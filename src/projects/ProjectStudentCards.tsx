@@ -5,6 +5,9 @@ import { stageStatusLabel, toneForTrack } from "./teacherPresentation";
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
+import VisuallyHidden from "../ui/VisuallyHidden";
+import { cardState, isStalled, sortStudentCards, STUDENT_SORTS, type StudentSort } from "./studentCardsView";
+import "./studentCards.css";
 import { fmtGrade, projectRankVisual } from "./projectPerformance";
 import type { StudentCard, StudentFilter, TrackMeta } from "./types";
 
@@ -28,6 +31,7 @@ const FILTERS: { key: StudentFilter; label: string }[] = [
   { key: "stale", label: "بلا تحديث" }
 ];
 const DEFAULT_LATE_THRESHOLD = 40;
+type StudentsView = "cards" | "table";
 
 // The class's student cards for one project: ONE `students` read per class/project (and per explicit reload);
 // search and filters are client-side over the already-loaded cards (zero requests). Card values are the
@@ -39,6 +43,9 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StudentFilter>("all");
+  // Phase P-5 — the teacher's order and view (cards or a compact table); both apply to the same filtered list.
+  const [sort, setSort] = useState<StudentSort>("name");
+  const [view, setView] = useState<StudentsView>("cards");
   // Phase P-1 — only the LATEST read may populate the cards: a slower response for a previously selected class is dropped.
   const seq = useRef(0);
 
@@ -60,7 +67,7 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [classId, projectCode, reloadNonce]);
 
-  const visible = useMemo(() => filterStudentCards(cards, filter, search, lateThreshold), [cards, filter, search, lateThreshold]);
+  const visible = useMemo(() => sortStudentCards(filterStudentCards(cards, filter, search, lateThreshold), sort), [cards, filter, search, lateThreshold, sort]);
   useEffect(() => { onVisibleChange?.(visible.map(c => ({ studentId: c.studentId, displayName: c.displayName }))); }, [visible, onVisibleChange]);
 
   return (
@@ -78,13 +85,47 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
             </div>
             <p className="eb-muted eb-project-students-count" role="status">{visible.length} من {cards.length} طالب</p>
           </div>
-          {visible.length ? (
+          <div className="eb-project-students-tools">
+            <label className="eb-field-inline">الترتيب<select value={sort} onChange={e => setSort(e.target.value as StudentSort)}>
+              {STUDENT_SORTS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select></label>
+            <div className="eb-segmented" role="group" aria-label="طريقة العرض">
+              <button type="button" aria-pressed={view === "cards"} onClick={() => setView("cards")}>بطاقات</button>
+              <button type="button" aria-pressed={view === "table"} onClick={() => setView("table")}>جدول</button>
+            </div>
+          </div>
+          {visible.length && view === "table" ? (
+            <div className="students-table-wrap eb-project-students-table" role="region" aria-label="جدول تقدّم الطلاب" tabIndex={0}>
+              <table className="students-table">
+                <thead><tr>
+                  <th scope="col">الطالب</th><th scope="col">التقدم العام</th>
+                  {tracks.map(t => <th key={t.trackId} scope="col">{t.title}</th>)}
+                  <th scope="col">{stageStatusLabel("ready_for_review")}</th><th scope="col">{stageStatusLabel("in_progress")}</th><th scope="col">{stageStatusLabel("approved")}</th>
+                  <th scope="col">الحالة</th><th scope="col">آخر تحديث</th><th scope="col"><VisuallyHidden>الإجراء</VisuallyHidden></th>
+                </tr></thead>
+                <tbody>{visible.map(c => {
+                  const state = cardState(c);
+                  return (
+                    <tr key={c.studentId} className={isStalled(c) ? "is-stale" : undefined}>
+                      <th scope="row"><strong>{c.displayName}</strong>{c.code ? <span className="eb-muted"> {c.code}</span> : null}</th>
+                      <td dir="ltr">{c.overallProgress}%</td>
+                      {tracks.map(t => <td key={t.trackId} dir="ltr">{c.trackProgress[t.trackId] || 0}%</td>)}
+                      <td>{c.readyForReviewCount}</td><td>{c.counts.in_progress}</td><td>{c.counts.approved}</td>
+                      <td>{state ? <StatusBadge tone={state.tone}>{state.label}</StatusBadge> : <span className="eb-muted">قيد التنفيذ</span>}</td>
+                      <td>{fmtDate(c.updatedAt)}</td>
+                      <td><button type="button" className="eb-button is-primary is-small" onClick={e => onOpenStudent(c.studentId, e.currentTarget)}>فتح ملف الطالب</button></td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+            </div>
+          ) : visible.length ? (
             <ul className="eb-student-cards">
               {visible.map(c => (
-                <li key={c.studentId} className={"eb-student-card" + (c.complete ? " is-complete" : "") + (c.stale ? " is-stale" : "")}>
+                <li key={c.studentId} className={"eb-student-card" + (c.complete ? " is-complete" : "") + (isStalled(c) ? " is-stale" : "")}>
                   <div className="eb-student-card-head">
                     <div className="eb-student-card-name"><strong>{c.displayName}</strong>{c.code ? <span className="eb-muted">{c.code}</span> : null}</div>
-                    {c.complete ? <StatusBadge tone="success">مكتمل</StatusBadge> : c.stale ? <StatusBadge tone="warn">بلا تحديث</StatusBadge> : null}
+                    {(() => { const state = cardState(c); return state ? <StatusBadge tone={state.tone}>{state.label}</StatusBadge> : null; })()}
                   </div>
                   <ProgressBar label="التقدم العام" value={c.overallProgress} tone="primary" size="sm" />
                   {tracks.map((t, i) => <ProgressBar key={t.trackId} label={t.title} value={c.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}

@@ -1,0 +1,13 @@
+/* Phase P-5 — the project's student list: order + view controls and the compact table view. The cards keep their styles in
+   projects-pro.css; this file only adds the P-5 parts. */
+.eb-project-students-tools{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); }
+.eb-project-students-tools .eb-field-inline select{ min-height:40px; }
+.eb-project-students-table{ max-width:100%; }
+.eb-project-students-table:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.eb-project-students-table table{ min-width:640px; }
+.eb-project-students-table th[scope="row"]{ text-align:start; font-weight:var(--eb-fw-regular); white-space:nowrap; }
+.eb-project-students-table td[dir="ltr"]{ text-align:end; font-variant-numeric:tabular-nums; }
+.eb-project-students-table tr.is-stale th[scope="row"] strong{ color:var(--eb-warn-tx, inherit); }
+@media (max-width:767px), (pointer:coarse){
+  .eb-project-students-tools .eb-field-inline select,.eb-project-students-tools .eb-segmented > button{ min-height:44px; }
+}

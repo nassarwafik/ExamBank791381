@@ -15,7 +15,8 @@ describe("filterStudentCards (generic, config-driven threshold)", () => {
     card({ studentId: "a", displayName: "أحمد", overallProgress: 20 }),
     card({ studentId: "b", displayName: "بلال", overallProgress: 80, readyForReviewCount: 2, counts: { not_started: 0, in_progress: 0, ready_for_review: 2, approved: 5 } }),
     card({ studentId: "c", displayName: "خالد", complete: true, overallProgress: 100 }),
-    card({ studentId: "d", displayName: "سعيد", stale: true, overallProgress: 10 })
+    // P-5: «بلا تحديث» is a STARTED student (one stage in progress); a never-started one is «لم يبدأ» (ProjectStudentCards.p5.test.tsx)
+    card({ studentId: "d", displayName: "سعيد", stale: true, overallProgress: 10, counts: { not_started: 0, in_progress: 1, ready_for_review: 0, approved: 0 } })
   ];
   it("ready filter", () => { expect(filterStudentCards(cards, "ready", "", 40).map(c => c.studentId)).toEqual(["b"]); });
   it("late filter uses the given threshold, not a hard-coded one", () => {
