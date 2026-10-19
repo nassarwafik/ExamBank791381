@@ -11,9 +11,10 @@
 //   3. BK02 shows as approved and BK01 not (a partly done merge is never approved for the student);
 //   4. the student's read writes nothing (snapshot and progress byte-identical);
 //   5. the page never scrolls sideways; axe-core (WCAG 2.1 A/AA): no serious or critical violation.
-// Then one teacher read through the real API converts the class: snapshot v2, BK01 «جاهزة للفحص» with the conversion note,
-// BK02 approved (80), the old entries archived (`condensedFrom`) and gone from `stages`, ONE `project.template.condense`
-// audit; a second read changes nothing; the student page after the conversion lists the same stages.
+// Then, through the real API: a teacher read SHOWS the converted class and writes nothing (Phase P-9: reads never write);
+// the first write (program.activate) converts it: snapshot v2, BK01 «جاهزة للفحص» with the conversion note, BK02 approved
+// (80), the old entries archived (`condensedFrom`) and gone from `stages`, ONE `project.template.condense` audit; a second
+// write and a read change nothing; the student page after the conversion lists the same stages.
 //
 // Tools are measuring instruments, not project dependencies: PLAYWRIGHT_CORE_DIR and AXE_CORE_DIR each name a directory whose
 // node_modules holds playwright-core / axe-core; CHROMIUM_PATH the browser. Output: HARNESS_OUT/<LABEL>/record.json (+ screenshots).
@@ -134,11 +135,18 @@ for (const [i, vp] of VIEWPORTS.entries()) {
   await ctx.close();
 }
 
-console.log("the teacher's first read converts the class");
+console.log("a teacher read shows the conversion; the first write persists it");
 const teacherToken = api.teacherToken();
-const get = () => api.handle("GET", "/api/project-tracker?projectCode=" + CODE + "&classId=c1&resource=board", { authorization: "Bearer " + teacherToken, "x-builder-token": teacherToken }, "");
-const r1 = await get();
-check("convert", r1.status === 200, "board read → " + r1.status);
+const auth = { authorization: "Bearer " + teacherToken, "x-builder-token": teacherToken };
+const get = () => api.handle("GET", "/api/project-tracker?projectCode=" + CODE + "&classId=c1&resource=board", auth, "");
+const write = () => api.handle("POST", "/api/project-tracker", { ...auth, "content-type": "application/json" }, JSON.stringify({ projectCode: CODE, classId: "c1", action: "program.activate" }));
+const beforeRead = stored();
+const r0 = await get();
+const board = JSON.parse(r0.body);
+check("read", r0.status === 200 && board.stages.some(s => s.stageId === "BK01") && !board.stages.some(s => s.stageId === "B01"), "the board read shows the condensed stages");
+check("read", stored() === beforeRead && api.mem.names("platform/audit/").length === 0, "the read wrote nothing and audited nothing");
+const r1 = await write();
+check("convert", r1.status === 200, "first write (program.activate) → " + r1.status);
 const snap = api.mem.getJson(NS.configName("c1"));
 check("convert", snap.templateVersion === 2 && !snap.conversion && snap.stages.some(s => s.stageId === "BK01") && !snap.stages.some(s => s.stageId === "B01"), "snapshot v2 with the condensed stages, no lock left");
 const docs = students.map(s => api.mem.getJson(NS.progressName("c1", s.userId)));
@@ -148,8 +156,8 @@ check("convert", docs.every(d => !("B01" in d.stages) && d.condensedFrom?.stages
 const audits = api.mem.names("platform/audit/").map(n => api.mem.getJson(n)).filter(a => a.action === "project.template.condense");
 check("convert", audits.length === 1, "one project.template.condense audit (" + audits.length + ")");
 const afterFirst = stored();
-await get();
-check("convert", stored() === afterFirst && api.mem.names("platform/audit/").map(n => api.mem.getJson(n)).filter(a => a.action === "project.template.condense").length === 1, "a second read changes nothing");
+await write(); await get();
+check("convert", stored() === afterFirst && api.mem.names("platform/audit/").map(n => api.mem.getJson(n)).filter(a => a.action === "project.template.condense").length === 1, "a second write and a read change nothing");
 
 const vp = VIEWPORTS[0];
 console.log("«مشاريعي» after the conversion @" + vp.width);

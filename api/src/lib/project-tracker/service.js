@@ -7,8 +7,8 @@
 // Roadmap #33 — Legacy 794589 Convergence contract: every function here returns DOMAIN results (documents,
 // outcomes, counts) or throws the storage/engine errors the callers already map; it never builds an HTTP response,
 // never chooses a status code or Arabic message, never records a route-owned audit event and never decides a body
-// shape. The generic route (project-tracker) and the legacy route (project-794589) both call these functions and
-// keep their own, unchanged contracts on top.
+// shape. The generic route (project-tracker) calls these functions and keeps its own, unchanged contract on top
+// (Phase P-9 removed the legacy project-794589 route that shared them).
 const crypto = require("crypto");
 const { downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, mapConcurrent, StorageConflictError } = require("../platform-storage");
 const { getProjectDefinition, getStorageNamespace, getSnapshotUpgradePolicy } = require("./registry");
@@ -59,12 +59,10 @@ function buildClassSnapshot(definition, classId, now) {
   };
 }
 
-// Roadmap #33: the snapshot factory used ONLY when a class has no snapshot yet. The generic route keeps
-// buildClassSnapshot (projectCode + tracks shape); the legacy 794589 route supplies its own factory
-// (project-794589-template.buildClassSnapshotFromDefault → the historical programCode shape). Existing snapshots,
-// including the version-aware upgrade path, are never affected by this option.
-function snapshotFactory(projectCode, options) {
-  if (options && typeof options.createSnapshot === "function") return options.createSnapshot;
+// Roadmap #33: the snapshot factory used ONLY when a class has no snapshot yet: buildClassSnapshot (projectCode +
+// tracks shape). Phase P-9 removed the `createSnapshot` override, whose only user was the legacy 794589 route.
+// Existing snapshots, including the version-aware upgrade path, are never affected by it.
+function snapshotFactory(projectCode) {
   return (classId, now) => buildClassSnapshot(getProjectDefinition(projectCode), classId, now);
 }
 
@@ -100,54 +98,99 @@ async function listProjectClasses(container, projectCode) {
     .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)));
 }
 
-// Returns the class snapshot, lazily creating+persisting it on first access for an ACTIVE class. For an
-// archived class with no snapshot yet, returns an in-memory default (never writes to an archived class).
-// `options.createSnapshot(classId, now)` overrides ONLY the first-create document (see snapshotFactory).
-async function ensureClassConfig(container, projectCode, classroom, options = {}) {
+// Phase P-9 — the ONE decision both ensureClassConfig (writes) and readClassConfig / readClassView (reads) take, so a read
+// always shows exactly what the next write persists: the snapshot, the write it still needs and (Phase P7) the view of a
+// progress document under it. Reads never write; the first write persists.
+//   - no snapshot yet → the first-create document; it is persisted only for an ACTIVE class (never on an archived one);
+//   - Phase P7 — an ACTIVE class on `policy.condenseFrom` → the condensed snapshot, each document as it will be converted
+//     ("condense": owner-approved rules, old entries archived; persisted by condenseClass). A class whose own stages
+//     cannot be converted safely (id collision) is served as it is and marked skipped by the next write;
+//   - Phase P7b (owner decision) — an ACTIVE class on `policy.resetFrom` WITH meaningful progress → the current set and
+//     every document from zero ("reset": the old work archived in each document, never shown or counted);
+//   - version-aware upgrade — only for a project that declares a policy (794589). NON-DESTRUCTIVE: an active class
+//     with no meaningful progress is upgraded to the current template version (and audited when written); any other
+//     class (or an archived one) is returned exactly as-is. Storage paths never change.
+async function resolveClassConfig(container, projectCode, classroom) {
   const ns = getStorageNamespace(projectCode);
-  const classId = classroom.classId;
   const now = new Date().toISOString();
-  const existing = await downloadJsonOrNull(container, ns.configName(classId));
+  const existing = await downloadJsonOrNull(container, ns.configName(classroom.classId));
+  const r = resolveStoredClass(projectCode, classroom, existing, now);
+  if (!r.needsProgressScan) return r;
+  return resolveStoredClass(projectCode, classroom, existing, now, classHasMeaningfulProgress(await listJson(container, ns.progressPrefix(classroom.classId))));
+}
+
+// The pure part of resolveClassConfig (no I/O): `meaningful` = the class has meaningful progress. Only an active class
+// below the current version that no conversion rule takes needs it; without it the result asks for the scan
+// (`needsProgressScan`). The student's own read passes its own document's flag (no class scan).
+function resolveStoredClass(projectCode, classroom, existing, now, meaningful) {
+  const classId = classroom.classId;
   const isActive = normalizeClassStatus(classroom) === "active";
-
-  if (!existing) {
-    const snapshot = snapshotFactory(projectCode, options)(classId, now);
-    if (isActive) await uploadJson(container, ns.configName(classId), snapshot);
-    return snapshot;
-  }
-
-  // Version-aware upgrade — only for a project that declares a policy. NON-DESTRUCTIVE: an active class with no
-  // meaningful progress is upgraded to the current template version and audited; a class with real progress (or
-  // archived) is returned exactly as-is. Storage paths never change.
-  // Phase P7 — an active class on the version the condensed template replaces (`policy.condenseFrom`) is converted to the
-  // condensed stages WITH its progress (service.condenseClass: owner-approved rules, archived old entries).
+  if (!existing) return { snapshot: snapshotFactory(projectCode)(classId, now), write: isActive ? "create" : null };
   const policy = getSnapshotUpgradePolicy(projectCode);
-  if (policy && isActive && policy.condenseFrom && Number(existing.templateVersion || 1) === policy.condenseFrom) {
-    // A conversion that fails (storage trouble) never fails the request: the class is served as it is (old set) and the
-    // next access retries. Documents already converted refuse old-set writes (assertWritable), so nothing is mixed.
-    try { return await condenseClass(container, projectCode, classroom, existing, policy, now); }
-    catch (e) { if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project.condense.failed", e); return (await downloadJsonOrNull(container, ns.configName(classId))) || existing; }
+  const fromVersion = Number(existing.templateVersion || 1);
+  if (policy && isActive && policy.condenseFrom && fromVersion === policy.condenseFrom && !(existing.condenseSkipped && existing.condenseSkipped.toVersion === policy.currentVersion)) {
+    const def = getProjectDefinition(projectCode);
+    const plan = condense.buildCondensePlan(def.stages, def.groups, existing);
+    const to = policy.currentVersion;
+    if (plan.skip) return { snapshot: existing, write: "condense", existing, policy };
+    return {
+      snapshot: condense.condensedSnapshot(existing, plan, to, now), write: "condense", existing, policy,
+      view: doc => condense.dropCondensedKeys(condense.condenseProgressDoc(doc, plan, to, fromVersion, now), plan, to)
+    };
   }
-  if (policy && isActive && Number(existing.templateVersion || 1) < policy.currentVersion) {
-    const progressDocs = await listJson(container, ns.progressPrefix(classId));
-    // Phase P7b — owner decision: a class on `policy.resetFrom` WITH progress restarts from zero on the current set (the
-    // same locked passes as the conversion; the old work is archived in each document, never shown or counted).
-    if (policy.resetFrom && Number(existing.templateVersion || 1) === policy.resetFrom && classHasMeaningfulProgress(progressDocs)) {
-      try { return await condenseClass(container, projectCode, classroom, existing, policy, now, "reset"); }
-      catch (e) { if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project.reset.failed", e); return (await downloadJsonOrNull(container, ns.configName(classId))) || existing; }
+  // Only a version BELOW the one the conversion replaces takes the reset / upgrade path; a class on that version that the
+  // conversion skipped (id collision) is served exactly as it is.
+  if (policy && isActive && fromVersion < (policy.condenseFrom || policy.currentVersion)) {
+    if (meaningful === undefined) return { needsProgressScan: true };
+    if (policy.resetFrom && fromVersion === policy.resetFrom && meaningful) {
+      return {
+        snapshot: { ...policy.buildUpgraded(existing, classId, now), resetAt: now, resetFromVersion: fromVersion }, write: "reset", existing, policy,
+        view: doc => condense.resetProgressDoc(doc, policy.currentVersion, fromVersion, now)
+      };
     }
-    if (shouldUpgradeSnapshot(existing, isActive, policy.currentVersion, classHasMeaningfulProgress(progressDocs))) {
-      const upgraded = policy.buildUpgraded(existing, classId, now);
-      await uploadJson(container, ns.configName(classId), upgraded);
-      await recordAuditEvent(container, {
-        actor: "system", action: "project.template.upgrade",
-        targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
-        details: { fromVersion: Number(existing.templateVersion || 1), toVersion: policy.currentVersion, reason: "no-meaningful-progress" }
-      });
-      return upgraded;
+    if (shouldUpgradeSnapshot(existing, isActive, policy.currentVersion, meaningful)) {
+      return { snapshot: policy.buildUpgraded(existing, classId, now), write: "upgrade", fromVersion, toVersion: policy.currentVersion };
     }
   }
-  return existing;
+  return { snapshot: existing, write: null };
+}
+
+// Returns the class snapshot, lazily creating+persisting it on first access for an ACTIVE class, or persisting (and
+// auditing) its pending upgrade / Phase P7 conversion / P7b reset. Only write paths call it.
+async function ensureClassConfig(container, projectCode, classroom, options = {}) {
+  const r = await resolveClassConfig(container, projectCode, classroom);
+  if (r.write === "condense" || r.write === "reset") {
+    // A conversion that fails (storage trouble) never fails the request on its own: the stored snapshot is returned (old
+    // set) and the next write retries. Documents already converted refuse old-set writes (assertWritable).
+    try { return await condenseClass(container, projectCode, classroom, r.existing, r.policy, new Date().toISOString(), r.write); }
+    catch (e) {
+      if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project." + r.write + ".failed", e);
+      return (await downloadJsonOrNull(container, getStorageNamespace(projectCode).configName(classroom.classId))) || r.existing;
+    }
+  }
+  if (r.write) await uploadJson(container, getStorageNamespace(projectCode).configName(classroom.classId), r.snapshot);
+  if (r.write === "upgrade") {
+    await recordAuditEvent(container, {
+      actor: "system", action: "project.template.upgrade",
+      targetType: "project-template", targetId: classroom.classId, targetLabel: classroom.name || "",
+      details: { fromVersion: r.fromVersion, toVersion: r.toVersion, reason: "no-meaningful-progress" }
+    });
+  }
+  return r.snapshot;
+}
+
+// Phase P-9 — the READ-side twin of ensureClassConfig: the same snapshot, never written and never audited (the in-memory
+// first-create, upgraded, converted or reset document). Every GET uses it (project-tracker, reports), so a read has no
+// side effect; the first write persists that same document.
+async function readClassConfig(container, projectCode, classroom) {
+  return (await resolveClassConfig(container, projectCode, classroom)).snapshot;
+}
+
+// Phase P7 — readClassConfig plus `view(doc)`: a progress document as the pending conversion / reset will store it (the
+// identity when nothing is pending). Read paths pass it to the progress loaders so the progress matches the snapshot.
+async function readClassView(container, projectCode, classroom) {
+  const r = await resolveClassConfig(container, projectCode, classroom);
+  return { config: r.snapshot, view: r.view || (doc => doc) };
 }
 
 // A CAS round that writes only when `fn` returns a NEW document (returning the current one, or undefined, writes nothing).
@@ -235,33 +278,6 @@ async function condenseClass(container, projectCode, classroom, existing, policy
   return switched;
 }
 
-// Phase P7 — true when an ACTIVE class still holds the stage set its project's condensed template replaces (the next
-// ensureClassConfig converts it). Read paths that bypass ensureClassConfig use it to convert first.
-function needsCondense(projectCode, snapshot, classroom) {
-  const policy = getSnapshotUpgradePolicy(projectCode);
-  if (!policy || !policy.condenseFrom || !snapshot || !classroom || normalizeClassStatus(classroom) !== "active") return false;
-  if (Number(snapshot.templateVersion || 1) !== policy.condenseFrom) return false;
-  return !(snapshot.condenseSkipped && snapshot.condenseSkipped.toVersion === policy.currentVersion);
-}
-
-// Phase P7 — the class (snapshot + one progress document) as it WILL be after its conversion, computed in memory by the same
-// pure rules (nothing is written): read paths that must not write (the student's reads) show the condensed stages at once.
-function condensedView(projectCode, snapshot, progress, classroom, now) {
-  // Phase P7b — a class on `policy.resetFrom` ends on the current set either way (reset when the class has progress,
-  // upgraded when it has none), and the student's old work is not counted: the student sees the fresh set at once.
-  const reset = getSnapshotUpgradePolicy(projectCode);
-  if (reset && reset.resetFrom && snapshot && classroom && normalizeClassStatus(classroom) === "active" && Number(snapshot.templateVersion || 1) === reset.resetFrom) {
-    return { snapshot: reset.buildUpgraded(snapshot, classroom.classId, now), progress: progress ? condense.resetProgressDoc(progress, reset.currentVersion, reset.resetFrom, now) : progress };
-  }
-  if (!needsCondense(projectCode, snapshot, classroom)) return { snapshot, progress };
-  const policy = getSnapshotUpgradePolicy(projectCode);
-  const def = getProjectDefinition(projectCode);
-  const plan = condense.buildCondensePlan(def.stages, def.groups, snapshot);
-  if (plan.skip) return { snapshot, progress };
-  const to = policy.currentVersion, from = Number(snapshot.templateVersion || 1);
-  return { snapshot: condense.condensedSnapshot(snapshot, plan, to, now), progress: progress ? condense.dropCondensedKeys(condense.condenseProgressDoc(progress, plan, to, from, now), plan, to) : progress };
-}
-
 // Phase P7 — a write must never land on a progress document converted to a NEWER stage set than the snapshot it was
 // checked against (its old keys are about to leave), nor while a conversion holds the class: a retryable conflict.
 function assertWritable(config, current) {
@@ -311,33 +327,35 @@ async function requireStudentInClass(container, studentId, classId) {
   return { ok: true, student: { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }, shareAchievements: u.shareAchievements !== false };
 }
 
-async function loadProgressEntries(container, projectCode, classId, students) {
+// Phase P7 — `view` (readClassView) shows each document as the pending conversion / reset will store it; reads only.
+async function loadProgressEntries(container, projectCode, classId, students, view = doc => doc) {
   const ns = getStorageNamespace(projectCode);
   const blobs = await listJson(container, ns.progressPrefix(classId));
-  const byId = new Map(blobs.filter(Boolean).map(p => [String(p.studentId), p]));
+  const byId = new Map(blobs.filter(Boolean).map(p => [String(p.studentId), view(p)]));
   return students.map(s => ({ studentId: s.studentId, displayName: s.displayName, code: s.code, progress: byId.get(String(s.studentId)) || null }));
 }
 
-async function loadStudentProgress(container, projectCode, classId, studentId) {
-  return downloadJsonOrNull(container, getStorageNamespace(projectCode).progressName(classId, studentId));
+async function loadStudentProgress(container, projectCode, classId, studentId, view = doc => doc) {
+  const doc = await downloadJsonOrNull(container, getStorageNamespace(projectCode).progressName(classId, studentId));
+  return doc ? view(doc) : doc;
 }
 
 // Roadmap #33 — ONE progress-update pipeline for every route, in the exact order both routes always used:
 //   1. canonical membership (foreign / archived / unknown id → { ok:false, reason:"not_member" }, nothing read
 //      or written under the class),
-//   2. snapshot load (lazy create / version-aware upgrade via ensureClassConfig — `options` as there),
+//   2. snapshot load (lazy create / version-aware upgrade via ensureClassConfig),
 //   3. the stage must exist AND be active in the class snapshot (→ { ok:false, reason:"stage_inactive" }),
 //   4. CAS mutation of the student's progress blob through applyProgressUpdate.
 // Engine/storage errors propagate unchanged so each handler keeps its own mapping: NO_CHANGE (e.code),
 // invalid status (e.httpStatus 400) and StorageConflictError (retry budget exhausted). Returns everything a
 // handler needs for its response AND its own audit records (outcome.statusChanged / noteChanged / from / to,
 // the stage title) — audit formatting is deliberately NOT centralized here.
-async function updateStudentProgress(container, projectCode, classroom, update, options = {}) {
+async function updateStudentProgress(container, projectCode, classroom, update) {
   const classId = classroom.classId;
   const { studentId, stageId, status, note, score, actor, now, expectedScore } = update;
   const membership = await requireStudentInClass(container, studentId, classId);
   if (!membership.ok) return { ok: false, reason: "not_member" };
-  const config = await ensureClassConfig(container, projectCode, classroom, options);
+  const config = await ensureClassConfig(container, projectCode, classroom);
   const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);
   if (!stage) return { ok: false, reason: "stage_inactive", config };
   assertWritable(config, null);
@@ -393,12 +411,12 @@ async function resetProject(container, projectCode, classId) {
 }
 
 // Roadmap #33 — CAS patch of the class snapshot (stages / groups / trackWeights / config merge). A missing snapshot
-// starts from the route's first-create factory (see snapshotFactory). StorageConflictError propagates.
+// starts from the first-create factory (see snapshotFactory). StorageConflictError propagates.
 // Phase P-1 — `options.validate(current, patch)` (the generic route passes template-validation) runs against the snapshot
 // of THIS CAS round before anything changes; an error it throws propagates and nothing is written.
 async function updateTemplate(container, projectCode, classId, patch, now, options = {}) {
   const ns = getStorageNamespace(projectCode);
-  const create = snapshotFactory(projectCode, options);
+  const create = snapshotFactory(projectCode);
   return mutateJsonWithRetry(container, ns.configName(classId), current => {
     const config = current || create(classId, now);
     if (typeof options.validate === "function") options.validate(config, patch);
@@ -413,8 +431,8 @@ async function updateTemplate(container, projectCode, classId, patch, now, optio
 
 module.exports = {
   CLASS_PREFIX, USER_PREFIX,
-  buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
+  buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig, readClassConfig, readClassView,
   listClassStudents, listClassStudentsForReadViews, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries, loadStudentProgress,
   listProjectClasses, updateStudentProgress, selfReportStages, resetProject, updateTemplate,
-  shouldUpgradeSnapshot, condenseClass, needsCondense, condensedView
+  shouldUpgradeSnapshot, condenseClass, resolveStoredClass
 };

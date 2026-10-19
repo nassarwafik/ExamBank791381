@@ -5,7 +5,8 @@
 // supported project of the class, with bounded concurrency. `deps` is the test seam (dl / mapConcurrent).
 const { downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../platform-storage");
 const { getProjectDefinition, getStorageNamespace } = require("./registry");
-const { workingDefinition, buildClassSnapshot, condensedView } = require("./service");
+const { workingDefinition, resolveStoredClass } = require("./service");
+const { progressDocIsMeaningful } = require("../project-794589-migration");
 const { getSupportedClassProgramCodes } = require("./class-programs");
 const core = require("./core");
 
@@ -23,12 +24,13 @@ async function loadStudentProjects(container, classroom, classId, studentId, now
     const definition = getProjectDefinition(projectCode);
     const ns = getStorageNamespace(projectCode);
     const [storedSnapshot, storedProgress] = await Promise.all([dl(container, ns.configName(classId)), dl(container, ns.progressName(classId, studentId))]);
-    // Phase P7 — a class still on the stage set the condensed one replaces is SHOWN converted (the same pure rules, in
-    // memory; a student read never writes), so the student never sees, or marks, stages that are about to disappear.
-    // The stored conversion happens on the next write or teacher read (service.ensureClassConfig).
-    const view = condensedView(projectCode, storedSnapshot, storedProgress, classroom, now);
-    const progress = view.progress;
-    const snapshot = view.snapshot || buildClassSnapshot(definition, classId, now);
+    // Phase P-9 / P7 — a read never writes: the class as the next write will store it (first-create, upgrade, P7
+    // conversion or P7b reset, by service.resolveStoredClass), and the student's progress under it, in memory. The
+    // student's own document decides a pending P7b reset (no class scan), so the student never sees, or marks, stages
+    // that are about to disappear.
+    const resolved = resolveStoredClass(projectCode, classroom, storedSnapshot, now, progressDocIsMeaningful(storedProgress));
+    const snapshot = resolved.snapshot;
+    const progress = storedProgress && resolved.view ? resolved.view(storedProgress) : storedProgress;
     const workDef = workingDefinition(projectCode, snapshot);
     const summary = core.buildStudentSummary(workDef, progress, now);
     return { projectCode, definition, snapshot, workDef, progress, summary };

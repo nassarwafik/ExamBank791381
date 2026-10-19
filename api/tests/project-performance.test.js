@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { handler as tracker } from "../src/functions/project-tracker.js";
-import { handler as legacyTracker } from "../src/functions/project-794589.js";
 import { handler as studentTracker } from "../src/functions/student-project-tracker.js";
 import { getProjectDefinition, getStorageNamespace } from "../src/lib/project-tracker/registry.js";
 import * as perf from "../src/lib/project-tracker/performance.js";
@@ -171,9 +170,10 @@ describe("102/87/88. teacher score authority through the canonical tracker write
     expect(denied.status).toBe(401);
     expect(ctx.getJson(NS.A.progressName("c1", "s1"))).toBeNull();
   });
-  it("the legacy 794589 route shares the SAME service: score stored + audited there too", async () => {
+  // Phase P-9 — the legacy /api/project-794589 route is removed; 794589 scores go through the generic route.
+  it("794589 (its historical storage paths) shares the SAME service: score stored + audited there too", async () => {
     const ctx = school(); audits.length = 0;
-    const r = await post(legacyTracker, ctx, "/api/project-794589", { action: "progress.update", classId: "c2", studentId: "s3", stageId: "BK01", status: "approved", score: 70 });
+    const r = await post(tracker, ctx, "/api/project-tracker", { projectCode: "794589", action: "progress.update", classId: "c2", studentId: "s3", stageId: "BK01", status: "approved", score: 70 });
     expect(r.status).toBe(200);
     expect(ctx.getJson(NS.L.progressName("c2", "s3")).stages.BK01).toMatchObject({ status: "approved", score: 70 });
     expect(audits.map(a => a.action)).toEqual(["project.stage.approve", "project.stage.score"]);

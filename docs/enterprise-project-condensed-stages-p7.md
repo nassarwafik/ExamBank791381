@@ -11,7 +11,7 @@ progress for a class is long and tiring, and the student's list is very long on 
 | Question | Decision |
 |---|---|
 | Stage sets | The condensed lists below, approved by the owner for all three projects. |
-| Classes that already started | **Converted automatically** on first access, with their progress. |
+| Classes that already started | **Converted automatically**, with their progress: every read shows the converted class, the first write stores it. |
 | Stage weight | **The number of items it merges** (Σ of the merged stages' weights, 1 each by default). A fully approved group therefore keeps exactly the project value it had. |
 | A merged stage the student finished only in part | **«بانتظار الاعتماد» (ready for review) for the teacher**, with a note naming what was done. Never an automatic approval, never a silent loss. |
 | Branch | `feature/p7-condensed-stages`, separate from P6. |
@@ -90,9 +90,18 @@ Track weights, project configuration and storage paths do not change.
 
 ### When
 
-`ensureClassConfig` (every teacher read and every write) converts an **active** class whose snapshot is on the version the
-condensed template replaces (`snapshotUpgrade.condenseFrom`: 1 for 899373 / 883589, 2 for 794589). Archived classes are
-never touched (read-only, as before). A class created after P7 gets the condensed set directly.
+An **active** class whose snapshot is on the version the condensed template replaces (`snapshotUpgrade.condenseFrom`: 1
+for 899373 / 883589, 2 for 794589) is converted. Archived classes are never touched (read-only, as before). A class created
+after P7 gets the condensed set directly.
+
+Since P-9 (#373) **a project read never writes**. One pure decision, `service.resolveStoredClass` (inside
+`resolveClassConfig`), serves both sides:
+
+- **Reads** (`readClassConfig` / `readClassView`: every teacher GET, the reports, the attention badges, the student's
+  portal) show the class **as the conversion will store it**: the condensed snapshot, and each progress document through
+  the same pure rules (`view(doc)`, passed to `loadProgressEntries` / `loadStudentProgress`). Nothing is written or audited.
+- **The first write** of any kind (`ensureClassConfig`: a progress update, a student's «أنجزتها», a template change,
+  `program.activate`) persists it through `condenseClass` below, so the stored result is exactly what the reads showed.
 
 ### Rules per student (pure, `condenseEntry`)
 
@@ -138,8 +147,10 @@ Storage writes use `mutateIfChanged` (ETag CAS; a no-op callback writes nothing)
   write was checked against. No write ever lands on a stage that is about to disappear.
 - **A failed conversion** releases its lock at once and the request is served on the old set (logged
   `project.condense.failed`); the next access completes it (pass 1 is idempotent).
-- **Student reads never write** (R33 B2): the student sees the class as it **will be** after the conversion, computed in
-  memory by the same rules (`condensedView`). The stored conversion happens on the next teacher read or write.
+- **No read writes** (P-9, R33 B2): teacher and student reads see the class as it **will be** after the conversion, computed
+  in memory by the same rules (`resolveStoredClass`). The stored conversion happens on the first write.
+- A class on the replaced version that the conversion **skipped** (id collision) is served exactly as it is by reads and
+  writes; it never falls into the older upgrade path (a test pins it: a 500 before the guard).
 - 794589 classes still on template v1 **with progress** restart from zero (P7b, below).
 
 ## P7b — 794589 classes on template v1 with progress restart from zero (owner decision)
@@ -149,7 +160,7 @@ condensed v3 set and that everything done on v1 is dropped: the class starts fro
 only, the earlier rule of `project-794589-migration.js` («a class with meaningful progress is never silently reset»): the
 reset is the owner's explicit decision, it is audited, and the old work stays recoverable.
 
-- **Trigger:** `ensureClassConfig` on an **active** 794589 class whose snapshot is v1 (`snapshotUpgrade.resetFrom: 1`) and
+- **Trigger:** the first write (`ensureClassConfig`; reads only show it) on an **active** 794589 class whose snapshot is v1 (`snapshotUpgrade.resetFrom: 1`) and
   whose class has meaningful progress. A v1 class **without** progress keeps the existing progress-free upgrade; archived
   classes are never touched.
 - **Passes:** the same lock / pass 1 / switch / sweep as the conversion (`condenseClass(…, "reset")`):
@@ -262,13 +273,41 @@ first round and were killed by the tests added for them).
 Production build + the real API in process; one class on the old 899373 set, one student per viewport with B01 approved
 (90), B02 ready and B04–B07 approved (80). At 390 (touch) / 1024 / 1440 px: only BK01–BK07 listed, every stage with its
 «يشمل: …», BK02 approved and BK01 not, the student read writes nothing, no horizontal overflow, axe (WCAG 2.1 A/AA) without
-a serious or critical violation. Then one teacher read converts the class: snapshot v2 without a lock, BK01 ready with the
-conversion note, BK02 approved with 80, old entries archived and gone, one audit, a second read changes nothing; the student
-page after the conversion lists the same stages. **Passed** on the head. Output goes to `.harness-p7/` (ignored).
+a serious or critical violation. Then a teacher read shows the condensed stages and writes / audits nothing; the first write
+(`program.activate`) converts the class: snapshot v2 without a lock, BK01 ready with the conversion note, BK02 approved with
+80, old entries archived and gone, one audit; a second write and a read change nothing; the student page after the
+conversion lists the same stages. **Passed** on the head. Output goes to `.harness-p7/` (ignored).
+
+## Reconciliation with P-9 (#373, «a project read never writes»)
+
+P-9 merged into `main` while P7 was open and changed the same function (`ensureClassConfig`). P7 converted a class on the
+first teacher **read**; P-9 made every read side-effect free. Both intents are kept: the decision is shared by reads and
+writes (`resolveStoredClass`), reads show the conversion in memory (snapshot + `view(doc)` for every progress loader, the
+attention counts, the reports and the student's portal), and the first write persists it with the same lock, passes,
+archive and audit. The legacy `student-project.js` route that P-9 deleted is gone (its P7 change went with it).
+
+- Tests updated deliberately: the P7 / P7b integration tests now prove that reads write nothing and that the first write
+  (`program.activate`) converts / resets; `project-cleanup-p9` uses the condensed id on a fresh class and expects c4 (V1 with
+  progress) SHOWN restarted from zero (P7b). R33 was regenerated on the merged code: every GET still touches nothing; the c1
+  / g1 writes persist the conversion (one `project.template.condense` audit), the c4 reads show the reset; no status code
+  changed. `G.projectsSummary` reports 1 instead of 2 ready stages for 794589 (c1's B01 approved + B02 ready merge into
+  BK01 ready; c4 restarts from zero).
+- A defect found by the existing tests during the reconciliation and fixed: a skipped class (id collision) without progress
+  fell into the upgrade path (500 for 899373, which has no upgrade builder). Pinned by a new test, fail-first on the
+  defective condition (`expected 500 to be 200`).
+- New tests: a skipped class without progress is served as it is (above); the project reports (ready / track / student)
+  read the class as the conversion will store it and write nothing; a reset is never also audited as a conversion.
+- Mutation re-run on the reconciled code (hash-verified restore, tree clean): the 30 P7 / P7b mutants re-anchored where the
+  code moved, plus N01–N06 for the read / write split (a teacher read that persists, class / student / report loaders and
+  the attention counts that ignore the view, the skipped-class fall-through): **36 / 36 KILLED**. R09 and N05 survived the
+  first round and were killed by the two tests just named; Q08's anchor had become ambiguous (the same guard line now also
+  sits in `resetProgressDoc`) and was re-anchored, then KILLED.
+- Real-browser gates on the reconciled build: P7 (the board read shows BK… and writes / audits nothing; the first write
+  converts), P6, P3 and P4 — all passed.
 
 ## Known limits
 
 - P6 merged first (#371): P7 reconciled with a normal merge (only `.gitignore` conflicted, union) and the full validation
-  passed again on the merge.
+  passed again on the merge. P-5 (#372) merged without conflict; P-9 (#373): see the reconciliation above.
 - Observed, not changed (it is identical on `main`): at 1440 px the student portal's project card header is squeezed into a
   narrow column (the project title wraps one character per line).

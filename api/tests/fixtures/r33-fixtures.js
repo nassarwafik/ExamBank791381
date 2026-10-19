@@ -19,9 +19,7 @@ const LEGACY_CONFIG = "platform/project-trackers/classes/", LEGACY_PROGRESS = "p
 function loadHandlers(apiRoot) {
   const r = rel => require(path.join(apiRoot, rel));
   return {
-    legacy: r("src/functions/project-794589.js").handler,
     generic: r("src/functions/project-tracker.js").handler,
-    studentLegacy: r("src/functions/student-project.js").handler,
     studentGeneric: r("src/functions/student-project-tracker.js").handler,
     template: r("src/lib/project-794589-template.js"),
     registry: r("src/lib/project-tracker/registry.js"),
@@ -100,7 +98,7 @@ function seedSchool(h) {
 }
 
 // ---- scenarios -------------------------------------------------------------------------------------------------
-const L = "/api/project-794589", G = "/api/project-tracker";
+const G = "/api/project-tracker";
 const t = (id, route, method, url, body, extra = {}) => ({ id, route, method, url, body, ...extra });
 const teacherPairs = [
   // [suffix, resource-or-action, query params / body, extra]
@@ -159,14 +157,11 @@ const teacherPairs = [
 ];
 function qs(params) { return Object.entries(params).map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&"); }
 const SCENARIOS = [];
+// Phase P-9 — the legacy routes (/api/project-794589 → "L.*", /api/student-project → "SL.*") were removed; their
+// scenarios and golden entries went with them. 794589 is served by the generic route ("G794589.*").
 for (const [suffix, method, p, extra] of teacherPairs) {
-  if (method === "GET") {
-    SCENARIOS.push(t("L." + suffix, "legacy", "GET", L + "?" + qs(p), undefined, extra));
-    SCENARIOS.push(t("G794589." + suffix, "generic", "GET", G + "?" + qs({ projectCode: "794589", ...p }), undefined, extra));
-  } else {
-    SCENARIOS.push(t("L." + suffix, "legacy", "POST", L, p, extra));
-    SCENARIOS.push(t("G794589." + suffix, "generic", "POST", G, { projectCode: "794589", ...p }, extra));
-  }
+  if (method === "GET") SCENARIOS.push(t("G794589." + suffix, "generic", "GET", G + "?" + qs({ projectCode: "794589", ...p }), undefined, extra));
+  else SCENARIOS.push(t("G794589." + suffix, "generic", "POST", G, { projectCode: "794589", ...p }, extra));
 }
 // Generic-only regression for the other projects (must be untouched by R33).
 const gen = (id, method, p) => SCENARIOS.push(method === "GET" ? t(id, "generic", "GET", G + "?" + qs(p)) : t(id, "generic", "POST", G, p));
@@ -192,7 +187,6 @@ gen("G.unsupportedProject", "GET", { projectCode: "000000", resource: "classes" 
 gen("G.noProjectCode", "GET", { resource: "classes" });
 // Student routes (identical seeds; the session helper is mocked identically for both — its own gates are shared).
 for (const sid of ["s1", "s2", "s3", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "nobody"]) {
-  SCENARIOS.push(t("SL." + sid, "studentLegacy", "GET", "/api/student-project", undefined, { studentId: sid }));
   SCENARIOS.push(t("SG." + sid, "studentGeneric", "GET", "/api/student-project-tracker", undefined, { studentId: sid }));
 }
 
@@ -221,13 +215,13 @@ async function runScenario(h, sc) {
   const audits = [];
   const req = { method: sc.method, url: "https://x" + sc.url, json: async () => sc.body || {} };
   let res;
-  if (sc.route === "legacy" || sc.route === "generic") {
+  if (sc.route === "generic") {
     const deps = { ...AUTH, container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async (_c, ev) => { audits.push(ev); } };
-    res = await (sc.route === "legacy" ? h.legacy : h.generic)(req, deps);
+    res = await h.generic(req, deps);
   } else {
     const student = ctx.getJson(UP + sc.studentId + ".json");
     const deps = { requireActiveStudentSession: async () => student ? { ok: true, user: { sub: sc.studentId }, student, container: ctx.container } : { ok: false, response: { status: 401, jsonBody: { ok: false, error: "الجلسة غير صالحة." } } } };
-    res = await (sc.route === "studentLegacy" ? h.studentLegacy : h.studentGeneric)(req, deps);
+    res = await h.studentGeneric(req, deps);
   }
   const after = storeSnapshot(ctx);
   const added = Object.keys(after).filter(n => !(n in before)).sort();

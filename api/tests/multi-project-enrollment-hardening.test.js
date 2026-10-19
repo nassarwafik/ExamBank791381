@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { handler as classrooms } from "../src/functions/manage-classrooms.js";
-import { handler as legacyTracker } from "../src/functions/project-794589.js";
 import { handler as tracker } from "../src/functions/project-tracker.js";
 import { handler as studentTracker } from "../src/functions/student-project-tracker.js";
 import { handler as reports } from "../src/functions/reports.js";
@@ -15,9 +14,10 @@ import { createMemoryContainer } from "./fixtures/memory-container.js";
 //      compatibility, add/remove/remove-all, stale scalar dropped, persisted round-trip, [] authoritative,
 //      400/403 without mutation, setProgram wrapper, dedupe, removed legacy project never resurrects.
 //   B. student tracker: all and only enrolled projects, no duplicates, legacy scalar, [] => not enrolled.
-//   C. legacy 794589 route: multi-project gate, progress.update membership parity (foreign/archived →
-//      404 and NO ghost blob; login-disabled member OK), resource=student parity.
-//   D. reset isolation across the three namespaces (generic and legacy reset).
+//   C. 794589 on the generic route (Phase P-9 removed the legacy /api/project-794589 route): multi-project
+//      gate, progress.update membership (foreign/archived → 404 and NO ghost blob; login-disabled member OK),
+//      resource=student membership.
+//   D. reset isolation across the three namespaces (899373 and 794589 resets).
 //   E. reports: class/student sections per enrolled project, per-project ready, non-enrolled → 400.
 //   F. projects-summary: per-project independent counts, total = sum, archived class excluded.
 //   G. concurrency: setPrograms vs roster-index write, forced ETag conflicts preserve foreign fields.
@@ -112,13 +112,12 @@ describe("A. classroom API — canonical create shape and multi-project mutation
     const r = await cls(ctx, { action: "setPrograms", classId: "c1", programCodes: [" 899373", "899373", "883589 ", "883589"] });
     expect(r.jsonBody.programCodes).toEqual(["899373", "883589"]); expect(codesOf(ctx, "c1")).toEqual(["899373", "883589"]);
   });
-  it("A14 a removed legacy project never resurrects: list, generic route and legacy route all agree", async () => {
+  it("A14 a removed legacy project never resurrects: the class list and the project route agree", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1", { programCode: "794589" }) });
     await cls(ctx, { action: "setPrograms", classId: "c1", programCodes: ["899373"] });
     expect((await listClasses(ctx))[0].programCodes).toEqual(["899373"]);
     expect((await get(tracker, ctx, "/api/project-tracker?projectCode=794589&resource=classes")).jsonBody.classes).toEqual([]);
-    expect((await get(legacyTracker, ctx, "/api/project-794589?resource=summary&classId=c1")).status).toBe(403);
-    expect((await get(legacyTracker, ctx, "/api/project-794589?resource=classes")).jsonBody.classes).toEqual([]);
+    expect((await get(tracker, ctx, "/api/project-tracker?projectCode=794589&resource=summary&classId=c1")).status).toBe(400);
   });
 });
 
@@ -152,15 +151,15 @@ describe("B. student tracker — all and only enrolled projects", () => {
   });
 });
 
-describe("C. legacy 794589 route — multi-project gate and membership parity", () => {
-  const legacy = (ctx, url) => get(legacyTracker, ctx, url);
-  const update = (ctx, studentId, stageId) => post(legacyTracker, ctx, "/api/project-794589", { action: "progress.update", classId: "c1", studentId, stageId, status: "in_progress" });
+describe("C. 794589 on the generic route — multi-project gate and membership", () => {
+  const legacy = (ctx, url) => get(tracker, ctx, url);
+  const update = (ctx, studentId, stageId) => post(tracker, ctx, "/api/project-tracker", { projectCode: "794589", action: "progress.update", classId: "c1", studentId, stageId, status: "in_progress" });
   const seed = () => ({ "platform/classes/c1.json": room("c1", { programCodes: ["794589", "899373"], studentIds: ["s1", "s2"] }), "platform/users/s1.json": user("s1", "c1"), "platform/users/s2.json": user("s2", "c1", { active: false }), "platform/users/s3.json": user("s3", "c2"), "platform/users/s4.json": user("s4", "c1", { archived: true, active: false }), "platform/classes/c2.json": room("c2", { programCodes: ["794589"] }) });
-  it("C1 multi-project enrollment keeps the legacy route open; a class without 794589 is refused (403)", async () => {
+  it("C1 multi-project enrollment keeps 794589 open; a class without 794589 is refused (400)", async () => {
     const ctx = createMemoryContainer(seed());
-    expect((await legacy(ctx, "/api/project-794589?resource=summary&classId=c1")).status).toBe(200);
+    expect((await legacy(ctx, "/api/project-tracker?projectCode=794589&resource=summary&classId=c1")).status).toBe(200);
     ctx.setJson("platform/classes/c1.json", room("c1", { programCodes: ["899373"] }));
-    expect((await legacy(ctx, "/api/project-794589?resource=summary&classId=c1")).status).toBe(403);
+    expect((await legacy(ctx, "/api/project-tracker?projectCode=794589&resource=summary&classId=c1")).status).toBe(400);
   });
   it("C2 progress.update rejects a student of another class (404) and creates NO progress blob", async () => {
     const ctx = createMemoryContainer(seed());
@@ -182,10 +181,11 @@ describe("C. legacy 794589 route — multi-project gate and membership parity", 
   });
   it("C5 resource=student uses the canonical membership rule: disabled member belongs, archived does not, foreign does not", async () => {
     const ctx = createMemoryContainer(seed());
-    const st = async id => (await legacy(ctx, "/api/project-794589?resource=student&classId=c1&studentId=" + id)).jsonBody.student;
-    expect((await st("s2")).displayName).toBe("طالب s2");
-    expect(await st("s4")).toEqual({ studentId: "s4", displayName: "", code: "" });
-    expect(await st("s3")).toEqual({ studentId: "s3", displayName: "", code: "" });
+    const st = id => legacy(ctx, "/api/project-tracker?projectCode=794589&resource=student&classId=c1&studentId=" + id);
+    expect((await st("s2")).jsonBody.student.displayName).toBe("طالب s2");
+    // the generic route answers 404 for a non-member (the removed legacy route answered 200 with a blank student)
+    expect((await st("s4")).status).toBe(404);
+    expect((await st("s3")).status).toBe(404);
   });
   it("C6 the generic route enforces the same membership rule for progress.update (parity check)", async () => {
     const ctx = createMemoryContainer(seed());
@@ -205,10 +205,10 @@ describe("D. reset isolation across namespaces", () => {
     expect(ctx.has(NS.L.progressName("c1", "s1"))).toBe(true); expect(ctx.has(NS.L.configName("c1"))).toBe(true);
     expect(ctx.has("platform/classes/c1.json")).toBe(true); expect(ctx.has("platform/users/s1.json")).toBe(true);
   });
-  it("D2 legacy 794589 reset deletes only the legacy namespace; 899373 and 883589 data survive", async () => {
+  it("D2 794589 reset deletes only the legacy 794589 namespace; 899373 and 883589 data survive", async () => {
     const s = school(); s["platform/classes/c1.json"].programCodes = ["899373", "883589", "794589"]; s[NS.L.configName("c1")] = buildClassSnapshotFromDefault("c1", NOW);
     const ctx = createMemoryContainer(s);
-    const r = await post(legacyTracker, ctx, "/api/project-794589", { action: "project.reset", classId: "c1" });
+    const r = await post(tracker, ctx, "/api/project-tracker", { projectCode: "794589", action: "project.reset", classId: "c1" });
     expect(r.status).toBe(200); expect(r.jsonBody.deletedProgressCount).toBe(1);
     expect(ctx.has(NS.L.progressName("c1", "s1"))).toBe(false); expect(ctx.has(NS.L.configName("c1"))).toBe(false);
     expect(ctx.has(NS.A.progressName("c1", "s1"))).toBe(true); expect(ctx.has(NS.A.configName("c1"))).toBe(true); expect(ctx.has(NS.B.progressName("c1", "s1"))).toBe(true);
