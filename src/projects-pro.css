@@ -315,3 +315,19 @@
 /* Phase P4 — «الطالب السابق / التالي» beside the profile heading (wraps under it on narrow screens). */
 .eb-student-sibling-nav{ display:flex; align-items:center; gap:var(--eb-space-2); flex:0 0 auto; }
 .eb-student-sibling-nav .eb-muted{ font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* Phase P6 — what waits for the teacher: the hub card's two badges, the dashboard's review shortcuts, the count on
+   «التقييم الجماعي», the student card's own-marks figure, and the waiting lists grouped by student or by stage. */
+.eb-project-card-attention{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-2); }
+@media (min-width: 768px){ .eb-project-stats.eb-stat-grid.is-primary{ grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr)); } }
+.eb-project-review-shortcuts{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); margin-block:var(--eb-space-3); }
+.eb-project-review-shortcuts .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
+.eb-view-count{ display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; margin-inline-start:var(--eb-space-1); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:11px; font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-student-card-self{ padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.eb-review-list-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); margin-block:var(--eb-space-2); }
+.eb-review-groups{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-review-group{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.eb-review-group-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-review-group-title{ margin:0; font-size:var(--eb-fs-14, 14px); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-review-group-count{ color:var(--eb-text-secondary); font-variant-numeric:tabular-nums; }
+.eb-review-group-head .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+@media (max-width: 767px){ .eb-review-group-head .eb-button,.eb-review-list-controls .eb-segmented > button{ min-height:44px; } }

@@ -4,13 +4,21 @@ import ProgressBar from "../ui/ProgressBar";
 import { toneForTrack } from "./teacherPresentation";
 import StatCard from "../ui/StatCard";
 import EmptyState from "../ui/EmptyState";
+import { IconCheck } from "../icons";
 import type { ClassSummary, TrackMeta } from "./types";
+import type { BulkMode } from "./ProjectBulkReview";
 
-type Props = { token: string; projectCode: string; classId: string; tracks: TrackMeta[] };
+type Props = {
+  token: string; projectCode: string; classId: string; tracks: TrackMeta[];
+  /** Phase P6 — archived classes are read-only: no review shortcuts. */
+  readOnly?: boolean;
+  /** Phase P6 — open «التقييم الجماعي» on the list that waits (ready stages, or the students' own marks). */
+  onOpenBulk?: (mode: BulkMode) => void;
+};
 
 // Overview of one class in one project: exactly the existing `summary` payload, presented as the shared
 // StatCards (four primary operational counts + stale hint) and semantic progress bars. Nothing is recomputed.
-export default function ProjectDashboard({ token, projectCode, classId, tracks }: Props) {
+export default function ProjectDashboard({ token, projectCode, classId, tracks, readOnly = false, onOpenBulk }: Props) {
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,6 +42,8 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks }
   if (error) return <div className="platform-error assignment-inline-message" role="alert">{error} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;
   if (!summary) return null;
   if (!summary.studentCount) return <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طلابًا إلى الصف من صفحة «الصفوف والطلاب» ليظهر تقدّمهم هنا." />;
+  const selfStages = summary.totalSelfReportedStages || 0, selfStudents = summary.studentsSelfReported || 0;
+  const shortcuts = !readOnly && onOpenBulk && (summary.totalReadyStages > 0 || selfStages > 0);
 
   return (
     <section className="eb-project-overview" aria-labelledby="eb-project-overview-title">
@@ -43,7 +53,14 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks }
         <StatCard primary label="مكتملون" value={summary.completedCount} tone="success" />
         <StatCard primary label="ينتظرون الفحص" value={summary.studentsReadyForReview} tone={summary.studentsReadyForReview > 0 ? "attention" : "neutral"} />
         <StatCard primary label="مراحل جاهزة للفحص" value={summary.totalReadyStages} tone="info" hint={"بلا تحديث " + summary.staleDays + "+ أيام: " + summary.staleCount} />
+        {selfStages > 0 && <StatCard primary label="حدّدها الطلاب" value={selfStages} tone="attention" hint={"من " + selfStudents + " طالب — بانتظار تأكيدك"} />}
       </div>
+      {shortcuts && (
+        <div className="eb-project-review-shortcuts" role="group" aria-label="ما ينتظرك">
+          {summary.totalReadyStages > 0 && <button type="button" className="eb-button is-primary" onClick={() => onOpenBulk("ready")}><IconCheck size={16} aria-hidden="true" />فحص المراحل الجاهزة ({summary.totalReadyStages})</button>}
+          {selfStages > 0 && <button type="button" className={"eb-button" + (summary.totalReadyStages > 0 ? "" : " is-primary")} onClick={() => onOpenBulk("self")}><IconCheck size={16} aria-hidden="true" />تأكيد ما حدّده الطلاب ({selfStages})</button>}
+        </div>
+      )}
       <div className="eb-project-progress-card">
         <ProgressBar label="التقدم العام للصف" value={summary.avgOverall} tone="primary" />
         <div className="eb-project-track-bars">

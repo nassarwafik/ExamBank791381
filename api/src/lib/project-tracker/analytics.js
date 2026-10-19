@@ -3,6 +3,11 @@
 // (keys by trackId) — the same code drives 794589 / 899373 / 883589 and any future project.
 const core = require("./core");
 
+function selfReportedTotals(summaries) {
+  const total = summaries.reduce((s, x) => s + (x.selfReportedCount || 0), 0);
+  return total ? { studentsSelfReported: summaries.filter(s => s.selfReportedCount > 0).length, totalSelfReportedStages: total } : {};
+}
+
 // entries: [{ studentId, displayName, progress }]
 function buildClassSummary(definition, entries, now) {
   const summaries = entries.map(e => core.buildStudentSummary(definition, e.progress, now));
@@ -19,7 +24,9 @@ function buildClassSummary(definition, entries, now) {
     totalReadyStages: summaries.reduce((s, x) => s + x.readyForReviewCount, 0),
     staleCount: summaries.filter(s => s.stale).length,
     trackWeights: definition.trackWeights,
-    staleDays: definition.config ? definition.config.staleDays : 7
+    staleDays: definition.config ? definition.config.staleDays : 7,
+    // Phase P6 — the students' own marks (P2) awaiting the teacher's confirmation; present only when there are any.
+    ...selfReportedTotals(summaries)
   };
 }
 

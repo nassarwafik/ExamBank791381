@@ -81,7 +81,9 @@ describe("P1 bulk review — ready list", () => {
     await mount({ onReadyChanged });
     expect(screen.getByRole("button", { name: "بانتظار الاعتماد (3)" }).getAttribute("aria-pressed")).toBe("true");
     const list = screen.getByRole("list", { name: "مراحل بانتظار الاعتماد" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+    // Phase P6 — the waiting list is grouped (a group per student, each with its own list), so its rows are counted by
+    // their checkboxes (updated deliberately; the same three stages).
+    expect(within(list).getAllByRole("checkbox")).toHaveLength(3);
     expect(approveBtn()).toHaveProperty("disabled", true);
     fireEvent.click(within(bar()).getByRole("button", { name: "تحديد الكل" }));
     expect(within(bar()).getByRole("status").textContent).toBe("3 محدد من 3");

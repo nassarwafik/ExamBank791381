@@ -148,7 +148,8 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     // /api/messages?kind=unread-summary is App's «الرسائل» badge (Phase 5D), owned by App like projects-summary — not the shell.
     // /api/saved-exams is the landing page's content, not the shell: since Phase 21F.9 the builder page opens on «امتحاناتي» (the
     // Exam Studio home), which lists the saved exams — once.
-    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary", "/api/teacher-profile", "/api/messages?kind=unread-summary", "/api/saved-exams"]));
+    // Phase P6 — the ONE summary read now asks for the students' own marks too (`include=attention`); updated deliberately.
+    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary&include=attention", "/api/teacher-profile", "/api/messages?kind=unread-summary", "/api/saved-exams"]));
     expect(calls.filter(u => pathOf(u) === "/api/teacher-profile").length).toBe(1);
     expect(calls.filter(u => pathOf(u) === "/api/saved-exams").length).toBe(1);
   });
