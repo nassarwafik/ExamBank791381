@@ -24,6 +24,7 @@ type Props = {
 const FILTERS: { key: StudentFilter; label: string }[] = [
   { key: "all", label: "الكل" },
   { key: "ready", label: "جاهزون للفحص" },
+  { key: "self", label: "حدّدوا مراحل" },
   { key: "late", label: "متأخرون" },
   { key: "not_started", label: "لم يبدأوا" },
   { key: "complete", label: "مكتملون" },
@@ -134,6 +135,7 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
                   <p className="eb-student-card-counts">
                     <span>{stageStatusLabel("approved")} {c.counts.approved}</span>
                     <span>{stageStatusLabel("ready_for_review")} {c.readyForReviewCount}</span>
+                    {(c.selfReportedCount || 0) > 0 && <span className="eb-student-card-self">حدّدها الطالب {c.selfReportedCount}</span>}
                     <span>{stageStatusLabel("in_progress")} {c.counts.in_progress}</span>
                     <span>{stageStatusLabel("not_started")} {c.counts.not_started}</span>
                   </p>

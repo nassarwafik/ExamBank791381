@@ -34,6 +34,8 @@ export type StudentCard = {
   trackProgress: Record<string, number>;
   counts: StatusCounts;
   readyForReviewCount: number;
+  /** Phase P6 — additive (absent on older payloads): stages the student marked as done that the teacher has not confirmed. */
+  selfReportedCount?: number;
   complete: boolean;
   updatedAt: string;
   stale: boolean;
@@ -56,6 +58,9 @@ export type ClassSummary = {
   completedCount: number;
   studentsReadyForReview: number;
   totalReadyStages: number;
+  /** Phase P6 — additive (absent on older payloads): the students' own marks awaiting the teacher's confirmation. */
+  studentsSelfReported?: number;
+  totalSelfReportedStages?: number;
   staleCount: number;
   trackWeights: Record<string, number>;
   staleDays: number;
@@ -135,4 +140,4 @@ export type ProjectAnalytics = {
 
 export type ProjectMeta = { projectCode: string; title: string; tracks: TrackMeta[] };
 
-export type StudentFilter = "all" | "ready" | "late" | "not_started" | "complete" | "stale";
+export type StudentFilter = "all" | "ready" | "self" | "late" | "not_started" | "complete" | "stale";

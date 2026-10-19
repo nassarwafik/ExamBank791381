@@ -24,6 +24,7 @@ export function filterStudentCards(cards: StudentCard[], filter: StudentFilter, 
     if (term && !(card.displayName.toLowerCase().includes(term) || String(card.code || "").toLowerCase().includes(term))) return false;
     switch (filter) {
       case "ready": return card.readyForReviewCount > 0;
+      case "self": return (card.selfReportedCount || 0) > 0;                // Phase P6 — marks waiting for the teacher
       case "late": return !card.complete && card.overallProgress < lateThreshold;
       // Phase P-5 — «لم يبدأوا» and «بلا تحديث» never overlap (a never-started student is not «بلا تحديث»).
       case "not_started": return isNotStarted(card);

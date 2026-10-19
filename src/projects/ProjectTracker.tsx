@@ -12,6 +12,8 @@ import { useConfirm } from "../ui/useConfirm";
 import StatusBadge from "../ui/StatusBadge";
 import { IconDashboard, IconStudents, IconReports, IconEdit, IconRefresh, IconLock, IconCheck } from "../icons";
 import type { ProjectClass, TrackMeta } from "./types";
+import type { ClassAttention } from "./projectAttention";
+import type { BulkMode } from "./ProjectBulkReview";
 import type { ProjectDrillTarget, ProjectEvaluationQueueView, ProjectStudentRef } from "./drillTarget";
 import "../projects-pro.css";
 
@@ -35,7 +37,19 @@ type Props = {
   onEvaluationQueueFinish?: () => void;
   /** 9G review — «العودة إلى آخر طالب في الجلسة»: open the queue's terminal item directly (App, fresh drill seq). */
   onEvaluationQueueReturnToTerminal?: () => void;
+  /** Phase P6 — what waits per active class of THIS project (App's projects-summary read): stages ready for review and
+   * the students' own marks awaiting confirmation. Shown in the class selector and on «التقييم الجماعي». */
+  attentionByClass?: Record<string, ClassAttention>;
 };
+
+// Phase P6 — «3 بانتظار الفحص · 2 حدّدها الطلاب» (empty when nothing waits).
+function attentionText(a: ClassAttention | undefined): string {
+  if (!a) return "";
+  const parts: string[] = [];
+  if (a.ready > 0) parts.push(a.ready + " بانتظار الفحص");
+  if (a.selfReported > 0) parts.push(a.selfReported + " حدّدها الطلاب");
+  return parts.join(" · ");
+}
 
 const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.ReactNode }[] = [
   { key: "dashboard", label: "لوحة المشروع", icon: s => <IconDashboard size={s} /> },
@@ -52,7 +66,7 @@ const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.Re
  * per project, then the resource of the current view for the selected class; the student list stays mounted
  * (hidden) while a student profile is open, so returning re-reads it only after a mutation.
  */
-export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null, evaluationQueue = null, onEvaluationQueueMove, onEvaluationQueueComplete, onEvaluationFocusExit, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal }: Props) {
+export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null, evaluationQueue = null, onEvaluationQueueMove, onEvaluationQueueComplete, onEvaluationFocusExit, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal, attentionByClass = {} }: Props) {
   const [classes, setClasses] = useState<ProjectClass[]>([]);
   // The project whose class list `classes` currently holds ("" until the first successful read). A drill target is
   // validated ONLY against a list loaded for the SAME project, and a stale classes response (an earlier project) is
@@ -62,6 +76,8 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const appliedDrillSeq = useRef(0);
   const [classId, setClassId] = useState("");
   const [view, setView] = useState<ProjectView>("dashboard");
+  // Phase P6 — the review mode «التقييم الجماعي» opens on when reached from a dashboard shortcut (else its own default).
+  const [bulkMode, setBulkMode] = useState<BulkMode | null>(null);
   const [title, setTitle] = useState("");
   const [tracks, setTracks] = useState<TrackMeta[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,8 +156,10 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
 
   // 9E/9F — leaving the drill flow by hand: no focus mode for what follows, and App ends the evaluation session.
   function leaveFocusFlow() { if (evaluationFocusSeq) onEvaluationFocusExit?.(); setEvaluationFocusSeq(0); }
-  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); leaveFocusFlow(); studentsDirty.current = false; }
-  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); leaveFocusFlow(); studentsDirty.current = false; }
+  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); setBulkMode(null); leaveFocusFlow(); studentsDirty.current = false; }
+  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); setBulkMode(null); leaveFocusFlow(); studentsDirty.current = false; }
+  // Phase P6 — a dashboard shortcut: «التقييم الجماعي» on the list that waits (ready stages, or the students' own marks).
+  function openBulk(mode: BulkMode) { changeView("bulk"); setBulkMode(mode); }
   function openStudent(studentId: string, trigger?: HTMLElement | null) {
     studentOpener.current = trigger instanceof HTMLElement ? trigger : null;
     studentsDirty.current = false;
@@ -178,6 +196,8 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const selected = useMemo(() => classes.find(c => c.classId === classId) || null, [classes, classId]);
   const readOnly = selected?.status === "archived";
   const trackNames = tracks.map(t => t.title).join(" · ");
+  const selectedAttention = attentionByClass[classId];
+  const classWaiting = selectedAttention && !readOnly ? selectedAttention.ready + selectedAttention.selfReported : 0;
 
   return (
     <section className="eb-project-workspace">
@@ -192,7 +212,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               {!classes.length && <option value="">—</option>}
               {activeClasses.length > 0 && (
                 <optgroup label="الصفوف النشطة">
-                  {activeClasses.map(c => <option key={c.classId} value={c.classId}>{c.name} — {c.schoolYear}</option>)}
+                  {activeClasses.map(c => { const waiting = attentionText(attentionByClass[c.classId]); return <option key={c.classId} value={c.classId}>{c.name} — {c.schoolYear}{waiting ? " (" + waiting + ")" : ""}</option>; })}
                 </optgroup>
               )}
               {archivedClasses.length > 0 && (
@@ -205,7 +225,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           {readOnly && <StatusBadge tone="warn" className="eb-project-readonly"><IconLock size={14} aria-hidden="true" />مؤرشف — للقراءة فقط</StatusBadge>}
           <div className="eb-segmented eb-project-views" role="group" aria-label="أقسام المشروع">
             {VIEWS.map(v => (
-              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => { if (v.key !== view || v.key === "students") afterSettingsGuard(() => changeView(v.key)); }} disabled={!classId}>{v.icon(16)}<span>{v.label}</span></button>
+              <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => { if (v.key !== view || v.key === "students") afterSettingsGuard(() => changeView(v.key)); }} disabled={!classId}>{v.icon(16)}<span>{v.label}</span>{v.key === "bulk" && classWaiting > 0 && <span className="eb-view-count" aria-label={attentionText(selectedAttention)}>{classWaiting}</span>}</button>
             ))}
           </div>
           <ActionMenu label="المزيد من إجراءات المشروع">
@@ -221,7 +241,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
         <EmptyState title="لا يوجد صف مرتبط بهذا المشروع بعد." description={"فعّل المشروع (" + projectCode + ") للصف من صفحة «الصفوف والطلاب»."} />
       ) : classId && tracks.length > 0 ? (
         <div className="eb-project-body" key={viewNonce}>
-          {view === "dashboard" && <ProjectDashboard token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
+          {view === "dashboard" && <ProjectDashboard token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onOpenBulk={openBulk} />}
           {view === "students" && (
             <>
               <div hidden={!!openStudentId}>
@@ -236,7 +256,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               )}
             </>
           )}
-          {view === "bulk" && <ProjectBulkReview token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onGridDirty} />}
+          {view === "bulk" && <ProjectBulkReview key={bulkMode || "auto"} token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onGridDirty} initialMode={bulkMode} />}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
           {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onSettingsDirty} />}
         </div>

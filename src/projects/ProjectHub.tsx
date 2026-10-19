@@ -10,13 +10,15 @@ type Props = {
   status: "loading" | "ready" | "error";
   /** Ready-for-review counts per project from the existing global projects-summary read. */
   readyByProject: Record<string, number>;
+  /** Phase P6 — stages the students marked as done that wait for the teacher's confirmation, per project (same read). */
+  selfReportedByProject?: Record<string, number>;
   onRetry?: () => void;
   onOpenProject: (projectCode: string) => void;
 };
 
 // Landing page for "المشاريع": one card per registered project. The shell owns the page title, so the hub
 // starts directly with content (no hero / eyebrow).
-export default function ProjectHub({ projects, status, readyByProject, onRetry, onOpenProject }: Props) {
+export default function ProjectHub({ projects, status, readyByProject, selfReportedByProject = {}, onRetry, onOpenProject }: Props) {
   if (status === "error") {
     return (
       <section className="eb-projects-hub" aria-label="المشاريع">
@@ -38,6 +40,7 @@ export default function ProjectHub({ projects, status, readyByProject, onRetry, 
       <ul className="eb-project-cards">
         {projects.map(p => {
           const ready = Number(readyByProject[p.projectCode]) || 0;
+          const self = Number(selfReportedByProject[p.projectCode]) || 0;
           return (
             <li key={p.projectCode} className="eb-project-card">
               <div className="eb-project-card-head">
@@ -51,9 +54,12 @@ export default function ProjectHub({ projects, status, readyByProject, onRetry, 
                 {p.tracks.map(t => <li key={t.trackId}><StatusBadge tone="neutral">{t.title}</StatusBadge></li>)}
               </ul>
               <div className="eb-project-card-foot">
-                {ready > 0
-                  ? <StatusBadge tone="info">{ready} مراحل بانتظار الفحص</StatusBadge>
-                  : <span className="eb-muted eb-project-card-quiet">لا مراحل بانتظار الفحص</span>}
+                <span className="eb-project-card-attention">
+                  {ready > 0
+                    ? <StatusBadge tone="info">{ready} مراحل بانتظار الفحص</StatusBadge>
+                    : <span className="eb-muted eb-project-card-quiet">لا مراحل بانتظار الفحص</span>}
+                  {self > 0 && <StatusBadge tone="warn">{self} حدّدها الطلاب بانتظار تأكيدك</StatusBadge>}
+                </span>
                 <button type="button" className="eb-button is-primary" onClick={() => onOpenProject(p.projectCode)}>فتح المشروع</button>
               </div>
             </li>

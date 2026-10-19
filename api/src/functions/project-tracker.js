@@ -26,7 +26,7 @@ const { listUsersForReadViews } = require("../lib/project-tracker/user-directory
 const { isSelfReported } = require("../lib/project-tracker/self-report");
 const { validateTemplatePatch } = require("../lib/project-tracker/template-validation");
 const analytics = require("../lib/project-tracker/analytics");
-const { countReadyStages } = require("../lib/project-tracker/ready-count");
+const { countReadyStages, countSelfReportedStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -199,13 +199,22 @@ async function handler(request, deps = {}, obs = null) {
           const [stored, docs] = await Promise.all([downloadJsonOrNull(container, ns.configName(c.classId)), listJson(container, ns.progressPrefix(c.classId))]);
           const snapshot = stored || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
           const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
-          return countReadyStages(docs, activeStageIds, sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId));
+          const isMember = sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId);
+          return { ready: countReadyStages(docs, activeStageIds, isMember), self: countSelfReportedStages(docs, activeStageIds, isMember) };
         });
-        const byProject = {};
-        let total = 0;
-        for (const code of getSupportedProjects()) byProject[code] = 0;
-        pairs.forEach(({ code }, i) => { byProject[code] += counts[i]; total += counts[i]; });
-        return { status: 200, jsonBody: { ok: true, totalReadyForReview: total, byProject } };
+        // Phase P6 — the students' own marks awaiting the teacher's confirmation, by the same rules, and both figures per
+        // active class (only classes with something waiting) for the workspace's class selector.
+        const byProject = {}, selfReportedByProject = {}, byClass = {};
+        let total = 0, totalSelfReported = 0;
+        for (const code of getSupportedProjects()) { byProject[code] = 0; selfReportedByProject[code] = 0; byClass[code] = {}; }
+        pairs.forEach(({ code, c }, i) => {
+          byProject[code] += counts[i].ready; total += counts[i].ready;
+          selfReportedByProject[code] += counts[i].self; totalSelfReported += counts[i].self;
+          if (counts[i].ready || counts[i].self) byClass[code][c.classId] = { ready: counts[i].ready, selfReported: counts[i].self };
+        });
+        // The P6 figures are opt-in (`include=attention`): the default body is unchanged for every existing caller.
+        const attention = String(new URL(request.url).searchParams.get("include") || "") === "attention";
+        return { status: 200, jsonBody: { ok: true, totalReadyForReview: total, byProject, ...(attention ? { totalSelfReported, selfReportedByProject, byClass } : {}) } };
       }
 
       if (!projectCode) return { status: 400, jsonBody: { ok: false, error: "projectCode مطلوب." } };
@@ -425,7 +434,8 @@ async function handler(request, deps = {}, obs = null) {
               const { workDef, stage, written, previous, outcome } = result;
               await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
               const targetId = projectCode + "/" + classId + "/" + studentId + "/" + stageId;
-              if (outcome.statusChanged) readyChanged = true;
+              // Phase P6 — confirming a student's own mark changes the teacher's attention counts (P2 self-reports) too.
+              if (outcome.statusChanged || outcome.verified) readyChanged = true;
               if (outcome.statusChanged || outcome.verified) {
                 await rec(container, { actor: auth.user?.sub, action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change", targetType: "project-stage", targetId, targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, via: "progress.bulk", ...(outcome.verified ? { verifiedSelfReport: true } : {}) } });
               }
