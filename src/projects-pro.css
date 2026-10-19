@@ -307,7 +307,7 @@
 .eb-score-cell.is-ready{ background:var(--eb-info-bg); }
 .eb-score-cell.is-changed input{ border:2px solid var(--eb-warn-tx); }
 .eb-score-cell.is-invalid input{ border:2px dashed var(--eb-danger-tx); background:var(--eb-danger-bg); }
-.eb-score-grid-failures ul{ margin:0; padding-inline-start:var(--eb-space-4); }
+.eb-score-grid-failures ul{ margin:0; padding:0; list-style-position:inside; }
 .eb-score-grid-failures{ margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
 .eb-score-grid-legend{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); margin:0; font-size:var(--eb-fs-12); }
 .eb-score-legend::before{ content:""; display:inline-block; width:12px; height:12px; margin-inline-end:6px; vertical-align:-1px; border-radius:3px; border:1px solid var(--eb-line-2); }

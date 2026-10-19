@@ -261,7 +261,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   );
   function goToSibling(target: SiblingRef) {
     if (!unsavedDrafts) { onOpenSibling?.(target.studentId); return; }
-    void confirm({ title: "تغييرات غير محفوظة", message: "في ملف هذا الطالب علامات أو ملاحظات لم تُحفظ. هل تريد تجاهلها والانتقال إلى " + target.displayName + "؟", confirmLabel: "تجاهل والانتقال", cancelLabel: "البقاء هنا", tone: "danger" })
+    void confirm({ title: "علامات أو ملاحظات لم تُحفظ", message: "في ملف هذا الطالب علامات أو ملاحظات لم تُحفظ. هل تريد تجاهلها والانتقال إلى " + target.displayName + "؟", confirmLabel: "تجاهل والانتقال", cancelLabel: "البقاء هنا", tone: "danger" })
       .then(ok => { if (ok) onOpenSibling?.(target.studentId); });
   }
   const siblingNav = siblings && onOpenSibling && (siblings.previous || siblings.next) ? (
