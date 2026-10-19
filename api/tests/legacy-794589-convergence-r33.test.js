@@ -14,6 +14,11 @@ import { fileURLToPath } from "node:url";
 //    ("SL.*") were removed with their 59 golden entries, and a teacher READ no longer writes. Exactly four GET
 //    scenarios were refreshed, and only their storage delta / system audits (status, body and route audits unchanged):
 //    REFRESHED_BY_P9 below.
+//    Phase P-5b (reviewed golden change): a never-started student is no longer «بلا تحديث». Exactly ten entries were
+//    refreshed, and only these body fields changed: `stale` true → false and `notStarted: true` added on the never-started
+//    students' summaries, and `staleCount` 2 → 1 in G794589.summary.c1 (REFRESHED_BY_P5B; invariant B8). Two of them
+//    (G794589.student.c4.s7.v1, SG.s7) came with the reconciliation onto P7, whose V1 restart leaves s7 not started
+//    (only `notStarted: true` was added there).
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -35,6 +40,7 @@ const ids = F.SCENARIOS.map(s => s.id);
 const generic794589Ids = ids.filter(id => id.startsWith("G794589."));
 const GENERIC_SNAPSHOT_KEYS = ["schemaVersion", "projectCode", "classId", "templateVersion", "tracks", "trackWeights", "config", "groups", "stages", "createdAt", "updatedAt"];
 const REFRESHED_BY_P9 = ["G794589.template.c2.lazyCreate", "G794589.template.c3.v1NoProgress", "G794589.template.cL.legacyScalar", "G899373.template.cN.enrolled"];
+const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10", "G794589.student.c4.s7.v1", "SG.s7"];
 const inLegacyNamespace = n => n.startsWith(F.LEGACY_CONFIG) || (n.startsWith(F.LEGACY_PROGRESS) && !/^platform\/project-progress\/(899373|883589)\//.test(n));
 const inNamespace = (code, n) => n.startsWith("platform/project-trackers/" + code + "/") || n.startsWith("platform/project-progress/" + code + "/");
 const touched = r => [...r.storage.added, ...r.storage.removed, ...r.storage.changed];
@@ -145,6 +151,31 @@ describe("B. explicit invariants", () => {
     expect(R["SG.nobody"].status).toBe(401);
     // P7b: the V1 class with progress is shown restarted from zero on the condensed set (the read writes nothing)
     expect(R["SG.s7"].body.projects[0].summary.trackProgress.book).toBe(0); expect(R["SG.s7"].body.projects[0].nextStages.book.stageId).toBe("BK01"); expect(touched(R["SG.s7"])).toEqual([]);
+  });
+});
+
+describe("B8. Phase P-5b — «لم يبدأ» is never «بلا تحديث»", () => {
+  // every student summary any scenario returns (teacher detail, cards, student projects)
+  const summaries = () => {
+    const out = [];
+    const walk = (v, id) => { if (Array.isArray(v)) v.forEach(x => walk(x, id)); else if (v && typeof v === "object") { if ("stale" in v && "counts" in v) out.push({ id, s: v }); for (const k of Object.keys(v)) walk(v[k], id); } };
+    for (const id of ids) walk(R[id].body, id);
+    return out;
+  };
+  it("a summary is notStarted exactly when no active stage left «لم يبدأ»; a notStarted summary is never stale", () => {
+    const all = summaries();
+    expect(all.length).toBeGreaterThan(20);
+    for (const { id, s } of all) {
+      const started = s.counts.in_progress + s.counts.ready_for_review + s.counts.approved > 0;
+      expect(s.notStarted === true, id).toBe(!started);
+      if (!started) expect(s.stale, id).toBe(false);
+      if (started) expect("notStarted" in s, id).toBe(false);
+    }
+  });
+  it("the refreshed entries are exactly the ones that carry a never-started student", () => {
+    const withNotStarted = [...new Set(summaries().filter(x => x.s.notStarted).map(x => x.id))];
+    expect(withNotStarted.filter(id => !REFRESHED_BY_P5B.includes(id))).toEqual([]);
+    expect(R["G794589.summary.c1"].body.summary.staleCount).toBe(1);
   });
 });
 

@@ -85,6 +85,10 @@ function buildStudentSummary(definition, progressDoc, now) {
   const complete = isStudentComplete(stages, progressDoc);
   const updatedAt = (progressDoc && progressDoc.updatedAt) || "";
   const selfReportedCount = countSelfReported(stages, progressDoc);
+  // Phase P-5b — «started» = at least one ACTIVE stage left «لم يبدأ» (in progress, waiting for review or approved).
+  // A never-started student is never «بلا تحديث»: an empty updatedAt reads as infinitely old, which used to count every
+  // never-started student as stale.
+  const notStarted = counts.in_progress + counts.ready_for_review + counts.approved === 0;
   return {
     overallProgress,
     trackProgress,
@@ -92,7 +96,9 @@ function buildStudentSummary(definition, progressDoc, now) {
     readyForReviewCount: counts.ready_for_review,
     complete,
     updatedAt,
-    stale: getStaleState(updatedAt, staleDays, now, complete),
+    stale: !notStarted && getStaleState(updatedAt, staleDays, now, complete),
+    // Phase P-5b — present only for a never-started student, so every other body is unchanged.
+    ...(notStarted ? { notStarted: true } : {}),
     // Phase P6 — present only when the student has unconfirmed marks (absent = 0), so every other body is unchanged.
     ...(selfReportedCount ? { selfReportedCount } : {})
   };
