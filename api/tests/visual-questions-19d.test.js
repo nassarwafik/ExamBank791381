@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createRequire } from "node:module";
 import { gradeExam } from "../src/lib/assignment-grading.js";
 import { resolveGrader } from "../src/lib/question-type-graders.js";
@@ -20,7 +20,8 @@ const IMG = { exists: true, visible: true, assets: [{ dataUrl: "data:image/png;b
 const HCFG = { v: 1, mode: "multiple", selections: 3, alt: "مخطط شبكة فيه موجّه ومبدّل وجدار حماية" };
 const HKEY = { scoring: "proportional", regions: [{ id: "target-router", shape: { kind: "rect", x: 0.137, y: 0.113, width: 0.181, height: 0.173 } }, { id: "target-switch", shape: { kind: "circle", cx: 0.617, cy: 0.311, r: 0.093 } }, { id: "target-firewall", shape: { kind: "polygon", points: [{ x: 0.413, y: 0.611 }, { x: 0.719, y: 0.607 }, { x: 0.557, y: 0.893 }] } }] };
 const HIN = { router: { x: 0.2, y: 0.2 }, sw: { x: 0.62, y: 0.31 }, fw: { x: 0.55, y: 0.7 }, none: { x: 0.95, y: 0.05 } };
-const HSECRETS = /target-router|target-switch|target-firewall|0\.137|0\.181|0\.617|0\.093|0\.413|0\.719|0\.557|"regions"/;   // hotspot-specific: checked on whole payloads
+// The coordinates match only as a whole number (not inside a longer one, e.g. a timestamp "…:50.557Z" — see the clock test below).
+const HSECRETS = /target-router|target-switch|target-firewall|(?<![\d.])0\.(?:137|181|617|093|413|719|557)(?![\d])|"regions"/;   // hotspot-specific: checked on whole payloads
 const HCANARIES = new RegExp(HSECRETS.source + '|"shape"|"scoring"|proportional');                                                    // + generic key tokens: checked on hotspot-only output
 const LCFG = { v: 1, alt: "مخطط طبقات نموذج OSI", allowReuse: false, zones: [{ id: "z1", shape: { kind: "rect", x: 0.1, y: 0.1, width: 0.2, height: 0.1 }, name: "العليا" }, { id: "z2", shape: { kind: "rect", x: 0.1, y: 0.3, width: 0.2, height: 0.1 } }, { id: "z3", shape: { kind: "circle", cx: 0.7, cy: 0.5, r: 0.1 } }], labels: [{ id: "l-app", text: "Application" }, { id: "l-net", text: "Network" }, { id: "l-phy", text: "Physical" }, { id: "l-ses", text: "Session" }] };
 const LKEY = { scoring: "proportional", correctLabelByZone: { z1: "l-app", z2: "l-net", z3: "l-phy" } };
@@ -190,6 +191,22 @@ describe("19D — end to end through the REAL handlers", () => {
     const [h, d] = r.jsonBody.assignment.exam.sections[0].questions;
     expect(h.hotspot).toEqual(HCFG); expect(h.image.assets[0].dataUrl).toBe(IMG.assets[0].dataUrl); expect(d.labelDiagram).toEqual(LCFG_DELIVERED);
     expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(r.jsonBody)).not.toMatch(LCANARIES);
+  });
+  // Hotfix — the payload carries real timestamps (dueAt = now + 1 day). A clock whose milliseconds read "557" right after a
+  // "…5" seconds digit ("…:50.557Z") used to match the numeric canary 0\.557 inside the timestamp: a false leak report
+  // (main cc444485, CI run 39309915726). The canaries match a coordinate only as a whole JSON number.
+  it("delivery under a clock whose timestamp contains a canary's digits («…:50.557Z»): still no false leak, still no real one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-19T19:20:50.557Z") });
+    try {
+      const ctx = F.seed({ a: assignment() });
+      const r = await studentAssignment().handler(F.studentRequest(undefined, "GET"), deps(ctx));
+      expect(r.status).toBe(200);
+      expect(JSON.stringify(r.jsonBody)).toContain("50.557Z");                    // the timestamp really carries the digits
+      const [h] = r.jsonBody.assignment.exam.sections[0].questions;
+      expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(HSECRETS);
+    } finally { vi.useRealTimers(); }
+    // the anchored canaries still catch every coordinate as a JSON number, and the target ids
+    for (const leak of ['{"x":0.137}', '{"width":0.181}', '[0.617,1]', '{"r":0.093}', '"target-router"', '{"regions":[]}']) expect(leak).toMatch(HSECRETS);
   });
   it("saveDraft then submit: bound answers stored, graded by the server, nothing private in responses or logs; review shows the overlays' data", async () => {
     const ctx = F.seed({ a: assignment() });
