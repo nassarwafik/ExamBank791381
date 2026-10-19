@@ -146,11 +146,11 @@ export default function RosterPane(p: RosterPaneProps) {
       {p.bulkErrors.length > 0 && <div className="platform-warning" role="alert"><strong>عمليات لم تكتمل:</strong>{p.bulkErrors.map((x, i) => <div key={x.userId || i}>{x.displayName || x.userId || "السطر " + ((x.index ?? i) + 1)}: {x.error}</div>)}</div>}
 
       {p.visibleStudents.length > 0 && (
-        <div className="students-table-wrap eb-roster-table-wrap"><table className="students-table students-table-pro eb-roster-table">
+        <div className="students-table-wrap eb-roster-table-wrap"><table className="students-table students-table-pro eb-roster-table" aria-label={"طلاب " + classroom.name}>
           <thead><tr>
             <th scope="col" className="eb-col-select"><label className="eb-check-hit"><input type="checkbox" checked={allVisibleSelected} onChange={p.onToggleSelectVisible} aria-label="تحديد الكل" /></label></th>
             {SORT_COLUMNS.map(c => sortTh(c.key, c.label))}
-            <th scope="col">آخر دخول</th><th scope="col">الوظائف</th><th scope="col" className="eb-col-actions"><VisuallyHidden>الإجراءات</VisuallyHidden></th>
+            <th scope="col">آخر دخول</th><th scope="col">الواجبات</th><th scope="col" className="eb-col-actions"><VisuallyHidden>الإجراءات</VisuallyHidden></th>
           </tr></thead>
           <tbody>{p.visibleStudents.map(student => {
             const selected = p.selectedIds.includes(student.userId);
@@ -164,9 +164,9 @@ export default function RosterPane(p: RosterPaneProps) {
             <td dir="ltr" data-label="رقم الهوية" className="eb-col-identity">{student.identityNumber || student.code || "يحتاج تحديث"}</td>
             <td data-label="الحالة" className="eb-col-status"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
             <td data-label="آخر دخول" className="eb-col-login">{lastLogin ? <time dateTime={student.lastLoginAt} title={lastLogin.full}>{lastLogin.label}</time> : <span className="never-login">لم يدخل بعد</span>}</td>
-            <td data-label="الوظائف" className="eb-col-tasks">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الوظائف ({student.submittedAssignmentsCount})</button> : <span className="eb-muted">—</span>}</td>
+            <td data-label="الواجبات" className="eb-col-tasks">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الواجبات ({student.submittedAssignmentsCount})<VisuallyHidden> — {student.displayName}</VisuallyHidden></button> : <span className="eb-muted"><span aria-hidden="true">—</span><VisuallyHidden>لا واجبات مسلّمة</VisuallyHidden></span>}</td>
             <td className="eb-col-actions"><div className="eb-row-actions">
-              <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>التفاصيل</VisuallyHidden></button>
+              <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>{"تفاصيل " + student.displayName}</VisuallyHidden></button>
               <ActionMenu label={"إجراءات " + student.displayName}>
                 <button type="button" className="eb-menu-item" onClick={() => p.onEdit(student)} disabled={p.busy}><IconEdit size={16} />تعديل</button>
                 <button type="button" className="eb-menu-item" onClick={() => p.onCopyIdentity(student)}><IconCopy size={16} />نسخ رقم الهوية</button>

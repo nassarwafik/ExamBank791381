@@ -57,14 +57,14 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     expect(screen.getByRole("heading", { level: 2, name: "صف جيد" })).toBeTruthy();   // roster pane is headed by the selected class
   });
 
-  it("archive tab: the inconsistent class renders with the archived row style and offers 'تفعيل', not 'أرشفة الصف'", async () => {
+  it("archive tab: the inconsistent class renders with the archived row style and offers 'استعادة الصف', not 'أرشفة الصف'", async () => {
     await mount();
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
     await within(document.querySelector(".class-list") as HTMLElement).findByText("صف متناقض");
     const row = classRow("صف متناقض");
     expect(row.className).toContain("archived");
     const menu = await classMenu(row);
-    expect(within(menu).getByRole("button", { name: "تفعيل" })).toBeTruthy();
+    expect(within(menu).getByRole("button", { name: "استعادة الصف" })).toBeTruthy();
     expect(within(menu).queryByRole("button", { name: "أرشفة الصف" })).toBeNull();
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: /الصفوف النشطة/ }));

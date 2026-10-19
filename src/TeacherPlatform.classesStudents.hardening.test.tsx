@@ -83,8 +83,8 @@ describe("defect: stale profile responses", () => {
     await mount();
     const slow = deferred<Response>();
     override = (url) => url.includes("profileUserId=s1") ? slow.promise : undefined;
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
-    fireEvent.click(within(rowOf("بسمة")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
+    fireEvent.click(within(rowOf("بسمة")).getByRole("button", { name: /^تفاصيل / }));
     expect(await screen.findByRole("dialog", { name: "بسمة أحمد" })).toBeTruthy();
     await act(async () => { slow.resolve(json(profileOf(S1))); await slow.promise; });
     await new Promise(r => setTimeout(r, 0));
@@ -95,7 +95,7 @@ describe("defect: stale profile responses", () => {
     await mount();
     const slow = deferred<Response>();
     override = (url) => url.includes("profileUserId=s1") ? slow.promise : undefined;
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
     selectClass("الثاني عشر 8");
     await screen.findByText("نور");
     await act(async () => { slow.resolve(json(profileOf(S1))); await slow.promise; });
@@ -191,13 +191,13 @@ describe("defect: transport failures", () => {
     const onSessionExpired = vi.fn();
     await mount({ onSessionExpired });
     override = () => json({ ok: false, error: "Unauthorized" }, 401);
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
     await waitFor(() => expect(onSessionExpired).toHaveBeenCalledTimes(1));
   });
   it("a non-JSON 502 page becomes an Arabic message, never a parser error", async () => {
     await mount();
     override = () => ({ ok: false, status: 502, json: async () => { throw new SyntaxError("Unexpected token '<'"); } } as unknown as Response);
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("الخادم غير متاح حاليًا. أعد المحاولة بعد قليل.");
   });
@@ -224,7 +224,7 @@ describe("defect: graduation and school-year defaults", () => {
 describe("defect: provisional marks in the student history", () => {
   it("a mark that is not final is labelled provisional and the status never says «مصحح نهائيًا»", async () => {
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / }));
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
     const history = d.querySelectorAll("table")[1] as HTMLElement;
     const row = within(history).getByText("اختبار الكسور").closest("tr") as HTMLElement;
@@ -348,8 +348,8 @@ describe("visual pass: roster presentation", () => {
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     expect(rowOf("علي").className).toContain("is-selected");
     expect(rowOf("بسمة").className).not.toContain("is-selected");
-    expect(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" })).toBeTruthy();
-    expect(Array.from(rowOf("علي").querySelectorAll("td[data-label]")).map(td => td.getAttribute("data-label"))).toEqual(["الاسم", "اسم العائلة", "رقم الهوية", "الحالة", "آخر دخول", "الوظائف"]);
+    expect(within(rowOf("علي")).getByRole("button", { name: /^تفاصيل / })).toBeTruthy();
+    expect(Array.from(rowOf("علي").querySelectorAll("td[data-label]")).map(td => td.getAttribute("data-label"))).toEqual(["الاسم", "اسم العائلة", "رقم الهوية", "الحالة", "آخر دخول", "الواجبات"]);
   });
   it("while the roster loads, a skeleton with one status line is shown", async () => {
     const roster = deferred<Response>();

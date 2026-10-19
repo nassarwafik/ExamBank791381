@@ -116,7 +116,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
                 )}
                 {active && p.onEdit && <button type="button" className="eb-menu-item" onClick={() => p.onEdit?.(classroom)} disabled={p.busy}><IconEdit size={16} />تعديل بيانات الصف</button>}
                 {active && p.isGraduationEligible(classroom) && <button type="button" className="eb-menu-item" onClick={() => p.onGraduate(classroom)} disabled={p.busy}><IconGraduation size={16} />تخريج وأرشفة الصف</button>}
-                <button type="button" className="eb-menu-item" onClick={() => p.onToggleArchive(classroom)} disabled={p.busy}>{active ? <><IconArchive size={16} />أرشفة الصف</> : <><IconRestore size={16} />تفعيل</>}</button>
+                <button type="button" className="eb-menu-item" onClick={() => p.onToggleArchive(classroom)} disabled={p.busy}>{active ? <><IconArchive size={16} />أرشفة الصف</> : <><IconRestore size={16} />استعادة الصف</>}</button>
               </ActionMenu>
             </li>
           );
