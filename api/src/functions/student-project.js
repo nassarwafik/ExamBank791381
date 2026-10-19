@@ -14,7 +14,7 @@ const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { buildClassSnapshotFromDefault, PROGRAM_CODE } = require("../lib/project-794589-template");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
 const { getStorageNamespace } = require("../lib/project-tracker/registry");
-const { workingDefinition } = require("../lib/project-tracker/service");
+const { workingDefinition, condensedView } = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const shape = require("../lib/project-794589-legacy-shape");
 
@@ -46,10 +46,11 @@ async function handler(request, deps = {}, obs = null) {
       }
 
       const ns = getStorageNamespace(PROGRAM_CODE);
-      const config = (await downloadJsonOrNull(container, ns.configName(classId)))
-        || buildClassSnapshotFromDefault(classId, now);
+      // Phase P7 — a class still on the V2 set is SHOWN converted (in memory, never written), like the generic student route.
+      const view = condensedView(PROGRAM_CODE, await downloadJsonOrNull(container, ns.configName(classId)), await downloadJsonOrNull(container, ns.progressName(classId, studentId)), classroom, now);
+      const config = view.snapshot || buildClassSnapshotFromDefault(classId, now);
       const workDef = workingDefinition(PROGRAM_CODE, config);
-      const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
+      const progress = view.progress;
       const summary = core.buildStudentSummary(workDef, progress, now);
 
       return {

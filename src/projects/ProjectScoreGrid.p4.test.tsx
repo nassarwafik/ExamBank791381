@@ -28,8 +28,12 @@ const NOW = "2026-10-01T00:00:00.000Z";
 const DEF = getProjectDefinition(CODE);
 const TRACKS: TrackMeta[] = DEF.tracks;
 const G1 = (DEF.groups as { groupId: string; track: string; order: number; title: string }[]).filter(g => g.track === "book").sort((a, b) => a.order - b.order);
-const G1_STAGES = (DEF.stages as { stageId: string; groupId: string; order: number; active?: boolean }[]).filter(s => s.groupId === G1[0].groupId && s.active === true).sort((a, b) => a.order - b.order).map(s => s.stageId);
-const [B1, B2, B3] = G1_STAGES;
+const stagesOf = (groupId: string) => (DEF.stages as { stageId: string; groupId: string; order: number; active?: boolean }[]).filter(s => s.groupId === groupId && s.active === true).sort((a, b) => a.order - b.order).map(s => s.stageId);
+// P7: the condensed template's first book group holds one stage, so the grid tests work on the first book group with
+// three stages (opened through the group menu) and switch away to another book group.
+const GRID_GROUP = G1.find(g => stagesOf(g.groupId).length >= 3)!.groupId;
+const OTHER_GROUP = G1.find(g => g.groupId !== GRID_GROUP)!.groupId;
+const [B1, B2, B3] = stagesOf(GRID_GROUP);
 const user = (id: string, cid: string, name: string) => ({ userId: id, role: "student", active: true, archived: false, authVersion: 1, classId: cid, displayName: name, code: "C" + id });
 const room = (id: string, over: Body = {}) => ({ classId: id, name: "صف " + id, active: true, status: "active", studentIds: [], programCodes: [CODE], schoolYear: "2026", updatedAt: NOW, createdAt: NOW, ...over });
 const progress = (sid: string, cid: string, stages: Record<string, Body>) => ({ schemaVersion: 1, programCode: CODE, classId: cid, studentId: sid, startedAt: NOW, updatedAt: NOW, stages, history: [] });
@@ -58,6 +62,10 @@ async function openGrid(readOnly = false) {
   const view = render(<ProjectBulkReview token="t" projectCode={CODE} classId="c1" tracks={TRACKS} readOnly={readOnly} />);
   fireEvent.click(await screen.findByRole("button", { name: "جدول العلامات" }));
   await screen.findByRole("region", { name: "جدول العلامات" });
+  const select = screen.getByRole("combobox", { name: /المجموعة/ }) as HTMLSelectElement;
+  if (select.value !== GRID_GROUP) fireEvent.change(select, { target: { value: GRID_GROUP } });
+  if (!readOnly) await screen.findByRole("textbox", { name: new RegExp("^أحمد — " + B1 + " ") });
+  else await within(screen.getByRole("region", { name: "جدول العلامات" })).findByText("40");
   return view;
 }
 
@@ -187,7 +195,7 @@ describe("P4 — «جدول العلامات»", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(cell("بيان", B1).value).toBe("50");
     const select = screen.getByRole("combobox", { name: /المجموعة/ });
-    fireEvent.change(select, { target: { value: G1[1].groupId } });
+    fireEvent.change(select, { target: { value: OTHER_GROUP } });
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تجاهل العلامات" }));
     await waitFor(() => expect(screen.queryByRole("textbox", { name: new RegExp("— " + B1 + " ") })).toBeNull());
   });

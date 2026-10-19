@@ -136,14 +136,16 @@ describe("36/37/104/105/92. project milestones from real progress writes", () =>
   const access = def.stages.filter(s => s.track === "access" && s.required && s.active);
   it("AquaSense-style rank-up (190 → 205) creates ONE project_rank_up for that project; a second write in the same tier adds nothing; other projects untouched", async () => {
     const ctx = school();
-    // approve 8/20 book stages with score 100 → progress 20, grade 20 → strength 120 (bronze)
-    for (const s of book.slice(0, 8)) await update(ctx, { stageId: s.stageId, status: "approved", score: 100 });
+    // approve 8/20 of the book's weight with score 100 → progress 20, grade 20 → strength 120 (bronze)
+    // Phase P7 — the condensed stages weigh the old stages they merge: BK02 + BK03 + BK04 = 4 + 2 + 2 = 8 (updated deliberately).
+    const byId = id => book.find(s => s.stageId === id);
+    for (const s of ["BK02", "BK03", "BK04"].map(byId)) await update(ctx, { stageId: s.stageId, status: "approved", score: 100 });
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "project_899373_rank_bronze_s1")]);        // beginner → bronze once
     const ev = ctx.getJson(feedBlobName("c1", "project_899373_rank_bronze_s1"));
     expect(ev).toMatchObject({ eventType: "project_rank_up", project: { projectCode: "899373", title: "مشروع 899373", tier: "bronze", level: 2 }, shareWithClass: true });
     expect(ev.postId.endsWith("_s1")).toBe(true);
-    // keep approving to cross 200 (silver): 14/20 book → progress 35, grade 35 → 210
-    for (const s of book.slice(8, 14)) await update(ctx, { stageId: s.stageId, status: "approved", score: 100 });
+    // keep approving to cross 200 (silver): 14/20 of the book's weight (+ BK05 + BK06 = 3 + 3) → progress 35, grade 35 → 210
+    for (const s of ["BK05", "BK06"].map(byId)) await update(ctx, { stageId: s.stageId, status: "approved", score: 100 });
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "project_899373_rank_bronze_s1"), feedBlobName("c1", "project_899373_rank_silver_s1")]);
     expect(ctx.getJson(feedBlobName("c1", "project_899373_rank_silver_s1")).project.projectStrength).toBe(210);
     expect(feedNames(ctx).some(n => n.includes("883589"))).toBe(false);

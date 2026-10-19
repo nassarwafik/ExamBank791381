@@ -5,7 +5,7 @@
 // supported project of the class, with bounded concurrency. `deps` is the test seam (dl / mapConcurrent).
 const { downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../platform-storage");
 const { getProjectDefinition, getStorageNamespace } = require("./registry");
-const { workingDefinition, buildClassSnapshot } = require("./service");
+const { workingDefinition, buildClassSnapshot, condensedView } = require("./service");
 const { getSupportedClassProgramCodes } = require("./class-programs");
 const core = require("./core");
 
@@ -22,8 +22,13 @@ async function loadStudentProjects(container, classroom, classId, studentId, now
   return mc(codes, limit, async projectCode => {
     const definition = getProjectDefinition(projectCode);
     const ns = getStorageNamespace(projectCode);
-    const [storedSnapshot, progress] = await Promise.all([dl(container, ns.configName(classId)), dl(container, ns.progressName(classId, studentId))]);
-    const snapshot = storedSnapshot || buildClassSnapshot(definition, classId, now);
+    const [storedSnapshot, storedProgress] = await Promise.all([dl(container, ns.configName(classId)), dl(container, ns.progressName(classId, studentId))]);
+    // Phase P7 — a class still on the stage set the condensed one replaces is SHOWN converted (the same pure rules, in
+    // memory; a student read never writes), so the student never sees, or marks, stages that are about to disappear.
+    // The stored conversion happens on the next write or teacher read (service.ensureClassConfig).
+    const view = condensedView(projectCode, storedSnapshot, storedProgress, classroom, now);
+    const progress = view.progress;
+    const snapshot = view.snapshot || buildClassSnapshot(definition, classId, now);
     const workDef = workingDefinition(projectCode, snapshot);
     const summary = core.buildStudentSummary(workDef, progress, now);
     return { projectCode, definition, snapshot, workDef, progress, summary };

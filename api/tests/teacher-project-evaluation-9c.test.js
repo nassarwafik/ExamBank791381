@@ -43,7 +43,7 @@ describe("9C-B semantics — who needs evaluation", () => {
   });
   it("H2 a stage scored 0 IS graded (never counted as ungraded); H3 mixed stages count exactly the ungraded ones", async () => {
     const s = seed();
-    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { B01: 0, B02: 85, B03: undefined });
+    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { BK01: 0, BK02: 85, BK03: undefined });
     const ctx = createMemoryContainer(s);
     const row = (await pe(ctx)).attention.find(x => x.studentId === "s01" && x.projectCode === "899373");
     expect(row).toMatchObject({ gradedStages: 2, ungradedStages: TOTAL_A - 2, totalStages: TOTAL_A, evaluationProgress: Math.round((2 / TOTAL_A) * 100) });
@@ -63,9 +63,9 @@ describe("9C-B semantics — who needs evaluation", () => {
   it("H5 an inactive snapshot stage is neither total nor ungraded; a score on it is an orphan and ignored (H6)", async () => {
     const s = seed();
     const cfg = { ...getProjectDefinition("899373"), classId: "c1", createdAt: NOW, updatedAt: NOW };
-    cfg.stages = cfg.stages.map(st => (st.stageId === "B02" ? { ...st, active: false } : st));
+    cfg.stages = cfg.stages.map(st => (st.stageId === "BK02" ? { ...st, active: false } : st));
     s[NS.A.configName("c1")] = cfg;
-    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { B02: 90, GONE: 50, B01: 70 });   // B02 inactive + GONE unknown → orphans
+    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { BK02: 90, GONE: 50, BK01: 70 });   // B02 inactive + GONE unknown → orphans
     const ctx = createMemoryContainer(s);
     const row = (await pe(ctx)).attention.find(x => x.studentId === "s01" && x.projectCode === "899373");
     expect(row).toMatchObject({ totalStages: TOTAL_A - 1, gradedStages: 1, ungradedStages: TOTAL_A - 2 });
@@ -75,7 +75,7 @@ describe("9C-B semantics — who needs evaluation", () => {
     s["platform/classes/c1.json"].studentIds = ["s01"];
     for (const sid of ["s02", "s03", "s04", "s05"]) delete s["platform/users/" + sid + ".json"];
     s["platform/classes/c2.json"].programCodes = [];
-    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { B01: 10 });
+    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { BK01: 10 });
     const ctx = createMemoryContainer(s);
     const r = await pe(ctx);
     expect(r.attention.map(x => [x.studentId, x.projectCode, x.ungradedStages])).toEqual([["s01", "883589", TOTAL_B], ["s01", "899373", TOTAL_A - 1]].sort((a, b) => b[2] - a[2] || (a[1] < b[1] ? -1 : 1)));
@@ -152,8 +152,8 @@ describe("9C-C reads — bounded, never per student, never a container scan", ()
   it("H-reads: exactly ONE snapshot download + ONE progress-folder listing per active class × enrolled project; no per-student reads; archived class untouched", async () => {
     const s = seed();
     s[NS.A.configName("c1")] = { ...getProjectDefinition("899373"), classId: "c1", createdAt: NOW, updatedAt: NOW };
-    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { B01: 5 });
-    s[NS.A.progressName("c1", "s02")] = doc("899373", "c1", "s02", { B01: 5 });
+    s[NS.A.progressName("c1", "s01")] = doc("899373", "c1", "s01", { BK01: 5 });
+    s[NS.A.progressName("c1", "s02")] = doc("899373", "c1", "s02", { BK01: 5 });
     s[NS.A.progressName("c3", "s21")] = doc("899373", "c3", "s21", {});
     const ctx = createMemoryContainer(s);
     await todayHandler(req(), deps(ctx));   // Phase 12E-B: the first Today read bootstraps the assignment index (its only write)
@@ -183,8 +183,8 @@ describe("9C-C reads — bounded, never per student, never a container scan", ()
 describe("9C-F/K robustness, additivity, authorization", () => {
   it("H13 legacy / malformed progress documents never crash: string scores, null stages, a document without studentId, a snapshot without stages (skipped + reported)", async () => {
     const s = seed();
-    s[NS.A.progressName("c1", "s01")] = { programCode: "899373", classId: "c1", studentId: "s01", stages: { B01: { status: "approved", score: "abc" }, B02: null, B03: { status: "approved", score: 0 } } };
-    s[NS.A.progressName("c1", "orphan")] = { stages: { B01: { score: 50 } } };                          // no studentId → ignored
+    s[NS.A.progressName("c1", "s01")] = { programCode: "899373", classId: "c1", studentId: "s01", stages: { BK01: { status: "approved", score: "abc" }, BK02: null, BK03: { status: "approved", score: 0 } } };
+    s[NS.A.progressName("c1", "orphan")] = { stages: { BK01: { score: 50 } } };                          // no studentId → ignored
     s[NS.B.configName("c1")] = { projectCode: "883589", classId: "c1" };                                 // malformed snapshot: no stages
     const ctx = createMemoryContainer(s);
     const r = await todayHandler(req(), deps(ctx));

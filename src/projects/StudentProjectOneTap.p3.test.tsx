@@ -25,7 +25,12 @@ const ACTIVE = (getProjectDefinition(CODE).stages as Stage[]).filter(s => s.acti
 const BOOK = ACTIVE.filter(s => s.track === "book");
 const ACCESS = ACTIVE.filter(s => s.track === "access");
 const ids = (group: string) => BOOK.filter(s => s.groupId === group).map(s => s.stageId);
-const G1 = ids("book_g1"), G2 = ids("book_g2");                                  // B01–B03 «بداية الكتاب», B04–B07 «الجداول المستعملة»
+// Phase P7 (condensed template): BK01 «بداية الكتاب» (one stage), BK02–BK04 «الجداول وقاعدة البيانات», BK05–BK06
+// «الاستعلامات»; the Access track's single group AC01–AC04 «قاعدة بيانات Access» carries the four-stage group checks.
+const G1 = ids("bk_g1"), G2 = ids("bk_g2"), G3 = ids("bk_g3");
+const AC = ACCESS.filter(s => s.groupId === "ac_g1").map(s => s.stageId);
+const groupTitle = (id: string) => (getProjectDefinition(CODE).groups as { groupId: string; title: string }[]).find(g => g.groupId === id)!.title;
+const T1 = groupTitle("bk_g1"), T2 = groupTitle("bk_g2"), T3 = groupTitle("bk_g3"), TAC = groupTitle("ac_g1");
 const TEACHER = { status: "approved", approvedBy: "teacher-1", approvedAt: NOW };
 const SELF = { status: "approved", approvedBy: "s1", approvedAt: NOW, selfReportedAt: NOW, selfReportedBy: "s1", selfReportedFrom: "not_started" };
 const user = (id: string, cid: string, name: string) => ({ userId: id, role: "student", active: true, archived: false, authVersion: 1, classId: cid, displayName: name, code: "C" + id });
@@ -70,29 +75,29 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("P3 filters — what is left to do first", () => {
   it("opens on «المتبقية» with a count per view; approved and pending stages are only in their own views", async () => {
-    server({ [G1[2]]: TEACHER, [G2[0]]: SELF });
+    server({ [G1[0]]: TEACHER, [G2[0]]: SELF });
     await mount();
     expect(chipTexts()).toEqual(["المتبقية (" + (BOOK.length - 2) + ")", "بانتظار تأكيد المعلم (1)", "المعتمدة (1)", "الكل (" + BOOK.length + ")"]);
     expect(pressed()).toEqual(["المتبقية (" + (BOOK.length - 2) + ")"]);
-    expect(shownCodes()).toEqual(BOOK.map(s => s.stageId).filter(id => id !== G1[2] && id !== G2[0]));
+    expect(shownCodes()).toEqual(BOOK.map(s => s.stageId).filter(id => id !== G1[0] && id !== G2[0]));
     fireEvent.click(chip(/^بانتظار/));
     expect(shownCodes()).toEqual([G2[0]]);
     expect(screen.getByRole("button", { name: "تراجع عن تحديد " + G2[0] + " — " + stageTitle(G2[0]) })).toBeTruthy();
     fireEvent.click(chip(/^المعتمدة/));
-    expect(shownCodes()).toEqual([G1[2]]);
-    expect(within(rowOf(G1[2])).queryByRole("button")).toBeNull();               // a teacher-approved stage has no action
+    expect(shownCodes()).toEqual([G1[0]]);
+    expect(within(rowOf(G1[0])).queryByRole("button")).toBeNull();               // a teacher-approved stage has no action
   });
 
   it("a tap moves the stage to «بانتظار تأكيد المعلم» at once, and the view stays on «المتبقية»", async () => {
     const s = server();
     await mount();
-    fireEvent.click(screen.getByRole("button", { name: doneName(G1[1]) }));
-    await screen.findByText("تم تحديد " + G1[1] + " كمنفّذة. تظهر الآن لمعلمك.");
+    fireEvent.click(screen.getByRole("button", { name: doneName(G2[1]) }));
+    await screen.findByText("تم تحديد " + G2[1] + " كمنفّذة. تظهر الآن لمعلمك.");
     await waitFor(() => expect(chip(/^المتبقية/).textContent).toBe("المتبقية (" + (BOOK.length - 1) + ")"));
     expect(chip(/^بانتظار/).textContent).toBe("بانتظار تأكيد المعلم (1)");
-    expect(shownCodes()).not.toContain(G1[1]);
+    expect(shownCodes()).not.toContain(G2[1]);
     expect(pressed()[0]).toMatch(/^المتبقية/);
-    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G1[1]], mark: true }]);
+    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G2[1]], mark: true }]);
   });
 
   it("marking the last remaining stage says «أحسنت» instead of jumping to another view", async () => {
@@ -110,7 +115,7 @@ describe("P3 filters — what is left to do first", () => {
     server(all(BOOK.map(s => s.stageId), TEACHER));
     await mount();
     expect(pressed()).toEqual(["الكل (" + BOOK.length + ")"]);
-    expect(groupToggle("بداية الكتاب").getAttribute("aria-expanded")).toBe("true");   // a finished track keeps its scores in view
+    expect(groupToggle(T1).getAttribute("aria-expanded")).toBe("true");   // a finished track keeps its scores in view
     expect(shownCodes()).toEqual(BOOK.map(s => s.stageId));
     const accessTitle = (getProjectDefinition(CODE).tracks as { trackId: string; title: string }[]).find(t => t.trackId === "access")!.title;
     fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: accessTitle }));
@@ -123,17 +128,17 @@ describe("P3 groups — fold with their done / total count", () => {
     server({ ...all(G1, TEACHER), [G2[0]]: TEACHER });
     await mount();
     fireEvent.click(chip(/^الكل/));
-    expect(groupToggle("بداية الكتاب").getAttribute("aria-expanded")).toBe("false");
-    expect(within(groupOf("بداية الكتاب")).getByText(G1.length + " / " + G1.length + " منجزة")).toBeTruthy();
-    expect(within(groupOf("بداية الكتاب")).queryByText(G1[0])).toBeNull();
-    expect(groupToggle("الجداول المستعملة").getAttribute("aria-expanded")).toBe("true");
-    expect(within(groupOf("الجداول المستعملة")).getByText("1 / " + G2.length + " منجزة")).toBeTruthy();
-    fireEvent.click(groupToggle("بداية الكتاب"));
-    expect(groupToggle("بداية الكتاب").getAttribute("aria-expanded")).toBe("true");
-    expect(within(groupOf("بداية الكتاب")).getByText(G1[0])).toBeTruthy();
-    fireEvent.click(groupToggle("الجداول المستعملة"));
-    expect(within(groupOf("الجداول المستعملة")).queryByText(G2[1])).toBeNull();
-    expect(within(groupOf("الجداول المستعملة")).queryByRole("button", { name: /أنجزت المجموعة/ })).toBeNull();   // folded: no group action
+    expect(groupToggle(T1).getAttribute("aria-expanded")).toBe("false");
+    expect(within(groupOf(T1)).getByText(G1.length + " / " + G1.length + " منجزة")).toBeTruthy();
+    expect(within(groupOf(T1)).queryByText(G1[0])).toBeNull();
+    expect(groupToggle(T2).getAttribute("aria-expanded")).toBe("true");
+    expect(within(groupOf(T2)).getByText("1 / " + G2.length + " منجزة")).toBeTruthy();
+    fireEvent.click(groupToggle(T1));
+    expect(groupToggle(T1).getAttribute("aria-expanded")).toBe("true");
+    expect(within(groupOf(T1)).getByText(G1[0])).toBeTruthy();
+    fireEvent.click(groupToggle(T2));
+    expect(within(groupOf(T2)).queryByText(G2[1])).toBeNull();
+    expect(within(groupOf(T2)).queryByRole("button", { name: /أنجزت المجموعة/ })).toBeNull();   // folded: no group action
   });
 
   it("a group the student completes now stays open (it never folds under the finger)", async () => {
@@ -142,9 +147,9 @@ describe("P3 groups — fold with their done / total count", () => {
     fireEvent.click(chip(/^الكل/));
     const last = G2[G2.length - 1];
     fireEvent.click(screen.getByRole("button", { name: doneName(last) }));
-    await within(groupOf("الجداول المستعملة")).findByText(G2.length + " / " + G2.length + " منجزة");
-    expect(groupToggle("الجداول المستعملة").getAttribute("aria-expanded")).toBe("true");
-    expect(within(groupOf("الجداول المستعملة")).getByText(last)).toBeTruthy();
+    await within(groupOf(T2)).findByText(G2.length + " / " + G2.length + " منجزة");
+    expect(groupToggle(T2).getAttribute("aria-expanded")).toBe("true");
+    expect(within(groupOf(T2)).getByText(last)).toBeTruthy();
   });
 });
 
@@ -155,16 +160,18 @@ describe("P3 actions — the next step, a whole group, a double tap", () => {
     const card = document.querySelector(".eb-sp-next-card") as HTMLElement;
     expect(card.textContent).toContain(G1[0] + " — " + stageTitle(G1[0]));
     fireEvent.click(within(card).getByRole("button", { name: doneName(G1[0]) }));
-    await waitFor(() => expect((document.querySelector(".eb-sp-next-card") as HTMLElement).textContent).toContain(G1[1] + " — " + stageTitle(G1[1])));
+    await waitFor(() => expect((document.querySelector(".eb-sp-next-card") as HTMLElement).textContent).toContain(G2[0] + " — " + stageTitle(G2[0])));
     expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G1[0]], mark: true }]);
     expect(s.doc().stages[G1[0]]).toMatchObject({ status: "approved", selfReportedBy: "s1" });
   });
 
   it("«أنجزت المجموعة كلها» asks first, then sends ONE request with only the group's remaining stages", async () => {
-    const s = server({ [G2[1]]: TEACHER, [G2[2]]: SELF });
+    const s = server({ [AC[1]]: TEACHER, [AC[2]]: SELF });
     await mount();
+    const accessTitle = (getProjectDefinition(CODE).tracks as { trackId: string; title: string }[]).find(t => t.trackId === "access")!.title;
+    fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: accessTitle }));
     fireEvent.click(chip(/^الكل/));
-    const group = groupOf("الجداول المستعملة");
+    const group = groupOf(TAC);
     fireEvent.click(within(group).getByRole("button", { name: "أنجزت المجموعة كلها (2)" }));
     let dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("تحديد المجموعة كمنفّذة")).toBeTruthy();
@@ -174,26 +181,27 @@ describe("P3 actions — the next step, a whole group, a double tap", () => {
     fireEvent.click(within(group).getByRole("button", { name: "أنجزت المجموعة كلها (2)" }));
     dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "تحديد مرحلتين" }));
-    await screen.findByText("تم تحديد مرحلتين من «الجداول المستعملة» كمنفّذة. تظهر الآن لمعلمك.");
-    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G2[0], G2[3]], mark: true }]);
-    expect(s.doc().stages[G2[1]]).toEqual(TEACHER);                               // the teacher's approval is untouched
-    await within(groupOf("الجداول المستعملة")).findByText(G2.length + " / " + G2.length + " منجزة");
+    await screen.findByText("تم تحديد مرحلتين من «" + TAC + "» كمنفّذة. تظهر الآن لمعلمك.");
+    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [AC[0], AC[3]], mark: true }]);
+    expect(s.doc().stages[AC[1]]).toEqual(TEACHER);                               // the teacher's approval is untouched
+    await within(groupOf(TAC)).findByText(AC.length + " / " + AC.length + " منجزة");
   });
 
   it("offers the group action only while more than one stage is left", async () => {
     server(all(G2.slice(0, -1), TEACHER));
     await mount();
-    expect(within(groupOf("الجداول المستعملة")).queryByRole("button", { name: /أنجزت المجموعة/ })).toBeNull();
-    expect(within(groupOf("بداية الكتاب")).getByRole("button", { name: "أنجزت المجموعة كلها (" + G1.length + ")" })).toBeTruthy();
+    expect(within(groupOf(T2)).queryByRole("button", { name: /أنجزت المجموعة/ })).toBeNull();
+    expect(within(groupOf(T1)).queryByRole("button", { name: /أنجزت المجموعة/ })).toBeNull();   // a one-stage group
+    expect(within(groupOf(T3)).getByRole("button", { name: "أنجزت المجموعة كلها (" + G3.length + ")" })).toBeTruthy();
   });
 
   it("a double tap sends ONE request", async () => {
     const s = server();
     await mount();
-    const btn = screen.getByRole("button", { name: doneName(G1[2]) });
+    const btn = screen.getByRole("button", { name: doneName(G2[2]) });
     fireEvent.click(btn);
     fireEvent.click(btn);
-    await screen.findByText("تم تحديد " + G1[2] + " كمنفّذة. تظهر الآن لمعلمك.");
-    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G1[2]], mark: true }]);
+    await screen.findByText("تم تحديد " + G2[2] + " كمنفّذة. تظهر الآن لمعلمك.");
+    expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G2[2]], mark: true }]);
   });
 });

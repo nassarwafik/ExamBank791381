@@ -52,7 +52,7 @@ describe("B. explicit invariants", () => {
       const doc = R[id].storage.docs[F.LEGACY_CONFIG + (id.includes("cL") ? "cL" : "c2") + ".json"];
       expect(Object.keys(doc)).toEqual(LEGACY_SNAPSHOT_KEYS);
       expect(doc.programCode).toBe("794589"); expect("projectCode" in doc).toBe(false); expect("tracks" in doc).toBe(false);
-      expect(doc.templateVersion).toBe(2); expect(doc.createdAt).toBe(F.FIXED_NOW);
+      expect(doc.templateVersion).toBe(3); expect(doc.createdAt).toBe(F.FIXED_NOW);   // P7: the condensed V3 set
     }
     for (const id of ["G794589.template.c2.lazyCreate", "G794589.activate.c2", "G794589.template.cL.legacyScalar"]) {
       const doc = R[id].storage.docs[F.LEGACY_CONFIG + (id.includes("cL") ? "cL" : "c2") + ".json"];
@@ -83,8 +83,8 @@ describe("B. explicit invariants", () => {
       expect(touched(R[p + "template.cA.archived"])).toEqual([]);          // archived: in-memory only
       expect(R[p + "template.c3.v1NoProgress"].storage.changed).toEqual([F.LEGACY_CONFIG + "c3.json"]);
       const up = R[p + "template.c3.v1NoProgress"].storage.docs[F.LEGACY_CONFIG + "c3.json"];
-      expect(up.templateVersion).toBe(2); expect(up.upgradedFromVersion).toBe(1); expect(up.programCode).toBe("794589"); expect(up.createdAt).toBe("2025-09-01T00:00:00.000Z");
-      expect(R[p + "template.c3.v1NoProgress"].systemAudits.map(a => [a.action, a.targetId, a.details])).toEqual([["project.template.upgrade", "c3", { fromVersion: 1, toVersion: 2, reason: "no-meaningful-progress" }]]);
+      expect(up.templateVersion).toBe(3); expect(up.upgradedFromVersion).toBe(1);   // P7: straight to the condensed V3 expect(up.programCode).toBe("794589"); expect(up.createdAt).toBe("2025-09-01T00:00:00.000Z");
+      expect(R[p + "template.c3.v1NoProgress"].systemAudits.map(a => [a.action, a.targetId, a.details])).toEqual([["project.template.upgrade", "c3", { fromVersion: 1, toVersion: 3, reason: "no-meaningful-progress" }]]);
     }
     expect(R["L.template.c3.v1NoProgress"].storage.docs).toEqual(R["G794589.template.c3.v1NoProgress"].storage.docs);
   });
@@ -101,12 +101,13 @@ describe("B. explicit invariants", () => {
       expect(R["L." + s].status).toBe(200); expect(R["L." + s].body.student.displayName).toBe(""); expect(R["L." + s].body.student.code).toBe("");
       expect(R["G794589." + s].status).toBe(404);
     }
-    expect(R["L.student.c1.s3.archived"].body.progress.B01.status).toBe("approved"); // the legacy route still returns that id's progress
+    // the legacy route still returns that student's progress (P7: converted with the class — B01 approved alone in BK01)
+    expect(R["L.student.c1.s3.archived"].body.progress.BK01.status).toBe("ready_for_review");
     // audit formats: legacy targetId unprefixed and no projectCode; generic prefixed with the project code
-    expect(R["L.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "c1/s1/B03", targetLabel: expect.any(String), details: { fromStatus: "not_started", toStatus: "approved" } }]);
-    expect(R["G794589.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "794589/c1/s1/B03", targetLabel: expect.any(String), details: { projectCode: "794589", fromStatus: "not_started", toStatus: "approved" } }]);
-    expect(R["L.update.noteOnly"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.note", targetType: "project-stage", targetId: "c1/s1/B03", targetLabel: expect.any(String) }]);
-    expect(R["G794589.update.noteOnly"].audits[0]).toMatchObject({ targetId: "794589/c1/s1/B03", details: { projectCode: "794589" } });
+    expect(R["L.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "c1/s1/BK02", targetLabel: expect.any(String), details: { fromStatus: "not_started", toStatus: "approved" } }]);
+    expect(R["G794589.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "794589/c1/s1/BK02", targetLabel: expect.any(String), details: { projectCode: "794589", fromStatus: "not_started", toStatus: "approved" } }]);
+    expect(R["L.update.noteOnly"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.note", targetType: "project-stage", targetId: "c1/s1/BK02", targetLabel: expect.any(String) }]);
+    expect(R["G794589.update.noteOnly"].audits[0]).toMatchObject({ targetId: "794589/c1/s1/BK02", details: { projectCode: "794589" } });
     expect(R["L.reset.c1"].audits).toEqual([{ actor: "teacher-1", action: "project.reset", targetType: "project-tracker", targetId: "c1", targetLabel: "صف c1", details: { deletedProgressCount: 2 } }]);
     expect(R["G794589.reset.c1"].audits).toEqual([{ actor: "teacher-1", action: "project.reset", targetType: "project-tracker", targetId: "794589/c1", targetLabel: "صف c1", details: { projectCode: "794589", deletedProgressCount: 2 } }]);
     expect(R["L.templateUpdate.c1"].audits).toEqual([{ actor: "teacher-1", action: "project.template.update", targetType: "project-template", targetId: "c1", targetLabel: "صف c1" }]);
@@ -140,13 +141,17 @@ describe("B. explicit invariants", () => {
   it("B6 progress semantics: 25+ history → POST returns the last 20 (26 stored); note-only; approval; NO_CHANGE; invalid status; conflict", () => {
     for (const p of ["L.", "G794589."]) {
       const up = R[p + "update.approve"];
-      expect(up.status).toBe(200); expect(up.body.history).toHaveLength(20); expect(up.body.stage).toMatchObject({ stageId: "B03", status: "approved", approvedAt: F.FIXED_NOW, approvedBy: "teacher-1" });
+      // P7 — the class converts on this first access (B03 → BK02); the write then follows exactly as before.
+      expect(up.status).toBe(200); expect(up.body.history).toHaveLength(20); expect(up.body.stage).toMatchObject({ stageId: "BK02", status: "approved", approvedAt: F.FIXED_NOW, approvedBy: "teacher-1" });
       expect(up.storage.docs[F.LEGACY_PROGRESS + "c1/s1.json"].history).toHaveLength(26);
-      expect(up.storage.changed).toEqual([F.LEGACY_PROGRESS + "c1/s1.json"]);
-      expect(R[p + "update.noteOnly"].body.stage).toMatchObject({ stageId: "B03", note: "n2", status: "not_started" });
-      expect(R[p + "update.noChange"].body).toEqual({ ok: true, noChange: true }); expect(touched(R[p + "update.noChange"])).toEqual([]); expect(R[p + "update.noChange"].audits).toEqual([]);
-      expect(R[p + "update.invalidStatus"].status).toBe(400); expect(touched(R[p + "update.invalidStatus"])).toEqual([]);
-      expect(R[p + "update.conflict"].status).toBe(503); expect(R[p + "update.conflict"].body.error).toBe("حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى."); expect(touched(R[p + "update.conflict"])).toEqual([]); expect(R[p + "update.conflict"].audits).toEqual([]);
+      expect(up.storage.changed).toEqual([F.LEGACY_PROGRESS + "c1/s1.json", F.LEGACY_PROGRESS + "c1/s3.json", F.LEGACY_CONFIG + "c1.json"]);   // + the conversion
+      expect(R[p + "update.noteOnly"].body.stage).toMatchObject({ stageId: "BK02", note: "n2", status: "not_started" });
+      // P7 — the only writes are the class conversion's (system, audited as project.template.condense); the route writes nothing.
+      const conversion = [F.LEGACY_PROGRESS + "c1/s1.json", F.LEGACY_PROGRESS + "c1/s3.json", F.LEGACY_CONFIG + "c1.json"];
+      expect(R[p + "update.noChange"].body).toEqual({ ok: true, noChange: true }); expect(touched(R[p + "update.noChange"])).toEqual(conversion); expect(R[p + "update.noChange"].audits).toEqual([]);
+      expect(R[p + "update.noChange"].systemAudits.map(a => a.action)).toEqual(["project.template.condense"]);
+      expect(R[p + "update.invalidStatus"].status).toBe(400); expect(touched(R[p + "update.invalidStatus"])).toEqual(conversion); expect(R[p + "update.invalidStatus"].audits).toEqual([]);   // P7: the class conversion only; the rejected write itself stores nothing
+      expect(R[p + "update.conflict"].status).toBe(503); expect(R[p + "update.conflict"].body.error).toBe("حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى."); expect(touched(R[p + "update.conflict"])).toEqual([F.LEGACY_PROGRESS + "c1/s3.json"]); expect(R[p + "update.conflict"].audits).toEqual([]);   // P7: s3's conversion only (s1 conflicts; the class stays on its old set)
       expect(R[p + "templateUpdate.conflict"].status).toBe(503); expect(touched(R[p + "templateUpdate.conflict"])).toEqual([]);
       for (const s of ["update.foreign", "update.archivedStudent", "update.ghost"]) { expect(R[p + s].status).toBe(404); expect(touched(R[p + s])).toEqual([]); }
       expect(R[p + "update.badStage"].status).toBe(400); expect(R[p + "update.archivedClass"].status).toBe(403); expect(touched(R[p + "update.archivedClass"])).toEqual([]);

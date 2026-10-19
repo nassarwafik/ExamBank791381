@@ -127,28 +127,28 @@ describe("8D-B inline project grading → student tracker, Strength and the read
     expect(zero.strength.projectPoints).toBe(0);
 
     // 1. a score alone: stored, visible to the student, no Strength (nothing approved), summary untouched
-    let r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "B01", score: "90" });
+    let r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "BK01", score: "90" });
     expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
     expect((await readySummary()).totalReadyForReview).toBe(0);
     let t = await studentTracker(S1);
     const project = t.projects.find(p => p.projectCode === "899373");
-    expect(project.progress.B01.score).toBe(90);
+    expect(project.progress.BK01.score).toBe(90);
     expect(project.summary.overallProgress).toBe(0);
     expect((await dashboard(S1)).strength.projectPoints).toBe(0);
 
     // 2. ready_for_review: exactly one ready stage in the global summary, none for the classmate
-    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "B01", status: "ready_for_review" });
+    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "BK01", status: "ready_for_review" });
     expect(r.status).toBe(200);
     expect(await readySummary()).toMatchObject({ totalReadyForReview: 1, byProject: { "899373": 1 } });
     expect((await dashboard(S1)).strength.projectPoints).toBe(0);                    // ready is not approved
 
     // 3. approve: the summary returns to 0; progress and Strength move, from ONE server computation
-    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "B01", status: "approved" });
+    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "BK01", status: "approved" });
     expect(r.status).toBe(200);
     expect((await readySummary()).totalReadyForReview).toBe(0);
     t = await studentTracker(S1);
     const approved = t.projects.find(p => p.projectCode === "899373");
-    expect(approved.progress.B01).toMatchObject({ status: "approved", score: 90 });
+    expect(approved.progress.BK01).toMatchObject({ status: "approved", score: 90 });
     expect(approved.summary.overallProgress).toBeGreaterThan(0);
     const d1 = await dashboard(S1);
     expect(d1.strength.projectPoints).toBeGreaterThan(0);
@@ -160,9 +160,9 @@ describe("8D-B inline project grading → student tracker, Strength and the read
     expect((await dashboard(S2)).strength.projectPoints).toBe(0);
 
     // 4. a later score edit on the approved stage keeps the approval and the summary
-    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "B01", score: "95" });
+    r = await trackerPost({ action: "progress.update", studentId: S1, stageId: "BK01", score: "95" });
     expect(r.status).toBe(200);
-    expect((await studentTracker(S1)).projects[0].progress.B01).toMatchObject({ status: "approved", score: 95 });
+    expect((await studentTracker(S1)).projects[0].progress.BK01).toMatchObject({ status: "approved", score: 95 });
     expect((await readySummary()).totalReadyForReview).toBe(0);
   });
 });
