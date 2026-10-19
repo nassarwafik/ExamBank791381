@@ -15,6 +15,9 @@ import { configure } from "@testing-library/react";
 // shows the local status fallback. Give the async queries the headroom that first import needs.
 configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
+// Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
+// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];
 const PROJECTS = [{ projectCode: "794589", title: "مشروع 794589", tracks: TRACKS }];

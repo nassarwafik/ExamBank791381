@@ -126,6 +126,10 @@
    the columns line up down the list. Below 768px the row becomes a two-line card (stage on top; status + value, then
    score, then actions), no horizontal overflow, 44px touch targets. Logical properties and tokens only. */
 .eb-stage-grade-hint{ margin:0; font-size:var(--eb-fs-12); }
+/* Phase P8 — «اعتماد المرحلة عند حفظ العلامة»: a visible switch (ON by default) above the stage rows. */
+.eb-stage-grade-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); }
+.eb-stage-approve-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-2); min-height:44px; font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); cursor:pointer; }
+.eb-stage-approve-toggle input{ width:20px; height:20px; margin:0; accent-color:var(--eb-primary); }
 .eb-stage-grade-row{ background:var(--eb-surface); }
 .eb-stage-grade-row.is-busy{ background:var(--eb-surface-2); }
 .eb-stage-grade-grid{

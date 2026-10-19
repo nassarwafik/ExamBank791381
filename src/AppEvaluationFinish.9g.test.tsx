@@ -9,6 +9,9 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act, configure } from "@testing-library/react";
 configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
+// Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
+// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];
 const PROJECTS = [{ projectCode: "899373", title: "مشروع 899373", tracks: TRACKS }, { projectCode: "883589", title: "مشروع 883589", tracks: TRACKS }];
