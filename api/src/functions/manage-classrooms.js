@@ -3,7 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { mutateJsonWithRetry, StorageConflictError, listJson } = require("../lib/platform-storage");
+const { mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 // Roadmap #25 — explicit, teacher-triggered roster-index repair (the only O(all-users) path in this function;
 // the normal class list stays O(classes) and reads the cheap studentIds count).
 const { canonicalMemberIds, reconcileRosterIndex } = require("../lib/class-roster-index");
@@ -23,6 +23,7 @@ const { validateLearningModuleIds, findLearningCourse } = require("../lib/learni
 // as "../auth/<hash>" would otherwise be resolved by the storage SDK to a document outside platform/classes/).
 const { isSafeId, cleanText, LIMITS } = require("../lib/roster-input");
 const { createPendingGradingReader, pendingForClassMembers, pendingClassMessage } = require("../lib/pending-grading");
+const { loadDocs } = require("../lib/classes-students-read-cache");
 
 /**
  * Validates + normalizes the teacher-typed class labels (NFC, invisible/bidi characters removed, whitespace
@@ -84,11 +85,19 @@ async function uploadJson(container, blobName, document) {
   });
 }
 
+// Phase S.2 — every class document is read through the shared ETag-verified cache (classes-students-read-cache): one listing,
+// and only a new or changed document is downloaded (in parallel). `dl` (the handler's injected downloadJsonOrNull test seam)
+// keeps the plain one-by-one read.
+async function classDocuments(container, dl) {
+  if (!dl) return loadDocs(container, CLASS_PREFIX);
+  const docs = [];
+  for await (const blob of container.listBlobsFlat({ prefix: CLASS_PREFIX })) if (blob.name.endsWith(".json")) docs.push(await dl(container, blob.name));
+  return docs;
+}
+
 async function listClasses(container, dl, tenant = null) {
   const classes = [];
-  for await (const blob of container.listBlobsFlat({ prefix: CLASS_PREFIX })) {
-    if (!blob.name.endsWith(".json")) continue;
-    const document = await dl(container, blob.name);
+  for (const document of await classDocuments(container, dl)) {
     if (!document || !canAccessDocument(document, tenant)) continue;
     classes.push({
       classId: String(document.classId || ""),
@@ -154,7 +163,9 @@ async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const up = deps.uploadJson || uploadJson;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
-  const ls = deps.listJson || listJson;
+  // Phase S.2 — the class guards read the users through the shared ETag-verified cache (the documents are as current as a
+  // plain listing: an unchanged ETag is the only reuse). deps.listJson stays the test seam.
+  const ls = deps.listJson || loadDocs;
   // Audit is secondary — a recorder failure must never fail the class mutation (Roadmap #19). The real
   // recordAuditEvent already swallows; this wrapper extends the guarantee to any injected recorder.
   const rawRec = deps.recordAuditEvent || recordAuditEvent;
@@ -166,7 +177,7 @@ async function handler(request, deps = {}, obs = null) {
     const tenant = tenantOf(auth.user);
 
     if (request.method === "GET") {
-      return { status: 200, jsonBody: { ok: true, classes: await listClasses(container, dl, tenant) } };
+      return { status: 200, jsonBody: { ok: true, classes: await listClasses(container, deps.downloadJsonOrNull ? dl : null, tenant) } };
     }
 
     let body = {};
