@@ -80,7 +80,7 @@ function seedSchool(h) {
   // c3: V1 snapshot, NO meaningful progress → auto-upgrade candidate; s6 member.
   s[CP + "c3.json"] = cls("c3", { studentIds: ["s6"] }); s[nsL.configName("c3")] = v1Snapshot("c3"); s[UP + "s6.json"] = user("s6", "c3");
   s[nsL.progressName("c3", "s6")] = progressDoc("794589", "c3", "s6", { B01: { status: "not_started" } });
-  // c4: V1 snapshot WITH meaningful progress → must never be touched; s7 member.
+  // c4: V1 snapshot WITH meaningful progress → restarts from zero on the condensed set (P7b owner decision); s7 member.
   s[CP + "c4.json"] = cls("c4", { studentIds: ["s7"] }); s[nsL.configName("c4")] = v1Snapshot("c4"); s[UP + "s7.json"] = user("s7", "c4");
   s[nsL.progressName("c4", "s7")] = progressDoc("794589", "c4", "s7", { B01: { status: "approved", approvedAt: "2025-11-01T00:00:00.000Z" }, P01: { status: "ready_for_review" } });
   // cA: ARCHIVED class, V1 snapshot + progress; s8 member.

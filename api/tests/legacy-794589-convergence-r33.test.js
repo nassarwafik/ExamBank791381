@@ -76,10 +76,18 @@ describe("B. explicit invariants", () => {
     for (const s of ["reset.c1", "update.approve", "template.c2.lazyCreate", "templateUpdate.c1"]) expect(R["L." + s].storage.added.concat(R["L." + s].storage.removed, R["L." + s].storage.changed)).toEqual(R["G794589." + s].storage.added.concat(R["G794589." + s].storage.removed, R["G794589." + s].storage.changed));
   });
 
-  it("B3 historical snapshots: V1 WITH meaningful progress is never touched; V1 WITHOUT progress is upgraded identically on both routes (legacy shape, audited once)", () => {
+  // Phase P7b (owner decision): a V1 class WITH meaningful progress restarts from zero on the condensed V3 set — the old
+  // work archived in the document (`resetFrom`), never shown or counted — identically on both routes, audited once.
+  it("B3 historical snapshots: V1 WITH meaningful progress restarts from zero (P7b); V1 WITHOUT progress is upgraded identically on both routes (legacy shape, audited once)", () => {
     for (const p of ["L.", "G794589."]) {
-      expect(touched(R[p + "template.c4.v1Progress"])).toEqual([]); expect(R[p + "template.c4.v1Progress"].systemAudits).toEqual([]);
-      expect(R[p + "template.c4.v1Progress"].body.template.templateVersion).toBe(1);
+      const c4 = R[p + "template.c4.v1Progress"];
+      expect(touched(c4).sort()).toEqual([F.LEGACY_PROGRESS + "c4/s7.json", F.LEGACY_CONFIG + "c4.json"]);
+      expect(c4.systemAudits.map(a => [a.action, a.targetId, a.details])).toEqual([["project.template.reset", "c4", { projectCode: "794589", fromVersion: 1, toVersion: 3, students: 1, reason: "owner-decision-restart-from-zero" }]]);
+      expect(c4.body.template.templateVersion).toBe(3);
+      const reset = c4.storage.docs[F.LEGACY_PROGRESS + "c4/s7.json"];
+      expect(reset.stages).toEqual({}); expect(reset.history).toEqual([]); expect(reset.stageTemplateVersion).toBe(3);
+      expect(Object.keys(reset.resetFrom.stages).sort()).toEqual(["B01", "P01"]);
+      expect(c4.storage.docs[F.LEGACY_CONFIG + "c4.json"]).toMatchObject({ templateVersion: 3, programCode: "794589", resetFromVersion: 1 });
       expect(touched(R[p + "template.cA.archived"])).toEqual([]);          // archived: in-memory only
       expect(R[p + "template.c3.v1NoProgress"].storage.changed).toEqual([F.LEGACY_CONFIG + "c3.json"]);
       const up = R[p + "template.c3.v1NoProgress"].storage.docs[F.LEGACY_CONFIG + "c3.json"];
@@ -87,6 +95,7 @@ describe("B. explicit invariants", () => {
       expect(R[p + "template.c3.v1NoProgress"].systemAudits.map(a => [a.action, a.targetId, a.details])).toEqual([["project.template.upgrade", "c3", { fromVersion: 1, toVersion: 3, reason: "no-meaningful-progress" }]]);
     }
     expect(R["L.template.c3.v1NoProgress"].storage.docs).toEqual(R["G794589.template.c3.v1NoProgress"].storage.docs);
+    expect(R["L.template.c4.v1Progress"].storage.docs).toEqual(R["G794589.template.c4.v1Progress"].storage.docs);
   });
 
   it("B4 documented legacy/generic differences are preserved, not unified", () => {
@@ -124,9 +133,11 @@ describe("B. explicit invariants", () => {
     expect(l.summary.bookProgress).toBe(g.summary.trackProgress.book); expect(l.summary.packetTracerProgress).toBe(g.summary.trackProgress.packetTracer);
     expect(l.summary.overallProgress).toBe(g.summary.overallProgress); expect(l.counts).toBe(undefined);
     expect(l.nextBookStage).toEqual(g.nextStages.book); expect(l.nextPacketTracerStage).toEqual(g.nextStages.packetTracer);
-    // legacy balance shape (V1 class with 60/40 weights and a 20-point threshold → book leads)
-    const lb = R["L.student.c4.s7.v1"].body.balance, gb = R["G794589.student.c4.s7.v1"].body.balance;
-    expect(lb).toEqual({ leadingTrack: "book", diff: gb.diff }); expect(gb.leadingTrackId).toBe("book"); expect(Object.keys(gb).sort()).toEqual(["diff", "laggingTrackId", "laggingTrackTitle", "leadingTrackId", "leadingTrackTitle"]);
+    // legacy balance shape. P7b: the only imbalanced student (c4/s7, V1) restarted from zero, so both routes now report no
+    // balance for it; the legacy shape itself is asserted on the shared converter.
+    expect(R["L.student.c4.s7.v1"].body.balance).toBe(null); expect(R["G794589.student.c4.s7.v1"].body.balance).toBe(null);
+    const { legacyBalance } = require("../src/lib/project-794589-legacy-shape.js");
+    expect(legacyBalance({ leadingTrackId: "book", leadingTrackTitle: "الكتاب", laggingTrackId: "packetTracer", laggingTrackTitle: "Packet Tracer", diff: 30 })).toEqual({ leadingTrack: "book", diff: 30 });
     // class summary / students / analytics
     const ls = R["L.summary.c1"].body.summary, gs = R["G794589.summary.c1"].body.summary;
     expect(Object.keys(ls).sort()).toEqual(["avgBook", "avgOverall", "avgPacketTracer", "completedCount", "staleCount", "staleDays", "studentCount", "studentsReadyForReview", "totalReadyStages", "trackWeights"]);
@@ -175,7 +186,8 @@ describe("B. explicit invariants", () => {
     expect(R["SG.s9"].body.enrolled).toBe(true); expect(R["SG.s9"].body.projects.map(p => p.projectCode)).toEqual(["899373"]);
     expect(R["SL.s10"].body.enrolled).toBe(true); expect(R["SL.s11"].body).toEqual({ ok: true, enrolled: false }); expect(R["SG.s11"].body.projects.map(p => p.projectCode)).toEqual(["899373", "883589"]);
     expect(R["SL.nobody"].status).toBe(401); expect(R["SG.nobody"].status).toBe(401);
-    expect(R["SL.s7"].body.summary.bookProgress).toBe(50); expect(R["SL.s7"].body.nextBookStage.stageId).toBe("B02"); // V1 class, historical stage ids
+    // P7b: the V1 class with progress is shown restarted from zero on the condensed set, and the student read writes nothing
+    expect(R["SL.s7"].body.summary.bookProgress).toBe(0); expect(R["SL.s7"].body.nextBookStage.stageId).toBe("BK01"); expect(touched(R["SL.s7"])).toEqual([]); expect(touched(R["SG.s7"])).toEqual([]);
   });
 });
 

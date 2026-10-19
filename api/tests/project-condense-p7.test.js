@@ -267,7 +267,7 @@ describe("P7 class conversion (real handlers, in-memory storage)", () => {
     expect((await mark(["B04"])).jsonBody.results[0]).toMatchObject({ stageId: "B04", ok: false, error: "stage_inactive" });
   });
 
-  it("794589: a v2 class with progress converts to the v3 set; a v1 class with progress stays untouched", async () => {
+  it("794589: a v2 class with progress converts to the v3 set; a v1 class with progress restarts from zero (P7b)", async () => {
     const NS7 = getStorageNamespace("794589");
     const v2 = JSON.parse(JSON.stringify(OLD("794589")));
     const legacySnap = { schemaVersion: 1, programCode: "794589", classId: "c7", templateVersion: 2, trackWeights: v2.trackWeights, config: v2.config, groups: v2.groups, stages: v2.stages, createdAt: NOW, updatedAt: NOW };
@@ -285,7 +285,101 @@ describe("P7 class conversion (real handlers, in-memory storage)", () => {
     expect("projectCode" in s7).toBe(false);                                   // the legacy snapshot keeps its own shape
     expect(t.ctx.getJson(NS7.progressName("c7", "p1")).stages.PT10).toMatchObject({ status: "approved", score: 88 });
     await t.get("board", "c8", "794589");
-    expect(t.ctx.getJson(NS7.configName("c8")).templateVersion).toBe(1);
-    expect(t.ctx.getJson(NS7.progressName("c8", "p2")).stages.B01).toBeTruthy();
+    expect(t.ctx.getJson(NS7.configName("c8")).templateVersion).toBe(3);             // P7b (owner decision): no longer left on v1
+    expect(t.ctx.getJson(NS7.progressName("c8", "p2")).stages).toEqual({});
+  });
+});
+
+// Phase P7b — owner decision: 794589 classes still on template v1 WITH progress restart from zero on the condensed v3 set.
+// The old work leaves the document's `stages` / `history` (archived in `resetFrom`: never shown, never counted), the
+// snapshot becomes the current template in the legacy shape, one `project.template.reset` audit. Same locked passes and
+// writer guards as the conversion; archived classes untouched; student reads show the fresh set without writing.
+describe("P7b — 794589 v1 classes with progress restart from zero", () => {
+  const NS7 = getStorageNamespace("794589");
+  const v2 = JSON.parse(JSON.stringify(OLD("794589")));
+  const v1Snap = (cid, extra = {}) => ({ schemaVersion: 1, programCode: "794589", classId: cid, templateVersion: 1, trackWeights: v2.trackWeights, config: v2.config, groups: v2.groups, stages: v2.stages, createdAt: NOW, updatedAt: NOW, ...extra });
+  const doc7 = (sid, cid, stages, history = []) => ({ schemaVersion: 1, programCode: "794589", classId: cid, studentId: sid, startedAt: NOW, updatedAt: NOW, stages, history });
+  const HIST = [{ type: "status", stageId: "B01", to: "approved", at: NOW, by: T }];
+  function setup7(roomExtra = {}, snapExtra = {}) {
+    const t = setup({
+      "platform/classes/c8.json": room("c8", { programCodes: ["794589"], ...roomExtra }), "platform/users/p2.json": user("p2", "c8"), "platform/users/p3.json": user("p3", "c8"),
+      [NS7.configName("c8")]: v1Snap("c8", snapExtra),
+      [NS7.progressName("c8", "p2")]: doc7("p2", "c8", { B01: approved(88), P01: { status: "ready_for_review", updatedAt: NOW } }, HIST),
+      [NS7.progressName("c8", "p3")]: doc7("p3", "c8", {})
+    });
+    const resets = () => t.ctx.names("platform/audit/").map(n => t.ctx.getJson(n)).filter(a => a.action === "project.template.reset");
+    return { ...t, snap7: () => t.ctx.getJson(NS7.configName("c8")), doc7: sid => t.ctx.getJson(NS7.progressName("c8", sid)), resets };
+  }
+
+  it("the first teacher read resets the class: v3 set (legacy shape), every document from zero, old work archived, audited once", async () => {
+    const t = setup7();
+    const r = await t.get("board", "c8", "794589");
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.stages.map(s => s.stageId)).toContain("PT01");
+    expect(r.jsonBody.stages.some(s => s.stageId === "B01")).toBe(false);
+    const snap = t.snap7();
+    expect(snap).toMatchObject({ templateVersion: 3, programCode: "794589", resetFromVersion: 1 });
+    expect("projectCode" in snap).toBe(false);
+    expect(snap.conversion).toBeUndefined();
+    expect(snap.stages.filter(s => s.active === true)).toHaveLength(20);
+    const d = t.doc7("p2");
+    expect(d).toMatchObject({ studentId: "p2", classId: "c8", startedAt: NOW, stageTemplateVersion: 3, stages: {}, history: [] });
+    expect(d.resetFrom).toEqual({ templateVersion: 1, at: expect.any(String), stages: { B01: approved(88), P01: { status: "ready_for_review", updatedAt: NOW } }, history: HIST });
+    expect(t.doc7("p3")).toMatchObject({ stages: {}, stageTemplateVersion: 3 });
+    expect(t.resets()).toHaveLength(1);
+    expect(t.resets()[0].details).toMatchObject({ projectCode: "794589", fromVersion: 1, toVersion: 3, students: 2 });
+    const after = JSON.stringify([t.snap7(), t.doc7("p2"), t.doc7("p3")]);
+    await t.get("board", "c8", "794589");
+    expect(JSON.stringify([t.snap7(), t.doc7("p2"), t.doc7("p3")])).toBe(after);       // a second read changes nothing
+    expect(t.resets()).toHaveLength(1);
+  });
+
+  it("the reset student counts nothing: no approved stage, no grade, no ready stage", async () => {
+    const t = setup7();
+    const r = await t.get("students", "c8", "794589");
+    const card = r.jsonBody.students.find(s => s.studentId === "p2");
+    expect(card.overallProgress).toBe(0);
+    expect(card.readyForReviewCount || 0).toBe(0);
+  });
+
+  it("a v1 class WITHOUT progress keeps the progress-free upgrade (not a reset); an archived v1 class is never touched", async () => {
+    const free = setup({ "platform/classes/c8.json": room("c8", { programCodes: ["794589"] }), [NS7.configName("c8")]: v1Snap("c8") });
+    await free.get("board", "c8", "794589");
+    expect(free.ctx.getJson(NS7.configName("c8"))).toMatchObject({ templateVersion: 3, upgradedFromVersion: 1 });
+    expect(free.ctx.getJson(NS7.configName("c8")).resetFromVersion).toBeUndefined();
+    const t = setup7({ status: "archived", active: false });
+    const before = JSON.stringify([t.snap7(), t.doc7("p2")]);
+    await t.get("board", "c8", "794589");
+    expect(JSON.stringify([t.snap7(), t.doc7("p2")])).toBe(before);
+    expect(t.resets()).toEqual([]);
+  });
+
+  it("while another request holds a fresh lock, reads see the old set and writes are refused; a stale lock is taken over", async () => {
+    const t = setup7({}, { conversion: { toVersion: 3, lockId: "other", startedAt: new Date().toISOString() } });
+    expect((await t.get("board", "c8", "794589")).jsonBody.stages.some(s => s.stageId === "B01")).toBe(true);
+    expect((await t.post({ projectCode: "794589", classId: "c8", action: "progress.update", studentId: "p2", stageId: "B01", status: "in_progress" })).status).toBe(503);
+    expect(t.doc7("p2").stages.B01).toEqual(approved(88));
+    const stale = setup7({}, { conversion: { toVersion: 3, lockId: "other", startedAt: "2020-01-01T00:00:00.000Z" } });
+    await stale.get("board", "c8", "794589");
+    expect(stale.snap7().templateVersion).toBe(3);
+    expect(stale.doc7("p2").stages).toEqual({});
+  });
+
+  it("the student's read shows the fresh set and nothing done, without writing; «أنجزتها» resets the class and marks a new stage", async () => {
+    const t = setup7();
+    const sdeps = { ...t.deps, requireActiveStudentSession: async () => ({ ok: true, container: t.ctx.container, user: { sub: "p2", sv: 1 }, student: t.ctx.getJson("platform/users/p2.json") }) };
+    const before = JSON.stringify([t.snap7(), t.doc7("p2"), t.doc7("p3")]);
+    const g = await studentTracker({ method: "GET", url: "https://x/api/student-project-tracker", json: async () => ({}) }, sdeps);
+    const p = g.jsonBody.projects.find(x => x.projectCode === "794589");
+    expect(p.stages.map(s => s.stageId)).toContain("PT01");
+    expect(p.stages.some(s => s.stageId === "B01")).toBe(false);
+    expect(p.progress).toEqual({});
+    expect(JSON.stringify([t.snap7(), t.doc7("p2"), t.doc7("p3")])).toBe(before);     // a student read never writes
+    const m = await studentTracker({ method: "POST", url: "https://x/api/student-project-tracker", json: async () => ({ projectCode: "794589", stageIds: ["PT01"], mark: true }) }, sdeps);
+    expect(m.jsonBody.results[0]).toMatchObject({ stageId: "PT01", ok: true });
+    expect(t.snap7().templateVersion).toBe(3);
+    expect(Object.keys(t.doc7("p2").stages)).toEqual(["PT01"]);
+    expect(t.doc7("p2").resetFrom.stages.B01).toEqual(approved(88));
+    expect(t.resets()).toHaveLength(1);
   });
 });

@@ -140,8 +140,56 @@ Storage writes use `mutateIfChanged` (ETag CAS; a no-op callback writes nothing)
   `project.condense.failed`); the next access completes it (pass 1 is idempotent).
 - **Student reads never write** (R33 B2): the student sees the class as it **will be** after the conversion, computed in
   memory by the same rules (`condensedView`). The stored conversion happens on the next teacher read or write.
-- 794589 classes still on template v1 **with progress** stay as they are (the existing v1 → v2 policy only upgrades
-  progress-free classes); they are not converted by P7.
+- 794589 classes still on template v1 **with progress** restart from zero (P7b, below).
+
+## P7b — 794589 classes on template v1 with progress restart from zero (owner decision)
+
+The owner decided that the 794589 classes still on the first template (v1) **with** recorded progress are converted to the
+condensed v3 set and that everything done on v1 is dropped: the class starts from zero. This replaces, for these classes
+only, the earlier rule of `project-794589-migration.js` («a class with meaningful progress is never silently reset»): the
+reset is the owner's explicit decision, it is audited, and the old work stays recoverable.
+
+- **Trigger:** `ensureClassConfig` on an **active** 794589 class whose snapshot is v1 (`snapshotUpgrade.resetFrom: 1`) and
+  whose class has meaningful progress. A v1 class **without** progress keeps the existing progress-free upgrade; archived
+  classes are never touched.
+- **Passes:** the same lock / pass 1 / switch / sweep as the conversion (`condenseClass(…, "reset")`):
+  - every progress document gets `stages: {}`, `history: []` and `stageTemplateVersion: 3`; its identity (student,
+    class, startedAt) is kept, and the old `stages` / `history` move untouched to `resetFrom { templateVersion, at, stages, history }`;
+  - the snapshot becomes the current template in the legacy shape (`policy.buildUpgraded`), with `resetAt` and
+    `resetFromVersion: 1`;
+  - one `project.template.reset` audit (`reason: owner-decision-restart-from-zero`, students count).
+- **Nothing old counts:** progress, grade, ready counts and history start at zero; the archive is never read by the product.
+- **Writers** refuse while the lock is fresh or when the document is newer than the snapshot (same guards). **Student
+  reads** show the fresh set and an empty progress at once, in memory, without writing.
+- Achievements already awarded from v1 work (achievement events) are not removed; P7b only resets the project tracker.
+
+Tests (in `api/tests/project-condense-p7.test.js`, describe «P7b»): the reset (v3 legacy shape, documents from zero,
+archive, one audit, a second read changes nothing); the reset student counts nothing; a progress-free v1 class keeps the
+upgrade and an archived v1 class is untouched (pin); fresh lock → old set + 503 writes, stale lock taken over; the student
+read shows the fresh set without writing and «أنجزتها» resets the class then marks PT01. The earlier 794589 test now
+expects the reset. **Fail-first** on `e0776673` (P7 head before P7b): 5 of 6 fail (`expected 1 to be 3`,
+`expected [ 'B01', … ] to include 'PT01'`, `expected 1 to be +0`); the pin passes.
+
+R33: the golden was regenerated again with the same frozen clock. Exactly 8 scenarios changed, all on class c4 (V1 with
+progress): the two teacher routes now reset it (writes: c4 snapshot + s7 progress, one `project.template.reset` audit),
+and the four student routes for s6 / s7 show the fresh set without writing. No status code changed. Invariants B3 (reset
+identical on both routes, archived), B5 (the only imbalanced student was c4/s7: both routes now report no balance; the
+legacy balance shape is asserted on `legacyBalance`) and B7 (s7 sees 0 % and next stage BK01, no write) were updated.
+
+Mutation proof (10 mutants, **10 KILLED**):
+
+| Id | Planted defect | Killed by |
+|---|---|---|
+| R01 | a progress-free v1 class is reset instead of upgraded | progress-free v1 keeps the upgrade; R33 c3 |
+| R02 | archived v1 classes are reset | R33 cA archived |
+| R03 | the old work is deleted instead of archived | the reset test; the student test |
+| R04 | the old history is still counted | the reset test |
+| R05 | the old stages are still counted | the 794589 test; the lock test |
+| R06 | a reset document is reset again (archive overwritten) | the reset test; the student test |
+| R07 | the reset is audited as a conversion | the reset test; the student test |
+| R08 | the student still sees the old v1 work | the student test; R33 SL.s6 |
+| R09 | the reset also runs the condense sweep and audit | R33 c4 (both routes) |
+| R10 | an archived v1 class is shown reset to the student | R33 SL.s8 / SG.s8 |
 
 ## UI
 
@@ -220,8 +268,7 @@ page after the conversion lists the same stages. **Passed** on the head. Output 
 
 ## Known limits
 
-- A 794589 class still on template v1 with progress keeps its old set (unchanged policy); converting it needs an owner decision.
-- The P6 branch (open PR) has tests and a browser gate that use old 899373 ids; whichever of P6 / P7 merges second
-  reconciles them with a normal merge and runs the full validation again.
+- P6 merged first (#371): P7 reconciled with a normal merge (only `.gitignore` conflicted, union) and the full validation
+  passed again on the merge.
 - Observed, not changed (it is identical on `main`): at 1440 px the student portal's project card header is squeezed into a
   narrow column (the project title wraps one character per line).

@@ -26,7 +26,8 @@ const DEFINITIONS = {
     // older template is upgraded to the current version, audited, never reset). New projects declare
     // no policy (no migration needed).
     // Phase P7 — v2 (the 54-book / 51-PT set) converts to the condensed v3 set WITH its progress (service.condenseClass).
-    snapshotUpgrade: { currentVersion: V794589, buildUpgraded: buildUpgraded794589, condenseFrom: 2 }
+    // Phase P7b — owner decision: a v1 class WITH progress restarts from zero on the v3 set (old work archived, audited).
+    snapshotUpgrade: { currentVersion: V794589, buildUpgraded: buildUpgraded794589, condenseFrom: 2, resetFrom: 1 }
   },
   "899373": {
     projectCode: "899373",

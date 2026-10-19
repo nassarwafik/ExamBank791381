@@ -164,6 +164,18 @@ function dropCondensedKeys(doc, plan, toVersion) {
   return changed ? { ...doc, stages } : doc;
 }
 
+/**
+ * Phase P7b — owner decision for 794589 classes still on template v1 WITH progress: they restart from zero on the
+ * condensed set. The document keeps its identity (student, class, startedAt) and the old work moves, untouched, to
+ * `resetFrom` (not shown, not counted; kept only so the decision stays recoverable). Idempotent: a document already on
+ * `toVersion` is returned as it is.
+ */
+function resetProgressDoc(doc, toVersion, fromVersion, now) {
+  if (!doc || typeof doc !== "object") return doc;
+  if (Number(doc.stageTemplateVersion) >= toVersion) return doc;
+  return { ...doc, stages: {}, history: [], updatedAt: now, stageTemplateVersion: toVersion, resetFrom: { templateVersion: fromVersion, at: now, stages: doc.stages || {}, history: Array.isArray(doc.history) ? doc.history : [] } };
+}
+
 /** The converted class snapshot: only the stage set and its version change. */
 function condensedSnapshot(existing, plan, toVersion, now) {
   const { conversion, ...rest } = existing;                                     // eslint-disable-line no-unused-vars
@@ -172,4 +184,4 @@ function condensedSnapshot(existing, plan, toVersion, now) {
 
 const lockIsFresh = (snapshot, nowMs) => !!(snapshot && snapshot.conversion && Number.isFinite(Date.parse(snapshot.conversion.startedAt)) && nowMs - Date.parse(snapshot.conversion.startedAt) < LOCK_MS);
 
-module.exports = { buildCondensePlan, condenseEntry, condenseProgressDoc, dropCondensedKeys, condensedSnapshot, lockIsFresh, LOCK_MS };
+module.exports = { buildCondensePlan, condenseEntry, condenseProgressDoc, dropCondensedKeys, resetProgressDoc, condensedSnapshot, lockIsFresh, LOCK_MS };

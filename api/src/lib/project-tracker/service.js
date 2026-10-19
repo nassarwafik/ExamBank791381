@@ -130,6 +130,12 @@ async function ensureClassConfig(container, projectCode, classroom, options = {}
   }
   if (policy && isActive && Number(existing.templateVersion || 1) < policy.currentVersion) {
     const progressDocs = await listJson(container, ns.progressPrefix(classId));
+    // Phase P7b — owner decision: a class on `policy.resetFrom` WITH progress restarts from zero on the current set (the
+    // same locked passes as the conversion; the old work is archived in each document, never shown or counted).
+    if (policy.resetFrom && Number(existing.templateVersion || 1) === policy.resetFrom && classHasMeaningfulProgress(progressDocs)) {
+      try { return await condenseClass(container, projectCode, classroom, existing, policy, now, "reset"); }
+      catch (e) { if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project.reset.failed", e); return (await downloadJsonOrNull(container, ns.configName(classId))) || existing; }
+    }
     if (shouldUpgradeSnapshot(existing, isActive, policy.currentVersion, classHasMeaningfulProgress(progressDocs))) {
       const upgraded = policy.buildUpgraded(existing, classId, now);
       await uploadJson(container, ns.configName(classId), upgraded);
@@ -166,13 +172,17 @@ async function mutateIfChanged(container, name, fn) {
 //   3. sweep: a document written under the old snapshot during the window is converted, and the old keys leave `stages`.
 // A pass that fails leaves a state the next access completes (a stale lock is retaken after condense.LOCK_MS). A class
 // whose own stages cannot be converted safely (an id collision) is marked skipped once and left exactly as it is.
-async function condenseClass(container, projectCode, classroom, existing, policy, now) {
+// Phase P7b — mode "reset" (owner decision, `policy.resetFrom`): the same passes, but every document restarts from zero
+// (condense.resetProgressDoc: the old work archived in `resetFrom`) and the snapshot becomes the current template
+// (policy.buildUpgraded); audited once as `project.template.reset`.
+async function condenseClass(container, projectCode, classroom, existing, policy, now, mode = "condense") {
   const ns = getStorageNamespace(projectCode);
   const classId = classroom.classId;
   const toVersion = policy.currentVersion, fromVersion = Number(existing.templateVersion || 1);
-  if (existing.condenseSkipped && existing.condenseSkipped.toVersion === toVersion) return existing;
+  const reset = mode === "reset";
+  if (!reset && existing.condenseSkipped && existing.condenseSkipped.toVersion === toVersion) return existing;
   const def = getProjectDefinition(projectCode);
-  const plan = condense.buildCondensePlan(def.stages, def.groups, existing);
+  const plan = reset ? { stages: [], mergedIds: [] } : condense.buildCondensePlan(def.stages, def.groups, existing);
   if (plan.skip) {
     const marked = await mutateIfChanged(container, ns.configName(classId), cur => (cur && Number(cur.templateVersion || 1) === fromVersion && !(cur.condenseSkipped && cur.condenseSkipped.toVersion === toVersion) ? { ...cur, condenseSkipped: { toVersion, reason: plan.skip, at: now } } : cur));
     if (marked && marked.condenseSkipped && marked.condenseSkipped.at === now) {
@@ -189,12 +199,13 @@ async function condenseClass(container, projectCode, classroom, existing, policy
   });
   if (!locked || Number(locked.templateVersion || 1) !== fromVersion || !locked.conversion || locked.conversion.lockId !== lockId) return locked || existing;
   const names = () => listBlobNames(container, ns.progressPrefix(classId));
-  const convert = name => mutateIfChanged(container, name, doc => condense.condenseProgressDoc(doc, plan, toVersion, fromVersion, now));
+  const convert = name => mutateIfChanged(container, name, doc => (reset ? condense.resetProgressDoc(doc, toVersion, fromVersion, now) : condense.condenseProgressDoc(doc, plan, toVersion, fromVersion, now)));
   let switched;
   try {
     await mapConcurrent(await names(), 4, convert);
     switched = await mutateIfChanged(container, ns.configName(classId), cur => {
       if (!cur || !cur.conversion || cur.conversion.lockId !== lockId) { const e = new StorageConflictError("conversion lock lost"); throw e; }
+      if (reset) { const { conversion, ...rest } = cur; return { ...policy.buildUpgraded(rest, classId, now), resetAt: now, resetFromVersion: fromVersion }; }   // eslint-disable-line no-unused-vars
       return condense.condensedSnapshot(cur, plan, toVersion, now);
     });
   } catch (e) {
@@ -209,6 +220,13 @@ async function condenseClass(container, projectCode, classroom, existing, policy
   }
   const all = await names();
   await mapConcurrent(all, 4, convert);                                                // documents created during the window
+  if (reset) {
+    await recordAuditEvent(container, {
+      actor: "system", action: "project.template.reset", targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
+      details: { projectCode, fromVersion, toVersion, students: all.length, reason: "owner-decision-restart-from-zero" }
+    });
+    return switched;
+  }
   await mapConcurrent(all, 4, name => mutateIfChanged(container, name, doc => condense.dropCondensedKeys(doc, plan, toVersion)));
   await recordAuditEvent(container, {
     actor: "system", action: "project.template.condense", targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
@@ -229,6 +247,12 @@ function needsCondense(projectCode, snapshot, classroom) {
 // Phase P7 — the class (snapshot + one progress document) as it WILL be after its conversion, computed in memory by the same
 // pure rules (nothing is written): read paths that must not write (the student's reads) show the condensed stages at once.
 function condensedView(projectCode, snapshot, progress, classroom, now) {
+  // Phase P7b — a class on `policy.resetFrom` ends on the current set either way (reset when the class has progress,
+  // upgraded when it has none), and the student's old work is not counted: the student sees the fresh set at once.
+  const reset = getSnapshotUpgradePolicy(projectCode);
+  if (reset && reset.resetFrom && snapshot && classroom && normalizeClassStatus(classroom) === "active" && Number(snapshot.templateVersion || 1) === reset.resetFrom) {
+    return { snapshot: reset.buildUpgraded(snapshot, classroom.classId, now), progress: progress ? condense.resetProgressDoc(progress, reset.currentVersion, reset.resetFrom, now) : progress };
+  }
   if (!needsCondense(projectCode, snapshot, classroom)) return { snapshot, progress };
   const policy = getSnapshotUpgradePolicy(projectCode);
   const def = getProjectDefinition(projectCode);
