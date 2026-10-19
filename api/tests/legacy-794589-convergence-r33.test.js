@@ -14,9 +14,11 @@ import { fileURLToPath } from "node:url";
 //    ("SL.*") were removed with their 59 golden entries, and a teacher READ no longer writes. Exactly four GET
 //    scenarios were refreshed, and only their storage delta / system audits (status, body and route audits unchanged):
 //    REFRESHED_BY_P9 below.
-//    Phase P-5b (reviewed golden change): a never-started student is no longer «بلا تحديث». Exactly eight entries were
+//    Phase P-5b (reviewed golden change): a never-started student is no longer «بلا تحديث». Exactly ten entries were
 //    refreshed, and only these body fields changed: `stale` true → false and `notStarted: true` added on the never-started
-//    students' summaries, and `staleCount` 2 → 1 in G794589.summary.c1 (REFRESHED_BY_P5B; invariant B8).
+//    students' summaries, and `staleCount` 2 → 1 in G794589.summary.c1 (REFRESHED_BY_P5B; invariant B8). Two of them
+//    (G794589.student.c4.s7.v1, SG.s7) came with the reconciliation onto P7, whose V1 restart leaves s7 not started
+//    (only `notStarted: true` was added there).
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -38,7 +40,7 @@ const ids = F.SCENARIOS.map(s => s.id);
 const generic794589Ids = ids.filter(id => id.startsWith("G794589."));
 const GENERIC_SNAPSHOT_KEYS = ["schemaVersion", "projectCode", "classId", "templateVersion", "tracks", "trackWeights", "config", "groups", "stages", "createdAt", "updatedAt"];
 const REFRESHED_BY_P9 = ["G794589.template.c2.lazyCreate", "G794589.template.c3.v1NoProgress", "G794589.template.cL.legacyScalar", "G899373.template.cN.enrolled"];
-const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10"];
+const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10", "G794589.student.c4.s7.v1", "SG.s7"];
 const inLegacyNamespace = n => n.startsWith(F.LEGACY_CONFIG) || (n.startsWith(F.LEGACY_PROGRESS) && !/^platform\/project-progress\/(899373|883589)\//.test(n));
 const inNamespace = (code, n) => n.startsWith("platform/project-trackers/" + code + "/") || n.startsWith("platform/project-progress/" + code + "/");
 const touched = r => [...r.storage.added, ...r.storage.removed, ...r.storage.changed];

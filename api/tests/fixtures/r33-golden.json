@@ -4831,7 +4831,8 @@
         "readyForReviewCount": 0,
         "complete": false,
         "updatedAt": "2026-09-20T10:00:00.000Z",
-        "stale": false
+        "stale": false,
+        "notStarted": true
       },
       "performance": {
         "overallProgress": 0,
@@ -27561,7 +27562,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "2026-09-20T10:00:00.000Z",
-            "stale": false
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,

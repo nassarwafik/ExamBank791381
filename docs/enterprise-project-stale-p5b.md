@@ -15,12 +15,15 @@ dashboard hint («بلا تحديث N+ أيام: N»), the class summary's `stal
 
 ## The reviewed golden change (R33)
 
-Exactly eight entries were refreshed. Only these body fields changed: `stale` went from true to false and
+Exactly ten entries were refreshed. Only these body fields changed: `stale` went from true to false and
 `notStarted: true` was added on the never-started students' summaries, and `staleCount` went from 2 to 1 in
 `G794589.summary.c1`. Status, storage and audits are unchanged.
 
-The eight entries are `G794589.student.c1.s2.disabled`, `G794589.summary.c1`, `G794589.students.c1`, `SG.s2`, `SG.s5`,
-`SG.s6`, `SG.s9` and `SG.s10`.
+The ten entries are `G794589.student.c1.s2.disabled`, `G794589.summary.c1`, `G794589.students.c1`, `SG.s2`, `SG.s5`,
+`SG.s6`, `SG.s9` and `SG.s10`, plus `G794589.student.c4.s7.v1` and `SG.s7`.
+
+The last two came with the reconciliation onto P7 (#374). P7's V1 restart leaves the V1 class's student s7 not started, so
+only `notStarted: true` was added there; its `stale` was already false.
 
 The new invariant B8 checks two things on every summary any scenario returns: `notStarted` holds exactly when no active
 stage has started, and a never-started summary is never stale.
