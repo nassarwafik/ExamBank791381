@@ -11,9 +11,13 @@
 // the safe alternative the message names.
 //
 // Read cost: one listing of assignment documents and one listing of submission NAMES per request (cached across the
-// rows of a bulk action), then one download per existing submission of the student in their current class only.
+// rows of a bulk action), then one download per existing submission of the student in their current class only. Phase S.2:
+// every document is read through the shared ETag-verified cache (classes-students-read-cache) with the ETag the request's
+// own listing reports — an unchanged document is not downloaded again, a changed one always is, so the guard never decides
+// from a stale copy. The assignment documents stay the authority (not the class-assignment index, which lists published
+// assignments only: an assignment archived after its publication can still hold work awaiting the teacher).
 
-const { listJson, listBlobNames, downloadManyJson } = require("./platform-storage");
+const { loadDocs, loadEntries, listEntries } = require("./classes-students-read-cache");
 const { deriveGradingStatus } = require("./grading-status");
 const { activeAttemptOf } = require("./assignment-availability");
 const { isReportableAssessment } = require("./assignment-lifecycle");
@@ -37,24 +41,24 @@ function createPendingGradingReader(container) {
   async function load() {
     if (!assignmentsByClass) {
       assignmentsByClass = new Map();
-      for (const a of await listJson(container, ASSIGNMENT_PREFIX)) {
+      for (const a of await loadDocs(container, ASSIGNMENT_PREFIX)) {
         const id = String(a?.assignmentId || ""), classId = String(a?.classId || "");
         if (!id || !classId || !isReportableAssessment(a)) continue;
         if (!assignmentsByClass.has(classId)) assignmentsByClass.set(classId, []);
         assignmentsByClass.get(classId).push(id);
       }
     }
-    if (!submissionNames) submissionNames = new Set(await listBlobNames(container, SUBMISSION_PREFIX));
+    if (!submissionNames) submissionNames = new Map((await listEntries(container, SUBMISSION_PREFIX)).map(entry => [entry.name, entry]));
   }
   /** Number of the student's submissions in `classId` that still need the teacher. */
   async function count(studentId, classId) {
     if (!studentId || !classId) return 0;
     await load();
-    const names = (assignmentsByClass.get(String(classId)) || [])
-      .map(id => SUBMISSION_PREFIX + id + "/" + studentId + ".json")
-      .filter(name => submissionNames.has(name));
-    if (!names.length) return 0;
-    return (await downloadManyJson(container, names)).filter(submissionNeedsTeacher).length;
+    const entries = (assignmentsByClass.get(String(classId)) || [])
+      .map(id => submissionNames.get(SUBMISSION_PREFIX + id + "/" + studentId + ".json"))
+      .filter(Boolean);
+    if (!entries.length) return 0;
+    return (await loadEntries(container, entries)).filter(submissionNeedsTeacher).length;
   }
   return { count };
 }
