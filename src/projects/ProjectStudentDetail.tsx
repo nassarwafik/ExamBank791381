@@ -12,7 +12,7 @@ import { useConfirm } from "../ui/useConfirm";
 import ProjectRankHero from "./ProjectRankHero";
 import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
-import { kindOfPatch, mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
+import { mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
 import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation } from "./types";
 import type { ProjectEvaluationQueueView } from "./drillTarget";
 
@@ -59,9 +59,18 @@ type UpdateResponse = {
 };
 
 type Patch = StagePatch;
-const kindOf = kindOfPatch;
 const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
 const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => { const next = { ...map }; delete next[key]; return next; };
+// Phase P8 — the operations a patch carries (a combined save is both a score and a status write for the busy / double-submit
+// state of the row), and the remembered switch (per device; a storage failure falls back to the default ON).
+const patchKinds = (patch: Patch): string[] => [patch.score !== undefined ? "score" : "", patch.status !== undefined ? "status" : "", patch.note !== undefined ? "note" : ""].filter(Boolean);
+const APPROVE_ON_SAVE_KEY = "eb.projects.approveOnSave";
+function readApproveOnSave(): boolean {
+  try { return window.localStorage.getItem(APPROVE_ON_SAVE_KEY) !== "0"; } catch { return true; }
+}
+function writeApproveOnSave(on: boolean) {
+  try { window.localStorage.setItem(APPROVE_ON_SAVE_KEY, on ? "1" : "0"); } catch { /* the switch still works for this session */ }
+}
 
 /**
  * Non-modal student profile for one project. Same single `student` read and the same `progress.update`
@@ -82,7 +91,10 @@ const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => 
  *     after the earlier one settled), so responses apply in order and an older response can never overwrite a
  *     newer canonical state. The same operation on the same stage cannot be queued twice (double-submit guard).
  *     Each job carries its (project, class, student) context; a job or response for a previous selection is dropped.
- *   • Saving a score never changes the status and approving never sends a score: they remain separate decisions.
+ *   • Phase P8 (owner decision) — the visible switch «اعتماد المرحلة عند حفظ العلامة» (ON by default, remembered on this
+ *     device): saving a score on a stage not yet approved (or marked by the student, still unconfirmed) also approves it,
+ *     in ONE `progress.update` carrying both. With the switch off, saving a score never changes the status (the 8C / 9B
+ *     rule). Clearing a score never approves; approving alone never sends a score.
  */
 /** The first ungraded ACTIVE stage in the server's canonical order (Phase 9B `evaluation.stages`); null when none. */
 function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation["stages"][number] | null {
@@ -107,6 +119,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<Record<string, true>>({});           // "stageId:kind" queued or in flight
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [approveOnSave, setApproveOnSave] = useState(readApproveOnSave);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   // The selection every queued write belongs to; a write or response for another selection is dropped.
@@ -195,14 +208,14 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // the server validates the score and returns the recomputed performance (grade / project Strength / stage values).
   function updateStage(stage: ProjectStage, patch: Patch, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
     if (!detail || detail.readOnly) return;
-    const key = stage.stageId + ":" + kindOf(patch);
-    if (pendingRef.current.has(key)) return;                                   // double-submit guard (same operation)
+    const keys = patchKinds(patch).map(k => stage.stageId + ":" + k);
+    if (keys.some(k => pendingRef.current.has(k))) return;                      // double-submit guard (same operation)
     const context = contextRef.current;
     // The exact values this mutation submits (compared against the live drafts when the response arrives).
     const submittedScore = patch.score === null ? "" : patch.score === undefined ? undefined : String(patch.score).trim();
     const submittedNote = patch.note;
-    pendingRef.current.add(key);
-    setPending(prev => ({ ...prev, [key]: true }));
+    for (const k of keys) pendingRef.current.add(k);
+    setPending(prev => ({ ...prev, ...Object.fromEntries(keys.map(k => [k, true as const])) }));
     setRowErrors(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
     const run = async () => {
       if (context !== contextRef.current) return;                              // selection changed while queued
@@ -221,7 +234,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         // save button re-enables once this write settles). The same rule applies to a noChange response.
         if (patch.score !== undefined) setScoreDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId].trim() !== submittedScore ? prev : dropKey(prev, stage.stageId)));
         if (patch.note !== undefined) setNoteDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId] !== submittedNote ? prev : dropKey(prev, stage.stageId)));
-        setNotice(patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
+        setNotice(patch.score !== undefined && patch.status === "approved" ? "تم حفظ العلامة واعتماد المرحلة." : patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
         // Keyboard flow: Enter-save moves on to the next stage's score field — only if focus did not move meanwhile.
         const from = opts.advanceFrom;
         if (from && document.activeElement === from) {
@@ -239,8 +252,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         setRowErrors(prev => ({ ...prev, [stage.stageId]: e instanceof Error ? e.message : "تعذر حفظ التغيير." }));
       } finally {
         if (context === contextRef.current) {
-          pendingRef.current.delete(key);
-          setPending(prev => { const next = { ...prev }; delete next[key]; return next; });
+          for (const k of keys) pendingRef.current.delete(k);
+          setPending(prev => { const next = { ...prev }; for (const k of keys) delete next[k]; return next; });
         }
       }
     };
@@ -248,9 +261,19 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     queue.current = queue.current.then(run, run);
   }
 
+  // Phase P8 — with the switch on, a save on a stage not yet approved (or still the student's unconfirmed mark) approves it too.
+  function approvesOnSave(stage: ProjectStage): boolean {
+    const entry = detail?.progress[stage.stageId];
+    const status = normalizeStageStatus(entry?.status);
+    return approveOnSave && (status !== "approved" || !!entry?.selfReportedAt);
+  }
   function saveScore(stage: ProjectStage, draft: string, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
     if (draft.trim() === "") return;
-    updateStage(stage, { score: draft.trim() }, opts);
+    updateStage(stage, approvesOnSave(stage) ? { score: draft.trim(), status: "approved" } : { score: draft.trim() }, opts);
+  }
+  function toggleApproveOnSave(on: boolean) {
+    setApproveOnSave(on);
+    writeApproveOnSave(on);
   }
 
   // Phase P4 — moving to another student drops this profile's drafts, so unsaved scores / notes are confirmed first.
@@ -371,7 +394,17 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}
       </div>
 
-      {!readOnly && <p className="eb-muted eb-stage-grade-hint">أدخل العلامة واضغط Enter أو «حفظ»، ثم «اعتماد» لاعتماد المرحلة. تُحفظ التغييرات بالتتابع.</p>}
+      {!readOnly && (
+        <div className="eb-stage-grade-bar">
+          <label className="eb-stage-approve-toggle">
+            <input type="checkbox" role="switch" checked={approveOnSave} onChange={e => toggleApproveOnSave(e.target.checked)} />
+            اعتماد المرحلة عند حفظ العلامة
+          </label>
+          <p className="eb-muted eb-stage-grade-hint">{approveOnSave
+            ? "أدخل العلامة واضغط Enter أو «حفظ واعتماد»: تُحفظ العلامة وتُعتمد المرحلة معًا. تُحفظ التغييرات بالتتابع."
+            : "أدخل العلامة واضغط Enter أو «حفظ»، ثم «اعتماد» لاعتماد المرحلة. تُحفظ التغييرات بالتتابع."}</p>
+        </div>
+      )}
       <div className="eb-stage-groups" ref={listRef}>
         {!groups.length && <EmptyState compact title="لا توجد مراحل في هذا المسار." />}
         {groups.map(g => {
@@ -430,7 +463,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                                   value={draft} onChange={e => { const v = e.target.value; setScoreDrafts(prev => ({ ...prev, [stage.stageId]: v })); }} onKeyDown={onScoreKey}
                                   aria-label={"علامة المرحلة " + label + " من 100"} placeholder="0–100" aria-invalid={rowError ? true : undefined} />
                                 <span className="eb-stage-score-max" aria-hidden="true">/100</span>
-                                <button type="button" className="eb-button is-small" disabled={scoreBusy || !scoreChanged} onClick={e => { const trigger = e.currentTarget; saveScore(stage, draft, { refocus: { trigger, input: trigger.closest("li")?.querySelector<HTMLInputElement>("input[data-stage-score]") ?? null } }); }} aria-label={"حفظ علامة المرحلة " + stage.stageId}>{scoreBusy ? "جارٍ الحفظ…" : "حفظ"}</button>
+                                <button type="button" className="eb-button is-small" disabled={scoreBusy || !scoreChanged} onClick={e => { const trigger = e.currentTarget; saveScore(stage, draft, { refocus: { trigger, input: trigger.closest("li")?.querySelector<HTMLInputElement>("input[data-stage-score]") ?? null } }); }} aria-label={(approvesOnSave(stage) ? "حفظ واعتماد علامة المرحلة " : "حفظ علامة المرحلة ") + stage.stageId}>{scoreBusy ? "جارٍ الحفظ…" : approvesOnSave(stage) ? "حفظ واعتماد" : "حفظ"}</button>
                               </>
                             )}
                           </div>

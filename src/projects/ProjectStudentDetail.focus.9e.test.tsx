@@ -13,6 +13,9 @@ import ProjectStudentDetail from "./ProjectStudentDetail";
 import ProjectTracker from "./ProjectTracker";
 import type { TrackMeta } from "./types";
 import type { ProjectDrillTarget } from "./drillTarget";
+// Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
+// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
 const { handler: tracker } = nodeRequire("../../api/src/functions/project-tracker.js");

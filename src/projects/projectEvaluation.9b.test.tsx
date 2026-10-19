@@ -15,6 +15,9 @@ import StudentTodayHub from "../student/today/StudentTodayHub";
 import { evaluationBriefs, evaluationSummaryText, fmtProjectScore, mutationBody, normalizeProjectEvaluation, projectEvaluationText, ungradedStagesOf } from "./projectEvaluation";
 import { NOT_GRADED_LABEL } from "./projectPerformance";
 import type { ProjectEvaluation, TrackMeta } from "./types";
+// Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
+// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
 const { handler: tracker } = nodeRequire("../../api/src/functions/project-tracker.js");
