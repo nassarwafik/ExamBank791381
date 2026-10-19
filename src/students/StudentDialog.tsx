@@ -91,7 +91,7 @@ export type StudentDialogProps = {
 
 /**
  * StudentDialog — ONE dialog for the student profile. Two entry points share the same
- * `GET /api/students?profileUserId=` payload: "التفاصيل" opens on the summary, "الوظائف" opens the same
+ * `GET /api/students?profileUserId=` payload: the row's details button opens on the summary, its «الواجبات (N)» button opens the same
  * dialog with focus on the assignments/history section. No tabs: plain sections plus a small in-dialog
  * section navigator.
  */
@@ -109,7 +109,7 @@ export default function StudentDialog(p: StudentDialogProps) {
         <button type="button" onClick={jump("eb-student-summary")}>ملخص</button>
         <button type="button" onClick={jump("eb-student-info")}>بيانات الطالب</button>
         <button type="button" onClick={jump("eb-student-medals")}>الميداليات</button>
-        <button type="button" onClick={jump("eb-student-history")}>الواجبات وسجل الوظائف</button>
+        <button type="button" onClick={jump("eb-student-history")}>الواجبات وسجل التسليم</button>
       </nav>
 
       <section className="eb-dialog-section" aria-labelledby="eb-student-summary">
@@ -145,7 +145,7 @@ export default function StudentDialog(p: StudentDialogProps) {
       </section>
 
       <section className="eb-dialog-section" aria-labelledby="eb-student-history">
-        <h3 id="eb-student-history" ref={historyRef} tabIndex={-1}>الواجبات وسجل الوظائف</h3>
+        <h3 id="eb-student-history" ref={historyRef} tabIndex={-1}>الواجبات وسجل التسليم</h3>
         <h4 className="eb-subheading">واجبات الصف الحالي</h4>
         <div className="students-table-wrap" role="region" aria-label="جدول واجبات الصف الحالي" tabIndex={0}><table className="students-table">
           <thead><tr><th scope="col">الواجب</th><th scope="col">الحالة</th><th scope="col">المحاولات</th><th scope="col">العلامة</th><th scope="col">النسبة</th><th scope="col">آخر تسليم</th></tr></thead>
@@ -154,9 +154,9 @@ export default function StudentDialog(p: StudentDialogProps) {
             <td>{a.latestScore === null ? "—" : a.latestScore + "/" + a.totalMarks}{a.latestScore !== null && resolveGradingStatus(a) !== "final" && <small className="eb-muted"> (مبدئية)</small>}</td><td>{a.latestPercentage === null ? "—" : a.latestPercentage + "%"}</td><td>{a.submittedAt ? p.fmtDate(a.submittedAt) : "—"}</td>
           </tr>)}{!profile.assignments.length && <tr><td colSpan={6}>لا توجد واجبات لهذا الصف.</td></tr>}</tbody>
         </table></div>
-        <h4 className="eb-subheading">سجل الوظائف المسلّمة</h4>
-        <div className="students-table-wrap" role="region" aria-label="جدول سجل الوظائف المسلّمة" tabIndex={0}><table className="students-table">
-          <thead><tr><th scope="col">اسم الوظيفة</th><th scope="col">تاريخ آخر تسليم</th><th scope="col">العلامة</th><th scope="col">عدد المحاولات</th><th scope="col">الحالة</th><th scope="col">إجراءات</th></tr></thead>
+        <h4 className="eb-subheading">سجل الواجبات المسلّمة</h4>
+        <div className="students-table-wrap" role="region" aria-label="جدول سجل الواجبات المسلّمة" tabIndex={0}><table className="students-table">
+          <thead><tr><th scope="col">الواجب</th><th scope="col">تاريخ آخر تسليم</th><th scope="col">العلامة</th><th scope="col">عدد المحاولات</th><th scope="col">الحالة</th><th scope="col">إجراءات</th></tr></thead>
           <tbody>{profile.submittedAssignments.map(item => <Fragment key={item.assignmentId}>
             <tr>
               <td>{item.title || "—"}</td>
@@ -166,7 +166,7 @@ export default function StudentDialog(p: StudentDialogProps) {
               <td>{item.attemptsUsed > 1 ? "المحاولات: " + item.attemptsUsed : item.attemptsUsed}</td>
               <td>{resolveGradingStatus(item) === "final" ? "مصحح نهائيًا" : "بانتظار المراجعة"}</td>
               <td><div className="eb-inline-actions">
-                <button type="button" className="eb-button is-small" onClick={() => p.onReview(item)}><IconEye size={14} />فحص الوظيفة</button>
+                <button type="button" className="eb-button is-small" onClick={() => p.onReview(item)}><IconEye size={14} />فحص الواجب</button>
                 {item.isCurrentClassAssignment ? <>
                   <button type="button" className="eb-button is-small" onClick={() => p.onAllowRetry(item)} disabled={p.busy}><IconPlus size={14} />محاولة إضافية</button>
                   <button type="button" className="eb-button is-small" aria-expanded={p.deadlineFor === item.assignmentId} onClick={() => p.deadlineFor === item.assignmentId ? p.onCloseDeadline() : p.onOpenDeadline(item)} disabled={p.busy}><IconEdit size={14} />تمديد الموعد</button>

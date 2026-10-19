@@ -109,7 +109,7 @@ describe("R32 — create", () => {
     expect(screen.getByText("Pw-secret-1")).toBeTruthy();       // credential box unchanged
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
-    expect(within(rowOf("جديد")).queryByText(/الوظائف/)).toBeNull(); // counters start at 0 → no history button
+    expect(within(rowOf("جديد")).queryByText(/الواجبات \(/)).toBeNull(); // counters start at 0 → no history button
   });
 
   it("rosterSynced:false → authoritative fallback: GET students FIRST, then GET classes (sequential)", async () => {
@@ -237,7 +237,7 @@ describe("R32 — edit", () => {
     const row = rowOf("عليّ");
     expect(within(row).getByText("555555555")).toBeTruthy();
     expect(likes("عليّ")).toBe("2");
-    expect(within(row).getByText("الوظائف (3)")).toBeTruthy();
+    expect(within(row).getByRole("button", { name: /^الواجبات \(3\)/ })).toBeTruthy();
     expect(badge()).toBe("2");
     expectNoReloads();
   });
