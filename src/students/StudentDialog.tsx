@@ -1,4 +1,4 @@
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, useState } from "react";
 import Dialog from "../ui/Dialog";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
@@ -9,6 +9,23 @@ import { stageVisual } from "../studentStageVisuals";
 import { visualImgProps } from "../studentVisualSizes";
 import type { ProfileSection, StudentProfile, SubmittedAssignment } from "./types";
 import { SAVE_LABELS } from "../teacher/saveLabels";
+import { PasswordText, RevealToggle } from "./MaskedPassword";
+
+// Phase S.3 — the new password is masked until «إظهار كلمة المرور» (copy uses the real value); it still disappears after ten
+// seconds, and a newer reset starts masked again.
+function ResetPasswordBox({ reveal, onCopy }: { reveal: { password: string; secondsLeft: number }; onCopy: (password: string) => void }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="credential-box eb-credential-box" role="status">
+      <div className="credential-values"><div><span>كلمة المرور الجديدة</span><strong dir="ltr"><PasswordText value={reveal.password} shown={shown} /></strong></div></div>
+      <div className="eb-inline-actions">
+        <RevealToggle label="إظهار كلمة المرور" shown={shown} onToggle={() => setShown(x => !x)} />
+        <button type="button" className="eb-button is-small" onClick={() => onCopy(reveal.password)}><IconCopy size={14} />نسخ</button>
+      </div>
+      <p className="eb-muted"><VisuallyHidden>ستختفي كلمة المرور تلقائيًا بعد عشر ثوانٍ. انسخها الآن.</VisuallyHidden><span aria-hidden="true">ستختفي كلمة المرور بعد {reveal.secondsLeft} ثوانٍ</span></p>
+    </div>
+  );
+}
 
 /** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads. */
 function StrengthSummary({ profile }: { profile: StudentProfile }) {
@@ -117,13 +134,7 @@ export default function StudentDialog(p: StudentDialogProps) {
         <div className="eb-inline-actions">
           <button type="button" className="eb-button is-small" onClick={p.onResetPassword} disabled={p.busy}><IconKey size={14} />كلمة مرور جديدة</button>
         </div>
-        {p.passwordReveal && (
-          <div className="credential-box eb-credential-box" role="status">
-            <div className="credential-values"><div><span>كلمة المرور الجديدة</span><strong dir="ltr">{p.passwordReveal.password}</strong></div></div>
-            <div className="eb-inline-actions"><button type="button" className="eb-button is-small" onClick={() => p.onCopyPassword(p.passwordReveal?.password || "")}><IconCopy size={14} />نسخ</button></div>
-            <p className="eb-muted"><VisuallyHidden>ستختفي كلمة المرور تلقائيًا بعد عشر ثوانٍ. انسخها الآن.</VisuallyHidden><span aria-hidden="true">ستختفي كلمة المرور بعد {p.passwordReveal.secondsLeft} ثوانٍ</span></p>
-          </div>
-        )}
+        {p.passwordReveal && <ResetPasswordBox key={p.passwordReveal.password} reveal={p.passwordReveal} onCopy={p.onCopyPassword} />}
       </section>
 
       <section className="eb-dialog-section" aria-labelledby="eb-student-medals">

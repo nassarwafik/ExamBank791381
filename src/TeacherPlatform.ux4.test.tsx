@@ -168,9 +168,13 @@ describe("UX-4 request parity — students", () => {
     await screen.findByText("✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول.");
     expect(posts("/api/students")).toEqual([{ action: "create", classId: "c1", firstName: "ريم", familyName: "صالح", identityNumber: "555555555", password: "" }]);
     expect(screen.queryByRole("dialog")).toBeNull();
+    // S.3 — the password is masked until «إظهار كلمة المرور»; «إخفاء» still removes the whole box.
+    expect(screen.queryByText("Pw-new-1")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "إظهار كلمة المرور" }));
     expect(screen.getByText("Pw-new-1")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "إخفاء" }));
     expect(screen.queryByText("Pw-new-1")).toBeNull();
+    expect(screen.queryByRole("region", { name: "بيانات دخول جديدة" })).toBeNull();
   });
   it("update (edit dialog incl. class move) → {action:update,userId,firstName,familyName,identityNumber,classId,password}", async () => {
     await mount();
@@ -232,6 +236,7 @@ describe("UX-4 request parity — students", () => {
     const d2 = await screen.findByRole("dialog", { name: "علي حسن" });
     fireEvent.click(within(d2).getByRole("button", { name: "كلمة مرور جديدة" }));
     await confirmDialog();
+    fireEvent.click(await within(d2).findByRole("button", { name: "إظهار كلمة المرور" }));   // S.3 — masked until asked
     await within(d2).findByText("Reset-Pw-9");
     expect(posts("/api/students")).toEqual([{ action: "resetPassword", userId: "s1" }]);
     expect(within(d2).getByRole("status").textContent).toContain("Reset-Pw-9");
@@ -248,10 +253,12 @@ describe("UX-4 request parity — students", () => {
     const preview = d.querySelector("table") as HTMLElement;
     expect(within(preview).getByText("صالح", { selector: ".eb-badge" })).toBeTruthy(); expect(within(preview).getByText("غير صالح", { selector: ".eb-badge" })).toBeTruthy();
     fireEvent.click(within(d).getByRole("button", { name: /استيراد الطلاب الصالحين/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "إظهار كلمات المرور" }));       // S.3 — masked until asked
     await screen.findByText("Pw-batch-5");
     const bodies = posts("/api/students");
     expect(bodies[0]).toEqual({ action: "previewImport", classId: "c1", students: parseBulkStudents(raw, "r.json").students }); // the SAME local normalisation as before
-    expect(bodies[1]).toEqual({ action: "bulkImport", classId: "c1", students: [{ firstName: "ريم", familyName: "صالح", identityNumber: "555555555" }] });
+    // S.3 — the import also carries the preview's retry key.
+    expect(bodies[1]).toEqual({ action: "bulkImport", classId: "c1", students: [{ firstName: "ريم", familyName: "صالح", identityNumber: "555555555" }], importId: expect.stringMatching(/^[A-Za-z0-9-]{16,64}$/) });
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "إغلاق" }));                       // discard batch → confirm
     await confirmDialog();
@@ -277,6 +284,11 @@ describe("UX-4 request parity — students", () => {
     fireEvent.click(within(screen.getByRole("region", { name: "إجراءات جماعية" })).getByRole("button", { name: "حذف نهائي" }));
     expect((await confirmEl()).className).toContain("tone-danger");
     expect((await confirmEl()).textContent).toContain("⚠️ حذف نهائي لـ 2 طالب؟");
+    // S.3 — «حذف نهائي» unlocks only once the number of students is typed.
+    const lock = (await confirmEl()).querySelector(".eb-dialog-foot .is-danger") as HTMLButtonElement;
+    expect(lock.disabled).toBe(true);
+    fireEvent.change(within(await confirmEl()).getByLabelText(/اكتب عدد الطلاب/), { target: { value: "2" } });
+    expect(lock.disabled).toBe(false);
     await confirmDialog();
     await screen.findByText(/نُفذت العملية على طالب واحد/);
     const ops = posts("/api/students").filter(b => b.action === "bulkAction");

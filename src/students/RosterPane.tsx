@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -10,6 +10,7 @@ import { relativeTime } from "./rosterText";
 import { arabicCount, arabicCountParts, STUDENTS, STUDENTS_AFTER_DIGITS } from "../learning/arabicCount";
 import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp, IconPrint } from "../icons";
 import { type CredentialBatch } from "../credentialBatch";
+import { PasswordText, RevealToggle } from "./MaskedPassword";
 import type { BulkError, BulkOperation, Classroom, Credential, SortKey, StatusFilter, Student } from "./types";
 
 export type RosterPaneProps = {
@@ -116,19 +117,7 @@ export default function RosterPane(p: RosterPaneProps) {
         </>}
       />
 
-      {p.credentialBox && (
-        <section className="credential-box eb-credential-box" aria-label="بيانات دخول جديدة">
-          <h3 className="eb-subheading">بيانات دخول جديدة · {p.credentialBox.name}</h3>
-          <div className="credential-values">
-            <div><span>رقم الهوية / الدخول</span><strong dir="ltr">{p.credentialBox.identityNumber}</strong></div>
-            <div><span>كلمة المرور</span><strong dir="ltr">{p.credentialBox.password}</strong></div>
-          </div>
-          <div className="eb-inline-actions">
-            <button type="button" className="eb-button is-small" onClick={p.onCopyCredentialBox}><IconCopy size={14} />نسخ بيانات الدخول</button>
-            <button type="button" className="eb-button is-small" onClick={p.onHideCredentialBox}>إخفاء</button>
-          </div>
-        </section>
-      )}
+      {p.credentialBox && <CredentialBox key={p.credentialBox.password} box={p.credentialBox} onCopy={p.onCopyCredentialBox} onHide={p.onHideCredentialBox} />}
 
       <div className="student-admin-stats eb-roster-stats" role="group" aria-label="ملخص الصف — اختر رقمًا لعرض طلابه" aria-busy={!ready || undefined}>
         {STAT_FILTERS.map(f => (
@@ -152,27 +141,7 @@ export default function RosterPane(p: RosterPaneProps) {
 
       {p.selectedIds.length > 0 && <BulkActionBar count={p.selectedIds.length} busy={p.busy} targetClasses={p.bulk.targetClasses} targetClassId={p.bulk.targetClassId} onTargetChange={p.bulk.onTargetChange} onAction={p.bulk.onAction} onClear={p.onClearSelection} />}
 
-      {p.credentialBatch && (
-        <section className="credential-box eb-credential-box" aria-label="بيانات الدخول الجديدة">
-          <div className="eb-credential-head">
-            <div><h3 className="eb-subheading">بيانات الدخول الجديدة</h3><p className="eb-muted">{arabicCount(p.credentialBatch.credentials.length, STUDENTS)} · احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p></div>
-            <div className="eb-inline-actions">
-              <button type="button" className="eb-button is-small" onClick={p.onToggleBatch} aria-expanded={!p.credentialBatch.collapsed}>{p.credentialBatch.collapsed ? <><IconChevronDown size={14} />إظهار</> : <><IconChevronUp size={14} />طي</>}</button>
-              {p.onPrintBatch && <button type="button" className="eb-button is-small is-primary" onClick={p.onPrintBatch}><IconPrint size={14} />طباعة بطاقات الدخول</button>}
-              {p.onDownloadBatchCsv && <button type="button" className="eb-button is-small" onClick={p.onDownloadBatchCsv}><IconDownload size={14} />تنزيل CSV</button>}
-              <button type="button" className="eb-button is-small" onClick={p.onDownloadBatch}><IconDownload size={14} />تنزيل JSON</button>
-              <button type="button" className="eb-button is-small" onClick={p.onDiscardBatch}><IconClose size={14} />إغلاق</button>
-            </div>
-          </div>
-          {!p.credentialBatch.collapsed && (
-            <div className="students-table-wrap"><table className="students-table">
-              <thead><tr><th scope="col">الاسم</th><th scope="col">العائلة</th><th scope="col">رقم الهوية</th><th scope="col">كلمة المرور</th><th scope="col"><VisuallyHidden>نسخ</VisuallyHidden></th></tr></thead>
-              <tbody>{p.credentialBatch.credentials.map((c, i) => <tr key={(c.userId || c.code) + i}><td>{c.firstName}</td><td>{c.familyName}</td><td dir="ltr">{c.identityNumber || c.code}</td><td dir="ltr"><strong>{c.password}</strong></td>
-                <td><button type="button" className="eb-button is-small" onClick={() => p.onCopyCredential(c)}><IconCopy size={14} />نسخ</button></td></tr>)}</tbody>
-            </table></div>
-          )}
-        </section>
-      )}
+      {p.credentialBatch && <CredentialBatchPanel key={p.credentialBatch.createdAt} batch={p.credentialBatch} onToggle={p.onToggleBatch} onDownload={p.onDownloadBatch} onDiscard={p.onDiscardBatch} onCopy={p.onCopyCredential} onDownloadCsv={p.onDownloadBatchCsv} onPrint={p.onPrintBatch} />}
 
       {p.bulkErrors.length > 0 && <div className="platform-warning" role="alert"><strong>عمليات لم تكتمل:</strong>{p.bulkErrors.map((x, i) => <div key={x.userId || i}>{x.displayName || x.userId || "السطر " + ((x.index ?? i) + 1)}: {x.error}</div>)}</div>}
 
@@ -212,6 +181,56 @@ export default function RosterPane(p: RosterPaneProps) {
         </table></div>
       )}
       {tableBody}
+    </section>
+  );
+}
+
+// Phase S.3 — the password of a newly created student is masked until «إظهار كلمة المرور»; a new box starts masked again.
+function CredentialBox({ box, onCopy, onHide }: { box: NonNullable<RosterPaneProps["credentialBox"]>; onCopy: () => void; onHide: () => void }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <section className="credential-box eb-credential-box" aria-label="بيانات دخول جديدة">
+      <h3 className="eb-subheading">بيانات دخول جديدة · {box.name}</h3>
+      <div className="credential-values">
+        <div><span>رقم الهوية / الدخول</span><strong dir="ltr">{box.identityNumber}</strong></div>
+        <div><span>كلمة المرور</span><strong dir="ltr"><PasswordText value={box.password} shown={shown} /></strong></div>
+      </div>
+      <div className="eb-inline-actions">
+        <RevealToggle label="إظهار كلمة المرور" shown={shown} onToggle={() => setShown(x => !x)} />
+        <button type="button" className="eb-button is-small" onClick={onCopy}><IconCopy size={14} />نسخ بيانات الدخول</button>
+        <button type="button" className="eb-button is-small" onClick={onHide}>إخفاء</button>
+      </div>
+    </section>
+  );
+}
+
+// Phase S.3 — the batch's passwords are masked until «إظهار كلمات المرور». The panel unmounts while another class is selected,
+// so coming back (or a new batch) always starts masked. «لم تُحفظ بعد» until a download or a print took a copy.
+function CredentialBatchPanel({ batch, onToggle, onDownload, onDiscard, onCopy, onDownloadCsv, onPrint }: {
+  batch: CredentialBatch; onToggle: () => void; onDownload: () => void; onDiscard: () => void; onCopy: (credential: Credential) => void;
+  onDownloadCsv?: () => void; onPrint?: () => void;
+}) {
+  const [shown, setShown] = useState(false);
+  return (
+    <section className="credential-box eb-credential-box" aria-label="بيانات الدخول الجديدة">
+      <div className="eb-credential-head">
+        <div><h3 className="eb-subheading">بيانات الدخول الجديدة</h3><p className="eb-muted">{arabicCount(batch.credentials.length, STUDENTS)} · {batch.savedAt ? "✓ حُفظت نسخة منها (تنزيل أو طباعة)." : "لم تُحفظ بعد: نزّلها أو اطبعها الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح."}</p></div>
+        <div className="eb-inline-actions">
+          <button type="button" className="eb-button is-small" onClick={onToggle} aria-expanded={!batch.collapsed}>{batch.collapsed ? <><IconChevronDown size={14} />إظهار</> : <><IconChevronUp size={14} />طي</>}</button>
+          {!batch.collapsed && <RevealToggle label="إظهار كلمات المرور" shown={shown} onToggle={() => setShown(x => !x)} />}
+          {onPrint && <button type="button" className="eb-button is-small is-primary" onClick={onPrint}><IconPrint size={14} />طباعة بطاقات الدخول</button>}
+          {onDownloadCsv && <button type="button" className="eb-button is-small" onClick={onDownloadCsv}><IconDownload size={14} />تنزيل CSV</button>}
+          <button type="button" className="eb-button is-small" onClick={onDownload}><IconDownload size={14} />تنزيل JSON</button>
+          <button type="button" className="eb-button is-small" onClick={onDiscard}><IconClose size={14} />إغلاق</button>
+        </div>
+      </div>
+      {!batch.collapsed && (
+        <div className="students-table-wrap"><table className="students-table">
+          <thead><tr><th scope="col">الاسم</th><th scope="col">العائلة</th><th scope="col">رقم الهوية</th><th scope="col">كلمة المرور</th><th scope="col"><VisuallyHidden>نسخ</VisuallyHidden></th></tr></thead>
+          <tbody>{batch.credentials.map((c, i) => <tr key={(c.userId || c.code) + i}><td>{c.firstName}</td><td>{c.familyName}</td><td dir="ltr">{c.identityNumber || c.code}</td><td dir="ltr"><strong><PasswordText value={c.password} shown={shown} /></strong></td>
+            <td><button type="button" className="eb-button is-small" onClick={() => onCopy(c)}><IconCopy size={14} />نسخ</button></td></tr>)}</tbody>
+        </table></div>
+      )}
     </section>
   );
 }

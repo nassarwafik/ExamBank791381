@@ -372,7 +372,9 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     authVersion: 1,
     createdAt: now,
     updatedAt: now,
-    lastLoginAt: ""
+    lastLoginAt: "",
+    // Phase S.3 — the retry key of the bulk import that created this account (never returned by publicStudent).
+    ...(options.importId ? { importId: options.importId } : {})
   };
 
   const authDocument = {
@@ -421,6 +423,23 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   }
   // Roadmap #25: the roster index is updated by the caller AFTER this authoritative write (never here).
   return { student: publicStudent(student), temporaryPassword: password };
+}
+
+// Phase S.3 — a SAFE RETRY of one bulk import. The teacher's browser sends the same unguessable key with every attempt to
+// import one previewed file. When the response of an attempt is lost (network, gateway) the accounts it created exist but
+// their generated passwords reached no one; a retry used to report every such row as a duplicate, leaving accounts nobody
+// can log into. A row whose identity is held by an account THIS import created, in THIS class, recently, never logged into
+// and not archived is recovered with a NEW password (the old one was never seen); anything else is still a duplicate.
+const IMPORT_ID_PATTERN = /^[A-Za-z0-9-]{16,64}$/;
+const IMPORT_RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
+async function recoverImportedStudent(container, classId, importId, item) {
+  const existing = await findStudentByIdentity(container, identityFromInput(item));
+  if (!existing || existing.importId !== importId || String(existing.classId || "") !== classId) return null;
+  if (existing.lastLoginAt || existing.archived === true) return null;
+  const createdAt = Date.parse(String(existing.createdAt || ""));
+  if (!Number.isFinite(createdAt) || Date.now() - createdAt > IMPORT_RETRY_WINDOW_MS) return null;
+  const password = await resetStudentPassword(container, existing);
+  return { student: publicStudent(existing), password };
 }
 
 async function resetStudentPassword(container, student, requestedPassword = "") {
@@ -945,6 +964,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const errors = [];
         const createdIds = [];
         let duplicates = 0;
+        let recovered = 0;
+        const importId = typeof body?.importId === "string" && IMPORT_ID_PATTERN.test(body.importId) ? body.importId : "";
 
         // CREATE-only, per-row. Each row is revalidated server-side by createStudentRecord (name/identity/
         // existing-identity), and the conditional auth write is the final race guard — a row that loses a
@@ -952,9 +973,21 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         // another account. A partial result is reported explicitly (created + failed), never as full success.
         // createStudentRecord already writes each new student's AUTHORITATIVE membership (user.classId) — the
         // classroom.studentIds list it also touches in-memory is a denormalized index we DO NOT persist here.
+        // Phase S.3 — one row: a create, or (same import key, identity already held by an account this import created) a
+        // recovery with a new password. A failed recovery is reported as ITS failure through the same per-row catch below.
+        const importRow = async item => {
+          try {
+            const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true, visible: tenant ? studentOk : null, importId });
+            return { student: result.student, password: result.temporaryPassword, recovered: false };
+          } catch (error) {
+            const again = importId && error && error.code === "duplicate" ? await recoverImportedStudent(container, classId, importId, item) : null;
+            if (!again) throw error;
+            return { ...again, recovered: true };
+          }
+        };
         for (const item of students) {
           try {
-            const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true, visible: tenant ? studentOk : null });
+            const result = await importRow(item);
             credentials.push({
               userId: result.student.userId,
               firstName: result.student.firstName,
@@ -962,9 +995,11 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               displayName: result.student.displayName,
               identityNumber: result.student.identityNumber,
               code: result.student.code,
-              password: result.temporaryPassword
+              password: result.password,
+              ...(result.recovered ? { recovered: true } : {})
             });
             createdIds.push(result.student.userId);
+            if (result.recovered) recovered += 1;
           } catch (error) {
             if (error && error.code === "duplicate") duplicates += 1;
             errors.push({
@@ -1000,7 +1035,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           targetType: "class",
           targetId: classId,
           targetLabel: String(classroom.name || ""),
-          details: { classId, createdCount: credentials.length, duplicateCount: duplicates, failedCount: errors.length }
+          details: { classId, createdCount: credentials.length - recovered, recoveredCount: recovered, duplicateCount: duplicates, failedCount: errors.length }
         });
         return {
           status: 200,
@@ -1010,6 +1045,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             imported: credentials.length,
             failed: errors.length,
             duplicates,
+            recovered,
             rosterSynced,
             credentials,
             errors

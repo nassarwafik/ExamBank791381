@@ -265,6 +265,7 @@ describe("new: credential hand-outs, filters and notices", () => {
     fireEvent.change(d.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [file] } });
     await within(d).findByText("جاهز للاستيراد");
     fireEvent.click(within(d).getByRole("button", { name: /استيراد الطلاب الصالحين/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "إظهار كلمات المرور" }));   // S.3 — masked until asked
     await screen.findByText("Pw5batch");
     expect(screen.getByRole("button", { name: "طباعة بطاقات الدخول" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "تنزيل CSV" }));
