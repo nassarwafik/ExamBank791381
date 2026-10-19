@@ -29,7 +29,9 @@ describe("buildClassSummary", () => {
     expect(s.studentsReadyForReview).toBe(1);
     expect(s.totalReadyStages).toBe(1);
     expect(s.completedCount).toBe(0);
-    expect(s.staleCount).toBe(1); // s3 never updated
+    // Phase P-5b — s3 never started (no progress at all): it is «لم يبدأ», no longer counted «بلا تحديث». s1 and s2 were updated
+    // recently, so nobody is stale (before P-5b this pinned staleCount 1 for the never-started s3).
+    expect(s.staleCount).toBe(0);
   });
 });
 

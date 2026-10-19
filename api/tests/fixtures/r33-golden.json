@@ -9677,7 +9677,8 @@
         "readyForReviewCount": 0,
         "complete": false,
         "updatedAt": "",
-        "stale": true
+        "stale": false,
+        "notStarted": true
       },
       "performance": {
         "overallProgress": 0,
@@ -13687,7 +13688,7 @@
         "completedCount": 0,
         "studentsReadyForReview": 1,
         "totalReadyStages": 1,
-        "staleCount": 2,
+        "staleCount": 1,
         "trackWeights": {
           "book": 50,
           "packetTracer": 50
@@ -13813,7 +13814,8 @@
           "readyForReviewCount": 0,
           "complete": false,
           "updatedAt": "",
-          "stale": true,
+          "stale": false,
+          "notStarted": true,
           "grade": 0,
           "projectStrength": 0,
           "projectTier": "beginner"
@@ -48465,7 +48467,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "",
-            "stale": true
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,
@@ -55864,7 +55867,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "",
-            "stale": true
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,
@@ -59561,7 +59565,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "2026-02-01T00:00:00.000Z",
-            "stale": true
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,
@@ -60322,7 +60327,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "",
-            "stale": true
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,
@@ -61394,7 +61400,8 @@
             "readyForReviewCount": 0,
             "complete": false,
             "updatedAt": "",
-            "stale": true
+            "stale": false,
+            "notStarted": true
           },
           "performance": {
             "overallProgress": 0,

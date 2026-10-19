@@ -245,8 +245,12 @@ async function handler(request, deps = {}, obs = null) {
           const rows = entries.map(e => {
             const summary = core.buildStudentSummary(workDef, e.progress, now);
             const reasons = [];
-            if (summary.stale) reasons.push("بلا تحديث " + (cfg.staleDays || 7) + "+ أيام");
-            if (!summary.complete && summary.overallProgress < lateThreshold) reasons.push("تقدّم أقل من " + lateThreshold + "%");
+            // Phase P-5b — a never-started student has one reason, «لم يبدأ بعد» (never «بلا تحديث», and its 0 % is implied).
+            if (summary.notStarted) reasons.push("لم يبدأ بعد");
+            else {
+              if (summary.stale) reasons.push("بلا تحديث " + (cfg.staleDays || 7) + "+ أيام");
+              if (!summary.complete && summary.overallProgress < lateThreshold) reasons.push("تقدّم أقل من " + lateThreshold + "%");
+            }
             return { studentId: e.studentId, displayName: e.displayName, overall: summary.overallProgress, trackProgress: summary.trackProgress, updatedAt: summary.updatedAt, complete: summary.complete, reasons };
           }).filter(r => r.reasons.length);
           return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, lateThreshold, class: classMeta(c), students: rows } };

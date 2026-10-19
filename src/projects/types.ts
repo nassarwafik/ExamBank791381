@@ -36,6 +36,8 @@ export type StudentCard = {
   readyForReviewCount: number;
   /** Phase P6 — additive (absent on older payloads): stages the student marked as done that the teacher has not confirmed. */
   selfReportedCount?: number;
+  /** Phase P-5b — additive (present only when true): no active stage has left «لم يبدأ»; such a student is never `stale`. */
+  notStarted?: boolean;
   complete: boolean;
   updatedAt: string;
   stale: boolean;
