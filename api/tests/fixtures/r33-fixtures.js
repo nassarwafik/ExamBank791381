@@ -45,13 +45,26 @@ function v1Snapshot(classId) {
 }
 const progressDoc = (programCode, classId, studentId, stages, history = []) => ({ schemaVersion: 1, programCode, classId, studentId, startedAt: "2025-10-01T00:00:00.000Z", updatedAt: "2026-02-01T00:00:00.000Z", stages, history });
 
+// Phase P7 — the school is seeded with the stage sets it was captured with (V2 for 794589, V1 for 899373 / 883589), from
+// the verbatim pre-P7 templates: the seeded blobs are byte-identical to the ones the golden was produced from, so every
+// difference the golden records since P7 is the owner-approved conversion of these classes to the condensed sets.
+const PRE_P7 = code => JSON.parse(JSON.stringify(require("./project-templates-pre-p7/" + code + ".json")));
+function preP7LegacySnapshot(classId, now) {
+  const t = PRE_P7("794589");
+  return { schemaVersion: 1, programCode: "794589", classId, templateVersion: t.templateVersion, trackWeights: t.trackWeights, config: t.config, groups: t.groups, stages: t.stages, createdAt: now, updatedAt: now };
+}
+function preP7GenericSnapshot(h, code, classId, now) {
+  const t = PRE_P7(code);
+  return { schemaVersion: 1, projectCode: code, classId, templateVersion: t.templateVersion, tracks: h.registry.getProjectDefinition(code).tracks, trackWeights: t.trackWeights, config: t.config, groups: t.groups, stages: t.stages, createdAt: now, updatedAt: now };
+}
+
 function seedSchool(h) {
   const s = {};
   const nsL = h.registry.getStorageNamespace("794589"), nsA = h.registry.getStorageNamespace("899373"), nsB = h.registry.getStorageNamespace("883589");
   // c1: V2 snapshot + meaningful progress. s1 member (progress + 25 history), s2 disabled member, s3 ARCHIVED (has
   // stale progress), s4 foreign (class c9).
   s[CP + "c1.json"] = cls("c1", { studentIds: ["s1", "s2"] });
-  s[nsL.configName("c1")] = h.template.buildClassSnapshotFromDefault("c1", "2026-01-05T00:00:00.000Z");
+  s[nsL.configName("c1")] = preP7LegacySnapshot("c1", "2026-01-05T00:00:00.000Z");
   s[UP + "s1.json"] = user("s1", "c1"); s[UP + "s2.json"] = user("s2", "c1", { active: false }); s[UP + "s3.json"] = user("s3", "c1", { archived: true, active: false }); s[UP + "s4.json"] = user("s4", "c9");
   const history = Array.from({ length: 25 }, (_, i) => ({ eventId: "hist-" + String(i).padStart(2, "0"), stageId: "B01", type: "status", fromStatus: "not_started", toStatus: "in_progress", actor: "teacher-0", createdAt: "2026-01-1" + (i % 9) + "T00:00:00.000Z" }));
   s[nsL.progressName("c1", "s1")] = progressDoc("794589", "c1", "s1", {
@@ -65,7 +78,7 @@ function seedSchool(h) {
   // c3: V1 snapshot, NO meaningful progress → auto-upgrade candidate; s6 member.
   s[CP + "c3.json"] = cls("c3", { studentIds: ["s6"] }); s[nsL.configName("c3")] = v1Snapshot("c3"); s[UP + "s6.json"] = user("s6", "c3");
   s[nsL.progressName("c3", "s6")] = progressDoc("794589", "c3", "s6", { B01: { status: "not_started" } });
-  // c4: V1 snapshot WITH meaningful progress → must never be touched; s7 member.
+  // c4: V1 snapshot WITH meaningful progress → restarts from zero on the condensed set (P7b owner decision); s7 member.
   s[CP + "c4.json"] = cls("c4", { studentIds: ["s7"] }); s[nsL.configName("c4")] = v1Snapshot("c4"); s[UP + "s7.json"] = user("s7", "c4");
   s[nsL.progressName("c4", "s7")] = progressDoc("794589", "c4", "s7", { B01: { status: "approved", approvedAt: "2025-11-01T00:00:00.000Z" }, P01: { status: "ready_for_review" } });
   // cA: ARCHIVED class, V1 snapshot + progress; s8 member.
@@ -77,8 +90,8 @@ function seedSchool(h) {
   const cL = cls("cL", { studentIds: ["s10"] }); delete cL.programCodes; cL.programCode = "794589"; s[CP + "cL.json"] = cL; s[UP + "s10.json"] = user("s10", "cL");
   // g1: generic two-project class (899373 + 883589) with snapshots and progress; s11 member.
   s[CP + "g1.json"] = cls("g1", { programCodes: ["899373", "883589"], studentIds: ["s11"] }); s[UP + "s11.json"] = user("s11", "g1");
-  s[nsA.configName("g1")] = h.service.buildClassSnapshot(h.registry.getProjectDefinition("899373"), "g1", "2026-02-01T00:00:00.000Z");
-  s[nsB.configName("g1")] = h.service.buildClassSnapshot(h.registry.getProjectDefinition("883589"), "g1", "2026-02-01T00:00:00.000Z");
+  s[nsA.configName("g1")] = preP7GenericSnapshot(h, "899373", "g1", "2026-02-01T00:00:00.000Z");
+  s[nsB.configName("g1")] = preP7GenericSnapshot(h, "883589", "g1", "2026-02-01T00:00:00.000Z");
   s[nsA.progressName("g1", "s11")] = progressDoc("899373", "g1", "s11", { B01: { status: "approved", approvedAt: "2026-03-01T00:00:00.000Z" }, A01: { status: "ready_for_review" } });
   s[nsB.progressName("g1", "s11")] = progressDoc("883589", "g1", "s11", { V01: { status: "in_progress" } });
   return s;
@@ -113,20 +126,24 @@ const teacherPairs = [
   ["analytics.c1", "GET", { resource: "analytics", classId: "c1" }],
   ["activate.c2", "POST", { action: "program.activate", classId: "c2" }],
   ["activate.cA.archived", "POST", { action: "program.activate", classId: "cA" }],
-  ["update.approve", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B03", status: "approved" }],
-  ["update.status", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B03", status: "in_progress" }],
-  ["update.noteOnly", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B03", note: "n2" }],
-  ["update.noChange", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B02", status: "ready_for_review" }],
-  ["update.invalidStatus", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B03", status: "bogus" }],
-  ["update.foreign", "POST", { action: "progress.update", classId: "c1", studentId: "s4", stageId: "B03", status: "approved" }],
-  ["update.archivedStudent", "POST", { action: "progress.update", classId: "c1", studentId: "s3", stageId: "B03", status: "approved" }],
-  ["update.ghost", "POST", { action: "progress.update", classId: "c1", studentId: "ghost", stageId: "B03", status: "approved" }],
+  // Phase P7 — writes target the condensed stages the seeded classes convert to on first access (B03 → BK02, the
+  // ready B02 → BK01 «بانتظار الاعتماد», A01 → AC01, V01 → VS01); archived / not-enrolled classes keep their old ids.
+  ["update.approve", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK02", status: "approved" }],
+  ["update.status", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK02", status: "in_progress" }],
+  ["update.noteOnly", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK02", note: "n2" }],
+  ["update.noChange", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK01", status: "ready_for_review" }],
+  ["update.invalidStatus", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK02", status: "bogus" }],
+  ["update.foreign", "POST", { action: "progress.update", classId: "c1", studentId: "s4", stageId: "BK02", status: "approved" }],
+  ["update.archivedStudent", "POST", { action: "progress.update", classId: "c1", studentId: "s3", stageId: "BK02", status: "approved" }],
+  ["update.ghost", "POST", { action: "progress.update", classId: "c1", studentId: "ghost", stageId: "BK02", status: "approved" }],
   ["update.badStage", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "NOPE", status: "approved" }],
   ["update.archivedClass", "POST", { action: "progress.update", classId: "cA", studentId: "s8", stageId: "B01", status: "approved" }],
   ["update.notEnrolled", "POST", { action: "progress.update", classId: "cN", studentId: "s9", stageId: "B01", status: "approved" }],
   ["update.missingIds", "POST", { action: "progress.update", classId: "c1", studentId: "s1" }],
+  // P7: every write to s1 conflicts, so c1's conversion cannot complete — the class is served on its old set and the
+  // write (an old id) exhausts its CAS retries exactly as before (503, s1 untouched).
   ["update.conflict", "POST", { action: "progress.update", classId: "c1", studentId: "s1", stageId: "B03", status: "approved" }, { conflictOn: LEGACY_PROGRESS + "c1/s1.json" }],
-  ["update.lazyCreateEmptyClass", "POST", { action: "progress.update", classId: "c2", studentId: "s5", stageId: "B01", status: "in_progress" }],
+  ["update.lazyCreateEmptyClass", "POST", { action: "progress.update", classId: "c2", studentId: "s5", stageId: "BK01", status: "in_progress" }],
   ["reset.c1", "POST", { action: "project.reset", classId: "c1" }],
   ["reset.c2.empty", "POST", { action: "project.reset", classId: "c2" }],
   ["reset.cA.archived", "POST", { action: "project.reset", classId: "cA" }],
@@ -156,13 +173,13 @@ gen("G899373.students.g1", "GET", { projectCode: "899373", resource: "students",
 gen("G899373.analytics.g1", "GET", { projectCode: "899373", resource: "analytics", classId: "g1" });
 gen("G899373.template.c1.notEnrolled", "GET", { projectCode: "899373", resource: "template", classId: "c1" });
 gen("G899373.template.cN.enrolled", "GET", { projectCode: "899373", resource: "template", classId: "cN" });
-gen("G899373.update.approve", "POST", { projectCode: "899373", action: "progress.update", classId: "g1", studentId: "s11", stageId: "A01", status: "approved" });
-gen("G899373.update.foreign", "POST", { projectCode: "899373", action: "progress.update", classId: "g1", studentId: "s1", stageId: "A01", status: "approved" });
+gen("G899373.update.approve", "POST", { projectCode: "899373", action: "progress.update", classId: "g1", studentId: "s11", stageId: "AC01", status: "approved" });
+gen("G899373.update.foreign", "POST", { projectCode: "899373", action: "progress.update", classId: "g1", studentId: "s1", stageId: "AC01", status: "approved" });
 gen("G899373.reset.g1", "POST", { projectCode: "899373", action: "project.reset", classId: "g1" });
 gen("G899373.templateUpdate.g1", "POST", { projectCode: "899373", action: "template.update", classId: "g1", template: { config: { staleDays: 3 } } });
 gen("G883589.template.g1", "GET", { projectCode: "883589", resource: "template", classId: "g1" });
 gen("G883589.student.g1.s11", "GET", { projectCode: "883589", resource: "student", classId: "g1", studentId: "s11" });
-gen("G883589.update.status", "POST", { projectCode: "883589", action: "progress.update", classId: "g1", studentId: "s11", stageId: "V01", status: "ready_for_review" });
+gen("G883589.update.status", "POST", { projectCode: "883589", action: "progress.update", classId: "g1", studentId: "s11", stageId: "VS01", status: "ready_for_review" });
 gen("G883589.reset.g1", "POST", { projectCode: "883589", action: "project.reset", classId: "g1" });
 gen("G.projects", "GET", { resource: "projects" });
 gen("G.projectsSummary", "GET", { resource: "projects-summary" });

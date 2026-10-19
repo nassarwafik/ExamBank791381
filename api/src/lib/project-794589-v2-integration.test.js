@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { buildClassSnapshotFromDefault } from "./project-794589-template.js";
+import { createRequire } from "node:module";
 import { calculateTrackProgress, buildStudentSummary, isStudentComplete, getNextStage } from "./project-794589-core.js";
 import { buildAnalytics } from "./project-794589-analytics.js";
 
 const NOW = "2026-09-07T00:00:00.000Z";
-const config = buildClassSnapshotFromDefault("cV2", NOW);
+// Phase P7 — the V2 set is no longer the default (the condensed V3 is), but archived classes keep it forever: the engine
+// is still checked on it, built from the verbatim V2 fixture (updated deliberately).
+const V2 = createRequire(import.meta.url)("../../tests/fixtures/project-templates-pre-p7/794589.json");
+const config = { schemaVersion: 1, programCode: "794589", classId: "cV2", ...JSON.parse(JSON.stringify(V2)), createdAt: NOW, updatedAt: NOW };
 const bookIds = config.stages.filter(s => s.track === "book").map(s => s.stageId);
 const ptIds = config.stages.filter(s => s.track === "packetTracer").map(s => s.stageId);
 

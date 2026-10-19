@@ -217,6 +217,7 @@ function OneProject({ project, contribution, onBack, token, onChanged }: { proje
                           {kind === "pending" && <button type="button" className="eb-button is-quiet is-small eb-sp-undo-btn" disabled={pending.has(stage.stageId)} onClick={() => void send([stage.stageId], false, stage.stageId)} aria-label={"تراجع عن تحديد " + label}>تراجع</button>}
                         </span>
                       </div>
+                      {stage.description ? <p className="eb-sp-stage-items">يشمل: {stage.description}</p> : null}
                       {perf && (
                         <p className="eb-sp-stage-score">
                           <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>

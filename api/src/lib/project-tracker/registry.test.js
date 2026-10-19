@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { createRequire } from "node:module";
 import {
   getSupportedProjects, isSupportedProject, getProjectDefinition, getProjectMeta, getStorageNamespace
 } from "./registry.js";
+
+// Phase P7 — the defaults are the owner-approved condensed sets; the previous sets (the conversion source) are kept
+// verbatim as fixtures and their content checks below now read them (updated deliberately).
+const PRE_P7 = code => createRequire(import.meta.url)("../../../tests/fixtures/project-templates-pre-p7/" + code + ".json");
 
 describe("project registry", () => {
   it("supports exactly the three project codes", () => {
@@ -10,10 +15,12 @@ describe("project registry", () => {
     expect(isSupportedProject("000000")).toBe(false);
   });
 
-  it("794589 keeps its two tracks and full 105-stage template", () => {
+  it("794589 keeps its two tracks; its condensed template has 20 stages (10 + 10) replacing the 105", () => {
     const d = getProjectDefinition("794589");
     expect(d.tracks.map(t => t.trackId)).toEqual(["book", "packetTracer"]);
-    expect(d.stages).toHaveLength(105);
+    expect(d.stages).toHaveLength(20);
+    expect(d.stages.filter(s => s.track === "book")).toHaveLength(10);
+    expect(PRE_P7("794589").stages).toHaveLength(105);
   });
 
   it("getProjectMeta returns lightweight track info without the heavy template", () => {
@@ -24,10 +31,15 @@ describe("project registry", () => {
 });
 
 describe("899373 template", () => {
-  const d = getProjectDefinition("899373");
+  it("the condensed set: book=7, access=4, total=11", () => {
+    const c = getProjectDefinition("899373");
+    expect(c.stages.filter(s => s.track === "book")).toHaveLength(7);
+    expect(c.stages.filter(s => s.track === "access")).toHaveLength(4);
+  });
+  const d = PRE_P7("899373");
   const book = d.stages.filter(s => s.track === "book");
   const access = d.stages.filter(s => s.track === "access");
-  it("has book=20, access=8, total=28", () => {
+  it("the previous set (conversion source): book=20, access=8, total=28", () => {
     expect(book).toHaveLength(20);
     expect(access).toHaveLength(8);
     expect(d.stages).toHaveLength(28);
@@ -52,10 +64,15 @@ describe("899373 template", () => {
 });
 
 describe("883589 template", () => {
-  const d = getProjectDefinition("883589");
+  it("the condensed set: book=12, visualStudio=6, total=18", () => {
+    const c = getProjectDefinition("883589");
+    expect(c.stages.filter(s => s.track === "book")).toHaveLength(12);
+    expect(c.stages.filter(s => s.track === "visualStudio")).toHaveLength(6);
+  });
+  const d = PRE_P7("883589");
   const book = d.stages.filter(s => s.track === "book");
   const vs = d.stages.filter(s => s.track === "visualStudio");
-  it("has book=35, visualStudio=17, total=52", () => {
+  it("the previous set (conversion source): book=35, visualStudio=17, total=52", () => {
     expect(book).toHaveLength(35);
     expect(vs).toHaveLength(17);
     expect(d.stages).toHaveLength(52);
@@ -69,9 +86,10 @@ describe("883589 template", () => {
     const ids = d.stages.map(s => s.stageId);
     expect(new Set(ids).size).toBe(ids.length);
   });
-  it("keeps 'Web Services' as an organizing group, not a stage", () => {
+  it("keeps 'Web Services' as an organizing group, not a stage (the condensed set names it in its stage)", () => {
     expect(d.groups.some(g => g.title === "Web Services")).toBe(true);
     expect(d.stages.some(s => s.title === "Web Services")).toBe(false);
+    expect(getProjectDefinition("883589").stages.find(s => s.mergedFrom.includes("B21")).title).toMatch(/^Web Services/);
   });
   it("every stage defaults to weight 1, required, active, empty description", () => {
     for (const s of d.stages) {

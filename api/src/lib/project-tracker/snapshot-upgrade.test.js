@@ -23,14 +23,16 @@ describe("shouldUpgradeSnapshot (794589 version-aware upgrade decision)", () => 
 });
 
 describe("getSnapshotUpgradePolicy", () => {
-  it("794589 declares an upgrade policy at the current template version", () => {
+  // Phase P7 — every project now converts its previous set to the condensed one (updated deliberately).
+  it("794589 declares an upgrade policy at the current template version (3) and converts v2 with its progress", () => {
     const p = getSnapshotUpgradePolicy("794589");
     expect(p).toBeTruthy();
-    expect(p.currentVersion).toBe(2);
+    expect(p.currentVersion).toBe(3);
+    expect(p.condenseFrom).toBe(2);
     expect(typeof p.buildUpgraded).toBe("function");
   });
-  it("899373 and 883589 declare NO policy (no migration)", () => {
-    expect(getSnapshotUpgradePolicy("899373")).toBe(null);
-    expect(getSnapshotUpgradePolicy("883589")).toBe(null);
+  it("899373 and 883589 convert their v1 set to the condensed v2 set", () => {
+    expect(getSnapshotUpgradePolicy("899373")).toEqual({ currentVersion: 2, condenseFrom: 1 });
+    expect(getSnapshotUpgradePolicy("883589")).toEqual({ currentVersion: 2, condenseFrom: 1 });
   });
 });

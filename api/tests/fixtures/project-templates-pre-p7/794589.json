@@ -1,0 +1,1297 @@
+{
+  "templateVersion": 2,
+  "trackWeights": {
+    "book": 50,
+    "packetTracer": 50
+  },
+  "config": {
+    "staleDays": 7,
+    "lateThreshold": 40,
+    "balanceWarningThreshold": 25
+  },
+  "groups": [
+    {
+      "groupId": "book_b1",
+      "track": "book",
+      "title": "بداية الكتاب",
+      "order": 1
+    },
+    {
+      "groupId": "book_b2",
+      "track": "book",
+      "title": "الفرع الأول: الجداول والتخطيط",
+      "order": 2
+    },
+    {
+      "groupId": "book_b3",
+      "track": "book",
+      "title": "الفرع الأول: الخوادم",
+      "order": 3
+    },
+    {
+      "groupId": "book_b4",
+      "track": "book",
+      "title": "الفرع الأول: الصور",
+      "order": 4
+    },
+    {
+      "groupId": "book_b5",
+      "track": "book",
+      "title": "الفرع الأول: الحماية والربط",
+      "order": 5
+    },
+    {
+      "groupId": "book_b6",
+      "track": "book",
+      "title": "الفرع الأول: تعريفات من سويتش وراوتر",
+      "order": 6
+    },
+    {
+      "groupId": "book_b7",
+      "track": "book",
+      "title": "الفرع الثاني: الجداول والتخطيط",
+      "order": 7
+    },
+    {
+      "groupId": "book_b8",
+      "track": "book",
+      "title": "الفرع الثاني: الصور",
+      "order": 8
+    },
+    {
+      "groupId": "book_b9",
+      "track": "book",
+      "title": "الفرع الثالث: الجداول والتخطيط",
+      "order": 9
+    },
+    {
+      "groupId": "book_b10",
+      "track": "book",
+      "title": "الفرع الثالث: الصور والخدمات الخارجية",
+      "order": 10
+    },
+    {
+      "groupId": "book_b11",
+      "track": "book",
+      "title": "نهاية الكتاب",
+      "order": 11
+    },
+    {
+      "groupId": "pt_p1",
+      "track": "packetTracer",
+      "title": "الفرع الأول: بناء الفرع",
+      "order": 1
+    },
+    {
+      "groupId": "pt_p2",
+      "track": "packetTracer",
+      "title": "الفرع الأول: إعداد الشبكة",
+      "order": 2
+    },
+    {
+      "groupId": "pt_p3",
+      "track": "packetTracer",
+      "title": "الفرع الأول: الخوادم",
+      "order": 3
+    },
+    {
+      "groupId": "pt_p4",
+      "track": "packetTracer",
+      "title": "الفرع الأول: تعريف الخدمات",
+      "order": 4
+    },
+    {
+      "groupId": "pt_p5",
+      "track": "packetTracer",
+      "title": "الفرع الأول: الحماية والتوجيه",
+      "order": 5
+    },
+    {
+      "groupId": "pt_p6",
+      "track": "packetTracer",
+      "title": "الفرع الثاني: بناء الفرع",
+      "order": 6
+    },
+    {
+      "groupId": "pt_p7",
+      "track": "packetTracer",
+      "title": "الفرع الثاني: إعداد الشبكة",
+      "order": 7
+    },
+    {
+      "groupId": "pt_p8",
+      "track": "packetTracer",
+      "title": "الفرع الثالث: بناء الفرع",
+      "order": 8
+    },
+    {
+      "groupId": "pt_p9",
+      "track": "packetTracer",
+      "title": "الفرع الثالث: إعداد الشبكة",
+      "order": 9
+    },
+    {
+      "groupId": "pt_p10",
+      "track": "packetTracer",
+      "title": "الفرع الثالث: السيرفيرات الخارجية",
+      "order": 10
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "B01",
+      "track": "book",
+      "groupId": "book_b1",
+      "title": "صفحة الغلاف",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B02",
+      "track": "book",
+      "groupId": "book_b1",
+      "title": "الفهرست",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B03",
+      "track": "book",
+      "groupId": "book_b1",
+      "title": "مقترح المشروع",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B04",
+      "track": "book",
+      "groupId": "book_b1",
+      "title": "المقدمة",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B05",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "جدول الأقسام والعناوين",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B06",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "جدول توزيع الحواسيب",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B07",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "جدول الأجهزة",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B08",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "VTP Configuration",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B09",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "VLAN",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B10",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "Trunk",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B11",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "Dot1Q",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B12",
+      "track": "book",
+      "groupId": "book_b2",
+      "title": "جدول السويتشات وتوزيع الـ VLAN",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B13",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "DNS",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B14",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "HTTP",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B15",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "DHCP",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B16",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "FTP",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B17",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "Email",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B18",
+      "track": "book",
+      "groupId": "book_b3",
+      "title": "صور للخوادم من المشروع",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B19",
+      "track": "book",
+      "groupId": "book_b4",
+      "title": "صور للأقسام المختلفة",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B20",
+      "track": "book",
+      "groupId": "book_b4",
+      "title": "صور للفرع الأول كامل",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B21",
+      "track": "book",
+      "groupId": "book_b5",
+      "title": "تعريفات Port Security",
+      "description": "",
+      "order": 21,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B22",
+      "track": "book",
+      "groupId": "book_b5",
+      "title": "تعريفات Password للسويتشات والراوترات",
+      "description": "",
+      "order": 22,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B23",
+      "track": "book",
+      "groupId": "book_b5",
+      "title": "Metro Ethernet",
+      "description": "",
+      "order": 23,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B24",
+      "track": "book",
+      "groupId": "book_b5",
+      "title": "تعريفات OSPF",
+      "description": "",
+      "order": 24,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B25",
+      "track": "book",
+      "groupId": "book_b6",
+      "title": "Show VLAN",
+      "description": "",
+      "order": 25,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B26",
+      "track": "book",
+      "groupId": "book_b6",
+      "title": "Show VTP Status",
+      "description": "",
+      "order": 26,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B27",
+      "track": "book",
+      "groupId": "book_b6",
+      "title": "Show Interface Trunk",
+      "description": "",
+      "order": 27,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B28",
+      "track": "book",
+      "groupId": "book_b6",
+      "title": "Show OSPF",
+      "description": "",
+      "order": 28,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B29",
+      "track": "book",
+      "groupId": "book_b6",
+      "title": "Show Running Config",
+      "description": "",
+      "order": 29,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B30",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "جدول الأقسام والعناوين",
+      "description": "",
+      "order": 30,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B31",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "جدول توزيع الحواسيب",
+      "description": "",
+      "order": 31,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B32",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "جدول الأجهزة",
+      "description": "",
+      "order": 32,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B33",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "VTP Configuration",
+      "description": "",
+      "order": 33,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B34",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "VLAN",
+      "description": "",
+      "order": 34,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B35",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "Trunk",
+      "description": "",
+      "order": 35,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B36",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "Dot1Q",
+      "description": "",
+      "order": 36,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B37",
+      "track": "book",
+      "groupId": "book_b7",
+      "title": "جدول السويتشات وتوزيع الـ VLAN",
+      "description": "",
+      "order": 37,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B38",
+      "track": "book",
+      "groupId": "book_b8",
+      "title": "صور للأقسام المختلفة",
+      "description": "",
+      "order": 38,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B39",
+      "track": "book",
+      "groupId": "book_b8",
+      "title": "صور للفرع الأول كامل",
+      "description": "",
+      "order": 39,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B40",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "جدول الأقسام والعناوين",
+      "description": "",
+      "order": 40,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B41",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "جدول توزيع الحواسيب",
+      "description": "",
+      "order": 41,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B42",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "جدول الأجهزة",
+      "description": "",
+      "order": 42,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B43",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "VTP Configuration",
+      "description": "",
+      "order": 43,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B44",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "VLAN",
+      "description": "",
+      "order": 44,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B45",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "Trunk",
+      "description": "",
+      "order": 45,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B46",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "Dot1Q",
+      "description": "",
+      "order": 46,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B47",
+      "track": "book",
+      "groupId": "book_b9",
+      "title": "جدول السويتشات وتوزيع الـ VLAN",
+      "description": "",
+      "order": 47,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B48",
+      "track": "book",
+      "groupId": "book_b10",
+      "title": "صور للأقسام المختلفة",
+      "description": "",
+      "order": 48,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B49",
+      "track": "book",
+      "groupId": "book_b10",
+      "title": "صور للفرع الأول كامل",
+      "description": "",
+      "order": 49,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B50",
+      "track": "book",
+      "groupId": "book_b10",
+      "title": "سيرفير خارجي",
+      "description": "",
+      "order": 50,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B51",
+      "track": "book",
+      "groupId": "book_b10",
+      "title": "موقع مثل جوجل خارجي",
+      "description": "",
+      "order": 51,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B52",
+      "track": "book",
+      "groupId": "book_b10",
+      "title": "صور للسيرفير",
+      "description": "",
+      "order": 52,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B53",
+      "track": "book",
+      "groupId": "book_b11",
+      "title": "مردود",
+      "description": "",
+      "order": 53,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B54",
+      "track": "book",
+      "groupId": "book_b11",
+      "title": "مصادر",
+      "description": "",
+      "order": 54,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P01",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "تقسيم الأقسام",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P02",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "وضع الحواسيب",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P03",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "تسمية الحواسيب",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P04",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "وضع سويتشات لكل قسم وتسميته",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P05",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "ربط الحواسيب والسويتشات",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P06",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "ربط السويتشات ببعضها",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P07",
+      "track": "packetTracer",
+      "groupId": "pt_p1",
+      "title": "وضع راوتر وربطه بالسويتش",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P08",
+      "track": "packetTracer",
+      "groupId": "pt_p2",
+      "title": "تعريف VTP",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P09",
+      "track": "packetTracer",
+      "groupId": "pt_p2",
+      "title": "تعريف VLAN",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P10",
+      "track": "packetTracer",
+      "groupId": "pt_p2",
+      "title": "تعريف منافذ السويتش مع الـ VLAN الملائم",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P11",
+      "track": "packetTracer",
+      "groupId": "pt_p2",
+      "title": "تعريف Trunk",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P12",
+      "track": "packetTracer",
+      "groupId": "pt_p2",
+      "title": "تعريف Dot1Q",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P13",
+      "track": "packetTracer",
+      "groupId": "pt_p3",
+      "title": "DNS",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P14",
+      "track": "packetTracer",
+      "groupId": "pt_p3",
+      "title": "HTTP",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P15",
+      "track": "packetTracer",
+      "groupId": "pt_p3",
+      "title": "DHCP",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P16",
+      "track": "packetTracer",
+      "groupId": "pt_p3",
+      "title": "FTP",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P17",
+      "track": "packetTracer",
+      "groupId": "pt_p3",
+      "title": "Email",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P18",
+      "track": "packetTracer",
+      "groupId": "pt_p4",
+      "title": "تعريف DNS",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P19",
+      "track": "packetTracer",
+      "groupId": "pt_p4",
+      "title": "بناء موقع للشركة HTTP",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P20",
+      "track": "packetTracer",
+      "groupId": "pt_p4",
+      "title": "تعريف DHCP للفرع الأول",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P21",
+      "track": "packetTracer",
+      "groupId": "pt_p4",
+      "title": "تعريف FTP للفرع الأول",
+      "description": "",
+      "order": 21,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P22",
+      "track": "packetTracer",
+      "groupId": "pt_p4",
+      "title": "تعريف Email للفرع الأول",
+      "description": "",
+      "order": 22,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P23",
+      "track": "packetTracer",
+      "groupId": "pt_p5",
+      "title": "Port Security for Switches",
+      "description": "",
+      "order": 23,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P24",
+      "track": "packetTracer",
+      "groupId": "pt_p5",
+      "title": "Password for Switches and Router",
+      "description": "",
+      "order": 24,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P25",
+      "track": "packetTracer",
+      "groupId": "pt_p5",
+      "title": "OSPF",
+      "description": "",
+      "order": 25,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P26",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "تقسيم الأقسام",
+      "description": "",
+      "order": 26,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P27",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "وضع الحواسيب",
+      "description": "",
+      "order": 27,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P28",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "تسمية الحواسيب",
+      "description": "",
+      "order": 28,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P29",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "وضع سويتشات لكل قسم وتسميته",
+      "description": "",
+      "order": 29,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P30",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "ربط الحواسيب والسويتشات",
+      "description": "",
+      "order": 30,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P31",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "ربط السويتشات ببعضها",
+      "description": "",
+      "order": 31,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P32",
+      "track": "packetTracer",
+      "groupId": "pt_p6",
+      "title": "وضع راوتر وربطه بالسويتش",
+      "description": "",
+      "order": 32,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P33",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "تعريف VTP",
+      "description": "",
+      "order": 33,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P34",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "تعريف VLAN",
+      "description": "",
+      "order": 34,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P35",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "تعريف منافذ السويتش مع الـ VLAN الملائم",
+      "description": "",
+      "order": 35,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P36",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "تعريف Trunk",
+      "description": "",
+      "order": 36,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P37",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "تعريف Dot1Q",
+      "description": "",
+      "order": 37,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P38",
+      "track": "packetTracer",
+      "groupId": "pt_p7",
+      "title": "OSPF",
+      "description": "",
+      "order": 38,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P39",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "تقسيم الأقسام",
+      "description": "",
+      "order": 39,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P40",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "وضع الحواسيب",
+      "description": "",
+      "order": 40,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P41",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "تسمية الحواسيب",
+      "description": "",
+      "order": 41,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P42",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "وضع سويتشات لكل قسم وتسميته",
+      "description": "",
+      "order": 42,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P43",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "ربط الحواسيب والسويتشات",
+      "description": "",
+      "order": 43,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P44",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "ربط السويتشات ببعضها",
+      "description": "",
+      "order": 44,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P45",
+      "track": "packetTracer",
+      "groupId": "pt_p8",
+      "title": "وضع راوتر وربطه بالسويتش",
+      "description": "",
+      "order": 45,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P46",
+      "track": "packetTracer",
+      "groupId": "pt_p9",
+      "title": "تعريف VTP",
+      "description": "",
+      "order": 46,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P47",
+      "track": "packetTracer",
+      "groupId": "pt_p9",
+      "title": "تعريف VLAN",
+      "description": "",
+      "order": 47,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P48",
+      "track": "packetTracer",
+      "groupId": "pt_p9",
+      "title": "تعريف منافذ السويتش مع الـ VLAN الملائم",
+      "description": "",
+      "order": 48,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P49",
+      "track": "packetTracer",
+      "groupId": "pt_p9",
+      "title": "تعريف Trunk",
+      "description": "",
+      "order": 49,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P50",
+      "track": "packetTracer",
+      "groupId": "pt_p9",
+      "title": "تعريف عناوين Static",
+      "description": "",
+      "order": 50,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P51",
+      "track": "packetTracer",
+      "groupId": "pt_p10",
+      "title": "تعريف سيرفيرات جوجل خارجية",
+      "description": "",
+      "order": 51,
+      "weight": 1,
+      "required": true,
+      "active": true
+    }
+  ]
+}

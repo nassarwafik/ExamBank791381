@@ -27,7 +27,9 @@ const CODE = "899373";
 const NS = getStorageNamespace(CODE);
 const NOW = "2026-10-01T00:00:00.000Z";
 const TRACKS: TrackMeta[] = getProjectDefinition(CODE).tracks;
-const FIRST = (getProjectDefinition(CODE).stages as { stageId: string; track: string; order: number }[]).filter(s => s.track === "book").sort((a, b) => a.order - b.order)[0].stageId;
+const FIRST_STAGE = (getProjectDefinition(CODE).stages as { stageId: string; track: string; order: number; weight: number }[]).filter(s => s.track === "book").sort((a, b) => a.order - b.order)[0];
+const FIRST = FIRST_STAGE.stageId;
+const FIRST_WEIGHT = FIRST_STAGE.weight;                                       // P7: a condensed stage weighs its merged items (BK01 = 3)
 const C1_TITLE = "مرحلة خاصة بالصف الأول";
 const user = (id: string, cid: string, name: string) => ({ userId: id, role: "student", active: true, archived: false, authVersion: 1, classId: cid, displayName: name, code: "C" + id });
 const room = (id: string, over: Body = {}) => ({ classId: id, name: "صف " + id, active: true, status: "active", studentIds: [], programCodes: [CODE], schoolYear: "2026", updatedAt: NOW, createdAt: NOW, ...over });
@@ -154,7 +156,7 @@ describe("B3 stage weight 0", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("وزن المرحلة " + FIRST + " يجب أن يكون رقمًا أكبر من 0.");
     expect(s.posts).toHaveLength(0);                                            // refused on screen, before any request
     expect(screen.queryByText("✓ تم حفظ إعداد المراحل.")).toBeNull();
-    expect(s.stored("c1").stages.find((x: { stageId: string }) => x.stageId === FIRST).weight).toBe(1);
+    expect(s.stored("c1").stages.find((x: { stageId: string }) => x.stageId === FIRST).weight).toBe(FIRST_WEIGHT);
   });
 });
 

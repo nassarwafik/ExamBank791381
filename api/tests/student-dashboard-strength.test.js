@@ -16,9 +16,19 @@ const room = (id, extra = {}) => ({ classId: id, name: "صف " + id, grade: "11"
 function progressAt(code, cid, sid, bookFraction, otherFraction) {
   const def = getProjectDefinition(code);
   const tracks = def.tracks.map(t => t.trackId);
-  const ids = t => def.stages.filter(s => s.track === t && s.required === true && s.active === true).map(s => s.stageId);
+  const counted = t => def.stages.filter(s => s.track === t && s.required === true && s.active === true);
+  const ids = t => counted(t).map(s => s.stageId);
   const stages = {};
-  const pick = (list, fraction) => list.slice(0, Math.round(list.length * fraction));
+  // Phase P7 — the condensed stages carry different weights (the number of old stages each merges), so the percentage is
+  // by WEIGHT: the first subset (in stage order) whose weights add up to exactly that fraction (updated deliberately).
+  const pick = (list, fraction) => {
+    const st = list.map(id => def.stages.find(x => x.stageId === id));
+    const total = st.reduce((n, x) => n + x.weight, 0), target = Math.round(total * fraction);
+    const go = (i, left, acc) => (left === 0 ? acc : i >= st.length || left < 0 ? null : go(i + 1, left - st[i].weight, [...acc, st[i].stageId]) || go(i + 1, left, acc));
+    const found = go(0, target, []);
+    if (!found) throw new Error("no exact weight subset for " + fraction);
+    return found;
+  };
   for (const id of pick(ids(tracks[0]), bookFraction)) stages[id] = { status: "approved", approvedAt: NOW, updatedAt: NOW };
   for (const id of pick(ids(tracks[1]), otherFraction)) stages[id] = { status: "approved", approvedAt: NOW, updatedAt: NOW };
   // a ready_for_review stage never counts toward progress

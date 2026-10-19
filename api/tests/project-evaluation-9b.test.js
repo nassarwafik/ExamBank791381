@@ -33,8 +33,8 @@ function school(hooks) {
   ctx.audits = [];
   return ctx;
 }
-const setScore = (ctx, over = {}, auth) => post(ctx, { action: "score.set", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", score: 85, ...over }, auth);
-const clearScore = (ctx, over = {}, auth) => post(ctx, { action: "score.clear", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", ...over }, auth);
+const setScore = (ctx, over = {}, auth) => post(ctx, { action: "score.set", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", score: 85, ...over }, auth);
+const clearScore = (ctx, over = {}, auth) => post(ctx, { action: "score.clear", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", ...over }, auth);
 const evalOf = async (ctx, over = {}) => (await get(ctx, new URLSearchParams({ projectCode: "899373", resource: "evaluation", classId: "c1", studentId: "s1", ...over }).toString())).jsonBody;
 const studentDeps = (ctx, id = "s1") => ({ requireActiveStudentSession: async () => ({ ok: true, user: { sub: id }, student: ctx.getJson("platform/users/" + id + ".json"), container: ctx.container }), container: ctx.container, getContainer: () => ctx.container });
 const studentGet = (ctx, id, qs = "") => studentTracker({ method: "GET", url: "https://x/api/student-project-tracker" + qs, json: async () => ({}) }, studentDeps(ctx, id));
@@ -142,14 +142,14 @@ describe("9B-F7 review fix — evaluation.updatedAt is the newest score MUTATION
   });
   it("R7 through the real handler: set B01, set B02, clear B02 → updatedAt follows the clear; clearing the last grade keeps it", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 10 });
+    await setScore(ctx, { stageId: "BK01", score: 10 });
     const afterSet = (await evalOf(ctx)).evaluation;
-    await setScore(ctx, { stageId: "B02", score: 20 });
-    const r = await clearScore(ctx, { stageId: "B02" });
+    await setScore(ctx, { stageId: "BK02", score: 20 });
+    const r = await clearScore(ctx, { stageId: "BK02" });
     const clearAt = ctx.getJson(NS.A.progressName("c1", "s1")).history.at(-1).createdAt;
     expect(r.jsonBody.evaluation.updatedAt).toBe(clearAt);
     expect(Date.parse(clearAt)).toBeGreaterThanOrEqual(Date.parse(afterSet.updatedAt));
-    const last = await clearScore(ctx, { stageId: "B01" });
+    const last = await clearScore(ctx, { stageId: "BK01" });
     expect(last.jsonBody.evaluation).toMatchObject({ gradedStages: 0, projectScore: null });
     expect(last.jsonBody.evaluation.updatedAt).toBe(ctx.getJson(NS.A.progressName("c1", "s1")).history.at(-1).createdAt);
     expect(last.jsonBody.evaluation.updatedAt).not.toBe("");
@@ -170,7 +170,7 @@ describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audite
     const ctx = school();
     let r = await setScore(ctx, { score: 85 });
     expect(r.status).toBe(200);
-    expect(r.jsonBody).toMatchObject({ ok: true, action: "score.set", stage: { stageId: "B01", status: "not_started", score: 85 } });
+    expect(r.jsonBody).toMatchObject({ ok: true, action: "score.set", stage: { stageId: "BK01", status: "not_started", score: 85 } });
     expect(r.jsonBody.evaluation).toMatchObject({ gradedStages: 1, ungradedStages: ACTIVE_A.length - 1, projectScore: 85 });
     expect(r.jsonBody.performance).toMatchObject({ grade: 0 });                                  // not approved → the grade axis is untouched
     expect(r.jsonBody.summary.overallProgress).toBe(0);                                          // workflow untouched
@@ -179,10 +179,10 @@ describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audite
     r = await setScore(ctx, { score: 100 });
     expect(r.status).toBe(200); expect(r.jsonBody.stage.score).toBe(100); expect(r.jsonBody.evaluation.projectScore).toBe(100);
     const stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect(stored.stages.B01).toMatchObject({ status: "not_started", score: 100 });
+    expect(stored.stages.BK01).toMatchObject({ status: "not_started", score: 100 });
     expect(stored.history.filter(h => h.type === "score").map(h => [h.fromScore, h.toScore])).toEqual([[null, 85], [85, 0], [0, 100]]);
     expect(ctx.audits.map(a => a.action)).toEqual(["project.stage.score", "project.stage.score", "project.stage.score"]);
-    expect(ctx.audits[0].details).toMatchObject({ projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", oldScore: null, newScore: 85, via: "score.set" });
+    expect(ctx.audits[0].details).toMatchObject({ projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", oldScore: null, newScore: 85, via: "score.set" });
   });
   it("L5/L6/L7 negative, > 100, non-number, missing score → 400 with the Arabic message and NOTHING written", async () => {
     const ctx = school();
@@ -210,7 +210,7 @@ describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audite
   });
   it("L9 invalid / inactive stage → 400 and the stage is NEVER created in the document", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 50 });                                         // a real document exists first
+    await setScore(ctx, { stageId: "BK01", score: 50 });                                         // a real document exists first
     const before = JSON.stringify(ctx.getJson(NS.A.progressName("c1", "s1")));
     for (const bad of ["NOPE", "", "P01" /* a 794589 stage id */]) {
       const r = await setScore(ctx, { stageId: bad, score: 50 });
@@ -218,11 +218,11 @@ describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audite
     }
     // deactivate B02 in the class snapshot → scoring it is refused too
     const cfg = ctx.getJson(NS.A.configName("c1"));
-    cfg.stages = cfg.stages.map(s => (s.stageId === "B02" ? { ...s, active: false } : s));
+    cfg.stages = cfg.stages.map(s => (s.stageId === "BK02" ? { ...s, active: false } : s));
     ctx.setJson(NS.A.configName("c1"), cfg);
-    expect((await setScore(ctx, { stageId: "B02", score: 50 })).status).toBe(400);
+    expect((await setScore(ctx, { stageId: "BK02", score: 50 })).status).toBe(400);
     expect(JSON.stringify(ctx.getJson(NS.A.progressName("c1", "s1")))).toBe(before);
-    expect("B02" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);
+    expect("BK02" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);
   });
   it("L10 student not in the class (foreign / archived / unknown) → 404, no ghost document; archived class → 403", async () => {
     const ctx = school();
@@ -240,38 +240,38 @@ describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audite
   });
   it("L16 clear removes ONLY that stage's score (0 stays a grade until cleared), history records it; clearing an unscored stage is a no-op", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 0 });
-    await setScore(ctx, { stageId: "B02", score: 90 });
-    let r = await clearScore(ctx, { stageId: "B01" });
+    await setScore(ctx, { stageId: "BK01", score: 0 });
+    await setScore(ctx, { stageId: "BK02", score: 90 });
+    let r = await clearScore(ctx, { stageId: "BK01" });
     expect(r.status).toBe(200);
     expect("score" in r.jsonBody.stage).toBe(false);
     expect(r.jsonBody.evaluation).toMatchObject({ gradedStages: 1, projectScore: 90 });
     const stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect("score" in stored.stages.B01).toBe(false); expect(stored.stages.B02.score).toBe(90);
-    expect(stored.history.at(-1)).toMatchObject({ type: "score", stageId: "B01", fromScore: 0, toScore: null });
-    r = await clearScore(ctx, { stageId: "B03" });
+    expect("score" in stored.stages.BK01).toBe(false); expect(stored.stages.BK02.score).toBe(90);
+    expect(stored.history.at(-1)).toMatchObject({ type: "score", stageId: "BK01", fromScore: 0, toScore: null });
+    r = await clearScore(ctx, { stageId: "BK03" });
     expect(r.status).toBe(200); expect(r.jsonBody.noChange).toBe(true);
-    expect("B03" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);            // a no-op never creates the stage
+    expect("BK03" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);            // a no-op never creates the stage
   });
   it("L17 a missing stage id on clear → 400; unknown action stays unknown", async () => {
     const ctx = school();
     expect((await clearScore(ctx, { stageId: "" })).status).toBe(400);
-    expect((await post(ctx, { action: "setStageScore", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", score: 5 })).status).toBe(400);
+    expect((await post(ctx, { action: "setStageScore", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", score: 5 })).status).toBe(400);
   });
   it("L18 progress.update still carries `evaluation` (additive) and its score path stays equivalent to score.set", async () => {
     const ctx = school();
-    const r = await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", score: 42 });
+    const r = await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", score: 42 });
     expect(r.status).toBe(200);
     expect(r.jsonBody.evaluation).toMatchObject({ gradedStages: 1, projectScore: 42 });
-    expect((await evalOf(ctx)).evaluation.stages.find(s => s.stageId === "B01")).toMatchObject({ score: 42, graded: true, scoredBy: "teacher-1" });
+    expect((await evalOf(ctx)).evaluation.stages.find(s => s.stageId === "BK01")).toMatchObject({ score: 42, graded: true, scoredBy: "teacher-1" });
   });
 });
 
 describe("9B-E student read surface — own data only, identity from the session", () => {
   it("L12/L13 the student reads their OWN evaluation; a studentId / classId in the query is ignored (never another student's data)", async () => {
     const ctx = school();
-    await setScore(ctx, { studentId: "s1", stageId: "B01", score: 85 });
-    await setScore(ctx, { studentId: "s2", stageId: "B01", score: 10 });
+    await setScore(ctx, { studentId: "s1", stageId: "BK01", score: 85 });
+    await setScore(ctx, { studentId: "s2", stageId: "BK01", score: 10 });
     const mine = (await studentGet(ctx, "s1")).jsonBody;
     expect(mine.projects.find(p => p.projectCode === "899373").evaluation).toMatchObject({ gradedStages: 1, projectScore: 85 });
     const spoof = (await studentGet(ctx, "s1", "?studentId=s2&classId=c1")).jsonBody;
@@ -280,7 +280,7 @@ describe("9B-E student read surface — own data only, identity from the session
     expect(other.projects.find(p => p.projectCode === "899373").evaluation.projectScore).toBe(10);
     // the student route is GET-only: a POST with a score body is not a mutation path (404/405 or ignored → nothing written)
     const before = JSON.stringify(ctx.getJson(NS.A.progressName("c1", "s1")));
-    await studentTracker({ method: "POST", url: "https://x/api/student-project-tracker", json: async () => ({ action: "score.set", stageId: "B02", score: 100 }) }, studentDeps(ctx, "s1")).catch(() => {});
+    await studentTracker({ method: "POST", url: "https://x/api/student-project-tracker", json: async () => ({ action: "score.set", stageId: "BK02", score: 100 }) }, studentDeps(ctx, "s1")).catch(() => {});
     expect(JSON.stringify(ctx.getJson(NS.A.progressName("c1", "s1")))).toBe(before);
   });
   it("L12b a student of a class with no project → enrolled:false, no evaluation, no error", async () => {
@@ -294,35 +294,35 @@ describe("9B-E student read surface — own data only, identity from the session
 describe("9B-J isolation + concurrency", () => {
   it("L14 project isolation: scoring stage B01 in 899373 never touches 883589's B01 (and vice versa); both evaluations independent", async () => {
     const ctx = school();
-    await setScore(ctx, { projectCode: "899373", stageId: "B01", score: 80 });
-    await setScore(ctx, { projectCode: "883589", stageId: "B01", score: 30 });
+    await setScore(ctx, { projectCode: "899373", stageId: "BK01", score: 80 });
+    await setScore(ctx, { projectCode: "883589", stageId: "BK01", score: 30 });
     const a = (await evalOf(ctx, { projectCode: "899373" })).evaluation, b = (await evalOf(ctx, { projectCode: "883589" })).evaluation;
     expect(a).toMatchObject({ gradedStages: 1, projectScore: 80 }); expect(b).toMatchObject({ gradedStages: 1, projectScore: 30 });
     expect(b.totalStages).toBe(getProjectDefinition("883589").stages.filter(s => s.active === true).length);
-    await clearScore(ctx, { projectCode: "899373", stageId: "B01" });
+    await clearScore(ctx, { projectCode: "899373", stageId: "BK01" });
     expect((await evalOf(ctx, { projectCode: "883589" })).evaluation).toEqual(b);
-    expect(ctx.getJson(NS.B.progressName("c1", "s1")).stages.B01.score).toBe(30);
+    expect(ctx.getJson(NS.B.progressName("c1", "s1")).stages.BK01.score).toBe(30);
   });
   it("L15 student isolation: s1's scores never appear in s2's evaluation; each has their own document", async () => {
     const ctx = school();
-    await setScore(ctx, { studentId: "s1", stageId: "B01", score: 70 });
-    await setScore(ctx, { studentId: "s1", stageId: "B02", score: 90 });
-    await setScore(ctx, { studentId: "s2", stageId: "B03", score: 10 });
+    await setScore(ctx, { studentId: "s1", stageId: "BK01", score: 70 });
+    await setScore(ctx, { studentId: "s1", stageId: "BK02", score: 90 });
+    await setScore(ctx, { studentId: "s2", stageId: "BK03", score: 10 });
     expect((await evalOf(ctx, { studentId: "s1" })).evaluation).toMatchObject({ gradedStages: 2, projectScore: 80 });
     expect((await evalOf(ctx, { studentId: "s2" })).evaluation).toMatchObject({ gradedStages: 1, projectScore: 10 });
     expect(ctx.names(NS.A.progressPrefix("c1")).sort()).toEqual([NS.A.progressName("c1", "s1"), NS.A.progressName("c1", "s2")].sort());
   });
   it("J1 stage A then stage B → both remain; clearing A keeps B; a stage entry is merged, never the whole document replaced", async () => {
     const ctx = school();
-    await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B03", status: "approved", note: "أحسنت" });
-    await setScore(ctx, { stageId: "B01", score: 60 });
-    await setScore(ctx, { stageId: "B02", score: 70 });
+    await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK03", status: "approved", note: "أحسنت" });
+    await setScore(ctx, { stageId: "BK01", score: 60 });
+    await setScore(ctx, { stageId: "BK02", score: 70 });
     let stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect(stored.stages.B01.score).toBe(60); expect(stored.stages.B02.score).toBe(70);
-    expect(stored.stages.B03).toMatchObject({ status: "approved", note: "أحسنت" });               // an unrelated stage's status/note survive
-    await clearScore(ctx, { stageId: "B01" });
+    expect(stored.stages.BK01.score).toBe(60); expect(stored.stages.BK02.score).toBe(70);
+    expect(stored.stages.BK03).toMatchObject({ status: "approved", note: "أحسنت" });               // an unrelated stage's status/note survive
+    await clearScore(ctx, { stageId: "BK01" });
     stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect("score" in stored.stages.B01).toBe(false); expect(stored.stages.B02.score).toBe(70); expect(stored.stages.B03.note).toBe("أحسنت");
+    expect("score" in stored.stages.BK01).toBe(false); expect(stored.stages.BK02.score).toBe(70); expect(stored.stages.BK03.note).toBe("أحسنت");
     expect(stored).toMatchObject({ schemaVersion: 1, programCode: "899373", classId: "c1", studentId: "s1" });
   });
   it("J2 concurrent A / B writes race through the real CAS: an injected conflicting write is retried, no lost update", async () => {
@@ -333,79 +333,79 @@ describe("9B-J isolation + concurrency", () => {
       if (fired || name !== NS.A.progressName("c1", "s1")) return;
       fired = true;
       const cur = api.getJson(name);
-      cur.stages.B02 = { status: "not_started", score: 33, updatedAt: NOW };
+      cur.stages.BK02 = { status: "not_started", score: 33, updatedAt: NOW };
       api.setJson(name, cur);
     } });
-    await setScore(ctx, { stageId: "B03", score: 1 });                                          // the document exists (CAS path)
-    const r = await setScore(ctx, { stageId: "B01", score: 99 });
+    await setScore(ctx, { stageId: "BK03", score: 1 });                                          // the document exists (CAS path)
+    const r = await setScore(ctx, { stageId: "BK01", score: 99 });
     expect(r.status).toBe(200); expect(fired).toBe(true);
     const stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect(stored.stages.B01.score).toBe(99); expect(stored.stages.B02.score).toBe(33); expect(stored.stages.B03.score).toBe(1);
+    expect(stored.stages.BK01.score).toBe(99); expect(stored.stages.BK02.score).toBe(33); expect(stored.stages.BK03.score).toBe(1);
     expect(r.jsonBody.evaluation).toMatchObject({ gradedStages: 3 });
     // two writers in flight at once (Promise.all) also both land
     const ctx2 = school();
-    const [x, y] = await Promise.all([setScore(ctx2, { stageId: "B01", score: 11 }), setScore(ctx2, { stageId: "B02", score: 22 })]);
+    const [x, y] = await Promise.all([setScore(ctx2, { stageId: "BK01", score: 11 }), setScore(ctx2, { stageId: "BK02", score: 22 })]);
     expect([x.status, y.status].every(s => s === 200 || s === 503)).toBe(true);
     const s2 = ctx2.getJson(NS.A.progressName("c1", "s1"));
-    if (x.status === 200) expect(s2.stages.B01.score).toBe(11);
-    if (y.status === 200) expect(s2.stages.B02.score).toBe(22);
+    if (x.status === 200) expect(s2.stages.BK01.score).toBe(11);
+    if (y.status === 200) expect(s2.stages.BK02.score).toBe(22);
     expect(x.status === 200 || y.status === 200).toBe(true);
   });
   it("J3 an exhausted CAS budget surfaces 503 with the shared conflict message (never a silent overwrite)", async () => {
     const ctx = school({ beforeConditionalUpload: (name, api) => { if (name === NS.A.progressName("c1", "s1")) api.setJson(name, api.getJson(name)); } });
-    await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B03", status: "in_progress" }).catch(() => {});
-    ctx.setJson(NS.A.progressName("c1", "s1"), { schemaVersion: 1, programCode: "899373", classId: "c1", studentId: "s1", stages: { B03: { status: "in_progress", updatedAt: NOW } }, history: [], updatedAt: NOW });
-    const r = await setScore(ctx, { stageId: "B01", score: 5 });
+    await post(ctx, { action: "progress.update", projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK03", status: "in_progress" }).catch(() => {});
+    ctx.setJson(NS.A.progressName("c1", "s1"), { schemaVersion: 1, programCode: "899373", classId: "c1", studentId: "s1", stages: { BK03: { status: "in_progress", updatedAt: NOW } }, history: [], updatedAt: NOW });
+    const r = await setScore(ctx, { stageId: "BK01", score: 5 });
     expect(r.status).toBe(503);
     expect(r.jsonBody.error).toBe("حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.");
     expect(StorageConflictError).toBeTypeOf("function");
-    expect("B01" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);
+    expect("BK01" in ctx.getJson(NS.A.progressName("c1", "s1")).stages).toBe(false);
   });
 });
 
 describe("9B-K edge cases", () => {
   it("K1 a snapshot whose stages were all deactivated → zero total, progress 0, score null; old scores become orphans (ignored, listed)", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 77 });
+    await setScore(ctx, { stageId: "BK01", score: 77 });
     const cfg = ctx.getJson(NS.A.configName("c1"));
     cfg.stages = cfg.stages.map(s => ({ ...s, active: false }));
     ctx.setJson(NS.A.configName("c1"), cfg);
     const e = (await evalOf(ctx)).evaluation;
-    expect(e).toMatchObject({ totalStages: 0, gradedStages: 0, ungradedStages: 0, evaluationProgress: 0, projectScore: null, orphanStageIds: ["B01"] });
+    expect(e).toMatchObject({ totalStages: 0, gradedStages: 0, ungradedStages: 0, evaluationProgress: 0, projectScore: null, orphanStageIds: ["BK01"] });
     const st = (await studentGet(ctx, "s1")).jsonBody.projects.find(p => p.projectCode === "899373");
-    expect(st.evaluation.orphanStageIds).toEqual(["B01"]);                                       // the student surface never crashes either
+    expect(st.evaluation.orphanStageIds).toEqual(["BK01"]);                                       // the student surface never crashes either
   });
   it("K2 a renamed stage (same stableId) keeps its score; a stage removed from the snapshot becomes an orphan", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 64 });
-    await setScore(ctx, { stageId: "B02", score: 40 });
+    await setScore(ctx, { stageId: "BK01", score: 64 });
+    await setScore(ctx, { stageId: "BK02", score: 40 });
     const cfg = ctx.getJson(NS.A.configName("c1"));
-    cfg.stages = cfg.stages.filter(s => s.stageId !== "B02").map(s => (s.stageId === "B01" ? { ...s, title: "اسم جديد" } : s));
+    cfg.stages = cfg.stages.filter(s => s.stageId !== "BK02").map(s => (s.stageId === "BK01" ? { ...s, title: "اسم جديد" } : s));
     ctx.setJson(NS.A.configName("c1"), cfg);
     const e = (await evalOf(ctx)).evaluation;
-    expect(e.stages.find(s => s.stageId === "B01")).toMatchObject({ title: "اسم جديد", score: 64 });
-    expect(e).toMatchObject({ gradedStages: 1, projectScore: 64, orphanStageIds: ["B02"] });
+    expect(e.stages.find(s => s.stageId === "BK01")).toMatchObject({ title: "اسم جديد", score: 64 });
+    expect(e).toMatchObject({ gradedStages: 1, projectScore: 64, orphanStageIds: ["BK02"] });
     expect(e.totalStages).toBe(ACTIVE_A.length - 1);
   });
   it("K3 archived class: evaluation is readable (readOnly:true) but every score action is refused", async () => {
     const ctx = school();
-    ctx.setJson(NS.A.progressName("c9", "s9"), { schemaVersion: 1, programCode: "899373", classId: "c9", studentId: "s9", stages: { B01: { status: "approved", score: 55, updatedAt: NOW } }, history: [], updatedAt: NOW });
+    ctx.setJson(NS.A.progressName("c9", "s9"), { schemaVersion: 1, programCode: "899373", classId: "c9", studentId: "s9", stages: { BK01: { status: "approved", score: 55, updatedAt: NOW } }, history: [], updatedAt: NOW });
     const r = await evalOf(ctx, { classId: "c9", studentId: "s9" });
     expect(r.status ?? 200).toBe(200); expect(r.readOnly).toBe(true); expect(r.evaluation).toMatchObject({ gradedStages: 1, projectScore: 55 });
     expect((await clearScore(ctx, { classId: "c9", studentId: "s9" })).status).toBe(403);
-    expect(ctx.getJson(NS.A.progressName("c9", "s9")).stages.B01.score).toBe(55);
+    expect(ctx.getJson(NS.A.progressName("c9", "s9")).stages.BK01.score).toBe(55);
   });
   it("K4 the legacy 794589 namespace works through the generic route too (paths unchanged)", async () => {
     const ctx = school();
-    const r = await post(ctx, { action: "score.set", projectCode: "794589", classId: "c2", studentId: "s3", stageId: "B01", score: 12 });
+    const r = await post(ctx, { action: "score.set", projectCode: "794589", classId: "c2", studentId: "s3", stageId: "BK01", score: 12 });
     expect(r.status).toBe(200);
-    expect(ctx.getJson(NS.L.progressName("c2", "s3")).stages.B01.score).toBe(12);
+    expect(ctx.getJson(NS.L.progressName("c2", "s3")).stages.BK01.score).toBe(12);
     expect(NS.L.progressName("c2", "s3")).toBe("platform/project-progress/c2/s3.json");
     expect(r.jsonBody.evaluation).toMatchObject({ gradedStages: 1, projectScore: 12 });
   });
   it("K5 existing surfaces keep working with scored documents: students cards / summary / analytics / projects-summary", async () => {
     const ctx = school();
-    await setScore(ctx, { stageId: "B01", score: 0 });
+    await setScore(ctx, { stageId: "BK01", score: 0 });
     for (const res of ["students", "summary", "analytics"]) expect((await get(ctx, "projectCode=899373&resource=" + res + "&classId=c1")).status, res).toBe(200);
     const ps = await get(ctx, "resource=projects-summary");
     expect(ps.status).toBe(200); expect(ps.jsonBody.totalReadyForReview).toBe(0);                // a score is never a ready_for_review

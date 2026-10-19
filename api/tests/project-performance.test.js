@@ -141,19 +141,20 @@ describe("6. score validation + 5/8/88. progress entry, history, approved-only",
 describe("102/87/88. teacher score authority through the canonical tracker write path", () => {
   it("builder sets a score (with or without a status) → stored, history + audit emitted, performance returned", async () => {
     const ctx = school(); audits.length = 0;
-    const r = await update(ctx, "899373", { stageId: "B01", status: "approved", score: 85 });
+    const r = await update(ctx, "899373", { stageId: "BK01", status: "approved", score: 85 });
     expect(r.status).toBe(200);
-    expect(r.jsonBody.stage).toMatchObject({ stageId: "B01", status: "approved", score: 85 });
-    expect(r.jsonBody.performance).toMatchObject({ grade: 2, gradePrecise: 2.125, maxStrength: 600 });   // B01 = 1/20 of book (50%) = 2.5 → 85% = 2.125
-    expect(r.jsonBody.performance.stageValues.B01).toMatchObject({ score: 85, maxContribution: 2.5, contribution: 2.125, counted: true });
+    expect(r.jsonBody.stage).toMatchObject({ stageId: "BK01", status: "approved", score: 85 });
+    // Phase P7 — BK01 merges 3 old stages: weight 3 of the book's 20 (50%) = 7.5 → 85% = 6.375 (was B01: 1/20 = 2.5 → 2.125).
+    expect(r.jsonBody.performance).toMatchObject({ grade: 6, gradePrecise: 6.375, maxStrength: 600 });
+    expect(r.jsonBody.performance.stageValues.BK01).toMatchObject({ score: 85, maxContribution: 7.5, contribution: 6.375, counted: true });
     expect(r.jsonBody.history.some(h => h.type === "score" && h.toScore === 85 && h.fromScore === null)).toBe(true);
     expect(audits.map(a => a.action)).toEqual(["project.stage.approve", "project.stage.score"]);
-    expect(audits[1].details).toMatchObject({ projectCode: "899373", classId: "c1", studentId: "s1", stageId: "B01", oldScore: null, newScore: 85 });
+    expect(audits[1].details).toMatchObject({ projectCode: "899373", classId: "c1", studentId: "s1", stageId: "BK01", oldScore: null, newScore: 85 });
     const stored = ctx.getJson(NS.A.progressName("c1", "s1"));
-    expect(stored.stages.B01.score).toBe(85);
+    expect(stored.stages.BK01.score).toBe(85);
     // score-only follow-up: one score audit, no status audit
     audits.length = 0;
-    const r2 = await update(ctx, "899373", { stageId: "B01", score: 90 });
+    const r2 = await update(ctx, "899373", { stageId: "BK01", score: 90 });
     expect(r2.status).toBe(200); expect(r2.jsonBody.stage.score).toBe(90);
     expect(audits.map(a => a.action)).toEqual(["project.stage.score"]);
     expect(audits[0].details).toMatchObject({ oldScore: 85, newScore: 90 });
@@ -161,20 +162,20 @@ describe("102/87/88. teacher score authority through the canonical tracker write
   it("invalid scores are rejected server-side with 400 and nothing is written; a student token is denied (401)", async () => {
     const ctx = school();
     for (const bad of [-5, 101, "abc", Number.NaN]) {
-      const r = await update(ctx, "899373", { stageId: "B01", score: bad });
+      const r = await update(ctx, "899373", { stageId: "BK01", score: bad });
       expect(r.status, String(bad)).toBe(400); expect(r.jsonBody.error).toBe("العلامة يجب أن تكون رقمًا بين 0 و 100.");
     }
     expect(ctx.getJson(NS.A.progressName("c1", "s1"))).toBeNull();
-    const denied = await update(ctx, "899373", { stageId: "B01", score: 85 }, NO_AUTH);
+    const denied = await update(ctx, "899373", { stageId: "BK01", score: 85 }, NO_AUTH);
     expect(denied.status).toBe(401);
     expect(ctx.getJson(NS.A.progressName("c1", "s1"))).toBeNull();
   });
   // Phase P-9 — the legacy /api/project-794589 route is removed; 794589 scores go through the generic route.
   it("794589 (its historical storage paths) shares the SAME service: score stored + audited there too", async () => {
     const ctx = school(); audits.length = 0;
-    const r = await post(tracker, ctx, "/api/project-tracker", { projectCode: "794589", action: "progress.update", classId: "c2", studentId: "s3", stageId: "B01", status: "approved", score: 70 });
+    const r = await post(tracker, ctx, "/api/project-tracker", { projectCode: "794589", action: "progress.update", classId: "c2", studentId: "s3", stageId: "BK01", status: "approved", score: 70 });
     expect(r.status).toBe(200);
-    expect(ctx.getJson(NS.L.progressName("c2", "s3")).stages.B01).toMatchObject({ status: "approved", score: 70 });
+    expect(ctx.getJson(NS.L.progressName("c2", "s3")).stages.BK01).toMatchObject({ status: "approved", score: 70 });
     expect(audits.map(a => a.action)).toEqual(["project.stage.approve", "project.stage.score"]);
   });
 });
@@ -183,10 +184,12 @@ describe("100/18. multi-project isolation + read surfaces", () => {
   it("project A and B keep independent grade / Strength / rank; scoring A never changes B", async () => {
     const ctx = school();
     // A: approve + score the first 8 book stages high (progress up), B: one low score
-    const a = getProjectDefinition("899373").stages.filter(s => s.track === "book").slice(0, 8);
+    // Phase P7 — BK02 + BK03 + BK04 weigh 4 + 2 + 2 = 8 of the book's 20 (40%), exactly as the first 8 old stages did.
+    const a = getProjectDefinition("899373").stages.filter(s => ["BK02", "BK03", "BK04"].includes(s.stageId));
     for (const s of a) await update(ctx, "899373", { stageId: s.stageId, status: "approved", score: 100 });
-    const bStage = getProjectDefinition("883589").stages.find(s => s.active !== false && s.required !== false).stageId;
-    await update(ctx, "883589", { stageId: bStage, status: "approved", score: 20 });
+    // Phase P7 — one small stage: VS02 (weight 1 of Visual Studio's 17) at 15 → precise 0.44, rounds to 0 (as before).
+    const bStage = "VS02";
+    await update(ctx, "883589", { stageId: bStage, status: "approved", score: 15 });
     const before = (await get(studentTracker, ctx, "/api/student-project-tracker", studentDeps(ctx))).jsonBody.projects;
     const pa = before.find(p => p.projectCode === "899373").performance, pb = before.find(p => p.projectCode === "883589").performance;
     expect(pa.grade).toBe(20); expect(pa.overallProgress).toBe(20); expect(pa.projectStrength).toBe(120); expect(pa.tier).toBe("bronze");
@@ -198,12 +201,12 @@ describe("100/18. multi-project isolation + read surfaces", () => {
   });
   it("teacher student detail + cards expose performance (grade / projectStrength / projectTier); student rows are read-only values", async () => {
     const ctx = school();
-    await update(ctx, "899373", { stageId: "B01", status: "approved", score: 85 });
+    await update(ctx, "899373", { stageId: "BK01", status: "approved", score: 85 });
     const detail = (await get(tracker, ctx, "/api/project-tracker?projectCode=899373&resource=student&classId=c1&studentId=s1")).jsonBody;
-    expect(detail.performance).toMatchObject({ grade: 2, projectStrength: expect.any(Number), tier: "beginner", level: 1 });
-    expect(detail.performance.stageValues.B01).toMatchObject({ score: 85, maxContribution: 2.5 });
+    expect(detail.performance).toMatchObject({ grade: 6, projectStrength: expect.any(Number), tier: "beginner", level: 1 });   // P7: 7.5 × 85%
+    expect(detail.performance.stageValues.BK01).toMatchObject({ score: 85, maxContribution: 7.5 });
     const cards = (await get(tracker, ctx, "/api/project-tracker?projectCode=899373&resource=students&classId=c1")).jsonBody.students;
-    expect(cards[0]).toMatchObject({ studentId: "s1", grade: 2, projectTier: "beginner" });
+    expect(cards[0]).toMatchObject({ studentId: "s1", grade: 6, projectTier: "beginner" });
     expect(typeof cards[0].projectStrength).toBe("number");
     // analytics / summary still work with scored entries (no new field breaks them)
     const analytics = await get(tracker, ctx, "/api/project-tracker?projectCode=899373&resource=analytics&classId=c1");

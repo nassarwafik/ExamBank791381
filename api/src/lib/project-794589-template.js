@@ -9,7 +9,8 @@ const PROGRAM_CODE = "794589";
 // The current default-template version. Bumped to 2 when the stage set/semantics changed (the old
 // 50-book/62-PT set was replaced by the approved 54-book/51-PT set). Class snapshots created before
 // this carry a lower templateVersion and are upgraded version-aware (see project-794589-migration).
-const TEMPLATE_VERSION = 2;
+// Phase P7: 3 — the owner-approved condensed set (10 book / 10 PT); v2 classes convert with their progress.
+const TEMPLATE_VERSION = 3;
 
 const TEMPLATE_CANDIDATES = [
   path.join(process.cwd(), "src", "data", "project-794589", "default-template.json"),

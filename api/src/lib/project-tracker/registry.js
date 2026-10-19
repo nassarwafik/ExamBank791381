@@ -25,7 +25,9 @@ const DEFINITIONS = {
     // 794589 keeps its original version-aware snapshot upgrade (a progress-free active class on an
     // older template is upgraded to the current version, audited, never reset). New projects declare
     // no policy (no migration needed).
-    snapshotUpgrade: { currentVersion: V794589, buildUpgraded: buildUpgraded794589 }
+    // Phase P7 — v2 (the 54-book / 51-PT set) converts to the condensed v3 set WITH its progress (service.condenseClass).
+    // Phase P7b — owner decision: a v1 class WITH progress restarts from zero on the v3 set (old work archived, audited).
+    snapshotUpgrade: { currentVersion: V794589, buildUpgraded: buildUpgraded794589, condenseFrom: 2, resetFrom: 1 }
   },
   "899373": {
     projectCode: "899373",
@@ -34,7 +36,9 @@ const DEFINITIONS = {
       { trackId: "book", title: "الكتاب", icon: "📘" },
       { trackId: "access", title: "Access", icon: "🗄️" }
     ],
-    loadTemplate: () => loadTemplateFile("899373")
+    loadTemplate: () => loadTemplateFile("899373"),
+    // Phase P7 — v1 (28 stages) converts to the condensed v2 set (11) with its progress.
+    snapshotUpgrade: { currentVersion: 2, condenseFrom: 1 }
   },
   "883589": {
     projectCode: "883589",
@@ -43,7 +47,9 @@ const DEFINITIONS = {
       { trackId: "book", title: "الكتاب", icon: "📘" },
       { trackId: "visualStudio", title: "Visual Studio", icon: "🧩" }
     ],
-    loadTemplate: () => loadTemplateFile("883589")
+    loadTemplate: () => loadTemplateFile("883589"),
+    // Phase P7 — v1 (52 stages) converts to the condensed v2 set (18) with its progress.
+    snapshotUpgrade: { currentVersion: 2, condenseFrom: 1 }
   }
 };
 
