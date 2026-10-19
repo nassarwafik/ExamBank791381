@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
 import { STAGE_STATUS_TONE, stageStatusLabel, normalizeStageStatus } from "./teacherPresentation";
 import { fmtContribution } from "./projectPerformance";
@@ -7,12 +7,15 @@ import EmptyState from "../ui/EmptyState";
 import { useConfirm } from "../ui/useConfirm";
 import { IconCheck } from "../icons";
 import { bulkNoticeText, type BulkTotals } from "./bulkReview";
+import ProjectScoreGrid from "./ProjectScoreGrid";
 import type { ProjectGroup, StageStatus, TrackMeta } from "./types";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[]; readOnly: boolean;
   /** Called after a bulk write that changed at least one status (App re-reads the global ready counts). */
   onReadyChanged?: () => void;
+  /** Phase P4 — reports whether «جدول العلامات» holds unsaved scores (the workspace asks before leaving). */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 export type BoardStage = { stageId: string; track: string; groupId: string; title: string; order: number; required: boolean };
@@ -21,7 +24,7 @@ export type BoardStudent = { studentId: string; displayName: string; code: strin
 export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[] };
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
 type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
-type Mode = "ready" | "self" | "stage";
+type Mode = "ready" | "self" | "stage" | "grid";
 
 const EMPTY_CELL: BoardCell = { status: "not_started", score: null };
 const cellOf = (s: BoardStudent, stageId: string): BoardCell => {
@@ -41,7 +44,7 @@ const ERROR_TEXT: Record<string, string> = { not_member: "الطالب لم يع
  * or «إرجاع إلى قيد التنفيذ»). The server applies each pair through the canonical pipeline and reports per item; failed
  * pairs stay selected for a retry. Only the latest board read for the current (project, class) may populate the view.
  */
-export default function ProjectBulkReview({ token, projectCode, classId, tracks, readOnly, onReadyChanged }: Props) {
+export default function ProjectBulkReview({ token, projectCode, classId, tracks, readOnly, onReadyChanged, onDirtyChange }: Props) {
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +58,9 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
   const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
   const seq = useRef(0);
   const { confirm, confirmDialog } = useConfirm();
+  // Phase P4 — unsaved scores in «جدول العلامات»: leaving the grid for another mode asks first.
+  const [gridDirty, setGridDirty] = useState(false);
+  const onGridDirty = useCallback((d: boolean) => { setGridDirty(d); onDirtyChange?.(d); }, [onDirtyChange]);
 
   async function load(keepNotice = false) {
     const mine = ++seq.current;
@@ -97,7 +103,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
   // Until the teacher picks a mode: the ready list when something waits, then the students' own marks, else «حسب المرحلة».
   const mode: Mode = chosenMode ?? (readyPairs.length ? "ready" : selfPairs.length ? "self" : "stage");
-  const pairs = mode === "ready" ? readyPairs : selfPairs;
+  const pairs = mode === "ready" ? readyPairs : mode === "self" ? selfPairs : [];
   useEffect(() => {
     if (!board || (stageId && trackStages.some(s => s.stageId === stageId))) return;
     const first = trackStages.find(s => readyByStage[s.stageId]) || trackStages[0];
@@ -106,7 +112,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
   const locked = readOnly || !!board?.readOnly;
   const stage = stages.find(s => s.stageId === stageId) || null;
-  const visibleKeys = mode !== "stage"
+  const visibleKeys = mode === "ready" || mode === "self"
     ? pairs.map(p => keyOf(p.student.studentId, p.stage.stageId))
     : stage && board ? board.students.map(s => keyOf(s.studentId, stage.stageId)) : [];
   const selectedVisible = visibleKeys.filter(k => selected.has(k));
@@ -116,7 +122,12 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
     setSelected(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   }
   function selectOnly(keys: string[]) { setSelected(new Set(keys)); }
-  function changeMode(next: Mode) { setChosenMode(next); setSelected(new Set()); setItemErrors({}); }
+  function changeMode(next: Mode) {
+    const go = () => { setChosenMode(next); setSelected(new Set()); setItemErrors({}); };
+    if (mode !== "grid" || next === "grid" || !gridDirty) { go(); return; }
+    void confirm({ title: "علامات غير محفوظة", message: "في «جدول العلامات» علامات لم تُحفظ بعد. هل تريد تجاهلها؟", confirmLabel: "تجاهل العلامات", cancelLabel: "متابعة الإدخال", tone: "danger" })
+      .then(ok => { if (ok) go(); });
+  }
   function changeTrack(next: string) { setTrack(next); setStageId(""); setSelected(new Set()); setItemErrors({}); }
   function changeStage(next: string) { setStageId(next); setSelected(new Set()); setItemErrors({}); }
 
@@ -181,7 +192,13 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
         <button type="button" aria-pressed={mode === "ready"} onClick={() => changeMode("ready")}>بانتظار الاعتماد ({readyPairs.length})</button>
         <button type="button" aria-pressed={mode === "self"} onClick={() => changeMode("self")}>حدّدها الطلاب ({selfPairs.length})</button>
         <button type="button" aria-pressed={mode === "stage"} onClick={() => changeMode("stage")}>حسب المرحلة</button>
+        <button type="button" aria-pressed={mode === "grid"} onClick={() => changeMode("grid")}>جدول العلامات</button>
       </div>
+
+      {mode === "grid" && (
+        <ProjectScoreGrid token={token} projectCode={projectCode} classId={classId} tracks={tracks} board={board} locked={locked}
+          onSaved={() => load(true)} onDirtyChange={onGridDirty} />
+      )}
 
       {mode === "stage" && (
         <div className="eb-bulk-stage-picker">
@@ -198,7 +215,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
         </div>
       )}
 
-      {!locked && visibleKeys.length > 0 && (
+      {mode !== "grid" && !locked && visibleKeys.length > 0 && (
         <div className="eb-bulk-bar eb-bulk-review-bar" role="region" aria-label="إجراءات التقييم الجماعي">
           <span className="eb-bulk-summary" role="status">{selectedVisible.length} محدد من {visibleKeys.length}</span>
           <div className="eb-bulk-groups">
@@ -227,7 +244,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
       )}
 
       {mode === "self" && <p className="eb-muted">مراحل حدّدها الطلاب كمنفّذة وتُحتسب في تقدّمهم الآن. «تأكيد المحدد» يعتمدها باسمك، و«إرجاع إلى قيد التنفيذ» يلغي تحديد الطالب.</p>}
-      {mode !== "stage" && (
+      {(mode === "ready" || mode === "self") && (
         pairs.length ? (
           <ul className="eb-bulk-list" aria-label={mode === "ready" ? "مراحل بانتظار الاعتماد" : "مراحل حدّدها الطلاب"}>
             {pairs.map(({ student, stage: st }) => {
