@@ -61,6 +61,19 @@ function getNextStages(definition, progressDoc) {
   return out;
 }
 
+// Phase P6 — active stages the STUDENT marked as done (P2) that the teacher has not confirmed yet. They count as approved
+// in `counts`; this separate figure lets the teacher see them without opening the bulk review.
+function countSelfReported(stages, progressDoc) {
+  const entries = (progressDoc && progressDoc.stages) || {};
+  let n = 0;
+  for (const stage of (Array.isArray(stages) ? stages : [])) {
+    if (!stage || stage.active !== true) continue;
+    const e = entries[stage.stageId];
+    if (e && e.status === "approved" && typeof e.selfReportedAt === "string" && e.selfReportedAt !== "") n += 1;
+  }
+  return n;
+}
+
 // Lightweight student card. trackProgress is a { trackId: pct } map (generic replacement for the old
 // bookProgress / packetTracerProgress fields).
 function buildStudentSummary(definition, progressDoc, now) {
@@ -71,6 +84,7 @@ function buildStudentSummary(definition, progressDoc, now) {
   const counts = countStatuses(stages, progressDoc, null);
   const complete = isStudentComplete(stages, progressDoc);
   const updatedAt = (progressDoc && progressDoc.updatedAt) || "";
+  const selfReportedCount = countSelfReported(stages, progressDoc);
   return {
     overallProgress,
     trackProgress,
@@ -78,7 +92,9 @@ function buildStudentSummary(definition, progressDoc, now) {
     readyForReviewCount: counts.ready_for_review,
     complete,
     updatedAt,
-    stale: getStaleState(updatedAt, staleDays, now, complete)
+    stale: getStaleState(updatedAt, staleDays, now, complete),
+    // Phase P6 — present only when the student has unconfirmed marks (absent = 0), so every other body is unchanged.
+    ...(selfReportedCount ? { selfReportedCount } : {})
   };
 }
 
@@ -86,6 +102,6 @@ module.exports = {
   STATUSES,
   stageStatus, stageWeight, countedStages, calculateTrackProgress, countStatuses,
   getNextStage, isStudentComplete, getStaleState, daysSince, progressBucket,
-  trackIds, buildTrackProgress, calculateOverall, getBalanceInsight, getNextStages, buildStudentSummary,
+  trackIds, buildTrackProgress, calculateOverall, getBalanceInsight, getNextStages, buildStudentSummary, countSelfReported,
   applyProgressUpdate, emptyProgress
 };

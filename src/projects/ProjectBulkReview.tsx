@@ -16,6 +16,8 @@ type Props = {
   onReadyChanged?: () => void;
   /** Phase P4 — reports whether «جدول العلامات» holds unsaved scores (the workspace asks before leaving). */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Phase P6 — the mode to open on (a dashboard shortcut); otherwise the default below. */
+  initialMode?: BulkMode | null;
 };
 
 export type BoardStage = { stageId: string; track: string; groupId: string; title: string; order: number; required: boolean };
@@ -25,6 +27,8 @@ export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGr
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
 type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
 type Mode = "ready" | "self" | "stage" | "grid";
+export type BulkMode = Mode;
+type GroupBy = "student" | "stage";
 
 const EMPTY_CELL: BoardCell = { status: "not_started", score: null };
 const cellOf = (s: BoardStudent, stageId: string): BoardCell => {
@@ -44,12 +48,16 @@ const ERROR_TEXT: Record<string, string> = { not_member: "الطالب لم يع
  * or «إرجاع إلى قيد التنفيذ»). The server applies each pair through the canonical pipeline and reports per item; failed
  * pairs stay selected for a retry. Only the latest board read for the current (project, class) may populate the view.
  */
-export default function ProjectBulkReview({ token, projectCode, classId, tracks, readOnly, onReadyChanged, onDirtyChange }: Props) {
+export default function ProjectBulkReview({ token, projectCode, classId, tracks, readOnly, onReadyChanged, onDirtyChange, initialMode = null }: Props) {
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [chosenMode, setChosenMode] = useState<Mode | null>(null);
+  const [chosenMode, setChosenMode] = useState<Mode | null>(initialMode);
+  // Phase P6 — the waiting lists («بانتظار الاعتماد», «حدّدها الطلاب») are grouped (by student by default, or by stage),
+  // can be narrowed to one track, and each group carries its own one-tap decision.
+  const [groupBy, setGroupBy] = useState<GroupBy>("student");
+  const [listTrack, setListTrack] = useState<string>("all");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [stageId, setStageId] = useState("");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -74,7 +82,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
   }
   // A new (project, class) starts clean: no board from the previous class, no selection, no stage, no errors.
   useEffect(() => {
-    setBoard(null); setChosenMode(null); setStageId(""); setSelected(new Set()); setItemErrors({}); setScore("");
+    setBoard(null); setChosenMode(initialMode); setStageId(""); setSelected(new Set()); setItemErrors({}); setScore(""); setListTrack("all");
     void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId, projectCode]);
@@ -103,7 +111,24 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
   // Until the teacher picks a mode: the ready list when something waits, then the students' own marks, else «حسب المرحلة».
   const mode: Mode = chosenMode ?? (readyPairs.length ? "ready" : selfPairs.length ? "self" : "stage");
-  const pairs = mode === "ready" ? readyPairs : mode === "self" ? selfPairs : [];
+  const modePairs = mode === "ready" ? readyPairs : mode === "self" ? selfPairs : [];
+  const pairs = listTrack === "all" ? modePairs : modePairs.filter(p => p.stage.track === listTrack);
+  // Groups of the visible waiting list, in board order: students by name as the server sorts them; stages track by track
+  // (the project's track order), then by their order inside the track.
+  const groups = useMemo(() => {
+    const out: { key: string; title: string; code?: string; pairs: typeof pairs }[] = [];
+    const at = new Map<string, number>();
+    for (const p of pairs) {
+      const key = groupBy === "student" ? p.student.studentId : p.stage.stageId;
+      if (!at.has(key)) { at.set(key, out.length); out.push({ key, title: groupBy === "student" ? p.student.displayName : p.stage.stageId + " — " + p.stage.title, code: groupBy === "student" ? p.student.code : undefined, pairs: [] }); }
+      out[at.get(key)!].pairs.push(p);
+    }
+    if (groupBy === "stage") {
+      const rank = (g: { pairs: typeof pairs }) => { const st = g.pairs[0].stage, t = tracks.findIndex(x => x.trackId === st.track); return (t < 0 ? tracks.length : t) * 100000 + st.order; };
+      out.sort((a, b) => rank(a) - rank(b));
+    }
+    return out;
+  }, [pairs, groupBy, tracks]);
   useEffect(() => {
     if (!board || (stageId && trackStages.some(s => s.stageId === stageId))) return;
     const first = trackStages.find(s => readyByStage[s.stageId]) || trackStages[0];
@@ -135,13 +160,13 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
   const scoreValue = scoreText === "" ? undefined : Number(scoreText);
   const scoreInvalid = scoreValue !== undefined && (!Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > 100);
 
-  async function apply(status: StageStatus, verb: string) {
-    if (locked || busy || !selectedVisible.length || (status === "approved" && scoreInvalid)) return;
+  async function apply(status: StageStatus, verb: string, keys: string[] = selectedVisible) {
+    if (locked || busy || !keys.length || (status === "approved" && scoreInvalid)) return;
     if (status !== "approved") {
-      const ok = await confirm({ title: "إرجاع المراحل إلى قيد التنفيذ", message: "سيُلغى اعتماد المراحل المحددة المعتمدة وتُحتسب من جديد عند اعتمادها. العلامات المحفوظة لا تُحذف.", confirmLabel: "إرجاع " + selectedVisible.length });
+      const ok = await confirm({ title: "إرجاع المراحل إلى قيد التنفيذ", message: "سيُلغى اعتماد المراحل المحددة المعتمدة وتُحتسب من جديد عند اعتمادها. العلامات المحفوظة لا تُحذف.", confirmLabel: "إرجاع " + keys.length });
       if (!ok) return;
     }
-    const items = selectedVisible.map(parseKey);
+    const items = keys.map(parseKey);
     setChosenMode(mode);                                                       // stay on this view even when it empties
     setBusy(true); setError(""); setNotice(""); setItemErrors({});
     try {
@@ -157,6 +182,18 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
       await load(true);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغييرات."); }
     finally { setBusy(false); }
+  }
+  // Phase P6 — every waiting stage in view (the track filter applies) in ONE request, after a confirmation.
+  async function applyAll() {
+    const keys = pairs.map(p => keyOf(p.student.studentId, p.stage.stageId));
+    if (!keys.length) return;
+    const self = mode === "self";
+    const ok = await confirm({
+      title: self ? "تأكيد كل ما حدّده الطلاب" : "اعتماد كل المراحل الجاهزة",
+      message: (self ? "سيُؤكَّد " : "سيُعتمد ") + keys.length + " مرحلة لـ " + new Set(pairs.map(p => p.student.studentId)).size + " طالب باسمك" + (scoreValue !== undefined ? "، مع العلامة الموحّدة " + scoreValue : "") + ". يمكنك إرجاع أي مرحلة لاحقًا.",
+      confirmLabel: (self ? "تأكيد " : "اعتماد ") + keys.length
+    });
+    if (ok) await apply("approved", self ? "تم تأكيد" : "تم اعتماد", keys);
   }
 
   if (!board) {
@@ -221,6 +258,11 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
           <div className="eb-bulk-groups">
             <div className="eb-bulk-group">
               <button type="button" className="eb-button is-small" disabled={busy} onClick={() => selectOnly(allVisibleSelected ? [] : visibleKeys)}>{allVisibleSelected ? "إلغاء التحديد" : "تحديد الكل"}</button>
+              {(mode === "ready" || mode === "self") && (
+                <button type="button" className="eb-button is-small is-primary" disabled={busy || scoreInvalid} onClick={() => void applyAll()}>
+                  <IconCheck size={16} />{(mode === "self" ? "تأكيد الكل" : "اعتماد الكل") + " (" + visibleKeys.length + ")"}
+                </button>
+              )}
               {mode === "stage" && stage && board && (
                 <>
                   <button type="button" className="eb-button is-small" disabled={busy} onClick={() => selectOnly(board.students.filter(s => cellOf(s, stage.stageId).status === "ready_for_review").map(s => keyOf(s.studentId, stage.stageId)))}>تحديد الجاهزين</button>
@@ -244,27 +286,63 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
       )}
 
       {mode === "self" && <p className="eb-muted">مراحل حدّدها الطلاب كمنفّذة وتُحتسب في تقدّمهم الآن. «تأكيد المحدد» يعتمدها باسمك، و«إرجاع إلى قيد التنفيذ» يلغي تحديد الطالب.</p>}
+      {(mode === "ready" || mode === "self") && modePairs.length > 0 && (
+        <div className="eb-review-list-controls">
+          <div className="eb-segmented" role="group" aria-label="تجميع القائمة">
+            <button type="button" aria-pressed={groupBy === "student"} onClick={() => setGroupBy("student")}>بالطلاب</button>
+            <button type="button" aria-pressed={groupBy === "stage"} onClick={() => setGroupBy("stage")}>بالمراحل</button>
+          </div>
+          {tracks.length > 1 && (
+            <div className="eb-chip-group" role="group" aria-label="مسار القائمة">
+              {[{ trackId: "all", title: "كل المسارات" }, ...tracks].map(t => {
+                const n = t.trackId === "all" ? modePairs.length : modePairs.filter(p => p.stage.track === t.trackId).length;
+                return <button key={t.trackId} type="button" className="eb-chip-button" aria-pressed={listTrack === t.trackId} onClick={() => { setListTrack(t.trackId); setSelected(new Set()); setItemErrors({}); }}>{t.title} ({n})</button>;
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {(mode === "ready" || mode === "self") && (
         pairs.length ? (
-          <ul className="eb-bulk-list" aria-label={mode === "ready" ? "مراحل بانتظار الاعتماد" : "مراحل حدّدها الطلاب"}>
-            {pairs.map(({ student, stage: st }) => {
-              const key = keyOf(student.studentId, st.stageId);
+          <ul className="eb-review-groups" aria-label={mode === "ready" ? "مراحل بانتظار الاعتماد" : "مراحل حدّدها الطلاب"}>
+            {groups.map(g => {
+              const keys = g.pairs.map(p => keyOf(p.student.studentId, p.stage.stageId));
+              const verb = mode === "self" ? "تأكيد" : "اعتماد";
+              const action = groupBy === "student" ? verb + " مراحل " + g.title : verb + " " + g.pairs[0].stage.stageId + " للجميع";
               return (
-                <li key={key} className={"eb-bulk-row" + (selected.has(key) ? " is-selected" : "")}>
-                  <label className="eb-bulk-row-main">
-                    {!locked && checkbox(key, student.displayName + " — " + st.stageId)}
-                    <strong>{student.displayName}</strong>
-                    <span className="eb-stage-code">{st.stageId}</span>
-                    <span>{st.title}</span>
-                    <span className="eb-muted">{tracks.find(t => t.trackId === st.track)?.title || st.track}</span>
-                  </label>
-                  {cellBadge(cellOf(student, st.stageId))}
-                  {itemErrors[key] && <small className="eb-stage-row-error" role="alert">{itemErrors[key]}</small>}
+                <li key={g.key} className="eb-review-group">
+                  <div className="eb-review-group-head">
+                    <h3 className="eb-review-group-title">{g.title}{g.code ? <span className="eb-muted"> {g.code}</span> : null} <span className="eb-review-group-count">({g.pairs.length})</span></h3>
+                    {!locked && (
+                      <button type="button" className="eb-button is-small" disabled={busy || scoreInvalid} onClick={() => void apply("approved", mode === "self" ? "تم تأكيد" : "تم اعتماد", keys)}>
+                        <IconCheck size={16} />{action + " (" + keys.length + ")"}
+                      </button>
+                    )}
+                  </div>
+                  <ul className="eb-bulk-list" aria-label={g.title}>
+                    {g.pairs.map(({ student, stage: st }) => {
+                      const key = keyOf(student.studentId, st.stageId);
+                      return (
+                        <li key={key} className={"eb-bulk-row" + (selected.has(key) ? " is-selected" : "")}>
+                          <label className="eb-bulk-row-main">
+                            {!locked && checkbox(key, student.displayName + " — " + st.stageId)}
+                            {groupBy === "stage" ? <strong>{student.displayName}</strong> : <span className="eb-stage-code">{st.stageId}</span>}
+                            {groupBy === "student" && <span>{st.title}</span>}
+                            {groupBy === "student" && <span className="eb-muted">{tracks.find(t => t.trackId === st.track)?.title || st.track}</span>}
+                          </label>
+                          {cellBadge(cellOf(student, st.stageId))}
+                          {itemErrors[key] && <small className="eb-stage-row-error" role="alert">{itemErrors[key]}</small>}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </li>
               );
             })}
           </ul>
-        ) : mode === "ready"
+        ) : modePairs.length
+          ? <EmptyState compact title="لا شيء في هذا المسار." description="اختر «كل المسارات» لرؤية القائمة كاملة." />
+          : mode === "ready"
           ? <EmptyState compact title="لا توجد مراحل بانتظار الاعتماد." description="اختر «حسب المرحلة» لاعتماد مرحلة لعدة طلاب دفعة واحدة." />
           : <EmptyState compact title="لا توجد مراحل حدّدها الطلاب بانتظار تأكيدك." />
       )}

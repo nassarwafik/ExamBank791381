@@ -61,7 +61,8 @@ function installFetch() {
   }) as unknown as typeof fetch;
 }
 
-const summaryReads = () => calls.filter(c => c.method === "GET" && c.url === "/api/project-tracker?resource=projects-summary").length;
+// Phase P6 — the ONE summary read now asks for the students' own marks too (`include=attention`); updated deliberately.
+const summaryReads = () => calls.filter(c => c.method === "GET" && c.url === "/api/project-tracker?resource=projects-summary&include=attention").length;
 const catalogReads = () => calls.filter(c => c.method === "GET" && c.url === "/api/project-tracker?resource=projects").length;
 const posts = () => calls.filter(c => c.method === "POST" && c.url.includes("/api/project-tracker")).map(c => c.body);
 const sidebar = () => screen.getByRole("complementary", { name: "التنقل الرئيسي" });

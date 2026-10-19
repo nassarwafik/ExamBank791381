@@ -68,6 +68,7 @@ import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkl
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
+import { NO_PROJECT_ATTENTION, projectAttentionOf, type ProjectAttention, type ProjectsSummaryResponse } from "./projects/projectAttention";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
 import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
 import { QuestionTextBlock, parseTable } from "./questionContent";
@@ -665,7 +666,9 @@ function App() {
   const [projectCatalogStatus, setProjectCatalogStatus] = useState<"loading" | "ready" | "error">("loading");
   const [projectCatalogNonce, setProjectCatalogNonce] = useState(0);
   // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
-  const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
+  // Phase P6 — the same read also carries the students' own marks awaiting confirmation (`include=attention`): totals,
+  // per project and per class, so the badge, the hub and the workspace class selector show them without another request.
+  const [projectReady, setProjectReady] = useState<ProjectAttention>(NO_PROJECT_ATTENTION);
   // UX-6a review: App stays the ONE owner of the global ready summary. A successful project mutation that can
   // change ready-stage counts (status change, template update, project reset) bumps this nonce, which re-issues
   // exactly one aggregated projects-summary read; the hub cards and the sidebar badge then re-render from it.
@@ -835,13 +838,13 @@ function App() {
   const wasInProjectsView = useRef(inProjectsView);
   useEffect(() => {
     // §2/§6 — also gated on AUTHORITATIVE validation (no teacher request during boot or a transient-failure retry state).
-    if (!sessionValidated || !token || sessionRole !== "teacher") { wasInProjectsView.current = inProjectsView; setProjectReady({ total: 0, byProject: {} }); return; }
+    if (!sessionValidated || !token || sessionRole !== "teacher") { wasInProjectsView.current = inProjectsView; setProjectReady(NO_PROJECT_ATTENTION); return; }
     if (!inProjectsView && wasInProjectsView.current) { wasInProjectsView.current = false; return; }   // leaving Projects: no read
     wasInProjectsView.current = inProjectsView;
     let cancelled = false;
-    apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
-      .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
-      .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
+    apiRequest<ProjectsSummaryResponse>("/api/project-tracker?resource=projects-summary&include=attention")
+      .then(r => { if (!cancelled) setProjectReady(projectAttentionOf(r)); })
+      .catch(() => { if (!cancelled) setProjectReady(NO_PROJECT_ATTENTION); });
     return () => { cancelled = true; };
   }, [token, sessionRole, inProjectsView, sessionValidated, projectReadyNonce]);
 
@@ -5812,6 +5815,7 @@ function App() {
     <TeacherAppShell
       nav={{ teacherView, workspaceTab, projectCode, projectList }}
       projectReadyTotal={projectReady.total}
+      projectSelfReportedTotal={projectReady.selfTotal}
       messageUnread={messageUnread}
       displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
       identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
@@ -5864,9 +5868,9 @@ function App() {
       {teacherView === "project" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
-            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill}
+            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill} attentionByClass={projectReady.byClass[projectCode]}
                 evaluationQueue={queueView(evaluationQueue)} onEvaluationQueueMove={moveEvaluationQueue} onEvaluationQueueComplete={completeEvaluationQueueItem} onEvaluationFocusExit={exitEvaluationQueue} onEvaluationQueueFinish={finishEvaluationQueue} onEvaluationQueueReturnToTerminal={returnToEvaluationQueueTerminal} />
-            : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
+            : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} selfReportedByProject={projectReady.selfByProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}
 
