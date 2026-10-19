@@ -2,7 +2,7 @@
 // Phase P3 — the student's one-tap stage marking in a REAL Chromium on the production build (certification only; nothing is
 // deployed). The build in DIST (default ./dist) is served next to the REAL API, in process (browser-harness/learning-l8-api.cjs:
 // every Azure Functions handler on the in-memory storage of the API tests, real signed sessions). One class enrolled in
-// project 899373; one student per viewport, each with the third stage of the first group approved by the teacher.
+// project 899373; one student per viewport, each with the third stage of the first three-stage group approved by the teacher.
 //
 // At 390 px (touch) and 1024 and 1440 px, on the student portal's «مشاريعي»:
 //   1. the stage list opens on «المتبقية» with its count; the teacher-approved stage is not listed there and has no action;
@@ -43,8 +43,12 @@ const NS = getStorageNamespace(CODE);
 const DEF = getProjectDefinition(CODE);
 const groupsOfFirstTrack = DEF.groups.filter(g => g.track === DEF.tracks[0].trackId).sort((a, b) => a.order - b.order);
 const stagesOf = g => DEF.stages.filter(s => s.groupId === g.groupId && s.active === true).sort((a, b) => a.order - b.order);
-const [G1, G2] = groupsOfFirstTrack.slice(0, 2).map(stagesOf);
-const G2_TITLE = groupsOfFirstTrack[1].title;
+// Phase P7: the condensed first group holds one stage, so the gate uses the first group with three stages or more (G1)
+// and the next group with two or more (G2, marked as a whole).
+const g1 = groupsOfFirstTrack.find(g => stagesOf(g).length >= 3);
+const g2 = groupsOfFirstTrack.find(g => g.order > g1.order && stagesOf(g).length >= 2);
+const [G1, G2] = [g1, g2].map(stagesOf);
+const G2_TITLE = g2.title;
 const NOW = "2026-10-01T00:00:00.000Z";
 const VIEWPORTS = [{ width: 390, height: 844, touch: true }, { width: 1024, height: 768, touch: false }, { width: 1440, height: 900, touch: false }];
 const students = VIEWPORTS.map((vp, i) => ({ userId: "p3s" + (i + 1), role: "student", active: true, archived: false, authVersion: 1, classId: "c1", displayName: "طالب " + (i + 1), code: "P3" + (i + 1) }));

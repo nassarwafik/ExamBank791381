@@ -98,6 +98,25 @@ describe("P7 conversion rules (pure)", () => {
     expect(plan.stages.find(s => s.stageId === "AC03")).toMatchObject({ active: false });
   });
 
+  it("a merged stage is required when ANY of its active old stages is required; optional only when all of them are", () => {
+    const snap = oldSnapshot(CODE, "c1", s => ({ ...s, stages: s.stages.map(x => (x.stageId === "B03" || ["B04", "B05", "B06", "B07"].includes(x.stageId) ? { ...x, required: false } : x)) }));
+    const d = getProjectDefinition(CODE);
+    const plan = buildCondensePlan(d.stages, d.groups, snap);
+    expect(plan.stages.find(s => s.stageId === "BK01").required).toBe(true);     // B01, B02 required, B03 optional
+    expect(plan.stages.find(s => s.stageId === "BK02").required).toBe(false);    // B04–B07 all optional
+  });
+
+  it("a document is converted once: a converted one is returned as it is, and an existing new entry is never overwritten", () => {
+    const d = getProjectDefinition(CODE);
+    const plan = buildCondensePlan(d.stages, d.groups, oldSnapshot(CODE, "c1"));
+    const converted = progress("s1", "c1", { BK01: approved(70), B01: approved(90), B02: approved(90), B03: approved(90) }, { stageTemplateVersion: 2 });
+    expect(condenseProgressDoc(converted, plan, 2, 1, NOW)).toBe(converted);
+    const mixed = progress("s1", "c1", { BK01: { status: "in_progress", updatedAt: NOW }, B01: approved(90), B02: approved(90), B03: approved(90) });
+    const out = condenseProgressDoc(mixed, plan, 2, 1, NOW);
+    expect(out.stages.BK01).toEqual({ status: "in_progress", updatedAt: NOW });   // the newer write wins
+    expect(out.condensedFrom.stages.B01).toEqual(approved(90));
+  });
+
   it("a teacher's own stage and group are carried; a colliding id makes the class skip conversion", () => {
     const withOwn = oldSnapshot(CODE, "c1", s => ({ ...s, groups: [...s.groups, { groupId: "mine", track: "book", title: "مجموعتي", order: 9 }], stages: [...s.stages, { stageId: "X1", track: "book", groupId: "mine", title: "مرحلتي", order: 99, weight: 2, required: true, active: true }] }));
     const d = getProjectDefinition(CODE);
@@ -193,6 +212,29 @@ describe("P7 class conversion (real handlers, in-memory storage)", () => {
     expect(t.snap().templateVersion).toBe(2);
     expect(t.doc("s1").stages.BK01.status).toBe("ready_for_review");
     expect(t.doc("s2").stages.BK01.status).toBe("ready_for_review");
+  });
+
+  it("a progress document that appears while the class converts (a write already past its checks) is converted by the sweep", async () => {
+    const t = setup({ [NS.progressName("c1", "s1")]: progress("s1", "c1", { B01: approved(90) }) });
+    const real = t.ctx.container.getBlockBlobClient.bind(t.ctx.container);
+    let injected = false;
+    t.ctx.container.getBlockBlobClient = name => {
+      const client = real(name);
+      if (name !== NS.configName("c1")) return client;
+      return { ...client, upload: async (...args) => {
+        const r = await client.upload(...args);
+        // Right after the snapshot switch, the late document lands (old keys, never seen by pass 1).
+        if (!injected && String(args[0]).includes("\"condensedAt\"")) { injected = true; t.ctx.setJson(NS.progressName("c1", "s2"), progress("s2", "c1", { B01: approved(80), B02: approved(80), B03: approved(80) })); }
+        return r;
+      } };
+    };
+    expect((await t.get("board")).status).toBe(200);
+    expect(injected).toBe(true);
+    expect(t.snap().templateVersion).toBe(2);
+    expect(t.doc("s2").stageTemplateVersion).toBe(2);
+    expect(t.doc("s2").stages.BK01).toMatchObject({ status: "approved", score: 80 });
+    expect(t.doc("s2").stages.B01).toBeUndefined();
+    expect(t.doc("s2").condensedFrom.stages.B01).toEqual(approved(80));
   });
 
   it("a write never lands on a document converted to a newer set than the snapshot it was checked against", async () => {
