@@ -1,11 +1,11 @@
 // Generic teacher-side Project Tracker API. Serves ANY project in the registry (currently 794589,
-// 899373, 883589) via ?projectCode=. Mirrors the capabilities of the 794589 route but data-driven:
+// 899373, 883589) via ?projectCode=. Data-driven:
 // summary / students / student / analytics / template (GET) and program.activate / progress.update /
 // project.reset / template.update (POST). Storage is namespaced per project (794589 => legacy paths),
-// so a write to one project can never touch another. The dedicated project-794589 route stays as-is.
-// Roadmap #33: the write operations and the class catalogue are shared with the legacy route through
-// lib/project-tracker/service.js (domain results only); this handler owns every status code, message, body
-// shape and audit record, all unchanged.
+// so a write to one project can never touch another. Phase P-9 removed the dedicated project-794589 route:
+// this route serves 794589 too, and a GET here never writes (svc.readClassConfig).
+// Roadmap #33: the write operations and the class catalogue live in lib/project-tracker/service.js (domain results
+// only); this handler owns every status code, message, body shape and audit record.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
@@ -238,7 +238,8 @@ async function handler(request, deps = {}, obs = null) {
         if (!ownClassroom(classroom)) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
         const readOnly = normalizeClassStatus(classroom) === "archived";
-        const config = await svc.ensureClassConfig(container, projectCode, classroom);
+        // Phase P-9 — a read never writes: the snapshot as the next write will see it (lazy create / upgrade in memory only).
+        const config = await svc.readClassConfig(container, projectCode, classroom);
         const workDef = svc.workingDefinition(projectCode, config);
 
         if (resource === "template") {
@@ -493,6 +494,9 @@ async function handler(request, deps = {}, obs = null) {
         const patch = body.template && typeof body.template === "object" ? body.template : {};
         try {
           // Phase P-1 — the patch is validated against the class's current snapshot inside the CAS round (400, nothing written).
+          // Phase P-9 — reads no longer persist a pending upgrade, so it is applied here first: the patch lands on the
+          // upgraded snapshot and a later write can never upgrade over it.
+          await svc.ensureClassConfig(container, projectCode, classroom);
           const written = await svc.updateTemplate(container, projectCode, classId, patch, now, { validate: (current, p) => validateTemplatePatch(current, p, definition.tracks.map(t => t.trackId)) });
           await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
