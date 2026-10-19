@@ -36,6 +36,8 @@ const DESKTOP_QUERY = "(min-width: 1024px)";
 type Props = {
   nav: TeacherNavState;
   projectReadyTotal: number;
+  /** Phase P6 — stages the students marked as done that wait for the teacher's confirmation (counted in the same badge). */
+  projectSelfReportedTotal?: number;
   /** Phase 5D — unread student replies (server-derived; App owns it). `capped` → "99+". */
   messageUnread?: { total: number; capped: boolean };
   displayName: string;
@@ -46,7 +48,7 @@ type Props = {
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread, displayName, identity, onNavigate, onLogout, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -89,7 +91,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
   function navButton(id: TeacherNavId, variant: "" | "group-head" | "child" = "") {
     const Icon = ICONS[id];
     const isActive = id === active;
-    const badge = id === "projects" && projectReadyTotal > 0 ? projectReadyTotal : 0;
+    const badge = id === "projects" ? Math.max(0, projectReadyTotal) + Math.max(0, projectSelfReportedTotal) : 0;
     const unread = id === "messages" && messageUnread && messageUnread.total > 0 ? messageUnread : null;
     return (
       <button
@@ -105,7 +107,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
         {badge > 0 && (
           <span className="eb-nav-badge">
             {badge}
-            <VisuallyHidden> مراحل بانتظار الفحص</VisuallyHidden>
+            <VisuallyHidden>{projectSelfReportedTotal > 0 ? " مراحل بانتظار الفحص أو التأكيد" : " مراحل بانتظار الفحص"}</VisuallyHidden>
           </span>
         )}
         {unread && (

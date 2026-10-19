@@ -17,4 +17,21 @@ function countReadyStages(progressDocs, activeStageIds, isMemberFn) {
   return n;
 }
 
-module.exports = { countReadyStages };
+// Phase P6 — the same exactness for the stages the STUDENTS marked as done (P2) that the teacher has not confirmed yet:
+// approved + a non-empty `selfReportedAt`, of a current member, on an active stage of the class snapshot.
+function countSelfReportedStages(progressDocs, activeStageIds, isMemberFn) {
+  const set = activeStageIds instanceof Set ? activeStageIds : new Set(activeStageIds || []);
+  let n = 0;
+  for (const doc of (Array.isArray(progressDocs) ? progressDocs : [])) {
+    if (!doc) continue;
+    if (!isMemberFn(String(doc.studentId))) continue;
+    const stages = doc.stages || {};
+    for (const stageId of Object.keys(stages)) {
+      const e = stages[stageId];
+      if (e && e.status === "approved" && typeof e.selfReportedAt === "string" && e.selfReportedAt !== "" && set.has(stageId)) n += 1;
+    }
+  }
+  return n;
+}
+
+module.exports = { countReadyStages, countSelfReportedStages };

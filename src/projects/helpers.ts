@@ -23,6 +23,7 @@ export function filterStudentCards(cards: StudentCard[], filter: StudentFilter, 
     if (term && !(card.displayName.toLowerCase().includes(term) || String(card.code || "").toLowerCase().includes(term))) return false;
     switch (filter) {
       case "ready": return card.readyForReviewCount > 0;
+      case "self": return (card.selfReportedCount || 0) > 0;                // Phase P6 — marks waiting for the teacher
       case "late": return !card.complete && card.overallProgress < lateThreshold;
       case "not_started": return card.overallProgress === 0 && card.counts.in_progress === 0 && card.readyForReviewCount === 0;
       case "complete": return card.complete;
