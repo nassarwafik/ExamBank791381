@@ -70,6 +70,7 @@ async function compare(seedOpts, run) {
   const after = await run(ctx);
   return { before: strip(before), after: strip(after), st };
 }
+const ctxNames = (opts, prefix) => Object.keys(seed(opts)).filter(n => n.startsWith(prefix));
 const SMALL = { classes: 1, perClass: 30, assignmentsPerClass: 6 };
 const LARGE = { classes: 4, perClass: 25, assignmentsPerClass: 6 };   // 100 students, 24 assignments
 
@@ -189,11 +190,14 @@ describe("R27 C — gradebook, item analysis, profile: identical results, parall
     expect(st.of("platform/submissions/")).toBe(25);
     expect(st.maxInflight).toBeGreaterThan(1); expect(st.dups()).toBe(0); expect(st.uploads).toBe(0);
   });
-  it("C3 student profile: same body (R26 population, R23 grading); one submission read per assignment; parallel", async () => {
+  it("C3 student profile: same body (R26 population, R23 grading); only the student's existing submissions are read; parallel", async () => {
     const { before, after, st } = await compare(LARGE, get(studentHandler, "/api/students?profileUserId=s1"));
     expect(after).toEqual(before);
     expect(after.jsonBody.profile.stats.assigned).toBe(6);
-    expect(st.of("platform/submissions/")).toBe(24);
+    // Phase S.2: one listing of submission names selects s1's 6 existing submissions (pre-S.2: one download attempt per
+    // assignment of the platform — 24, 18 of them a 404).
+    expect(st.of("platform/submissions/")).toBe(ctxNames(LARGE, "platform/submissions/").filter(n => n.endsWith("/s1.json")).length);
+    expect(st.of("platform/submissions/")).toBe(6);
     expect(st.maxInflight).toBeGreaterThan(1); expect(st.dups()).toBe(0); expect(st.uploads).toBe(0);
   });
 });

@@ -251,6 +251,41 @@ U.2 completes U.1's deferred list. Nothing in the data, the API or the grading p
 - **Mutation campaign.** 14 mutants, all KILLED. V4 (no empty-view guard) first survived; the test now also asserts that the switch reports no error.
 - **Existing tests.** Expectations updated for the new wording: «طالب واحد محدد», «طالبان محددان», «3 طلاب محددون», «نُفذت العملية على طالب واحد». Clicks in the archive view are scoped to the class list, because the selected class's name now also heads the roster.
 
+## Phase S.2 — read cost without a new authority
+
+S.2 lowers the storage cost of the four reads behind the page:
+- the roster (`GET /api/students?classId=`);
+- the classes list (`GET /api/classrooms`);
+- the student profile;
+- the pending-grading guard of S.1.
+
+Nothing about *who* is read changes. The same listings decide membership, the class list and the guard. Only unchanged documents are no longer downloaded again.
+
+| # | Decision | Why |
+|---|---|---|
+| S2-a | **No new index decides anything.** The roster still lists and reads the user documents (`class-membership`); the guard still reads the assignment and submission documents. | The roster index (`classroom.studentIds`, Roadmap #25) is documented as a display count that never decides membership. A roster read from it would drop any student the index has drifted on. The class-assignment index (12E-B) lists published assignments only: an assignment archived after publication can still hold work awaiting the teacher, so a guard read from it could miss that work (AGENTS.md §10). A per-teacher class index would be a third denormalized authority. Your P-2 decision chose a short cache over a durable membership index; S.2 follows it, and goes further: no staleness at all. |
+| S2-b | **One shared ETag-verified document cache** (`lib/classes-students-read-cache.js`, built on `etag-doc-cache`, 21H.4) serves the four reads. It covers the users scan, the roster students' submissions, the class documents, the tenancy class read, the profile's assignments and submissions, the guard's assignments and submissions, and the class-archive guard's users. | A document is reused only when the listing reports the same ETag right now, so any change by any writer is downloaded again. A hit is a fresh parsed object. A teacher moving between classes, opening profiles or refreshing re-downloads only what changed. Before, every class switch re-downloaded every user of the platform. |
+| S2-c | **The cache is keyed by the container's storage URL.** A fixture without a URL keeps one slot per object, as before. | Production builds a new container client per request (`BlobServiceClient.fromConnectionString(…).getContainerClient`). A cache keyed by the client object, as 21H.4 was, never hit across two requests. **This also activates the Today hub's 21H.4 cache in production.** It had no hit there until now; its correctness rule is unchanged. |
+| S2-d | **The profile selects the student's submissions by name** from one listing of submission names, instead of one download attempt per assignment of the platform. | In the R27 fixture of 24 assignments, 24 downloads (18 of them a 404) became the student's 6. |
+| S2-f | **ETag values are compared without their HTTP quotes.** | The cache only pays off when a listing and a download report the same string for one version. If one API reports `"0x8D…"` and the other `0x8D…`, nothing would ever hit (correct, but useless). Normalizing makes the reuse independent of that detail. |
+| S2-e | **Unchanged:** every listing (the membership and tenancy decision) is still made on every request, and the first read of a cold instance costs the same as before. The guard's check-then-act window from S.1 is unchanged. | The cache only removes repeated downloads; it never replaces a listing. |
+
+**Evidence.**
+- **New test file:** `api/tests/classes-students-s2.test.js`, 10 tests. Every request runs through a fresh client object with the same storage URL, as in production, and every physical storage operation is counted.
+  - On the baseline `2ae2be7c`, 9 fail:
+    - a repeated roster read downloaded 24 user and 48 submission documents again (0 now);
+    - a class switch re-downloaded 24 users (0 now);
+    - a repeated classes read re-downloaded the class documents (0 now);
+    - the profile probed 8 submission blobs where the student had 4;
+    - a second guard read re-downloaded 4 submissions (0 now);
+    - two clients of the same storage shared nothing.
+  - The 10th test (the class archive is still refused through the cached users read) is a pin.
+- **Mutation campaign:** 9 mutants, all KILLED.
+  - Planted defects: a hit that ignores the ETag; the slot keyed by the object again; the cache bypassed; the profile probing every assignment again; misaligned profile submissions; the guard ignoring pending work; the classes list without its tenant filter; a deleted document served from the cache; ETag quoting not normalized.
+  - W8 (the deleted document) first SURVIVED. A test for a blob deleted between the listing and its download now kills it.
+- **Existing tests:** R27 C3 pinned «one submission read per assignment» (24). It now asserts the student's existing submissions (6). The body is still compared with the sequential run.
+- **Memory:** the shared cache is bounded like 21H.4: 20 000 documents or 32 MB of text per storage URL, least recently used first.
+
 ## Phase S.3 — credentials and dangerous actions
 
 S.3 is the S.3 row of the plan above: four changes around the moments where a teacher can lose or expose a credential, or

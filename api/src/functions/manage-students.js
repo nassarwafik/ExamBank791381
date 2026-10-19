@@ -14,13 +14,7 @@ const {
   uploadJsonConditional,
   isConcurrencyConflict,
   downloadJsonWithEtagOrNull,
-  deleteBlobConditional,
-  // Roadmap #27 — shared bounded-concurrency reads (order-preserving; identical null/error semantics).
-  listJson,
-  listBlobNames,
-  downloadManyJson,
-  mapConcurrent,
-  getReadConcurrency
+  deleteBlobConditional
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 // Phase 21G.0 — teacher tenancy: a student belongs to their class's teacher (and keeps that owner when they leave a class).
@@ -46,6 +40,7 @@ const { isStudentClassMember } = require("../lib/class-membership");
 // grading-safety guard that refuses a move/archive that would hide work still awaiting the teacher.
 const { isSafeId, normalizeIdentityNumber, cleanText, LIMITS } = require("../lib/roster-input");
 const { createPendingGradingReader, pendingGradingMessage } = require("../lib/pending-grading");
+const { loadDocs, loadEntries, listEntries } = require("../lib/classes-students-read-cache");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -161,8 +156,9 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
   const scanStartedAt = Date.now();
   const memberIds = [];
-  // Roadmap #27: list names first, then download with bounded concurrency (listing order preserved).
-  const userDocs = await downloadManyJson(container, await listBlobNames(container, USER_PREFIX));
+  // Roadmap #27: list names first, then download with bounded concurrency (listing order preserved). Phase S.2: through the
+  // ETag-verified cache — the listing still decides who is read, only an unchanged document is not downloaded again.
+  const userDocs = await loadDocs(container, USER_PREFIX);
   for (const student of userDocs) {
     if (!student || student.role !== "student") continue;
     if (classId && isStudentClassMember(student, classId)) memberIds.push(String(student.userId || ""));
@@ -190,9 +186,10 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   const idSet = new Set(result.map(s => s.userId));
   const submittedSets = new Map(); // studentId -> Set<assignmentId>
   if (idSet.size) {
-    // Roadmap #27: select the roster students' submission blobs by NAME, then download them concurrently.
+    // Roadmap #27: select the roster students' submission blobs by NAME, then download them concurrently (S.2: through the
+    // ETag-verified cache, with the ETag this same listing reports).
     const candidates = [];
-    for (const name of await listBlobNames(container, SUBMISSION_PREFIX)) {
+    for (const { name, etag } of await listEntries(container, SUBMISSION_PREFIX)) {
       const rest = name.slice(SUBMISSION_PREFIX.length); // "{assignmentId}/{studentId}.json"
       const slashIndex = rest.indexOf("/");
       if (slashIndex < 0) continue;
@@ -200,9 +197,9 @@ async function listStudents(container, classId, includeArchived = false, obs = n
       const studentId = rest.slice(slashIndex + 1, -".json".length);
       if (!assignmentId || !studentId) continue;
       if (!idSet.has(studentId)) continue;
-      candidates.push({ name, assignmentId, studentId });
+      candidates.push({ name, etag, assignmentId, studentId });
     }
-    const submissions = await downloadManyJson(container, candidates.map(x => x.name));
+    const submissions = await loadEntries(container, candidates);
     candidates.forEach((cand, i) => {
       const attempts = Array.isArray(submissions[i]?.attempts) ? submissions[i].attempts : [];
       if (!attempts.length) return;
@@ -681,7 +678,7 @@ async function buildStudentProfile(container, userId) {
 
   // Sorted once, newest first; the current-class "assignments" list below is a filtered view of
   // this same sorted array, so it preserves the exact ordering already relied on elsewhere.
-  const allAssignments = (await listJson(container, ASSIGNMENT_PREFIX))
+  const allAssignments = (await loadDocs(container, ASSIGNMENT_PREFIX))
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
   const history = [];
@@ -689,12 +686,18 @@ async function buildStudentProfile(container, userId) {
   let completed = 0;
   let percentageSum = 0;
 
-  // Roadmap #27: one submission read per assignment as before, but fetched with bounded concurrency
-  // (aligned with allAssignments, so the sequential aggregation below is unchanged).
-  const submissionsByIndex = await mapConcurrent(allAssignments, getReadConcurrency(), assignment => {
+  // Phase S.2: ONE listing of submission names selects this student's existing submissions (exact names), which are read
+  // through the ETag-verified cache — instead of one download attempt per assignment of the platform, most of them a 404.
+  // Aligned with allAssignments (null where the student has none), so the sequential aggregation below is unchanged.
+  const ownSubmissions = new Map();
+  for (const entry of await listEntries(container, SUBMISSION_PREFIX)) ownSubmissions.set(entry.name, entry);
+  const wanted = allAssignments.map(assignment => {
     const assignmentId = String(assignment.assignmentId || "");
-    return assignmentId ? downloadJsonOrNull(container, SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json") : null;
+    return assignmentId ? ownSubmissions.get(SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json") || null : null;
   });
+  const loaded = await loadEntries(container, wanted.filter(Boolean));
+  let next = 0;
+  const submissionsByIndex = wanted.map(entry => (entry ? loaded[next++] : null));
 
   for (let index = 0; index < allAssignments.length; index++) {
     const assignment = allAssignments[index];
@@ -857,7 +860,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       let allowedClasses;
       const classOk = async classId => {
         if (!tenant) return true;
-        if (allowedClasses === undefined) allowedClasses = accessibleClassIds(await listJson(container, CLASS_PREFIX), tenant);
+        if (allowedClasses === undefined) allowedClasses = accessibleClassIds(await loadDocs(container, CLASS_PREFIX), tenant);
         return classIdAllowed(allowedClasses, classId);
       };
       const studentOk = async student => {
