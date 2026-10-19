@@ -216,6 +216,8 @@ describe("UX-7a StudentPortal — projects (read-only, presentation on the share
     expect(tracks.getByRole("progressbar", { name: "الكتاب" }).getAttribute("aria-valuenow")).toBe("80");
     expect(tracks.getByRole("progressbar", { name: "التدريب العملي" }).getAttribute("aria-valuenow")).toBe("49");
     expect(region.getByText(/الخطوة التالية في الكتاب:/).textContent).toContain("B02 — تلخيص الفصل");
+    // P3 opens the stage list on «المتبقية»; «الكل» shows the approved B01 this case reads (updated deliberately, no request).
+    fireEvent.click(region.getByRole("button", { name: /^الكل/ }));
     const b01 = region.getByText("B01").closest("li") as HTMLElement;
     expect(within(b01).getByText("تم الاعتماد").className).toContain("eb-badge");
     expect(within(b01).getByText("ملاحظة من المعلم: أحسنت")).toBeTruthy();
