@@ -27,7 +27,7 @@ import {CreateClassDialog,EditClassDialog,AddStudentDialog,ImportStudentsDialog,
 import {identityDigits,matchesSearch,isTwelfthGrade,defaultSchoolYear,safeFileName} from "./students/rosterText";
 import {buildCredentialsCsv,buildCredentialCardsHtml,printHtmlDocument} from "./students/credentialSheets";
 import type {ClassArchiveView,Classroom,ClassLearningMaterial,LearningCatalogCourse,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
-import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
+import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload,markCredentialBatchSaved,credentialBatchUnsaved} from "./credentialBatch";
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
 // Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
 import {csvCell} from "./reports/csv";
@@ -53,7 +53,10 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
  assignmentDrill?:AssignmentDrill|null;
  onAssignmentDrillConsumed?:(seq:number)=>void;
  /** The shell's logout: an authoritative 401 from this workspace's API ends the teacher session (like App's apiRequest). */
- onSessionExpired?:()=>void};
+ onSessionExpired?:()=>void;
+ /** Phase S.3 — reports whether a generated credential batch is open and was never downloaded or printed: App asks before a
+  * navigation that would unmount this workspace (its plaintext passwords live only here). */
+ onCredentialsPendingChange?:(pending:boolean)=>void};
 type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import"|"editClass";
 
@@ -79,6 +82,17 @@ function statusLabel(student:Student){
 // Roadmap #25: a membership change may finish with the class COUNT index sync deferred (rosterSynced:false).
 // The operation itself succeeded; the count self-heals on the next roster load — tell the teacher, non-fatally.
 const ROSTER_SYNC_NOTE=" تم تنفيذ العملية، وسيتم تحديث عداد الصف تلقائيًا.";
+// Phase S.3 — a failed import keeps its preview and its retry key: retrying is safe (no duplicate account is created, and an
+// account the lost attempt created comes back with a new password).
+const IMPORT_RETRY_NOTE=" يمكنك إعادة المحاولة بأمان: لن تُنشأ حسابات مكررة، وتظهر كلمات مرور جديدة لأي حساب أُنشئ دون أن تصلك بياناته.";
+// The key must be unguessable (it lets a retry re-issue passwords of never-used accounts it created); without a cryptographic
+// source no key is sent and the import behaves as before (rows already created are reported as duplicates).
+function newImportId(){
+ const c=globalThis.crypto;
+ if(c&&typeof c.randomUUID==="function")return c.randomUUID();
+ if(c&&typeof c.getRandomValues==="function")return Array.from(c.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join("");
+ return "";
+}
 function withRosterNote(result:{rosterSynced?:boolean}|null|undefined,message:string):string{
  return result&&result.rosterSynced===false?message+ROSTER_SYNC_NOTE:message;
 }
@@ -130,6 +144,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const [,setBulkStudents]=useState<BulkStudent[]>([]);
  const [bulkFileName,setBulkFileName]=useState("");
  const [importPreview,setImportPreview]=useState<ImportPreviewRow[]>([]);
+ // Phase S.3 — the retry key of ONE previewed file: every attempt to import that preview sends the same key, so a retry after
+ // a lost response recovers the accounts the first attempt created instead of reporting them as duplicates (see the server).
+ const [importId,setImportId]=useState("");
  const [previewBusy,setPreviewBusy]=useState(false);
 
  const [editingStudent,setEditingStudent]=useState<Student|null>(null);
@@ -324,6 +341,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(selectedClassId)void loadStudents(selectedClassId);
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
+ // Phase S.3 — an open batch that was never downloaded or printed exists only in this tab: closing or reloading the page asks
+ // first (the browser's own prompt), and App asks before a navigation that unmounts this workspace.
+ const credentialsPending=credentialBatchUnsaved(credentialBatch);
+ const onCredentialsPendingChange=props.onCredentialsPendingChange;
+ useEffect(()=>{
+  onCredentialsPendingChange?.(credentialsPending);
+  if(!credentialsPending)return;
+  const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue=""};
+  window.addEventListener("beforeunload",warn);
+  return ()=>{window.removeEventListener("beforeunload",warn);onCredentialsPendingChange?.(false)};
+ },[credentialsPending,onCredentialsPendingChange]);
 
  function clearPasswordReveal(){
   if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
@@ -629,7 +657,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // Stage 2: send the normalized rows for a server-authoritative PREVIEW (validation only). Selecting a
  // file NEVER creates students; creation happens only in importBulkStudents after explicit confirmation.
  async function readBulkFile(file:File|null){
-  setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName(file?.name||"");setError("");setNotice("");
+  setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setImportId("");setBulkFileName(file?.name||"");setError("");setNotice("");
   if(!file)return;
   try{
    const {students:normalized}=parseBulkStudents(await readImportFileText(file),file.name);
@@ -640,6 +668,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     method:"POST",body:JSON.stringify({action:"previewImport",classId:selectedClassId,students:normalized})
    });
    setImportPreview(result.preview||[]);
+   setImportId(newImportId());
    setNotice("✓ تمت معاينة الملف: "+result.valid+" صالح، "+result.duplicates+" مكرر، "+result.invalid+" غير صالح. لن يتم الحفظ قبل الضغط على زر الاستيراد.");
   }catch(e){
    setError(e instanceof Error?e.message:"الملف غير صالح.");
@@ -655,16 +684,17 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const sourceClassId=selectedClassId;
   try{
    const payload=validRows.map(x=>({firstName:x.firstName,familyName:x.familyName,identityNumber:x.identityNumber}));
-   const result=await teacherApi<{ok:true;imported:number;failed:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
-    method:"POST",body:JSON.stringify({action:"bulkImport",classId:sourceClassId,students:payload})
+   const result=await teacherApi<{ok:true;imported:number;failed:number;recovered?:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
+    method:"POST",body:JSON.stringify({action:"bulkImport",classId:sourceClassId,students:payload,...(importId?{importId}:{})})
    });
    if((result.credentials||[]).length)showCredentialBatch(result.credentials||[]);
    setBulkErrors(result.errors||[]);
    // Sequential, like reloadAuthoritative: the roster read repairs the class count index BEFORE the classes read.
    await reloadAuthoritative(sourceClassId);
-   setNotice(withRosterNote(result,"✓ تم استيراد "+arabicCount(result.imported,STUDENTS_GENITIVE)+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
-   setBulkStudents([]);setBulkFileName("");setImportPreview([]);setDialog("none");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر استيراد الطلاب.")}
+   const recovered=Number(result.recovered)||0;
+   setNotice(withRosterNote(result,"✓ تم استيراد "+arabicCount(result.imported,STUDENTS_GENITIVE)+(result.failed?"، وتعذر استيراد "+result.failed+".":".")+(recovered?" "+recovered+" منها أُنشئت في محاولة سابقة لم يصل ردها، وأُعطيت كلمات مرور جديدة.":"")));
+   setBulkStudents([]);setBulkFileName("");setImportPreview([]);setImportId("");setDialog("none");
+  }catch(e){setError((e instanceof Error?e.message:"تعذر استيراد الطلاب.")+IMPORT_RETRY_NOTE)}
   finally{setActionBusy(false)}
  }
 
@@ -694,6 +724,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const a=document.createElement("a");
   a.href=url;a.download=safeFileName(credentialBatch.className,"class")+"-student-credentials.json";a.click();
   URL.revokeObjectURL(url);
+  setCredentialBatch(b=>b?markCredentialBatchSaved(b):b);
  }
 
  function downloadBlob(content:string,type:string,fileName:string){
@@ -706,10 +737,12 @@ function TeacherPlatform(props:TeacherPlatformProps){
  function downloadCredentialsCsv(){
   if(!credentialBatch||!credentialBatch.credentials.length)return;
   downloadBlob(buildCredentialsCsv(credentialBatch),"text/csv;charset=utf-8",safeFileName(credentialBatch.className,"class")+"-student-credentials.csv");
+  setCredentialBatch(b=>b?markCredentialBatchSaved(b):b);
  }
  function printCredentialCards(){
   if(!credentialBatch||!credentialBatch.credentials.length)return;
   printHtmlDocument(buildCredentialCardsHtml(credentialBatch,"ادخل إلى المنصة برقم الهوية وكلمة المرور أعلاه."));
+  setCredentialBatch(b=>b?markCredentialBatchSaved(b):b);
  }
  function downloadImportTemplate(){downloadBlob(IMPORT_TEMPLATE_CSV,"text/csv;charset=utf-8","students-import-template.csv")}
 
@@ -825,7 +858,10 @@ function TeacherPlatform(props:TeacherPlatformProps){
   else if(operation==="unarchive")question="استعادة "+arabicCount(count,STUDENTS_GENITIVE)+" من الأرشيف وتفعيل حساباتهم؟";
   else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+arabicCount(count,STUDENTS_GENITIVE)+"؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
   else if(operation==="move")question="نقل "+arabicCount(count,STUDENTS_GENITIVE)+" إلى الصف المختار؟";
-  if(question&&!(await confirm({message:question,tone:operation==="delete"?"danger":"default",confirmLabel:operation==="delete"?"حذف نهائي":"تأكيد"})))return;
+  // Phase S.3 — a bulk delete cannot be undone and reaches many accounts at once: the teacher TYPES the number of students
+  // before «حذف نهائي» unlocks (the message itself is unchanged).
+  const typeToConfirm=operation==="delete"?{label:"للتأكيد، اكتب عدد الطلاب الذين سيُحذفون ("+count+"):",expected:String(count)}:undefined;
+  if(question&&!(await confirm({message:question,tone:operation==="delete"?"danger":"default",confirmLabel:operation==="delete"?"حذف نهائي":"تأكيد",typeToConfirm})))return;
   if(operation==="resetpasswords"&&!(await confirmReplaceCredentialBatch()))return;
 
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
@@ -854,7 +890,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   if(list.length&&!list.some(c=>c.classId===selectedClassId))setSelectedClassId(list[0].classId);
  }
  function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
- function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setError("");setDialog("import")}
+ function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setImportId("");setBulkFileName("");setError("");setDialog("import")}
 
  // The Suspense boundary wraps ONLY the dashboard body: the teacher shell, sidebar and this workspace wrapper stay mounted
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).

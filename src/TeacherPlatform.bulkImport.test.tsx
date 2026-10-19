@@ -98,7 +98,8 @@ describe("R18 bulk-import UX", { timeout: 30000 }, () => {
     fireEvent.click(importButton());
     await waitFor(() => expect(calls.some(c => c.action === "bulkImport")).toBe(true));
 
-    // V: the credential batch shows the one created student's plaintext password (in-memory only).
+    // V: the credential batch shows the one created student's plaintext password (in-memory only) — S.3: once asked.
+    fireEvent.click(await screen.findByRole("button", { name: "إظهار كلمات المرور" }));
     await screen.findByText("Pw123456");
     expect(screen.getByText(/بيانات الدخول الجديدة/)).toBeTruthy();
     // U: the per-row failure is visible.
@@ -112,11 +113,13 @@ describe("R18 bulk-import UX", { timeout: 30000 }, () => {
     fireEvent.change(fileInput(document.body), { target: { files: [jsonFile()] } });
     await waitFor(() => expect((importButton() as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(importButton());
+    fireEvent.click(await screen.findByRole("button", { name: "إظهار كلمات المرور" }));   // S.3 — shown, so hiding is observable
     await screen.findByText("Pw123456");
 
     // Switch to another ACTIVE class → the batch (owned by صف أول) is hidden.
     fireEvent.click(screen.getByText("صف ثالث"));
     await waitFor(() => expect(screen.queryByText("Pw123456")).toBeNull());
+    expect(screen.queryByRole("region", { name: "بيانات الدخول الجديدة" })).toBeNull();
   });
 
   it("X: the import control is disabled for an archived class", async () => {

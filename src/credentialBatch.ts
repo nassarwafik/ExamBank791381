@@ -22,6 +22,8 @@ export type CredentialBatch = {
   credentials: CredentialLite[];
   createdAt: string;
   collapsed: boolean;
+  /** Phase S.3 — set once the teacher downloaded (JSON / CSV) or printed the batch; until then leaving warns. */
+  savedAt?: string;
 };
 
 // Capture the class AT GENERATION TIME (never derive it later from the selected class).
@@ -32,6 +34,16 @@ export function openCredentialBatch(
   createdAt: string = new Date().toISOString()
 ): CredentialBatch {
   return { classId, className, credentials: Array.isArray(credentials) ? credentials : [], createdAt, collapsed: false };
+}
+
+// Phase S.3 — the passwords of a batch exist only in this tab's memory: until a copy was taken (download or print), leaving
+// the page or the platform loses them for good (the teacher would have to generate new ones).
+export function markCredentialBatchSaved(batch: CredentialBatch, savedAt: string = new Date().toISOString()): CredentialBatch {
+  return batch.savedAt ? batch : { ...batch, savedAt };
+}
+
+export function credentialBatchUnsaved(batch: CredentialBatch | null): boolean {
+  return !!batch && batch.credentials.length > 0 && !batch.savedAt;
 }
 
 export function toggleCredentialBatchCollapsed(batch: CredentialBatch): CredentialBatch {
