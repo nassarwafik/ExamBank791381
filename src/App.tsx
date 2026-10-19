@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import type { FormEvent } from "react";
 import { lazyWithRetry } from "./lazyWithRetry";
 // Phase 8E-5 — the STUDENT PORTAL is a LAZY chunk: the login page, the session-validation boot and every teacher
@@ -737,9 +737,33 @@ function App() {
     openProjectStudent(evaluationQueue.items[index]);
   }
 
+  // Phase S.3 — TeacherPlatform reports an open credential batch never downloaded or printed (its generated passwords live
+  // only in that workspace). A navigation that unmounts the workspace, or a logout, asks first; moving between its own tabs
+  // (dashboard / students / assignments / audit) keeps it mounted and asks nothing. An expired session is never held back.
+  const credentialsPendingRef = useRef(false);
+  const reportCredentialsPending = useCallback((pending: boolean) => { credentialsPendingRef.current = pending; }, []);
+  function leavePlatformThen(action: () => void) {
+    if (teacherView !== "platform" || !credentialsPendingRef.current) { action(); return; }
+    void confirm({
+      tone: "danger",
+      title: "كلمات مرور لم تُحفظ",
+      message: "لديك قائمة كلمات مرور جديدة لم تُنزَّل أو تُطبع بعد. إذا غادرت الآن فلن تتمكن من عرضها مرة أخرى، وسيلزم إنشاء كلمات مرور جديدة للطلاب.",
+      confirmLabel: "مغادرة دون حفظ",
+      cancelLabel: "البقاء في الصفحة"
+    }).then(ok => { if (ok) { credentialsPendingRef.current = false; action(); } });
+  }
+  // The Today Hub's project exits leave the platform too.
+  const guardedGoToProjects = (code: string) => leavePlatformThen(() => goToProjects(code));
+  const guardedOpenProjectStudent = (ref: ProjectStudentRef) => leavePlatformThen(() => openProjectStudent(ref));
+  const guardedStartEvaluationQueue = (items: ProjectEvaluationQueueItem[], index: number) => leavePlatformThen(() => startEvaluationQueue(items, index));
+
   // UX-2 — the shell asks for a destination by id; every id maps onto the EXISTING setters above
   // (teacherView / workspaceTab / projectCode stay the only navigation authority).
   function navigateTeacher(id: TeacherNavId) {
+    if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { navigateTeacherNow(id); return; }
+    leavePlatformThen(() => navigateTeacherNow(id));
+  }
+  function navigateTeacherNow(id: TeacherNavId) {
     setEvaluationQueue(null);                                                   // 9F: any shell navigation ends the evaluation session
     setAssignmentDrill(null);                                                   // 12B: … and forgets any unconsumed assignment drill
     if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
@@ -5820,7 +5844,7 @@ function App() {
       displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
       identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
       onNavigate={navigateTeacher}
-      onLogout={handleLogout}
+      onLogout={() => leavePlatformThen(handleLogout)}
     >
       {confirmDialog}
       {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>
@@ -5839,13 +5863,14 @@ function App() {
             workspaceTab={workspaceTab}
             onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
             onNavigate={navigateTeacher}
-            onOpenProject={goToProjects}
-            onOpenProjectStudent={openProjectStudent}
-            onStartEvaluationQueue={startEvaluationQueue}
+            onOpenProject={guardedGoToProjects}
+            onOpenProjectStudent={guardedOpenProjectStudent}
+            onStartEvaluationQueue={guardedStartEvaluationQueue}
             onOpenAssignmentTarget={openAssignmentTarget}
             assignmentDrill={assignmentDrill}
             onAssignmentDrillConsumed={consumeAssignmentDrill}
             onSessionExpired={handleLogout}
+            onCredentialsPendingChange={reportCredentialsPending}
           />
         </Suspense>
       )}

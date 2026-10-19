@@ -182,6 +182,9 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-dialog-root.is-sheet .eb-dialog { width: min(640px, 100%); max-height: none; border-block: 0; border-inline-end: 0; border-radius: 0; }
 .eb-dialog-root.is-sheet .eb-dialog.size-lg { width: min(820px, 100%); }
 .eb-confirm-message { margin: 0; white-space: pre-line; line-height: var(--eb-lh-body); color: var(--eb-text); }
+/* S.3 — the typed confirmation of an irreversible bulk action: the field the confirm button waits for. */
+.eb-confirm-type { display: flex; flex-direction: column; gap: var(--eb-space-2); color: var(--eb-text); font-weight: var(--eb-fw-semibold); }
+.eb-confirm-type input { min-height: 44px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text); font: inherit; font-weight: var(--eb-fw-regular); }
 @media (max-width: 767px) {
   .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
   .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }

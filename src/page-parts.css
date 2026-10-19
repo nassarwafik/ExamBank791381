@@ -217,6 +217,9 @@
 .eb-credential-box .credential-values span{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-credential-box .credential-values strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-variant-numeric:tabular-nums; }
 .eb-credential-box .students-table-wrap{ background:var(--eb-surface); }
+/* S.3 — a masked password: fixed-length dots in the value's own size and colour (not the muted field-label style). */
+.eb-secret-mask{ letter-spacing:.15em; }
+.eb-credential-box .credential-values .eb-secret-mask,.eb-credential-box .credential-values .eb-secret-mask span{ color:inherit; font-size:inherit; }
 .eb-subheading{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
 .eb-muted{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
 /* UX-8b — status lines rendered directly on the page background (no card behind them): muted is 4.43:1 there, text-secondary passes */

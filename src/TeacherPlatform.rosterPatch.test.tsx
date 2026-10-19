@@ -105,6 +105,7 @@ describe("R32 — create", () => {
     await screen.findByText("✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول.");
     expect(screen.getByText("جديد")).toBeTruthy();
     expect(badge()).toBe("3");
+    fireEvent.click(screen.getByRole("button", { name: "إظهار كلمة المرور" }));   // S.3 — masked until asked
     expect(screen.getByText("Pw-secret-1")).toBeTruthy();       // credential box unchanged
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
@@ -302,6 +303,7 @@ describe("R32 — bulk paths, class switch and manual refresh stay authoritative
     const importButton = () => screen.getByRole("button", { name: /استيراد الطلاب الصالحين/ }) as HTMLButtonElement;
     await waitFor(() => expect(importButton().disabled).toBe(false));
     fireEvent.click(importButton());
+    fireEvent.click(await screen.findByRole("button", { name: "إظهار كلمات المرور" }));   // S.3 — masked until asked
     await screen.findByText("Pw123456");
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
