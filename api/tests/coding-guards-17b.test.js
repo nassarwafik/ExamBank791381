@@ -213,6 +213,18 @@ describe("R7 — CI: a dedicated runner workflow with no secrets; the SWA gates 
     expect(login).toContain("--duration-seconds 900");
     expect(login).not.toMatch(/set -e|exit [1-9]/);                                   // fail-open: never fails the job
   });
+  it("Docker Hub fallback (owner-approved): only Docker Official Images on ECR Public, only the SAME digest, only as a validated named context; no credential", () => {
+    const pull = raw("runner/scripts/pull-base-images.sh"), build = raw("runner/scripts/build-images.sh"), y = raw(wf);
+    const shape = "^public\\.ecr\\.aws/docker/library/[a-z0-9][a-z0-9._-]*@sha256:[0-9a-f]{64}$";
+    expect(pull).toContain(shape);
+    expect(pull).toContain('fallback="docker.io/library/${image#public.ecr.aws/docker/library/}"');   // same name, same digest
+    expect(pull).not.toMatch(/docker (login|tag)|:latest/);
+    expect(build).toContain(shape);
+    expect(build).toContain('"$image=docker-image://docker.io/library/${image#public.ecr.aws/docker/library/}"');
+    expect(build).toContain("refusing the base-image context");
+    expect(build).toMatch(/--network none/);
+    expect(y).not.toMatch(/DOCKERHUB|DOCKER_HUB|docker\/login-action/);                    // anonymous: no stored credential
+  });
   it("the SWA workflow still runs tests, build and lint before deploy (not weakened, nothing skipped)", () => {
     const y = raw(".github/workflows/azure-static-web-apps-white-grass-0ce642c10.yml");
     for (const s of ["run: npm test", "run: npm run build", "run: npm run lint", "needs: quality_gate"]) expect(y, s).toContain(s);
