@@ -19,7 +19,6 @@ const today = require("../src/functions/teacher-today.js");
 const feed = require("../src/functions/teacher-achievement-feed.js");
 const messages = require("../src/functions/messages.js");
 const projects = require("../src/functions/project-tracker.js");
-const project794589 = require("../src/functions/project-794589.js");
 const analytics = require("../src/functions/teacher-analytics.js");
 const photo = require("../src/functions/student-profile-photo.js");
 const audit = require("../src/functions/audit-history.js");
@@ -247,20 +246,22 @@ describe("21G.0 everything derived from classes covers only the teacher's own", 
     expect(res.status).toBe(404);
     expect(res.jsonBody).toEqual(missing.jsonBody);
   });
-  it("the legacy 794589 project route: another teacher's class is not listed, not readable and not writable", async () => {
+  // Phase P-9 — the legacy /api/project-794589 route is removed; its tenancy guarantees are kept here on the generic
+  // route that serves 794589 (every resource it had, and project.reset).
+  it("794589 on the generic route: another teacher's class is not listed, not readable and not writable", async () => {
     const { p, a } = await setup();
     expect((await p.classAction(multi("teacher-a"), { action: "setPrograms", classId: a, programCodes: ["794589"] })).status).toBe(200);
-    expect((await get(p, project794589, multi("teacher-a"), "/project-794589?resource=classes")).jsonBody.classes.map(c => c.classId)).toEqual([a]);
-    expect((await get(p, project794589, multi("teacher-b"), "/project-794589?resource=classes")).jsonBody.classes).toEqual([]);
+    expect((await get(p, projects, multi("teacher-a"), "/project-tracker?projectCode=794589&resource=classes")).jsonBody.classes.map(c => c.classId)).toEqual([a]);
+    expect((await get(p, projects, multi("teacher-b"), "/project-tracker?projectCode=794589&resource=classes")).jsonBody.classes).toEqual([]);
     for (const resource of ["summary", "students", "template"]) {
-      const res = await get(p, project794589, multi("teacher-b"), "/project-794589?resource=" + resource + "&classId=" + a);
-      const missing = await get(p, project794589, multi("teacher-b"), "/project-794589?resource=" + resource + "&classId=no-such-class");
+      const res = await get(p, projects, multi("teacher-b"), "/project-tracker?projectCode=794589&resource=" + resource + "&classId=" + a);
+      const missing = await get(p, projects, multi("teacher-b"), "/project-tracker?projectCode=794589&resource=" + resource + "&classId=no-such-class");
       expect(res.status).toBe(404);
       expect(res.jsonBody).toEqual(missing.jsonBody);
     }
-    const reset = await post(p, project794589, multi("teacher-b"), { action: "project.reset", classId: a });
+    const reset = await post(p, projects, multi("teacher-b"), { projectCode: "794589", action: "project.reset", classId: a });
     expect(reset.status).toBe(404);
-    expect((await get(p, project794589, multi("teacher-a"), "/project-794589?resource=summary&classId=" + a)).status).toBe(200);
+    expect((await get(p, projects, multi("teacher-a"), "/project-tracker?projectCode=794589&resource=summary&classId=" + a)).status).toBe(200);
   });
   it("student photos: another teacher's student is invisible and cannot be changed", async () => {
     const { p, sa } = await setup();

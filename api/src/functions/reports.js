@@ -57,8 +57,9 @@ async function submissionsForAll(container, assignments) {
 }
 
 // Project working definition + progress entries for a class (reused by every project report).
+// Phase P-9 — a report is a read: the snapshot as the next write will see it, never written (svc.readClassConfig).
 async function projectContext(container, projectCode, classroom) {
-  const config = await svc.ensureClassConfig(container, projectCode, classroom);
+  const config = await svc.readClassConfig(container, projectCode, classroom);
   const workDef = svc.workingDefinition(projectCode, config);
   const students = await svc.listClassStudents(container, classroom.classId);
   const entries = await svc.loadProgressEntries(container, projectCode, classroom.classId, students);
@@ -158,7 +159,7 @@ async function handler(request, deps = {}, obs = null) {
         const projects = [];
         if (c) for (const pCode of getSupportedClassProgramCodes(c)) {
           const ns = getStorageNamespace(pCode);
-          const config = await svc.ensureClassConfig(container, pCode, c);
+          const config = await svc.readClassConfig(container, pCode, c);
           const workDef = svc.workingDefinition(pCode, config);
           const progress = await downloadJsonOrNull(container, ns.progressName(sClassId, studentId));
           const summary = core.buildStudentSummary(workDef, progress, now);

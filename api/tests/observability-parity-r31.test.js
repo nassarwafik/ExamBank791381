@@ -15,9 +15,7 @@ import { handler as teacherAnalyticsAi } from "../src/functions/teacher-analytic
 import { handler as teacherFeed } from "../src/functions/teacher-achievement-feed.js";
 import { handler as reports } from "../src/functions/reports.js";
 import { handler as tracker } from "../src/functions/project-tracker.js";
-import { handler as legacyTracker } from "../src/functions/project-794589.js";
 import { handler as studentTracker } from "../src/functions/student-project-tracker.js";
-import { handler as studentProject } from "../src/functions/student-project.js";
 import { handler as studentProfile } from "../src/functions/student-profile.js";
 import { handler as studentFeed } from "../src/functions/achievement-feed.js";
 import { handler as itemAnalysis } from "../src/functions/assignment-item-analysis.js";
@@ -42,9 +40,8 @@ const INVENTORY = {
   // frontend-used platform routes that were unwrapped
   "teacher-analytics": "teacher.analytics.error", "teacher-analytics-ai": "teacher.analyticsAi.error", "teacher-achievement-feed": "teacher.feed.error",
   reports: "reports.error", "project-tracker": "project.tracker.error", "student-project-tracker": "student.projectTracker.error",
-  "student-profile": "student.profile.error", "achievement-feed": "student.feed.error", "assignment-item-analysis": "assignment.itemAnalysis.error",
-  // legacy compatibility routes (no current frontend caller)
-  "project-794589": "project.legacy794589.error", "student-project": "student.project.error"
+  "student-profile": "student.profile.error", "achievement-feed": "student.feed.error", "assignment-item-analysis": "assignment.itemAnalysis.error"
+  // Phase P-9 removed the two legacy compatibility routes that were also wrapped here (project-794589, student-project).
 };
 
 // ── log capture ──
@@ -130,8 +127,8 @@ describe("A. inventory / source guard — exactly the approved routes are wrappe
     const src = SRC("student-dashboard");
     expect(src).toMatch(/withObservability\("student-dashboard",handler\)/); expect(src).toContain('logError("student.dashboard.error"');
   });
-  it("A3 the approved inventory is exactly 9 frontend-used routes + 2 legacy routes", () => {
-    expect(Object.keys(INVENTORY).sort()).toEqual(["achievement-feed", "assignment-item-analysis", "project-794589", "project-tracker", "reports", "student-profile", "student-project", "student-project-tracker", "teacher-achievement-feed", "teacher-analytics", "teacher-analytics-ai"]);
+  it("A3 the approved inventory is exactly the 9 frontend-used routes (the 2 legacy routes were removed in Phase P-9)", () => {
+    expect(Object.keys(INVENTORY).sort()).toEqual(["achievement-feed", "assignment-item-analysis", "project-tracker", "reports", "student-profile", "student-project-tracker", "teacher-achievement-feed", "teacher-analytics", "teacher-analytics-ai"]);
   });
 });
 
@@ -215,22 +212,6 @@ describe("project-tracker (generic)", () => {
   });
 });
 
-describe("project-794589 (legacy)", () => {
-  const W = obs.withObservability("project-794589", legacyTracker);
-  it("B classes parity", async () => { const r = await parity("project-794589", legacyTracker, projectSchool, teacherDeps, GET("/api/project-794589?resource=classes")); expect(r.jsonBody.classes.map(c => c.classId)).toEqual(["c1"]); });
-  it("C failure → generic 500 + one safe logError", async () => {
-    const r = await W(GET("/api/project-794589?resource=classes"), teacherDeps(failDownload(createMemoryContainer(projectSchool()), "platform/classes/c1.json")));
-    expect(r.status).toBe(500); expect(r.jsonBody).toEqual({ ok: false, error: "تعذر تنفيذ عملية متابعة المشروع حاليًا." }); expectHeader(r); assertLoggedOnce("project.legacy794589.error");
-  });
-  it("D 403 (not enrolled) / 404 / 401 unchanged", async () => {
-    const ctx = createMemoryContainer(projectSchool());
-    expect((await W(GET("/api/project-794589?resource=summary&classId=cArch"), teacherDeps(ctx))).status).toBe(403);
-    expect((await W(GET("/api/project-794589?resource=summary&classId=nope"), teacherDeps(ctx))).status).toBe(404);
-    expect((await W(GET("/api/project-794589?resource=classes"), teacherDeps(ctx, AUTH_NO))).status).toBe(401);
-    expect(errorEvents()).toHaveLength(0);
-  });
-});
-
 describe("student-project-tracker", () => {
   const W = obs.withObservability("student-project-tracker", studentTracker);
   it("B parity", async () => { const r = await parity("student-project-tracker", studentTracker, projectSchool, ctx => studentDeps(ctx), GET("/api/student-project-tracker")); expect(r.jsonBody.projects.map(p => p.projectCode)).toEqual(["899373", "794589"]); });
@@ -239,19 +220,6 @@ describe("student-project-tracker", () => {
     expect(r.status).toBe(500); expect(r.jsonBody).toEqual({ ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." }); expectHeader(r); assertLoggedOnce("student.projectTracker.error");
   });
   it("D 401 unchanged", async () => { const r = await W(GET("/api/student-project-tracker"), studentDeps(createMemoryContainer(projectSchool()), "s1", false)); expect(r.status).toBe(401); expectHeader(r); expect(errorEvents()).toHaveLength(0); });
-});
-
-describe("student-project (legacy)", () => {
-  const W = obs.withObservability("student-project", studentProject);
-  it("B parity (enrolled and not enrolled)", async () => {
-    const r = await parity("student-project", studentProject, projectSchool, ctx => studentDeps(ctx), GET("/api/student-project")); expect(r.jsonBody.enrolled).toBe(true);
-    const r2 = await parity("student-project", studentProject, school, ctx => studentDeps(ctx), GET("/api/student-project")); expect(r2.jsonBody).toEqual({ ok: true, enrolled: false });
-  });
-  it("C failure → generic 500 + one safe logError", async () => {
-    const r = await W(GET("/api/student-project"), studentDeps(failDownload(createMemoryContainer(projectSchool()), "platform/classes/c1.json")));
-    expect(r.status).toBe(500); expect(r.jsonBody).toEqual({ ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." }); expectHeader(r); assertLoggedOnce("student.project.error");
-  });
-  it("D 401 unchanged", async () => { const r = await W(GET("/api/student-project"), studentDeps(createMemoryContainer(projectSchool()), "s1", false)); expect(r.status).toBe(401); expect(errorEvents()).toHaveLength(0); });
 });
 
 describe("student-profile", () => {

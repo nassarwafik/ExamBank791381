@@ -292,7 +292,7 @@ export const CAMPAIGNS = {
       find: 'if (body.studentId !== undefined && !(await ownStudent(String(body.studentId || "").trim()))) return notFound(MSG.studentNotFound);', replace: "", tests: TEN },
     { id: "G0-M13", what: "another teacher's class report is served", file: "api/src/functions/reports.js",
       find: 'if (classId && !(await classAccessible(load, classId, tenant))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };', replace: "", tests: TEN },
-    { id: "G0-M14", what: "the legacy 794589 route serves another teacher's class", file: "api/src/functions/project-794589.js",
+    { id: "G0-M14", what: "the project route (794589 included) serves another teacher's class", file: "api/src/functions/project-tracker.js",
       find: "const ownClassroom = classroom => !!classroom && canAccessDocument(classroom, tenant);", replace: "const ownClassroom = classroom => !!classroom;", tests: TEN },
     { id: "G0-M15", what: "the bank list shows other teachers' questions", file: BQ,
       find: "          if (!bankEntryVisible(ownershipOf(question, byId.get(String(question.id)), sourceId), tenant)) continue;\n", replace: "", tests: BANK },
