@@ -28,6 +28,10 @@ const LKEY = { scoring: "proportional", correctLabelByZone: { z1: "l-app", z2: "
 // Independent review — the student receives the label bank in a content-hash order, never in the authored (zone-following) order.
 const LCFG_DELIVERED = { ...LCFG, labels: ["l-net", "l-app", "l-phy", "l-ses"].map(id => LCFG.labels.find(l => l.id === id)) };
 const LCANARIES = /correctLabelByZone|"z1":"l-app"|"scoring"/;
+// Whole responses and logs carry live timestamps (the fixture's dueAt is now + 1 day): their milliseconds can spell a canary
+// number by chance (".557" → 0\.557), a false leak 7 runs in 1000. Only ISO timestamps are blanked before a whole-payload
+// scan; every other byte is still scanned.
+const scanText = v => JSON.stringify(v).replace(/"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z"/g, '""');
 const hq = (over = {}) => ({ examQuestionId: "h1", presentationType: "hotspot", questionTypeVersion: 1, text: "حدّد الأجهزة الثلاثة على المخطط.", marks: 3, image: clone(IMG), hotspot: clone(HCFG), answer: clone(HKEY), ...over });
 const lq = (over = {}) => ({ examQuestionId: "d1", presentationType: "labelDiagram", questionTypeVersion: 1, text: "سمِّ الطبقات.", marks: 3, image: clone(IMG), labelDiagram: clone(LCFG), answer: clone(LKEY), ...over });
 const exam = questions => ({ examId: "E19D", title: "e", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions }] });
@@ -190,7 +194,7 @@ describe("19D — end to end through the REAL handlers", () => {
     expect(r.status).toBe(200);
     const [h, d] = r.jsonBody.assignment.exam.sections[0].questions;
     expect(h.hotspot).toEqual(HCFG); expect(h.image.assets[0].dataUrl).toBe(IMG.assets[0].dataUrl); expect(d.labelDiagram).toEqual(LCFG_DELIVERED);
-    expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(JSON.stringify(r.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(r.jsonBody)).not.toMatch(LCANARIES);
+    expect(JSON.stringify(h)).not.toMatch(HCANARIES); expect(scanText(r.jsonBody)).not.toMatch(HSECRETS); expect(scanText(r.jsonBody)).not.toMatch(LCANARIES);
   });
   // Hotfix — the payload carries real timestamps (dueAt = now + 1 day). A clock whose milliseconds read "557" right after a
   // "…5" seconds digit ("…:50.557Z") used to match the numeric canary 0\.557 inside the timestamp: a false leak report
@@ -218,7 +222,7 @@ describe("19D — end to end through the REAL handlers", () => {
     expect(s.status).toBe(200); expect(s.jsonBody.ok).toBe(true);
     const attempt = ctx.getJson(F.SUB).attempts.find(a => a.attemptNumber === 1);
     expect(attempt.answers.h1).toEqual(pts(HIN.router, HIN.sw)); expect(attempt.score).toBe(2 + 3);
-    expect(JSON.stringify(s.jsonBody)).not.toMatch(HSECRETS); expect(JSON.stringify(logs)).not.toMatch(HSECRETS); expect(JSON.stringify(logs)).not.toMatch(LCANARIES);
+    expect(scanText(s.jsonBody)).not.toMatch(HSECRETS); expect(scanText(logs)).not.toMatch(HSECRETS); expect(scanText(logs)).not.toMatch(LCANARIES);
     const rv = await review().handler(F.teacherRequest("/api/assignment-review?assignmentId=" + F.AID + "&studentId=" + F.S1 + "&attemptNumber=1", undefined, "GET"), deps(ctx));
     expect(rv.status).toBe(200);
     const hr = rv.jsonBody.questions.find(x => x.questionId === "h1"), dr = rv.jsonBody.questions.find(x => x.questionId === "d1");
