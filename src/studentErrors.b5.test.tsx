@@ -99,4 +99,15 @@ describe("F3 — a failing timeout finalize is not re-sent every second", () => 
     await act(async () => { await new Promise(r => setTimeout(r, 4500)); });
     expect(finalizeCalls).toBeLessThanOrEqual(2);
   }, 15000);
+
+  it("when the connection comes back, the finalize is retried at once (the backoff is reset)", async () => {
+    subGet = () => ok({ ok: true, state: timedExpired });
+    mountExam();
+    await waitFor(() => expect(finalizeCalls).toBe(1));                        // failed → backing off for 2s
+    await act(async () => {
+      Object.defineProperty(navigator, "onLine", { configurable: true, value: false }); window.dispatchEvent(new Event("offline"));
+      Object.defineProperty(navigator, "onLine", { configurable: true, value: true }); window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(finalizeCalls).toBe(2), { timeout: 1200 });     // well before the 2s backoff would allow
+  }, 15000);
 });
