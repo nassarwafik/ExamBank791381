@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>لوحة المتابعة</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="layout">
+  <main class="main">
+    <div class="content">
+      <div class="ph">
+        <div><h1>صباح الخير، أستاذ محمد</h1><p>هذا ملخص صفوفك خلال آخر ٣٠ يومًا</p></div>
+        <div class="row-actions">
+          <div class="seg"><span>٧ أيام</span><span class="on">٣٠ يومًا</span><span>٩٠ يومًا</span></div>
+          <span class="btn"><i data-i="filter" data-s="15"></i>كل الصفوف</span>
+          <span class="btn pri"><i data-i="plus" data-s="16"></i>إنشاء واجب</span>
+        </div>
+      </div>
+
+      <section class="card kpis">
+        <div class="kpi"><div class="l"><i data-i="users" data-s="15"></i>الطلاب النشطون</div><div class="v num">١٤٦</div><div class="d">في ٦ صفوف فعّالة</div></div>
+        <div class="kpi"><div class="l"><i data-i="target" data-s="15"></i>متوسط الصفوف</div><div class="v num">٧٨٫٤٪</div><div class="d"><b>▲ ٣٫٢٪</b> مقارنة بالواجبات السابقة</div></div>
+        <div class="kpi"><div class="l"><i data-i="check" data-s="15"></i>نسبة التسليم</div><div class="v num">٩١٪</div><div class="d"><b>▲ ٥٪</b> عن الشهر الماضي</div></div>
+        <div class="kpi"><div class="l"><i data-i="clock" data-s="15"></i>بانتظار التصحيح</div><div class="v num">٢٣</div><div class="d"><b class="dn">٨ متأخرة</b> أكثر من يومين</div></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card">
+          <div class="card-h"><h2>يحتاج إلى انتباهك</h2><span class="link">عرض الكل</span></div>
+          <div class="rows">
+            <div class="r"><span class="ic"><i data-i="clock"></i></span><span class="t">تصحيح «اختبار الدوال التربيعية»<small>الصف العاشر – أ</small></span><span class="k2">بانتظار التصحيح</span><span class="tag warn">١٢ إجابة</span><span class="act"><i data-i="chevL" data-s="16"></i>فتح</span></div>
+            <div class="r"><span class="ic"><i data-i="alert"></i></span><span class="t">تسليمات ناقصة في «واجب الشبكات ٣»<small>الحادي عشر – ب</small></span><span class="k2">تسليمات ناقصة</span><span class="tag bad">٧ طلاب</span><span class="act"><i data-i="chevL" data-s="16"></i>فتح</span></div>
+            <div class="r"><span class="ic"><i data-i="user"></i></span><span class="t">طلاب يحتاجون متابعة<small>انخفاض مستمر في الأداء</small></span><span class="k2">مؤشرات ذكية</span><span class="tag">٤ طلاب</span><span class="act"><i data-i="chevL" data-s="16"></i>فتح</span></div>
+            <div class="r"><span class="ic"><i data-i="review"></i></span><span class="t">مراجعة نشر «امتحان الفيزياء النهائي»<small>طلب من أ. سارة</small></span><span class="k2">مراجعات النشر</span><span class="tag">بانتظارك</span><span class="act"><i data-i="chevL" data-s="16"></i>فتح</span></div>
+            <div class="r"><span class="ic"><i data-i="cal"></i></span><span class="t">ينتهي غدًا «مشروع البرمجة – المرحلة ٢»<small>الثاني عشر – أ</small></span><span class="k2">موعد قريب</span><span class="tag ok">١٩/٢٤ سلّموا</span><span class="act"><i data-i="chevL" data-s="16"></i>فتح</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-h"><h2>اتجاه الأداء</h2><span class="link">آخر ٨ أسابيع</span></div>
+          <div class="legend"><span><i style="background:var(--primary)"></i>متوسط الصف</span><span><i style="background:var(--primary-pale)"></i>نسبة التسليم</span></div>
+          <div class="chart">
+            <svg direction="ltr" viewBox="0 0 420 200" width="100%" height="200">
+              <g stroke="#ecebf0" stroke-width="1">
+                <line x1="0" y1="20" x2="420" y2="20"/><line x1="0" y1="70" x2="420" y2="70"/><line x1="0" y1="120" x2="420" y2="120"/><line x1="0" y1="170" x2="420" y2="170"/>
+              </g>
+              <g font-size="10" fill="#a9a5b4" font-family="Plex"><text x="418" y="24" text-anchor="end">100</text><text x="418" y="74" text-anchor="end">75</text><text x="418" y="124" text-anchor="end">50</text></g>
+              <polyline fill="none" stroke="#d9cfea" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" points="10,60 62,54 114,64 166,48 218,42 270,46 322,36 374,32"/>
+              <path d="M10,110 L62,104 L114,98 L166,100 L218,84 L270,80 L322,70 L374,62 L374,170 L10,170 Z" fill="#2a0a4e" opacity=".06"/>
+              <polyline fill="none" stroke="#2a0a4e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" points="10,110 62,104 114,98 166,100 218,84 270,80 322,70 374,62"/>
+              <circle cx="374" cy="62" r="4" fill="#fff" stroke="#2a0a4e" stroke-width="2.4"/>
+              <g font-size="10" fill="#a9a5b4" font-family="Plex" text-anchor="middle"><text x="10" y="190">أ١</text><text x="62" y="190">أ٢</text><text x="114" y="190">أ٣</text><text x="166" y="190">أ٤</text><text x="218" y="190">أ٥</text><text x="270" y="190">أ٦</text><text x="322" y="190">أ٧</text><text x="374" y="190">أ٨</text></g>
+            </svg>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-h"><h2>مقارنة الصفوف</h2><span class="link">التقرير الكامل</span></div>
+        <div class="rows">
+          <div class="r"><span class="grip"><i data-i="grip" data-s="14"></i></span><span class="ic"><i data-i="users"></i></span><span class="t">الصف العاشر – أ<small>٢٦ طالبًا</small></span><span class="bar"><i style="width:84%"></i></span><span class="k num">متوسط ٨٤٪</span><span class="k2">تسليم ٩٦٪</span><span class="act"><i data-i="pen" data-s="16"></i>عرض</span></div>
+          <div class="r"><span class="grip"><i data-i="grip" data-s="14"></i></span><span class="ic"><i data-i="users"></i></span><span class="t">الحادي عشر – ب<small>٢٤ طالبًا</small></span><span class="bar"><i style="width:71%"></i></span><span class="k num">متوسط ٧١٪</span><span class="k2">تسليم ٨٨٪</span><span class="act"><i data-i="pen" data-s="16"></i>عرض</span></div>
+          <div class="r"><span class="grip"><i data-i="grip" data-s="14"></i></span><span class="ic"><i data-i="users"></i></span><span class="t">الثاني عشر – أ<small>٢٤ طالبًا</small></span><span class="bar"><i style="width:79%"></i></span><span class="k num">متوسط ٧٩٪</span><span class="k2">تسليم ٩٢٪</span><span class="act"><i data-i="pen" data-s="16"></i>عرض</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="shell.js"></script><script>shell('dashboard')</script>
+</body></html>
