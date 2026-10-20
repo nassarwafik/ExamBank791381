@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler, type ChartOptions } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
-import { reportGet } from "./api";
+import { reportGet, isAbortError, isSessionExpired } from "./api";
+import { ReportSessionContext } from "./session";
 import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState } from "./ui";
 import { pct, isoDay } from "./format";
 import { downloadCsv } from "./csv";
@@ -45,22 +46,29 @@ function withRange(params: Record<string, string>, f: Filters): Record<string, s
 /**
  * Report fetch hook with stale-response protection: data is stored WITH the params key it was fetched for, so
  * the moment the params change the exposed `data` is null (old rows never show against new filters), and a
- * late response for an older key is discarded (cancelled on cleanup and key-checked on arrival).
+ * late response for an older key is discarded (cancelled on cleanup and key-checked on arrival). Phase R-2: the
+ * superseded request is also ABORTED on the wire, and a 401 ends the teacher session (ReportSessionContext).
  */
 function useReport<T>(token: string, params: Record<string, string> | null) {
   const key = params ? JSON.stringify(params) : "";
   const [stored, setStored] = useState<{ key: string; data: T | null; error: string }>({ key: "", data: null, error: "" });
   const [loading, setLoading] = useState(false);
   const [nonce, setNonce] = useState(0);
+  const onSessionExpired = useContext(ReportSessionContext);
   useEffect(() => {
     if (!params) return;
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
-    reportGet<T>(token, params)
+    reportGet<T>(token, params, controller.signal)
       .then(r => { if (!cancelled) setStored({ key, data: r, error: "" }); })
-      .catch(e => { if (!cancelled) setStored({ key, data: null, error: e instanceof Error ? e.message : "تعذر تجهيز التقرير." }); })
+      .catch(e => {
+        if (cancelled || isAbortError(e)) return;
+        if (isSessionExpired(e)) onSessionExpired?.();
+        setStored({ key, data: null, error: e instanceof Error ? e.message : "تعذر تجهيز التقرير." });
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [token, key, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
   const current = stored.key === key && key !== "";
   return { data: current ? stored.data : null, error: current ? stored.error : "", loading: !!params && (loading || !current), reload: () => setNonce(n => n + 1) };
@@ -290,11 +298,10 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
 
 function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: csvRows.TrackRow[] };
+  // The track/group start empty for every project + class: ReportView keys this component by both (Phase R-2), so a stale
+  // track from another project (e.g. "access") never carries over — and is never sent, not even once, before a reset.
   const [track, setTrack] = useState("");
   const [groupId, setGroupId] = useState("");
-  // Reset the track/group when the project or class changes, so a stale track from another project
-  // (e.g. "access") never carries over to a project that doesn't have it.
-  useEffect(() => { setTrack(""); setGroupId(""); }, [filters.projectCode, filters.classId]);
   const params = filters.projectCode && filters.classId ? { type: "track", projectCode: filters.projectCode, classId: filters.classId, ...(track ? { track } : {}), ...(groupId ? { groupId } : {}) } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   // An explicitly chosen track that no longer exists (project/class changed) falls back to the server default;
@@ -406,7 +413,7 @@ export default function ReportView({ type, token, filters, onOpenProject }: { ty
     case "student": return <StudentReport token={token} filters={filters} />;
     case "assignments": return <AssignmentsReport token={token} filters={filters} />;
     case "project": return <ProjectReport token={token} filters={filters} onOpenProject={onOpenProject} />;
-    case "track": return <TrackReport token={token} filters={filters} />;
+    case "track": return <TrackReport key={filters.projectCode + "|" + filters.classId} token={token} filters={filters} />;
     case "ready": return <ReadyReport token={token} filters={filters} onOpenProject={onOpenProject} />;
     case "delayed": return <DelayedReport token={token} filters={filters} />;
     case "timeline": return <TimelineReport token={token} filters={filters} />;

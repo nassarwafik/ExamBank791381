@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { lazyWithRetry } from "../lazyWithRetry";
-import { reportGet } from "./api";
+import { reportGet, isAbortError, isSessionExpired } from "./api";
+import { ReportSessionContext } from "./session";
 import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
 import { rangeForPeriod, type Period } from "./period";
@@ -19,18 +20,28 @@ type ClassOpt = { classId: string; name: string; schoolYear: string; status: str
 type ProjectOpt = { projectCode: string; title: string };
 type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
 
+// Phase R-2 — the custom range is applied after a short pause (no request for a half-typed date) and only when valid.
+const CUSTOM_RANGE_DELAY_MS = 400;
+const INVERTED_RANGE_TEXT = "لا يمكن أن يكون تاريخ «من» بعد تاريخ «إلى».";
+const errorMessage = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
+
 /**
  * Reports Center (UX-6b): Hub (categories → grouped report cards) → report workspace (back, compact identity,
  * only the relevant filters, result). ReportsCenter owns every filter/state decision; the API semantics
  * (report types, query parameters, period meaning) are unchanged. The shell owns the page title (no hero).
+ * Phase R-2: an authoritative 401 calls the shell's onSessionExpired (like TeacherPlatform); the filter options and the
+ * student list each show their own loading / error / retry; a superseded request is aborted.
  */
-export default function ReportsCenter({ token, onOpenProject }: { token: string; onOpenProject?: (projectCode: string) => void }) {
+export default function ReportsCenter({ token, onOpenProject, onSessionExpired }: { token: string; onOpenProject?: (projectCode: string) => void; onSessionExpired?: () => void }) {
   const [opts, setOpts] = useState<FiltersResp | null>(null);
   const [active, setActive] = useState<ReportType | null>(null);
   const [category, setCategory] = useState<Category>("all");
   const [filters, setFilters] = useState<Filters>({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "", from: "", to: "" });
   const [period, setPeriod] = useState<Period>("all");
-  const [studentsFor, setStudentsFor] = useState<{ classId: string; list: { studentId: string; displayName: string }[] }>({ classId: "", list: [] });
+  const [studentsFor, setStudentsFor] = useState<{ classId: string; list: { studentId: string; displayName: string }[]; error: string; nonce: number }>({ classId: "", list: [], error: "", nonce: 0 });
+  const [studentsNonce, setStudentsNonce] = useState(0);
+  // The custom range as typed; it reaches `filters` (and so the request) only when valid, after CUSTOM_RANGE_DELAY_MS.
+  const [customRange, setCustomRange] = useState({ from: "", to: "" });
   const [optsLoading, setOptsLoading] = useState(false);
   const [optsError, setOptsError] = useState("");
   const [optsNonce, setOptsNonce] = useState(0);
@@ -41,23 +52,36 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setOptsLoading(true); setOptsError("");
-    reportGet<FiltersResp>(token, { type: "filters" })
+    reportGet<FiltersResp>(token, { type: "filters" }, controller.signal)
       .then(r => { if (!cancelled) setOpts(r); })
-      .catch(e => { if (!cancelled) setOptsError(e instanceof Error ? e.message : "تعذر تحميل بيانات التقارير."); })
+      .catch(e => {
+        if (cancelled || isAbortError(e)) return;
+        if (isSessionExpired(e)) onSessionExpired?.();
+        setOptsError(errorMessage(e, "تعذر تحميل بيانات التقارير."));
+      })
       .finally(() => { if (!cancelled) setOptsLoading(false); });
-    return () => { cancelled = true; };
-  }, [token, optsNonce]);
+    return () => { cancelled = true; controller.abort(); };
+  }, [token, optsNonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Period -> concrete from/to (YYYY-MM-DD). "all" carries no date bound (reports are already class-scoped and a
   // class maps to exactly one schoolYear; schoolYear strings are NOT converted to invented date boundaries).
   // "custom" keeps the user-entered dates.
   function applyPeriod(p: Period) {
     setPeriod(p);
-    if (p === "custom") return; // keep the user-entered from/to
+    if (p === "custom") { setCustomRange({ from: filters.from, to: filters.to }); return; } // start from the current bounds
     const { from, to } = rangeForPeriod(p);
     setFilters(f => ({ ...f, from, to }));
   }
+  // Phase R-2 — an inverted custom range is refused locally (inline alert, no request); a valid one is applied after a pause.
+  const rangeInverted = period === "custom" && !!customRange.from && !!customRange.to && customRange.from > customRange.to;
+  useEffect(() => {
+    if (period !== "custom" || rangeInverted) return;
+    if (customRange.from === filters.from && customRange.to === filters.to) return;
+    const id = setTimeout(() => setFilters(f => ({ ...f, from: customRange.from, to: customRange.to })), CUSTOM_RANGE_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [period, rangeInverted, customRange.from, customRange.to, filters.from, filters.to]);
 
   const activeCard = REPORT_CARDS.find(c => c.type === active) || null;
   const needs = (k: Need) => !!activeCard?.needs.includes(k);
@@ -65,18 +89,28 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
   const needsStudentList = active === "student" || active === "timeline";
 
   // Load students only when the open report consumes them and a class is chosen; a late response for an
-  // older class is dropped (cancelled) and the exposed list is keyed by class so it is never stale.
+  // older class is dropped (cancelled + aborted) and the exposed list is keyed by class so it is never stale.
+  // Phase R-2: a failure is kept (with the attempt's nonce) and shown with a retry — never an empty dropdown.
   useEffect(() => {
     if (!needsStudentList || !filters.classId) return;
     const classId = filters.classId;
-    if (studentsFor.classId === classId) return;                   // already loaded for this class — no re-read
+    if (studentsFor.classId === classId && studentsFor.nonce === studentsNonce) return;   // already loaded / failed for this attempt
     let cancelled = false;
-    reportGet<{ students: { studentId: string; displayName: string }[] }>(token, { type: "classStudents", classId })
-      .then(r => { if (!cancelled) setStudentsFor({ classId, list: r.students || [] }); })
-      .catch(() => { if (!cancelled) setStudentsFor({ classId, list: [] }); });
-    return () => { cancelled = true; };
-  }, [token, filters.classId, needsStudentList, studentsFor.classId]);
-  const students = studentsFor.classId && studentsFor.classId === filters.classId ? studentsFor.list : [];
+    const controller = new AbortController();
+    const nonce = studentsNonce;
+    reportGet<{ students: { studentId: string; displayName: string }[] }>(token, { type: "classStudents", classId }, controller.signal)
+      .then(r => { if (!cancelled) setStudentsFor({ classId, list: r.students || [], error: "", nonce }); })
+      .catch(e => {
+        if (cancelled || isAbortError(e)) return;
+        if (isSessionExpired(e)) onSessionExpired?.();
+        setStudentsFor({ classId, list: [], error: errorMessage(e, "تعذر تحميل قائمة الطلاب."), nonce });
+      });
+    return () => { cancelled = true; controller.abort(); };
+  }, [token, filters.classId, needsStudentList, studentsFor.classId, studentsFor.nonce, studentsNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  const studentsCurrent = !!filters.classId && studentsFor.classId === filters.classId && studentsFor.nonce === studentsNonce;
+  const students = studentsCurrent ? studentsFor.list : [];
+  const studentsLoading = needsStudentList && !!filters.classId && !studentsCurrent;
+  const studentsError = studentsCurrent ? studentsFor.error : "";
 
   const classesForYear = useMemo(() => {
     if (!opts) return [];
@@ -144,6 +178,8 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
       </div>
       <p className="eb-report-print-title">{card.title}</p>
       <div className="eb-report-filters eb-report-noprint" role="region" aria-label="مرشحات التقرير">
+        {optsError && <ErrorState text={optsError} onRetry={() => setOptsNonce(n => n + 1)} />}
+        {optsLoading && !opts && <LoadingState text="جارٍ تحميل خيارات التصفية..." />}
         <div className="eb-report-filter-row">
           <label className="eb-field-inline">السنة الدراسية
             <select value={filters.schoolYear} onChange={e => setFilters(f => ({ ...f, schoolYear: e.target.value, classId: "", studentId: "" }))}>
@@ -167,21 +203,22 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
           </label>
           {needs("student") && (
             <label className="eb-field-inline">الطالب
-              <select value={filters.studentId} onChange={e => setFilters(f => ({ ...f, studentId: e.target.value }))} disabled={!filters.classId}>
-                <option value="">اختر طالبًا</option>
+              <select value={filters.studentId} onChange={e => setFilters(f => ({ ...f, studentId: e.target.value }))} disabled={!filters.classId || studentsLoading} aria-busy={studentsLoading || undefined}>
+                <option value="">{studentsLoading ? "جارٍ تحميل الطلاب..." : "اختر طالبًا"}</option>
                 {students.map(s => <option key={s.studentId} value={s.studentId}>{s.displayName}</option>)}
               </select>
             </label>
           )}
           {card.type === "timeline" && (
             <label className="eb-field-inline">طالب (اختياري)
-              <select value={filters.studentId} onChange={e => setFilters(f => ({ ...f, studentId: e.target.value }))} disabled={!filters.classId}>
-                <option value="">الصف كامل</option>
+              <select value={filters.studentId} onChange={e => setFilters(f => ({ ...f, studentId: e.target.value }))} disabled={!filters.classId || studentsLoading} aria-busy={studentsLoading || undefined}>
+                <option value="">{studentsLoading ? "جارٍ تحميل الطلاب..." : "الصف كامل"}</option>
                 {students.map(s => <option key={s.studentId} value={s.studentId}>{s.displayName}</option>)}
               </select>
             </label>
           )}
         </div>
+        {studentsError && <ErrorState text={"تعذر تحميل قائمة الطلاب: " + studentsError} onRetry={() => setStudentsNonce(n => n + 1)} />}
         {timeAware && (
           <div className="eb-report-filter-row" role="group" aria-label="خيارات الفترة الزمنية">
             <label className="eb-field-inline">الفترة الزمنية
@@ -191,16 +228,19 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
             </label>
             {period === "custom" && (
               <>
-                <label className="eb-field-inline">من<input type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} /></label>
-                <label className="eb-field-inline">إلى<input type="date" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} /></label>
+                <label className="eb-field-inline">من<input type="date" value={customRange.from} max={customRange.to || undefined} aria-invalid={rangeInverted || undefined} aria-describedby={rangeInverted ? "eb-report-range-error" : undefined} onChange={e => { const from = e.target.value; setCustomRange(r => ({ ...r, from })); }} /></label>
+                <label className="eb-field-inline">إلى<input type="date" value={customRange.to} min={customRange.from || undefined} aria-invalid={rangeInverted || undefined} aria-describedby={rangeInverted ? "eb-report-range-error" : undefined} onChange={e => { const to = e.target.value; setCustomRange(r => ({ ...r, to })); }} /></label>
               </>
             )}
           </div>
         )}
+        {rangeInverted && <p id="eb-report-range-error" className="platform-error assignment-inline-message" role="alert">{INVERTED_RANGE_TEXT}</p>}
       </div>
-      <Suspense fallback={<LoadingState />}>
-        <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} />
-      </Suspense>
+      <ReportSessionContext.Provider value={onSessionExpired}>
+        <Suspense fallback={<LoadingState />}>
+          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} />
+        </Suspense>
+      </ReportSessionContext.Provider>
     </section>
   );
 }
