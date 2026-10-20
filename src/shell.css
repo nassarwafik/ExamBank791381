@@ -76,8 +76,9 @@
    button). The fallback above stays for engines without color-mix(). */
 @supports (background: color-mix(in srgb, red 50%, transparent)) {
   .eb-nav-link.is-active {
-    background: color-mix(in srgb, var(--eb-primary) 30%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eb-primary) 45%, transparent);
+    /* UX-R1 — tinted with the rail's own accent: the deep purple primary would vanish on the dark rail. */
+    background: color-mix(in srgb, var(--eb-nav-accent) 22%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--eb-nav-accent) 40%, transparent);
   }
 }
 .eb-nav-link.is-active::before {

@@ -85,7 +85,7 @@
   display: block;
   font-size: 1.05rem;
   color: #0f172a;
-  border-inline-start: 4px solid #2563eb;
+  border-inline-start: 4px solid var(--eb-primary);
   padding-inline-start: 10px;
   margin-bottom: 10px;
 }
@@ -119,9 +119,9 @@
 }
 .iex-cover-marks-total {
   font-weight: 800;
-  background: #eff6ff !important;
-  border-color: #bfdbfe !important;
-  color: #1e3a8a !important;
+  background: var(--eb-primary-050) !important;
+  border-color: var(--eb-primary-200) !important;
+  color: var(--eb-primary-strong) !important;
 }
 
 .iex-cover-start {
@@ -132,13 +132,13 @@
   font-size: 1.1rem;
   font-weight: 800;
   color: #fff;
-  background: #2563eb;
+  background: var(--eb-primary);
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.05s ease;
 }
-.iex-cover-start:hover { background: #1d4ed8; }
+.iex-cover-start:hover { background: var(--eb-primary-strong); }
 .iex-cover-start:active { transform: translateY(1px); }
 
 .iex-cover-preview-note {

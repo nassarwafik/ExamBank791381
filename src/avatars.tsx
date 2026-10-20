@@ -20,7 +20,7 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
   { id: "a12", emoji: "🦄", bg: "#c7d2fe", label: "يونيكورن" },
 ];
 
-const DEFAULT_BG = "#2563eb";
+const DEFAULT_BG = "var(--eb-primary, #2a0a4e)";
 
 export function avatarById(id: string | undefined): AvatarOption | null {
   return AVATAR_OPTIONS.find(a => a.id === id) || null;

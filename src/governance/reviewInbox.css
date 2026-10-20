@@ -14,7 +14,7 @@
 .gov-stage{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-weight:700;font-size:12px;border:1px solid var(--line2,#cdd5e0)}
 .gov-stage::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
 .gov-stage.is-review{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
-.gov-stage.is-approve{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.gov-stage.is-approve{background:var(--eb-primary-050);color:var(--eb-primary-strong);border-color:var(--eb-primary-200)}
 .gov-stage.is-publish{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
 .gov-empty{border:1px dashed var(--line2,#cdd5e0);border-radius:12px;padding:20px;text-align:center;color:var(--muted,#64748b)}
 .gov-workflow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:0;padding:0;list-style:none}

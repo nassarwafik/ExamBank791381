@@ -14,7 +14,7 @@ body {
 }
 
 /* Selection + custom scrollbars */
-::selection { background: rgba(37,99,235,.16); }
+::selection { background: color-mix(in srgb, var(--eb-primary) 16%, transparent); }
 * { scrollbar-width: thin; scrollbar-color: #cdd6e4 transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
@@ -62,7 +62,7 @@ button {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top right, #e4edfc 0, transparent 32%),
+    radial-gradient(circle at top right, var(--eb-primary-100) 0, transparent 32%),
     radial-gradient(circle at bottom left, #e0e7ff 0, transparent 28%),
     #f5f7fa;
 }
@@ -129,8 +129,8 @@ button {
 }
 
 .login-card input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  border-color: var(--eb-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--eb-primary) 10%, transparent);
 }
 
 .primary-button {
@@ -138,7 +138,7 @@ button {
   border: 0;
   border-radius: 12px;
   padding: 14px;
-  background: #2563eb;
+  background: var(--eb-primary);
   color: white;
   font-size: 16px;
   font-weight: 800;
@@ -146,7 +146,7 @@ button {
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--eb-primary-strong);
 }
 
 .primary-button:disabled {
@@ -226,7 +226,7 @@ button {
   width: 240px;
   height: 240px;
   border-radius: 20px;
-  background: rgba(37, 99, 235, 0.06);
+  background: color-mix(in srgb, var(--eb-primary) 6%, transparent);
   pointer-events: none;
 }
 
@@ -241,8 +241,8 @@ button {
   flex: 0 0 auto;
   border-radius: 10px;
   padding: 7px 10px;
-  background: #e4edfc;
-  color: #1d4ed8;
+  background: var(--eb-primary-100);
+  color: var(--eb-primary-strong);
   font-weight: 900;
   font-size: 13px;
 }
@@ -285,8 +285,8 @@ button {
 .per-question-ai textarea:focus,
 .teacher-note-panel textarea:focus {
   background: white;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  border-color: var(--eb-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--eb-primary) 8%, transparent);
 }
 
 .builder-actions {
@@ -307,7 +307,7 @@ button {
 .secondary-primary-button {
   border: 0;
   border-radius: 12px;
-  background: #2563eb;
+  background: var(--eb-primary);
   color: white;
   font-weight: 800;
   cursor: pointer;
@@ -325,7 +325,7 @@ button {
 
 .generate-button:hover:not(:disabled),
 .secondary-primary-button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--eb-primary-strong);
 }
 
 .generate-button:disabled,
@@ -363,7 +363,7 @@ button {
 }
 
 .eyebrow {
-  color: #2563eb;
+  color: var(--eb-primary);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.2px;
@@ -463,9 +463,9 @@ button {
 .exam-total {
   min-width: 130px;
   text-align: center;
-  border: 1px solid #e4edfc;
-  background: #eef4ff;
-  color: #1d4ed8;
+  border: 1px solid var(--eb-primary-100);
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
   border-radius: 16px;
   padding: 12px 16px;
 }
@@ -750,9 +750,9 @@ button {
 }
 
 .question-action-bar > button:hover {
-  border-color: #2563eb;
-  background: #eef4ff;
-  color: #1d4ed8;
+  border-color: var(--eb-primary);
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
 }
 
 .select-action {
@@ -776,7 +776,7 @@ button {
 .per-question-ai {
   margin-top: 18px;
   padding: 18px;
-  border: 1px solid #e4edfc;
+  border: 1px solid var(--eb-primary-100);
   border-radius: 16px;
   background: #f7f9fd;
 }
@@ -848,9 +848,9 @@ button {
 }
 
 .bottom-actions-card button:hover {
-  border-color: #2563eb;
-  background: #eef4ff;
-  color: #1d4ed8;
+  border-color: var(--eb-primary);
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
 }
 
 /* =========================
@@ -952,8 +952,8 @@ button {
 }
 
 .model-picker select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  border-color: var(--eb-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--eb-primary) 8%, transparent);
 }
 
 .model-picker select:disabled {
@@ -967,8 +967,8 @@ button {
 
 .model-chip {
   border-color: #cfe0f8;
-  background: #eef4ff;
-  color: #1d4ed8;
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
 }
 
 @media (max-width: 760px) {
@@ -1054,7 +1054,7 @@ button {
 }
 
 .exam-preview-heading span {
-  color: #2563eb;
+  color: var(--eb-primary);
   font-size: 13px;
   font-weight: 900;
 }
@@ -1207,15 +1207,15 @@ button {
   border:
     1px
     solid
-    #e4edfc;
+    var(--eb-primary-100);
 
   border-radius: 20px;
 
   background:
-    #eef4ff;
+    var(--eb-primary-050);
 
   color:
-    #1e40af;
+    var(--eb-primary-strong);
 
   font-size:
     18px;
@@ -1419,7 +1419,7 @@ td {
     900;
 
   color:
-    #1d4ed8 !important;
+    var(--eb-primary-strong) !important;
 }
 
 .student-answer-cell {
@@ -1682,10 +1682,10 @@ td {
 
 .image-status-line.is-working {
   background:
-    #eef4ff;
+    var(--eb-primary-050);
 
   color:
-    #1d4ed8;
+    var(--eb-primary-strong);
 }
 
 /* Spinner */
@@ -1993,7 +1993,7 @@ td {
 
 .preview-mode-bar strong {
   color:
-    #1e3a8a;
+    var(--eb-primary-strong);
 
   font-size:
     15px;
@@ -2031,7 +2031,7 @@ td {
     white;
 
   color:
-    #1e40af;
+    var(--eb-primary-strong);
 
   font-weight:
     800;
@@ -2043,10 +2043,10 @@ td {
 .preview-mode-actions
 .preview-print-button {
   border-color:
-    #2563eb;
+    var(--eb-primary);
 
   background:
-    #2563eb;
+    var(--eb-primary);
 
   color:
     white;
@@ -2272,7 +2272,7 @@ button {
   padding: 10px 16px;
   font-weight: 700;
   cursor: pointer;
-  background: #1d4ed8;
+  background: var(--eb-primary-strong);
   color: #fff;
 }
 
@@ -2296,15 +2296,15 @@ button {
   border:
     1px
     solid
-    #e4edfc;
+    var(--eb-primary-100);
 
   border-radius: 12px;
 
   background:
-    #eef4ff;
+    var(--eb-primary-050);
 
   color:
-    #1e40af;
+    var(--eb-primary-strong);
 
   font-size:
     13px;
@@ -2450,7 +2450,7 @@ button:disabled {
   border:
     1px
     solid
-    #e4edfc;
+    var(--eb-primary-100);
 
   border-radius: 16px;
 
@@ -2480,7 +2480,7 @@ button {
     white;
 
   color:
-    #1d4ed8;
+    var(--eb-primary-strong);
 
   font-weight:
     900;
@@ -2492,7 +2492,7 @@ button {
 .saved-exams-access
 button:hover:not(:disabled) {
   background:
-    #eef4ff;
+    var(--eb-primary-050);
 }
 
 .saved-exams-access
@@ -2710,10 +2710,10 @@ button {
     #cfe0f8;
 
   background:
-    #eef4ff;
+    var(--eb-primary-050);
 
   color:
-    #1d4ed8;
+    var(--eb-primary-strong);
 }
 
 .saved-delete-button {
@@ -2996,10 +2996,10 @@ button {
 
 .exam-metadata-grid input:focus,
 .exam-metadata-grid textarea:focus {
-  border-color: #2563eb;
+  border-color: var(--eb-primary);
   box-shadow:
     0 0 0 3px
-    rgba(37, 99, 235, 0.08);
+    color-mix(in srgb, var(--eb-primary) 8%, transparent);
 }
 
 .exam-metadata-grid textarea {
@@ -3016,7 +3016,7 @@ button {
 .question-jump-bar {
   margin-top: 16px;
   padding: 12px 14px;
-  border: 1px solid #e4edfc;
+  border: 1px solid var(--eb-primary-100);
   border-radius: 16px;
   background: #f7f9fd;
   display: flex;
@@ -3042,7 +3042,7 @@ button {
   border: 1px solid #cfe0f8;
   border-radius: 10px;
   background: white;
-  color: #1d4ed8;
+  color: var(--eb-primary-strong);
   font-weight: 900;
   cursor: pointer;
   display: inline-flex;
@@ -3052,8 +3052,8 @@ button {
 }
 
 .question-jump-bar button:hover {
-  border-color: #2563eb;
-  background: #eef4ff;
+  border-color: var(--eb-primary);
+  background: var(--eb-primary-050);
 }
 
 .question-jump-bar button small {
@@ -3084,7 +3084,7 @@ button {
 
 .question-order-actions button:hover:not(:disabled) {
   border-color: #cfe0f8;
-  color: #1d4ed8;
+  color: var(--eb-primary-strong);
 }
 
 .question-order-actions button:disabled {
@@ -3224,7 +3224,7 @@ button {
 .brand-mark {
   border-radius: var(--eb-r);
   background: linear-gradient(135deg, var(--eb-navy), var(--eb-primary));
-  box-shadow: 0 8px 20px -10px rgba(37,99,235,.5);
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--eb-primary) 50%, transparent);
 }
 .login-card h1 { font-size: 26px; font-weight: 800; letter-spacing: .2px; }
 .subtitle { color: var(--eb-muted); }
@@ -3248,12 +3248,12 @@ button {
 .primary-button, .generate-button {
   border: 0; border-radius: var(--eb-r);
   background: var(--eb-primary); color: #fff; font-weight: 700;
-  box-shadow: 0 8px 18px -10px rgba(37,99,235,.55);
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--eb-primary) 55%, transparent);
   transition: var(--eb-dur) var(--eb-ease);
 }
 .primary-button:hover, .generate-button:hover:not(:disabled) {
   background: var(--eb-primary-strong); transform: translateY(-1px);
-  box-shadow: 0 12px 24px -10px rgba(37,99,235,.6);
+  box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--eb-primary) 60%, transparent);
 }
 .primary-button:disabled, .generate-button:disabled {
   opacity: .55; cursor: not-allowed; box-shadow: none; transform: none;
@@ -3299,5 +3299,5 @@ button {
 .structured-builder-overlay{position:fixed;inset:0;z-index:var(--eb-z-overlay,60);background:var(--surface,#f5f7fa);overflow:auto;padding:16px}
 /* Phase 21F.3 — the Exam Studio fills the overlay and scrolls inside its own panes (the toast reserve lives on its canvas). */
 .structured-builder-overlay:has(> .st-studio),.structured-builder-overlay:has(> .st-studio):has(.eb-toast),.structured-builder-overlay:has(> .st-studio)[data-toast-reserve]{overflow:hidden;padding:0}
-.convert-structured-btn{margin-top:10px;width:100%;border:1px dashed #2563eb;background:#eff4ff;color:#1d4ed8;border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}
+.convert-structured-btn{margin-top:10px;width:100%;border:1px dashed var(--eb-primary);background:#eff4ff;color:var(--eb-primary-strong);border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}
 .convert-structured-btn:hover{background:#e0eaff}

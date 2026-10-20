@@ -41,7 +41,7 @@
 .smartsim-actions .eb-button{min-height:44px}
 .smartsim-panel{border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .smartsim-drop{border:2px dashed var(--line2,#cdd5e0);border-radius:12px;padding:20px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;cursor:pointer}
-.smartsim-drop.is-over{border-color:var(--accent,#1d4ed8);background:var(--surface2,#f4f6fa)}
+.smartsim-drop.is-over{border-color:var(--eb-primary-strong);background:var(--surface2,#f4f6fa)}
 .smartsim-drop:focus-visible{outline:3px solid var(--focus,#f59e0b);outline-offset:2px}
 .smartsim-progress{width:100%;min-height:8px}
 .smartsim-report{border-radius:12px;padding:10px 12px;background:var(--surface2,#f4f6fa);display:flex;flex-direction:column;gap:6px}
