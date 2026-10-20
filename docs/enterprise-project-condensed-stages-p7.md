@@ -158,14 +158,16 @@ Storage writes use `mutateIfChanged` (ETag CAS; a no-op callback writes nothing)
 The owner decided that the 794589 classes still on the first template (v1) **with** recorded progress are converted to the
 condensed v3 set and that everything done on v1 is dropped: the class starts from zero. This replaces, for these classes
 only, the earlier rule of `project-794589-migration.js` («a class with meaningful progress is never silently reset»): the
-reset is the owner's explicit decision, it is audited, and the old work stays recoverable.
+reset is the owner's explicit decision and it is audited. The old work was first kept in an archive; since **P7c** (below)
+it is deleted.
 
 - **Trigger:** the first write (`ensureClassConfig`; reads only show it) on an **active** 794589 class whose snapshot is v1 (`snapshotUpgrade.resetFrom: 1`) and
   whose class has meaningful progress. A v1 class **without** progress keeps the existing progress-free upgrade; archived
   classes are never touched.
 - **Passes:** the same lock / pass 1 / switch / sweep as the conversion (`condenseClass(…, "reset")`):
   - every progress document gets `stages: {}`, `history: []` and `stageTemplateVersion: 3`; its identity (student,
-    class, startedAt) is kept, and the old `stages` / `history` move untouched to `resetFrom { templateVersion, at, stages, history }`;
+    class, startedAt) is kept. The old `stages` / `history` first moved to `resetFrom { templateVersion, at, stages, history }`;
+    since P7c they are deleted;
   - the snapshot becomes the current template in the legacy shape (`policy.buildUpgraded`), with `resetAt` and
     `resetFromVersion: 1`;
   - one `project.template.reset` audit (`reason: owner-decision-restart-from-zero`, students count).
@@ -201,6 +203,63 @@ Mutation proof (10 mutants, **10 KILLED**):
 | R08 | the student still sees the old v1 work | the student test; R33 SL.s6 |
 | R09 | the reset also runs the condense sweep and audit | R33 c4 (both routes) |
 | R10 | an archived v1 class is shown reset to the student | R33 SL.s8 / SG.s8 |
+
+## P7c — the old v1 work of reset classes is deleted (owner decision)
+
+The owner decided that the v1 work P7b archived (`resetFrom`) is **deleted**, not kept.
+
+- **New resets** (`condense.resetProgressDoc`): the document restarts from zero and keeps nothing of the old work (no
+  `resetFrom`). The snapshot carries `resetArchiveDeletedAt` (= `resetAt`). The `project.template.reset` audit says
+  `archive: "deleted"`.
+- **Classes reset before P7c** (snapshot with `resetFromVersion` and no `resetArchiveDeletedAt`): the class's **first write**
+  (`ensureClassConfig`, write kind `delete-reset-archive`; reads never write, P-9) runs `service.deleteResetArchives`:
+  - every progress document of the class loses its `resetFrom` (CAS, idempotent). Nothing else in it changes: the work
+    done since the reset, the identity and the history stay. A document without an archive is not written;
+  - then the snapshot is marked `resetArchiveDeletedAt`, so it runs once;
+  - one `project.template.reset_archive_deleted` audit, with the number of documents and never their content.
+- **Failure:** a pass that fails never fails the teacher's or the student's write. The snapshot stays unmarked and the next
+  write completes the deletion.
+- **Nothing visible changes:** the archive was never read, shown or counted (responses expose only `stages` / `history`).
+- **Not deleted:**
+  - audit records (they name actions, not the work);
+  - achievements already awarded from v1 work (as in P7b);
+  - the P7 conversion archive `condensedFrom` (899373 / 883589 / 794589 v2 → condensed), which is outside this decision.
+- **Archived classes:** writes are refused there, so an archive in a class archived after its reset is deleted on the first
+  write after it is reactivated.
+
+Tests: `api/tests/project-reset-archive-p7c.test.js` (7), covering:
+- the pure reset;
+- a new reset stores no trace of the v1 work;
+- a class reset earlier: reads write nothing; the first write deletes every archive once, keeps the new work and leaves a
+  document without an archive untouched; one audit naming counts only; a later write does not scan the class again;
+- the teacher's progress write and the student's «أنجزتها» trigger it; the student's read does not;
+- a failed pass: the write is served, nothing is marked, and the next write completes it;
+- an archived class is never touched (a pin).
+
+Updated deliberately:
+- the two P7b tests that pinned the archive (`project-condense-p7.test.js`) now assert it is absent;
+- R33 golden regenerated with the same frozen clock: **1 of 79** scenarios changed (`G794589.template.c4.v1Progress`: the
+  snapshot gains `resetArchiveDeletedAt`). No status code changed.
+
+**Fail-first** on `47aca61c`: 6 of 7 fail (`expected true to be false` on `"resetFrom" in doc`; the snapshot lacks
+`resetArchiveDeletedAt`; the pure reset still returns the archive). The archived-class test passes there: it is a **pin**.
+
+Mutation proof (hash-verified restore, tree clean afterwards): **12 / 12 KILLED**.
+
+| Id | Planted defect | Killed by |
+|---|---|---|
+| D01 | a new reset still archives the old work | pure reset test; new-reset test; P7b reset test |
+| D02 | an earlier archive is never deleted | pure reset test; earlier-reset test |
+| D03 | a class reset earlier is never cleaned | earlier-reset test; progress-write test |
+| D04 | the deletion runs again on every write (no done marker) | earlier-reset test (no second scan) |
+| D05 | a new reset (shown) lacks the done marker | R33 `G794589.template.c4.v1Progress` |
+| D06 | a new reset (stored) lacks the done marker | P7b reset test; new-reset test |
+| D07 | the class is marked done before the documents are cleaned | failed-pass test |
+| D08 | a failed deletion fails the write | failed-pass test |
+| D09 | `ensureClassConfig` ignores the deletion | earlier-reset test; progress-write test |
+| D10 | the deletion also wipes the work done since the reset | earlier-reset test |
+| D11 | the audit counts documents that had no archive | earlier-reset test |
+| D12 | the deletion is not audited | earlier-reset test; progress-write test |
 
 ## UI
 

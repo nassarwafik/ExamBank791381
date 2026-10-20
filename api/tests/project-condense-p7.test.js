@@ -338,8 +338,9 @@ describe("P7 class conversion (real handlers, in-memory storage)", () => {
 });
 
 // Phase P7b — owner decision: 794589 classes still on template v1 WITH progress restart from zero on the condensed v3 set.
-// The old work leaves the document's `stages` / `history` (archived in `resetFrom`: never shown, never counted), the
-// snapshot becomes the current template in the legacy shape, one `project.template.reset` audit. Same locked passes and
+// The old work leaves the document's `stages` / `history` and is deleted (Phase P7c, owner decision: no `resetFrom`
+// archive; api/tests/project-reset-archive-p7c.test.js), the snapshot becomes the current template in the legacy shape,
+// one `project.template.reset` audit. Same locked passes and
 // writer guards as the conversion; archived classes untouched; student reads show the fresh set without writing.
 describe("P7b — 794589 v1 classes with progress restart from zero", () => {
   const NS7 = getStorageNamespace("794589");
@@ -358,7 +359,7 @@ describe("P7b — 794589 v1 classes with progress restart from zero", () => {
     return { ...t, snap7: () => t.ctx.getJson(NS7.configName("c8")), doc7: sid => t.ctx.getJson(NS7.progressName("c8", sid)), resets };
   }
 
-  it("a read SHOWS the reset without writing; the first write resets the class: v3 set (legacy shape), every document from zero, old work archived, audited once", async () => {
+  it("a read SHOWS the reset without writing; the first write resets the class: v3 set (legacy shape), every document from zero, old work deleted, audited once", async () => {
     const t = setup7();
     const pristine = t.store();
     const r = await t.get("board", "c8", "794589");
@@ -374,7 +375,7 @@ describe("P7b — 794589 v1 classes with progress restart from zero", () => {
     expect(snap.stages.filter(s => s.active === true)).toHaveLength(20);
     const d = t.doc7("p2");
     expect(d).toMatchObject({ studentId: "p2", classId: "c8", startedAt: NOW, stageTemplateVersion: 3, stages: {}, history: [] });
-    expect(d.resetFrom).toEqual({ templateVersion: 1, at: expect.any(String), stages: { B01: approved(88), P01: { status: "ready_for_review", updatedAt: NOW } }, history: HIST });
+    expect("resetFrom" in d).toBe(false);                                      // P7c: the old work is deleted, not archived
     expect(t.doc7("p3")).toMatchObject({ stages: {}, stageTemplateVersion: 3 });
     expect(t.resets()).toHaveLength(1);
     expect(t.resets()[0].details).toMatchObject({ projectCode: "794589", fromVersion: 1, toVersion: 3, students: 2 });
@@ -435,7 +436,7 @@ describe("P7b — 794589 v1 classes with progress restart from zero", () => {
     expect(m.jsonBody.results[0]).toMatchObject({ stageId: "PT01", ok: true });
     expect(t.snap7().templateVersion).toBe(3);
     expect(Object.keys(t.doc7("p2").stages)).toEqual(["PT01"]);
-    expect(t.doc7("p2").resetFrom.stages.B01).toEqual(approved(88));
+    expect("resetFrom" in t.doc7("p2")).toBe(false);                           // P7c: deleted, not archived
     expect(t.resets()).toHaveLength(1);
   });
 });

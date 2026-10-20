@@ -1902,7 +1902,8 @@
         "upgradedAt": "2026-09-20T10:00:00.000Z",
         "upgradedFromVersion": 1,
         "resetAt": "2026-09-20T10:00:00.000Z",
-        "resetFromVersion": 1
+        "resetFromVersion": 1,
+        "resetArchiveDeletedAt": "2026-09-20T10:00:00.000Z"
       },
       "tracks": [
         {

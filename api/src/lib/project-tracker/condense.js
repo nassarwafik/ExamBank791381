@@ -166,14 +166,22 @@ function dropCondensedKeys(doc, plan, toVersion) {
 
 /**
  * Phase P7b — owner decision for 794589 classes still on template v1 WITH progress: they restart from zero on the
- * condensed set. The document keeps its identity (student, class, startedAt) and the old work moves, untouched, to
- * `resetFrom` (not shown, not counted; kept only so the decision stays recoverable). Idempotent: a document already on
- * `toVersion` is returned as it is.
+ * condensed set. The document keeps its identity (student, class, startedAt).
+ * Phase P7c — owner decision: the old work is DELETED, not archived (no `resetFrom`). Idempotent: a document already on
+ * `toVersion` only loses an archive an earlier reset left (deleteResetArchive).
  */
 function resetProgressDoc(doc, toVersion, fromVersion, now) {
   if (!doc || typeof doc !== "object") return doc;
-  if (Number(doc.stageTemplateVersion) >= toVersion) return doc;
-  return { ...doc, stages: {}, history: [], updatedAt: now, stageTemplateVersion: toVersion, resetFrom: { templateVersion: fromVersion, at: now, stages: doc.stages || {}, history: Array.isArray(doc.history) ? doc.history : [] } };
+  if (Number(doc.stageTemplateVersion) >= toVersion) return deleteResetArchive(doc);
+  const { resetFrom, ...rest } = doc;                                            // eslint-disable-line no-unused-vars
+  return { ...rest, stages: {}, history: [], updatedAt: now, stageTemplateVersion: toVersion };
+}
+
+/** Phase P7c — the document without the `resetFrom` archive of an earlier P7b reset (the same document when it has none). */
+function deleteResetArchive(doc) {
+  if (!doc || typeof doc !== "object" || !("resetFrom" in doc)) return doc;
+  const { resetFrom, ...rest } = doc;                                            // eslint-disable-line no-unused-vars
+  return rest;
 }
 
 /** The converted class snapshot: only the stage set and its version change. */
@@ -184,4 +192,4 @@ function condensedSnapshot(existing, plan, toVersion, now) {
 
 const lockIsFresh = (snapshot, nowMs) => !!(snapshot && snapshot.conversion && Number.isFinite(Date.parse(snapshot.conversion.startedAt)) && nowMs - Date.parse(snapshot.conversion.startedAt) < LOCK_MS);
 
-module.exports = { buildCondensePlan, condenseEntry, condenseProgressDoc, dropCondensedKeys, resetProgressDoc, condensedSnapshot, lockIsFresh, LOCK_MS };
+module.exports = { buildCondensePlan, condenseEntry, condenseProgressDoc, dropCondensedKeys, resetProgressDoc, deleteResetArchive, condensedSnapshot, lockIsFresh, LOCK_MS };
