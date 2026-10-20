@@ -15,17 +15,29 @@
 .eb-student-shell .student-shell { padding: var(--eb-space-5) clamp(var(--eb-space-3), 3vw, var(--eb-space-6)) var(--eb-space-7); }
 .eb-sp-v2 { width: min(1320px, 100%); gap: var(--eb-space-4); }
 
-/* ── Top bar: one calm navy band; on phones a brand row + one scrollable row of actions ───────────────────── */
+/* ── Top bar (UX-R2): the redesign's light chrome — a white band with a hairline and soft shadow, ink text, quiet pill
+   entries; on phones a brand row + one scrollable row of actions ─────────────────────────────────────────────── */
 .eb-student-shell .student-topbar {
   position: sticky; inset-block-start: 0; z-index: var(--eb-z-sticky);
   min-height: 64px; padding: var(--eb-space-2) clamp(var(--eb-space-3), 3vw, var(--eb-space-6));
-  background: linear-gradient(90deg, var(--eb-navy) 0%, var(--eb-navy-2) 100%);
-  box-shadow: var(--eb-sh-sm);
+  background: var(--eb-chrome-bg); color: var(--eb-chrome-text);
+  box-shadow: var(--eb-chrome-shadow);
 }
-.eb-student-shell .student-brand h1 { font-size: var(--eb-fs-20); letter-spacing: .01em; }
+.eb-student-shell .student-brand h1 { font-size: var(--eb-fs-20); letter-spacing: .01em; color: var(--eb-chrome-text); }
+.eb-student-shell .student-brand p { color: var(--eb-chrome-text-muted); }
 .eb-student-shell .student-topbar-actions { display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; }
 .eb-student-shell .student-topbar-link,
 .eb-student-shell .student-logout { border-radius: var(--eb-pill); min-height: 40px; padding-inline: var(--eb-space-3); }
+.eb-student-shell .student-topbar-link,
+.eb-student-shell .student-logout {
+  border: 1px solid var(--eb-chrome-border); background: var(--eb-chrome-bg); color: var(--eb-chrome-text);
+  font-weight: var(--eb-fw-semibold);
+}
+.eb-student-shell .student-topbar-link:hover,
+.eb-student-shell .student-logout:hover { background: var(--eb-chrome-hover); border-color: var(--eb-line-2); }
+.eb-student-shell .eb-notif-bell[aria-expanded="true"] { background: var(--eb-chrome-active); border-color: var(--eb-primary); }
+.eb-student-shell .student-topbar-link:focus-visible,
+.eb-student-shell .student-logout:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 @media (max-width: 720px) {
   .eb-student-shell .student-topbar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2); position: static; }
   .eb-student-shell .student-brand { flex: 1 1 auto; min-width: 0; }

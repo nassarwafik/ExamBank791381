@@ -31,18 +31,22 @@ describe("L.1 stylesheet", () => {
     expect(component).toContain('const wide = useMediaQuery("(min-width: 1280px)");');
   });
 
-  it("focus mode hides exactly the teacher shell's navigation column and page header", () => {
+  // UX-R2: the shell gained a full-width top bar (brand, quick navigation, identity) — chrome like the sidebar, so focus mode
+  // hides it too; the sidebar is plain "eb-sidebar" (light chrome) and the page header a plain block (the bar is the banner).
+  it("focus mode hides exactly the teacher shell's top bar, navigation column and page header", () => {
     const flat = noSpaces(css);
+    expect(flat).toContain("html[data-eb-reading-focus].eb-shell>.eb-topbar");
     expect(flat).toContain("html[data-eb-reading-focus].eb-shell>.eb-sidebar");
     expect(flat).toContain("html[data-eb-reading-focus].eb-shell-main>.eb-page-header");
     // the shell really renders those classes in that structure
     const shell = read("../../shell/TeacherAppShell.tsx");
-    expect(shell).toContain('className="eb-sidebar eb-on-dark"');
+    expect(shell).toContain('<header className="eb-topbar">');
+    expect(shell).toContain('className="eb-sidebar"');
     expect(shell).toContain('className="app-shell-main eb-shell-main"');
-    expect(read("../../ui/PageHeader.tsx")).toContain('<header className="eb-page-header">');
+    expect(read("../../ui/PageHeader.tsx")).toContain('<div className="eb-page-header">');
     // no other host element is hidden by the flag
     const hidden = [...css.matchAll(/html\[data-eb-reading-focus\][^{,]*/g)].map(m => m[0].trim());
-    expect(hidden.every(sel => /\.eb-sidebar$|\.eb-drawer-backdrop$|\.eb-page-header$|\.eb-lm-reader$/.test(sel))).toBe(true);
+    expect(hidden.every(sel => /\.eb-topbar$|\.eb-sidebar$|\.eb-drawer-backdrop$|\.eb-page-header$|\.eb-lm-reader$/.test(sel))).toBe(true);
   });
 
   it("toolbar labels are hidden visually (never removed) in normal reading only", () => {

@@ -32,7 +32,9 @@ function mockFetch() {
 function Shell({ p, onChange, sessionName = "" }: { p: TeacherProfile | null; onChange?: (x: TeacherProfile) => void; sessionName?: string }) {
   return <TeacherAppShell nav={nav} projectReadyTotal={0} displayName={resolveTeacherDisplayName(p, sessionName)} identity={{ token: "tok", profile: p, onProfileChange: onChange || (() => {}) }} onNavigate={() => {}} onLogout={() => {}}><div>x</div></TeacherAppShell>;
 }
-const sidebar = () => screen.getByRole("complementary", { name: "التنقل الرئيسي" });
+// UX-R2 — the identity and the brand moved from the sidebar into the shell's full-width top bar (the page's one banner);
+// every assertion below is unchanged, only scoped to where the block now lives.
+const topbar = () => screen.getByRole("banner");
 
 describe("display-name authority", () => {
   it("profile name wins; else the session name; else «المعلم» — and the sources contain no hard-coded personal name", () => {
@@ -45,26 +47,26 @@ describe("display-name authority", () => {
   });
 });
 
-describe("sidebar identity block", () => {
+describe("shell identity block (top bar since UX-R2)", () => {
   it("shows the name and the preset icon, keeps the brand (Tadris+ / التعليم المتكامل), exposes the accessible profile button; no profile → default initial, no button", () => {
     mockFetch();
     const { rerender } = render(<Shell p={profile()} />);
-    const side = sidebar();
+    const side = topbar();
     expect(within(side).getByText("أ. سامر")).toBeTruthy();
     expect(within(side).getByText("Tadris+")).toBeTruthy(); expect(within(side).getByText("التعليم المتكامل")).toBeTruthy();   // BRAND-005
     const btn = within(side).getByRole("button", { name: /تعديل صورة وملف المعلم/ });
     expect(btn.textContent).toContain("🦁");
     rerender(<Shell p={null} sessionName="" />);
-    expect(within(sidebar()).getAllByText("المعلم").length).toBeGreaterThan(0);
-    expect(within(sidebar()).queryByRole("button", { name: /تعديل صورة وملف المعلم/ })).toBeNull();
-    expect(sidebar().querySelector(".eb-teacher-identity .is-default")).toBeTruthy();
+    expect(within(topbar()).getAllByText("المعلم").length).toBeGreaterThan(0);
+    expect(within(topbar()).queryByRole("button", { name: /تعديل صورة وملف المعلم/ })).toBeNull();
+    expect(topbar().querySelector(".eb-teacher-identity .is-default")).toBeTruthy();
   });
   it("with a photo version the sidebar reads the own photo ONCE (builder headers) and shows it before the preset", async () => {
     (globalThis as { URL: typeof URL }).URL.createObjectURL = () => "blob:teacher";
     (globalThis as { URL: typeof URL }).URL.revokeObjectURL = () => {};
     const calls = mockFetch();
     render(<Shell p={profile({ profilePhoto: { version: 2, updatedAt: "" } })} />);
-    await waitFor(() => expect(sidebar().querySelector(".eb-teacher-identity .is-photo")).toBeTruthy());
+    await waitFor(() => expect(topbar().querySelector(".eb-teacher-identity .is-photo")).toBeTruthy());
     expect(calls.map(c => c.url)).toEqual(["/api/teacher-profile-photo?v=2"]);
     expect(calls[0].headers["x-builder-token"]).toBe("tok");
   });
@@ -77,26 +79,26 @@ describe("sidebar identity block", () => {
       return <Shell p={p} onChange={setP} />;
     }
     render(<Host />);
-    fireEvent.click(within(sidebar()).getByRole("button", { name: /تعديل صورة وملف المعلم/ }));
+    fireEvent.click(within(topbar()).getByRole("button", { name: /تعديل صورة وملف المعلم/ }));
     const dialog = await screen.findByRole("dialog", { name: "ملف المعلم" });
     fireEvent.click(within(dialog).getByRole("button", { name: "قطة" }));
     await within(dialog).findByText("تم حفظ الأيقونة.");
     expect(calls.filter(c => c.method === "POST").at(-1)!.body).toEqual({ action: "setAvatar", avatarId: "a2" });
-    expect(within(sidebar()).getByRole("button", { name: /تعديل صورة وملف المعلم/ }).textContent).toContain("🐱");
+    expect(within(topbar()).getByRole("button", { name: /تعديل صورة وملف المعلم/ }).textContent).toContain("🐱");
     fireEvent.change(within(dialog).getByLabelText("اسم المعلم"), { target: { value: "أ. هدى" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "حفظ الاسم" }));
     await within(dialog).findByText("تم حفظ الاسم.");
-    expect(within(sidebar()).getByText("أ. هدى")).toBeTruthy();
+    expect(within(topbar()).getByText("أ. هدى")).toBeTruthy();
     expect(within(dialog).getByRole("button", { name: "رفع صورة شخصية" })).toBeTruthy();
     fireEvent.change(within(dialog).getByLabelText("ملف الصورة الشخصية للمعلم"), { target: { files: [new File([new Uint8Array([1, 2, 3])], "me.jpg", { type: "image/jpeg" })] } });
     await within(dialog).findByText("تم حفظ صورتك الشخصية.");
     const up = calls.filter(c => c.body?.action === "uploadPhoto").at(-1)!;
     expect(String(up.body!.dataUrl)).toMatch(/^data:image\/jpeg;base64,/); expect(up.body).not.toHaveProperty("teacherId");
-    await waitFor(() => expect(sidebar().querySelector(".eb-teacher-identity .is-photo")).toBeTruthy());
+    await waitFor(() => expect(topbar().querySelector(".eb-teacher-identity .is-photo")).toBeTruthy());
     fireEvent.click(within(dialog).getByRole("button", { name: /إزالة الصورة/ }));
     await within(dialog).findByText(/تمت إزالة الصورة/);
     expect(calls.filter(c => c.method === "POST").at(-1)!.body).toEqual({ action: "removePhoto" });
-    await waitFor(() => expect(sidebar().querySelector(".eb-teacher-identity .is-avatar")).toBeTruthy());   // preset fallback returns
+    await waitFor(() => expect(topbar().querySelector(".eb-teacher-identity .is-avatar")).toBeTruthy());   // preset fallback returns
     for (const c of calls.filter(c => c.method === "POST")) { expect(c.url).toBe("/api/teacher-profile"); expect(c.headers["x-builder-token"]).toBe("tok"); }
     fireEvent.click(within(dialog).getAllByRole("button", { name: "إغلاق" }).at(-1) as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "ملف المعلم" })).toBeNull());

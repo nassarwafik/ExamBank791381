@@ -22,7 +22,7 @@
 .ge .ge-hint{margin:0;font-size:12px;color:var(--muted,#64748b)}
 .ge .ge-issues,.ge .ge-issues-inline{margin:0;padding-block:6px;padding-inline:26px 10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:8px;font-size:12.5px;line-height:1.7}
 .ge .ge-issues-inline{padding-block:2px;font-size:12px;flex-basis:100%}
-.ge .ge-features{padding:6px 8px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;font-size:12.5px}
+.ge .ge-features{padding:6px 8px;border:1px solid var(--eb-primary-200);background:var(--eb-primary-050);border-radius:8px;font-size:12.5px}
 .ge .ge-features ul{margin:4px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
 .ge .ge-preview{min-inline-size:0}
 .ge :is(button,input,select,textarea):focus-visible{outline:3px solid var(--primary,#2563eb);outline-offset:2px}

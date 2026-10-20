@@ -21,7 +21,7 @@ export type ProfileAvatarProps = {
   className?: string;
 };
 
-const DEFAULT_BG = "#2563eb";
+const DEFAULT_BG = "var(--eb-primary, #2a0a4e)";
 
 export default function ProfileAvatar({ photoUrl, avatarId, name, fallbackLetter, size = 52, onClick, label, className }: ProfileAvatarProps) {
   const option = avatarById(avatarId);

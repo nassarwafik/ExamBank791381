@@ -75,6 +75,7 @@
    The Reader flags <html data-eb-reading-focus> while focus mode is on (and clears it on exit / unmount). The teacher
    shell's navigation column and page header leave the layout; the Reader's own toolbar keeps «الخروج من وضع التركيز»,
    and Escape leaves too. */
+html[data-eb-reading-focus] .eb-shell > .eb-topbar,
 html[data-eb-reading-focus] .eb-shell > .eb-sidebar,
 html[data-eb-reading-focus] .eb-shell > .eb-drawer-backdrop,
 html[data-eb-reading-focus] .eb-shell-main > .eb-page-header { display: none; }

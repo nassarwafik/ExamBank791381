@@ -11,15 +11,17 @@ import { resolveTeacherDisplayName, teacherHeaders, type TeacherProfile } from "
  * beside the name (profile → session → "المعلم"). Clicking opens the self-profile dialog. The photo is one
  * authenticated read (only when the profile reports a version); nothing about the product brand changes.
  */
-export default function TeacherIdentity({ token, profile, sessionDisplayName, onProfileChange, compact }: {
+export default function TeacherIdentity({ token, profile, sessionDisplayName, onProfileChange, compact, size = 40 }: {
   token: string; profile: TeacherProfile | null; sessionDisplayName: string; onProfileChange: (p: TeacherProfile) => void; compact?: boolean;
+  /** Avatar size in px (UX-R2: the top bar passes 44 — a full touch target). */
+  size?: number;
 }) {
   const [open, setOpen] = useState(false);
   const name = resolveTeacherDisplayName(profile, sessionDisplayName);
   const photo = useProfilePhoto(token ? "/api/teacher-profile-photo" : null, token ? teacherHeaders(token) : {}, profile?.profilePhoto?.version ?? null);
   return (
     <div className={"eb-teacher-identity" + (compact ? " is-compact" : "")}>
-      <ProfileAvatar photoUrl={photo} avatarId={profile?.avatarId} name={name} size={40} onClick={profile ? () => setOpen(true) : undefined} label="تعديل صورة وملف المعلم" className="eb-teacher-identity-avatar" />
+      <ProfileAvatar photoUrl={photo} avatarId={profile?.avatarId} name={name} size={size} onClick={profile ? () => setOpen(true) : undefined} label="تعديل صورة وملف المعلم" className="eb-teacher-identity-avatar" />
       <span className="eb-teacher-identity-name eb-nav-label" title={name}>{name}</span>
       {profile && open && <Suspense fallback={null}><TeacherProfileDialog open token={token} profile={profile} photoUrl={photo} onClose={() => setOpen(false)} onChange={onProfileChange} /></Suspense>}
     </div>

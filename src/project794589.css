@@ -12,7 +12,7 @@
 .p794-bar-track { height: 10px; border-radius: 999px; background: var(--eb-line); overflow: hidden; }
 .p794-bar-fill { display: block; height: 100%; border-radius: 999px; transition: width .5s var(--eb-ease, ease); }
 .p794-bar-overall { background: linear-gradient(90deg, var(--eb-primary), var(--eb-primary-strong)); }
-.p794-bar-book { background: #2563eb; }
+.p794-bar-book { background: var(--eb-primary); }
 .p794-bar-pt { background: #0d9488; }
 
 /* ===== Groups + stage rows (student panel) ===== */
@@ -34,7 +34,7 @@
 .p794-status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
 .p794-status-badge.status-not-started { background: #f1f5f9; color: #64748b; }
 .p794-status-badge.status-in-progress { background: #fef9c3; color: #a16207; }
-.p794-status-badge.status-ready { background: #dbeafe; color: #1d4ed8; }
+.p794-status-badge.status-ready { background: var(--eb-primary-100); color: var(--eb-primary-strong); }
 .p794-status-badge.status-approved { background: #dcfce7; color: #15803d; }
 
 /* ===== Student portal project section ===== */

@@ -46,7 +46,7 @@
   transition:background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
 }
 .eb-notif-item:hover{ background:var(--eb-surface-2); }
-.eb-notif-item.is-unread{ background:var(--eb-primary-050); border-color:rgba(37,99,235,.18); }
+.eb-notif-item.is-unread{ background:var(--eb-primary-050); border-color:color-mix(in srgb, var(--eb-primary) 18%, transparent); }
 .eb-notif-item.is-unread:hover{ border-color:var(--eb-primary); }
 
 .eb-notif-icon{ flex:0 0 auto; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-primary-strong); border:1px solid var(--eb-line); }

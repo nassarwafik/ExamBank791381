@@ -48,7 +48,7 @@
 .rv-status.is-unanswered{ background:var(--eb-surface-2); color:var(--eb-muted); border-color:var(--eb-line-2); }
 .rv-status.is-draft{ border-style:dashed; }
 .rv-mode{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:var(--eb-pill); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); border:1px solid var(--eb-line-2); background:var(--eb-surface-2); color:var(--eb-muted); }
-.rv-mode.is-manual{ color:#1d4ed8; background:var(--eb-primary-050); border-color:#bfdbfe; }
+.rv-mode.is-manual{ color:var(--eb-primary-strong); background:var(--eb-primary-050); border-color:var(--eb-primary-200); }
 .rv-mode.is-draft{ color:#9a3412; background:var(--eb-warn-bg); border-color:#fdba74; border-style:dashed; }
 .rv-legend-modes{ margin-block-start:4px; }
 .review-question.rv-q.is-correct{ border-inline-start:4px solid #22c55e; }

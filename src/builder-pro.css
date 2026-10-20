@@ -19,7 +19,7 @@
 .prompt-card .ai-badge{
   flex:0 0 auto; width:42px; height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center;
   font-weight:800; color:#fff; background:linear-gradient(135deg,var(--bp-primary),var(--bp-primary-2));
-  box-shadow:0 10px 22px -12px rgba(37,99,235,.7);
+  box-shadow:0 10px 22px -12px color-mix(in srgb, var(--eb-primary) 70%, transparent);
 }
 .builder-heading h2{ margin:0 0 3px; font-size:18px; font-weight:800; color:var(--bp-navy); }
 .builder-heading p{ margin:0; color:var(--bp-muted); font-size:13.5px; line-height:1.8; }
