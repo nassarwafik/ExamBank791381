@@ -11,6 +11,7 @@ import IconButton from "../ui/IconButton";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconChevronBack } from "../icons";
 import { REPORT_CARDS, CATEGORIES, GROUPS, PERIODS, TIME_AWARE, type Category, type Need } from "./catalog";
+import { periodContext, type ExportContext } from "./reportExport";
 import "../reports-pro.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
@@ -167,6 +168,11 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
 
   const card = activeCard!;
   const timeAware = TIME_AWARE.includes(card.type);
+  // Phase R-4 — what an export says about its surroundings: the applied period (words + dates) and the project's title.
+  const exportContext: ExportContext = {
+    ...(timeAware ? periodContext(period, filters.from, filters.to, Object.fromEntries(PERIODS.map(p => [p.key, p.label]))) : { periodLabel: "", periodTag: "" }),
+    projectTitle: opts?.projects.find(p => p.projectCode === filters.projectCode)?.title
+  };
   return (
     <section className="eb-report-workspace" aria-labelledby="eb-report-ws-title">
       <div className="eb-report-ws-head eb-report-noprint">
@@ -238,7 +244,7 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
       </div>
       <ReportSessionContext.Provider value={onSessionExpired}>
         <Suspense fallback={<LoadingState />}>
-          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} />
+          <ReportView type={card.type} token={token} filters={filters} exportContext={exportContext} onOpenProject={onOpenProject} />
         </Suspense>
       </ReportSessionContext.Provider>
     </section>

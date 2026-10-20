@@ -8,7 +8,7 @@ import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-li
 vi.mock("react-chartjs-2", () => ({ Bar: () => <canvas />, Line: () => <canvas />, Doughnut: () => <canvas /> }));
 
 import ReportsCenter from "./ReportsCenter";
-import * as csvRows from "./reportCsv";
+import { classExport, exportRows } from "./reportExport";
 
 const TRACKS = [{ trackId: "book", title: "الكتاب" }, { trackId: "packetTracer", title: "Packet Tracer" }];
 const FILTERS = { ok: true, schoolYears: ["2025-2026"], classes: [{ classId: "c1", name: "الحادي عشر", schoolYear: "2025-2026", status: "active", programCodes: ["794589"] }], projects: [{ projectCode: "794589", title: "مشروع 794589" }] };
@@ -76,10 +76,12 @@ describe("P-5d — class report", () => {
     expect(section.textContent).toContain("مكتملون 2");
     expect(section.textContent).toContain("لم يبدأوا 4");
   });
-  it("the class CSV lists «لم يبدأوا» for a project only when the server reports it", () => {
-    const base = { class: { name: "ص" }, projects: [{ title: "م", tracks: [], avgOverall: 1, trackAverages: {}, completedCount: 2 }] };
-    expect(csvRows.classReportRows([], base).map(r => r.join("|"))).not.toContain("م|لم يبدأوا|4");
+  it("the class export lists «لم يبدأوا» for a project only when the server reports it", () => {
+    // Phase R-4 — the class export is one section per project (heading = project title), its rows «المؤشر | القيمة».
+    const base = { class: { name: "ص", schoolYear: "", status: "active", studentCount: 1 }, kpis: { assignments: 0, averageScore: null, submissionRate: 0 }, projects: [{ title: "م", tracks: [], avgOverall: 1, trackAverages: {}, completedCount: 2 }] };
+    const rowsOf = (d: typeof base) => exportRows(classExport(d, { periodLabel: "", periodTag: "" }), "x").rows.map(r => r.join("|"));
+    expect(rowsOf(base)).not.toContain("لم يبدأوا|4");
     const withCount = { ...base, projects: [{ ...base.projects[0], notStartedCount: 4 }] };
-    expect(csvRows.classReportRows([], withCount).map(r => r.join("|"))).toContain("م|لم يبدأوا|4");
+    expect(rowsOf(withCount)).toContain("لم يبدأوا|4");
   });
 });

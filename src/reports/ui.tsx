@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import SharedEmptyState from "../ui/EmptyState";
 import { IconDownload, IconPrint } from "../icons";
+import { exportCsv, exportXlsx, printExport, type ReportExport } from "./reportExport";
 
 /* Reports Center presentation helpers (UX-6b). State/data stay in ReportsCenter / ReportViews. */
 
@@ -12,17 +13,25 @@ export function ErrorState({ text, onRetry }: { text: string; onRetry?: () => vo
 }
 
 /**
- * ReportHeader — the result's context row: title (h3 under the workspace h2), optional description/hint and the
- * CSV / print actions (marked .eb-report-noprint). Export uses the already-loaded data only — no request.
+ * ReportHeader — the result's context row: title (h3 under the workspace h2), optional description/hint and the export actions
+ * (marked .eb-report-noprint). Phase R-4: CSV, Excel and «طباعة / PDF» all come from the report's ONE export model, built
+ * from the already-loaded data — no request. Printing is a clean A4 document (printReport), never window.print() of the shell.
  */
-export function ReportHeader({ title, description, onExportCsv, children }: { title: ReactNode; description?: ReactNode; onExportCsv?: () => void; children?: ReactNode }) {
+export function ReportHeader({ title, description, exportData, children }: { title: ReactNode; description?: ReactNode; exportData?: ReportExport; children?: ReactNode }) {
+  const [printError, setPrintError] = useState(false);
   return (
-    <SectionHeader level={3} className="eb-report-result-head" title={title} description={description}
-      actions={<div className="eb-report-actions eb-report-noprint">
-        {children}
-        {onExportCsv && <button type="button" className="eb-button is-small" onClick={onExportCsv}><IconDownload size={16} />تصدير CSV</button>}
-        <button type="button" className="eb-button is-small" onClick={() => window.print()}><IconPrint size={16} />طباعة</button>
-      </div>} />
+    <>
+      <SectionHeader level={3} className="eb-report-result-head" title={title} description={description}
+        actions={<div className="eb-report-actions eb-report-noprint">
+          {children}
+          {exportData && <>
+            <button type="button" className="eb-button is-small" onClick={() => exportCsv(exportData)}><IconDownload size={16} />تصدير CSV</button>
+            <button type="button" className="eb-button is-small" onClick={() => exportXlsx(exportData)}><IconDownload size={16} />تصدير Excel</button>
+            <button type="button" className="eb-button is-small" onClick={() => setPrintError(!printExport(exportData))}><IconPrint size={16} />طباعة / PDF</button>
+          </>}
+        </div>} />
+      {printError && <ErrorState text="تعذر فتح نافذة الطباعة في هذا المتصفح. جرّب تصدير Excel أو CSV." />}
+    </>
   );
 }
 

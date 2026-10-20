@@ -257,7 +257,7 @@ describe("UX-6b filters — only relevant controls, canonical project/class filt
 });
 
 describe("UX-6b report types", () => {
-  it("class report: StatCards from the payload, latest-submitted wording, independent project summaries with progress bars, CSV export and print without requests", async () => {
+  it("class report: StatCards from the payload, latest-submitted wording, independent project summaries with progress bars, export and print without requests", async () => {
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     let captured: Blob | null = null;
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = (b: Blob) => { captured = b; return "blob:x"; };
@@ -280,9 +280,15 @@ describe("UX-6b report types", () => {
     const bytes = new Uint8Array(await new Response(captured as unknown as Blob).arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
-    expect(text).toBe("﻿" + ['"القسم","المؤشر","القيمة"', '"أكاديمي","الحالة","نشط"', '"أكاديمي","عدد الطلاب","24"', '"أكاديمي","عدد الواجبات","3"', '"أكاديمي","متوسط العلامات","71%"', '"أكاديمي","نسبة التسليم","83%"', '"مشروع 794589","التقدم العام","55"', '"مشروع 794589","الكتاب","70"', '"مشروع 794589","Packet Tracer","40"', '"مشروع 794589","مكتملون","2"'].join("\r\n"));
-    fireEvent.click(screen.getByRole("button", { name: "طباعة" }));
-    expect(window.print).toHaveBeenCalledTimes(1);
+    // Phase R-4 (owner decision D-4) — the export model: identity block, then sections of real numbers (no «71%» text).
+    const lines = text.replace(/^\uFEFF/, "").split("\r\n");
+    expect(lines[0]).toBe('"تقرير الصف — الحادي عشر"');
+    expect(lines).toEqual(expect.arrayContaining(['"الصف","الحادي عشر"', '"السنة الدراسية","2025-2026"', '"حالة الصف","نشط"', '"الفترة","كل الفترة"',
+      '"المؤشرات الأكاديمية"', '"عدد الطلاب","24"', '"عدد التقييمات","3"', '"متوسط النتائج (%)","71.3"', '"نسبة التسليم (%)","83"',
+      '"مشروع 794589"', '"التقدم العام (%)","55"', '"الكتاب (%)","70"', '"Packet Tracer (%)","40"', '"مكتملون","2"']));
+    // Phase R-4 (P1-3) — printing is a clean print document (printReport), never window.print() of the whole app shell.
+    fireEvent.click(screen.getByRole("button", { name: "طباعة / PDF" }));
+    expect(window.print).not.toHaveBeenCalled();
     expect(calls.length).toBe(n);
     expect(document.querySelector(".eb-report-filters")?.classList.contains("eb-report-noprint")).toBe(true);
     expect(document.querySelector(".eb-report-ws-head")?.classList.contains("eb-report-noprint")).toBe(true);
