@@ -17,7 +17,8 @@ type Props = {
 };
 
 // Overview of one class in one project: exactly the existing `summary` payload, presented as the shared
-// StatCards (four primary operational counts + stale hint) and semantic progress bars. Nothing is recomputed.
+// StatCards (four primary operational counts + stale hint, plus «لم يبدأوا» (P-5c) and the students' own marks (P6) when there
+// are any) and semantic progress bars. Nothing is recomputed.
 export default function ProjectDashboard({ token, projectCode, classId, tracks, readOnly = false, onOpenBulk }: Props) {
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,6 +44,7 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks, 
   if (!summary) return null;
   if (!summary.studentCount) return <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طلابًا إلى الصف من صفحة «الصفوف والطلاب» ليظهر تقدّمهم هنا." />;
   const selfStages = summary.totalSelfReportedStages || 0, selfStudents = summary.studentsSelfReported || 0;
+  const notStarted = summary.notStartedCount || 0;                       // Phase P-5c — the server's count (P-5b rule)
   const shortcuts = !readOnly && onOpenBulk && (summary.totalReadyStages > 0 || selfStages > 0);
 
   return (
@@ -53,6 +55,7 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks, 
         <StatCard primary label="مكتملون" value={summary.completedCount} tone="success" />
         <StatCard primary label="ينتظرون الفحص" value={summary.studentsReadyForReview} tone={summary.studentsReadyForReview > 0 ? "attention" : "neutral"} />
         <StatCard primary label="مراحل جاهزة للفحص" value={summary.totalReadyStages} tone="info" hint={"بلا تحديث " + summary.staleDays + "+ أيام: " + summary.staleCount} />
+        {notStarted > 0 && <StatCard primary label="لم يبدأوا" value={notStarted} tone="attention" hint="لم يبدأ أي مرحلة بعد" />}
         {selfStages > 0 && <StatCard primary label="حدّدها الطلاب" value={selfStages} tone="attention" hint={"من " + selfStudents + " طالب — بانتظار تأكيدك"} />}
       </div>
       {shortcuts && (

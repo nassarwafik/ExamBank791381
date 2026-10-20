@@ -19,6 +19,8 @@ import { fileURLToPath } from "node:url";
 //    students' summaries, and `staleCount` 2 → 1 in G794589.summary.c1 (REFRESHED_BY_P5B; invariant B8). Two of them
 //    (G794589.student.c4.s7.v1, SG.s7) came with the reconciliation onto P7, whose V1 restart leaves s7 not started
 //    (only `notStarted: true` was added there).
+//    Phase P-5c (reviewed golden change): one entry refreshed — G794589.summary.c1 gained `notStartedCount: 1` (its only
+//    change); invariant B9 ties the count to the class's student cards.
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -176,6 +178,17 @@ describe("B8. Phase P-5b — «لم يبدأ» is never «بلا تحديث»", 
     const withNotStarted = [...new Set(summaries().filter(x => x.s.notStarted).map(x => x.id))];
     expect(withNotStarted.filter(id => !REFRESHED_BY_P5B.includes(id))).toEqual([]);
     expect(R["G794589.summary.c1"].body.summary.staleCount).toBe(1);
+  });
+});
+
+describe("B9. Phase P-5c — the class summary counts the never-started students", () => {
+  it("summary.notStartedCount equals the cards marked notStarted for the same class (absent when zero)", () => {
+    for (const [summaryId, studentsId] of [["G794589.summary.c1", "G794589.students.c1"], ["G899373.summary.g1", "G899373.students.g1"]]) {
+      const n = R[studentsId].body.students.filter(c => c.notStarted === true).length;
+      const s = R[summaryId].body.summary;
+      if (n) expect(s.notStartedCount, summaryId).toBe(n); else expect("notStartedCount" in s, summaryId).toBe(false);
+    }
+    expect(R["G794589.summary.c1"].body.summary.notStartedCount).toBe(1);
   });
 });
 
