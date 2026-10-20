@@ -1,5 +1,7 @@
 
 const {BlobServiceClient}=require("@azure/storage-blob");
+// Batch-1 security fix: no blob name with a "." / ".." segment, "\\" or a control character reaches the SDK (lib/blob-names).
+require("./blob-names");
 const CONTAINER="bank";
 async function streamToBuffer(stream){const parts=[];for await(const chunk of stream)parts.push(Buffer.from(chunk));return Buffer.concat(parts)}
 function getContainer(){const cs=process.env.AZURE_STORAGE_CONNECTION_STRING;if(!cs)throw new Error("AZURE_STORAGE_CONNECTION_STRING is not configured.");return BlobServiceClient.fromConnectionString(cs).getContainerClient(CONTAINER)}

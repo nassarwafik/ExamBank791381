@@ -4,6 +4,7 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { withheldAssignmentIds } = require("../lib/results-release");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost, isVisibleToStudent, reactionCounts } = require("../lib/achievement-feed");
+const { isSafeSegment } = require("../lib/blob-names");
 
 const UP = "platform/users/", AP = "platform/assignments/";
 // Phase 21G.5 (D2) — an assessment medal reveals a mark band, so its post is shown (to anyone, its owner included) only once the
@@ -57,6 +58,8 @@ async function handler(request, deps = {}, obs = null) {
       const postId = String(body?.postId || "").trim();
       const reaction = String(body?.reaction || "").trim();
       if (!postId || !REACTIONS.includes(reaction)) return { status: 400, jsonBody: { ok: false, error: "ردّ الفعل غير صالح." } };
+      // The post id becomes part of a blob name: one safe segment only (a "../" id would leave the class's feed folder).
+      if (!isSafeSegment(postId)) return { status: 400, jsonBody: { ok: false, error: "معرّف المنشور غير صالح." } };
 
       const studentId = String(student.userId);
       // A medal post that is not shown (its assignment's results are not released) cannot be reacted to either.

@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { isSafeSegment } = require("../lib/blob-names");
 
 
 const RAW_CONTAINER = "raw";
@@ -4001,6 +4002,26 @@ app.http(
               year,
               variant
             );
+
+
+          // Batch-1 security fix — these values become blob names (sources/<sourceId>.json, html/<sourceId>.html and the
+          // embedded images <examCode>/<year>/<variant>/…): each must be ONE safe segment, or a "../" value would write any
+          // document in the account.
+          if (
+            [examCode, variant, suppliedSourceId].some(value => value && !isSafeSegment(value)) ||
+            !isSafeSegment(sourceId, 200)
+          ) {
+            return {
+              status: 400,
+
+              jsonBody: {
+                ok:
+                  false,
+
+                error: "معرّف المصدر غير صالح."
+              }
+            };
+          }
 
 
           const save =

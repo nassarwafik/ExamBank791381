@@ -5,6 +5,7 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
+const { isSafeSegment } = require("../lib/blob-names");
 const { isStudentClassMember } = require("../lib/class-membership");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordEventSafely } = require("../lib/notification-events");
@@ -95,6 +96,9 @@ async function handler(request, deps = {}, obs = null) {
       const classId = String(body?.classId || "").trim();
       const postId = String(body?.postId || "").trim();
       if (!classId || !postId) return { status: 400, jsonBody: { ok: false, error: "classId and postId are required." } };
+      // Both ids become part of a blob name: a safe class id and one safe post segment (a "../" id would reach another
+      // class's posts or any other document).
+      if (!isSafeId(classId) || !isSafeSegment(postId)) return { status: 400, jsonBody: { ok: false, error: "معرّف المنشور غير صالح." } };
       if (!(await classAccessible(name => downloadJsonOrNull(container, name), classId, tenant))) return { status: 404, jsonBody: { ok: false, error: "المنشور غير موجود." } };
 
       if (action === "react") {
@@ -104,6 +108,7 @@ async function handler(request, deps = {}, obs = null) {
         try {
           updated = await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
             if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+            if (current.classId !== undefined && String(current.classId) !== classId) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
             previousReaction = REACTIONS.includes(current.teacherReaction) ? current.teacherReaction : null;
             committedAt = new Date().toISOString();
             current.teacherReaction = current.teacherReaction === reaction ? null : reaction;
@@ -129,6 +134,7 @@ async function handler(request, deps = {}, obs = null) {
         try {
           updated = await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
             if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+            if (current.classId !== undefined && String(current.classId) !== classId) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
             previousNote = String(current.teacherNote || "").trim();
             committedAt = new Date().toISOString();
             current.teacherNote = note;
