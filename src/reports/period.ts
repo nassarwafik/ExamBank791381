@@ -7,10 +7,12 @@ export function formatLocalDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export type Period = "all" | "7" | "30" | "year" | "custom";
+// Phase R-1 (owner decision D-3): no «هذه السنة الدراسية» — it carried no bound (a class is already one school year), so it
+// was indistinguishable from «كل الفترة»; the school-year filter above the period is the year criterion.
+export type Period = "all" | "7" | "30" | "custom";
 
 // "آخر N أيام" is inclusive of today plus the previous N-1 days (so "last 7" spans 7 calendar days).
-// "all"/"year"/"custom" carry no computed bound here (year == the class's own year; custom is user-set).
+// "all"/"custom" carry no computed bound here (custom is user-set).
 export function rangeForPeriod(period: Period, today: Date = new Date()): { from: string; to: string } {
   if (period === "7" || period === "30") {
     const span = period === "7" ? 7 : 30;

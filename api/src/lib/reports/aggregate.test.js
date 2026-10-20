@@ -33,7 +33,7 @@ describe("assignmentStats keeps missing and zero separate", () => {
     expect(st.missing).toBe(1);
     expect(st.zeroScores).toBe(1);
     expect(st.submissionRate).toBe(67);
-    expect(st.avgAttempts).toBe(1); // (1+2+0)/3 = 1
+    expect(st.avgAttempts).toBe(1.5); // Phase R-1: per submitting student (1+2)/2 — the non-submitter has no attempts to average
     expect(st.average).toBe(40);
   });
 });

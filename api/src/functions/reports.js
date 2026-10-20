@@ -118,13 +118,15 @@ async function handler(request, deps = {}, obs = null) {
         const students = await classStudents(container, classId);
         const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const allPcts = [];
-        let submittedCells = 0;
+        let submittedCells = 0, pendingCells = 0;
         const subsByAssignment = await submissionsForAll(container, assignments);
         for (let i = 0; i < assignments.length; i++) {
           const subs = subsByAssignment[i];
           for (const s of students) {
             const o = agg.studentOutcome(subs.get(String(s.studentId)));
-            if (o.state === "submitted") { submittedCells += 1; allPcts.push(o.percentage); }
+            if (o.state === "missing") continue;
+            submittedCells += 1;                                       // handed in — a pending result included (R-1 / D-1)
+            if (o.state === "pending") pendingCells += 1; else allPcts.push(o.percentage);
           }
         }
         const totalCells = students.length * assignments.length;
@@ -139,7 +141,8 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: {
           assignments: assignments.length,
           averageScore: agg.average(allPcts),
-          submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0
+          submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0,
+          pendingReview: pendingCells
         }, projects } };
       }
 
@@ -152,9 +155,8 @@ async function handler(request, deps = {}, obs = null) {
         const assignments = c ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
         // Roadmap #27: the student's per-assignment submissions are independent reads → bounded concurrency, aligned.
         const mySubs = await mapConcurrent(assignments, getReadConcurrency(), a => downloadJsonOrNull(container, SUB_PREFIX + a.assignmentId + "/" + studentId + ".json"));
-        let submittedCount = 0;
-        for (const s of mySubs) if (agg.studentOutcome(s).state === "submitted") submittedCount += 1;
         const acad = agg.studentAcademicAverage(mySubs);
+        const submittedCount = acad.submittedCount;                    // handed in — a pending result included (R-1 / D-1)
         // One entry per project of the student's class — each independent.
         const projects = [];
         if (c) for (const pCode of getSupportedClassProgramCodes(c)) {
@@ -174,7 +176,7 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, type,
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
           // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
-          academic: { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0 },
+          academic: { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0, pendingCount: acad.pendingCount },
           projects } };
       }
 
@@ -189,7 +191,7 @@ async function handler(request, deps = {}, obs = null) {
         const perAssignment = [];
         const pooledPcts = [];
         const matrix = [];
-        let submittedCells = 0;
+        let submittedCells = 0, pendingCells = 0;
         const subsByAssignment = await submissionsForAll(container, assignments);
         for (let i = 0; i < assignments.length; i++) {
           const a = assignments[i];
@@ -197,13 +199,19 @@ async function handler(request, deps = {}, obs = null) {
           const entries = students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) }));
           const st = agg.assignmentStats(entries);
           perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st });
-          matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: entries.map(e => { const o = agg.studentOutcome(e.submission); return { studentId: e.studentId, state: o.state, percentage: o.percentage }; }) });
-          for (const e of entries) { const o = agg.studentOutcome(e.submission); if (o.state === "submitted") { pooledPcts.push(o.percentage); submittedCells += 1; } }
+          const outcomes = entries.map(e => ({ studentId: e.studentId, o: agg.studentOutcome(e.submission) }));
+          // `zero` is the same rule as assignmentStats.zeroScores (a FINAL score of 0), so the cell and the count never disagree.
+          matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: outcomes.map(({ studentId, o }) => ({ studentId, state: o.state, percentage: o.percentage, zero: o.state === "submitted" && o.score === 0 })) });
+          for (const { o } of outcomes) {
+            if (o.state === "missing") continue;
+            submittedCells += 1;                                       // handed in — a pending result included (R-1 / D-1)
+            if (o.state === "pending") pendingCells += 1; else pooledPcts.push(o.percentage);
+          }
         }
         const totalCells = students.length * assignments.length;
         return { status: 200, jsonBody: { ok: true, type, class: classMeta(c),
           students: students.map(s => ({ studentId: s.studentId, displayName: s.displayName })),
-          overall: { assessmentCount: assignments.length, participants: pooledPcts.length, average: agg.average(pooledPcts), submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0, distribution: agg.gradeDistribution(pooledPcts) },
+          overall: { assessmentCount: assignments.length, participants: submittedCells, pendingReview: pendingCells, average: agg.average(pooledPcts), submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0, distribution: agg.gradeDistribution(pooledPcts) },
           perAssignment, matrix } };
       }
 

@@ -339,7 +339,7 @@ describe("UX-5 detail — one results GET, focus, four operational stats, no N+1
     expect(head.textContent).toContain("منشور"); expect(head.textContent).toContain("الحادي عشر"); expect(head.textContent).toContain("3 محاولة"); expect(head.textContent).toContain("مؤقّت · 90 دقيقة");
     const cards = Array.from(detail.querySelectorAll(".eb-stat-grid.is-primary .eb-stat-card")).map(c => (c.querySelector(".eb-stat-label")?.textContent || "") + "=" + (c.querySelector(".eb-stat-value")?.textContent || ""));
     expect(cards).toEqual(["تم التسليم=3/4", "بانتظار التصحيح=1", "نهائي=2", "لم يسلّم=1"]);
-    expect((detail.querySelector(".eb-assign-stats-hints") as HTMLElement).textContent).toBe("المعدل 72%الأعلى 90%الأدنى 62%قيد المحاولة 1");
+    expect((detail.querySelector(".eb-assign-stats-hints") as HTMLElement).textContent).toBe("المعدل 72% (لا يشمل 1 بانتظار التصحيح)الأعلى 90%الأدنى 62%قيد المحاولة 1");   // Phase R-1 (D-1): the average names the results it leaves out
     const n = calls.length;
     fireEvent.click(within(detail).getByRole("button", { name: /^العلامة/ }));
     fireEvent.change(within(detail).getByLabelText("بحث بالاسم أو الكود"), { target: { value: "زيد" } });
@@ -394,7 +394,7 @@ describe("UX-5 gradebook — filters, sorts, grading labels, review action, life
     expect(gbNames(detail)).toEqual(["خالد", "عمر", "زيد", "سعد"]);                                    // highest; null last
     fireEvent.click(within(detail).getByRole("button", { name: /^العلامة/ }));
     expect(within(detail).getByRole("columnheader", { name: /العلامة/ }).getAttribute("aria-sort")).toBe("ascending");
-    expect(gbNames(detail)).toEqual(["زيد", "خالد", "عمر", "سعد"]);                                    // lowest; null last
+    expect(gbNames(detail)).toEqual(["خالد", "عمر", "زيد", "سعد"]);                                    // lowest; Phase R-1 (D-1): pending زيد after the finals; null last
     fireEvent.click(within(detail).getByRole("button", { name: "بانتظار التصحيح أولًا" }));
     expect(within(detail).getByRole("button", { name: "بانتظار التصحيح أولًا" }).getAttribute("aria-pressed")).toBe("true");
     expect(gbNames(detail)).toEqual(["زيد", "خالد", "سعد", "عمر"]);

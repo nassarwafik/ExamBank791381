@@ -53,6 +53,9 @@ describe("buildHistoryTimeline", () => {
     const progress = { history: [{ stageId: "B01", type: "status", toStatus: "approved", createdAt: "2026-01-05T00:00:00Z" }] };
     const range = { from: Date.parse("2026-01-19"), to: Date.parse("2026-02-01") + 86400000 - 1 };
     const pts = buildHistoryTimeline(def, [{ studentId: "s1", progress }], range, NOW);
-    expect(pts.every(p => Date.parse(p.weekStart) >= range.from)).toBe(true);
+    // Phase R-1: a week is kept when it OVERLAPS the range (a partial first week included), never when it ends before it.
+    expect(pts.length).toBeGreaterThan(0);
+    expect(pts.every(p => Date.parse(p.weekStart) + 7 * 86400000 - 1 >= range.from && Date.parse(p.weekStart) <= range.to)).toBe(true);
+    expect(pts.map(p => p.weekStart)).not.toContain("2026-01-11");
   });
 });

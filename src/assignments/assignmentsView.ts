@@ -37,12 +37,15 @@ export function gradebookRows(results: readonly StudentResult[], search: string,
     if (filter === "active") return !!s.activeAttempt;               // currently attempting (independent of grading)
     return rowGrading(s) === filter;                                  // pendingReview | final | notSubmitted
   });
-  const pct = (s: StudentResult) => (s.latestResult ? Number(s.latestResult.percentage || 0) : null);
+  // Phase R-1 (owner decision D-1): only a FINAL result has a mark to rank; a result awaiting the teacher follows the final ones
+  // (by name) whatever its provisional percentage, and a row with no result stays last (by name).
+  const pct = (s: StudentResult) => (s.latestResult && rowGrading(s) === "final" ? Number(s.latestResult.percentage || 0) : null);
+  const rank = (s: StudentResult) => (pct(s) !== null ? 0 : s.latestResult ? 1 : 2);
   const byName = (a: StudentResult, b: StudentResult) => String(a.studentName).localeCompare(String(b.studentName), "ar");
   const sorted = [...rows];
   if (sort === "name") sorted.sort(byName);
   else if (sort === "pendingFirst") sorted.sort((a, b) => { const ap = rowGrading(a) === "pendingReview" ? 0 : 1, bp = rowGrading(b) === "pendingReview" ? 0 : 1; return ap !== bp ? ap - bp : byName(a, b); });
-  else sorted.sort((a, b) => { const av = pct(a), bv = pct(b); if (av === null && bv === null) return byName(a, b); if (av === null) return 1; if (bv === null) return -1; return sort === "highest" ? bv - av : av - bv; });
+  else sorted.sort((a, b) => { const ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; if (ra !== 0) return byName(a, b); const av = pct(a) as number, bv = pct(b) as number; return sort === "highest" ? bv - av : av - bv; });
   return sorted;
 }
 

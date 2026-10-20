@@ -96,7 +96,7 @@ describe("R24 #2–#5 — assignment-results (gradebook) population is canonical
     expect(sB.latestResult.percentage).toBe(60);
     expect(sB.attempts).toHaveLength(1);
     expect(r.jsonBody.stats).toMatchObject({ students: 3, submitted: 3, pendingReview: 1, finalized: 2, notSubmitted: 0, active: 0 });
-    expect(r.jsonBody.stats.average).toBe(Number(((80 + 60 + 80) / 3).toFixed(1)));   // existing formula, now over members
+    expect(r.jsonBody.stats.average).toBe(Number(((80 + 80) / 2).toFixed(1)));         // over members; Phase R-1 (D-1): sB's pending 60 is not averaged
   });
   it("#3 excludes the archived student (row and stats), #4 excludes other-class, #5 excludes non-student role", async () => {
     const r = await resultsGet(seed());

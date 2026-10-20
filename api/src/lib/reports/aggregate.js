@@ -1,6 +1,7 @@
 // Pure, storage-free aggregation helpers for the Reports Center. The reports function does the blob
 // reads (prefix listing, batched) and hands plain arrays here, so every calculation is unit-testable
 // and there is no N+1 hidden inside the math.
+const { deriveGradingStatus } = require("../grading-status");
 
 // The latest attempt of a submission doc (or null when the student never submitted).
 function latestAttempt(submission) {
@@ -10,10 +11,14 @@ function latestAttempt(submission) {
 
 // A student's outcome on one assignment, distinguishing "missing" (never submitted) from a real
 // submitted score of 0. This is the distinction the assignments report must never blur.
+// Phase R-1 (owner decision D-1): a latest result that still awaits the teacher (canonical deriveGradingStatus →
+// "pendingReview": manual marks, unfinalized, a coding target still grading or held, a technical hold) is "pending" —
+// handed in, but carrying NO percentage, so its provisional score can never become a zero or enter an average.
 function studentOutcome(submission) {
   const latest = latestAttempt(submission);
   const attempts = submission && Array.isArray(submission.attempts) ? submission.attempts.length : 0;
   if (!latest) return { state: "missing", percentage: null, score: null, attempts };
+  if (deriveGradingStatus(latest) === "pendingReview") return { state: "pending", percentage: null, score: null, attempts };
   return { state: "submitted", percentage: Number(latest.percentage || 0), score: Number(latest.score || 0), attempts };
 }
 
@@ -46,15 +51,18 @@ function gradeDistribution(percentages) {
 
 // Assignment-style stats: submission rate, non-submitters, average attempts, avg score, missing vs zero.
 // entries: [{ studentId, submission }] across the class for ONE assignment.
+// A pending result counts as submitted (and in the submission rate) but never as a zero nor in the average.
+// avgAttempts is per SUBMITTING student: a non-submitter has no attempt to average.
 function assignmentStats(entries) {
   const total = entries.length;
-  let submitted = 0, missing = 0, zeros = 0, attemptSum = 0;
+  let submitted = 0, missing = 0, pending = 0, zeros = 0, attemptSum = 0;
   const pcts = [];
   for (const e of entries) {
     const o = studentOutcome(e.submission);
-    attemptSum += o.attempts;
     if (o.state === "missing") { missing += 1; continue; }
     submitted += 1;
+    attemptSum += o.attempts;
+    if (o.state === "pending") { pending += 1; continue; }
     pcts.push(o.percentage);
     if (o.score === 0) zeros += 1;
   }
@@ -62,21 +70,25 @@ function assignmentStats(entries) {
     students: total,
     submitted,
     missing,
+    pendingReview: pending,
     zeroScores: zeros,
     submissionRate: total ? Math.round((submitted / total) * 100) : 0,
     average: average(pcts),
-    avgAttempts: total ? round1(attemptSum / total) : 0
+    avgAttempts: submitted ? round1(attemptSum / submitted) : 0
   };
 }
 
-// Pools the latest percentages across many assignments for a student (their academic average).
+// Pools the latest FINAL percentages across many assignments for a student (their academic average);
+// submittedCount includes the handed-in results still awaiting the teacher (pendingCount of them).
 function studentAcademicAverage(submissionsByAssignment) {
   const pcts = [];
+  let pendingCount = 0;
   for (const sub of submissionsByAssignment) {
     const o = studentOutcome(sub);
     if (o.state === "submitted") pcts.push(o.percentage);
+    else if (o.state === "pending") pendingCount += 1;
   }
-  return { average: average(pcts), submittedCount: pcts.length };
+  return { average: average(pcts), submittedCount: pcts.length + pendingCount, pendingCount };
 }
 
 // ---- CSV ----

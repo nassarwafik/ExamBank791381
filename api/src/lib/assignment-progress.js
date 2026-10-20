@@ -7,7 +7,8 @@
 //   pendingReview  members whose LATEST attempt still needs manual review (deriveGradingStatus)
 //   graded         members whose latest attempt is final
 //   active         members with a live attempt right now (independent of grading, as in the gradebook)
-//   average        the mean percentage of the latest attempts of the submitted members (1 decimal), else null
+//   average        the mean percentage of the FINAL latest results (1 decimal), else null — a result still awaiting the teacher
+//                  is never averaged (Phase R-1, owner decision D-1: its provisional score is not an academic mark)
 //   lastSubmittedAt the newest completed-attempt timestamp
 const { activeAttemptOf } = require("./assignment-availability");
 const { deriveGradingStatus } = require("./grading-status");
@@ -20,14 +21,14 @@ function deriveAssignmentProgress(members, submissionsByStudent) {
     const s = submissionsByStudent.get(String(u.userId)) || null;
     const attempts = Array.isArray(s?.attempts) ? s.attempts : [], latest = attempts.length ? attempts[attempts.length - 1] : null;
     if (latest) {
-      submitted++; sum += Number(latest.percentage || 0);
+      submitted++;
       const g = deriveGradingStatus(latest);
-      if (g === "pendingReview") pendingReview++; else if (g === "final") graded++;
+      if (g === "pendingReview") pendingReview++; else if (g === "final") { graded++; sum += Number(latest.percentage || 0); }
       for (const at of attempts) last = Math.max(last, ms(at && at.submittedAt));
     } else notSubmitted++;
     if (activeAttemptOf(s)) active++;
   }
-  return { expected: members.length, submitted, notSubmitted, pendingReview, graded, active, average: submitted ? Number((sum / submitted).toFixed(1)) : null, lastSubmittedAt: last ? new Date(last).toISOString() : "" };
+  return { expected: members.length, submitted, notSubmitted, pendingReview, graded, active, average: graded ? Number((sum / graded).toFixed(1)) : null, lastSubmittedAt: last ? new Date(last).toISOString() : "" };
 }
 
 module.exports = { deriveAssignmentProgress };
