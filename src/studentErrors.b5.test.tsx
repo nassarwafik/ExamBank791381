@@ -77,7 +77,7 @@ describe("F2 — the exam page never shows browser or parser text", () => {
 });
 
 describe("F2 — the student portal", () => {
-  const mountPortal = () => { const onLogout = vi.fn(); render(<StudentPortal token="st" onLogout={onLogout} />); return onLogout; };
+  const mountPortal = () => { const onLogout = vi.fn(); render(<StudentPortal token="st" displayName="أ" onLogout={onLogout} />); return onLogout; };
   it("a dropped connection on the dashboard shows the Arabic connection message", async () => {
     globalThis.fetch = vi.fn(() => dropped()) as unknown as typeof fetch;
     mountPortal();
