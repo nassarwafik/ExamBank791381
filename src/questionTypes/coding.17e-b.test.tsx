@@ -24,7 +24,9 @@ type CtxMod = typeof import("./studentAttemptContext");
 type ExecMod = typeof import("../coding/codingExecution");
 const sanitizeExamForStudent = (sanitizer as unknown as { sanitizeExamForStudent: (exam: unknown) => { sections: { questions: Question[] }[] } }).sanitizeExamForStudent;
 
-const CANARY_RE = /HIDDEN_STDIN_CANARY_17EB|HIDDEN_EXPECTED_CANARY_17EB|HIDDEN_WEIGHT_CANARY_17EB|REFERENCE_SOLUTION_CANARY_17EB|HIDDEN_LABEL_CANARY_17EB|9\.17|allOrNothing|scoringPolicy|hiddenTests|referenceSolutions/;
+// The hidden weight matches only as a whole number: the DOM, requests and storage carry live timestamps, and "…:09.170Z" holds its
+// digits (one timestamp in a thousand — the defect of the 19D hotfix, #377). Pinned by the T-1 test at the end of this file.
+const CANARY_RE = /HIDDEN_STDIN_CANARY_17EB|HIDDEN_EXPECTED_CANARY_17EB|HIDDEN_WEIGHT_CANARY_17EB|REFERENCE_SOLUTION_CANARY_17EB|HIDDEN_LABEL_CANARY_17EB|(?<![\d.])9\.17(?!\d)|allOrNothing|scoringPolicy|hiddenTests|referenceSolutions/;
 const CFG = {
   allowedLanguages: ["python", "java"], defaultLanguage: "python",
   starterCode: { python: "a, b = map(int, input().split())\n", java: "public class Main {\n    public static void main(String[] args) {\n    }\n}\n" },
@@ -436,5 +438,16 @@ describe("17E-B E2E — autosave × run race, refresh restore, secrecy through t
     first.unmount(); cleanup();
     await openPage();
     expect((await editorBox()).value).toBe("print('B')\n\t# آخر تعديل 🙂\n");
+  });
+});
+
+describe("T-1 — the 17EB canary and live timestamps", () => {
+  it("never matches a timestamp that holds the weight's digits, and still matches the weight itself", () => {
+    for (const at of ["2026-10-20T19:20:09.170Z", "2026-10-20T19:20:59.179Z", "2026-10-20T09:17:00.000Z"]) {
+      expect(JSON.stringify({ savedAt: at, endsAt: at })).not.toMatch(CANARY_RE);
+      expect("<time>" + at + "</time>").not.toMatch(CANARY_RE);
+    }
+    for (const leak of ['{"weight":9.17}', "[9.17,1]", "<td>9.17</td>", "الوزن 9.17", "HIDDEN_WEIGHT_CANARY_17EB", '"hiddenTests"']) expect(leak).toMatch(CANARY_RE);
+    for (const other of ['{"t":19.17}', '"v":"1.9.17"', '{"t":9.175}']) expect(other).not.toMatch(CANARY_RE);   // another number holding the digits
   });
 });
