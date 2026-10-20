@@ -49,6 +49,7 @@ import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
 // Phase 21E.3 — assessment integrity: the record of questions whose renderer could not recover (see student/exam/renderFailures.ts).
 import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailureReport,unavailablePages,renderFailureSubmitWarning,type RenderFailureState,type RenderFailureEvent,type RenderFailureReport} from "./student/exam/renderFailures";
 import type {SaveStateKind} from "./studentSaveState";
+import {NETWORK_ERROR_TEXT,UNEXPECTED_RESPONSE_TEXT,safeJson,userFacingMessage} from "./userFacingErrors";
 
 type ExamBody={presentation?:unknown;title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
@@ -156,6 +157,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // lastSavedAt / dirty / error / retry). The server-side stale-attempt guard remains the final write backstop.
  const saveEpoch=useRef(0);
  const startingRef=useRef(false),finalizingRef=useRef(false);
+ // Batch 5 (F3): after a finalize that failed while online (server error / dropped request), the countdown tick waits
+ // 2s, 4s, 8s … (max 30s) before the next attempt instead of re-sending it every second. Reset on success and on reconnect.
+ const finalizeRetryAt=useRef(0),finalizeFailures=useRef(0);
+ const monotonicMs=()=>typeof performance!=="undefined"?performance.now():0;   // never the device clock (UX-7b timer authority)
  // Phase 17E-C — server-read tickets (see readAndAdopt). invalidateReads() makes every read issued before it stale.
  const readSeq=useRef(0),appliedRead=useRef(0);
  const invalidateReads=()=>{appliedRead.current=++readSeq.current};
@@ -184,7 +189,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const policy=normalizeAttemptPolicy(state?.attemptPolicy??assignment.attemptPolicy);
  const paused=state?.activeAttempt?.status==="paused";
 
- async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.",r.headers?.get?.("x-request-id")||"");return j}
+ // Batch 5 (F2): the status decides before the body is read (a non-JSON 401 still logs out); a dropped connection or a non-JSON
+ // body is shown in Arabic. A network failure stays a plain Error (not ApiError), so it stays retryable exactly as before.
+ async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);let r:Response;try{r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h})}catch(e){if(e instanceof Error&&e.name==="AbortError")throw e;throw new Error(NETWORK_ERROR_TEXT)}const j=await safeJson<T&{error?:string}>(r);if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,userFacingMessage(j?.error,r.status,"حدث خطأ."),r.headers?.get?.("x-request-id")||"");if(j===null)throw new Error(UNEXPECTED_RESPONSE_TEXT);return j}
  const api=subApi;
  // Phase 17B — the generic attempt seam for registered renderers (coding practice runs): same-origin /api/ paths only; the
  // token is added HERE and never handed to the renderer, the Answer, storage or the builder.
@@ -201,7 +208,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // questions ONLY when this resolves.
  async function fetchExamBody():Promise<ExamBody>{
   const h=new Headers();h.set("x-student-token",token);h.set("Authorization","Bearer "+token);
-  const r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h});
+  let r:Response;try{r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h})}catch{throw new Error(NETWORK_ERROR_TEXT)}   // Batch 5 (F2): never "Failed to fetch"
   let j:{assignment?:{exam?:ExamBody;requiresStart?:boolean};error?:string}={};try{j=await r.json()}catch{}
   if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}
   if(!r.ok)throw new ApiError(r.status,j.error||"تعذر تحميل الأسئلة.",r.headers?.get?.("x-request-id")||"");
@@ -396,7 +403,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  },[resync]);
  useEffect(()=>{
   // Update the ref synchronously (event handlers/submit read it immediately, before the state re-render commits).
-  const handleOnline=()=>{onlineRef.current=true;if(mountedRef.current)setOnline(true);void recoverAndSave()};
+  const handleOnline=()=>{onlineRef.current=true;finalizeRetryAt.current=0;finalizeFailures.current=0;if(mountedRef.current)setOnline(true);void recoverAndSave()};
   const handleOffline=()=>{onlineRef.current=false;if(mountedRef.current)setOnline(false)};
   window.addEventListener("online",handleOnline);
   window.addEventListener("offline",handleOffline);
@@ -478,6 +485,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // finalize, and do NOT retry every countdown tick (no finalize storm). The reconnect flow resyncs
   // authoritative state first and finalizes exactly once (or resumes if the attempt was extended).
   if(!onlineRef.current){if(mountedRef.current)setExpired(true);return}
+  if(monotonicMs()<finalizeRetryAt.current){if(mountedRef.current)setExpired(true);return}   // F3: backing off after a failure
   finalizingRef.current=true;setExpired(true);submittingRef.current=true;
   try{
    await saveQueue.current.catch(()=>{});
@@ -486,9 +494,11 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // context (epoch bump), cancel any pending autosave debounce, reset revision/savedRevision/dirtyAttempt/
    // dirtyGeneration and save flags, and take the server's finalized draft (NEVER upload post-deadline local
    // answers). Then show the result. `expired` stays true (a timed-out result); beforeunload no longer warns.
+   finalizeRetryAt.current=0;finalizeFailures.current=0;
    if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("");scrollTop()}
   }catch(e){
    finalizingRef.current=false;
+   finalizeFailures.current++;finalizeRetryAt.current=monotonicMs()+Math.min(30000,2000*2**(finalizeFailures.current-1));
    // A 409 here can mean the attempt is NOT actually expired anymore (a dueAtOverride extended the effective
    // deadline), or another tab already submitted/started a new attempt. Decide from AUTHORITATIVE server state
    // through the SAME attempt-context logic (adoptOrKeepActive) — never resume a new attempt with stale answers.
