@@ -7,13 +7,14 @@ import type { TrackMeta } from "../projects/types";
 export type Kpi = { label: string; value: ReactNode; hint?: string };
 type Cell = string | number;
 
-export type ClassReportData = { class: { name: string }; projects: { title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number }[] };
+export type ClassReportData = { class: { name: string }; projects: { title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; notStartedCount?: number }[] };
 export function classReportRows(kpis: Kpi[], data: ClassReportData): Cell[][] {
   const csv: Cell[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
   for (const p of data.projects) {
     csv.push([p.title, "التقدم العام", String(p.avgOverall)]);
     for (const t of p.tracks) csv.push([p.title, t.title, String(p.trackAverages[t.trackId] || 0)]);
     csv.push([p.title, "مكتملون", String(p.completedCount)]);
+    if (p.notStartedCount) csv.push([p.title, "لم يبدأوا", String(p.notStartedCount)]);   // Phase P-5d — only when reported
   }
   return csv;
 }
