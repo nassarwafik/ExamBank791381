@@ -148,11 +148,11 @@
 /* ---------- Action menu (disclosure of plain controls) ---------- */
 .eb-menu-trigger{
   display:inline-flex; align-items:center; justify-content:center; gap:var(--eb-space-1); min-width:36px; min-height:36px; padding:0;
-  border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-xs); background:var(--eb-surface); color:var(--eb-text); font:inherit; cursor:pointer;
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text-heading); font:inherit; cursor:pointer;
   transition:background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
 }
 .eb-menu-trigger.has-text{ padding:0 var(--eb-space-3); }
-.eb-menu-trigger:hover,.eb-menu-trigger[aria-expanded="true"]{ background:var(--eb-primary-050); border-color:var(--eb-primary); color:var(--eb-primary-strong); }
+.eb-menu-trigger:hover,.eb-menu-trigger[aria-expanded="true"]{ background:var(--eb-surface-2); border-color:var(--eb-border-strong); color:var(--eb-text-heading); }
 .eb-menu-trigger:disabled{ opacity:.55; cursor:default; }
 /* 21E.2 — a menu is a transient popover of the control that opened it, so it paints above every layer that can host such a
    control: pages, the full-screen work surfaces (--eb-z-overlay: the structured builder) and dialogs (--eb-z-modal). With
@@ -160,13 +160,13 @@
 .eb-menu-panel{
   z-index:calc(var(--eb-z-modal) + 1); min-width:220px; max-width:min(300px, calc(100vw - 16px)); overflow:auto;
   overscroll-behavior:contain; /* 21E.2 K1 — a capped panel scrolls inside; reaching its end never scrolls the page under it (that would close it) */
-  display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-1);
-  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:var(--eb-sh-lg);
+  display:flex; flex-direction:column; gap:0; padding:var(--eb-space-1) 0; /* UX-R3 — the reference popover: full-width rows, soft lift */
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); box-shadow:var(--eb-sh-md);
 }
 .eb-menu-item{
   display:flex; align-items:center; gap:var(--eb-space-2); width:100%; text-align:start;
-  border:0; background:transparent; border-radius:var(--eb-r-xs); padding:var(--eb-space-2) var(--eb-space-3);
-  color:var(--eb-text); font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-medium); cursor:pointer;
+  border:0; background:transparent; border-radius:0; padding:var(--eb-space-2) var(--eb-space-4);
+  color:var(--eb-text-heading); font:inherit; font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); cursor:pointer;
 }
 .eb-menu-item:hover{ background:var(--eb-surface-2); }
 .eb-menu-item:disabled{ opacity:.55; cursor:default; }

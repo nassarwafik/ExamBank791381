@@ -8,6 +8,7 @@ import type { StageStatus } from "./types";
 const FALLBACK: Record<string, string> = {
   "--eb-primary": "#2a0a4e",
   "--eb-primary-strong": "#4a2380",
+  "--eb-primary-300": "#8b74b8",
   "--eb-info": "#0284c7",
   "--eb-success": "#16a34a",
   "--eb-warn": "#d97706",
@@ -36,8 +37,11 @@ export function withAlpha(color: string, alpha: number): string {
 }
 
 export type ChartPalette = {
-  /** Series colours cycled by track index (stable per track position). */
+  /** Series colours cycled by track index (stable per track position). UX-R3: the deep purple, then its lavender step, then the
+   *  warn and success hues — the redesign palette first, distinct hues after it. */
   series: string[];
+  /** UX-R3 — a three-step judgement scale for value bars (below 60 · 60–79 · 80+), from the semantic tokens. */
+  scale: { low: string; mid: string; high: string };
   primary: string;
   primarySoft: string;
   grid: string;
@@ -50,7 +54,8 @@ export function chartPalette(): ChartPalette {
   const warn = tokenColor("--eb-warn");
   const success = tokenColor("--eb-success");
   return {
-    series: [withAlpha(primary, 0.85), withAlpha(info, 0.85), withAlpha(warn, 0.85), withAlpha(success, 0.85)],
+    series: [withAlpha(primary, 0.85), withAlpha(tokenColor("--eb-primary-300"), 0.9), withAlpha(warn, 0.85), withAlpha(success, 0.85)],
+    scale: { low: withAlpha(tokenColor("--eb-danger"), 0.76), mid: withAlpha(warn, 0.76), high: withAlpha(success, 0.76) },
     primary,
     primarySoft: withAlpha(primary, 0.14),
     grid: withAlpha(tokenColor("--eb-faint"), 0.25),

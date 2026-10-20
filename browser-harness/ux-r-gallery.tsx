@@ -3,7 +3,7 @@
 // icon buttons, the action menu, fields, empty state, breadcrumb, chart card, dialog surface) with the app's own stylesheets
 // in the app's own order, so scripts/capture-visual-baseline-ux-r.mjs (PART=gallery) can screenshot the whole kit before and
 // after each UX-R phase. Static demo props only: no app state, no network.
-import { StrictMode, type ReactNode } from "react";
+import { StrictMode, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import "../src/design-tokens.css";
 import "../src/fonts.css";
@@ -14,6 +14,7 @@ import "../src/page-parts.css";
 import "../src/shell.css";
 import "../src/ui/ui.css";
 import "../src/ui/field.css";
+import "../src/ui/kit.css";
 import ActionMenu from "../src/ui/ActionMenu";
 import Breadcrumb from "../src/ui/Breadcrumb";
 import ChartCard from "../src/ui/ChartCard";
@@ -26,7 +27,44 @@ import ProgressRing from "../src/ui/ProgressRing";
 import SectionHeader from "../src/ui/SectionHeader";
 import StatCard from "../src/ui/StatCard";
 import StatusBadge from "../src/ui/StatusBadge";
-import { IconDashboard, IconDownload, IconEdit, IconMore, IconPlus, IconRefresh, IconStudents, IconTrash } from "../src/icons";
+import Card from "../src/ui/Card";
+import { ListRows, ListRow, RowAction } from "../src/ui/ListRows";
+import SubNav from "../src/ui/SubNav";
+import KpiStrip from "../src/ui/KpiStrip";
+import Segmented from "../src/ui/Segmented";
+import Tooltip from "../src/ui/Tooltip";
+import { IconAssignments, IconDashboard, IconDownload, IconEdit, IconMore, IconPlus, IconRefresh, IconStudents, IconTrash } from "../src/icons";
+
+// UX-R3 — the kit's interactive pieces keep local demo state.
+function KitDemo() {
+  const [cls, setCls] = useState("c2");
+  const [period, setPeriod] = useState("30");
+  return (
+    <>
+      <S id="kit-subnav-card" title="UX-R3 SubNav + Card + ListRows + RowAction">
+        <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0, 1fr)", gap: "24px", alignItems: "start" }}>
+          <SubNav label="الصفوف" currentId={cls} onSelect={setCls} groups={[{ label: "الصفوف النشطة", items: [{ id: "c1", label: "العاشر – أ", count: 26 }, { id: "c2", label: "العاشر – ب", count: 25 }, { id: "c3", label: "الحادي عشر – أ", count: 23 }] }, { label: "إدارة", items: [{ id: "new", label: "إنشاء صف" }, { id: "archive", label: "الأرشيف" }] }]} />
+          <Card title="الطلاب" aside={<span>ترتيب حسب: الاسم</span>} flush>
+            <ListRows label="الطلاب">
+              <ListRow icon={<IconStudents size={18} />} title="أحمد خالد الحسن" context="ID 20261045" meta="آخر دخول: اليوم" status={<StatusBadge tone="success">نشط</StatusBadge>} action={<RowAction onClick={() => {}} />} />
+              <ListRow icon={<IconStudents size={18} />} title="جود سامر النجار" context="ID 20261047" meta="آخر دخول: قبل ٥ أيام" status={<StatusBadge tone="warn">يحتاج متابعة</StatusBadge>} action={<RowAction onClick={() => {}} />} />
+              <ListRow icon={<IconAssignments size={18} />} title="اختبار الدوال التربيعية" context="العاشر – أ" meta="اختبار قصير" action={<RowAction label="فتح" onClick={() => {}} />} />
+            </ListRows>
+          </Card>
+        </div>
+      </S>
+      <S id="kit-kpis" title="UX-R3 KpiStrip + Segmented + Tooltip">
+        <div style={{ display: "grid", gap: "16px" }}>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <Segmented label="الفترة" value={period} onChange={setPeriod} options={[{ value: "7", label: "٧ أيام" }, { value: "30", label: "٣٠ يومًا" }, { value: "90", label: "٩٠ يومًا" }]} />
+            <Tooltip text="ألصق قائمة أسماء دفعة واحدة"><button type="button" className="eb-button">إضافة جماعية</button></Tooltip>
+          </div>
+          <KpiStrip label="المؤشرات الرئيسية" items={[{ label: "الطلاب النشطون", value: "146", hint: "في ٦ صفوف فعّالة" }, { label: "متوسط الصفوف", value: "78.4%", hint: "▲ 3.2% مقارنة بالسابق", trend: "up" }, { label: "نسبة التسليم", value: "91%", hint: "▲ 5% عن الشهر الماضي", trend: "up" }, { label: "بانتظار التصحيح", value: "23", hint: "8 متأخرة", trend: "down" }]} />
+        </div>
+      </S>
+    </>
+  );
+}
 
 const S = ({ id, title, children }: { id: string; title: string; children: ReactNode }) => (
   <section id={id} data-gallery={id} style={{ margin: "16px", padding: "16px", border: "1px dashed var(--eb-line-2)", borderRadius: "8px", background: "var(--eb-surface)" }}>
@@ -39,6 +77,7 @@ const Row = ({ children }: { children: ReactNode }) => <div style={{ display: "f
 function Page() {
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "8px 0 40px", fontFamily: "var(--eb-font)", background: "var(--eb-bg)" }}>
+      <KitDemo />
       <S id="page-header" title="PageHeader + Breadcrumb">
         <PageHeader title="الصفوف والطلاب" icon={<IconStudents size={22} />} breadcrumb={[{ label: "لوحة المتابعة", onSelect: () => {} }, { label: "الصفوف والطلاب" }]} />
         <Breadcrumb items={[{ label: "بنك الامتحانات", onSelect: () => {} }, { label: "باني الامتحان" }]} />

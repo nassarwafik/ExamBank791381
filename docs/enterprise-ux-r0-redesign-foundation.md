@@ -613,3 +613,127 @@ test) failed once.
 - That test renders `TeacherPlatform` alone, none of the shell.
 - Measured afterwards: 0 / 8 failures in isolation on `main` `a70350c1` and 0 / 8 on the R2 head.
 - It is recorded here and not patched (`AGENTS.md` §12).
+
+---
+
+# Phase UX-R3 — The component kit
+
+**Owner direction (2026-10-20):** start R3. R2 had already merged (PR #392), so R3 branches from `main` `0ed8b9cb` as
+`feature/ux-r3-kit`, with no stacking.
+
+## R3.1 What changes for the user
+
+**On every page now**, because these shared primitives are used everywhere:
+- **Buttons** have a hairline border and a neutral grey hover; quiet buttons use ink text.
+- **Stat cards** are flat: hairline border, 8 px radius, no shadow. Their thin accent bar stays.
+- **Chart cards** take the same card look, with a card-sized title.
+- **Dialogs and empty states** use the 8 px radius.
+- **The «⋮» menu** is the reference popover: full-width rows, 14 px text, a soft lift, a hairline border.
+- **Progress bars** are thinner, and their second series is the lavender step.
+- **Every dashboard chart** draws in the redesign palette: deep purple, the lavender step, and the semantic danger / warn /
+  success scale for topic averages. **No blue is left in the teacher charts.**
+
+**New components, ready for the page phases (R4 onward)**, shown in the gallery:
+
+| Component | What it is |
+|---|---|
+| `ui/Card.tsx` | hairline container; a titled card is a region named by its heading |
+| `ui/ListRows.tsx` (`ListRows` / `ListRow` / `RowAction`) | the reference's ≥ 44 px rows split by hairlines: icon, title, muted context, meta, status, inline action. A real list; `RowAction` is a real button named by its text («تعديل» by default) |
+| `ui/SubNav.tsx` | settings-style text navigation: a named `<nav>`, labelled groups, the current item a grey pill with `aria-current="page"`, counts kept in the name |
+| `ui/KpiStrip.tsx` | one card split into cells by vertical hairlines. A description list, so each value is read with its label |
+| `ui/Segmented.tsx` | a WAI-ARIA radio group: one Tab stop; arrows follow the reading direction (in RTL the left arrow goes to the next option); Home / End |
+| `ui/Tooltip.tsx` | the dark hint. WCAG 1.4.13: hover **and** focus, it stays while the pointer is on it, Escape dismisses it without moving focus. It *describes* the control, never names it |
+
+**Not included:**
+- **No cascading submenu.** No page needs one yet, and the grouped menu (`.eb-menu-group` / `-label` / `-sep`) already covers the
+  reference popover. It can come with the first page that needs it.
+- **The exam-question chart palette (`src/charts/chartTheme.ts`, ECharts) is left unchanged on purpose.** It colours charts
+  *inside questions*, where a question's text may name a series by its colour («الخط الأزرق»), and question version families are
+  immutable. It is content, not chrome.
+
+## R3.2 Edit set
+
+**New components and their stylesheet:**
+- `src/ui/Card.tsx`, `ListRows.tsx`, `SubNav.tsx`, `KpiStrip.tsx`, `Segmented.tsx`, `Tooltip.tsx`: new.
+- `src/ui/kit.css`: new, imported by both shells after `ui.css`.
+  - Token-only: zero colour literals, as the ratchet requires of a new sheet.
+  - Logical properties only.
+  - 44 px targets on touch and below 1024 px.
+  - A canonical focus ring on every interactive part.
+  - `[hidden]` honoured on the tooltip.
+
+**Restyled primitives:**
+- `src/ui/ui.css`: buttons, stat card (flat; the pinned accent bar kept), dialog, empty state, progress bar, chart card, chip.
+- `src/page-parts.css`: the menu trigger and panel. `overflow:auto`, `overscroll-behavior:contain`, the
+  `calc(var(--eb-z-modal) + 1)` layer and every 44 px rule are unchanged, and no transition was added, so the reduced-motion
+  lists stay complete.
+
+**Chart theme:**
+- `src/projects/chartPalette.ts`:
+  - the second series is `--eb-primary-300`, replacing the info blue;
+  - a new `scale { low, mid, high }` comes from the danger / warn / success tokens;
+  - `--eb-primary-300` is added to the fallback copy.
+- `src/TeacherDashboard.tsx`: the five charts read `chartPalette()` instead of literals (`#2563eb`, `rgba(37,99,235,…)`, sky,
+  red / green / amber, slate grid), with the palette added to each chart's memo dependencies.
+
+**Gallery:** `browser-harness/ux-r-gallery.tsx` shows the new components (12 sections).
+
+**Tests:**
+- New:
+  - `src/ui/kit.ux-r3.test.tsx` (18 tests: semantics, keyboard, WCAG 1.4.13, kit.css guards);
+  - `src/projects/chartPalette.ux-r3.test.ts` (5 tests).
+- Updated:
+  - `src/projects/chartPalette.tokenMirror.ux-r1.test.ts`: adds `--eb-primary-300` to the mirror list.
+  - `src/TeacherDashboard.test.tsx`: the topic-colour pin. It compared the old rgba literals; it now checks the same threshold
+    mapping (< 60 → `scale.low`, ≥ 80 → `scale.high`, otherwise `scale.mid`). The mapping was the invariant; the literals were
+    the look.
+
+**Not changed:**
+- any component's markup, class names or props;
+- every pinned invariant listed in the constraint map: StatCard's DOM and accent bar, the menu's layer and scroll containment,
+  the phone / coarse 44 px rules, the reduced-motion lists, the focus-ring tokens, the dialog's first fixed rule;
+- ActionMenu's consumer list;
+- the colour ratchet (2 298).
+
+## R3.3 Fail-first evidence
+
+Not applicable: R3 adds components and restyles; it fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R3.4 Mutation proof
+
+Each mutant was run against `src/ui`, both chart palette tests, `TeacherDashboard.test.tsx` and the colour ratchet. Each file was
+restored byte-for-byte (SHA-256), and `git status` was clean afterwards.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | `RowAction` loses `type="button"` | KILLED | kit «RowAction is a real button…» |
+| M2 | SubNav marks every item current | KILLED | kit «exactly the current item carries aria-current=page…» |
+| M3 | Segmented ignores RTL | KILLED | kit «in RTL the LEFT arrow goes to the next option…» |
+| M4 | Tooltip: Escape no longer dismisses | KILLED | kit «… Escape dismisses it without moving focus» |
+| M5 | SubNav loses its 44 px touch target | KILLED | kit «touch screens and the drawer layout get 44 px targets…» |
+| M6 | a colour literal in kit.css | KILLED | colour ratchet (a new sheet must be 0); kit «is token-only…» |
+| M7 | chart series[1] back to the info blue | KILLED | chartPalette.ux-r3 «series: the deep purple, then its lavender step…» |
+| M8 | dashboard reintroduces a blue literal | KILLED | chartPalette.ux-r3 «no hard-coded chart colour remains…» |
+| M9 | Tooltip names the control instead of describing it | KILLED | kit Tooltip tests |
+| M10 | KpiStrip labels are not `<dt>` | KILLED | kit «a description list: each value paired with its label…» |
+
+**A test-hygiene fix found by M3.** The RTL test restored its `getComputedStyle` mock only at the end of its body, so a failing
+assertion leaked the mock into later tests: a Tooltip test failed under M3 too. The restore now runs in `afterEach`, and a re-run
+of M3 is killed by the RTL test alone.
+
+## R3.5 Browser gates (CI workflows, run locally with CI's tools: playwright-core 1.55.0, axe-core 4.10.2)
+
+A change to `src/ui/**` triggers two CI workflows. Both were run on the R3 build:
+- **L.8 reader journey, axe and touch targets:** «L.8 gate passed».
+- **U.1 class bar, roster, student sheet and axe:** «U.1 gate passed».
+
+## R3.6 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture (14 pages × 3 viewports + gallery) | 42 / 45 clean; the three recorded phone overflows only (§7) |
+| `npm test`, full root suite | **1 174 / 1 174 files, 14 012 / 14 012 tests** |
+| `npm run lint` | exit 0. The two `TeacherDashboard.tsx` warnings left (lines 276 / 301, about `loadDashboard` / `loadAchievements`) predate R3 |
+| `npm run build` (tsc -b + bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 298, unchanged (kit.css counts 0) |
