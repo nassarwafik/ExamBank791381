@@ -106,7 +106,8 @@ describe("UX-4 request parity — classrooms", () => {
     fireEvent.change(within(d).getByLabelText("السنة الدراسية"), { target: { value: "2026-2027" } });
     fireEvent.click(within(d).getByRole("button", { name: "إنشاء الصف" }));
     await screen.findByText("✓ تم إنشاء الصف.");
-    expect(posts("/api/classrooms")).toEqual([{ action: "create", name: "العاشر 1", grade: "العاشر", schoolYear: "2026-2027" }]);
+    // Batch 4 (D3), updated deliberately: the create also carries the form's idempotency key (one class per submission).
+    expect(posts("/api/classrooms")).toEqual([{ action: "create", name: "العاشر 1", grade: "العاشر", schoolYear: "2026-2027", requestKey: expect.stringMatching(/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/) }]);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
   it("project toggle → confirm → setPrograms {classId, programCodes} (add keeps the others; remove drops only that code); cancel → no request", async () => {

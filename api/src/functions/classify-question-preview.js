@@ -6,6 +6,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { updateSourceQuestions, updateIndexEntries } = require("../lib/bank-index-writes");
 
 const BANK_CONTAINER = "bank";
 const ASSETS_CONTAINER = "assets";
@@ -14,8 +15,6 @@ const SOURCE_ID = "791381-2025";
 const SOURCE_BLOB =
   `sources/${SOURCE_ID}.json`;
 
-const INDEX_BLOB =
-  "index/questions-index.json";
 
 
 // ==========================================================
@@ -114,41 +113,6 @@ async function downloadBlobJson(
 
   return JSON.parse(
     buffer.toString("utf8")
-  );
-}
-
-
-async function uploadJson(
-  containerClient,
-  blobName,
-  data
-) {
-  const text =
-    JSON.stringify(
-      data,
-      null,
-      2
-    );
-
-
-  const blockBlobClient =
-    containerClient
-      .getBlockBlobClient(
-        blobName
-      );
-
-
-  await blockBlobClient.uploadData(
-    Buffer.from(
-      text,
-      "utf8"
-    ),
-    {
-      blobHTTPHeaders: {
-        blobContentType:
-          "application/json; charset=utf-8"
-      }
-    }
   );
 }
 
@@ -650,140 +614,119 @@ async function saveClassification(
     new Date()
       .toISOString();
 
+  // Batch-4 data-integrity fix — the classification is applied to the question in memory (the response shows it) and
+  // then, inside one CAS round each, to the CURRENT source document and the CURRENT index entry: an edit or an import
+  // another request saved while the AI answered is kept (no read-then-overwrite of the whole document).
+  const applyToSourceQuestion =
+    question => {
+      question.classification = {
+        topic:
+          classification.primaryTopic,
 
-  question.classification = {
-    topic:
-      classification.primaryTopic,
+        secondaryTopics:
+          classification.secondaryTopics,
 
-    secondaryTopics:
-      classification.secondaryTopics,
+        difficulty:
+          classification.difficulty,
 
-    difficulty:
-      classification.difficulty,
+        difficultyLabel:
+          classification.difficultyLabel,
 
-    difficultyLabel:
-      classification.difficultyLabel,
+        difficultyReason:
+          classification.difficultyReason,
 
-    difficultyReason:
-      classification.difficultyReason,
+        difficultyConfidence:
+          classification.difficultyConfidence,
 
-    difficultyConfidence:
-      classification.difficultyConfidence,
+        familyKey:
+          classification.familyKey,
 
-    familyKey:
-      classification.familyKey,
+        needsReview:
+          classification.needsReview,
 
-    needsReview:
-      classification.needsReview,
+        reviewReason:
+          classification.reviewReason,
 
-    reviewReason:
-      classification.reviewReason,
+        status:
+          classification.needsReview
+            ? "needs-review"
+            : "classified",
 
-    status:
-      classification.needsReview
-        ? "needs-review"
-        : "classified",
+        model,
 
-    model,
-
-    classifiedAt:
-      now
-  };
-
-
-  if (!question.flags) {
-    question.flags = {};
-  }
-
-
-  question.flags.hasCLI =
-    classification.hasCLI;
+        classifiedAt:
+          now
+      };
 
 
-  question.flags.requiresCalculation =
-    classification.requiresCalculation;
+      if (!question.flags) {
+        question.flags = {};
+      }
 
 
-  question.reviewStatus =
-    classification.needsReview
-      ? "needs-review"
-      : "classified";
+      question.flags.hasCLI =
+        classification.hasCLI;
 
 
-  // --------------------------------------------------------
-  // Save source JSON
-  // --------------------------------------------------------
+      question.flags.requiresCalculation =
+        classification.requiresCalculation;
 
-  await uploadJson(
+
+      question.reviewStatus =
+        classification.needsReview
+          ? "needs-review"
+          : "classified";
+    };
+
+  applyToSourceQuestion(
+    question
+  );
+
+  await updateSourceQuestions(
     bankContainer,
     SOURCE_BLOB,
-    bankDocument
+    [question.id],
+    applyToSourceQuestion,
+    now
   );
 
-
-  // --------------------------------------------------------
-  // Update lightweight index
-  // --------------------------------------------------------
-
-  const indexDocument =
-    await downloadBlobJson(
-      bankContainer,
-      INDEX_BLOB
-    );
-
-
-  const indexQuestion =
-    indexDocument.questions
-      ?.find(
-        item =>
-          item.id === question.id
-      );
-
-
-  if (indexQuestion) {
-    indexQuestion.topic =
-      classification.primaryTopic;
-
-    indexQuestion.secondaryTopics =
-      classification.secondaryTopics;
-
-    indexQuestion.difficulty =
-      classification.difficulty;
-
-    indexQuestion.difficultyLabel =
-      classification.difficultyLabel;
-
-    indexQuestion.familyKey =
-      classification.familyKey;
-
-    indexQuestion.hasCLI =
-      classification.hasCLI;
-
-    indexQuestion.requiresCalculation =
-      classification.requiresCalculation;
-
-    indexQuestion.needsReview =
-      classification.needsReview;
-
-    indexQuestion.reviewStatus =
-      question.reviewStatus;
-
-    indexQuestion.classificationConfidence =
-      classification.difficultyConfidence;
-  }
-
-
-  indexDocument.updatedAt =
-    now;
-
-
-  await uploadJson(
+  await updateIndexEntries(
     bankContainer,
-    INDEX_BLOB,
-    indexDocument
+    [question.id],
+    indexQuestion => {
+      indexQuestion.topic =
+        classification.primaryTopic;
+
+      indexQuestion.secondaryTopics =
+        classification.secondaryTopics;
+
+      indexQuestion.difficulty =
+        classification.difficulty;
+
+      indexQuestion.difficultyLabel =
+        classification.difficultyLabel;
+
+      indexQuestion.familyKey =
+        classification.familyKey;
+
+      indexQuestion.hasCLI =
+        classification.hasCLI;
+
+      indexQuestion.requiresCalculation =
+        classification.requiresCalculation;
+
+      indexQuestion.needsReview =
+        classification.needsReview;
+
+      indexQuestion.reviewStatus =
+        question.reviewStatus;
+
+      indexQuestion.classificationConfidence =
+        classification.difficultyConfidence;
+    },
+    now
   );
 }
-
 
 // ==========================================================
 // MAIN

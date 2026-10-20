@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
+const { replaceSourceInIndex } = require("../lib/bank-index-writes");
 
 const RAW_CONTAINER = "raw";
 const BANK_CONTAINER = "bank";
@@ -45,17 +46,6 @@ async function downloadBlobBuffer(containerClient, blobName) {
   return await streamToBuffer(
     response.readableStreamBody
   );
-}
-
-
-async function downloadBlobText(containerClient, blobName) {
-  const buffer =
-    await downloadBlobBuffer(
-      containerClient,
-      blobName
-    );
-
-  return buffer.toString("utf8");
 }
 
 
@@ -651,42 +641,6 @@ async function uploadJson(
 
 
 // ==========================================================
-// Existing bank index
-// ==========================================================
-
-async function readExistingIndex(
-  bankContainer
-) {
-  const blobName =
-    "index/questions-index.json";
-
-  const blobClient =
-    bankContainer.getBlobClient(
-      blobName
-    );
-
-  if (
-    !(await blobClient.exists())
-  ) {
-    return {
-      schemaVersion: 1,
-      updatedAt: null,
-      questionCount: 0,
-      questions: []
-    };
-  }
-
-  const text =
-    await downloadBlobText(
-      bankContainer,
-      blobName
-    );
-
-  return JSON.parse(text);
-}
-
-
-// ==========================================================
 // Convert one question
 // ==========================================================
 
@@ -1210,28 +1164,6 @@ app.http("buildBank2025", {
       // Update lightweight question index
       // --------------------------------------------------
 
-      const existingIndex =
-        await readExistingIndex(
-          bankContainer
-        );
-
-
-      const oldQuestions =
-        Array.isArray(
-          existingIndex.questions
-        )
-          ? existingIndex.questions
-          : [];
-
-
-      const otherSources =
-        oldQuestions.filter(
-          question =>
-            question.sourceId
-            !== SOURCE_ID
-        );
-
-
       const sourceIndexEntries =
         questions.map(
           question => ({
@@ -1289,32 +1221,13 @@ app.http("buildBank2025", {
         );
 
 
-      const finalIndexQuestions =
-        [
-          ...otherSources,
-          ...sourceIndexEntries
-        ];
-
-
-      const finalIndex = {
-        schemaVersion:
-          1,
-
-        updatedAt:
-          now,
-
-        questionCount:
-          finalIndexQuestions.length,
-
-        questions:
-          finalIndexQuestions
-      };
-
-
-      await uploadJson(
+      // Batch-4 data-integrity fix — replace only this source's entries, inside one CAS round on the CURRENT index:
+      // every other source's entries (written by any request meanwhile) are kept.
+      await replaceSourceInIndex(
         bankContainer,
-        "index/questions-index.json",
-        finalIndex
+        SOURCE_ID,
+        sourceIndexEntries,
+        now
       );
 
 

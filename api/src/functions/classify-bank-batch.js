@@ -7,6 +7,7 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const BANK_CONTAINER = "bank";
 const ASSETS_CONTAINER = "assets";
 const INDEX_BLOB = "index/questions-index.json";
+const { updateSourceQuestions, updateIndexEntries } = require("../lib/bank-index-writes");
 
 const MAX_BATCH_SIZE = 12;
 const DEFAULT_BATCH_SIZE = 10;
@@ -117,37 +118,6 @@ async function downloadBlobJson(
   return JSON.parse(
     buffer.toString("utf8")
   );
-}
-
-
-async function uploadJson(
-  containerClient,
-  blobName,
-  data
-) {
-
-  const text =
-    JSON.stringify(
-      data,
-      null,
-      2
-    );
-
-
-  await containerClient
-    .getBlockBlobClient(blobName)
-    .uploadData(
-      Buffer.from(
-        text,
-        "utf8"
-      ),
-      {
-        blobHTTPHeaders: {
-          blobContentType:
-            "application/json; charset=utf-8"
-        }
-      }
-    );
 }
 
 
@@ -2081,6 +2051,9 @@ app.http(
           let repairedIndexEntries =
             0;
 
+          const repairedIds =
+            [];
+
 
           for (
             const indexQuestion
@@ -2133,6 +2106,10 @@ app.http(
 
 
             repairedIndexEntries++;
+
+            repairedIds.push(
+              indexQuestion.id
+            );
           }
 
 
@@ -2142,18 +2119,36 @@ app.http(
             repairedIndexEntries > 0
           ) {
 
-            indexDocument.updatedAt =
-              new Date()
-                .toISOString();
-
-
-            await uploadJson(
-
+            // Batch-4 data-integrity fix — the repair is re-applied to the CURRENT index entries in one CAS round
+            // (no whole-index overwrite of what another request wrote meanwhile).
+            await updateIndexEntries(
               bankContainer,
+              repairedIds,
+              entry => {
+                const sourceQuestion =
+                  sourceById.get(
+                    entry.id
+                  );
 
-              INDEX_BLOB,
+                const existing =
+                  classificationFromSource(
+                    sourceQuestion
+                  );
 
-              indexDocument
+                if (
+                  sourceQuestion
+                  &&
+                  existing
+                ) {
+                  syncIndexQuestion(
+                    entry,
+                    sourceQuestion,
+                    existing
+                  );
+                }
+              },
+              new Date()
+                .toISOString()
             );
           }
 
@@ -2962,42 +2957,63 @@ app.http(
 
 
             // ------------------------------------------------
-            // Update timestamps
+            // Save source and index
             // ------------------------------------------------
+            // Batch-4 data-integrity fix — the AI call above can take seconds; the classifications are applied to the
+            // CURRENT source document and the CURRENT index entries in one CAS round each, so a teacher's edit or an
+            // import saved meanwhile is kept (no read-then-overwrite of the whole documents).
 
-            bankDocument.updatedAt =
-              now;
+            const classificationById =
+              new Map(
+                selected.map(
+                  (question, i) => [
+                    question.id,
+                    classifications[i]
+                  ]
+                )
+              );
 
+            const selectedById =
+              new Map(
+                selected.map(
+                  question => [
+                    question.id,
+                    question
+                  ]
+                )
+              );
 
-            indexDocument.updatedAt =
-              now;
-
-
-            // ------------------------------------------------
-            // Save source
-            // ------------------------------------------------
-
-            await uploadJson(
-
+            await updateSourceQuestions(
               bankContainer,
-
               sourceBlob,
-
-              bankDocument
+              [...classificationById.keys()],
+              question =>
+                applyClassificationToSource(
+                  question,
+                  classificationById.get(
+                    question.id
+                  ),
+                  model,
+                  now
+                ),
+              now
             );
 
 
-            // ------------------------------------------------
-            // Save index
-            // ------------------------------------------------
-
-            await uploadJson(
-
+            await updateIndexEntries(
               bankContainer,
-
-              INDEX_BLOB,
-
-              indexDocument
+              [...classificationById.keys()],
+              entry =>
+                syncIndexQuestion(
+                  entry,
+                  selectedById.get(
+                    entry.id
+                  ),
+                  classificationById.get(
+                    entry.id
+                  )
+                ),
+              now
             );
           }
           else {

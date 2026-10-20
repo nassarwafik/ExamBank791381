@@ -91,6 +91,7 @@ import "./review-pro.css";
 import "./assignments-pro.css";
 import "./studentportal-pro.css";
 import { teacherProfileApi, resolveTeacherDisplayName, type TeacherProfile } from "./teacher/teacherProfile";
+import { hasRecoveryDraft, purgeLegacyRecoveryDraft, readRecoveryDraft, removeRecoveryDraft, writeRecoveryDraft } from "./legacyRecoveryDraft";
 import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
 // FINAL_BUILDER_PHASE_6
@@ -339,9 +340,6 @@ export const typeNames: Record<ExamQuestion["presentationType"], string> = {
   ordering: "رتّب"
 };
 
-const RECOVERY_KEY =
-  "ExamBank791381-Recovery-V1";
-
 function defaultExamMetadata(): ExamMetadata {
   return {
     school: "",
@@ -499,19 +497,6 @@ export function buildQualityIssues(current: ExamDraft): QualityIssue[] {
   });
 
   return issues;
-}
-
-function hasRecoveryDraft() {
-  try {
-    return Boolean(
-      localStorage.getItem(
-        RECOVERY_KEY
-      )
-    );
-  }
-  catch {
-    return false;
-  }
 }
 
 function getStoredToken() {
@@ -1033,7 +1018,19 @@ function App() {
     useState("");
 
   const [recoveryAvailable, setRecoveryAvailable] =
-    useState(hasRecoveryDraft);
+    useState(false);
+  // Batch-4 fix (D2): the local recovery draft belongs to the signed-in teacher (legacyRecoveryDraft); none is read or
+  // written before the teacher is known, and the old draft under the shared key is deleted.
+  const recoveryTeacherId =
+    teacherProfile?.teacherId || "";
+  useEffect(() => {
+    purgeLegacyRecoveryDraft();
+    setRecoveryAvailable(
+      hasRecoveryDraft(
+        recoveryTeacherId
+      )
+    );
+  }, [recoveryTeacherId]);
 
   const loggedIn = Boolean(token);
 
@@ -1077,16 +1074,18 @@ function App() {
                   .toISOString()
             };
 
-            localStorage.setItem(
-              RECOVERY_KEY,
-              JSON.stringify(
-                payload
+            if (
+              writeRecoveryDraft(
+                recoveryTeacherId,
+                JSON.stringify(
+                  payload
+                )
               )
-            );
-
-            setRecoveryAvailable(
-              true
-            );
+            ) {
+              setRecoveryAvailable(
+                true
+              );
+            }
           }
           catch {
             // Recovery is best-effort.
@@ -1104,7 +1103,8 @@ function App() {
     exam,
     plan,
     examPrompt,
-    hasUnsavedChanges
+    hasUnsavedChanges,
+    recoveryTeacherId
   ]);
 
   async function apiRequest<T>(
@@ -1247,6 +1247,11 @@ function App() {
   }
 
   function handleLogout() {
+    // Batch-4 fix (D2): the teacher's local recovery draft (answer keys included) never outlives the session.
+    removeRecoveryDraft(
+      recoveryTeacherId
+    );
+
     try {
       sessionStorage.removeItem("examBankBuilderToken");
       sessionStorage.removeItem("examBankSessionRole");
@@ -4719,8 +4724,8 @@ function App() {
   function restoreRecoveryDraft() {
     try {
       const raw =
-        localStorage.getItem(
-          RECOVERY_KEY
+        readRecoveryDraft(
+          recoveryTeacherId
         );
 
       if (!raw) {
@@ -4793,14 +4798,9 @@ function App() {
   }
 
   function discardRecoveryDraft() {
-    try {
-      localStorage.removeItem(
-        RECOVERY_KEY
-      );
-    }
-    catch {
-      // Ignore local storage errors.
-    }
+    removeRecoveryDraft(
+      recoveryTeacherId
+    );
 
     setRecoveryAvailable(
       false
@@ -4870,14 +4870,9 @@ function App() {
         now
       );
 
-      try {
-        localStorage.removeItem(
-          RECOVERY_KEY
-        );
-      }
-      catch {
-        // Ignore.
-      }
+      removeRecoveryDraft(
+        recoveryTeacherId
+      );
 
       setRecoveryAvailable(
         false

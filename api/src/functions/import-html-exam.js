@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { isSafeSegment } = require("../lib/blob-names");
+const { replaceSourceInIndex } = require("../lib/bank-index-writes");
 
 
 const RAW_CONTAINER = "raw";
@@ -560,45 +561,6 @@ const VOID_TAGS = new Set([
 // Stream helpers
 // ==========================================================
 
-async function streamToBuffer(stream) {
-  const chunks = [];
-
-  for await (const chunk of stream) {
-    chunks.push(
-      Buffer.from(chunk)
-    );
-  }
-
-  return Buffer.concat(chunks);
-}
-
-
-async function downloadBlobText(
-  containerClient,
-  blobName
-) {
-  const blobClient =
-    containerClient.getBlobClient(
-      blobName
-    );
-
-  const response =
-    await blobClient.download();
-
-  if (!response.readableStreamBody) {
-    throw new Error(
-      `Unable to read blob: ${blobName}`
-    );
-  }
-
-  const buffer =
-    await streamToBuffer(
-      response.readableStreamBody
-    );
-
-  return buffer.toString("utf8");
-}
-
 
 // ==========================================================
 // Upload helpers
@@ -646,39 +608,6 @@ async function uploadJson(
     ),
     "application/json; charset=utf-8"
   );
-}
-
-
-// ==========================================================
-// Existing index
-// ==========================================================
-
-async function readExistingIndex(
-  bankContainer
-) {
-  const blobClient =
-    bankContainer.getBlobClient(
-      INDEX_BLOB
-    );
-
-  if (
-    !(await blobClient.exists())
-  ) {
-    return {
-      schemaVersion: 1,
-      updatedAt: null,
-      questionCount: 0,
-      questions: []
-    };
-  }
-
-  const text =
-    await downloadBlobText(
-      bankContainer,
-      INDEX_BLOB
-    );
-
-  return JSON.parse(text);
 }
 
 
@@ -4802,32 +4731,6 @@ app.http(
             // Update global question index
             // =================================================
 
-            const existingIndex =
-              await readExistingIndex(
-                bankContainer
-              );
-
-
-            const oldQuestions =
-              Array.isArray(
-                existingIndex
-                  .questions
-              )
-                ? existingIndex
-                    .questions
-                : [];
-
-
-            // Replace old entries only for same source.
-            const otherSources =
-              oldQuestions.filter(
-                question =>
-                  question
-                    .sourceId !==
-                  sourceId
-              );
-
-
             const sourceIndexEntries =
               questions.map(
                 question => ({
@@ -4941,31 +4844,13 @@ app.http(
               );
 
 
-            const finalQuestions = [
-              ...otherSources,
-              ...sourceIndexEntries
-            ];
-
-
-            const finalIndex = {
-              schemaVersion:
-                1,
-
-              updatedAt:
-                now,
-
-              questionCount:
-                finalQuestions.length,
-
-              questions:
-                finalQuestions
-            };
-
-
-            await uploadJson(
+            // Batch-4 data-integrity fix — replace only this source's entries, inside one CAS round on the CURRENT
+            // index: entries another request wrote since this import started are kept (no read-then-overwrite).
+            await replaceSourceInIndex(
               bankContainer,
-              INDEX_BLOB,
-              finalIndex
+              sourceId,
+              sourceIndexEntries,
+              now
             );
           }
 
