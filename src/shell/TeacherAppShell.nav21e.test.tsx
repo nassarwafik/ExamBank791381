@@ -3,6 +3,9 @@
 // Phase 21E — enterprise main navigation. The sidebar is organised into visible, labelled sections (teaching · follow-up ·
 // exams · account) without moving, renaming or hiding any destination; the account controls (identity + logout) live
 // together at the bottom; the keyboard order follows the visual order; the compact rail keeps every section name in the
+// [UX-R2 — the redesign moved the identity and the menu toggles into the full-width top bar ABOVE the sidebar (the reference
+// layout); logout stays the sidebar's last control. The four placement tests below were updated on purpose for that move;
+// what they protect is kept: every control once, the account section last, and keyboard order = visual order.]
 // accessibility tree; and the redesign stylesheet adds no stacking context, no physical (non-RTL) sides and keeps
 // 44 px touch targets for the phone / tablet menu button.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
@@ -56,7 +59,9 @@ describe("21E nav — labelled sections, same destinations in the same order", (
     expect(names(within(g("الامتحانات")).getByRole("group", { name: "بنك الامتحانات" }))).toEqual([EXAM_BANK_HEAD, ...EXAM_BANK_NAV].map(id => NAV_LABELS[id]));
     const account = g("الحساب");
     expect(within(account).getByRole("button", { name: "تسجيل الخروج" }).className).toContain("app-sidebar-logout");
-    expect(within(account).getByRole("button", { name: /تعديل صورة وملف المعلم/ })).toBeTruthy();
+    // UX-R2: the identity sits in the top bar (banner), once — never also in the sidebar.
+    expect(within(screen.getByRole("banner")).getByRole("button", { name: /تعديل صورة وملف المعلم/ })).toBeTruthy();
+    expect(within(sidebar()).queryByRole("button", { name: /تعديل صورة وملف المعلم/ })).toBeNull();
     // every section shows its name as visible text (not only an aria-label)
     for (const name of ["التدريس", "المتابعة والأنشطة", "الامتحانات", "الحساب"]) expect(within(sidebar()).getByText(name, { selector: ".eb-nav-section-label" })).toBeTruthy();
   });
@@ -66,25 +71,32 @@ describe("21E nav — labelled sections, same destinations in the same order", (
     expect(names(sidebar())).toEqual([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]).concat("تسجيل الخروج"));
   });
 
-  it("the account controls sit together AFTER the navigation: identity below the last destination, logout last", () => {
+  it("the account section closes the sidebar: the activity log after the last destination, logout last (UX-R2: the identity is in the top bar)", () => {
     mount();
     const order = Array.from(sidebar().querySelectorAll<HTMLElement>("button")).map(labelOf);
-    const iAudit = order.indexOf(NAV_LABELS.audit), iAvatar = order.indexOf("تعديل صورة وملف المعلم"), iLogout = order.indexOf("تسجيل الخروج");
+    const iAudit = order.indexOf(NAV_LABELS.audit), iLogout = order.indexOf("تسجيل الخروج");
     expect(iAudit).toBeGreaterThan(order.indexOf(NAV_LABELS.reviews));
-    expect(iAvatar).toBeGreaterThan(iAudit);
+    expect(iLogout).toBeGreaterThan(iAudit);
     expect(iLogout).toBe(order.length - 1);
   });
 
-  it("keyboard order follows the visual order: menu toggle, the 13 destinations top to bottom, the profile, logout", () => {
+  it("keyboard order follows the visual order: the top bar start to end (menu toggles, home, quick navigation, profile), then the 13 destinations top to bottom, logout", () => {
     mount();
-    const focusables = Array.from(sidebar().querySelectorAll<HTMLElement>("button")).filter(b => !b.hasAttribute("disabled") && b.tabIndex >= 0);
-    expect(focusables.map(labelOf)).toEqual(["طيّ القائمة", ...[...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]), "تعديل صورة وملف المعلم", "تسجيل الخروج"]);
+    // The shell's own chrome only (the page content is the caller's): top bar first in the DOM, then the sidebar.
+    const chrome = [screen.getByRole("banner"), sidebar()];
+    // aria-label first (the avatar's carries a « (الحالية: …)» suffix, trimmed), else the nav label, else the visible text.
+    const name = (el: HTMLElement) => (el.getAttribute("aria-label") || "").replace(/\s*\(.*\)$/, "") || (el.querySelector(".eb-nav-label")?.textContent || "").trim() || (el.textContent || "").trim();
+    const focusables = chrome.flatMap(root => Array.from(root.querySelectorAll<HTMLElement>("button, input"))).filter(b => !b.hasAttribute("disabled") && b.tabIndex >= 0);
+    expect(focusables.map(name)).toEqual([
+      "طيّ القائمة", "القائمة", "الرئيسية", "انتقل إلى صفحة", "تعديل صورة وملف المعلم",
+      ...[...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]), "تسجيل الخروج",
+    ]);
   });
 
-  it("without an identity the account section still holds the user name and logout", () => {
+  it("without an identity the top bar still names the signed-in teacher and the account section still holds logout", () => {
     mount({}, false);
+    expect(screen.getByRole("banner").textContent).toContain("المعلم");
     const account = within(sidebar()).getByRole("group", { name: "الحساب" });
-    expect(account.textContent).toContain("المعلم");
     expect(within(account).getByRole("button", { name: "تسجيل الخروج" })).toBeTruthy();
   });
 

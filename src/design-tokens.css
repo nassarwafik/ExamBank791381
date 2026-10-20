@@ -117,8 +117,19 @@
   /* Containers */
   --eb-container: 1280px; --eb-container-wide: 1440px; --eb-container-reading: 720px; --eb-container-student: 960px;
 
-  /* Shell dimensions */
-  --eb-sidebar-w: 236px; --eb-sidebar-w-compact: 72px;
+  /* Shell dimensions (UX-R2: the full-width top bar above the sidebar and the page column) */
+  --eb-sidebar-w: 236px; --eb-sidebar-w-compact: 72px; --eb-topbar-h: 58px;
+
+  /* UX-R2 — the LIGHT chrome (teacher top bar + sidebar, student top bar). The --eb-nav-* set above stays the dark-surface
+     set (toasts, the student exam's dark bands, the 3D viewer) and is no longer read by the shell. */
+  --eb-chrome-bg: var(--eb-surface);
+  --eb-chrome-text: var(--eb-navy);
+  --eb-chrome-text-muted: var(--eb-muted);
+  --eb-chrome-hover: var(--eb-surface-2);
+  --eb-chrome-active: #eeedf3;
+  --eb-chrome-border: var(--eb-line);
+  --eb-chrome-field: #f3f3f6;
+  --eb-chrome-shadow: 0 1px 0 var(--eb-line), 0 4px 14px -10px rgba(28,19,48,.12);
 
   /* UX-7 — medal / personal-rank accents (same values as src/medals.ts MEDAL_COLORS) */
   --eb-medal-gold: #eab308; --eb-medal-silver: #94a3b8; --eb-medal-bronze: #c2703d;

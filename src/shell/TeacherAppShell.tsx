@@ -13,6 +13,7 @@ import {
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
 import TeacherIdentity from "../teacher/TeacherIdentity";
+import QuickNavSearch from "./QuickNavSearch";
 import type { TeacherProfile } from "../teacher/teacherProfile";
 import "../ui/ui.css";
 import "../shell.css";
@@ -20,7 +21,10 @@ import "./teacher-nav-21e.css";
 
 // UX-2 — Teacher App Shell. Consumes the existing navigation state (App.tsx owns it) and renders: skip link,
 // sidebar (expanded ≥1280 / compact rail 1024–1279 / drawer <1024, plus a manual compact toggle), page header
-// with breadcrumb + <h1>, footer navigation (audit, user, logout). No data fetching, no routing authority.
+// with breadcrumb + <h1>, footer navigation (audit, logout). No data fetching, no routing authority.
+// UX-R2 — the redesign's light chrome: a full-width top bar above the sidebar and the page column holds the menu toggles
+// (manual compact rail on desktop, the drawer below 1024), the brand, a «لوحة المتابعة» home pill, the quick navigation
+// field and the teacher identity; the sidebar below it is white with hairline-separated groups.
 const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
   dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, messages: IconMail, projects: IconProjects,
   reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, reviews: IconCheck, audit: IconAudit
@@ -132,38 +136,59 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
     );
   }
 
+  const destinations = (Object.keys(ICONS) as TeacherNavId[]).map(id => ({ id, label: NAV_LABELS[id] }));
   const crumbs = breadcrumbFor(nav).map(c => ({ label: c.label, onSelect: c.navId ? () => onNavigate(c.navId as TeacherNavId) : undefined }));
 
   return (
     <div className={"builder-page eb-shell" + (compact ? " is-compact" : "") + (drawerOpen ? " is-drawer-open" : "")} dir="rtl">
       <a className="eb-skip-link" href="#eb-main">تجاوز إلى المحتوى</a>
+      <header className="eb-topbar">
+        <IconButton
+          label={compact ? "توسيع القائمة" : "طيّ القائمة"}
+          icon={<IconSidebar size={20} />}
+          aria-pressed={compact}
+          onClick={() => setCompact(v => !v)}
+          className="eb-compact-toggle"
+        />
+        <IconButton
+          ref={menuButtonRef}
+          label="القائمة"
+          icon={<IconMenu size={20} />}
+          aria-expanded={drawerOpen}
+          aria-controls="eb-sidebar"
+          onClick={openDrawer}
+          className="eb-drawer-toggle"
+        />
+        <div className="eb-brand">
+          <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={32} /></span>
+          <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
+        </div>
+        {/* The home pill (the reference's «Projects» chip): a distinct name, so it never doubles the sidebar's «لوحة المتابعة». */}
+        <button type="button" className="eb-topbar-pill" title={NAV_LABELS.dashboard} onClick={() => navigate("dashboard")}>
+          الرئيسية
+        </button>
+        <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />
+        <div className="eb-topbar-actions">
+          {identity
+            ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact />
+            : <div className="eb-topbar-user" title={displayName}><IconUser size={16} /><span>{displayName}</span></div>}
+        </div>
+      </header>
       {drawerOpen && <div className="eb-drawer-backdrop" aria-hidden="true" onClick={dismissDrawer} />}
       <aside
         id="eb-sidebar"
         ref={asideRef}
-        className="eb-sidebar eb-on-dark"
+        className="eb-sidebar"
         aria-label="التنقل الرئيسي"
         role={drawerOpen ? "dialog" : undefined}
         aria-modal={drawerOpen ? true : undefined}
       >
-        <div className="eb-sidebar-top">
-          <div className="eb-brand">
-            <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={40} /></span>
-            <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
+        {drawerOpen && (
+          <div className="eb-sidebar-top">
+            <span className="eb-sidebar-title"><bdi dir="ltr">{BRAND_NAME}</bdi></span>
+            <IconButton label="إغلاق القائمة" icon={<IconClose size={18} />} onClick={dismissDrawer} className="eb-drawer-close" />
           </div>
-          {drawerOpen ? (
-            <IconButton inverse label="إغلاق القائمة" icon={<IconClose size={18} />} onClick={dismissDrawer} className="eb-drawer-close" />
-          ) : (
-            <IconButton
-              inverse
-              label={compact ? "توسيع القائمة" : "طيّ القائمة"}
-              icon={<IconSidebar size={18} />}
-              aria-pressed={compact}
-              onClick={() => setCompact(v => !v)}
-              className="eb-compact-toggle"
-            />
-          )}
-        </div>
+        )}
         <nav className="eb-nav" aria-label="الأقسام">
           {PRIMARY_SECTIONS.map(s => section(s.id, s.label, s.items.map(id => navButton(id))))}
           {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
@@ -176,36 +201,16 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         </nav>
         <nav className="eb-nav eb-nav-footer" aria-label="إعدادات وحساب">
           {FOOTER_NAV.map(id => navButton(id))}
-          {/* Phase 21E — the account controls together at the bottom: who is signed in, then «تسجيل الخروج». */}
+          {/* Phase 21E — the account controls at the bottom. UX-R2: who is signed in moved to the top bar; «تسجيل الخروج» stays here. */}
           {section("account", ACCOUNT_SECTION_LABEL, (
-            <>
-              {identity
-                ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact={compact} />
-                : <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>}
-              <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
-                <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
-              </button>
-            </>
+            <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
+              <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
+            </button>
           ), " eb-nav-account")}
         </nav>
       </aside>
       <div className="app-shell-main eb-shell-main">
-        <PageHeader
-          title={pageTitleFor(nav)}
-          icon={pageIcon(active)}
-          breadcrumb={crumbs}
-          leading={
-            <IconButton
-              ref={menuButtonRef}
-              label="القائمة"
-              icon={<IconMenu size={20} />}
-              aria-expanded={drawerOpen}
-              aria-controls="eb-sidebar"
-              onClick={openDrawer}
-              className="eb-drawer-toggle"
-            />
-          }
-        />
+        <PageHeader title={pageTitleFor(nav)} icon={pageIcon(active)} breadcrumb={crumbs} />
         <main id="eb-main" className="eb-shell-content" tabIndex={-1}>
           {children}
         </main>

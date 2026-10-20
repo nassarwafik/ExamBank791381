@@ -420,3 +420,159 @@ unchanged by R1. There is no new overflow and no page error.
 | mutation campaign, re-run on the final state | 8 / 8 KILLED, files restored (R1.5) |
 | visual capture | 42 / 45 clean; the 3 recorded overflows only (R1.6) |
 | after the owner's `--eb-faint` decision (R1.2) | full suite 1 170 / 1 170 files, 13 968 / 13 968 tests; lint exit 0; build + bundle guard passed; mutant M9 (faint darkened to `#7c8799`) KILLED by the UX-8b invariant test and the R1 palette pin, restored byte-for-byte |
+
+---
+
+# Phase UX-R2 — The app shell: full-width top bar and white sidebar
+
+**Owner direction (2026-10-20):** start R2. It is stacked on R1 like R1 was stacked on R0: branch `feature/ux-r2-shell` from
+the R1 head `ef9fcf0e`, with its own pull request. Merge order: R1 (PR #391), then R2.
+
+## R2.1 What changes for the user
+
+The teacher shell takes the reference layout.
+
+**The top bar** is a full-width white bar with a hairline and a soft shadow, sticky above everything. From the start edge (the
+right in RTL) it holds:
+- the menu control: «طيّ القائمة / توسيع القائمة» on desktop, «القائمة» below 1024 px;
+- the brand: mark and «Tadris+»;
+- a **«الرئيسية» pill** that leads to «لوحة المتابعة»;
+- the **quick navigation field** «انتقل إلى صفحة…»;
+- the teacher's **avatar**, which still opens the profile dialog.
+
+**The sidebar** is white below the bar. It has ink text, small section names, hairlines between groups, a grey pill with a slim
+purple bar for the current page, and «سجل النشاط» / «تسجيل الخروج» at the bottom. The compact rail (1024–1279 px, or by the
+toggle) and the phone drawer work as before.
+
+**The quick navigation field is honest.** It only jumps to a page of the platform: it does not search content (that is R18).
+- It is a WAI-ARIA combobox: arrows move, Enter opens the highlighted page, Escape closes the list and then clears the text.
+- Matching is Arabic-insensitive: diacritics, tatweel and alef / ya / ta-marbuta forms are ignored.
+
+**The student top bar** is the same light chrome: white band, ink brand, quiet pill entries («الإشعارات», «الرسائل», «الألعاب
+التعليمية», «تثبيت التطبيق», «تسجيل الخروج»).
+
+**Reader focus mode** now also hides the top bar, as it already hid the sidebar and the page header.
+
+## R2.2 Edit set
+
+**Shell structure:**
+- `src/shell/TeacherAppShell.tsx`:
+  - adds the top bar;
+  - moves the brand, the compact toggle, the drawer toggle (out of `PageHeader`'s `leading` slot) and `TeacherIdentity` into it;
+  - the sidebar loses `eb-on-dark` and the `inverse` controls;
+  - the drawer's own header row (title + «إغلاق القائمة») renders only while the drawer is open;
+  - the «الحساب» section keeps logout.
+- `src/ui/PageHeader.tsx`: a `<div>` instead of a `<header>`, so the top bar is the page's **one** banner landmark. Two banners
+  are ambiguous for screen readers, and `PageHeader` is used only by this shell.
+
+**Quick navigation (new):**
+- `src/shell/QuickNavSearch.tsx`: the field.
+- `src/shell/quickNav.ts`: the matching rules, kept apart so the component module exports only the component.
+
+**Stylesheets:**
+- `src/shell.css` and `src/shell/teacher-nav-21e.css`: the light chrome.
+  - The shell is a grid of three areas (top / side / main).
+  - The top bar is sticky at the top on `--eb-z-nav`. The sidebar sticks *below* it (`inset-block-start: var(--eb-topbar-h)`,
+    `height: calc(100vh - var(--eb-topbar-h))`).
+  - All colours come from the new `--eb-chrome-*` tokens; the shell no longer reads any dark `--eb-nav-*` token.
+  - Focus rings on white use the primary.
+  - The compact-rail rules that hid `.eb-brand-text` were scoped so they no longer hide the brand in the top bar.
+  - On phones (≤ 639 px) the pill hides and the brand name leaves the screen (it stays in the accessibility tree).
+  - The engine's own blue clear «×» in the search field is hidden; Escape clears.
+- `src/design-tokens.css`: `--eb-topbar-h` (58 px) and the `--eb-chrome-*` set (bg, text, text-muted, hover, active, border,
+  field, shadow). The `--eb-nav-*` set stays as the **dark-surface** tokens for toasts, the student exam's dark bands and the 3D
+  viewer.
+- `src/student/student-portal-v2.css`: the student top bar in light chrome. Token-only and scoped to `.eb-student-shell`, as its
+  guard requires.
+- `src/learning/reader/reader-enterprise-l1.css`: focus mode also hides `.eb-shell > .eb-topbar`. The line that
+  `scripts/mutate-l.mjs` targets is unchanged.
+
+**Tests:**
+- New:
+  - `src/shell/QuickNavSearch.ux-r2.test.tsx` (7 tests);
+  - `src/shell/shellChrome.ux-r2.test.tsx` (12 tests).
+- Updated on purpose for the move:
+  - `src/shell/TeacherAppShell.nav21e.test.tsx` (4 placement tests);
+  - `src/teacher/teacherIdentity.test.tsx` (scope: sidebar → top bar);
+  - `src/learning/reader/reader.l1.guards.test.ts`.
+
+**Not changed:**
+- navigation state, destinations, order, names, badges and `aria-current`;
+- the drawer's dialog, focus trap and focus return;
+- layers and z-index tokens;
+- data, API, grading.
+
+## R2.3 Tests that pinned the old placement — updated explicitly, invariants kept
+
+| Test | Old pin | Now | Invariant kept |
+|---|---|---|---|
+| nav21e «renders named groups…» | the avatar button inside the «الحساب» group | the avatar is in the banner, **once**; never also in the sidebar | groups, names and order of every destination; logout in «الحساب» |
+| nav21e «the account controls sit together AFTER the navigation…» | the avatar after the activity log in the sidebar | the activity log after the last destination; logout last | the account section closes the sidebar |
+| nav21e «keyboard order follows the visual order…» | sidebar only: toggle, 13 destinations, avatar, logout | whole chrome in DOM order: toggles, «الرئيسية», «انتقل إلى صفحة», avatar, then 13 destinations, logout | keyboard order = visual order |
+| nav21e «without an identity…» | the name inside the account section | the name in the top bar; logout in the account section | the signed-in teacher is always named |
+| teacherIdentity (3 tests) | `within(sidebar())` | `within(banner)` | every assertion unchanged: name authority, preset icon, brand, one photo read, the dialog flows |
+| reader.l1.guards «focus mode hides exactly…» | `className="eb-sidebar eb-on-dark"`, `<header className="eb-page-header">`, the hidden-host list | `<header className="eb-topbar">`, `className="eb-sidebar"`, `<div className="eb-page-header">`, `.eb-topbar` added to the list | focus mode hides exactly the shell's chrome and nothing else |
+
+Three regressions were caught by existing invariant tests while R2 was built, and fixed before any commit:
+- **The page's single status element.** The search field's live region had `role="status"`. `AppShell.lazyTeacherPlatform.8e`
+  requires exactly one status element (the platform's loading fallback). The region is now `aria-live` without the role.
+- **The pill's name.** The pill first carried the name «لوحة المتابعة» and `aria-current`, which doubled the sidebar button. It
+  is now «الرئيسية», without `aria-current`.
+- **A label class in the top bar.** The no-identity name in the top bar used the sidebar's `.eb-nav-label`, which the rail rules
+  hide. It now has its own class.
+
+## R2.4 Fail-first evidence
+
+Not applicable: R2 is a presentation feature, not a defect fix. The new behaviour (the quick navigation) and the new invariants
+(one banner, light chrome, geometry, contrast, focus, phone bar) are covered by the two new test files and proven by the mutation
+campaign below.
+
+## R2.5 Mutation proof
+
+Each mutant was run against `src/shell`, `AppShell.lazyTeacherPlatform.8e`, `phase8b`, `reader.l1.guards`,
+`api/tests/ux2-shell-foundation` and `teacherIdentity`. Each file was restored byte-for-byte (SHA-256), and `git status` was
+clean afterwards.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | sidebar gets `eb-on-dark` back | KILLED | shellChrome «no dark-surface class…»; reader.l1 focus-mode guard |
+| M2 | nav link text reads `--eb-nav-text-muted` again | KILLED | shellChrome «the shell stylesheets read no dark-surface --eb-nav-* colour token…» |
+| M3 | home pill named «لوحة المتابعة» | KILLED | shellChrome «exactly one banner…» and «the home pill never doubles…»; nav21e keyboard order |
+| M4 | quick-nav live region gets `role="status"` back | KILLED | AppShell.lazyTeacherPlatform E and F; QuickNavSearch live-region test |
+| M5 | nav focus ring back to `--eb-primary-100` | KILLED | shellChrome «focus rings on the white chrome are the primary…» |
+| M6 | sidebar sticks at `0` (under the bar) | KILLED | shellChrome «the sidebar sticks BELOW the top bar…» |
+| M7 | `--eb-chrome-text-muted` → `#a9a5b4` | KILLED | shellChrome «chrome text ≥ 7:1 and secondary text ≥ AA…» |
+| M8 | Enter navigates with no match | KILLED (2nd run) | QuickNavSearch «Escape closes… Enter with no match navigates nowhere» |
+
+**M8 survived the first run.** The mutant throws on `undefined.id` before `onNavigate`, so «not called» still held, but it had
+already wiped the typed text. The test now also asserts that the text stays, so the teacher can correct it.
+
+## R2.6 Visual evidence
+
+`scripts/capture-visual-baseline-ux-r.mjs` was run on the R2 build: 14 pages × 3 viewports, plus the gallery. Result: 42 / 45
+captures clean. The three that are not clean are the phone overflows recorded in §7 (students 391, bank 458, import 405), unchanged
+by R2. There is no new overflow and no page error.
+
+Extra checks in Chromium:
+- the phone drawer opens as the white sheet with «Tadris+» (LTR) and «إغلاق القائمة»;
+- the quick navigation list opens below the field with the highlighted option.
+
+## R2.7 Local validation (4-core container)
+
+| Check | Result |
+|---|---|
+| `npm test`, full root suite | **1 172 / 1 172 files, 13 987 / 13 987 tests** |
+| `npm run lint` | exit 0. The shell files are clean: the quick-nav helpers live in `quickNav.ts` |
+| `npm run build` (tsc -b + bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 298, unchanged. The new rules are token-only |
+
+## R2.8 Known limitations
+
+- **The help and notification icons of the reference bar are not added.** Teachers have no help centre or notification feed
+  today, and an icon with nothing behind it would be a fake control. They can come with R18.
+- **`--eb-nav-accent` (added in R1 for the dark rail's pill) is no longer read** by any stylesheet. It stays defined because the
+  R1 guard pins it. It can be removed in R17 together with its pin.
+- **Browser harness scripts that are not part of CI** select a menu button with a loose `/القائمة/` regex and `.first()`
+  (`check-*-browser-p3/p4/p8/p10/u1.mjs`). On desktop viewports the first match is now the top bar's «طيّ القائمة». They should
+  move to the exact name «القائمة» when they are next run.
