@@ -12,6 +12,8 @@
 .eb-ppc-grade-label{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 .eb-ppc-progress{ position:absolute; inset-block-end:-1.6em; margin:0; white-space:nowrap; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
 
+/* Phase P10 — the hero's own width decides its layout (a size container): see the @container rule below. */
+.eb-prh-box{ container-type:inline-size; min-width:0; }
 .eb-prh{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-4); padding:var(--eb-space-4); padding-block-end:calc(var(--eb-space-4) + 1.2em); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
 .eb-prh-rank{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
 .eb-prh-art{ flex:0 0 auto; object-fit:contain; }
@@ -32,7 +34,7 @@
 .eb-stage-score-edit label{ display:inline-flex; align-items:center; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-stage-score-edit input{ width:5.5em; min-height:40px; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-variant-numeric:tabular-nums; }
 
-@media (min-width: 768px){
+@container (min-width: 560px){
   .eb-prh{ flex-direction:row; justify-content:space-between; }
   .eb-prh-facts{ flex-direction:column; }
 }

@@ -16,9 +16,14 @@ describe("Achievement Hub + project performance CSS", () => {
     expect(rule(portal, ".eb-sp-project-cards")).toContain("grid-template-columns:1fr");
     expect(portal).toMatch(/@media \(min-width: 768px\)\{[\s\S]*\.eb-sp-project-cards\{ grid-template-columns:repeat\(auto-fill, minmax\(280px, 1fr\)\)/);
   });
-  it("the hero / circle / stage-score rules use tokens only and no fixed widths beyond the circle's own size prop; the hero becomes a row from 768px", () => {
-    expect(perf.replace(/@media[^{]*\{/g, "")).not.toMatch(/(^|[^-])width:\s*\d{3,}px/);
-    expect(perf).toMatch(/@media \(min-width: 768px\)\{[\s\S]*\.eb-prh\{ flex-direction:row/);
+  // Phase P10 (deliberate update): the hero's row layout now follows the hero's OWN width (a size container, ≥ 560px), not
+  // a 768px viewport — in the student portal the hero sits in a narrow column on wide screens and the viewport rule
+  // squeezed its title to one letter per line (scripts/check-project-hero-browser-p10.mjs).
+  it("the hero / circle / stage-score rules use tokens only and no fixed widths beyond the circle's own size prop; the hero becomes a row when ITS OWN width reaches 560px", () => {
+    expect(perf.replace(/@(media|container)[^{]*\{/g, "")).not.toMatch(/(^|[^-])width:\s*\d{3,}px/);
+    expect(rule(perf, ".eb-prh-box")).toContain("container-type:inline-size");
+    expect(perf).toMatch(/@container \(min-width: 560px\)\{[\s\S]*\.eb-prh\{ flex-direction:row/);
+    expect(perf).not.toMatch(/@media[^{]*\{[^@]*\.eb-prh\{ flex-direction:row/);
     expect(rule(perf, ".eb-prh")).toContain("min-width:0");
     for (const m of perf.matchAll(/var\(--([a-z0-9-]+)\)/g)) expect(m[1].startsWith("eb-"), m[1]).toBe(true);
   });
