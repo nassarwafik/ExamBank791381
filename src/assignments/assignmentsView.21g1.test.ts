@@ -51,7 +51,7 @@ describe("gradebook rows", () => {
     expect(names(gradebookRows(rows, "", "all", "name"))).toEqual(["أحمد", "باسل", "تالا", "دانة", "سارة"]);
     expect(names(gradebookRows(rows, "", "all", "pendingFirst"))).toEqual(["أحمد", "باسل", "تالا", "دانة", "سارة"]);
     expect(names(gradebookRows(rows, "", "all", "highest"))).toEqual(["سارة", "دانة", "أحمد", "باسل", "تالا"]);
-    expect(names(gradebookRows(rows, "", "all", "lowest"))).toEqual(["أحمد", "دانة", "سارة", "باسل", "تالا"]);
+    expect(names(gradebookRows(rows, "", "all", "lowest"))).toEqual(["دانة", "سارة", "أحمد", "باسل", "تالا"]);   // Phase R-1 (D-1): pending أحمد is not ranked
   });
   it("never mutates the input", () => {
     const copy = JSON.stringify(rows);

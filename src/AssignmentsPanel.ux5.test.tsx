@@ -394,7 +394,7 @@ describe("UX-5 gradebook — filters, sorts, grading labels, review action, life
     expect(gbNames(detail)).toEqual(["خالد", "عمر", "زيد", "سعد"]);                                    // highest; null last
     fireEvent.click(within(detail).getByRole("button", { name: /^العلامة/ }));
     expect(within(detail).getByRole("columnheader", { name: /العلامة/ }).getAttribute("aria-sort")).toBe("ascending");
-    expect(gbNames(detail)).toEqual(["زيد", "خالد", "عمر", "سعد"]);                                    // lowest; null last
+    expect(gbNames(detail)).toEqual(["خالد", "عمر", "زيد", "سعد"]);                                    // lowest; Phase R-1 (D-1): pending زيد after the finals; null last
     fireEvent.click(within(detail).getByRole("button", { name: "بانتظار التصحيح أولًا" }));
     expect(within(detail).getByRole("button", { name: "بانتظار التصحيح أولًا" }).getAttribute("aria-pressed")).toBe("true");
     expect(gbNames(detail)).toEqual(["زيد", "خالد", "سعد", "عمر"]);
