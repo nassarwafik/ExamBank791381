@@ -122,6 +122,13 @@ describe("UX-R2 — contrast, focus and the phone bar", () => {
     for (const css of [shell, nav]) expect(css).not.toMatch(/:focus-visible\s*\{[^}]*outline:[^;}]*var\(--eb-(?:primary-100|surface)\)/);
     expect(shell).toMatch(/\.eb-quicknav-input:focus-visible\s*\{[^}]*outline:\s*var\(--eb-focus-ring\)/);
   });
+  it("touch screens and the drawer layout: the search field and the home pill are 44 px targets; the bar's avatar is 44 px", () => {
+    // CI's L.8 gate measures every control at 390 / 834 px (touch) — the first R2 head had a 40 px field, a 34 px pill and a 40 px avatar.
+    const touch = /@media \(pointer: coarse\), \(max-width: 1023px\) \{([^}]*)\}/.exec(flat(read("shell.css")));
+    expect(touch).toBeTruthy();
+    expect(touch![1]).toMatch(/\.eb-quicknav-input, \.eb-topbar-pill \{ min-height: 44px;/);
+    expect(read("shell/TeacherAppShell.tsx")).toMatch(/<TeacherIdentity [^>]*compact size=\{44\} \/>/);
+  });
   it("phones (≤ 639 px): the home pill hides, the brand name leaves the screen but stays in the accessibility tree", () => {
     const phone = /@media \(max-width: 639px\) \{(.*?)\}\s*\}/.exec(flat(read("shell.css")));
     expect(phone).toBeTruthy();

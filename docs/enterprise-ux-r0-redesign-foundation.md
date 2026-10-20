@@ -576,3 +576,40 @@ Extra checks in Chromium:
 - **Browser harness scripts that are not part of CI** select a menu button with a loose `/القائمة/` regex and `.first()`
   (`check-*-browser-p3/p4/p8/p10/u1.mjs`). On desktop viewports the first match is now the top bar's «طيّ القائمة». They should
   move to the exact name «القائمة» when they are next run.
+
+## R2.9 CI fix: 44 px touch targets in the top bar
+
+**What failed.** On the first R2 head (`a9b97f97`), the workflow «L.8 reader journey, axe and touch targets» failed with 6 checks
+(run 39496179621). It measures every visible control at 390 and 834 px (touch), and three top-bar controls were under 44 px:
+
+| Control | Size |
+|---|---|
+| quick navigation field | 40 px tall |
+| avatar | 40 × 40 |
+| «الرئيسية» pill, at 834 px | 34 px |
+
+The avatar had never counted before, because it sat inside the closed drawer. No local suite measures rendered sizes, so the gap
+only showed in CI.
+
+**Fail-first.** `scripts/check-learning-reader-browser-l8.mjs` was run locally on that head with CI's own tools (playwright-core
+1.55.0, axe-core 4.10.2). It reproduced the same 6 touch-target failures at 390 and 834 px.
+
+**Fix:**
+- `src/shell.css`: a `@media (pointer: coarse), (max-width: 1023px)` block gives the field and the pill `min-height: 44px`.
+  - The pointer is listed first so that the drawer's own `@media (max-width: 1023px)` block stays the first of its kind; two
+    `api/tests/ux2-shell-foundation.test.js` guards read that block. A first attempt with the widths first broke them, and they
+    caught it before any push.
+- `src/teacher/TeacherIdentity.tsx`: an optional `size` prop. The default stays 40; the top bar passes 44.
+- `src/shell/shellChrome.ux-r2.test.tsx`: a new guard for both changes (13 tests in all).
+
+**After the fix:**
+- The L.8 gate passes locally with CI's tools.
+- Full root suite: 1 172 / 1 172 files, 13 988 / 13 988 tests.
+- `npm run lint` exit 0; build and bundle guard passed.
+- Visual capture: 39 / 42 page captures clean (the three recorded overflows only).
+
+**One timing failure, not R2's.** During the focused runs, `src/TeacherPlatform.createClass.d3.test.tsx` (the R0 §9.4 timing
+test) failed once.
+- That test renders `TeacherPlatform` alone, none of the shell.
+- Measured afterwards: 0 / 8 failures in isolation on `main` `a70350c1` and 0 / 8 on the R2 head.
+- It is recorded here and not patched (`AGENTS.md` §12).

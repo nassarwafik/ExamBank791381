@@ -77,6 +77,11 @@
 .eb-quicknav-list[hidden] { display: none; }
 .eb-quicknav-option { padding: var(--eb-space-2) var(--eb-space-4); color: var(--eb-chrome-text); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-medium); cursor: pointer; }
 .eb-quicknav-option.is-active { background: var(--eb-chrome-hover); }
+/* Touch screens and the drawer layout: every top-bar control is a 44 px target (the avatar is 44 px in the bar itself).
+   (The query lists the pointer first: the drawer's own «@media (max-width: 1023px)» block below stays the first of its kind.) */
+@media (pointer: coarse), (max-width: 1023px) {
+  .eb-quicknav-input, .eb-topbar-pill { min-height: 44px; }
+}
 /* Phones: the bar keeps the menu, the brand mark, the quick navigation and the avatar. The brand name leaves the screen
    (it stays in the accessibility tree) and the home pill hides — «لوحة المتابعة» is the drawer's first destination. */
 @media (max-width: 639px) {

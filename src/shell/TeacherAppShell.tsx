@@ -170,7 +170,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />
         <div className="eb-topbar-actions">
           {identity
-            ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact />
+            ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact size={44} />
             : <div className="eb-topbar-user" title={displayName}><IconUser size={16} /><span>{displayName}</span></div>}
         </div>
       </header>
