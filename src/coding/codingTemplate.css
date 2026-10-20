@@ -15,7 +15,7 @@
 .cx-tpl-gap { border: 2px solid var(--eb-primary, #2563eb); background: var(--eb-surface, #fff); padding: 4px; display: grid; gap: 4px; }
 .cx-tpl-gap[data-changed] { border-style: double; border-width: 3px; }
 .cx-tpl-gap-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.cx-tpl-tag.is-gap { background: var(--eb-primary-soft, #dbeafe); color: var(--eb-primary-strong, #1e40af); }
+.cx-tpl-tag.is-gap { background: var(--eb-primary-100); color: var(--eb-primary-strong, #1e40af); }
 .cx-tpl-reset { min-height: 36px; padding: 0 10px; font-size: 12px; }
 .cx-tpl-input { width: 100%; box-sizing: border-box; min-height: 3rem; resize: vertical; direction: ltr; text-align: left; white-space: pre; overflow: auto; tab-size: 4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; line-height: 1.5; padding: 6px 8px; border: 1px solid var(--eb-border, #e2e8f0); border-radius: 6px; }

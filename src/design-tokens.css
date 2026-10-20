@@ -7,53 +7,63 @@
   /* Typography */
   --eb-font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
 
-  /* Surfaces & background */
-  --eb-bg: #f5f7fa;
-  --eb-bg-tint: #f7f9fd;
-  --eb-surface: #ffffff;
-  --eb-surface-2: #f7f9fc;
+  /* UX-R1 — the approved redesign palette (docs/enterprise-ux-r0-redesign-foundation.md §3.1): quiet lavender-grey neutrals and a
+     deep purple primary instead of slate and blue. Names are unchanged, so every sheet that already reads a token follows. */
 
-  /* Navy / ink / text hierarchy */
-  --eb-navy: #0f172a;
-  --eb-navy-2: #12223f;
-  --eb-ink: #1e293b;
-  --eb-text: #334155;
-  /* 21E.1 slice 2 (audit F6) — was #64748b: 4.04–4.48:1 on the tints (primary-050/-100, bg, warn/danger/info -bg), below AA 4.5:1.
-     #475569 is ≥ 6.4:1 on every surface and tint and stays lighter than --eb-text. */
-  --eb-muted: #475569;
-  /* Input placeholders keep the former muted value: AA on white (4.76:1) yet clearly lighter than typed text (--eb-text, 2.2:1
-     apart), so an empty field never looks filled. */
-  --eb-placeholder: #64748b;
+  /* Surfaces & background */
+  --eb-bg: #f7f6fa;
+  --eb-bg-tint: #f8f7fb;
+  --eb-surface: #ffffff;
+  --eb-surface-2: #f5f4f8;
+
+  /* Ink / text hierarchy (purple-tinted near-blacks; the --eb-navy* names are kept for the dark surfaces that read them) */
+  --eb-navy: #1c1330;
+  --eb-navy-2: #2a1d45;
+  --eb-ink: #241b38;
+  --eb-text: #2d2740;
+  /* 21E.1 slice 2 (audit F6) — secondary text must be AA (4.5:1) on every surface and tint and stay lighter than --eb-text
+     (src/designSystem/mutedContrast.21e1s2.test.ts). UX-R1: #5f5a6e is ≥ 5.37:1 on all of them (the mockup's #6c6879 fell to
+     4.38:1 on --eb-primary-100). */
+  --eb-muted: #5f5a6e;
+  /* Input placeholders: AA on white (5.39:1) yet clearly lighter than typed text (--eb-text), so an empty field never looks
+     filled. */
+  --eb-placeholder: #6c6879;
+  /* Decorative only (drag grips, dividers): never text or a meaningful icon (2.6:1). UX-R1 keeps the UX-8b owner decision —
+     the token is not changed (api/tests/ux2-shell-foundation.test.js pins it); the mockup's lavender #a9a5b4 awaits the owner. */
   --eb-faint: #94a3b8;
 
-  /* Lines / borders (soft) */
-  --eb-line: #e9edf4;
-  --eb-line-2: #dce2ec;
+  /* Lines / borders (hairlines) */
+  --eb-line: #e9e8ee;
+  --eb-line-2: #dedce6;
 
-  /* Professional blue */
-  --eb-primary: #2563eb;
-  --eb-primary-strong: #1d4ed8;
-  --eb-primary-050: #eef4ff;
-  --eb-primary-100: #e4edfc;
+  /* Deep purple primary. --eb-primary-strong is the HOVER / pressed step: on a near-black primary a darker step would be
+     invisible, so it is a lighter purple (white on it 11.4:1; on --eb-primary-050 10.1:1 as link text). */
+  --eb-primary: #2a0a4e;
+  --eb-primary-strong: #4a2380;
+  --eb-primary-050: #f3effa;
+  --eb-primary-100: #ebe5f4;
+  /* Light borders / pale series (was the blue-200 literals) and the mid series / chart secondary (was blue-400/500). */
+  --eb-primary-200: #d9cfea;
+  --eb-primary-300: #8b74b8;
 
   /* Semantic */
   --eb-success: #16a34a; --eb-success-bg: #ecfdf3; --eb-success-tx: #15803d;
   --eb-warn: #d97706;    --eb-warn-bg: #fff7ed;    --eb-warn-tx: #b45309;
   --eb-danger: #dc2626;  --eb-danger-bg: #fef2f2;  --eb-danger-tx: #b42318;
 
-  /* Radius scale */
-  --eb-r-sm: 10px; --eb-r: 12px; --eb-r-lg: 16px; --eb-r-xl: 20px; --eb-pill: 999px;
+  /* Radius scale — UX-R1: flatter (controls / popovers 6 px, cards 8 px) */
+  --eb-r-sm: 6px; --eb-r: 8px; --eb-r-lg: 10px; --eb-r-xl: 12px; --eb-pill: 999px;
 
-  /* Soft shadow scale */
-  --eb-sh-xs: 0 1px 2px rgba(15,23,42,.05);
-  --eb-sh-sm: 0 4px 14px -8px rgba(15,23,42,.14);
-  --eb-sh-md: 0 10px 30px -18px rgba(15,23,42,.16);
-  --eb-sh-lg: 0 20px 44px -26px rgba(15,23,42,.22);
+  /* Shadow scale — UX-R1: lighter, purple-tinted; cards lean on hairline borders, popovers keep a soft lift */
+  --eb-sh-xs: 0 1px 2px rgba(28,19,48,.04);
+  --eb-sh-sm: 0 2px 8px -4px rgba(28,19,48,.10);
+  --eb-sh-md: 0 10px 28px -12px rgba(28,19,48,.18);
+  --eb-sh-lg: 0 18px 40px -18px rgba(28,19,48,.24);
 
   /* Motion & focus */
   --eb-ease: cubic-bezier(.4,0,.2,1);
   --eb-dur: .18s;
-  --eb-focus: 0 0 0 4px rgba(37,99,235,.16);
+  --eb-focus: 0 0 0 4px rgba(42,10,78,.14);
 }
 
 /* ============================================================
@@ -66,16 +76,19 @@
 :root {
   /* Semantic colour aliases */
   --eb-border: var(--eb-line);
-  --eb-border-strong: #cbd5e1;
+  --eb-border-strong: #cfcbd9;
   --eb-text-heading: var(--eb-navy);
   --eb-text-secondary: var(--eb-text);
   --eb-info: #0284c7; --eb-info-bg: #e0f2fe; --eb-info-tx: #075985;
-  --eb-nav-bg: #0f172a;
-  --eb-nav-text: #e6ecfb;
-  --eb-nav-text-muted: #93a5cc;
-  --eb-nav-hover: rgba(255, 255, 255, 0.08);
-  --eb-nav-border: rgba(255, 255, 255, 0.1);
-  --eb-backdrop: rgba(15, 23, 42, 0.45);
+  /* UX-R1 — the sidebar stays a dark rail until R2 makes it light; it is re-tinted to the purple ink family. Its active pill is
+     tinted with --eb-nav-accent (a light lavender), because the deep purple primary would vanish on the dark rail. */
+  --eb-nav-bg: #1c1330;
+  --eb-nav-text: #ece8f5;
+  --eb-nav-text-muted: #b3aac9;
+  --eb-nav-hover: rgba(255, 255, 255, 0.07);
+  --eb-nav-border: rgba(255, 255, 255, 0.09);
+  --eb-nav-accent: #b9a3e3;
+  --eb-backdrop: rgba(28, 19, 48, 0.45);
 
   /* Typography scale (12–28) and weights (400–700) */
   --eb-fs-12: 12px; --eb-fs-13: 13px; --eb-fs-14: 14px; --eb-fs-16: 16px;

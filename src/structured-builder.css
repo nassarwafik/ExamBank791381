@@ -84,7 +84,7 @@
 .sb-grid th,.sb-grid td{border:1px solid var(--line,#e5e9f0);padding:6px;vertical-align:top;min-width:120px}
 .sb-grid th{background:var(--surface2,#f1f5f9)}
 .sb-grid-actions{min-width:auto;background:var(--surface2,#f8fafc)}
-.sb-cell-answer{background:#eff6ff}
+.sb-cell-answer{background:var(--eb-primary-050)}
 .sb-cell-editor,.sb-cell-static{display:flex;flex-direction:column;gap:5px}
 .sb-cell-row{display:flex;gap:5px;align-items:center}
 
@@ -223,8 +223,8 @@
 .sb-q-selected-tag{font-size:11px;font-weight:800;color:var(--primary2,#1d4ed8);background:var(--primary050,#eef4ff);border-radius:var(--pill,999px);padding:1px 8px}
 .sb-question:focus-visible,.sb-question:focus{outline:2px solid var(--primary,#2563eb);outline-offset:2px}
 .sb-q-flash{animation:sb-q-flash 1.2s ease-out}
-@keyframes sb-q-flash{0%{box-shadow:0 0 0 4px #bfdbfe}100%{box-shadow:0 0 0 0 transparent}}
-@media (prefers-reduced-motion:reduce){.sb-q-flash{animation:none;box-shadow:0 0 0 3px #bfdbfe}}
+@keyframes sb-q-flash{0%{box-shadow:0 0 0 4px var(--eb-primary-200)}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.sb-q-flash{animation:none;box-shadow:0 0 0 3px var(--eb-primary-200)}}
 .sb-bulk-bar{position:sticky;top:64px;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface,#fff);border:1px solid var(--primary,#2563eb);border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px -18px rgba(15,23,42,.5)}
 .sb-bulk-group{display:inline-flex;gap:6px;align-items:center}
 .sb-bulk-count{font-size:12.5px}
@@ -359,7 +359,7 @@
 .sb-gov-state{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:700;border:1px solid var(--line2,#cdd5e0)}
 .sb-gov-state.is-draft{background:#f4f6fa;color:#334155}
 .sb-gov-state.is-in-review{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
-.sb-gov-state.is-approved{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.sb-gov-state.is-approved{background:var(--eb-primary-050);color:var(--eb-primary-strong);border-color:var(--eb-primary-200)}
 .sb-gov-state.is-published{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
 .sb-gov-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sb-gov-table{width:100%;border-collapse:collapse;font-size:13px}

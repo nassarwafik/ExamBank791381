@@ -1,19 +1,20 @@
 // Teacher project charts — ONE contained palette derived from the ExamBank design tokens. Chart.js needs
 // resolved colour strings (it cannot read `var(--eb-*)`), so each entry is read from the live token on
-// :root when available and otherwise falls back to the token's documented value (design-tokens.css).
+// :root when available and otherwise falls back to the token's documented value (design-tokens.css; kept equal by
+// chartPalette.tokenMirror.ux-r1.test.ts).
 // Presentation only: it never changes datasets, and status colours keep their semantic distinction.
 import type { StageStatus } from "./types";
 
 const FALLBACK: Record<string, string> = {
-  "--eb-primary": "#2563eb",
-  "--eb-primary-strong": "#1d4ed8",
+  "--eb-primary": "#2a0a4e",
+  "--eb-primary-strong": "#4a2380",
   "--eb-info": "#0284c7",
   "--eb-success": "#16a34a",
   "--eb-warn": "#d97706",
   "--eb-danger": "#dc2626",
-  "--eb-line-2": "#dce2ec",
+  "--eb-line-2": "#dedce6",
   "--eb-faint": "#94a3b8",
-  "--eb-muted": "#64748b"
+  "--eb-muted": "#5f5a6e"
 };
 
 export function tokenColor(name: string): string {

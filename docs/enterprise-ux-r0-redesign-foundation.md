@@ -48,7 +48,7 @@ stylesheet that already uses a token follows. The contrast figures below are WCA
 | Heading ink (`--eb-navy`, `--eb-text-heading`) | `#1c1330` | `#1c1330` | 14.4 : 1 on primary tint | purple-tinted near-black |
 | Body text (`--eb-text`, `--eb-ink`) | `#2d2740` | `#2d2740` | 11.6 : 1 | |
 | Muted text (`--eb-muted`) | `#6c6879` | **`#5f5a6e`** | 5.37 : 1 on primary tint | mockup value is 4.38 : 1 on the tint (below AA); the existing guard `src/designSystem/mutedContrast.21e1s2.test.ts` requires ≥ 4.5 : 1 |
-| Faint (`--eb-faint`) | `#a9a5b4` | `#a9a5b4` | 2.4 : 1 | **decorative only** (drag grip, dividers); never text or a meaningful icon |
+| Faint (`--eb-faint`) | `#a9a5b4` | **`#94a3b8` (unchanged)** | 2.6 : 1 | **decorative only** (drag grip, dividers); never text or a meaningful icon. The token is pinned by a recorded owner decision (UX-8b, `api/tests/ux2-shell-foundation.test.js`: «the token itself is NOT darkened»), so R1 leaves it as is; the mockup's lavender value is the owner's call |
 | Hairline (`--eb-line`) | `#e9e8ee` | `#e9e8ee` | — | card border, row separators |
 | Hover / active / field fill | `#f5f4f8` / `#eeedf3` / `#f3f3f6` | same | — | nav active pill, sub-nav active, search field |
 | Primary (`--eb-primary`) | `#2a0a4e` | `#2a0a4e` | white on it 16.8 : 1 | buttons, active chart series, tooltip |
@@ -274,3 +274,141 @@ hardening item. Changing a timeout here would be out of scope and is forbidden.
 - Tier 3: the `Build and Deploy Job` creates a PR preview only if it succeeds. R0 changes no page, so a preview would look like
   `main`.
 - No production or Runner deployment.
+
+---
+
+# Phase UX-R1 — Tokens v2 (the purple palette)
+
+**Owner direction (2026-10-20):** start R1 now, on a new branch stacked on R0 (`feature/ux-r1-tokens` from `70059d5`), with a
+separate pull request. Merge order: R0 (PR #390), then R1.
+
+## R1.1 Scope
+
+R1 changes the **look of every page**, and nothing else. No markup, component, data, API or grading change. Every edit is a
+colour, radius or shadow value, or replaces a literal with a token.
+
+## R1.2 Edit set
+
+**Tokens:**
+- `src/design-tokens.css`: §3.1 values under the existing names. New tokens: `--eb-primary-200`, `--eb-primary-300` and
+  `--eb-nav-accent`.
+- `--eb-primary-strong` is now the **hover / pressed** step: a lighter purple `#4a2380`. On a near-black primary, a darker step
+  would be invisible.
+
+**The rail:**
+- `src/shell.css` and `src/shell/teacher-nav-21e.css`: the active pill of the dark rail is tinted with `--eb-nav-accent` instead
+  of `--eb-primary`. The deep purple would vanish on the dark rail.
+- The rail itself stays dark, re-tinted to the purple ink family, until R2 makes it light.
+
+**Blue literals → tokens (179 replacements in 19 stylesheets):**
+- Mapping:
+  - `#2563eb` → `--eb-primary`
+  - `#1d4ed8` / `#1e40af` / `#1e3a8a` / `#1f4fb0` → `--eb-primary-strong`
+  - `#eef4ff` / `#eff6ff` → `--eb-primary-050`
+  - `#e4edfc` / `#dbeafe` → `--eb-primary-100`
+  - `#bfdbfe` / `#93c5fd` → `--eb-primary-200`
+  - `#60a5fa` / `#3b82f6` → `--eb-primary-300`
+  - `rgba(37,99,235,a)` → `color-mix(in srgb, var(--eb-primary) a%, transparent)`, and the same for the other two blues
+- Also replaced: the fallback of a variable **nothing defines**, such as `var(--accent, #1d4ed8)` in the question-type tabs and
+  the SmartSim drop zone. That fallback is what renders.
+- Left as is: a fallback of a variable that is defined, such as `var(--eb-primary, #2563eb)`. It never renders.
+- Stylesheets: `App.css` (60), `platform.css` (70), `login-pro.css` (10), `structured-builder.css` (6), `structured-cover.css`
+  (6), and 14 others with 1–3 each.
+
+**Copies of token values in code:**
+- `src/projects/chartPalette.ts`: its fallback colours are equal to the tokens again.
+- `src/avatars.tsx`, `src/ui/ProfileAvatar.tsx` and `src/ErrorBoundary.tsx`: the default avatar colour and the reload button read
+  `var(--eb-primary, #2a0a4e)` instead of a blue literal.
+
+**Kept as it was:** `--eb-faint` stays `#94a3b8`. The first R1 run changed it to the mockup's `#a9a5b4`. That is lighter, so the
+UX-8b invariant ("not darkened") still held, but `api/tests/ux2-shell-foundation.test.js` pins the value as a recorded owner
+decision and failed. A pinned owner decision is not changed by an agent: the value was put back, and the switch to `#a9a5b4` is
+left to the owner. The token is decorative only, so the difference is barely visible.
+
+**Ratchet:** `scripts/ux-color-inventory.baseline.json` lowered from 2 477 to **2 298** literals.
+
+**New tests:**
+- `src/designSystem/tokensV2.ux-r1.test.ts` (27 tests): pins, AA contrast, no rendered old blue, no undefined token.
+- `src/projects/chartPalette.tokenMirror.ux-r1.test.ts` (9 tests).
+
+**Deliberately not in R1:**
+
+| Item | Why | Phase |
+|---|---|---|
+| ≈ 540 slate neutral literals (`#64748b`, `#0f172a`, `rgba(15,23,42,…)` …) in 38 sheets | many draw simulator / diagram content. The difference from the new lavender-greys is subtle and needs per-page judgement | each page phase, then R17 |
+| Chart.js palettes (`src/charts/chartTheme.ts`, dashboard chart colours in `TeacherDashboard.tsx`) | the charts still draw in blue | R3 (theme) and R4 |
+| the login illustration SVG in `App.tsx` | page art | R16 |
+| the studio top bar's own navy / teal palette (`--st-*`) | pinned by its own contrast tests; part of the builder redesign | R11b |
+| the reader's light island inside its dark theme (`reader-enterprise-l1.css`) | literal copies of the old light tokens | R9b |
+| the function-graph colours, the exam presentation presets | content and teacher-chosen themes | not planned |
+
+## R1.3 Fail-first evidence
+
+`src/projects/chartPalette.tokenMirror.ux-r1.test.ts` compares the project charts' fallback colours with `design-tokens.css`:
+- **On the baseline `56ce097`:** 1 failed / 8 passed. `--eb-muted` expected `#475569` (the token since 21E.1 slice 2), received
+  `#64748b`. This copy had already drifted before R1, with no test to catch it.
+- **On the R1 head before the fix:** 5 failed. `--eb-primary`, `-strong`, `--eb-line-2`, `--eb-faint` and `--eb-muted` all still
+  held the old values. `--eb-faint` was later put back to `#94a3b8` (see R1.2), so its copy is `#94a3b8` again.
+- **After the fix:** 9 / 9.
+
+## R1.4 Pre-existing defects found by the R1 guard (recorded, not fixed here)
+
+Seven stylesheet reads use an `--eb-*` token that nothing defines, so the browser drops the declaration today. Defining them would
+change those pages' look, so each is left to the phase that owns the page. The guard lists them by name, and the list may only
+shrink.
+
+| Stylesheet | Undefined token | Phase |
+|---|---|---|
+| `games/games.css` | `--eb-font-mono` | R13 |
+| `learning/activities/activities.css` | `--eb-fs-18` | R9b |
+| `learning/visuals/visuals.css` | `--eb-font-mono` | R9b |
+| `projects/performance.css` | `--eb-fs-15` | R10 |
+| `projects-pro.css` | `--eb-fs-15` | R10 |
+| `studentexam-pro.css` | `--eb-text-muted` | R15 |
+| `studentexam-pro.css` | `--eb-fs-sm` | R15 |
+
+## R1.5 Mutation proof
+
+Each mutant was run against:
+- `src/designSystem/tokensV2.ux-r1.test.ts`;
+- `src/projects/chartPalette.tokenMirror.ux-r1.test.ts`;
+- `src/designSystem/mutedContrast.21e1s2.test.ts`;
+- `scripts/ux-color-inventory.test.mjs`.
+
+After each run the file was restored byte-for-byte (SHA-256-verified), and `git status` was clean afterwards.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | `--eb-primary` back to `#2563eb` | KILLED | palette pin; "primary and primary-strong as link text…"; the chart mirror test |
+| M2 | `--eb-nav-text-muted` darkened to `#6b6380` | KILLED | "the dark rail: labels ≥ 7:1, secondary labels and the accent ≥ AA…" |
+| M3 | bare `#2563eb` re-added to `App.css` | KILLED | colour ratchet; "bare literals and fallbacks of undefined variables are gone" |
+| M4 | `shell.css` reads a misspelt `--eb-nav-acent` | KILLED | "no stylesheet reads an undefined --eb-* token beyond the recorded…" |
+| M5 | chart fallback primary left at `#2563eb` | KILLED | chart mirror test `--eb-primary` |
+| M6 | hover step equal to the primary | KILLED | pin; "the hover step stays visibly distinct from the primary" |
+| M7 | placeholder lightened to `#8a8696` | KILLED | pin; "placeholder text on white and on the hover fill" |
+| M8 | `var(--accent,#1d4ed8)` re-added to `questionTypes.css` | KILLED | colour ratchet; "bare literals and fallbacks of undefined variables are gone" |
+
+## R1.6 Visual evidence
+
+`scripts/capture-visual-baseline-ux-r.mjs` was run on the R1 build: 14 pages × 3 viewports, plus the gallery. Result: 42 / 45
+captures clean. The three that are not clean are the phone overflows already recorded in §7 (students 391, bank 458, import 405),
+unchanged by R1. There is no new overflow and no page error.
+
+**What changed:**
+- every primary button, link, tab, active state, focus halo, stat-card accent, progress fill and badge tint moved from blue to the
+  deep purple;
+- the dark rail and the student top bar became purple ink;
+- radii are flatter and shadows lighter.
+
+**Still blue, as planned:** the Chart.js series (R3/R4) and the login illustration (R16).
+
+## R1.7 Local validation (final R1 state, 4-core container)
+
+| Check | Result |
+|---|---|
+| `npm test`, full root suite | **1 170 / 1 170 files, 13 968 / 13 968 tests**. The first run, before `--eb-faint` was put back, had 1 failure: the UX-8b pin (R1.2). The two R0 timing tests passed both times. |
+| `npm run lint` | exit 0. The `avatars.tsx` warnings predate R1 |
+| `npm run build` (tsc -b + bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| mutation campaign, re-run on the final state | 8 / 8 KILLED, files restored (R1.5) |
+| visual capture | 42 / 45 clean; the 3 recorded overflows only (R1.6) |
