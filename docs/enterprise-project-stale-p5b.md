@@ -43,3 +43,21 @@ stage has started, and a never-started summary is never stale.
   - S3: the baseline rule;
   - S4: the flag emitted on every summary;
   - S5 / S6 / S7: the delayed-report reasons.
+
+## Phase P-5c — the class summary counts «لم يبدأوا»
+
+The class summary now reports how many students have not started, by the rule above: `notStartedCount`. Like P6's figures,
+it is present only when it is above zero, so a class where everyone started keeps a byte-identical summary. The project
+dashboard shows it as its own card, «لم يبدأوا» (hint «لم يبدأ أي مرحلة بعد», attention tone), only when the server reports
+one or more. The «بلا تحديث N+ أيام: N» hint is unchanged.
+
+- **Golden.** Exactly one R33 entry was refreshed: `G794589.summary.c1` gained `notStartedCount: 1`, and nothing else changed. The new invariant B9 checks that the summary's count equals the number of `notStarted` cards of the same class.
+- **Tests.** `api/tests/project-not-started-count-p5c.test.js` (3) and `src/projects/ProjectDashboard.p5c.test.tsx` (2).
+- **Fail-first.** On `1012b131`, 3 of 5 fail; the other 2 are pins that check nothing changes when everyone started.
+- **Mutation campaign.** 6 mutants, all KILLED:
+  - N1: every student counted;
+  - N2: the stale students counted instead;
+  - N3: the count always emitted;
+  - N4: the count dropped;
+  - N5: the card shown at 0;
+  - N6: the dashboard reads the stale count.

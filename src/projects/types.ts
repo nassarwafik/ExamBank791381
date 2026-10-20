@@ -63,6 +63,8 @@ export type ClassSummary = {
   /** Phase P6 — additive (absent on older payloads): the students' own marks awaiting the teacher's confirmation. */
   studentsSelfReported?: number;
   totalSelfReportedStages?: number;
+  /** Phase P-5c — additive (present only when > 0): students with no active stage started (the P-5b rule). */
+  notStartedCount?: number;
   staleCount: number;
   trackWeights: Record<string, number>;
   staleDays: number;
