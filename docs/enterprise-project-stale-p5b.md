@@ -61,3 +61,21 @@ one or more. The «بلا تحديث N+ أيام: N» hint is unchanged.
   - N4: the count dropped;
   - N5: the card shown at 0;
   - N6: the dashboard reads the stale count.
+
+## Phase P-5d — «لم يبدأوا» in the Reports Center
+
+The same count (`notStartedCount`, present only when above zero) now appears where the reports show a project's other counts:
+
+- **Project report** (`type=project`, whose summary already carried it): its own StatCard «لم يبدأوا» (attention tone, hint «لم يبدأ أي مرحلة بعد») after «بلا تحديث», and a CSV row `لم يبدأوا` appended after the frozen KPI rows.
+- **Class report** (`type=class`): each project section now carries `notStartedCount` when it is above zero. The project card shows a «لم يبدأوا N» badge next to «مكتملون N», and the class CSV gets a `لم يبدأوا` row for that project.
+
+A class where everyone started reads and exports exactly as before. The UX-6b CSV-parity rows are unchanged.
+
+- **Tests.** `api/tests/reports-not-started-p5d.test.js` (3) and `src/reports/ReportsNotStarted.p5d.test.tsx` (4).
+- **Fail-first.** On `4e3683bb`, 4 of 7 fail; the other 3 are pins.
+- **Mutation campaign.** 7 mutants, all KILLED:
+  - D1 / D2: the class report drops or always emits the count;
+  - D3 / D4: the project card is never shown, or shown at 0;
+  - D5: the project CSV row is always appended;
+  - D6: the class badge is never shown;
+  - D7: the class CSV row is never written.

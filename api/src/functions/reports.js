@@ -136,7 +136,8 @@ async function handler(request, deps = {}, obs = null) {
         for (const pCode of getSupportedClassProgramCodes(c)) {
           const ctx = await projectContext(container, pCode, c);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
-          projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount });
+          // Phase P-5d — «لم يبدأوا» (P-5c count) only when some students have not started; every other section is unchanged.
+          projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}) });
         }
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: {
           assignments: assignments.length,

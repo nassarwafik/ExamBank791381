@@ -71,7 +71,7 @@ const motion = (reduced: boolean) => (reduced ? { animation: false as const } : 
 
 /* ---------------- Academic ---------------- */
 
-type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number };
+type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; notStartedCount?: number };
 
 function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level = 4 }: { title: string; tracks: TrackMeta[]; overall: number; trackValues: Record<string, number>; footer?: ReactNode; level?: 3 | 4 }) {
   const H = level === 3 ? "h3" : "h4";
@@ -118,7 +118,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
           <h3 id="eb-report-class-projects" className="eb-subheading">مشاريع الصف</h3>
           {/* Each project reported independently — never combine two projects into one % */}
           <div className="eb-report-project-grid">
-            {data.projects.map(p => <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.avgOverall} trackValues={p.trackAverages} footer={<StatusBadge tone="success">مكتملون {p.completedCount}</StatusBadge>} />)}
+            {data.projects.map(p => <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.avgOverall} trackValues={p.trackAverages} footer={<><StatusBadge tone="success">مكتملون {p.completedCount}</StatusBadge>{p.notStartedCount ? <>{" "}<StatusBadge tone="warn">لم يبدأوا {p.notStartedCount}</StatusBadge></> : null}</>} />)}
           </div>
           <ReportNote>بيانات التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</ReportNote>
         </section>
@@ -247,7 +247,7 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
 /* ---------------- Project (generic) ---------------- */
 
 function ProjectReport({ token, filters, onOpenProject }: { token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
-  type Resp = { tracks: TrackMeta[]; class: { name: string }; summary: { avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number; studentCount: number }; analytics?: AnalyticsData };
+  type Resp = { tracks: TrackMeta[]; class: { name: string }; summary: { avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number; studentCount: number; notStartedCount?: number }; analytics?: AnalyticsData };
   const params = filters.projectCode && filters.classId ? { type: "project", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   const [stageTrack, setStageTrack] = useState("");
@@ -261,7 +261,9 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
     ...data.tracks.map(t => ({ label: t.title, value: pct(data.summary.trackAverages[t.trackId] || 0) })),
     { label: "✅ مكتملون", value: data.summary.completedCount },
     { label: "🔵 ينتظرون الفحص", value: data.summary.studentsReadyForReview },
-    { label: "⚠ متأخرون", value: data.summary.staleCount }
+    { label: "⚠ متأخرون", value: data.summary.staleCount },
+    // Phase P-5d — appended (the frozen rows above are unchanged) and only when the server reports students who have not started.
+    ...(data.summary.notStartedCount ? [{ label: "لم يبدأوا", value: data.summary.notStartedCount }] : [])
   ];
   const track = resolveTrack(stageTrack, data.tracks.map(t => t.trackId), data.tracks[0]?.trackId || "");
   return (
@@ -275,6 +277,7 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
         <StatCard primary label="مكتملون" value={data.summary.completedCount} tone="success" />
         <StatCard primary label="ينتظرون الفحص" value={data.summary.studentsReadyForReview} tone={data.summary.studentsReadyForReview > 0 ? "attention" : "neutral"} />
         <StatCard primary label="بلا تحديث" value={data.summary.staleCount} tone={data.summary.staleCount > 0 ? "danger" : "neutral"} hint="متأخرون حسب إعداد الصف" />
+        {(data.summary.notStartedCount || 0) > 0 && <StatCard primary label="لم يبدأوا" value={data.summary.notStartedCount} tone="attention" hint="لم يبدأ أي مرحلة بعد" />}
       </div>
       <ProjectSummaryCard level={3} title="التقدم العام والمسارات" tracks={data.tracks} overall={data.summary.avgOverall} trackValues={data.summary.trackAverages} />
       {/* The `type=project` response already carries `analytics`; it is rendered directly (no second analytics GET). */}
