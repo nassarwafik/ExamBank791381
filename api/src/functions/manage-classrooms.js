@@ -3,7 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { mutateJsonWithRetry, StorageConflictError, uploadJsonConditional, isConcurrencyConflict } = require("../lib/platform-storage");
 // Roadmap #25 — explicit, teacher-triggered roster-index repair (the only O(all-users) path in this function;
 // the normal class list stays O(classes) and reads the cheap studentIds count).
 const { canonicalMemberIds, reconcileRosterIndex } = require("../lib/class-roster-index");
@@ -136,10 +136,20 @@ function learningMaterialsChangeAllowed(classroom) {
   return normalizeClassStatus(classroom) !== "archived";
 }
 
-function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant = null) {
+// Batch-4 fix (D3) — a create request may carry a client `requestKey` (one per «إنشاء الصف» submission, reused by a
+// double click or a retry). The class id is then derived from (teacher, key), so the same submission always names the same
+// class and is stored with a create-only write: a repeat returns that class instead of creating a duplicate. Without a key
+// (older clients) the id is random, as before.
+const REQUEST_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/;
+function classIdForRequestKey(requestKey, tenant) {
+  if (typeof requestKey !== "string" || !REQUEST_KEY_PATTERN.test(requestKey.trim())) return null;
+  return "cls-" + crypto.createHash("sha256").update(String(tenant || "") + "\u0000" + requestKey.trim()).digest("hex").slice(0, 32);
+}
+
+function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant = null, classId = null) {
   const doc = {
     schemaVersion: 1,
-    classId: crypto.randomUUID(),
+    classId: classId || crypto.randomUUID(),
     ...ownerStamp(tenant),
     name, grade, schoolYear,
     active: true,
@@ -204,10 +214,28 @@ async function handler(request, deps = {}, obs = null) {
       const programCode = String(body?.programCode || "").trim();
       if (!programCodeAccepted(programCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
 
+      if (body?.requestKey !== undefined && body?.requestKey !== null && !classIdForRequestKey(body.requestKey, tenant)) {
+        return { status: 400, jsonBody: { ok: false, error: "مفتاح الطلب غير صالح." } };
+      }
+      const keyedId = classIdForRequestKey(body?.requestKey, tenant);
       const now = new Date().toISOString();
-      const classroom = buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant);
+      const classroom = buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now, tenant, keyedId);
       const classId = classroom.classId;
-      await up(container, CLASS_PREFIX + classId + ".json", classroom);
+      if (keyedId) {
+        try { await (deps.uploadJsonConditional || uploadJsonConditional)(container, CLASS_PREFIX + classId + ".json", classroom, null); }
+        catch (e) {
+          if (!isConcurrencyConflict(e)) throw e;
+          // The same submission already created this class: answer with it, write and audit nothing.
+          const existing = await dl(container, CLASS_PREFIX + classId + ".json");
+          if (!existing || !canAccessDocument(existing, tenant)) throw e;
+          const codes = getClassProgramCodes(existing);
+          return {
+            status: 200,
+            jsonBody: { ok: true, duplicate: true, classroom: { classId, name: existing.name, grade: existing.grade, schoolYear: existing.schoolYear, programCodes: codes, programCode: codes[0] || "", active: existing.active !== false, studentCount: Array.isArray(existing.studentIds) ? existing.studentIds.length : 0, createdAt: existing.createdAt } }
+          };
+        }
+      }
+      else await up(container, CLASS_PREFIX + classId + ".json", classroom);
       // Roadmap #19: audit the class creation (high-value lifecycle mutation).
       const programCodes = getClassProgramCodes(classroom);
       await rec(container, { actor: auth.user?.sub, action: "class.create", targetType: "class", targetId: classId, targetLabel: name, details: { grade, schoolYear, ...(programCodes.length ? { programCodes } : {}) } });
@@ -438,4 +466,4 @@ async function handler(request, deps = {}, obs = null) {
 
 app.http("manageClassrooms", { methods: ["GET", "POST"], authLevel: "anonymous", route: "classrooms", handler: withObservability("classrooms", handler) });
 
-module.exports = { handler, buildNewClassroomDocument, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed, normalizeClassFields };
+module.exports = { handler, buildNewClassroomDocument, classIdForRequestKey, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed, normalizeClassFields };

@@ -3,6 +3,7 @@ import {validIdentity} from "./students/identity";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
 import {lazyWithRetry} from "./lazyWithRetry";
+import {newRequestKey} from "./bank/bankQuestionModel";
 // Phase 8E-2 — the Dashboard (and with it the whole Chart.js graph) is a LAZY chunk: it is the only initial-graph consumer
 // of chart.js, so a static import shipped ~186 KB of charting code to every user (students included) before first paint.
 // lazyWithRetry keeps the one-shot stale-chunk deployment recovery; the module is fetched once per page load and then
@@ -387,17 +388,24 @@ function TeacherPlatform(props:TeacherPlatformProps){
   },1000);
  }
 
+ // Batch-4 fix (D3): one request key per «إنشاء الصف» submission (kept for a retry after a failure, renewed after a
+ // success), and a synchronous in-flight guard: a double click or a retry never creates the class twice.
+ const createKeyRef=useRef("");
+ const createInFlightRef=useRef(false);
  async function createClass(){
-  if(!newClassName.trim()||actionBusy)return;
+  if(!newClassName.trim()||actionBusy||createInFlightRef.current)return;
+  createInFlightRef.current=true;
+  if(!createKeyRef.current)createKeyRef.current=newRequestKey();
   setActionBusy(true);setError("");setNotice("");
   try{
-   const result=await teacherApi<{ok:true;classroom:Classroom}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"create",name:newClassName.trim(),grade:newClassGrade.trim(),schoolYear:newSchoolYear.trim()})});
+   const result=await teacherApi<{ok:true;classroom:Classroom}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"create",name:newClassName.trim(),grade:newClassGrade.trim(),schoolYear:newSchoolYear.trim(),requestKey:createKeyRef.current})});
+   createKeyRef.current="";
    setNewClassName("");setNewClassGrade("");setDialog("none");
    await loadClasses(false);
    setSelectedClassId(result.classroom.classId);
    setNotice("✓ تم إنشاء الصف.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الصف.")}
-  finally{setActionBusy(false)}
+  finally{setActionBusy(false);createInFlightRef.current=false}
  }
 
  function openEditClass(classroom:Classroom){
