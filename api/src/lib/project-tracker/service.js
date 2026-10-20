@@ -106,7 +106,9 @@ async function listProjectClasses(container, projectCode) {
 //     ("condense": owner-approved rules, old entries archived; persisted by condenseClass). A class whose own stages
 //     cannot be converted safely (id collision) is served as it is and marked skipped by the next write;
 //   - Phase P7b (owner decision) — an ACTIVE class on `policy.resetFrom` WITH meaningful progress → the current set and
-//     every document from zero ("reset": the old work archived in each document, never shown or counted);
+//     every document from zero ("reset": the old work deleted, Phase P7c);
+//   - Phase P7c (owner decision) — a class P7b reset while the old work was still archived (`resetFrom` in its documents)
+//     → "delete-reset-archive": the first write deletes the archives (reads show the same: the archive is never read);
 //   - version-aware upgrade — only for a project that declares a policy (794589). NON-DESTRUCTIVE: an active class
 //     with no meaningful progress is upgraded to the current template version (and audited when written); any other
 //     class (or an archived one) is returned exactly as-is. Storage paths never change.
@@ -144,7 +146,7 @@ function resolveStoredClass(projectCode, classroom, existing, now, meaningful) {
     if (meaningful === undefined) return { needsProgressScan: true };
     if (policy.resetFrom && fromVersion === policy.resetFrom && meaningful) {
       return {
-        snapshot: { ...policy.buildUpgraded(existing, classId, now), resetAt: now, resetFromVersion: fromVersion }, write: "reset", existing, policy,
+        snapshot: { ...policy.buildUpgraded(existing, classId, now), resetAt: now, resetFromVersion: fromVersion, resetArchiveDeletedAt: now }, write: "reset", existing, policy,
         view: doc => condense.resetProgressDoc(doc, policy.currentVersion, fromVersion, now)
       };
     }
@@ -152,11 +154,12 @@ function resolveStoredClass(projectCode, classroom, existing, now, meaningful) {
       return { snapshot: policy.buildUpgraded(existing, classId, now), write: "upgrade", fromVersion, toVersion: policy.currentVersion };
     }
   }
+  if (existing.resetFromVersion && !existing.resetArchiveDeletedAt) return { snapshot: existing, write: "delete-reset-archive", existing };
   return { snapshot: existing, write: null };
 }
 
 // Returns the class snapshot, lazily creating+persisting it on first access for an ACTIVE class, or persisting (and
-// auditing) its pending upgrade / Phase P7 conversion / P7b reset. Only write paths call it.
+// auditing) its pending upgrade / Phase P7 conversion / P7b reset / P7c archive deletion. Only write paths call it.
 async function ensureClassConfig(container, projectCode, classroom, options = {}) {
   const r = await resolveClassConfig(container, projectCode, classroom);
   if (r.write === "condense" || r.write === "reset") {
@@ -166,6 +169,14 @@ async function ensureClassConfig(container, projectCode, classroom, options = {}
     catch (e) {
       if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project." + r.write + ".failed", e);
       return (await downloadJsonOrNull(container, getStorageNamespace(projectCode).configName(classroom.classId))) || r.existing;
+    }
+  }
+  if (r.write === "delete-reset-archive") {
+    // Same rule: a deletion that fails never fails the request; it is not marked done and the next write completes it.
+    try { return await deleteResetArchives(container, projectCode, classroom, r.existing, new Date().toISOString()); }
+    catch (e) {
+      if (options.obs && typeof options.obs.logError === "function") options.obs.logError("project.reset_archive_delete.failed", e);
+      return r.snapshot;
     }
   }
   if (r.write) await uploadJson(container, getStorageNamespace(projectCode).configName(classroom.classId), r.snapshot);
@@ -216,7 +227,7 @@ async function mutateIfChanged(container, name, fn) {
 // A pass that fails leaves a state the next access completes (a stale lock is retaken after condense.LOCK_MS). A class
 // whose own stages cannot be converted safely (an id collision) is marked skipped once and left exactly as it is.
 // Phase P7b — mode "reset" (owner decision, `policy.resetFrom`): the same passes, but every document restarts from zero
-// (condense.resetProgressDoc: the old work archived in `resetFrom`) and the snapshot becomes the current template
+// (condense.resetProgressDoc: the old work deleted, Phase P7c) and the snapshot becomes the current template
 // (policy.buildUpgraded); audited once as `project.template.reset`.
 async function condenseClass(container, projectCode, classroom, existing, policy, now, mode = "condense") {
   const ns = getStorageNamespace(projectCode);
@@ -248,7 +259,7 @@ async function condenseClass(container, projectCode, classroom, existing, policy
     await mapConcurrent(await names(), 4, convert);
     switched = await mutateIfChanged(container, ns.configName(classId), cur => {
       if (!cur || !cur.conversion || cur.conversion.lockId !== lockId) { const e = new StorageConflictError("conversion lock lost"); throw e; }
-      if (reset) { const { conversion, ...rest } = cur; return { ...policy.buildUpgraded(rest, classId, now), resetAt: now, resetFromVersion: fromVersion }; }   // eslint-disable-line no-unused-vars
+      if (reset) { const { conversion, ...rest } = cur; return { ...policy.buildUpgraded(rest, classId, now), resetAt: now, resetFromVersion: fromVersion, resetArchiveDeletedAt: now }; }   // eslint-disable-line no-unused-vars
       return condense.condensedSnapshot(cur, plan, toVersion, now);
     });
   } catch (e) {
@@ -266,7 +277,7 @@ async function condenseClass(container, projectCode, classroom, existing, policy
   if (reset) {
     await recordAuditEvent(container, {
       actor: "system", action: "project.template.reset", targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
-      details: { projectCode, fromVersion, toVersion, students: all.length, reason: "owner-decision-restart-from-zero" }
+      details: { projectCode, fromVersion, toVersion, students: all.length, archive: "deleted", reason: "owner-decision-restart-from-zero" }
     });
     return switched;
   }
@@ -276,6 +287,29 @@ async function condenseClass(container, projectCode, classroom, existing, policy
     details: { projectCode, fromVersion, toVersion, students: all.length, stagesBefore: (existing.stages || []).length, stagesAfter: plan.stages.length }
   });
   return switched;
+}
+
+// Phase P7c — owner decision: the v1 work a P7b reset archived (`resetFrom` in each progress document of the class) is
+// deleted. Every document loses its archive (CAS, idempotent; nothing else in it changes), then the snapshot is marked
+// (`resetArchiveDeletedAt`) so it runs once; audited once with the number of documents, never their content. A pass that
+// fails leaves the snapshot unmarked and the next write completes it.
+async function deleteResetArchives(container, projectCode, classroom, existing, now) {
+  const ns = getStorageNamespace(projectCode);
+  const classId = classroom.classId;
+  const deleted = new Set();
+  await mapConcurrent(await listBlobNames(container, ns.progressPrefix(classId)), 4, name => mutateIfChanged(container, name, doc => {
+    const next = condense.deleteResetArchive(doc);
+    if (next !== doc) deleted.add(name);
+    return next;
+  }));
+  const marked = await mutateIfChanged(container, ns.configName(classId), cur => (cur && cur.resetFromVersion && !cur.resetArchiveDeletedAt ? { ...cur, resetArchiveDeletedAt: now } : cur));
+  if (marked && marked.resetArchiveDeletedAt === now) {
+    await recordAuditEvent(container, {
+      actor: "system", action: "project.template.reset_archive_deleted", targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
+      details: { projectCode, fromVersion: Number(existing.resetFromVersion), documents: deleted.size, reason: "owner-decision-delete-old-work" }
+    });
+  }
+  return marked || existing;
 }
 
 // Phase P7 — a write must never land on a progress document converted to a NEWER stage set than the snapshot it was
