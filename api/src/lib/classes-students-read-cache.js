@@ -10,6 +10,8 @@
 // stale; a hit is a fresh parsed object. A teacher moving between classes, opening profiles or refreshing the page no longer
 // re-downloads every user / class / assignment / submission document that did not change. The listings are still made on
 // every request.
+// Phase R-3 — the Reports Center (api/src/functions/reports.js) reads its users / classes / assignments / submissions listings
+// through the same cache, under the same rule (authoritative documents, ETag-verified reuse, listings on every request).
 const { createDocCache, loadJsonDocs, loadJsonEntries, listEntries } = require("./etag-doc-cache");
 
 const CLASSES_STUDENTS_DOC_CACHE = createDocCache();

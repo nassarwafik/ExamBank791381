@@ -4,7 +4,11 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
+// Phase R-3 — every listing a report reads (users, classes, assignments, submissions) goes through the shared ETag-verified
+// document cache: the listing is still made on every request (so nothing can be stale) and a document is downloaded again only
+// when its ETag changed. The authoritative documents still decide everything; the cache only saves unchanged downloads.
+const { loadDocs } = require("../lib/classes-students-read-cache");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
@@ -28,8 +32,14 @@ async function loadClass(container, classId) { return downloadJsonOrNull(contain
 function classMeta(c) {
   return { classId: c.classId, name: c.name, grade: c.grade || "", schoolYear: c.schoolYear || "", status: normalizeClassStatus(c), programCodes: getClassProgramCodes(c), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0 };
 }
-async function classStudents(container, classId) {
-  const all = await listJson(container, USER_PREFIX);
+// Phase R-3 — the platform's user documents, read ONCE per request (memoized on the request's `reads`) and shared by the
+// report's roster and every project-tracker roster of the same request (a class in two projects used to scan them 3 times).
+function requestReads(container) {
+  let users = null;
+  return { users: () => (users = users || loadDocs(container, USER_PREFIX)) };
+}
+async function classStudents(container, classId, reads = requestReads(container)) {
+  const all = await reads.users();
   // Same population predicate as the project tracker (single source), so class reports and project
   // analytics always count the exact same students: exclude only archived; keep login-disabled.
   return all.filter(u => svc.studentBelongsToClass(u, classId))
@@ -40,13 +50,13 @@ async function classStudents(container, classId) {
 // ONE canonical predicate. Drafts and archived-from-draft ("deleted") drafts were never takeable and must not
 // count as unsubmitted assessments (they inflated the assessment count and deflated the submission rate).
 async function classAssignments(container, classId) {
-  return (await listJson(container, ASSIGN_PREFIX))
+  return (await loadDocs(container, ASSIGN_PREFIX))
     .filter(a => a && String(a.classId || "") === String(classId) && isReportableAssessment(a))
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 }
 // One prefix scan per assignment -> Map studentId -> submission.
 async function submissionsFor(container, assignmentId) {
-  const blobs = await listJson(container, SUB_PREFIX + assignmentId + "/");
+  const blobs = await loadDocs(container, SUB_PREFIX + assignmentId + "/");
   return new Map(blobs.filter(Boolean).map(s => [String(s.studentId), s]));
 }
 // Roadmap #27: the per-assignment submission scans are independent, so run a few at a time (each scan already
@@ -58,10 +68,12 @@ async function submissionsForAll(container, assignments) {
 
 // Project working definition + progress entries for a class (reused by every project report).
 // Phase P-9 — a report is a read: the snapshot as the next write will see it, never written (svc.readClassConfig).
-async function projectContext(container, projectCode, classroom) {
+// Phase R-3 — the roster comes from the request's single users read: classStudents applies the SAME membership predicate,
+// mapping and Arabic order as svc.listClassStudents (classStudentsFrom), so the entries are identical.
+async function projectContext(container, projectCode, classroom, reads = requestReads(container)) {
   const { config, view } = await svc.readClassView(container, projectCode, classroom);
   const workDef = svc.workingDefinition(projectCode, config);
-  const students = await svc.listClassStudents(container, classroom.classId);
+  const students = await classStudents(container, classroom.classId, reads);
   const entries = await svc.loadProgressEntries(container, projectCode, classroom.classId, students, view);
   return { config, workDef, students, entries };
 }
@@ -73,6 +85,7 @@ async function handler(request, deps = {}, obs = null) {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
+      const reads = requestReads(container);
       const now = new Date().toISOString();
       const url = new URL(request.url);
       const type = String(url.searchParams.get("type") || "").trim();
@@ -97,7 +110,7 @@ async function handler(request, deps = {}, obs = null) {
 
       // Filter options for the global filter bar (school years incl. archived, classes, projects).
       if (type === "filters") {
-        const classes = (await listJson(container, CLASS_PREFIX)).filter(c => c && canAccessDocument(c, tenant)).map(classMeta)
+        const classes = (await loadDocs(container, CLASS_PREFIX)).filter(c => c && canAccessDocument(c, tenant)).map(classMeta)
           .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
         const schoolYears = [...new Set(classes.map(c => c.schoolYear).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
         const projects = getSupportedProjects().map(getProjectMeta);
@@ -107,7 +120,7 @@ async function handler(request, deps = {}, obs = null) {
       // Students of one class, for the student/timeline filter dropdowns.
       if (type === "classStudents") {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
-        return { status: 200, jsonBody: { ok: true, students: await classStudents(container, classId) } };
+        return { status: 200, jsonBody: { ok: true, students: await classStudents(container, classId, reads) } };
       }
 
       // ---------- Academic reports ----------
@@ -115,7 +128,7 @@ async function handler(request, deps = {}, obs = null) {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        const students = await classStudents(container, classId);
+        const students = await classStudents(container, classId, reads);
         const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const allPcts = [];
         let submittedCells = 0, pendingCells = 0;
@@ -134,7 +147,7 @@ async function handler(request, deps = {}, obs = null) {
         // A class may be in several projects — report each independently (never combine their %).
         const projects = [];
         for (const pCode of getSupportedClassProgramCodes(c)) {
-          const ctx = await projectContext(container, pCode, c);
+          const ctx = await projectContext(container, pCode, c, reads);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
           // Phase P-5d — «لم يبدأوا» (P-5c count) only when some students have not started; every other section is unchanged.
           projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}) });
@@ -187,7 +200,7 @@ async function handler(request, deps = {}, obs = null) {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        const students = await classStudents(container, classId);
+        const students = await classStudents(container, classId, reads);
         const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const perAssignment = [];
         const pooledPcts = [];
@@ -223,7 +236,7 @@ async function handler(request, deps = {}, obs = null) {
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         if (!classHasProject(c, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
-        const { config, workDef, entries } = await projectContext(container, projectCode, c);
+        const { config, workDef, entries } = await projectContext(container, projectCode, c, reads);
         const tracks = getProjectDefinition(projectCode).tracks;
 
         if (type === "project") {
