@@ -73,6 +73,7 @@
 .eb-report-matrix-cell{ display:inline-flex; align-items:center; justify-content:center; min-width:34px; padding:2px var(--eb-space-2); border-radius:var(--eb-r-xs); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .eb-report-matrix-cell.is-submitted{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
 .eb-report-matrix-cell.is-zero{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.eb-report-matrix-cell.is-pending{ background:var(--eb-info-bg); color:var(--eb-info-tx); font-weight:var(--eb-fw-medium); font-size:var(--eb-fs-12); }
 .eb-report-matrix-cell.is-missing{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-weight:var(--eb-fw-medium); font-size:var(--eb-fs-12); }
 
 /* ---------- Responsive: 768 / 1024 / 1280 ---------- */

@@ -25,9 +25,14 @@ export type Filters = { schoolYear: string; classId: string; studentId: string; 
 
 /** Truthful meaning of every assessment number the Reports API returns (latest submitted attempt, not a final grade). */
 export const LATEST_ATTEMPT_LABEL = "نتيجة آخر محاولة مسلّمة";
-export const LATEST_ATTEMPT_NOTE = "الأرقام هنا هي نتيجة آخر محاولة مسلّمة لكل طالب كما يعيدها نظام التقارير، وقد تشمل تسليمات ما زالت بانتظار مراجعة المعلم؛ فهي ليست درجات نهائية معتمدة.";
-export const AVERAGE_NOTE = "المتوسطات ونسب التوزيع مبنية على نتيجة آخر محاولة مسلّمة لكل طالب في كل تقييم (ضمن الفترة المختارة)، وليست على الدرجات النهائية المعتمدة فقط.";
+// Phase R-1 (owner decision D-1): a result still awaiting the teacher is «بانتظار التصحيح» — handed in (counted in the submission
+// rate) but never a zero and never in an average or a distribution; the API sends it with no percentage.
+export const LATEST_ATTEMPT_NOTE = "الأرقام هنا هي نتيجة آخر محاولة مسلّمة لكل طالب كما يعيدها نظام التقارير. التسليمات التي ما زالت بانتظار تصحيح المعلم تظهر «بانتظار التصحيح» ولا تدخل في المتوسط أو التوزيع؛ وهذه الأرقام ليست درجات نهائية معتمدة.";
+export const AVERAGE_NOTE = "المتوسطات ونسب التوزيع مبنية على نتيجة آخر محاولة مسلّمة لكل طالب في كل تقييم (ضمن الفترة المختارة)؛ التسليمات التي ما زالت بانتظار تصحيح المعلم تُحسب في نسبة التسليم لكنها لا تدخل في المتوسط.";
 const MISSING_LABEL = "لم يسلّم";
+const PENDING_LABEL = "بانتظار التصحيح";
+/** The average's hint: what it means, plus how many results awaiting the teacher it leaves out (when any). */
+const averageHint = (pending: number | undefined) => pending ? "لا يشمل " + pending + " " + PENDING_LABEL : LATEST_ATTEMPT_LABEL;
 
 // Adds date-range params (from/to) to a report request when present.
 function withRange(params: Record<string, string>, f: Filters): Record<string, string> {
@@ -83,7 +88,7 @@ function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level
 }
 
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: ClassProjectSection[] };
+  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number }; projects: ClassProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -104,7 +109,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
       <div className="eb-stat-grid is-primary eb-report-stats">
         <StatCard primary label="الطلاب" value={data.class.studentCount} />
         <StatCard primary label="التقييمات" value={data.kpis.assignments} hint="ضمن الفترة المختارة" />
-        <StatCard primary label="متوسط النتائج" value={pct(data.kpis.averageScore)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="متوسط النتائج" value={pct(data.kpis.averageScore)} hint={averageHint(data.kpis.pendingReview)} />
         <StatCard primary label="نسبة التسليم" value={pct(data.kpis.submissionRate)} tone="info" />
       </div>
       <ReportNote>{AVERAGE_NOTE}</ReportNote>
@@ -125,7 +130,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
 type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; nextStages?: Record<string, { stageId: string; title: string } | null>; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; projects: StudentProjectSection[] };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number }; projects: StudentProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -141,7 +146,7 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
       <ReportHeader title={data.student.displayName} description={(data.student.className || "—") + " · " + data.student.schoolYear}
         onExportCsv={() => downloadCsv(csvRows.studentReportFilename(data), csvRows.studentReportRows(csvKpis, data))} />
       <div className="eb-stat-grid is-primary eb-report-stats">
-        <StatCard primary label="متوسط التقييمات" value={pct(data.academic.average)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="متوسط التقييمات" value={pct(data.academic.average)} hint={averageHint(data.academic.pendingCount)} />
         <StatCard primary label="المسلَّمة" value={data.academic.submittedCount + " / " + data.academic.assessmentCount} hint="من تقييمات الفترة المختارة" />
         <StatCard primary label="نسبة التسليم" value={pct(data.academic.submissionRate)} tone="info" />
         <StatCard primary label="مشاريع الصف" value={data.projects.length} />
@@ -172,12 +177,14 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
 
 function AssignmentsReport({ token, filters }: { token: string; filters: Filters }) {
   type Row = csvRows.AssignmentRow & { assignmentId: string };
-  type Cell = { studentId: string; state: string; percentage: number | null };
-  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
+  type Cell = { studentId: string; state: string; percentage: number | null; zero?: boolean };
+  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
   const palette = usePalette();
   const distLabels = useMemo(() => data ? Object.keys(data.overall.distribution) : [], [data]);
   const dist = useMemo(() => data && ({ labels: distLabels, datasets: [{ label: "عدد التسليمات", data: distLabels.map(k => data.overall.distribution[k]), backgroundColor: palette.series[0], borderRadius: 6 }] }), [data, distLabels, palette]);
+  // One lookup per matrix column (studentId → cell) instead of a linear search per rendered cell.
+  const cellsByAssignment = useMemo(() => new Map((data?.matrix || []).map(m => [m.assignmentId, new Map(m.cells.map(c => [c.studentId, c]))])), [data]);
   const barOptions = useMemo<ChartOptions<"bar">>(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: palette.grid } }, x: { grid: { display: false } } } }), [palette]);
   if (!filters.classId) return <EmptyState text="اختر صفًا." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -189,7 +196,7 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
       <div className="eb-stat-grid is-primary eb-report-stats">
         <StatCard primary label="التقييمات" value={data.overall.assessmentCount} />
         <StatCard primary label="التسليمات" value={data.overall.participants} hint="طالب × تقييم" />
-        <StatCard primary label="متوسط النتائج" value={pct(data.overall.average)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="متوسط النتائج" value={pct(data.overall.average)} hint={averageHint(data.overall.pendingReview)} />
         <StatCard primary label="نسبة التسليم" value={pct(data.overall.submissionRate)} tone="info" />
       </div>
       <ReportNote>{LATEST_ATTEMPT_NOTE}</ReportNote>
@@ -201,14 +208,15 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
         <ReportTable caption="ملخص كل تقييم: نسبة التسليم والمتوسط وعدد المسلِّمين" columns={[
           { key: "title", label: "التقييم" },
           { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate), numeric: true },
-          { key: "submitted", label: "مُسلَّم", numeric: true }, { key: "missing", label: MISSING_LABEL, numeric: true }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true },
+          { key: "submitted", label: "مُسلَّم", numeric: true }, { key: "missing", label: MISSING_LABEL, numeric: true },
+          { key: "pendingReview", label: PENDING_LABEL, render: r => String(r.pendingReview ?? 0), numeric: true }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true },
           { key: "average", label: "المتوسط (" + LATEST_ATTEMPT_LABEL + ")", render: r => pct(r.average), numeric: true }, { key: "avgAttempts", label: "متوسط المحاولات", numeric: true }
         ]} rows={data.perAssignment} empty="لا توجد تقييمات ضمن الفترة المختارة." />
       </section>
       {data.matrix.length > 0 && (
         <section aria-labelledby="eb-report-matrix-title">
           <h3 id="eb-report-matrix-title" className="eb-subheading">مصفوفة الطالب × التقييم</h3>
-          <p className="eb-muted eb-report-legend">القيمة = {LATEST_ATTEMPT_LABEL} (%) · 0 = سلّم بعلامة صفر · «{MISSING_LABEL}» = لا توجد محاولة مسلّمة</p>
+          <p className="eb-muted eb-report-legend">القيمة = {LATEST_ATTEMPT_LABEL} (%) · 0 = سلّم بعلامة صفر · «{PENDING_LABEL}» = سلّم والنتيجة لم تُصحَّح بعد · «{MISSING_LABEL}» = لا توجد محاولة مسلّمة</p>
           <div className="eb-report-table-scroll">
             <table className="eb-report-table eb-report-matrix">
               <caption className="eb-visually-hidden">مصفوفة الطالب × التقييم — {LATEST_ATTEMPT_LABEL} بالنسبة المئوية لكل طالب في كل تقييم؛ «{MISSING_LABEL}» تعني عدم وجود محاولة مسلّمة</caption>
@@ -217,10 +225,12 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
                 {data.students.map(stu => (
                   <tr key={stu.studentId}><th scope="row">{stu.displayName}</th>
                     {data.matrix.map(m => {
-                      const cell = m.cells.find(c => c.studentId === stu.studentId);
+                      const cell = cellsByAssignment.get(m.assignmentId)?.get(stu.studentId);
                       if (!cell || cell.state === "missing") return <td key={m.assignmentId} className="is-missing"><span className="eb-report-matrix-cell is-missing">{MISSING_LABEL}</span></td>;
-                      const value = Math.round(cell.percentage || 0);
-                      const zero = cell.percentage === 0;
+                      // Fail closed: any state that is not a final submitted result (pending, or one this client does not know) is never a number.
+                      if (cell.state !== "submitted" || cell.percentage === null) return <td key={m.assignmentId} className="is-pending"><span className="eb-report-matrix-cell is-pending">{PENDING_LABEL}</span></td>;
+                      const value = Math.round(cell.percentage);
+                      const zero = cell.zero ?? cell.percentage === 0;              // the server's flag = the «سلّم بعلامة صفر» count
                       return <td key={m.assignmentId} className={zero ? "is-zero" : "is-submitted"}><span className={"eb-report-matrix-cell " + (zero ? "is-zero" : "is-submitted")}>{value}<VisuallyHidden>{zero ? " سلّم بعلامة صفر" : "% " + LATEST_ATTEMPT_LABEL}</VisuallyHidden></span></td>;
                     })}
                   </tr>
@@ -377,6 +387,7 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={data.scope === "student" ? "طالب محدد — متوسط التقدّم الأسبوعي" : "الصف كامل — متوسط التقدّم الأسبوعي"}
         onExportCsv={() => downloadCsv(csvRows.timelineReportFilename(filters.projectCode, data.class.name), csvRows.timelineReportRows(data.trend))} />
+      {data.trend.length === 1 && <ReportNote>الفترة المختارة تغطي أسبوعًا واحدًا فقط، فيظهر نقطة واحدة دون اتجاه؛ اختر فترة أطول لرؤية تطوّر التقدّم.</ReportNote>}
       {data.trend.length
         ? <ChartCard level={3} title="متوسط التقدّم الأسبوعي" description="متوسط التقدّم (%) في نهاية كل أسبوع" table={{ columns: ["الأسبوع", "متوسط التقدّم %"], rows: data.trend.map(t => [t.weekStart, t.avgOverall]) }}>
             {({ reducedMotion }) => chart && <div className="eb-chart-canvas"><Line data={chart} options={{ ...lineOptions, ...motion(reducedMotion) }} /></div>}

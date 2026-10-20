@@ -40,7 +40,8 @@ describe("21G.2 assignment progress", () => {
     const s = await setup();
     const body = await s.get(s.A);
     expect(body.ok).toBe(true);
-    expect(body.progress).toEqual([{ assignmentId: s.pub, classId: s.a1, expected: 4, submitted: 3, notSubmitted: 1, pendingReview: 1, graded: 2, active: 2, average: 60, lastSubmittedAt: "2026-10-12T08:00:00.000Z" }]);
+    // Phase R-1 (owner decision D-1): the average is over the FINAL results only — (80 + 60) / 2 = 70; s2's pending 40 is not a mark.
+    expect(body.progress).toEqual([{ assignmentId: s.pub, classId: s.a1, expected: 4, submitted: 3, notSubmitted: 1, pendingReview: 1, graded: 2, active: 2, average: 70, lastSubmittedAt: "2026-10-12T08:00:00.000Z" }]);
     // Parity with the gradebook (assignment-results GET stats) for the same assignment.
     const stats = (await results.handler(req("GET", null, "http://x/api/assignment-results?assignmentId=" + s.pub), s.deps(s.A))).jsonBody.stats;
     const p = body.progress[0];

@@ -206,7 +206,7 @@ describe("UX-6b filters — only relevant controls, canonical project/class filt
     await waitFor(() => expect(reportGets("classStudents")).toHaveLength(2));
     expect(reportGets("classStudents")[1].url).toBe("/api/reports?type=classStudents&classId=c3");
   });
-  it("period: all/7/30/year/custom keep the exact query semantics — one report GET per resolved change, custom keeps ISO from/to", async () => {
+  it("period: all/7/30/custom keep the exact query semantics — one report GET per resolved change, custom keeps ISO from/to", async () => {
     vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(2026, 2, 15, 12));
     await mount();
     await open("التقييمات والواجبات");
@@ -219,7 +219,7 @@ describe("UX-6b filters — only relevant controls, canonical project/class filt
     pick("الفترة الزمنية", "30");
     await waitFor(() => expect(reportGets("assignments")).toHaveLength(3));
     expect(reportGets("assignments")[2].url).toBe("/api/reports?type=assignments&classId=c1&from=2026-02-14&to=2026-03-15");
-    pick("الفترة الزمنية", "year");
+    pick("الفترة الزمنية", "all");                                                                  // Phase R-1 (D-3): «هذه السنة الدراسية» removed
     await waitFor(() => expect(reportGets("assignments")).toHaveLength(4));
     expect(reportGets("assignments")[3].url).toBe("/api/reports?type=assignments&classId=c1");   // no invented boundaries
     pick("الفترة الزمنية", "custom");
@@ -323,7 +323,7 @@ describe("UX-6b report types", () => {
     expect(within(within(dist).getByRole("table")).getAllByRole("cell").map(c => c.textContent)).toEqual(["2", "0", "0", "1", "0", "1"]);
     const tables = screen.getAllByRole("table");
     const per = tables.find(t => t.querySelector("caption")?.textContent?.startsWith("ملخص كل تقييم")) as HTMLElement;
-    expect(within(per).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["التقييم", "نسبة التسليم", "مُسلَّم", "لم يسلّم", "سلّم بعلامة صفر", "المتوسط (نتيجة آخر محاولة مسلّمة)", "متوسط المحاولات"]);
+    expect(within(per).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["التقييم", "نسبة التسليم", "مُسلَّم", "لم يسلّم", "بانتظار التصحيح", "سلّم بعلامة صفر", "المتوسط (نتيجة آخر محاولة مسلّمة)", "متوسط المحاولات"]);
     expect(within(per).getAllByRole("rowheader").map(h => h.textContent)).toEqual(["اختبار الكسور", "واجب الجبر"]);
     const matrix = document.querySelector(".eb-report-matrix") as HTMLElement;
     expect(matrix.querySelector("caption")?.textContent).toContain("نتيجة آخر محاولة مسلّمة");

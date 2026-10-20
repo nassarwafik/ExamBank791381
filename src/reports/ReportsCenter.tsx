@@ -49,10 +49,9 @@ export default function ReportsCenter({ token, onOpenProject }: { token: string;
     return () => { cancelled = true; };
   }, [token, optsNonce]);
 
-  // Period -> concrete from/to (YYYY-MM-DD). "all" and "year" carry no date bound: reports are already
-  // class-scoped and a class maps to exactly one schoolYear, so "this school year" == the class's own
-  // assessments (schoolYear strings are NOT converted to invented date boundaries). "custom" keeps the
-  // user-entered dates.
+  // Period -> concrete from/to (YYYY-MM-DD). "all" carries no date bound (reports are already class-scoped and a
+  // class maps to exactly one schoolYear; schoolYear strings are NOT converted to invented date boundaries).
+  // "custom" keeps the user-entered dates.
   function applyPeriod(p: Period) {
     setPeriod(p);
     if (p === "custom") return; // keep the user-entered from/to

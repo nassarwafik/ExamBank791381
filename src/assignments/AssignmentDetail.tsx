@@ -71,7 +71,7 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
             <StatCard primary label="نهائي" value={stats.finalized ?? 0} tone="success" />
             <StatCard primary label="لم يسلّم" value={stats.notSubmitted ?? 0} />
           </div>
-          <p className="eb-assign-stats-hints"><span>المعدل <b>{pct(stats.average)}</b></span><span>الأعلى <b>{pct(stats.highest)}</b></span><span>الأدنى <b>{pct(stats.lowest)}</b></span><span>قيد المحاولة <b>{stats.active ?? 0}</b></span></p>
+          <p className="eb-assign-stats-hints"><span>المعدل <b>{pct(stats.average)}</b>{stats.pendingReview > 0 && <> (لا يشمل {stats.pendingReview} بانتظار التصحيح)</>}</span><span>الأعلى <b>{pct(stats.highest)}</b></span><span>الأدنى <b>{pct(stats.lowest)}</b></span><span>قيد المحاولة <b>{stats.active ?? 0}</b></span></p>
         </div>
       )}
 

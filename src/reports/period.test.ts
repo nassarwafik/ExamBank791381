@@ -31,9 +31,8 @@ describe("rangeForPeriod boundaries (N days = today + previous N-1)", () => {
     const r = rangeForPeriod("7", today);
     expect(r.from).toBe("2025-12-28");
   });
-  it("all / year / custom carry no computed bound", () => {
+  it("all / custom carry no computed bound", () => {                // Phase R-1 (D-3): no "year" period
     expect(rangeForPeriod("all")).toEqual({ from: "", to: "" });
-    expect(rangeForPeriod("year")).toEqual({ from: "", to: "" });
     expect(rangeForPeriod("custom")).toEqual({ from: "", to: "" });
   });
 });

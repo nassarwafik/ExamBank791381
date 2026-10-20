@@ -7,8 +7,7 @@ import { IconStudents, IconUser, IconAssignments, IconProjects, IconReports, Ico
 
 export type Category = "all" | "students" | "assessments" | "projects";
 export const PERIODS: { key: Period; label: string }[] = [
-  { key: "all", label: "كل الفترة" }, { key: "7", label: "آخر 7 أيام" }, { key: "30", label: "آخر 30 يومًا" },
-  { key: "year", label: "هذه السنة الدراسية" }, { key: "custom", label: "مخصص" }
+  { key: "all", label: "كل الفترة" }, { key: "7", label: "آخر 7 أيام" }, { key: "30", label: "آخر 30 يومًا" }, { key: "custom", label: "مخصص" }
 ];
 // Reports whose data has a time dimension (assessments/timeline). Others (project snapshot) ignore the range.
 export const TIME_AWARE: ReportType[] = ["class", "student", "assignments", "timeline"];

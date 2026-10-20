@@ -30,7 +30,7 @@ export function studentReportRows(kpis: Kpi[], data: StudentReportData): Cell[][
 }
 export const studentReportFilename = (data: StudentReportData) => "student-" + data.student.displayName;
 
-export type AssignmentRow = { title: string; students: number; submitted: number; missing: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
+export type AssignmentRow = { title: string; students: number; submitted: number; missing: number; pendingReview?: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
 export function assignmentsReportRows(perAssignment: AssignmentRow[]): Cell[][] {
   return [["التقييم", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])];
 }

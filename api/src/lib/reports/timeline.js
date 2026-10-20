@@ -56,9 +56,11 @@ function buildHistoryTimeline(definition, entries, range, now) {
   }
 
   if (!range || (range.from === null && range.to === null)) return points;
+  // A week is kept when it OVERLAPS the range (Phase R-1): a range starting mid-week keeps that partial week, so
+  // «آخر 7 أيام» is never reduced to a single point; a week that ends before the range starts is still dropped.
   return points.filter(p => {
     const ms = Date.parse(p.weekStart);
-    if (range.from !== null && ms < range.from) return false;
+    if (range.from !== null && ms + WEEK - 1 < range.from) return false;
     if (range.to !== null && ms > range.to) return false;
     return true;
   });
