@@ -3,6 +3,12 @@
 // (keys by trackId) — the same code drives 794589 / 899373 / 883589 and any future project.
 const core = require("./core");
 
+// Phase P-5c — the students who have not started (P-5b: no active stage left «لم يبدأ»); present only when there are any.
+function notStartedTotals(summaries) {
+  const n = summaries.filter(s => s.notStarted === true).length;
+  return n ? { notStartedCount: n } : {};
+}
+
 function selfReportedTotals(summaries) {
   const total = summaries.reduce((s, x) => s + (x.selfReportedCount || 0), 0);
   return total ? { studentsSelfReported: summaries.filter(s => s.selfReportedCount > 0).length, totalSelfReportedStages: total } : {};
@@ -26,7 +32,8 @@ function buildClassSummary(definition, entries, now) {
     trackWeights: definition.trackWeights,
     staleDays: definition.config ? definition.config.staleDays : 7,
     // Phase P6 — the students' own marks (P2) awaiting the teacher's confirmation; present only when there are any.
-    ...selfReportedTotals(summaries)
+    ...selfReportedTotals(summaries),
+    ...notStartedTotals(summaries)
   };
 }
 

@@ -5806,7 +5806,8 @@
           "book": 50,
           "packetTracer": 50
         },
-        "staleDays": 7
+        "staleDays": 7,
+        "notStartedCount": 1
       },
       "tracks": [
         {
