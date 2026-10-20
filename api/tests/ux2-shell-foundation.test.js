@@ -273,12 +273,15 @@ describe("UX-2 focus foundation", () => {
     expect(ex).not.toMatch(/\.iex-cli[^{]*\{[^}]*unicode-bidi/);
     expect(ex).not.toMatch(/outline\s*:\s*(none|0)/);
   });
-  it("UX-8b contrast: --eb-faint is unchanged but no longer colours real text; the fixed text/background pairs meet 4.5:1 (dependency-free WCAG maths); focus ring keeps 3:1", () => {
+  it("UX-8b contrast: --eb-faint is never darkened and no longer colours real text; the fixed text/background pairs meet 4.5:1 (dependency-free WCAG maths); focus ring keeps 3:1", () => {
     const tokens = read("design-tokens.css");
     const token = name => { const m = new RegExp(name + ":\\s*(#[0-9a-fA-F]{6})").exec(tokens); expect(m, name).toBeTruthy(); return m[1]; };
     const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
     const ratio = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
-    expect(token("--eb-faint")).toBe("#94a3b8");                                                    // owner decision: the token itself is NOT darkened
+    // Owner decision (UX-8b): the token itself is NOT darkened. Owner decision (UX-R1, 2026-10-20): it takes the redesign's
+    // lavender #a9a5b4 — lighter than the UX-8b value #94a3b8, so the UX-8b rule still holds and is checked as such.
+    expect(token("--eb-faint")).toBe("#a9a5b4");
+    expect(lum(token("--eb-faint"))).toBeGreaterThanOrEqual(lum("#94a3b8"));                       // never darker than the UX-8b value
     const faint = token("--eb-faint"), muted = token("--eb-muted"), text = token("--eb-text"), surface = token("--eb-surface"), surface2 = token("--eb-surface-2"), bg = token("--eb-bg"), primary = token("--eb-primary"), dangerTx = token("--eb-danger-tx");
     expect(ratio(faint, surface)).toBeLessThan(4.5);                                                 // why faint may not colour normal text
     expect(ratio(muted, surface)).toBeGreaterThanOrEqual(4.5);                                       // the replacement on cards

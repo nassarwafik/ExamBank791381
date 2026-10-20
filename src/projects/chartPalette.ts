@@ -13,7 +13,7 @@ const FALLBACK: Record<string, string> = {
   "--eb-warn": "#d97706",
   "--eb-danger": "#dc2626",
   "--eb-line-2": "#dedce6",
-  "--eb-faint": "#94a3b8",
+  "--eb-faint": "#a9a5b4",
   "--eb-muted": "#5f5a6e"
 };
 

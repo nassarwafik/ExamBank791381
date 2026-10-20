@@ -28,9 +28,9 @@
   /* Input placeholders: AA on white (5.39:1) yet clearly lighter than typed text (--eb-text), so an empty field never looks
      filled. */
   --eb-placeholder: #6c6879;
-  /* Decorative only (drag grips, dividers): never text or a meaningful icon (2.6:1). UX-R1 keeps the UX-8b owner decision —
-     the token is not changed (api/tests/ux2-shell-foundation.test.js pins it); the mockup's lavender #a9a5b4 awaits the owner. */
-  --eb-faint: #94a3b8;
+  /* Decorative only (drag grips, dividers): never text or a meaningful icon (2.4:1). Owner decisions: UX-8b — never darkened;
+     UX-R1 (2026-10-20) — the redesign's lavender, lighter than the UX-8b #94a3b8 (api/tests/ux2-shell-foundation.test.js). */
+  --eb-faint: #a9a5b4;
 
   /* Lines / borders (hairlines) */
   --eb-line: #e9e8ee;

@@ -41,7 +41,7 @@ const ratio = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((
 describe("UX-R1 — approved palette (pins)", () => {
   const APPROVED: Record<string, string> = {
     primary: "#2a0a4e", "primary-strong": "#4a2380", "primary-050": "#f3effa", "primary-100": "#ebe5f4", "primary-200": "#d9cfea", "primary-300": "#8b74b8",
-    navy: "#1c1330", ink: "#241b38", text: "#2d2740", muted: "#5f5a6e", placeholder: "#6c6879", faint: "#94a3b8",
+    navy: "#1c1330", ink: "#241b38", text: "#2d2740", muted: "#5f5a6e", placeholder: "#6c6879", faint: "#a9a5b4",
     line: "#e9e8ee", "line-2": "#dedce6", bg: "#f7f6fa", surface: "#ffffff", "surface-2": "#f5f4f8", "nav-bg": "#1c1330", "nav-accent": "#b9a3e3",
   };
   for (const [name, value] of Object.entries(APPROVED)) it(`--eb-${name} is ${value}`, () => expect(hex(name)).toBe(value));

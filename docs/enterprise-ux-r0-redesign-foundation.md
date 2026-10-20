@@ -48,7 +48,7 @@ stylesheet that already uses a token follows. The contrast figures below are WCA
 | Heading ink (`--eb-navy`, `--eb-text-heading`) | `#1c1330` | `#1c1330` | 14.4 : 1 on primary tint | purple-tinted near-black |
 | Body text (`--eb-text`, `--eb-ink`) | `#2d2740` | `#2d2740` | 11.6 : 1 | |
 | Muted text (`--eb-muted`) | `#6c6879` | **`#5f5a6e`** | 5.37 : 1 on primary tint | mockup value is 4.38 : 1 on the tint (below AA); the existing guard `src/designSystem/mutedContrast.21e1s2.test.ts` requires ≥ 4.5 : 1 |
-| Faint (`--eb-faint`) | `#a9a5b4` | **`#94a3b8` (unchanged)** | 2.6 : 1 | **decorative only** (drag grip, dividers); never text or a meaningful icon. The token is pinned by a recorded owner decision (UX-8b, `api/tests/ux2-shell-foundation.test.js`: «the token itself is NOT darkened»), so R1 leaves it as is; the mockup's lavender value is the owner's call |
+| Faint (`--eb-faint`) | `#a9a5b4` | `#a9a5b4` | 2.4 : 1 | **decorative only** (drag grip, dividers); never text or a meaningful icon. Owner decision 2026-10-20, in R1: it takes the lavender value. It is lighter than the UX-8b `#94a3b8`, so the UX-8b rule «never darkened» still holds and is now checked as an invariant |
 | Hairline (`--eb-line`) | `#e9e8ee` | `#e9e8ee` | — | card border, row separators |
 | Hover / active / field fill | `#f5f4f8` / `#eeedf3` / `#f3f3f6` | same | — | nav active pill, sub-nav active, search field |
 | Primary (`--eb-primary`) | `#2a0a4e` | `#2a0a4e` | white on it 16.8 : 1 | buttons, active chart series, tooltip |
@@ -320,10 +320,17 @@ colour, radius or shadow value, or replaces a literal with a token.
 - `src/avatars.tsx`, `src/ui/ProfileAvatar.tsx` and `src/ErrorBoundary.tsx`: the default avatar colour and the reload button read
   `var(--eb-primary, #2a0a4e)` instead of a blue literal.
 
-**Kept as it was:** `--eb-faint` stays `#94a3b8`. The first R1 run changed it to the mockup's `#a9a5b4`. That is lighter, so the
-UX-8b invariant ("not darkened") still held, but `api/tests/ux2-shell-foundation.test.js` pins the value as a recorded owner
-decision and failed. A pinned owner decision is not changed by an agent: the value was put back, and the switch to `#a9a5b4` is
-left to the owner. The token is decorative only, so the difference is barely visible.
+**`--eb-faint`, an owner decision:** `--eb-faint` is pinned in `api/tests/ux2-shell-foundation.test.js` as a recorded owner
+decision (UX-8b: «the token itself is NOT darkened»).
+- The first R1 run set the mockup's `#a9a5b4`, and that pin failed. The value was put back to `#94a3b8`, and the choice was put to
+  the owner.
+- On 2026-10-20 the owner approved `#a9a5b4`, in a Review Fix-style commit on this PR. That commit:
+  - sets the token;
+  - updates the pin, with both decisions recorded in its comment;
+  - turns the UX-8b rule into a checked invariant: the luminance must stay ≥ that of `#94a3b8`, so the token is never darkened;
+  - renames the test from «unchanged» to «never darkened»;
+  - updates the chart fallback copy and the R1 palette pin.
+- A mutant that darkens the token to `#7c8799` is KILLED by both tests.
 
 **Ratchet:** `scripts/ux-color-inventory.baseline.json` lowered from 2 477 to **2 298** literals.
 
@@ -348,7 +355,7 @@ left to the owner. The token is decorative only, so the difference is barely vis
 - **On the baseline `56ce097`:** 1 failed / 8 passed. `--eb-muted` expected `#475569` (the token since 21E.1 slice 2), received
   `#64748b`. This copy had already drifted before R1, with no test to catch it.
 - **On the R1 head before the fix:** 5 failed. `--eb-primary`, `-strong`, `--eb-line-2`, `--eb-faint` and `--eb-muted` all still
-  held the old values. `--eb-faint` was later put back to `#94a3b8` (see R1.2), so its copy is `#94a3b8` again.
+  held the old values. `--eb-faint` was then put back to `#94a3b8`, and the owner later approved `#a9a5b4` (see R1.2); the copy follows the token.
 - **After the fix:** 9 / 9.
 
 ## R1.4 Pre-existing defects found by the R1 guard (recorded, not fixed here)
@@ -412,3 +419,4 @@ unchanged by R1. There is no new overflow and no page error.
 | `git diff --check` | clean |
 | mutation campaign, re-run on the final state | 8 / 8 KILLED, files restored (R1.5) |
 | visual capture | 42 / 45 clean; the 3 recorded overflows only (R1.6) |
+| after the owner's `--eb-faint` decision (R1.2) | full suite 1 170 / 1 170 files, 13 968 / 13 968 tests; lint exit 0; build + bundle guard passed; mutant M9 (faint darkened to `#7c8799`) KILLED by the UX-8b invariant test and the R1 palette pin, restored byte-for-byte |
