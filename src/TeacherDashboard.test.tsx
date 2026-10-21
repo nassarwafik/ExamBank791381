@@ -20,6 +20,7 @@ vi.mock("react-chartjs-2", () => {
 
 import TeacherDashboard from "./TeacherDashboard";
 import { csvCell } from "./reports/csv";
+import { chartPalette } from "./projects/chartPalette";
 
 const SRC = import.meta.glob("./TeacherDashboard.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const dashboardSource = () => SRC["./TeacherDashboard.tsx"];
@@ -220,7 +221,10 @@ describe("UX-3 dashboard — charts (react-chartjs-2 mocked)", () => {
     expect(cls.data.labels).toEqual(["الحادي عشر", "العاشر"]); expect(cls.data.datasets[0].data).toEqual([74.2, 0]); expect(cls.options.indexAxis).toBe("y");
     const topic = bars.find(c => c.data.datasets[0].label === "متوسط الموضوع")!;
     expect(topic.data.labels).toHaveLength(10);
-    expect((topic.data.datasets[0].backgroundColor as string[]).slice(0, 3)).toEqual(["rgba(239,68,68,.76)", "rgba(22,163,74,.76)", "rgba(245,158,11,.76)"]);
+    // UX-R3: the threshold colours come from the shared token palette (danger < 60 · success ≥ 80 · warn otherwise) — the mapping is
+    // the invariant; the literal rgba strings of the old blue-era theme were its look.
+    const scale = chartPalette().scale;
+    expect((topic.data.datasets[0].backgroundColor as string[]).slice(0, 3)).toEqual([scale.low, scale.high, scale.mid]);
     for (const c of charts.calls) expect((c.options.plugins as { tooltip: { rtl: boolean } }).tooltip.rtl).toBe(true);
     expect(line.options.animation).toEqual({ duration: 1050, easing: "easeOutQuart" });
   });

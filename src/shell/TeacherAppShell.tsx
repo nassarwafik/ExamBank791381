@@ -16,6 +16,7 @@ import TeacherIdentity from "../teacher/TeacherIdentity";
 import QuickNavSearch from "./QuickNavSearch";
 import type { TeacherProfile } from "../teacher/teacherProfile";
 import "../ui/ui.css";
+import "../ui/kit.css";
 import "../shell.css";
 import "./teacher-nav-21e.css";
 
