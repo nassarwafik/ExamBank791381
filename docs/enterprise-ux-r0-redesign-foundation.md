@@ -874,3 +874,115 @@ after the campaign.
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | 2 294 (was 2 298) |
+
+---
+
+# Phase UX-R5 — Classes and students
+
+**Owner direction (2026-10-21):** start R5. R5 depends on R3, which is merged, so it branches from `main` `af7f9aab` as
+`feature/ux-r5-students`. It ran in parallel with R4 (PR #394); the two share no source file, and no unmerged work was copied.
+
+**Reconciliation.** R4 merged into `main` (`76df1cdf`) just after R5's first push (`97091881`). R5 took `main` in with a normal
+merge commit (`git merge origin/main`).
+- **Conflict:** one, in this record, where both phases had appended a section at the end. It was resolved by keeping both, R4
+  first.
+- **Re-validation:** the full suite, lint, typecheck, build and the U.1 gate were re-run on the reconciled head (§R5.5).
+- **Baselines:** `af7f9aab` → `76df1cdf`.
+
+**Owner decision on the layout (2026-10-21).** The mockup puts the classes in a narrow side column. The U.1 hardening phase chose
+the opposite on purpose: a class bar ABOVE a full-width roster, because a 260–300 px side column squeezed the table. That
+choice is pinned by the U.1 Chromium gate (classes above the roster, roster ≥ 90 % of the width) and by
+`classesStudents.u1.test.tsx`. Offered both options, the owner chose **to keep the U.1 layout in the reference look**. No U.1
+pin changes.
+
+## R5.1 What changes for the user
+
+- **The class bar reads as a sub-navigation.**
+  - Class items have no card border of their own and turn grey on hover.
+  - The selected class is a grey pill with a bold name.
+  - Each item's «⋯» is quiet (no box) until hovered or opened.
+  - The «الصفوف النشطة / الأرشيف» switch is the reference segmented group: one border, hairlines between the options, the
+    pressed one grey and bold. This applies in this workspace only; the shared base is unchanged for other pages.
+- **The five summary figures are one hairline strip.**
+  - Each figure is a cell, and the pressed figure (the active filter) is a grey cell.
+  - Each figure's tone is now a small dot before its label, replacing the 3 px coloured side stripe. The label names the figure;
+    the dot is decoration.
+  - The strip stays one row down to the phone; there it is 2 columns, and an odd last figure spans the row.
+- **The roster is a flat 8 px card of hairline rows** with a quiet white header. The sticky header keeps an opaque white fill.
+- **Search field and status select:** hairline borders.
+- **Other cards in the workspace use the 8 px radius:** the classes pane, the bulk bar, the credential box, the loading
+  skeleton, and the learning-materials panel (which also loses its shadow).
+
+**Fix: the phone overflow recorded in R0 §7 (students, 391 > 390 px).**
+- **Root cause:** the roster search `<input>` had no width. Its intrinsic size (the input's default size × the Arabic web font)
+  widened the phone toolbar column 1 px past the screen.
+- **Fix:** it now fills its field, like the class filter already did.
+
+**Not changed:**
+- **The U.1 layout** (owner decision above).
+- **The «إضافة طالب» popover of the mockup.** The current button opens the existing dialog; a popover would be new behaviour.
+- **Phone roster cards and the printed login cards.**
+- **All markup and every pinned rule.**
+
+## R5.2 Edit set
+
+**`src/page-parts.css`.** Only this stylesheet changed, and only in its UX-4 (literal-free) part. Every pinned string is kept:
+U.1 / U.2, the hardening rules, the touch-target blocks, the reduced-motion list and the menu layer.
+
+**Tests:** a new file, `src/students/classesStudents.ux-r5.test.ts`, with 9 guards. No existing test changed.
+
+**Colour ratchet:** R5 adds no literal. It is 2 294 after the merge, the count R4 set on `main`.
+
+## R5.3 Fail-first evidence (the overflow)
+
+The visual harness (`scripts/capture-visual-baseline-ux-r.mjs`) measures `scrollWidth` at 390 px.
+
+| Build | Result at 390 px |
+|---|---|
+| Baseline `af7f9aab` | `CHECK FAIL phone/students — horizontal overflow 391>390` |
+| R5 with only the one `inline-size:100%` line removed | `391>390` again |
+| R5 head | `CHECK PASS phone/students` |
+
+The isolation run proves that this line, and nothing else in R5, is the fix. `src/page-parts.css` was restored afterwards
+(SHA-256 identical). The R5 guard pins the line, and mutant M1 shows the guard kills its removal.
+
+## R5.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/students` (including U.1, U.2, S.3, S.4 and R5), `ux2-shell-foundation`,
+the hardening and UX-4 platform suites, and the colour ratchet. Each file was restored byte-for-byte (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the roster search box loses its width (the overflow returns) | KILLED | ux-r5 «the roster search box fills its field…» |
+| M2 | class items get their card border back | KILLED | ux-r5 «class items have no box of their own…» |
+| M3 | the selected class back to the purple tint with a shadow | KILLED | ux-r5 «… the selected class is a grey pill…» |
+| M4 | the summary strip loses its hairline dividers | KILLED | ux-r5 «cells sit on a 1 px gap…» |
+| M5 | the tone dot becomes generated text | KILLED | ux-r5 «the tone is a decorative dot…» |
+| M6 | the 3-column wrap at ≤ 1279 px returns (an empty hairline cell) | KILLED | ux-r5 «no wrap that would leave an empty hairline cell…» |
+| M7 | phone: the odd last figure no longer spans | KILLED | ux-r5 «no wrap…» |
+| M8 | the workspace's pressed view-switch option back to a white chip | KILLED | ux-r5 «the view switch is the reference segmented group…» |
+| M9 | the restyle leaks into the SHARED segmented base (other pages) | KILLED | ux-r5 «… the shared base is unchanged for other pages» |
+| M10 | the roster header back to a grey band | KILLED | ux-r5 «the roster is a flat 8 px card…» |
+| M11 | the roster card back to the large radius | KILLED | ux-r5 «the roster is a flat 8 px card…» |
+| M12 | U.1 broken: a 260 px side column for the classes | KILLED | u1 «one column at every width…»; ux-r5 «the U.1 layout is untouched…» |
+| M13 | the class «⋯» is boxed again | KILLED | ux-r5 «the «⋯» of a class item is quiet…» |
+
+13 / 13 KILLED, no TIMEOUT. `git status` showed only the R5 edit set before and after the campaign.
+
+## R5.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| U.1 gate (CI workflow, run locally with CI's tools: playwright-core 1.55.0, axe-core 4.10.2) | «U.1 gate passed» at 390 / 834 / 1024 / 1440. Covers the bar above the roster, chips inside the cards, the phone strip, touch targets, axe, the student sheet and S.4 |
+| Visual capture (14 pages × 3 viewports) | **40 / 42 clean** (was 39 / 42): the students overflow is fixed. Left: bank 458 and import 405, which go to R11a |
+| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests** on the second run on `97091881`. On the reconciled head (with R4): **1 176 / 1 176 files, 14 030 / 14 030 tests**; lint, build, `git diff --check` and the U.1 gate were re-run there and passed |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+
+**One timing failure, not R5's.** The first full run failed one test: `src/App.credentialsLeave.s3.test.tsx`, «no leave confirm».
+- The failure is a `waitFor` with the default 1 s timeout in a full-App DOM test, under suite load.
+- It passed 3 / 3 in isolation, and the whole suite passed on the second run.
+- R5 changes only CSS, which Vitest does not process (happy-dom never sees `page-parts.css`), so the change cannot affect that
+  test.
+- It is recorded here and not patched (`AGENTS.md` §12).
