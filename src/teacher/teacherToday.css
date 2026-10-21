@@ -2,30 +2,30 @@
    this file only adds the hub's own layout. Imported by TeacherTodayHub (the TeacherPlatform chunk, never initial). */
 .eb-today-teacher{ display:flex; flex-direction:column; gap:var(--eb-space-3); margin-block-end:var(--eb-space-5); }
 .eb-today-grid{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
-.eb-today-row{ display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+.eb-today-row{ display:flex; flex-direction:column; justify-content:center; gap:2px; min-height:44px; padding:var(--eb-space-2) var(--eb-space-5); }
 .eb-today-card-action{ align-self:flex-start; margin-block-start:auto; }
 .eb-today-note{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
 .eb-today-quiet{ margin:0; }
 .eb-today-error{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 /* Phase 21E.2 — quick actions are an even tile grid (2 / 3 / 6 columns) instead of a ragged wrap of outline buttons; each
-   icon sits in a tinted chip. Same six buttons, same order, same names. */
+   icon sits in a chip. Same six buttons, same order, same names. UX-R4 — flat hairline tiles, the icon in ink on a grey chip. */
 .eb-today-actions{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-2); }
 .eb-today-actions .eb-button{ min-height:44px; }
 .eb-today-actions .eb-today-action{
   justify-content:flex-start; gap:var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3);
-  border-color:var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); box-shadow:var(--eb-sh-xs);
+  border-color:var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); box-shadow:none;
   color:var(--eb-text-heading); text-align:start;
 }
-.eb-today-actions .eb-today-action:hover{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-today-actions .eb-today-action:hover{ border-color:var(--eb-line-2); background:var(--eb-surface-2); }
 .eb-today-action-icon{
   flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
-  border-radius:var(--eb-r-sm); background:var(--eb-primary-050); color:var(--eb-primary-strong);
+  border-radius:var(--eb-r-sm); background:var(--eb-chrome-active); color:var(--eb-text-heading);
 }
 @media (min-width: 768px){ .eb-today-actions{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (min-width: 1280px){ .eb-today-actions{ grid-template-columns:repeat(6,minmax(0,1fr)); } }
-.eb-today-recent{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4) var(--eb-space-5); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm); }
+.eb-today-recent{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4) var(--eb-space-5); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:none; }
 .eb-today-recent-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
-.eb-today-recent-item{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--eb-space-1) var(--eb-space-3); padding-block:var(--eb-space-1); border-block-end:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
+.eb-today-recent-item{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-1) var(--eb-space-3); min-height:44px; padding-block:var(--eb-space-1); border-block-end:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
 .eb-today-recent-item:last-child{ border-block-end:0; }
 .eb-today-recent-text{ min-width:0; flex:1 1 240px; color:var(--eb-text); overflow-wrap:anywhere; }
 .eb-today-recent-time{ flex:0 0 auto; color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
@@ -50,7 +50,7 @@
   width:100%; min-height:44px; align-items:center; margin:0; padding-inline:var(--eb-space-1); text-align:start;
   background:none; border:0; border-block-end:1px solid var(--eb-line); border-radius:var(--eb-r-sm); color:inherit; font:inherit; font-size:var(--eb-fs-13); cursor:pointer;
 }
-.eb-today-recent-action:hover{ background:var(--eb-primary-050); }
+.eb-today-recent-action:hover{ background:var(--eb-surface-2); }
 .eb-today-recent-entry:last-child .eb-today-recent-action{ border-block-end:0; }
 @media (min-width: 768px){
   .eb-today-row-action, .eb-today-recent-action{ min-height:38px; }
@@ -58,6 +58,8 @@
 /* Phase 21H.3 — a row with a direct action («تذكير»): the row button and the action sit side by side (never nested); the
    hub-level notice reports the action's result. */
 .eb-today-row-item.has-action, .eb-today-row.has-action{ display:flex; align-items:stretch; gap:var(--eb-space-2); }
+/* UX-R4 — the row runs edge to edge; its «تذكير» keeps the card's end padding. */
+.eb-today-row-item.has-action, .eb-today-row.has-action{ padding-inline-end:var(--eb-space-4); }
 .eb-today-row-item.has-action .eb-today-row-action{ flex:1 1 auto; min-width:0; }
 .eb-today-row-secondary{ flex:0 0 auto; align-self:center; min-height:44px; }
 @media (min-width: 768px){ .eb-today-row-secondary{ min-height:38px; } }
