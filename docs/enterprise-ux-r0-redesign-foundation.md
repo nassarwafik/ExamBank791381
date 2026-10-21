@@ -1085,7 +1085,13 @@ panel suites, `ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour rat
 
 **Owner direction (2026-10-21):** start R6b. R6a (PR #396) was green and waiting for review, and both phases edit
 `assignments-pro.css`. R6b is therefore stacked on the reconciled R6a head `51f1a764` as `feature/ux-r6b-gradebook`, the same
-stacking used for R4 on R3. When R6a merges, R6b takes `main` in with a normal merge commit, and its diff then shows R6b alone.
+stacking used for R4 on R3.
+
+**Reconciliation.** R6a merged into `main` (`fc40d203`, which also carried an unrelated change from another window,
+`docs/development/secrecy-canaries.md`). R6b took `main` in with a normal merge commit (`58ea4c4a`).
+- **Conflicts:** none.
+- **Validation:** the full validation and the mutation campaign below ran on that reconciled head. The PR diff shows R6b
+  alone.
 
 ## R6b.1 What changes for the user
 
@@ -1140,14 +1146,30 @@ mutation campaign below proves the new invariants.
 Each mutant was planted alone. The run covered `src/assignments`, the home / page / gradebook panel suites,
 `ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour ratchet. Each file was restored byte-for-byte (SHA-256).
 
-MUTATION_TABLE_R6B
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the page card shadow returns | KILLED | ux-r6b «is a flat 8 px hairline panel…» |
+| M2 | the figures strip loses its hairline dividers | KILLED | ux-r6b «… ONE hairline strip each…» |
+| M3 | the legacy tinted tile leaks back (tile override removed) | KILLED | ux-r6b «… the tiles outrank the legacy tinted…» |
+| M4 | the pressed status filter back to the navy fill | KILLED | ux-r6b «… sub-navigation with a grey pressed pill» |
+| M5 | the gradebook controls band returns | KILLED | ux-r6b «gradebook controls sit on the page…» |
+| M6 | the table header back to a grey band | KILLED | ux-r6b «quiet tables: white opaque header…» |
+| M7 | the selected row loses its state tint (the hover rule wins) | KILLED | ux-r6b «… the selected and drill rows keep their state tint» |
+| M8 | an unscoped rule reaches other pages | KILLED | ux-r6b «every rule is scoped to the assignment page…» |
+| M9 | a stacking context in the R6b block | KILLED | ux-r6b «adds no stacking context…»; 21E stacking guard |
+| M10 | a transition in the R6b block | KILLED | ux2-shell-foundation «UX-8b reduced motion…»; ux-r6b |
+| M11 | a colour literal in the R6b block | KILLED | colour ratchet; ux2-shell-foundation «token-only» |
+| M12 | phone: the per-student card wrapper gets a border again | KILLED | ux-r6b «phone: the per-student cards keep their borderless wrapper…» |
+| M13 | the R6a guard's slice runs to the end of the file again | KILLED | ux-r6a «… never targets the detail page…» (the bound is needed) |
+
+13 / 13 KILLED, no TIMEOUT. `git status` was clean before and after the campaign.
 
 ## R6b.5 Browser gate, visual evidence and local validation
 
 | Check | Result |
 |---|---|
 | 21E.2 results / gradebook gate (`scripts/capture-visual-gate-21e2.mjs`) on the R6b build | **28 / 28 results and gradebook checks pass** at 1280, 150 %, 200 % and 390 px touch: chart tables, CSV exports, G-03 export target, and V-01 / V-02 no horizontal overflow |
-| Same gate, builder part | 38 checks fail identically on the baseline build: the builder flow waits for a «الامتحانات المحفوظة» button that is no longer in the navigation. Stale harness, not R6b; see BASELINE_NOTE |
-| `npm test`, full root suite | FULL_SUITE |
-| `npm run lint`, `npx tsc -b`, build (bundle guard), `git diff --check` | LINT_BUILD |
+| Same gate, builder part | 38 checks fail identically on the baseline build: the builder flow waits for a «الامتحانات المحفوظة» button that is no longer in the navigation. Stale harness, not R6b; the baseline build (`main` `76df1cdf`) gives the same 28 / 66 with the same 38 builder failures and 0 results / gradebook failures |
+| `npm test`, full root suite | **1 178 / 1 178 files, 14 049 / 14 049 tests** on the reconciled head `58ea4c4a` |
+| `npm run lint`, `npx tsc -b`, build (bundle guard), `git diff --check` | lint exit 0 (pre-existing warnings only); build (tsc -b + vite + bundle guard) exit 0, «bundle guard passed»; `git diff --check origin/main..HEAD` clean |
 | colour ratchet | 2 294, unchanged |
