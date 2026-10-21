@@ -1173,3 +1173,86 @@ Each mutant was planted alone. The run covered `src/assignments`, the home / pag
 | `npm test`, full root suite | **1 178 / 1 178 files, 14 049 / 14 049 tests** on the reconciled head `58ea4c4a` |
 | `npm run lint`, `npx tsc -b`, build (bundle guard), `git diff --check` | lint exit 0 (pre-existing warnings only); build (tsc -b + vite + bundle guard) exit 0, «bundle guard passed»; `git diff --check origin/main..HEAD` clean |
 | colour ratchet | 2 294, unchanged |
+
+---
+
+# Phase UX-R9a — Learning: the library, the course home and the library search
+
+**Owner direction (2026-10-21):** start R9 (the plan splits it into R9a and R9b; R9b depends on R9a). R9a depends on R3 (merged),
+so it branches from `main` `f51bd90d` as `feature/ux-r9a-learning-library`. It ran in parallel with R7 (#399) and R8 (#401); they
+share no source file, only the capture harness and this record.
+
+## R9a.1 What changes for the user
+
+No reference mockup shows the learning pages, so R9a applies the record's general patterns (§3.2) to the teacher's
+«المواد التعليمية».
+
+The library:
+- **The page header sits on the page**, not in a hero card; the book count is a quiet grey tag instead of a purple pill.
+- **The course card is a flat 8 px hairline card** without a shadow, also on hover (the hover only darkens the hairline).
+- **The filters are quiet 6 px selects; the library search block is a flat 8 px panel**, its field without a resting shadow.
+  The field's focus ring is untouched.
+
+The course home:
+- **The book's sections are one hairline card of 48 px rows**, not a stack of eight cards. A row hovers grey (no purple) and its
+  focus ring is drawn inside the card, which clips its rows.
+- **«قراءة صفوفي»: the three figures are one hairline strip** whose cells draw their own hairlines (no grey empty cell when they
+  wrap); the table headers are a quiet white band.
+
+**Not changed, on purpose:** markup, roles, names, behaviour, the filters (still two `<select>`s, pinned as comboboxes), the
+reader (R9b), and the shared Reader search sheet `learning-search.css` (R9a scopes its search-field rules to `.eb-lm-search`).
+
+## R9a.2 Edit set
+
+- **`learning-library-premium.css`, `search/learning-library-search.css`, `classReading/class-reading.css`:** one block appended at
+  the end of each. Each wins by order (or by a higher specificity); no stacking context, transition, colour literal or physical
+  side; every sheet stays at 0 colour literals. **`learning.css` is untouched** (its layout guards pin exact rule bodies).
+- **`src/learning/learningLibrary.ux-r9a.test.ts`:** new, 9 guards (also: the blocks are last and appear once; learning.css and
+  learning-search.css carry no R9a rule; every search-sheet rule is scoped to `.eb-lm-`).
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `learning` scene (class `c1` carries the book; the catalog and the class
+  reading are served only while that scene is captured, so every other page's capture is unchanged) and two scripted pages:
+  `learning-book` (the course home with «قراءة صفوفي» opened) and `learning-search` (the library search with results for
+  «VLAN»).
+
+## R9a.3 Fail-first evidence
+
+Not applicable: R9a restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R9a.4 Mutation proof
+
+Each mutant was planted alone in its sheet. The run covered `src/learning`, `src/designSystem` and the colour ratchet. The file
+was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the hero card returns (shadow) | KILLED | ux-r9a «the page header sits on the page…» |
+| M2 | the count pill back to the purple tint | KILLED | ux-r9a «… the count is a quiet grey tag» |
+| M3 | the course card keeps its shadow | KILLED | ux-r9a «the course card is a flat 8 px hairline card…» |
+| M4 | the hover shadow returns | KILLED | ux-r9a «… also on hover» |
+| M5 | the sections back to a stack of cards (gap) | KILLED | ux-r9a «the sections are ONE hairline card of rows…» |
+| M6 | a section row loses its hairline | KILLED | ux-r9a «… split by hairlines…» |
+| M7 | section rows below 44 px | KILLED | ux-r9a «… (≥ 44 px…)» |
+| M8 | the row hover back to the purple tint | KILLED | ux-r9a «a row hovers grey…» |
+| M9 | the focus ring drawn outside the clipping card | KILLED | ux-r9a «… its focus ring is drawn inside the clipping card» |
+| M10 | the search block keeps its shadow | KILLED | ux-r9a «… the search block a flat 8 px panel…» |
+| M11 | the shadowless field also drops the focus ring | KILLED | ux-r9a «… (focus ring kept)» |
+| M12 | an unscoped search rule (reaches the shared Reader search) | KILLED | ux-r9a «… the shared Reader search sheet untouched» |
+| M13 | class-reading figures back to boxed cells | KILLED | ux-r9a ««قراءة صفوفي»: the figures are ONE hairline strip…» |
+| M14 | class-reading cells lose their own hairlines | KILLED | ux-r9a «… whose cells draw their own hairlines…» |
+| M15 | a colour literal in the block | KILLED | colour ratchet; ux-r9a |
+| M16 | a physical side in the block | KILLED | ux-r9a «add no stacking context, no transition, no colour literal and no physical side» |
+| M17 | a transition in the block | KILLED | ux-r9a (same guard) |
+
+17 / 17 KILLED, no TIMEOUT. `git status` showed only the R9a edit set before and after the campaign.
+
+## R9a.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| L.8 reader browser gate (`scripts/check-learning-reader-browser-l8.mjs`, CI's tools: playwright-core and axe-core from the workflow's pinned install), R9a build | **passed**: 24 audits (student portal, student reader and its unit opener, teacher library, teacher book, teacher reader at 390 / 834 touch, 1024, 1440 px: axe without serious / critical violations, no horizontal overflow, 44 px touch targets) and both journeys; 0 failures |
+| Visual capture `learning`, `learning-book`, `learning-search` (1440 / 1024 / 390 px), before and after | 9 / 9 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose learning CSS is identical to `main` |
+| `npm test`, full root suite (`9f2bf142`) | **1 179 / 1 179 files, 14 061 / 14 061 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (all three sheets stay at 0) |
