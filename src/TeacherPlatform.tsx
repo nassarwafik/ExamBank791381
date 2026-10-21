@@ -332,7 +332,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
   profileSeq.current++;setProfileBusy(false);
   // The move target never carries over to another class (it could equal the newly selected class).
   setBulkTargetClassId("");
-  setSelectedIds([]);setProfile(null);setEditingStudent(null);setReviewTarget(null);setHistoryDeadlineFor(null);setDialog("none");cancelPending();clearPasswordReveal();
+  // The create-class dialog is not scoped to the selected class: a class change (including the first selection after the load,
+  // whose effect can flush just after the dialog was opened) keeps it open; every class-scoped dialog closes.
+  setSelectedIds([]);setProfile(null);setEditingStudent(null);setReviewTarget(null);setHistoryDeadlineFor(null);setDialog(d=>d==="createClass"?d:"none");cancelPending();clearPasswordReveal();
   // Single-student credential box + bulk errors are cleared so a plaintext password / error never shows
   // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
   // simply HIDDEN unless its owning class is selected again (avoids accidental loss on a stray click).
