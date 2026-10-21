@@ -975,7 +975,7 @@ the hardening and UX-4 platform suites, and the colour ratchet. Each file was re
 |---|---|
 | U.1 gate (CI workflow, run locally with CI's tools: playwright-core 1.55.0, axe-core 4.10.2) | «U.1 gate passed» at 390 / 834 / 1024 / 1440. Covers the bar above the roster, chips inside the cards, the phone strip, touch targets, axe, the student sheet and S.4 |
 | Visual capture (14 pages × 3 viewports) | **40 / 42 clean** (was 39 / 42): the students overflow is fixed. Left: bank 458 and import 405, which go to R11a |
-| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests** on the second run |
+| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests** on the second run on `97091881`. On the reconciled head (with R4): **1 176 / 1 176 files, 14 030 / 14 030 tests**; lint, build, `git diff --check` and the U.1 gate were re-run there and passed |
 | `npm run lint` | exit 0 (pre-existing warnings only) |
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
