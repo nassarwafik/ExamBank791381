@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { calculateTrackProgress, buildStudentSummary, isStudentComplete, getNextStage } from "./project-794589-core.js";
-import { buildAnalytics } from "./project-794589-analytics.js";
+import { buildAnalytics } from "./project-tracker/analytics.js";
 
 const NOW = "2026-09-07T00:00:00.000Z";
 // Phase P7 — the V2 set is no longer the default (the condensed V3 is), but archived classes keep it forever: the engine
@@ -57,7 +57,8 @@ describe("analytics + heatmap on V2 template", () => {
     { studentId: "s1", displayName: "طالب ١", progress: approve(bookIds.slice(0, 10)) },
     { studentId: "s2", displayName: "طالب ٢", progress: approve(ptIds.slice(0, 5)) }
   ];
-  const a = buildAnalytics(config, entries, NOW);
+  // Phase P-9b: the engine directly (the legacy formatter that added the two 794589 tracks is gone; a V2 snapshot names none).
+  const a = buildAnalytics({ ...config, tracks: [{ trackId: "book" }, { trackId: "packetTracer" }] }, entries, NOW);
   it("heatmap covers exactly the 105 new stages and no old ids", () => {
     expect(a.heatmap.stages).toHaveLength(105);
     const ids = a.heatmap.stages.map(s => s.stageId);
