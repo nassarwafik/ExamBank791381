@@ -85,6 +85,9 @@ describe("UX-R16 — the error and offline pages", () => {
   it("the error boundary reads the tokens (with the reference values as fallbacks): 8 px flat card, no shadow, no slate", () => {
     for (const s of ['background: "var(--eb-bg, #f7f6fa)"', 'border: "1px solid var(--eb-line, #e9e8ee)"', 'borderRadius: "var(--eb-r, 8px)"', 'color: "var(--eb-text-heading, #1c1330)"', 'color: "var(--eb-muted, #5f5a6e)"', 'background: "var(--eb-primary, #2a0a4e)"']) expect(boundary).toContain(s);
     expect(boundary).not.toMatch(/boxShadow|#0f172a|#64748b|#f5f7fa|#e9edf4/);
+    // the card AND the button take the 8 px radius; no numeric radius is left
+    expect(boundary.match(/borderRadius: "var\(--eb-r, 8px\)"/g)).toHaveLength(2);
+    expect(boundary).not.toMatch(/borderRadius:\s*\d/);
     // the fallbacks are the tokens' own values
     expect(hex("eb-bg")).toBe("#f7f6fa"); expect(hex("eb-line")).toBe("#e9e8ee"); expect(hex("eb-muted")).toBe("#5f5a6e"); expect(hex("eb-primary")).toBe("#2a0a4e");
   });
