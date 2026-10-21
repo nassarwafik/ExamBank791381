@@ -12,9 +12,9 @@
 .rv-filter{ border:1px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text); border-radius:var(--eb-pill); padding:7px 13px; font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
 .rv-filter:hover{ background:var(--eb-surface-2); }
 .rv-filter:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
-.rv-filter.is-active{ background:var(--eb-navy); color:#fff; border-color:var(--eb-navy); }
+.rv-filter.is-active{ background:var(--eb-navy); color:var(--eb-surface); border-color:var(--eb-navy); }
 .rv-filter.is-pending{ border-color:var(--eb-warn); background:var(--eb-warn-bg); color:#9a3412; font-size:var(--eb-fs-14); }
-.rv-filter.is-pending.is-active{ background:#9a3412; color:#fff; border-color:#9a3412; }
+.rv-filter.is-pending.is-active{ background:#9a3412; color:var(--eb-surface); border-color:#9a3412; }
 .rv-filter-count{ font-variant-numeric:tabular-nums; opacity:.85; }
 .rv-pager{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .rv-pager button{ border:1px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text); border-radius:var(--eb-r); padding:8px 12px; font:inherit; font-weight:var(--eb-fw-bold); cursor:pointer; }
@@ -109,4 +109,31 @@
 /* Phase 21G.7 — touch screens: 44 px targets for the review's student navigation, attempt tabs, filters and pager. */
 @media (pointer: coarse) {
   .rv-student-nav button, .review-attempt-tabs button, .rv-filter, .rv-pager button, .review-top > button { min-block-size: 44px; }
+}
+
+/* UX-R12 — the grading workspace in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R12). Presentation only:
+   every grade, key, status and save path is unchanged. The attempt summary is ONE hairline strip, the navigator and the
+   question cards are flat 8 px hairline panels, the selected filter and attempt read as a grey pill (the «يحتاج إلى تصحيح يدوي»
+   filter keeps its warn tone: it is a status), and the phone fix: the header wraps, so the exam title keeps the full width.
+   Scoped to .rv-workspace. Tokens only, logical sides only, no stacking context, no transition. */
+.review-modal.rv-workspace{ border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-lg); }
+.rv-workspace .review-top .platform-eyebrow{ display:none; }
+.rv-workspace .review-top > button{ border-radius:var(--eb-r); }
+.rv-workspace .review-summary{ gap:0; margin:16px 22px; padding:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.rv-workspace .review-summary > div{ border:0; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.rv-workspace .review-attempt-tabs{ border-radius:var(--eb-r-sm); background:var(--eb-surface); padding:3px; }
+.rv-workspace .review-attempt-tabs button{ border-radius:var(--eb-r-sm); }
+.rv-workspace .review-attempt-tabs button.active{ background:var(--eb-chrome-active); color:var(--eb-text-heading); box-shadow:none; }
+.rv-workspace .rv-filter{ border-radius:var(--eb-r-sm); }
+.rv-workspace .rv-filter.is-active:not(.is-pending){ background:var(--eb-chrome-active); color:var(--eb-text-heading); border-color:transparent; }
+.rv-workspace .rv-nav{ border-radius:var(--eb-r); background:var(--eb-surface); }
+.rv-workspace .review-question{ border-radius:var(--eb-r); box-shadow:none; }
+.rv-workspace .review-question.rv-q.is-current{ box-shadow:0 0 0 2px var(--eb-primary); }
+.rv-workspace .review-qhead > div:first-child::before{ content:none; }
+.rv-workspace .review-answer-grid > div, .rv-workspace .review-grade-row{ border-radius:var(--eb-r); }
+.rv-workspace .review-footer .platform-primary{ box-shadow:none; }
+@media (max-width:767px){
+  .rv-workspace .review-top{ flex-wrap:wrap; }
+  .rv-workspace .review-top > div:first-child{ flex:1 1 0; min-width:0; }
+  .rv-workspace .review-top > .rv-student-nav{ order:2; }
 }
