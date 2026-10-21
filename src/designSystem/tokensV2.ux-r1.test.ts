@@ -102,8 +102,6 @@ describe("UX-R1 — every --eb-* token read without a fallback is defined", () =
     "learning/visuals/visuals.css: --eb-font-mono",    // R9b
     "projects/performance.css: --eb-fs-15",            // R10
     "projects-pro.css: --eb-fs-15",                    // R10
-    "studentexam-pro.css: --eb-text-muted",            // R15
-    "studentexam-pro.css: --eb-fs-sm",                 // R15
   ]);
   it("no stylesheet reads an undefined --eb-* token beyond the recorded pre-existing ones", () => {
     const definedEb = new Set<string>();
