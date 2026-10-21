@@ -207,3 +207,32 @@ html[data-eb-reading-focus] .eb-lm-reader { padding: var(--eb-space-2) var(--eb-
   .learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button[aria-pressed="true"] { outline: 2px solid Highlight; }
   .learning-reader-unit-lesson { border-color: CanvasText; }
 }
+
+/* ── UX-R9b — the reader chrome in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R9b) ─────────────
+   Presentation only, chrome only: the lesson content, diagrams and activities are untouched. Flat 8 px panels without a
+   resting shadow (top bar, index, page, page bar, unit contents, training card); a pressed tool, the docked index toggle,
+   the current index page and a chosen reading setting are a grey pill with heading-coloured (bold) text instead of the
+   primary tint; unit-contents rows hover grey (--eb-surface-2, which «داكن» re-maps; --eb-chrome-hover resolves on :root and
+   would stay light). The pill colour is a reader-scoped token that the «داكن» theme re-maps to
+   its own surface, so it never puts a light pill under light text. Normal reading only (:not(.is-presentation)); no
+   stacking context, no transition, no colour literal, no physical side. It comes last in the sheet, so it wins by order. */
+.learning-reader:not(.is-presentation) { --learning-reader-pressed: var(--eb-chrome-active); }
+.learning-reader[data-read-theme="dark"]:not(.is-presentation) { --learning-reader-pressed: var(--eb-read-dark-surface-2); }
+.learning-reader:not(.is-presentation) .learning-reader-topbar { border-color: var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
+.learning-reader:not(.is-presentation) .learning-reader-topbar .eb-button[aria-pressed="true"],
+.learning-reader:not(.is-presentation)[data-toc="docked"] .learning-reader-toc-toggle {
+  color: var(--eb-text-heading); background: var(--learning-reader-pressed);
+}
+.learning-reader:not(.is-presentation) .learning-reader-sidebar { border-radius: var(--eb-r); box-shadow: none; }
+.learning-reader:not(.is-presentation) .learning-reader-page { border-radius: var(--eb-r); box-shadow: none; }
+.learning-reader:not(.is-presentation) .learning-reader-nav { border-radius: var(--eb-r); box-shadow: none; }
+.learning-reader:not(.is-presentation) .learning-reader-toc-page.is-active {
+  color: var(--eb-text-heading); background: var(--learning-reader-pressed); border-inline-start-color: var(--eb-text-heading); font-weight: var(--eb-fw-bold);
+}
+.learning-reader:not(.is-presentation) .learning-reader-unit-contents { border-radius: var(--eb-r); box-shadow: none; }
+.learning-reader:not(.is-presentation) .learning-reader-unit-lesson:hover { background: var(--eb-surface-2); border-color: var(--eb-line-2); }
+.learning-reader:not(.is-presentation) .learning-reader-training { border-radius: var(--eb-r); }
+.learning-reader-settings-option:has(input:checked) { border-color: var(--eb-line-2); background: var(--eb-chrome-active); color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+@media (forced-colors: active) {
+  .learning-reader-settings-option:has(input:checked) { border-width: 2px; border-color: Highlight; }
+}

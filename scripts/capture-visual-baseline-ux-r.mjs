@@ -128,6 +128,13 @@ function api(req, res) {
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
   if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
   if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
+  // UX-R9b — the reader's module bodies, read from the API's own content data (the shape /api/learning-content returns).
+  if (p.startsWith("/api/learning-content/")) {
+    const [, , , courseId, moduleId] = p.split("/");
+    const file = path.join(root, "api/src/data/learning-content", courseId || "", (moduleId || "") + ".json");
+    return /^[\w-]+$/.test(courseId || "") && /^[\w-]+$/.test(moduleId || "") && fs.existsSync(file)
+      ? send(200, { ok: true, courseId, module: JSON.parse(fs.readFileSync(file, "utf8")) }) : send(404, { ok: false, error: "not found" });
+  }
   if (p === "/api/classrooms") return send(200, { ok: true, classes: CLASSES });
   if (p === "/api/students" && u.searchParams.get("profileUserId")) return send(200, { ok: true, profile: null });
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
@@ -172,6 +179,7 @@ const TEACHER_PAGES = [
   ["import", "استيراد من ملف"], ["reviews", "مراجعات النشر"], ["audit", "سجل النشاط"],
 ];
 // UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
+// UX-R9b — the teacher reader on its first content page (after the unit opener): top bar, index, page and page bar.
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
   { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
@@ -185,6 +193,16 @@ const SCRIPTED = [
     await page.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }).click({ timeout: 15000 });
     await page.getByRole("searchbox").fill("VLAN", { timeout: 15000 });
     await page.locator("[data-search-hit]").first().waitFor({ timeout: 15000 });
+  } },
+  { id: "learning-reader", role: "teacher", nav: "المواد التعليمية", run: async page => {
+    await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
+    await page.getByRole("button", { name: "بدء القراءة" }).click({ timeout: 15000 });
+    await page.locator(".learning-reader-page").waitFor({ timeout: 15000 });
+    const first = await page.locator(".learning-reader-navpos").textContent({ timeout: 15000 });
+    await page.getByRole("button", { name: /^التالي/ }).click({ timeout: 15000 });
+    await page.waitForFunction(t => document.querySelector(".learning-reader-navpos")?.textContent !== t, first, { timeout: 15000 });
+    await page.locator(".learning-reader-page-title").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0));
   } },
   { id: "messages-thread", role: "teacher", nav: "الرسائل", run: async page => {
     await page.getByRole("combobox", { name: "الصف" }).selectOption("c1", { timeout: 15000 });

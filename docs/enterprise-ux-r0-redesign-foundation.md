@@ -1267,6 +1267,94 @@ colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte a
 
 ---
 
+# Phase UX-R9b — Learning: the reader chrome and the training runner
+
+**Owner direction (2026-10-21):** start R9b. The plan has it follow R9a (#402), but the two share no stylesheet, so R9b branches
+from `main` `f51bd90d` as `feature/ux-r9b-learning-reader` and keeps its own PR; they share only the capture harness and this
+record, so whichever merges second takes a reconciliation merge.
+
+
+**Reconciliation.** The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R9b waited for review. R9b
+took `main` in with a normal merge commit (`git merge origin/main`). Conflicts: this record (kept both sections, R8 first) and the
+capture harness (kept both: R8's messages fixtures and pages with R9b's, in one `SCRIPTED` list). The hotfix R9b had ported is
+identical to `main`'s and merged without a change. The full root suite was re-run on the merged head. Baselines: `f51bd90d` →
+`f746c51a`.
+
+## R9b.1 What changes for the user
+
+Chrome only, in normal reading (teacher and student): the lesson content, the diagrams and the interactive activities are
+untouched, and presentation mode keeps its own look.
+- **The top bar, the docked index, the page, the page bar, the unit contents and the training card are flat 8 px panels** without
+  a resting shadow (each keeps its hairline border; the page bar stays sticky).
+- **A pressed tool, the docked index toggle, the current index page and a chosen reading setting are a grey pill** with
+  heading-coloured (bold) text, instead of the primary tint. The current index page keeps its guide mark, now heading-coloured.
+- **Unit-contents rows hover grey**, not purple.
+- **The training runner's panels are flat 8 px and its sticky submit bar has no shadow.**
+- **Dark-theme safe.** The pill colour is a reader-scoped token (`--learning-reader-pressed`) that «داكن» re-maps to its own
+  surface, so a light pill never sits under light text; the row hover uses `--eb-surface-2` (re-mapped) and never
+  `--eb-chrome-hover`, which resolves on `:root` and would stay light inside the dark reader.
+
+**Not changed, on purpose:** every content block (text, headings, callouts, examples, lists, tables, code, figures, practice
+questions, activities), the search and notes sheets, the «المزيد» menu (a popover keeps its shadow), presentation mode, focus mode,
+and the TOC's fine-pointer row heights (an L.1 decision).
+
+## R9b.2 Edit set
+
+- **`src/learning/reader/reader-enterprise-l1.css`:** one block appended at the end. `reader.css` is untouched: its 1024 px block
+  must stay the last rule set. Every rule is scoped to normal reading (`:not(.is-presentation)`), except the portalled settings
+  dialog's `.learning-reader-settings-option`. No stacking context, transition, colour literal, physical side, `!important` or
+  `html[data-eb-reading-focus]` selector; a forced-colors rule keeps the chosen setting's 2 px Highlight border.
+- **`src/learning/training/training.css`:** one block appended at the end.
+- **`src/learning/reader/readerChrome.ux-r9b.test.ts`:** new, 9 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `/api/learning-content` mock that serves the API's own module data
+  (`api/src/data/learning-content/<course>/<module>.json`, in the `{ ok, courseId, module }` shape), and a scripted page
+  `learning-reader`: the teacher reader on its first content page (after the unit opener).
+
+## R9b.3 Fail-first evidence
+
+Not applicable: R9b restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R9b.4 Mutation proof
+
+Each mutant was planted alone in its sheet. The run covered `src/learning`, `src/designSystem`, `src/shell` and the colour ratchet.
+The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the top bar keeps its resting shadow | KILLED | ux-r9b «the top bar, index, page, page bar and unit contents are flat…» |
+| M2 | a pressed tool back to the primary tint | KILLED | ux-r9b «a pressed tool and the docked index toggle are a grey pill…» |
+| M3 | the pill uses the light token directly (no dark re-map) | KILLED | same |
+| M4 | the dark theme no longer re-maps the pill | KILLED | ux-r9b «dark-theme safe…» |
+| M5 | the docked index keeps its shadow | KILLED | ux-r9b «… flat 8 px panels…» |
+| M6 | the page keeps its large radius and shadow | KILLED | same |
+| M7 | the page bar keeps its shadow | KILLED | same |
+| M8 | the current index page back to the primary tint | KILLED | ux-r9b «the current index page is the same grey pill…» |
+| M9 | the unit-lesson hover uses `--eb-chrome-hover` (stays light in «داكن») | KILLED | ux-r9b «dark-theme safe…» |
+| M10 | the chosen setting back to the primary tint | KILLED | ux-r9b «a chosen reading setting is a grey pill…» |
+| M11 | forced colors lose the chosen setting's Highlight border | KILLED | same |
+| M12 | a rule reaches presentation mode (unscoped) | KILLED | ux-r9b «restyles normal reading only…» |
+| M13 | a focus-mode selector in the block | KILLED | reader.l1.guards «focus mode hides exactly…»; ux-r9b |
+| M14 | a colour literal in the block | KILLED | colour ratchet; reader.l1.guards; ux-r9b |
+| M15 | a stacking context in the block (on the page) | KILLED | ux-r9b «add no stacking context…» |
+| M16 | the training submit bar keeps its shadow | KILLED | ux-r9b «the training runner…» |
+| M17 | the training panels keep the large radius | KILLED | same |
+
+17 / 17 KILLED, no TIMEOUT. `git status` showed only the R9b edit set before and after the campaign.
+
+## R9b.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| L.8 reader browser gate (`scripts/check-learning-reader-browser-l8.mjs`, the workflow's pinned playwright-core and axe-core), R9b build | **passed**: 24 audits (student portal, student reader and its unit opener, teacher library, book and reader at 390 / 834 touch, 1024, 1440 px) and both journeys; 0 failures |
+| Visual capture `learning-reader` (1440 / 1024 / 390 px), before and after | 3 / 3 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose reader CSS is identical to `main` |
+| `npm test`, full root suite (`8e7f2af1`) | **1 179 / 1 179 files, 14 061 / 14 061 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`reader-enterprise-l1.css` stays at 52, `training.css` at 0) |
+
+---
+
 # Phase UX-R9a — Learning: the library, the course home and the library search
 
 **Owner direction (2026-10-21):** start R9 (the plan splits it into R9a and R9b; R9b depends on R9a). R9a depends on R3 (merged),
