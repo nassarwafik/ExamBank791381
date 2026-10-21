@@ -744,7 +744,14 @@ A change to `src/ui/**` triggers two CI workflows. Both were run on the R3 build
 
 **Owner direction (2026-10-21):** start R4. R3 (PR #393) was still open, waiting for the owner's merge and an Azure preview slot.
 R4 depends on it, so R4 branches from the R3 head `eab451aa` as `feature/ux-r4-dashboard`. This is the same stacking the owner
-chose for R1 on top of R0. When R3 merges, R4 takes `main` in with a normal merge commit, and its diff then shows R4 alone.
+chose for R1 on top of R0.
+
+**Reconciliation.** The owner merged R3 into `main` (`af7f9aab`) while R4 was being validated. R4 took `main` in with a normal
+merge commit (`b3e7bfc4`, `git merge origin/main`); there were no conflicts.
+- The merged tree is byte-identical to the validated R4 commit `fda35744`: same tree SHA `1ade5d7f`.
+- The full validation was re-run on the merge commit anyway (§R4.5).
+- The PR diff against `main` now shows R4 alone.
+- Baselines: R3 head `eab451aa` → `main` `af7f9aab`.
 
 ## R4.1 What changes for the user
 
@@ -862,7 +869,7 @@ after the campaign.
 |---|---|
 | Visual capture (14 pages × 3 viewports) | 39 / 42 clean; the three recorded phone overflows only (§7: students 391, bank 458, import 405). The dashboard is clean at all three viewports |
 | 21E.2 Chromium gate on the dashboard (KPI and quick-action columns, accent bars, nav) | every CHECK passes at 1280, 150 %, 200 % and 390 px touch |
-| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests** |
+| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests**: on `fda35744`, and again on the reconciled merge `b3e7bfc4` (lint, build and `git diff --check` re-run there too) |
 | `npm run lint` | exit 0. The `TeacherDashboard.tsx` warnings at lines 276 / 301 predate R4 |
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
