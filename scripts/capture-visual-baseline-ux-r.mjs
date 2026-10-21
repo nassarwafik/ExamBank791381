@@ -129,6 +129,49 @@ const STUDENT_MESSAGES = { ok: true, direct: DIRECT, announcements: [{ ...msg(7,
   classroom: { classId: "c1", name: "العاشر – أ", archived: false }, canSend: true, readOnlyReason: "" };
 const NO_UNREAD = { unread: 0, capped: false };
 
+// UX-R10 — the projects pages (the shapes of the ProjectWorkspace.ux6 fixtures): two projects in the hub, and project 794589 for
+// class c1 with a dashboard, student cards, a student profile, analytics (charts and heatmap) and the stage settings. The sidebar
+// totals stay 0 so «المشاريع» keeps its exact accessible name; the per-project badge comes from byProject.
+const P_TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }, { trackId: "packetTracer", title: "Packet Tracer", icon: "🖧" }];
+const P_CATALOG = [{ projectCode: "794589", title: "مشروع الشبكات 794589", tracks: P_TRACKS }, { projectCode: "899373", title: "مشروع قواعد البيانات 899373", tracks: [P_TRACKS[0], { trackId: "access", title: "Access" }] }];
+const P_STAGES = [
+  { stageId: "B01", track: "book", groupId: "g1", title: "مقدمة الشبكات", description: "اقرأ الفصل الأول", order: 1, weight: 1, required: true, active: true },
+  { stageId: "B02", track: "book", groupId: "g1", title: "طبقات OSI", order: 2, weight: 1, required: false, active: true },
+  { stageId: "P01", track: "packetTracer", groupId: "g2", title: "أول طوبولوجيا", order: 1, weight: 1, required: true, active: true },
+  { stageId: "P02", track: "packetTracer", groupId: "g2", title: "شبكة VLAN", order: 2, weight: 1, required: true, active: true },
+];
+const P_GROUPS = [{ groupId: "g1", track: "book", title: "الوحدة الأولى", order: 1 }, { groupId: "g2", track: "packetTracer", title: "مختبرات", order: 1 }];
+const P_CARD = (st, i) => ({ studentId: st.userId, displayName: st.displayName, code: st.code, overallProgress: [45, 100, 70, 20, 0, 85][i], trackProgress: { book: [60, 100, 80, 30, 0, 90][i], packetTracer: [30, 100, 60, 10, 0, 80][i] },
+  counts: { not_started: [4, 0, 1, 6, 8, 1][i], in_progress: [2, 0, 2, 1, 0, 1][i], ready_for_review: [1, 0, 1, 0, 0, 1][i], approved: [3, 10, 6, 1, 0, 7][i] }, readyForReviewCount: [1, 0, 1, 0, 0, 1][i], complete: i === 1, updatedAt: NOW, stale: i === 4 });
+const P_STUDENTS = STUDENTS.slice(0, 6).map(P_CARD);
+const P_DETAIL = { ok: true, readOnly: false, projectCode: "794589", student: { studentId: "u1", displayName: STUDENTS[0].displayName, code: STUDENTS[0].code },
+  tracks: P_TRACKS, summary: P_STUDENTS[0], stages: P_STAGES, groups: P_GROUPS, trackWeights: { book: 1, packetTracer: 1 }, config: { staleDays: 7, lateThreshold: 40, balanceWarningThreshold: 30 },
+  progress: { B01: { status: "ready_for_review", note: "راجع القسم 2", updatedAt: NOW }, B02: { status: "in_progress", updatedAt: NOW }, P01: { status: "approved", updatedAt: NOW } },
+  history: [{ eventId: "e1", stageId: "B01", type: "status", fromStatus: "in_progress", toStatus: "ready_for_review", actor: "t", createdAt: NOW }],
+  nextStages: { book: P_STAGES[1], packetTracer: P_STAGES[3] }, balance: null };
+const P_ANALYTICS = {
+  perStudent: P_STUDENTS.map(c => ({ studentId: c.studentId, name: c.displayName, trackProgress: c.trackProgress, overall: c.overallProgress })),
+  stageCompletion: P_STAGES.map((st, i) => ({ stageId: st.stageId, title: st.title, track: st.track, groupId: st.groupId, approvedPct: [50, 33, 67, 17][i] })),
+  buckets: { "0-25": 2, "26-50": 1, "51-75": 1, "76-99": 1, "100": 1 },
+  weeklyTrend: [{ weekStart: "2026-09-27", avgOverall: 28 }, { weekStart: "2026-10-04", avgOverall: 41 }, { weekStart: "2026-10-11", avgOverall: 52 }, { weekStart: "2026-10-18", avgOverall: 53 }],
+  heatmap: { students: P_STUDENTS.map(c => ({ studentId: c.studentId, name: c.displayName })), stages: P_STAGES.map(st => ({ stageId: st.stageId, title: st.title, track: st.track, groupId: st.groupId })),
+    statuses: P_STUDENTS.map((c, i) => ({ B01: ["ready_for_review", "approved", "approved", "in_progress", "not_started", "approved"][i], B02: ["in_progress", "approved", "ready_for_review", "not_started", "not_started", "approved"][i], P01: ["approved", "approved", "in_progress", "not_started", "not_started", "ready_for_review"][i], P02: ["not_started", "approved", "not_started", "not_started", "not_started", "in_progress"][i] })) },
+};
+const P_SUMMARY = { studentCount: 6, avgOverall: 53, trackAverages: { book: 60, packetTracer: 47 }, completedCount: 1, studentsReadyForReview: 3, totalReadyStages: 3, staleCount: 1, trackWeights: { book: 1, packetTracer: 1 }, staleDays: 7 };
+const P_CLASSES = CLASSES.slice(0, 2).map(c => ({ classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear, status: "active", studentCount: c.studentCount }));
+function projectTracker(q) {
+  const r = q.get("resource");
+  if (r === "projects-summary") return { ok: true, totalReadyForReview: 0, byProject: { "794589": 3 }, totalSelfReported: 0, selfReportedByProject: {}, byClass: {} };
+  if (r === "projects") return { ok: true, projects: P_CATALOG };
+  if (r === "classes") return { ok: true, projectCode: "794589", title: P_CATALOG[0].title, tracks: P_TRACKS, classes: P_CLASSES };
+  if (r === "summary") return { ok: true, summary: P_SUMMARY, tracks: P_TRACKS, readOnly: false };
+  if (r === "students") return { ok: true, students: P_STUDENTS, tracks: P_TRACKS, config: { lateThreshold: 40 }, readOnly: false };
+  if (r === "student") return P_DETAIL;
+  if (r === "analytics") return { ok: true, analytics: P_ANALYTICS, tracks: P_TRACKS, groups: P_GROUPS, readOnly: false };
+  if (r === "template") return { ok: true, template: { stages: P_STAGES, groups: P_GROUPS, trackWeights: { book: 1, packetTracer: 1 }, config: { staleDays: 7, lateThreshold: 40 } }, tracks: P_TRACKS, readOnly: false };
+  return { ok: true, projects: [] };
+}
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -155,7 +198,7 @@ function api(req, res) {
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: ASSIGNMENTS });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
-  if (p === "/api/project-tracker") return send(200, u.searchParams.get("resource") === "projects-summary" ? { ok: true, totalReadyForReview: 0, byProject: {} } : { ok: true, projects: [] });
+  if (p === "/api/project-tracker") return send(200, projectTracker(u.searchParams));
   if (p === "/api/messages" && req.method === "POST") return send(200, { ok: true, ...NO_UNREAD });
   // The roster's unread count for class c1 only: the sidebar's own summary stays at 0, so «الرسائل» keeps its exact accessible name.
   if (p === "/api/messages" && u.searchParams.get("kind") === "unread-summary" && u.searchParams.get("classId") === "c1") return send(200, { ok: true, totalUnread: 2, capped: false, byStudent: { u2: { unread: 2, capped: false } } });
@@ -199,6 +242,21 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R10 — the project tracker: its dashboard, the student cards, a student profile, the analytics (charts measured like the
+  // report chart) and the stage settings.
+  ...[["project-dashboard", null], ["project-students", /تقدّم الطلاب/], ["project-profile", /تقدّم الطلاب/], ["project-analytics", /الإحصائيات/], ["project-settings", /إعداد/]].map(([id, view]) => ({
+    id, role: "teacher", nav: "المشاريع", chartSel: id === "project-analytics" ? ".eb-project-analytics .eb-chart-canvas" : null, run: async page => {
+      await page.getByRole("button", { name: "فتح المشروع" }).first().click({ timeout: 15000 });
+      await page.getByRole("group", { name: "أقسام المشروع" }).waitFor({ timeout: 15000 });
+      await page.waitForLoadState("networkidle");
+      if (view) await page.getByRole("group", { name: "أقسام المشروع" }).getByRole("button", { name: view }).first().click({ timeout: 15000 });
+      if (id === "project-profile") {
+        await page.getByRole("button", { name: "فتح ملف الطالب" }).first().click({ timeout: 15000 });
+        await page.locator("#eb-student-profile-title").waitFor({ timeout: 15000 });
+      }
+      if (id === "project-analytics") await page.locator(".eb-heatmap").waitFor({ timeout: 15000 });
+      await page.evaluate(() => window.scrollTo(0, 0));
+    } })),
   { id: "report-assignments", role: "teacher", nav: "التقارير", open: "فتح التقرير التقييمات والواجبات", pickClass: "c1", chart: true },
   { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
     await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
@@ -271,6 +329,12 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
     await page.screenshot({ path: file, fullPage: true });
     const m = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, height: document.documentElement.scrollHeight, h1: document.querySelector("h1")?.textContent?.trim() || "" }));
     const overflow = m.scrollWidth > m.clientWidth;
+    if (pg.chartSel) {
+      // UX-R10 — a chart with no usable height is a blank card: measure the first chart box and its canvas.
+      const chart = await page.evaluate(sel => { const box = document.querySelector(sel); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; }, pg.chartSel);
+      m.chart = chart;
+      if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("project chart has no usable height: " + JSON.stringify(chart));
+    }
     if (pg.chart) {
       const chart = await page.evaluate(() => { const box = document.querySelector(".eb-report-result .eb-chart-canvas"); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; });
       m.chart = chart;

@@ -1543,3 +1543,103 @@ sidebar-spacing guard, `ux2-shell-foundation` and the colour ratchet. The file w
 | `git diff --check` | clean |
 | colour ratchet | 2 294, unchanged (`reports-pro.css` stays at 0) |
 | Browser gates | none is triggered by `reports-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R10 — Projects
+
+**Owner direction (2026-10-21):** start R10. It depends on R3 (merged), so it branches from `main` `f746c51a` as
+`feature/ux-r10-projects`. It ran in parallel with R7 (#399), R9a (#402), R9b (#403) and R11a; it shares no stylesheet with them,
+only the capture harness and this record.
+
+## R10.1 What changes for the user
+
+No reference mockup shows the projects pages, so R10 applies the record's general patterns (§3.2).
+
+The hub («المشاريع»):
+- **Project cards are flat 8 px hairline cards** without a shadow, also on hover (the hover only darkens the hairline).
+- **«فتح المشروع» is a quiet button** (one dark button per card otherwise).
+
+The project tracker:
+- **The toolbar and every panel are flat 8 px panels** without a resting shadow: the progress card, the student cards, the
+  profile summary, the stage groups, the timeline, the heatmap card and the stage settings.
+- **The section switch (and every segmented group of the workspace) is the reference segmented group** — one border, hairline
+  dividers, the pressed option grey with bold text.
+- **The student filters read as sub-navigation**: quiet items, the pressed one a grey pill with bold text (instead of the solid
+  primary).
+- **The headline figures are one hairline strip** whose cells draw their own hairlines, so 4 to 6 figures never paint a grey empty
+  cell when a row wraps. Values read in ink; the tone accent bars stay.
+- **«فتح ملف الطالب» on the student cards is a quiet button.**
+- **The students table is an 8 px hairline frame with a quiet white header** (the sticky header keeps its opaque band).
+- **Fix: on a phone the section switch's buttons are 44 px tall** (§R10.3).
+
+**Not changed, on purpose:** every status colour — the heatmap cells and swatches, the stage-row status borders, the score-grid
+cells and legend, the evaluation focus and finish panels, `.is-evaluation-pending`, the complete / stale card borders, the warn
+count pills and the danger zone; the chart colours; the print rules; `performance.css` (shared with the student portal); the
+markup and behaviour.
+
+## R10.2 Edit set
+
+- **`src/projects-pro.css`:** one block appended at the end. Every rule is scoped to `.eb-projects-hub` or
+  `.eb-project-workspace`, because the chips, segmented groups, stat grids, tables and charts are shared with the student portal,
+  the dashboard and the reports. Token-only, no physical side and no `padding-inline-start/end` (the 8B / sidebar-spacing guards),
+  only the 767 px breakpoint, no transition, no stacking context; the 8C block slice and the 8B gutter rules are untouched.
+- **`src/projects/projects.ux-r10.test.ts`:** new, 11 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** project fixtures (the ProjectWorkspace.ux6 shapes: two projects, project
+  794589 for class `c1` with six students, a profile, analytics and the stage template; the sidebar totals stay 0 so «المشاريع»
+  keeps its exact accessible name) and five scripted pages: `project-dashboard`, `project-students`, `project-profile`,
+  `project-analytics` (the first chart box and canvas must be at least 160 px tall) and `project-settings`.
+
+## R10.3 Fail-first evidence (the phone section switch)
+
+**Defect.** `projects-pro.css` gave `.eb-project-views > button` `min-height:40px` inside `@media (max-width:767px)`, a later and
+more specific rule than the shell's 44 px phone floor for segmented buttons, so the five section buttons were 40 px touch targets
+on a phone.
+
+**Proof.** The guard «the last min-height a phone gives the view-switch buttons is at least 44 px», run against `f746c51a` (the
+test file copied into a detached worktree of the baseline):
+
+| SHA | Result |
+|---|---|
+| `f746c51a` (baseline) | **FAIL** — `expected 40 to be greater than or equal to 44` |
+| `68b0571d` (R10) | pass |
+
+Mutant M1 below plants the defect back.
+
+## R10.4 Mutation proof
+
+Each mutant was planted alone in `src/projects-pro.css`. The run covered `src/projects`, `ux2-shell-foundation`, `phase8b`, the
+sidebar-spacing guard, `src/designSystem` and the colour ratchet. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the phone section switch back to 40 px (the fixed defect) | KILLED | ux-r10 «the last min-height a phone gives…» |
+| M2 | the hub card keeps its shadow | KILLED | ux-r10 «the hub card is a flat 8 px hairline card…» |
+| M3 | the hub card hover shadow returns | KILLED | same |
+| M4 | one dark «فتح المشروع» per card again | KILLED | same |
+| M5 | one dark «فتح ملف الطالب» per card again | KILLED | ux-r10 «the student card's «فتح ملف الطالب» is quiet too…» |
+| M6 | the workspace panels keep their shadow | KILLED | ux-r10 «the toolbar and the workspace panels are flat…» |
+| M7 | the pressed segment back to white with a shadow | KILLED | ux-r10 «the switches are the reference segmented group…» |
+| M8 | the pressed filter back to the solid primary | KILLED | same |
+| M9 | the figures back to separate cards (gap) | KILLED | ux-r10 «the headline figures are ONE hairline strip…» |
+| M10 | the figure cells lose their own hairlines | KILLED | same |
+| M11 | the students table header back to the grey band | KILLED | ux-r10 «the students table is an 8 px hairline frame…» |
+| M12 | an unscoped chip rule (reaches the student portal filters) | KILLED | ux-r10 «scopes every rule to the projects pages…» |
+| M13 | the restyle reaches a status colour (heatmap cell) | KILLED | same |
+| M14 | a colour literal in the block | KILLED | colour ratchet; ux2-shell-foundation «UX-6a projects-pro.css is token-only…» |
+| M15 | a physical padding side in the block | KILLED | phase8b «8B-E projects never sit flush…»; sidebar-spacing guard; ux-r10 |
+| M16 | a stacking context in the block | KILLED | ux-r10 «adds no stacking context…» |
+
+16 / 16 KILLED, no TIMEOUT. `git status` showed only the R10 edit set before and after the campaign.
+
+## R10.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `projects`, `project-dashboard`, `-students`, `-profile`, `-analytics`, `-settings` (1440 / 1024 / 390 px), before and after | 18 / 18 clean each, no horizontal overflow, no page error; the analytics chart box and canvas 260 / 260 / 220 px. "Before" is the R7 build, whose projects CSS is identical to `main` |
+| `npm test`, full root suite (`68b0571d`) | **1 181 / 1 181 files, 14 074 / 14 074 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`projects-pro.css` stays at 0) |
+| Browser gates | none is triggered by `projects-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR. The manual `check-project-*-p*` gates were not run (their checks — sticky score-grid headers, hero geometry, ≥ 44 px review buttons and approve toggle — concern rules R10 does not touch) |
