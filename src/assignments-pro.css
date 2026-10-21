@@ -419,3 +419,47 @@
   .eb-assignments .eb-gradebook-table thead th.is-sortable .eb-th-sort { min-block-size: 44px; }
 }
 .eb-assign-detail .students-table-wrap[tabindex]:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
+
+/* UX-R6a — the assignments home and the creation wizard in the reference look (docs/enterprise-ux-r0-redesign-foundation.md
+   §3.2). Presentation only: markup, names, order and every pinned rule above are unchanged; these rules come last and win by
+   order at the same specificity. No stacking-context property, no transition. The full-width page and the gradebook (R6b) keep
+   their look: nothing here targets .eb-assign-detail, the gradebook or the overview. */
+/* The toolbar sits on the page (no card). */
+.eb-assign-toolbar { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+/* The four headline figures are ONE hairline strip: the cells sit on a 1 px gap over the hairline colour, so the dividers follow
+   4 / 2 columns; each tile keeps its tone accent bar and a transparent 1 px border; the values read in ink. */
+.eb-assign-kpis .eb-stat-grid.is-primary { gap: 1px; background: var(--eb-line); border: 1px solid var(--eb-line); border-radius: var(--eb-r); overflow: hidden; }
+.eb-assign-kpis .eb-stat-card { border-color: transparent; border-radius: 0; box-shadow: none; background: var(--eb-surface); }
+.eb-assign-kpis .eb-stat-grid.is-primary .eb-stat-value { color: var(--eb-text-heading); }
+/* The view switches («الواجبات الحالية / المؤرشفة», the wizard's content source) are the reference segmented group: one border,
+   hairlines between the options, the pressed one grey and bold (aria-pressed and weight mark it, never colour alone). */
+.eb-assignments .eb-segmented { gap: 0; padding: 0; background: var(--eb-surface); border-color: var(--eb-line-2); overflow: hidden; }
+.eb-assignments .eb-segmented > button { border-radius: 0; border-inline-start: 1px solid var(--eb-line); }
+.eb-assignments .eb-segmented > button:first-child { border-inline-start: 0; }
+.eb-assignments .eb-segmented > button[aria-pressed="true"] { background: var(--eb-chrome-active); font-weight: var(--eb-fw-bold); box-shadow: none; }
+/* The time filters read as sub-navigation: quiet text items, the pressed one a grey pill with bold text, its count muted. */
+.eb-filter-chip { border-color: transparent; border-radius: var(--eb-r-sm); background: transparent; color: var(--eb-text-heading); font-weight: var(--eb-fw-medium); }
+.eb-filter-chip:hover { background: var(--eb-surface-2); }
+.eb-filter-chip[aria-pressed="true"] { background: var(--eb-chrome-active); border-color: transparent; color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+.eb-filter-chip-n { color: var(--eb-muted); opacity: 1; }
+/* The list is ONE hairline card of rows: no card per assignment, rows split by hairlines; the title line, then the details on one
+   wrapping line, then the time chip and submission bar side by side. */
+.eb-assign-rows { gap: 0; background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r); overflow: hidden; }
+.eb-assign-row { padding: var(--eb-space-3) var(--eb-space-5); background: transparent; border: 0; border-block-start: 1px solid var(--eb-line); border-radius: 0; box-shadow: none; }
+.eb-assign-row:first-child { border-block-start: 0; }
+.eb-assign-row:hover { background: var(--eb-surface-2); box-shadow: none; }
+.eb-assign-row.selected { background: var(--eb-chrome-active); box-shadow: none; }
+.eb-assign-row.archived { background: var(--eb-surface-2); }
+.eb-assign-row-title strong { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+.eb-assign-row-main { flex: 1 1 auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: var(--eb-space-3); row-gap: 2px; }
+.eb-assign-row-main > .eb-assign-row-title, .eb-assign-row-main > .eb-assign-row-progress { flex-basis: 100%; }
+.eb-assign-row-progress { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--eb-space-2) var(--eb-space-4); margin-top: var(--eb-space-1); }
+.eb-assign-row-progress > .eb-progress { flex: 1 1 200px; max-inline-size: 360px; }
+@media (max-width: 767px) {
+  .eb-assign-row { padding: var(--eb-space-3) var(--eb-space-4); }
+  .eb-assign-row-progress > .eb-progress { max-inline-size: none; }
+}
+/* The wizard: a flat 8 px panel (its primary inline-start bar stays); the content source, policy groups and library items use the
+   8 px radius. */
+.eb-assign-composer { border-color: var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
+.eb-assign-composer .eb-source-card, .eb-assign-composer .eb-policy-group, .eb-assign-composer .library-item { border-radius: var(--eb-r); }
