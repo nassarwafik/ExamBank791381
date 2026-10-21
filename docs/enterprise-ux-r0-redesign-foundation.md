@@ -1442,3 +1442,104 @@ was restored byte-for-byte after each (SHA-256).
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | 2 294, unchanged (all three sheets stay at 0) |
+
+---
+
+# Phase UX-R7 — the Reports Center
+
+**Owner direction (2026-10-21):** start R7. It depends on R3 (merged), so it branches from `main` `fc40d203` as
+`feature/ux-r7-reports`. It ran in parallel with R6b (PR #398); the two share no source file, only this record.
+
+**Reconciliation.** Two normal merge commits (`git merge origin/main`), each followed by a full root-suite run (§R7.5):
+- P-9b (#397, API and docs only) merged into `main` (`59ffac32`) while R7 was validated; taken in without conflicts.
+- R6b (#398) merged into `main` (`f51bd90d`) while R7 waited for review. Conflict: one, in this record, where both phases had
+  appended a section; resolved by keeping both, R6b first. The two phases share no source file.
+- The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R7 waited for its CI. Conflicts: this
+  record (kept both sections, R8 first) and the capture harness (kept both: the reports mock and the messages fixtures, one
+  `SCRIPTED` list with R7's report page and R8's two pages, and both the `open` and the `run` steps). The hotfix R7 had ported
+  (`a06ce9ae`) is identical to `main`'s and merged without a change.
+- Baselines: `fc40d203` → `59ffac32` → `f51bd90d` → `f746c51a`.
+
+## R7.1 What changes for the user
+
+On the «التقارير» hub:
+- **The category filter reads as sub-navigation.** Quiet text items; the pressed one is a grey pill with bold text instead
+  of the primary fill.
+- **Each category is one hairline card of report rows**, not a grid of cards. A row is at least 44 px: the report's icon,
+  name and description, then its «فتح التقرير» action. The action is quiet (one dark primary button per row would put eight
+  on the page).
+
+In an opened report:
+- **The KPI figures are one hairline strip.** The cells draw their own hairlines (an inline-end and a block-end 1 px
+  shadow) inside one bordered strip, so a report with 5 figures on a 3- or 4-column row paints no grey empty cell — the
+  1 px-gap technique of R4–R6 would. Values read in ink; the tone accent bars stay.
+- **Filters, project cards and tables are flat 8 px panels** without a card shadow; the sticky table header is a quiet white
+  band and stays opaque.
+- **Fix — the report charts have a height of their own** (§R7.3).
+
+**Not changed, on purpose:** markup, names, labels, the catalogue, the filters' behaviour, CSV export and print. The
+sidebar-spacing gutter, the workspace and the print rules of `reports-pro.css` are kept verbatim (pinned by the ux6b, p5d, r1
+and r2 suites and the sidebar-spacing guard).
+
+## R7.2 Edit set
+
+- **`src/reports-pro.css`:** the hub, KPI, panel and table rules restyled in place; the chart heights added to the report
+  result; phone rules (220 / 280 px charts, wrapping rows). No physical side, no colour literal (the sheet stays outside the
+  colour baseline at 0), no `--eb-r-lg`, no `--eb-sh-xs/sm` card shadow.
+- **`src/reports/reportsCenter.ux-r7.test.ts`:** new, 9 guards, including the chart-height fix and the untouched print rules.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `/api/reports` mock (filters, a class's students, the assessments report,
+  in the shapes of the ReportsCenter.ux6b fixtures) and a scripted page `report-assignments` that opens «التقييمات
+  والواجبات», selects the class and **fails when the chart box or canvas is under 160 px**.
+
+## R7.3 Fail-first evidence (the chart height)
+
+**Defect.** The report charts draw with `maintainAspectRatio:false`, which takes the height of the parent box. That box,
+`.eb-chart-canvas`, was sized only in `projects-pro.css`, a sheet loaded with the Projects pages. A visit that starts in the
+Reports Center therefore rendered the distribution chart at Chart.js's 150 px fallback — a squashed chart — until the user
+happened to open a Projects page first.
+
+**Proof.** The scripted capture `report-assignments`, run against a build of each SHA:
+
+| Build | 1440 px | 1024 px | 390 px | Check |
+|---|---|---|---|---|
+| baseline `fc40d203` | 150 px | 150 px | 150 px | **FAIL** (under 160 px) |
+| R7 head | 260 px | 260 px | 220 px | PASS |
+
+The R7 guard «the report result owns the chart box heights…» pins the rule (mutants M1 and M2 below).
+
+## R7.4 Mutation proof
+
+Each mutant was planted alone in `src/reports-pro.css`. The run covered `src/reports`, the Reports Center suites, the
+sidebar-spacing guard, `ux2-shell-foundation` and the colour ratchet. The file was restored byte-for-byte after each
+(SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the report chart height rule removed (the 150 px fallback returns on a cold visit) | KILLED | ux-r7 «the report result owns the chart box heights…» |
+| M2 | the phone chart height removed | KILLED | ux-r7 «the report result owns the chart box heights…» |
+| M3 | the pressed category filter back to the primary fill | KILLED | ux-r7 «the catalogue filter reads as sub-navigation…» |
+| M4 | the catalogue back to a grid of cards | KILLED | ux-r7 «each group is ONE hairline card of report rows…» |
+| M5 | report rows lose their 44 px height | KILLED | ux-r7 «each group is ONE hairline card of report rows (≥ 44 px…)» |
+| M6 | one primary button per row again | KILLED | ux-r7 «the row action is quiet…» |
+| M7 | the KPI strip uses the 1 px-gap technique (paints the empty cells of a wrapped row) | KILLED | ux-r7 «the KPI figures are ONE hairline strip…» |
+| M8 | the KPI cells lose their own hairlines | KILLED | ux-r7 «the KPI figures are ONE hairline strip…» |
+| M9 | the filters card shadow returns | KILLED | ux-r7 «cards and tables are flat 8 px…» |
+| M10 | the table header back to the grey band | KILLED | ux-r7 «cards and tables are flat 8 px; the table header is quiet…» |
+| M11 | a physical side property | KILLED | ux-r7 «each group is ONE hairline card…» (the rule no longer matches) |
+| M12 | a colour literal | KILLED | colour ratchet «a stylesheet outside the baseline…»; ux2-shell-foundation |
+| M13 | print shows the report controls again | KILLED | ux-r7 «the print rules are untouched…» |
+
+13 / 13 KILLED, no TIMEOUT. `git status` showed only the R7 edit set before and after the campaign.
+
+## R7.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture of «التقارير» and `report-assignments` (1440 / 1024 / 390 px) | clean, no horizontal overflow, no page error; chart 260 / 260 / 220 px |
+| `npm test`, full root suite (R7 head before the merge) | 1 177 / 1 178 files, 14 047 / 14 048 tests. The one failure, `LearningReader.l2b.21e` «never renders a stored id outside the current published-only manifest», is in the learning reader (no file R7 touches); re-run alone: 13 / 13 pass |
+| `npm test`, full root suite (merged head, after the reconciliation) | **1 178 / 1 178 files, 14 051 / 14 051 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`reports-pro.css` stays at 0) |
+| Browser gates | none is triggered by `reports-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |

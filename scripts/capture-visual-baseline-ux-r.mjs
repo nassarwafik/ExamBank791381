@@ -84,6 +84,20 @@ const teacherToday = { ok: true, generatedAt: NOW, scope: { activeClasses: 3, st
   recent: [{ kind: "submitted", at: "2026-10-20T08:12:00.000Z", assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", studentId: "u1", studentName: "أحمد الحسن", percentage: 86 }, { kind: "started", at: "2026-10-20T08:21:00.000Z", assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي" }],
   partial: [] };
 
+// UX-R7 — the Reports Center (GET /api/reports): the filters, a class's students and the assessments report (the shapes of the
+// ReportsCenter.ux6b fixtures), so an opened report renders its KPIs, distribution chart, tables and matrix.
+const REPORTS = {
+  filters: { ok: true, schoolYears: ["2026"], classes: CLASSES.map(c => ({ classId: c.classId, name: c.name, schoolYear: c.schoolYear, status: "active", programCodes: [] })), projects: [] },
+  classStudents: { ok: true, students: STUDENTS.slice(0, 6).map(s => ({ studentId: s.userId, displayName: s.displayName })) },
+  assignments: { ok: true, type: "assignments", class: { classId: "c1", name: CLASSES[0].name },
+    students: STUDENTS.slice(0, 3).map(s => ({ studentId: s.userId, displayName: s.displayName })),
+    overall: { assessmentCount: 2, participants: 6, average: 68.5, submissionRate: 83, distribution: { "0-49": 1, "50-59": 1, "60-69": 1, "70-79": 1, "80-89": 1, "90-100": 1 } },
+    perAssignment: [{ assignmentId: "a1", title: ASSIGNMENTS[0].title, students: 6, submitted: 5, missing: 1, zeroScores: 0, submissionRate: 83, average: 72, avgAttempts: 1.2 }, { assignmentId: "a4", title: ASSIGNMENTS[3].title, students: 6, submitted: 4, missing: 2, zeroScores: 1, submissionRate: 67, average: 61, avgAttempts: 1 }],
+    matrix: [
+      { assignmentId: "a1", title: ASSIGNMENTS[0].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 2 ? "missing" : "submitted", percentage: i === 2 ? null : 80 - i * 15 })) },
+      { assignmentId: "a4", title: ASSIGNMENTS[3].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 1 ? "pending" : "submitted", percentage: i === 1 ? null : 70 })) },
+    ] },
+};
 // UX-R9a — the learning book page's «قراءة صفوفي» (the shapes of the ClassReadingPanel.l4 fixtures): class c1 carries the book
 // with two published units, so the panel shows its KPI strip and tables. Served only while a learning scene is captured, so the
 // shared classes payload (and every other page's capture) stays as it is.
@@ -124,6 +138,7 @@ function api(req, res) {
   if (p === "/api/platform-session") return role ? send(200, { ok: true, role, displayName: role === "teacher" ? "أ. محمد" : "أحمد الحسن" }) : send(401, { ok: false });
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
+  if (p === "/api/reports") return send(REPORTS[u.searchParams.get("type")] ? 200 : 400, REPORTS[u.searchParams.get("type")] || { ok: false, error: "unknown report" });
   if (p === "/api/teacher-today") return send(200, teacherToday);
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
   if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
@@ -180,8 +195,11 @@ const TEACHER_PAGES = [
 ];
 // UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
 // UX-R9b — the teacher reader on its first content page (after the unit opener): top bar, index, page and page bar.
+// UX-R7 — an OPENED report (not only the hub): «التقييمات والواجبات» for the first class, so its KPI strip, chart and tables are
+// captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  { id: "report-assignments", role: "teacher", nav: "التقارير", open: "فتح التقرير التقييمات والواجبات", pickClass: "c1", chart: true },
   { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
     await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
     await page.locator(".eb-lm-batch-details").first().waitFor({ timeout: 15000 });
@@ -239,6 +257,12 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
         await page.locator("#eb-sidebar").getByRole("button", { name: pg.nav, exact: true }).first().click({ timeout: 15000 });
         await page.waitForLoadState("networkidle");
       }
+      if (pg.open) {
+        await page.getByRole("button", { name: pg.open, exact: true }).click({ timeout: 15000 });
+        await page.getByRole("combobox", { name: "الصف" }).selectOption(pg.pickClass, { timeout: 15000 });
+        await page.locator(".eb-report-result").waitFor({ timeout: 15000 });
+        await page.waitForLoadState("networkidle");
+      }
       if (pg.run) { await pg.run(page); await page.waitForLoadState("networkidle"); }
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(500);
@@ -247,6 +271,11 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
     await page.screenshot({ path: file, fullPage: true });
     const m = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, height: document.documentElement.scrollHeight, h1: document.querySelector("h1")?.textContent?.trim() || "" }));
     const overflow = m.scrollWidth > m.clientWidth;
+    if (pg.chart) {
+      const chart = await page.evaluate(() => { const box = document.querySelector(".eb-report-result .eb-chart-canvas"); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; });
+      m.chart = chart;
+      if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("report chart has no usable height: " + JSON.stringify(chart));
+    }
     (record.pages[pg.id] ||= {})[vpName] = { reached, overflow, ...m, errors, screenshot: path.relative(out, file) };
     checks.push({ ok: reached && !overflow && !errors.length, id: vpName + "/" + pg.id, detail: (reached ? "reached" : "NOT reached") + (overflow ? " · horizontal overflow " + m.scrollWidth + ">" + m.clientWidth : "") + (errors.length ? " · " + errors.length + " error(s)" : "") });
     await ctx.close();
