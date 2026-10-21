@@ -306,3 +306,12 @@
 .import-url-forms{ grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); }
 .import-url-row input{ min-width:0; }
 .import-url-form,.import-drop-zone{ border-radius:var(--eb-r); }
+
+/* UX-R11b — the builder page's setup zone (docs/enterprise-ux-r0-redesign-foundation.md R11b): «إعداد الامتحان» and its
+   «ماذا تريد في الامتحان؟» card are flat 8 px hairline panels; the card loses its 3 px primary rule and the decorative tinted
+   square that sat over its model picker, and the AI badge is a plain primary tile. Scoped to the setup zone. Tokens only. */
+.builder-setup-zone{ border-radius:var(--eb-r); box-shadow:none; }
+.builder-setup-zone > summary{ background:var(--eb-surface); }
+.builder-setup-body .prompt-card{ border-radius:var(--eb-r); border-top:1px solid var(--eb-line); box-shadow:none; }
+.builder-setup-body .prompt-card::after{ content:none; }
+.builder-setup-body .prompt-card .ai-badge{ border-radius:var(--eb-r-sm); background:var(--eb-primary); box-shadow:none; }

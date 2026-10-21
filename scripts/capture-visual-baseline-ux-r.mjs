@@ -261,6 +261,20 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R11b — the Exam Studio: «امتحاناتي» (the builder destination itself), then a blank exam on each of its four steps.
+  { id: "studio-home", role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.locator(".st-home").waitFor({ timeout: 15000 });
+    // UX-R11b — the create tiles must stay inside «امتحاناتي» (on a phone they ran 20 px past its inline-end edge).
+    const spill = await page.evaluate(() => { const home = document.querySelector(".st-home").getBoundingClientRect(); return [...document.querySelectorAll(".st-home-create > li")].reduce((m, li) => { const r = li.getBoundingClientRect(); return Math.max(m, Math.round(home.left - r.left), Math.round(r.right - home.right)); }, 0); });
+    if (spill > 0) throw new Error("a create tile spills " + spill + " px out of «امتحاناتي»");
+  } },
+  ...[["studio-setup", "الإعداد"], ["studio-content", "المحتوى"], ["studio-review", "المراجعة"], ["studio-publish", "النشر"]].map(([id, step]) => ({ id, role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.locator(".sb-builder.st-studio").waitFor({ timeout: 15000 });
+    await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: new RegExp(step) }).click({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => window.scrollTo(0, 0));
+  } })),
   // UX-R11a — the bank's questions table and its saved exams (the overview is the sidebar page itself).
   ...[["bank-questions", "بنك الأسئلة"], ["bank-exams", "الامتحانات المحفوظة"]].map(([id, view]) => ({ id, role: "teacher", nav: "بنك الامتحانات", run: async page => {
     await page.locator(".eb-bank .eb-segmented").getByRole("button", { name: view }).click({ timeout: 15000 });

@@ -16,8 +16,21 @@ const raw = readFileSync(path.join(root, "src", "studio", "studio.css"), "utf8")
 const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
 const rules = (() => { const out: { selector: string; body: string }[] = []; const re = /([^{}]+)\{([^{}]*)\}/g; let m: RegExpExecArray | null; while ((m = re.exec(css))) out.push({ selector: m[1].replace(/@[^{]*$/, "").trim().replace(/^.*\{/, "").trim(), body: m[2] }); return out; })();
 const tokenBlock = rules[0];
-const hex = (name: string) => { const m = tokenBlock.body.match(new RegExp("--" + name + ":\\s*(#[0-9a-fA-F]{6})")); if (!m) throw new Error("token " + name); return m[1]; };
-const ebHex = (name: string) => { const t = readFileSync(path.join(root, "src", "design-tokens.css"), "utf8"); const m = t.match(new RegExp("--" + name + ":\\s*(#[0-9a-fA-F]{6})")); if (!m) throw new Error("eb token " + name); return m[1]; };
+// UX-R11b — the studio tokens now name canonical --eb-* tokens (the reference look), so a pair is checked on the RESOLVED colour:
+// a studio token is read from its block, a var(--eb-*) is followed through design-tokens.css (its first, light :root definition)
+// to its hex.
+const ebRoot = readFileSync(path.join(root, "src", "design-tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+const resolve = (value: string, depth = 0): string => {
+  const v = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
+  const ref = v.match(/^var\(--([\w-]+)\)$/);
+  if (!ref || depth > 6) throw new Error("not a hex or a var(): " + v);
+  const m = ebRoot.match(new RegExp("--" + ref[1] + ":\\s*([^;]+);"));
+  if (!m) throw new Error("eb token " + ref[1]);
+  return resolve(m[1], depth + 1);
+};
+const hex = (name: string) => { const m = tokenBlock.body.match(new RegExp("--" + name + ":\\s*([^;]+);")); if (!m) throw new Error("token " + name); return resolve(m[1]); };
+const ebHex = (name: string) => resolve("var(--" + name + ")");
 const lum = (h: string) => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(x => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
 const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
@@ -44,12 +57,16 @@ describe("21F.2 studio.css — tokens, RTL, touch, focus, motion", () => {
     expect(rules.some(r => /:focus-visible/.test(r.selector) && /outline:\s*var\(--eb-focus-ring\)/.test(r.body))).toBe(true);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.st-studio \*[^}]*transition:\s*none !important/);
   });
-  it("the brand pairs meet WCAG AA (text on the navy bar, teal text on its tint)", () => {
+  // UX-R11b — the bar is white (it was navy) and the accent is the primary family (it was turquoise). The pairs follow what is
+  // drawn: the bar's text and muted text on the bar, the accent text on its tint, a completed step's number (--st-top) on the
+  // accent disc, and the current step's number (white) on its heading-coloured disc.
+  it("the brand pairs meet WCAG AA (text on the white bar, accent text on its tint, the step numbers on their discs)", () => {
     expect(contrast(hex("st-top-tx"), hex("st-top"))).toBeGreaterThanOrEqual(7);
     expect(contrast(hex("st-top-mute"), hex("st-top"))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(hex("st-teal-tx"), hex("st-teal-050"))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(ebHex("eb-surface"), hex("st-top"))).toBeGreaterThanOrEqual(7);
-    expect(contrast(hex("st-top"), hex("st-teal"))).toBeGreaterThanOrEqual(4.5);   // a completed step's number on the teal disc
+    expect(contrast(hex("st-top"), hex("st-teal"))).toBeGreaterThanOrEqual(4.5);   // a completed step's number on the accent disc
+    expect(contrast(ebHex("eb-surface"), ebHex("eb-text-heading"))).toBeGreaterThanOrEqual(7);   // the current step's number
+    expect(contrast(hex("st-top-tx"), ebHex("eb-chrome-active"))).toBeGreaterThanOrEqual(7);   // the current step's label on its pill
   });
 });
 

@@ -1,6 +1,6 @@
 {
   "description": "UX-R colour ratchet: hard-coded colour literals per stylesheet (scripts/ux-color-inventory.mjs). A count may only go down; regenerate with --write after a phase converts literals to tokens.",
-  "total": 2294,
+  "total": 2282,
   "files": {
     "src/App.css": 241,
     "src/aiComposer/ai-composer.css": 34,
@@ -61,7 +61,6 @@
     "src/structured-builder.css": 247,
     "src/structured-cover.css": 22,
     "src/studentexam-pro.css": 1,
-    "src/studio/studio.css": 12,
     "src/visual/visual.css": 40
   }
 }

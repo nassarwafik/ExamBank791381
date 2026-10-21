@@ -6,24 +6,26 @@
    so the classic builder is untouched.
    ============================================================ */
 .st-studio, .st-home, .st-drawer {
-  --st-top: #031c40;
-  --st-top-2: #0b2a57;
-  --st-top-tx: #e8eefb;
-  --st-top-mute: #a9badb;
-  --st-top-line: rgba(232, 238, 251, 0.18);
-  --st-top-hover: rgba(232, 238, 251, 0.1);
-  --st-teal: #14b8a6;
-  --st-teal-050: #e6f8f6;
-  --st-teal-tx: #0f766e;
-  --st-teal-line: #b8ebe5;
-  --st-canvas: #eef2f8;
+  /* UX-R11b re-maps the brand tokens to the reference look: a white bar on a hairline, and the purple primary family as the studio's accent (it was a
+     navy bar and a turquoise accent). The token names are kept, so every studio rule follows; no literal colour is left. */
+  --st-top: var(--eb-surface);
+  --st-top-2: var(--eb-surface-2);
+  --st-top-tx: var(--eb-text-heading);
+  --st-top-mute: var(--eb-muted);
+  --st-top-line: var(--eb-line-2);
+  --st-top-hover: var(--eb-chrome-hover);
+  --st-teal: var(--eb-primary);
+  --st-teal-050: var(--eb-primary-050);
+  --st-teal-tx: var(--eb-primary-strong);
+  --st-teal-line: var(--eb-primary-100);
+  --st-canvas: var(--eb-bg);
   --st-canvas-dot: var(--eb-line-2);
   --st-sheet: var(--eb-surface);
   --st-panel: var(--eb-surface);
   --st-panel-2: var(--eb-surface-2);
-  --st-card-sh: var(--eb-sh-xs);
-  --st-card-sh-hover: 0 8px 24px -18px rgba(15, 23, 42, 0.35);
-  --st-card-sh-active: 0 0 0 4px var(--eb-primary-050), 0 22px 44px -30px color-mix(in srgb, var(--eb-primary) 55%, transparent);
+  --st-card-sh: none;
+  --st-card-sh-hover: none;
+  --st-card-sh-active: 0 0 0 3px var(--eb-primary-050);
   --st-outline-w: 288px;
   --st-inspector-w: 320px;
   --st-topbar-h: 60px;
@@ -511,3 +513,21 @@
 @media (prefers-reduced-motion: reduce) {
   .st-studio *, .st-drawer *, .st-home * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+
+/* UX-R11b — the Exam Studio and «امتحاناتي» in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R11b). The
+   tokens above re-map the palette; these rules finish the parts a token cannot: the bar's hairline, the current step as a grey
+   pill (it was a white pill on the navy bar), 8 px cards, flat exam cards with a quiet «فتح», the pressed filter as a grey pill,
+   and the phone fix (the create tiles stay inside «امتحاناتي»). Tokens only, logical sides only, every rule scoped. */
+.st-studio .st-topbar { border-block-end: 1px solid var(--eb-line); }
+.st-studio .st-steps { background: transparent; border: 1px solid var(--eb-line); }
+.st-studio .st-step { border-radius: var(--eb-r-sm); }
+.st-studio .st-step:hover { background: var(--eb-chrome-hover); }
+.st-studio .st-step[aria-current="step"] { background: var(--eb-chrome-active); color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+.st-studio .st-step[aria-current="step"] .st-step-n { background: var(--eb-text-heading); border-color: var(--eb-text-heading); color: var(--eb-surface); }
+.st-studio .st-section-card, .st-studio .st-card, .st-studio .st-panel { border-radius: var(--eb-r); }
+.st-home { grid-template-columns: minmax(0, 1fr); padding: 0; border-radius: 0; background: transparent; }
+.st-home .st-home-continue { border: 1px solid var(--eb-line); }
+.st-home .st-create, .st-home .st-home-empty { border-radius: var(--eb-r); }
+.st-home .st-exam-card { border-radius: var(--eb-r); border-block-start: 1px solid var(--eb-line); }
+.st-home .st-exam-actions .st-btn.is-primary, .st-home .st-exam-actions .st-btn.is-primary:hover:not(:disabled) { background: var(--eb-surface); border-color: var(--eb-line-2); color: var(--eb-text-heading); }
+.st-home .st-filter[aria-pressed="true"] { background: var(--eb-chrome-active); border-color: transparent; color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
