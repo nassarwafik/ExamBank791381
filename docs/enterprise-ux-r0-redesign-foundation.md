@@ -1078,3 +1078,98 @@ panel suites, `ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour rat
 | `git diff --check` | clean |
 | colour ratchet | 2 294, unchanged (assignments-pro.css stays at 0) |
 | Browser gates | none is triggered by `assignments-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R6b — Assignments: the assignment page, gradebook and question analysis
+
+**Owner direction (2026-10-21):** start R6b. R6a (PR #396) was green and waiting for review, and both phases edit
+`assignments-pro.css`. R6b is therefore stacked on the reconciled R6a head `51f1a764` as `feature/ux-r6b-gradebook`, the same
+stacking used for R4 on R3.
+
+**Reconciliation.** R6a merged into `main` (`fc40d203`, which also carried an unrelated change from another window,
+`docs/development/secrecy-canaries.md`). R6b took `main` in with a normal merge commit (`58ea4c4a`).
+- **Conflicts:** none.
+- **Validation:** the full validation and the mutation campaign below ran on that reconciled head. The PR diff shows R6b
+  alone.
+
+## R6b.1 What changes for the user
+
+The assignment page (opened with «فتح»):
+- **The page is a flat 8 px hairline panel:** no card shadow, no purple side bar.
+- **The four headline figures, and the question-analysis figures, are one hairline strip each.**
+  - Before, a legacy rule from `platform.css` (`.gradebook-stats article` / `article span`) still reached these tiles and gave
+    them a blue-grey tint, a tinted border and an 11 px label. The tiles are now white, with the 13 px muted label of every
+    other figure.
+- **The section switch «الطلاب · نظرة عامة · تحليل الأسئلة» has the reference segmented look.** That rule already comes from
+  R6a (`.eb-assignments .eb-segmented`); R6b adds nothing for it.
+- **The gradebook controls sit on the page**, no longer on a tinted band.
+- **The status filters and the question sort read as sub-navigation:**
+  - status filters: «الكل · بانتظار التصحيح · نهائي · لم يسلّم · قيد المحاولة»;
+  - question sort: «ترتيب الأسئلة».
+  - The pressed one is a grey pill with bold text instead of the navy fill.
+- **The gradebook and analysis tables are quiet:**
+  - a white header, still opaque because it is sticky;
+  - hairline rows and a grey hover.
+  - A selected student and the student a Today-hub row asked for keep their tint, because it carries state.
+- **The overview's settings card uses the 8 px radius.**
+
+**Not changed, on purpose:**
+- **No grading, status, release or export logic.** No markup or label changes either.
+- **The phone layout of one card per student (21G.4)**, the per-question colour grid (already token-only), the distribution and
+  status bars, the row-editor dialogs, and the bulk bar (selection state).
+
+## R6b.2 Edit set
+
+**`src/assignments-pro.css`:** one block appended after the R6a block, the last block of the sheet.
+- **Scoping:** every selector starts with `.eb-assign-detail`, so nothing reaches the home, the wizard or other pages (guarded).
+- **Forbidden in the block:**
+  - stacking contexts, transitions, a coarse block and colour literals;
+  - `position: sticky`;
+  - a repeat of the mutation anchors.
+- **`src/assignments/assignmentPage.ux-r6b.test.ts`:** new, 9 guards.
+
+**`src/assignments/assignmentsHome.ux-r6a.test.ts`: updated explicitly.**
+- Its block slice ran to the end of the file, so its rule "the R6a block never targets `.eb-assign-detail`" would have applied
+  to the R6b block appended after it.
+- The slice now stops at the R6b block. The R6a invariants are unchanged: block position, no stacking context or transition, no
+  coarse block, no detail-page selector inside the R6a block.
+- Mutant M13 shows the bound is needed.
+
+## R6b.3 Fail-first evidence
+
+Not applicable: R6b restyles. The legacy tile tint is a look inherited from an older layer, not a functional defect. The
+mutation campaign below proves the new invariants.
+
+## R6b.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/assignments`, the home / page / gradebook panel suites,
+`ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour ratchet. Each file was restored byte-for-byte (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the page card shadow returns | KILLED | ux-r6b «is a flat 8 px hairline panel…» |
+| M2 | the figures strip loses its hairline dividers | KILLED | ux-r6b «… ONE hairline strip each…» |
+| M3 | the legacy tinted tile leaks back (tile override removed) | KILLED | ux-r6b «… the tiles outrank the legacy tinted…» |
+| M4 | the pressed status filter back to the navy fill | KILLED | ux-r6b «… sub-navigation with a grey pressed pill» |
+| M5 | the gradebook controls band returns | KILLED | ux-r6b «gradebook controls sit on the page…» |
+| M6 | the table header back to a grey band | KILLED | ux-r6b «quiet tables: white opaque header…» |
+| M7 | the selected row loses its state tint (the hover rule wins) | KILLED | ux-r6b «… the selected and drill rows keep their state tint» |
+| M8 | an unscoped rule reaches other pages | KILLED | ux-r6b «every rule is scoped to the assignment page…» |
+| M9 | a stacking context in the R6b block | KILLED | ux-r6b «adds no stacking context…»; 21E stacking guard |
+| M10 | a transition in the R6b block | KILLED | ux2-shell-foundation «UX-8b reduced motion…»; ux-r6b |
+| M11 | a colour literal in the R6b block | KILLED | colour ratchet; ux2-shell-foundation «token-only» |
+| M12 | phone: the per-student card wrapper gets a border again | KILLED | ux-r6b «phone: the per-student cards keep their borderless wrapper…» |
+| M13 | the R6a guard's slice runs to the end of the file again | KILLED | ux-r6a «… never targets the detail page…» (the bound is needed) |
+
+13 / 13 KILLED, no TIMEOUT. `git status` was clean before and after the campaign.
+
+## R6b.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| 21E.2 results / gradebook gate (`scripts/capture-visual-gate-21e2.mjs`) on the R6b build | **28 / 28 results and gradebook checks pass** at 1280, 150 %, 200 % and 390 px touch: chart tables, CSV exports, G-03 export target, and V-01 / V-02 no horizontal overflow |
+| Same gate, builder part | 38 checks fail identically on the baseline build: the builder flow waits for a «الامتحانات المحفوظة» button that is no longer in the navigation. Stale harness, not R6b; the baseline build (`main` `76df1cdf`) gives the same 28 / 66 with the same 38 builder failures and 0 results / gradebook failures |
+| `npm test`, full root suite | **1 178 / 1 178 files, 14 049 / 14 049 tests** on the reconciled head `58ea4c4a` |
+| `npm run lint`, `npx tsc -b`, build (bundle guard), `git diff --check` | lint exit 0 (pre-existing warnings only); build (tsc -b + vite + bundle guard) exit 0, «bundle guard passed»; `git diff --check origin/main..HEAD` clean |
+| colour ratchet | 2 294, unchanged |
