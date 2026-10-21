@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { getProjectDefinition } from "./registry.js";
 import * as gen from "./core.js";
 import * as genAnalytics from "./analytics.js";
-// Legacy 794589 implementations — the behavior we must preserve exactly.
+// Legacy 794589 implementation — the behavior we must preserve exactly. (Phase P-9b: the legacy analytics formatter, a shape
+// over this same engine since R33, is gone; the class-level figures are checked against the legacy core per student instead.)
 import * as legacy from "../project-794589-core.js";
-import * as legacyAnalytics from "../project-794589-analytics.js";
 
 const NOW = "2026-09-20T00:00:00.000Z";
 
@@ -47,33 +47,35 @@ describe("engine parity with legacy 794589 math", () => {
     expect(g.diff).toBe(l.diff);
   });
 
-  it("analytics perStudent overall + stageCompletion + heatmap match legacy", () => {
+  it("analytics perStudent overall matches the legacy core for every student; stage completion counts approvals", () => {
     const entries = [
       { studentId: "s1", displayName: "أ", progress: approve(bookIds.slice(0, 12)) },
       { studentId: "s2", displayName: "ب", progress: approve(ptIds.slice(0, 8)) }
     ];
     const g = genAnalytics.buildAnalytics(def, entries, NOW);
-    const l = legacyAnalytics.buildAnalytics(def, entries, NOW);
-    expect(g.perStudent.map(s => [s.studentId, s.overall])).toEqual(l.perStudent.map(s => [s.studentId, s.overall]));
-    expect(g.stageCompletion).toEqual(l.stageCompletion);
-    expect(g.buckets).toEqual(l.buckets);
-    expect(g.heatmap.stages.length).toBe(l.heatmap.stages.length);
-    expect(g.weeklyTrend).toEqual(l.weeklyTrend);
+    const l = entries.map(e => [e.studentId, legacy.buildStudentSummary(def, e.progress, NOW).overallProgress]).sort((a, b) => a[1] - b[1]);
+    expect(g.perStudent.map(s => [s.studentId, s.overall])).toEqual(l);
+    const active = def.stages.filter(s => s.active === true);
+    expect(g.stageCompletion.map(s => s.stageId)).toEqual(active.map(s => s.stageId));
+    expect(g.heatmap.stages).toHaveLength(active.length);
+    expect(g.stageCompletion.find(s => s.stageId === bookIds[0]).approvedPct).toBe(50);       // one of two students
+    expect(g.stageCompletion.find(s => s.stageId === ptIds[ptIds.length - 1]).approvedPct).toBe(0);  // beyond s2's eight
   });
 
-  it("class summary matches legacy totals (avg/complete/ready/stale)", () => {
+  it("class summary averages and totals match the legacy core per student (avg/complete/ready/stale)", () => {
     const entries = [
       { studentId: "s1", displayName: "أ", progress: approve(bookIds.slice(0, 12)) },
       { studentId: "s2", displayName: "ب", progress: approve([...bookIds, ...ptIds]) }
     ];
     const g = genAnalytics.buildClassSummary(def, entries, NOW);
-    const l = legacyAnalytics.buildClassSummary(def, entries, NOW);
-    expect(g.avgOverall).toBe(l.avgOverall);
-    expect(g.trackAverages.book).toBe(l.avgBook);
-    expect(g.trackAverages.packetTracer).toBe(l.avgPacketTracer);
-    expect(g.completedCount).toBe(l.completedCount);
-    expect(g.totalReadyStages).toBe(l.totalReadyStages);
-    expect(g.staleCount).toBe(l.staleCount);
+    const l = entries.map(e => legacy.buildStudentSummary(def, e.progress, NOW));
+    const avg = pick => Math.round(l.reduce((sum, x) => sum + pick(x), 0) / l.length);
+    expect(g.avgOverall).toBe(avg(x => x.overallProgress));
+    expect(g.trackAverages.book).toBe(avg(x => x.bookProgress));
+    expect(g.trackAverages.packetTracer).toBe(avg(x => x.packetTracerProgress));
+    expect(g.completedCount).toBe(l.filter(x => x.complete).length);
+    expect(g.totalReadyStages).toBe(l.reduce((sum, x) => sum + x.readyForReviewCount, 0));
+    expect(g.staleCount).toBe(l.filter(x => x.stale).length);                                  // both started and updated now
   });
 });
 

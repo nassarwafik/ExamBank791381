@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { buildClassSummary, buildAnalytics, buildWeeklyTrend } from "./project-794589-analytics.js";
+import { buildClassSummary, buildAnalytics, buildWeeklyTrend } from "./analytics.js";
 
+// The class-level analytics on a small two-track class (book + Packet Tracer, two stages each). Phase P-9b: formerly run through
+// the legacy 794589 formatter (project-794589-analytics.js, a shape over this engine since R33), now on the engine directly — the
+// same numbers, read from the generic fields (trackAverages, trackProgress).
 const NOW = "2026-09-20T00:00:00.000Z";
 const config = {
+  projectCode: "794589",
+  tracks: [{ trackId: "book", title: "الكتاب" }, { trackId: "packetTracer", title: "Packet Tracer" }],
   trackWeights: { book: 50, packetTracer: 50 },
   config: { staleDays: 7 },
   groups: [{ groupId: "book_g", track: "book", title: "كتاب", order: 1 }, { groupId: "pt_g", track: "packetTracer", title: "PT", order: 2 }],
@@ -25,7 +30,7 @@ describe("buildClassSummary", () => {
     expect(s.studentCount).toBe(3);
     // s1: book 100, pt 0 -> overall 50; s2: book 50 pt 0 -> 25; s3: 0. avg overall = round(75/3)=25.
     expect(s.avgOverall).toBe(25);
-    expect(s.avgBook).toBe(50); // (100+50+0)/3
+    expect(s.trackAverages.book).toBe(50); // (100+50+0)/3
     expect(s.studentsReadyForReview).toBe(1);
     expect(s.totalReadyStages).toBe(1);
     expect(s.completedCount).toBe(0);
@@ -39,7 +44,7 @@ describe("buildAnalytics", () => {
   const a = buildAnalytics(config, entries, NOW);
   it("perStudent sorted lowest overall first", () => {
     expect(a.perStudent.map(p => p.studentId)).toEqual(["s3", "s2", "s1"]);
-    expect(a.perStudent[2]).toMatchObject({ book: 100, packetTracer: 0, overall: 50 });
+    expect(a.perStudent[2]).toMatchObject({ trackProgress: { book: 100, packetTracer: 0 }, overall: 50 });
   });
   it("stageCompletion is approved% across students", () => {
     const b01 = a.stageCompletion.find(s => s.stageId === "B01");
@@ -67,5 +72,28 @@ describe("buildWeeklyTrend", () => {
     expect(trend[trend.length - 1].avgOverall).toBe(25);
     // earlier point (before B02 approved on 09-12) has s1 at book 50 only.
     expect(trend[0].avgOverall).toBeLessThanOrEqual(25);
+  });
+});
+
+// Phase P-9b — figures the move did not pin yet (the mutation campaign's survivors): a class average that is not whole, ready
+// stages counted per stage (not per student), and a retired (inactive) stage kept out of the charts.
+describe("class figures: rounding, ready stages, retired stages", () => {
+  it("rounds a class average half up (50 and 25 → 38, not 37)", () => {
+    const s = buildClassSummary(config, entries.slice(0, 2), NOW);
+    expect(s.avgOverall).toBe(38);
+    expect(s.trackAverages.book).toBe(75);
+  });
+  it("counts every stage waiting for review, not every student with one", () => {
+    const s4 = { studentId: "s4", displayName: "منى", progress: { updatedAt: NOW, stages: { P01: { status: "ready_for_review" }, P02: { status: "ready_for_review" } } } };
+    const s = buildClassSummary(config, [...entries, s4], NOW);
+    expect(s.studentsReadyForReview).toBe(2);
+    expect(s.totalReadyStages).toBe(3);
+  });
+  it("leaves a retired stage out of stage completion and the heatmap", () => {
+    const retired = { ...config, stages: [...config.stages, { stageId: "B99", track: "book", groupId: "book_g", title: "B99", order: 3, weight: 1, required: true, active: false }] };
+    const a = buildAnalytics(retired, entries, NOW);
+    expect(a.stageCompletion.map(s => s.stageId)).not.toContain("B99");
+    expect(a.heatmap.stages.map(s => s.stageId)).not.toContain("B99");
+    expect(a.stageCompletion).toHaveLength(4);
   });
 });

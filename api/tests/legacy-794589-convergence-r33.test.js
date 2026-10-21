@@ -24,8 +24,8 @@ import { fileURLToPath } from "node:url";
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
-// C. CONVERGENCE GUARD — the business logic lives once (shared service + generic engine + pure legacy-shape
-//    formatters); these assertions FAIL on unpatched main and pin the architecture.
+// C. CONVERGENCE GUARD — the business logic lives once (shared service + generic engine; since P-9b no legacy formatter
+//    remains); these assertions FAIL on unpatched main and pin the architecture.
 const require = createRequire(import.meta.url);
 const F = require("./fixtures/r33-fixtures.js");
 const golden = JSON.parse(readFileSync(new URL("./fixtures/r33-golden.json", import.meta.url), "utf8"));
@@ -194,7 +194,7 @@ describe("B9. Phase P-5c — the class summary counts the never-started students
 
 describe("C. convergence guard — business logic lives once (fails on unpatched main)", () => {
   const generic = SRC("src/functions/project-tracker.js");
-  const service = SRC("src/lib/project-tracker/service.js"), legacyAnalytics = SRC("src/lib/project-794589-analytics.js"), shapeSrc = SRC("src/lib/project-794589-legacy-shape.js");
+  const service = SRC("src/lib/project-tracker/service.js");
   it("C1 the shared service exports the extracted operations and returns domain results (no HTTP)", () => {
     const svc = require("../src/lib/project-tracker/service.js");
     for (const fn of ["listProjectClasses", "ensureClassConfig", "readClassConfig", "readClassView", "updateStudentProgress", "resetProject", "updateTemplate", "loadStudentProgress"]) expect(typeof svc[fn]).toBe("function");
@@ -210,13 +210,8 @@ describe("C. convergence guard — business logic lives once (fails on unpatched
     for (const use of ["svc.updateStudentProgress(", "svc.resetProject(", "svc.updateTemplate(", "svc.listProjectClasses(", "svc.readClassView("]) expect(generic).toContain(use);
     expect(generic).not.toContain("createSnapshot");                                 // generic first-create shape = service default
   });
-  it("C5 legacy analytics is a formatter over the generic engine; the legacy-shape module is pure", () => {
-    expect(legacyAnalytics).toContain('require("./project-tracker/analytics")'); expect(legacyAnalytics).not.toContain("function weekStart"); expect(legacyAnalytics).not.toContain("asOfProgress");
-    expect(shapeSrc.length).toBeGreaterThan(0); expect(shapeSrc).not.toMatch(/require\(/);
-    const shape = require("../src/lib/project-794589-legacy-shape.js");
-    expect(shape.legacyBalance(null)).toBe(null); expect(shape.legacyBalance({ leadingTrackId: "packetTracer", laggingTrackId: "book", diff: 30 })).toEqual({ leadingTrack: "packetTracer", diff: 30 });
-    expect(shape.legacyNextStages({ book: null, packetTracer: { stageId: "P02" } })).toEqual({ nextBookStage: null, nextPacketTracerStage: { stageId: "P02" } });
-    expect(shape.legacyStudentSummary({ overallProgress: 40, trackProgress: { book: 80, packetTracer: 0 }, counts: { a: 1 }, readyForReviewCount: 1, complete: false, updatedAt: "x", stale: true })).toEqual({ overallProgress: 40, bookProgress: 80, packetTracerProgress: 0, counts: { a: 1 }, readyForReviewCount: 1, complete: false, updatedAt: "x", stale: true });
-    expect(shape.legacyClassSummary({ studentCount: 2, avgOverall: 10, trackAverages: { book: 20, packetTracer: 0 }, completedCount: 0, studentsReadyForReview: 1, totalReadyStages: 1, staleCount: 0, trackWeights: undefined, staleDays: 7 }).trackWeights).toEqual({ book: 50, packetTracer: 50 });
+  it("C5 Phase P-9b: the legacy formatters are gone (the engine's own shape is the only one; no copy of its math remains)", () => {
+    expect(existsSync(new URL("../src/lib/project-794589-analytics.js", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../src/lib/project-794589-legacy-shape.js", import.meta.url))).toBe(false);
   });
 });
