@@ -1267,6 +1267,285 @@ colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte a
 
 ---
 
+# Phase UX-R9b — Learning: the reader chrome and the training runner
+
+**Owner direction (2026-10-21):** start R9b. The plan has it follow R9a (#402), but the two share no stylesheet, so R9b branches
+from `main` `f51bd90d` as `feature/ux-r9b-learning-reader` and keeps its own PR; they share only the capture harness and this
+record, so whichever merges second takes a reconciliation merge.
+
+
+**Reconciliation.** The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R9b waited for review. R9b
+took `main` in with a normal merge commit (`git merge origin/main`). Conflicts: this record (kept both sections, R8 first) and the
+capture harness (kept both: R8's messages fixtures and pages with R9b's, in one `SCRIPTED` list). The hotfix R9b had ported is
+identical to `main`'s and merged without a change. The full root suite was re-run on the merged head. Baselines: `f51bd90d` →
+`f746c51a`.
+
+## R9b.1 What changes for the user
+
+Chrome only, in normal reading (teacher and student): the lesson content, the diagrams and the interactive activities are
+untouched, and presentation mode keeps its own look.
+- **The top bar, the docked index, the page, the page bar, the unit contents and the training card are flat 8 px panels** without
+  a resting shadow (each keeps its hairline border; the page bar stays sticky).
+- **A pressed tool, the docked index toggle, the current index page and a chosen reading setting are a grey pill** with
+  heading-coloured (bold) text, instead of the primary tint. The current index page keeps its guide mark, now heading-coloured.
+- **Unit-contents rows hover grey**, not purple.
+- **The training runner's panels are flat 8 px and its sticky submit bar has no shadow.**
+- **Dark-theme safe.** The pill colour is a reader-scoped token (`--learning-reader-pressed`) that «داكن» re-maps to its own
+  surface, so a light pill never sits under light text; the row hover uses `--eb-surface-2` (re-mapped) and never
+  `--eb-chrome-hover`, which resolves on `:root` and would stay light inside the dark reader.
+
+**Not changed, on purpose:** every content block (text, headings, callouts, examples, lists, tables, code, figures, practice
+questions, activities), the search and notes sheets, the «المزيد» menu (a popover keeps its shadow), presentation mode, focus mode,
+and the TOC's fine-pointer row heights (an L.1 decision).
+
+## R9b.2 Edit set
+
+- **`src/learning/reader/reader-enterprise-l1.css`:** one block appended at the end. `reader.css` is untouched: its 1024 px block
+  must stay the last rule set. Every rule is scoped to normal reading (`:not(.is-presentation)`), except the portalled settings
+  dialog's `.learning-reader-settings-option`. No stacking context, transition, colour literal, physical side, `!important` or
+  `html[data-eb-reading-focus]` selector; a forced-colors rule keeps the chosen setting's 2 px Highlight border.
+- **`src/learning/training/training.css`:** one block appended at the end.
+- **`src/learning/reader/readerChrome.ux-r9b.test.ts`:** new, 9 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `/api/learning-content` mock that serves the API's own module data
+  (`api/src/data/learning-content/<course>/<module>.json`, in the `{ ok, courseId, module }` shape), and a scripted page
+  `learning-reader`: the teacher reader on its first content page (after the unit opener).
+
+## R9b.3 Fail-first evidence
+
+Not applicable: R9b restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R9b.4 Mutation proof
+
+Each mutant was planted alone in its sheet. The run covered `src/learning`, `src/designSystem`, `src/shell` and the colour ratchet.
+The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the top bar keeps its resting shadow | KILLED | ux-r9b «the top bar, index, page, page bar and unit contents are flat…» |
+| M2 | a pressed tool back to the primary tint | KILLED | ux-r9b «a pressed tool and the docked index toggle are a grey pill…» |
+| M3 | the pill uses the light token directly (no dark re-map) | KILLED | same |
+| M4 | the dark theme no longer re-maps the pill | KILLED | ux-r9b «dark-theme safe…» |
+| M5 | the docked index keeps its shadow | KILLED | ux-r9b «… flat 8 px panels…» |
+| M6 | the page keeps its large radius and shadow | KILLED | same |
+| M7 | the page bar keeps its shadow | KILLED | same |
+| M8 | the current index page back to the primary tint | KILLED | ux-r9b «the current index page is the same grey pill…» |
+| M9 | the unit-lesson hover uses `--eb-chrome-hover` (stays light in «داكن») | KILLED | ux-r9b «dark-theme safe…» |
+| M10 | the chosen setting back to the primary tint | KILLED | ux-r9b «a chosen reading setting is a grey pill…» |
+| M11 | forced colors lose the chosen setting's Highlight border | KILLED | same |
+| M12 | a rule reaches presentation mode (unscoped) | KILLED | ux-r9b «restyles normal reading only…» |
+| M13 | a focus-mode selector in the block | KILLED | reader.l1.guards «focus mode hides exactly…»; ux-r9b |
+| M14 | a colour literal in the block | KILLED | colour ratchet; reader.l1.guards; ux-r9b |
+| M15 | a stacking context in the block (on the page) | KILLED | ux-r9b «add no stacking context…» |
+| M16 | the training submit bar keeps its shadow | KILLED | ux-r9b «the training runner…» |
+| M17 | the training panels keep the large radius | KILLED | same |
+
+17 / 17 KILLED, no TIMEOUT. `git status` showed only the R9b edit set before and after the campaign.
+
+## R9b.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| L.8 reader browser gate (`scripts/check-learning-reader-browser-l8.mjs`, the workflow's pinned playwright-core and axe-core), R9b build | **passed**: 24 audits (student portal, student reader and its unit opener, teacher library, book and reader at 390 / 834 touch, 1024, 1440 px) and both journeys; 0 failures |
+| Visual capture `learning-reader` (1440 / 1024 / 390 px), before and after | 3 / 3 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose reader CSS is identical to `main` |
+| `npm test`, full root suite (`8e7f2af1`) | **1 179 / 1 179 files, 14 061 / 14 061 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`reader-enterprise-l1.css` stays at 52, `training.css` at 0) |
+
+---
+
+# Phase UX-R9a — Learning: the library, the course home and the library search
+
+**Owner direction (2026-10-21):** start R9 (the plan splits it into R9a and R9b; R9b depends on R9a). R9a depends on R3 (merged),
+so it branches from `main` `f51bd90d` as `feature/ux-r9a-learning-library`. It ran in parallel with R7 (#399) and R8 (#401); they
+share no source file, only the capture harness and this record.
+
+
+**Reconciliation.** The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R9a waited for review. R9a
+took `main` in with a normal merge commit (`git merge origin/main`). Conflicts: this record (kept both sections, R8 first) and the
+capture harness (kept both: R8's messages fixtures and pages with R9a's, in one `SCRIPTED` list). The hotfix R9a had ported is
+identical to `main`'s and merged without a change. The full root suite was re-run on the merged head. Baselines: `f51bd90d` →
+`f746c51a`.
+
+## R9a.1 What changes for the user
+
+No reference mockup shows the learning pages, so R9a applies the record's general patterns (§3.2) to the teacher's
+«المواد التعليمية».
+
+The library:
+- **The page header sits on the page**, not in a hero card; the book count is a quiet grey tag instead of a purple pill.
+- **The course card is a flat 8 px hairline card** without a shadow, also on hover (the hover only darkens the hairline).
+- **The filters are quiet 6 px selects; the library search block is a flat 8 px panel**, its field without a resting shadow.
+  The field's focus ring is untouched.
+
+The course home:
+- **The book's sections are one hairline card of 48 px rows**, not a stack of eight cards. A row hovers grey (no purple) and its
+  focus ring is drawn inside the card, which clips its rows.
+- **«قراءة صفوفي»: the three figures are one hairline strip** whose cells draw their own hairlines (no grey empty cell when they
+  wrap); the table headers are a quiet white band.
+
+**Not changed, on purpose:** markup, roles, names, behaviour, the filters (still two `<select>`s, pinned as comboboxes), the
+reader (R9b), and the shared Reader search sheet `learning-search.css` (R9a scopes its search-field rules to `.eb-lm-search`).
+
+## R9a.2 Edit set
+
+- **`learning-library-premium.css`, `search/learning-library-search.css`, `classReading/class-reading.css`:** one block appended at
+  the end of each. Each wins by order (or by a higher specificity); no stacking context, transition, colour literal or physical
+  side; every sheet stays at 0 colour literals. **`learning.css` is untouched** (its layout guards pin exact rule bodies).
+- **`src/learning/learningLibrary.ux-r9a.test.ts`:** new, 9 guards (also: the blocks are last and appear once; learning.css and
+  learning-search.css carry no R9a rule; every search-sheet rule is scoped to `.eb-lm-`).
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `learning` scene (class `c1` carries the book; the catalog and the class
+  reading are served only while that scene is captured, so every other page's capture is unchanged) and two scripted pages:
+  `learning-book` (the course home with «قراءة صفوفي» opened) and `learning-search` (the library search with results for
+  «VLAN»).
+
+## R9a.3 Fail-first evidence
+
+Not applicable: R9a restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R9a.4 Mutation proof
+
+Each mutant was planted alone in its sheet. The run covered `src/learning`, `src/designSystem` and the colour ratchet. The file
+was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the hero card returns (shadow) | KILLED | ux-r9a «the page header sits on the page…» |
+| M2 | the count pill back to the purple tint | KILLED | ux-r9a «… the count is a quiet grey tag» |
+| M3 | the course card keeps its shadow | KILLED | ux-r9a «the course card is a flat 8 px hairline card…» |
+| M4 | the hover shadow returns | KILLED | ux-r9a «… also on hover» |
+| M5 | the sections back to a stack of cards (gap) | KILLED | ux-r9a «the sections are ONE hairline card of rows…» |
+| M6 | a section row loses its hairline | KILLED | ux-r9a «… split by hairlines…» |
+| M7 | section rows below 44 px | KILLED | ux-r9a «… (≥ 44 px…)» |
+| M8 | the row hover back to the purple tint | KILLED | ux-r9a «a row hovers grey…» |
+| M9 | the focus ring drawn outside the clipping card | KILLED | ux-r9a «… its focus ring is drawn inside the clipping card» |
+| M10 | the search block keeps its shadow | KILLED | ux-r9a «… the search block a flat 8 px panel…» |
+| M11 | the shadowless field also drops the focus ring | KILLED | ux-r9a «… (focus ring kept)» |
+| M12 | an unscoped search rule (reaches the shared Reader search) | KILLED | ux-r9a «… the shared Reader search sheet untouched» |
+| M13 | class-reading figures back to boxed cells | KILLED | ux-r9a ««قراءة صفوفي»: the figures are ONE hairline strip…» |
+| M14 | class-reading cells lose their own hairlines | KILLED | ux-r9a «… whose cells draw their own hairlines…» |
+| M15 | a colour literal in the block | KILLED | colour ratchet; ux-r9a |
+| M16 | a physical side in the block | KILLED | ux-r9a «add no stacking context, no transition, no colour literal and no physical side» |
+| M17 | a transition in the block | KILLED | ux-r9a (same guard) |
+
+17 / 17 KILLED, no TIMEOUT. `git status` showed only the R9a edit set before and after the campaign.
+
+## R9a.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| L.8 reader browser gate (`scripts/check-learning-reader-browser-l8.mjs`, CI's tools: playwright-core and axe-core from the workflow's pinned install), R9a build | **passed**: 24 audits (student portal, student reader and its unit opener, teacher library, teacher book, teacher reader at 390 / 834 touch, 1024, 1440 px: axe without serious / critical violations, no horizontal overflow, 44 px touch targets) and both journeys; 0 failures |
+| Visual capture `learning`, `learning-book`, `learning-search` (1440 / 1024 / 390 px), before and after | 9 / 9 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose learning CSS is identical to `main` |
+| `npm test`, full root suite (`9f2bf142`) | **1 179 / 1 179 files, 14 061 / 14 061 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (all three sheets stay at 0) |
+
+---
+
+# Phase UX-R7 — the Reports Center
+
+**Owner direction (2026-10-21):** start R7. It depends on R3 (merged), so it branches from `main` `fc40d203` as
+`feature/ux-r7-reports`. It ran in parallel with R6b (PR #398); the two share no source file, only this record.
+
+**Reconciliation.** Two normal merge commits (`git merge origin/main`), each followed by a full root-suite run (§R7.5):
+- P-9b (#397, API and docs only) merged into `main` (`59ffac32`) while R7 was validated; taken in without conflicts.
+- R6b (#398) merged into `main` (`f51bd90d`) while R7 waited for review. Conflict: one, in this record, where both phases had
+  appended a section; resolved by keeping both, R6b first. The two phases share no source file.
+- The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R7 waited for its CI. Conflicts: this
+  record (kept both sections, R8 first) and the capture harness (kept both: the reports mock and the messages fixtures, one
+  `SCRIPTED` list with R7's report page and R8's two pages, and both the `open` and the `run` steps). The hotfix R7 had ported
+  (`a06ce9ae`) is identical to `main`'s and merged without a change.
+- Baselines: `fc40d203` → `59ffac32` → `f51bd90d` → `f746c51a`.
+
+## R7.1 What changes for the user
+
+On the «التقارير» hub:
+- **The category filter reads as sub-navigation.** Quiet text items; the pressed one is a grey pill with bold text instead
+  of the primary fill.
+- **Each category is one hairline card of report rows**, not a grid of cards. A row is at least 44 px: the report's icon,
+  name and description, then its «فتح التقرير» action. The action is quiet (one dark primary button per row would put eight
+  on the page).
+
+In an opened report:
+- **The KPI figures are one hairline strip.** The cells draw their own hairlines (an inline-end and a block-end 1 px
+  shadow) inside one bordered strip, so a report with 5 figures on a 3- or 4-column row paints no grey empty cell — the
+  1 px-gap technique of R4–R6 would. Values read in ink; the tone accent bars stay.
+- **Filters, project cards and tables are flat 8 px panels** without a card shadow; the sticky table header is a quiet white
+  band and stays opaque.
+- **Fix — the report charts have a height of their own** (§R7.3).
+
+**Not changed, on purpose:** markup, names, labels, the catalogue, the filters' behaviour, CSV export and print. The
+sidebar-spacing gutter, the workspace and the print rules of `reports-pro.css` are kept verbatim (pinned by the ux6b, p5d, r1
+and r2 suites and the sidebar-spacing guard).
+
+## R7.2 Edit set
+
+- **`src/reports-pro.css`:** the hub, KPI, panel and table rules restyled in place; the chart heights added to the report
+  result; phone rules (220 / 280 px charts, wrapping rows). No physical side, no colour literal (the sheet stays outside the
+  colour baseline at 0), no `--eb-r-lg`, no `--eb-sh-xs/sm` card shadow.
+- **`src/reports/reportsCenter.ux-r7.test.ts`:** new, 9 guards, including the chart-height fix and the untouched print rules.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `/api/reports` mock (filters, a class's students, the assessments report,
+  in the shapes of the ReportsCenter.ux6b fixtures) and a scripted page `report-assignments` that opens «التقييمات
+  والواجبات», selects the class and **fails when the chart box or canvas is under 160 px**.
+
+## R7.3 Fail-first evidence (the chart height)
+
+**Defect.** The report charts draw with `maintainAspectRatio:false`, which takes the height of the parent box. That box,
+`.eb-chart-canvas`, was sized only in `projects-pro.css`, a sheet loaded with the Projects pages. A visit that starts in the
+Reports Center therefore rendered the distribution chart at Chart.js's 150 px fallback — a squashed chart — until the user
+happened to open a Projects page first.
+
+**Proof.** The scripted capture `report-assignments`, run against a build of each SHA:
+
+| Build | 1440 px | 1024 px | 390 px | Check |
+|---|---|---|---|---|
+| baseline `fc40d203` | 150 px | 150 px | 150 px | **FAIL** (under 160 px) |
+| R7 head | 260 px | 260 px | 220 px | PASS |
+
+The R7 guard «the report result owns the chart box heights…» pins the rule (mutants M1 and M2 below).
+
+## R7.4 Mutation proof
+
+Each mutant was planted alone in `src/reports-pro.css`. The run covered `src/reports`, the Reports Center suites, the
+sidebar-spacing guard, `ux2-shell-foundation` and the colour ratchet. The file was restored byte-for-byte after each
+(SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the report chart height rule removed (the 150 px fallback returns on a cold visit) | KILLED | ux-r7 «the report result owns the chart box heights…» |
+| M2 | the phone chart height removed | KILLED | ux-r7 «the report result owns the chart box heights…» |
+| M3 | the pressed category filter back to the primary fill | KILLED | ux-r7 «the catalogue filter reads as sub-navigation…» |
+| M4 | the catalogue back to a grid of cards | KILLED | ux-r7 «each group is ONE hairline card of report rows…» |
+| M5 | report rows lose their 44 px height | KILLED | ux-r7 «each group is ONE hairline card of report rows (≥ 44 px…)» |
+| M6 | one primary button per row again | KILLED | ux-r7 «the row action is quiet…» |
+| M7 | the KPI strip uses the 1 px-gap technique (paints the empty cells of a wrapped row) | KILLED | ux-r7 «the KPI figures are ONE hairline strip…» |
+| M8 | the KPI cells lose their own hairlines | KILLED | ux-r7 «the KPI figures are ONE hairline strip…» |
+| M9 | the filters card shadow returns | KILLED | ux-r7 «cards and tables are flat 8 px…» |
+| M10 | the table header back to the grey band | KILLED | ux-r7 «cards and tables are flat 8 px; the table header is quiet…» |
+| M11 | a physical side property | KILLED | ux-r7 «each group is ONE hairline card…» (the rule no longer matches) |
+| M12 | a colour literal | KILLED | colour ratchet «a stylesheet outside the baseline…»; ux2-shell-foundation |
+| M13 | print shows the report controls again | KILLED | ux-r7 «the print rules are untouched…» |
+
+13 / 13 KILLED, no TIMEOUT. `git status` showed only the R7 edit set before and after the campaign.
+
+## R7.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture of «التقارير» and `report-assignments` (1440 / 1024 / 390 px) | clean, no horizontal overflow, no page error; chart 260 / 260 / 220 px |
+| `npm test`, full root suite (R7 head before the merge) | 1 177 / 1 178 files, 14 047 / 14 048 tests. The one failure, `LearningReader.l2b.21e` «never renders a stored id outside the current published-only manifest», is in the learning reader (no file R7 touches); re-run alone: 13 / 13 pass |
+| `npm test`, full root suite (merged head, after the reconciliation) | **1 178 / 1 178 files, 14 051 / 14 051 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`reports-pro.css` stays at 0) |
+| Browser gates | none is triggered by `reports-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
 # Phase UX-R10 — Projects
 
 **Owner direction (2026-10-21):** start R10. It depends on R3 (merged), so it branches from `main` `f746c51a` as

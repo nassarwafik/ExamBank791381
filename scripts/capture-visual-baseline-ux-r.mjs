@@ -84,6 +84,33 @@ const teacherToday = { ok: true, generatedAt: NOW, scope: { activeClasses: 3, st
   recent: [{ kind: "submitted", at: "2026-10-20T08:12:00.000Z", assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", studentId: "u1", studentName: "أحمد الحسن", percentage: 86 }, { kind: "started", at: "2026-10-20T08:21:00.000Z", assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي" }],
   partial: [] };
 
+// UX-R7 — the Reports Center (GET /api/reports): the filters, a class's students and the assessments report (the shapes of the
+// ReportsCenter.ux6b fixtures), so an opened report renders its KPIs, distribution chart, tables and matrix.
+const REPORTS = {
+  filters: { ok: true, schoolYears: ["2026"], classes: CLASSES.map(c => ({ classId: c.classId, name: c.name, schoolYear: c.schoolYear, status: "active", programCodes: [] })), projects: [] },
+  classStudents: { ok: true, students: STUDENTS.slice(0, 6).map(s => ({ studentId: s.userId, displayName: s.displayName })) },
+  assignments: { ok: true, type: "assignments", class: { classId: "c1", name: CLASSES[0].name },
+    students: STUDENTS.slice(0, 3).map(s => ({ studentId: s.userId, displayName: s.displayName })),
+    overall: { assessmentCount: 2, participants: 6, average: 68.5, submissionRate: 83, distribution: { "0-49": 1, "50-59": 1, "60-69": 1, "70-79": 1, "80-89": 1, "90-100": 1 } },
+    perAssignment: [{ assignmentId: "a1", title: ASSIGNMENTS[0].title, students: 6, submitted: 5, missing: 1, zeroScores: 0, submissionRate: 83, average: 72, avgAttempts: 1.2 }, { assignmentId: "a4", title: ASSIGNMENTS[3].title, students: 6, submitted: 4, missing: 2, zeroScores: 1, submissionRate: 67, average: 61, avgAttempts: 1 }],
+    matrix: [
+      { assignmentId: "a1", title: ASSIGNMENTS[0].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 2 ? "missing" : "submitted", percentage: i === 2 ? null : 80 - i * 15 })) },
+      { assignmentId: "a4", title: ASSIGNMENTS[3].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 1 ? "pending" : "submitted", percentage: i === 1 ? null : 70 })) },
+    ] },
+};
+// UX-R9a — the learning book page's «قراءة صفوفي» (the shapes of the ClassReadingPanel.l4 fixtures): class c1 carries the book
+// with two published units, so the panel shows its KPI strip and tables. Served only while a learning scene is captured, so the
+// shared classes payload (and every other page's capture) stays as it is.
+const LEARNING_COURSE = "791381";
+const LEARNING_MODULES = [["791381-m01", "الوحدة الأولى"], ["791381-m02", "الوحدة الثانية"], ["791381-m03", "الوحدة الثالثة"]].map(([moduleId, title], i) => ({ moduleId, title, order: i + 1 }));
+const LEARNING = {
+  classes: { ok: true, classes: CLASSES.map(c => c.classId === "c1" ? { ...c, learningMaterials: [{ courseId: LEARNING_COURSE, visibleModuleIds: ["791381-m01", "791381-m02"] }] } : c) },
+  catalog: { ok: true, courses: [{ courseId: LEARNING_COURSE, title: "شبكات الاتصال", subject: "أنظمة محوسبة", modules: LEARNING_MODULES }] },
+  reading: { ok: true, classId: "c1", courseId: LEARNING_COURSE, generatedAt: NOW, totalPages: 20,
+    modules: [{ ...LEARNING_MODULES[0], total: 10, started: 4, completed: 2, averageRead: 58 }, { ...LEARNING_MODULES[1], total: 10, started: 2, completed: 0, averageRead: 12 }],
+    students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
+};
+let scene = "";
 // UX-R8 — the messages pages (the shapes of the AppMessages.5c / StudentPortal.messages / 5D fixtures): a direct conversation over
 // two days with consecutive messages, an unread count in the roster, and the student's dedicated view, so a thread, its bubbles,
 // the roster rows and both composers are captured, not only the empty start state.
@@ -154,7 +181,18 @@ function api(req, res) {
   if (p === "/api/platform-session") return role ? send(200, { ok: true, role, displayName: role === "teacher" ? "أ. محمد" : "أحمد الحسن" }) : send(401, { ok: false });
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
+  if (p === "/api/reports") return send(REPORTS[u.searchParams.get("type")] ? 200 : 400, REPORTS[u.searchParams.get("type")] || { ok: false, error: "unknown report" });
   if (p === "/api/teacher-today") return send(200, teacherToday);
+  if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
+  if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
+  if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
+  // UX-R9b — the reader's module bodies, read from the API's own content data (the shape /api/learning-content returns).
+  if (p.startsWith("/api/learning-content/")) {
+    const [, , , courseId, moduleId] = p.split("/");
+    const file = path.join(root, "api/src/data/learning-content", courseId || "", (moduleId || "") + ".json");
+    return /^[\w-]+$/.test(courseId || "") && /^[\w-]+$/.test(moduleId || "") && fs.existsSync(file)
+      ? send(200, { ok: true, courseId, module: JSON.parse(fs.readFileSync(file, "utf8")) }) : send(404, { ok: false, error: "not found" });
+  }
   if (p === "/api/classrooms") return send(200, { ok: true, classes: CLASSES });
   if (p === "/api/students" && u.searchParams.get("profileUserId")) return send(200, { ok: true, profile: null });
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
@@ -198,6 +236,10 @@ const TEACHER_PAGES = [
   ["messages", "الرسائل"], ["projects", "المشاريع"], ["reports", "التقارير"], ["games", "الألعاب التعليمية"], ["bank", "بنك الامتحانات"],
   ["import", "استيراد من ملف"], ["reviews", "مراجعات النشر"], ["audit", "سجل النشاط"],
 ];
+// UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
+// UX-R9b — the teacher reader on its first content page (after the unit opener): top bar, index, page and page bar.
+// UX-R7 — an OPENED report (not only the hub): «التقييمات والواجبات» for the first class, so its KPI strip, chart and tables are
+// captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
   // UX-R10 — the project tracker: its dashboard, the student cards, a student profile, the analytics (charts measured like the
@@ -215,6 +257,29 @@ const SCRIPTED = [
       if (id === "project-analytics") await page.locator(".eb-heatmap").waitFor({ timeout: 15000 });
       await page.evaluate(() => window.scrollTo(0, 0));
     } })),
+  { id: "report-assignments", role: "teacher", nav: "التقارير", open: "فتح التقرير التقييمات والواجبات", pickClass: "c1", chart: true },
+  { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
+    await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-lm-batch-details").first().waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: "عرض قراءة الصفوف" }).click({ timeout: 15000 });
+    await page.locator(".eb-lm-cr-kpis").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0)); // the full-page shot starts at the top (the top bar is sticky)
+  } },
+  { id: "learning-search", role: "teacher", nav: "المواد التعليمية", run: async page => {
+    await page.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }).click({ timeout: 15000 });
+    await page.getByRole("searchbox").fill("VLAN", { timeout: 15000 });
+    await page.locator("[data-search-hit]").first().waitFor({ timeout: 15000 });
+  } },
+  { id: "learning-reader", role: "teacher", nav: "المواد التعليمية", run: async page => {
+    await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
+    await page.getByRole("button", { name: "بدء القراءة" }).click({ timeout: 15000 });
+    await page.locator(".learning-reader-page").waitFor({ timeout: 15000 });
+    const first = await page.locator(".learning-reader-navpos").textContent({ timeout: 15000 });
+    await page.getByRole("button", { name: /^التالي/ }).click({ timeout: 15000 });
+    await page.waitForFunction(t => document.querySelector(".learning-reader-navpos")?.textContent !== t, first, { timeout: 15000 });
+    await page.locator(".learning-reader-page-title").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+  } },
   { id: "messages-thread", role: "teacher", nav: "الرسائل", run: async page => {
     await page.getByRole("combobox", { name: "الصف" }).selectOption("c1", { timeout: 15000 });
     await page.getByRole("list", { name: "طلاب الصف" }).getByRole("button").nth(1).click({ timeout: 15000 });
@@ -235,7 +300,7 @@ const record = { label, dist, generatedAt: new Date().toISOString(), pages: {} }
 for (const [vpName, viewport, touch] of VIEWPORTS) {
   fs.mkdirSync(path.join(out, vpName), { recursive: true });
   for (const pg of PAGES) {
-    role = pg.role;
+    role = pg.role; scene = pg.scene || "";
     const errors = [];
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);
@@ -248,6 +313,12 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
         const toggle = page.locator(".eb-drawer-toggle");
         if (await toggle.isVisible().catch(() => false)) await toggle.click();
         await page.locator("#eb-sidebar").getByRole("button", { name: pg.nav, exact: true }).first().click({ timeout: 15000 });
+        await page.waitForLoadState("networkidle");
+      }
+      if (pg.open) {
+        await page.getByRole("button", { name: pg.open, exact: true }).click({ timeout: 15000 });
+        await page.getByRole("combobox", { name: "الصف" }).selectOption(pg.pickClass, { timeout: 15000 });
+        await page.locator(".eb-report-result").waitFor({ timeout: 15000 });
         await page.waitForLoadState("networkidle");
       }
       if (pg.run) { await pg.run(page); await page.waitForLoadState("networkidle"); }
@@ -263,6 +334,11 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       const chart = await page.evaluate(sel => { const box = document.querySelector(sel); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; }, pg.chartSel);
       m.chart = chart;
       if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("project chart has no usable height: " + JSON.stringify(chart));
+    }
+    if (pg.chart) {
+      const chart = await page.evaluate(() => { const box = document.querySelector(".eb-report-result .eb-chart-canvas"); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; });
+      m.chart = chart;
+      if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("report chart has no usable height: " + JSON.stringify(chart));
     }
     (record.pages[pg.id] ||= {})[vpName] = { reached, overflow, ...m, errors, screenshot: path.relative(out, file) };
     checks.push({ ok: reached && !overflow && !errors.length, id: vpName + "/" + pg.id, detail: (reached ? "reached" : "NOT reached") + (overflow ? " · horizontal overflow " + m.scrollWidth + ">" + m.clientWidth : "") + (errors.length ? " · " + errors.length + " error(s)" : "") });
