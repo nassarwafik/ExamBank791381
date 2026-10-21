@@ -84,6 +84,19 @@ const teacherToday = { ok: true, generatedAt: NOW, scope: { activeClasses: 3, st
   recent: [{ kind: "submitted", at: "2026-10-20T08:12:00.000Z", assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", studentId: "u1", studentName: "أحمد الحسن", percentage: 86 }, { kind: "started", at: "2026-10-20T08:21:00.000Z", assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي" }],
   partial: [] };
 
+// UX-R9a — the learning book page's «قراءة صفوفي» (the shapes of the ClassReadingPanel.l4 fixtures): class c1 carries the book
+// with two published units, so the panel shows its KPI strip and tables. Served only while a learning scene is captured, so the
+// shared classes payload (and every other page's capture) stays as it is.
+const LEARNING_COURSE = "791381";
+const LEARNING_MODULES = [["791381-m01", "الوحدة الأولى"], ["791381-m02", "الوحدة الثانية"], ["791381-m03", "الوحدة الثالثة"]].map(([moduleId, title], i) => ({ moduleId, title, order: i + 1 }));
+const LEARNING = {
+  classes: { ok: true, classes: CLASSES.map(c => c.classId === "c1" ? { ...c, learningMaterials: [{ courseId: LEARNING_COURSE, visibleModuleIds: ["791381-m01", "791381-m02"] }] } : c) },
+  catalog: { ok: true, courses: [{ courseId: LEARNING_COURSE, title: "شبكات الاتصال", subject: "أنظمة محوسبة", modules: LEARNING_MODULES }] },
+  reading: { ok: true, classId: "c1", courseId: LEARNING_COURSE, generatedAt: NOW, totalPages: 20,
+    modules: [{ ...LEARNING_MODULES[0], total: 10, started: 4, completed: 2, averageRead: 58 }, { ...LEARNING_MODULES[1], total: 10, started: 2, completed: 0, averageRead: 12 }],
+    students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
+};
+let scene = "";
 // UX-R8 — the messages pages (the shapes of the AppMessages.5c / StudentPortal.messages / 5D fixtures): a direct conversation over
 // two days with consecutive messages, an unread count in the roster, and the student's dedicated view, so a thread, its bubbles,
 // the roster rows and both composers are captured, not only the empty start state.
@@ -112,6 +125,9 @@ function api(req, res) {
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
   if (p === "/api/teacher-today") return send(200, teacherToday);
+  if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
+  if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
+  if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
   // UX-R9b — the reader's module bodies, read from the API's own content data (the shape /api/learning-content returns).
   if (p.startsWith("/api/learning-content/")) {
     const [, , , courseId, moduleId] = p.split("/");
@@ -162,9 +178,22 @@ const TEACHER_PAGES = [
   ["messages", "الرسائل"], ["projects", "المشاريع"], ["reports", "التقارير"], ["games", "الألعاب التعليمية"], ["bank", "بنك الامتحانات"],
   ["import", "استيراد من ملف"], ["reviews", "مراجعات النشر"], ["audit", "سجل النشاط"],
 ];
+// UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
 // UX-R9b — the teacher reader on its first content page (after the unit opener): top bar, index, page and page bar.
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
+    await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-lm-batch-details").first().waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: "عرض قراءة الصفوف" }).click({ timeout: 15000 });
+    await page.locator(".eb-lm-cr-kpis").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0)); // the full-page shot starts at the top (the top bar is sticky)
+  } },
+  { id: "learning-search", role: "teacher", nav: "المواد التعليمية", run: async page => {
+    await page.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }).click({ timeout: 15000 });
+    await page.getByRole("searchbox").fill("VLAN", { timeout: 15000 });
+    await page.locator("[data-search-hit]").first().waitFor({ timeout: 15000 });
+  } },
   { id: "learning-reader", role: "teacher", nav: "المواد التعليمية", run: async page => {
     await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
     await page.getByRole("button", { name: "بدء القراءة" }).click({ timeout: 15000 });
@@ -195,7 +224,7 @@ const record = { label, dist, generatedAt: new Date().toISOString(), pages: {} }
 for (const [vpName, viewport, touch] of VIEWPORTS) {
   fs.mkdirSync(path.join(out, vpName), { recursive: true });
   for (const pg of PAGES) {
-    role = pg.role;
+    role = pg.role; scene = pg.scene || "";
     const errors = [];
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);

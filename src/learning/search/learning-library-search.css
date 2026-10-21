@@ -21,3 +21,11 @@
 @media (forced-colors: active) {
   .eb-lm-search { border: 1px solid CanvasText; }
 }
+
+/* UX-R9a — the library's filters and search block in the reference look: a flat 8 px panel, quiet 6 px selects, and the search
+   field without a resting shadow (scoped to the library: learning-search.css is shared with the Reader and keeps its look; the
+   focus ring of the field is untouched). No stacking context, no transition, no colour literal, no physical side. */
+.eb-lm-filter-select { border-color: var(--eb-line-2); border-radius: var(--eb-r-sm); }
+.eb-lm-search { border-radius: var(--eb-r); box-shadow: none; }
+.eb-lm-search .eb-search-box { border-color: var(--eb-line-2); border-radius: var(--eb-r); }
+.eb-lm-search .eb-search-box:not(:focus-within) { box-shadow: none; }
