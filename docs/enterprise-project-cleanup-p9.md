@@ -44,6 +44,45 @@ Every other entry (75 of 79) is byte-identical to the capture, including every w
 
 ## Not in P-9
 
-- **The legacy formatter modules stay** (`project-794589-analytics.js`, `project-794589-legacy-shape.js`). They are now used by tests only (the engine parity tests). Removing them is a separate clean-up.
+- **The legacy formatter modules stay** (`project-794589-analytics.js`, `project-794589-legacy-shape.js`). They are now used by tests only (the engine parity tests). Removing them is a separate clean-up, done in P-9b (below).
 - **The server's `stale` rule is unchanged.** The P-5 follow-up (a never-started student is not «بلا تحديث») is now unblocked: the legacy goldens are gone.
 - **Production traffic was not inspected.** An agent does not read Application Insights. See the owner check in the pull request.
+
+## Phase P-9b — the test-only legacy formatters are removed
+
+After P-9 the two legacy formatter modules served no route. They were only read by tests:
+
+- `project-794589-analytics.js` re-shaped the generic engine's class summary and analytics into the old 794589 fields (`avgBook`, `avgPacketTracer`, `perStudent[].book`). It had been a formatter over `project-tracker/analytics.js` since R33.
+- `project-794589-legacy-shape.js` held those shape functions.
+
+Both are deleted. Nothing in production imported them, so no route, payload or stored document changes. The legacy modules
+that production code still uses stay: `project-794589-core.js`, `project-794589-progress.js`, `project-794589-migration.js` and
+`project-794589-template.js`.
+
+| Test | What changed |
+|---|---|
+| `api/src/lib/project-794589-analytics.test.js` → `api/src/lib/project-tracker/analytics-two-track.test.js` | Same class, same students, same numbers, run on the engine directly. The figures are read from the generic fields: `trackAverages.book` instead of `avgBook`, `trackProgress` instead of `book` / `packetTracer`. |
+| `api/src/lib/project-tracker/engine.test.js` | Two tests compared the engine with the formatter, that is with itself. They now compare the class figures with the **legacy core** (`project-794589-core.js`), the independent implementation, per student: each student's overall, the class averages per track, and the completed, ready and stale totals. They also pin stage completion (50 % and 0 % stages). The weekly-trend equality is dropped: both sides were the same function. |
+| `api/src/lib/project-794589-v2-integration.test.js` | The V2 heatmap and stage-completion checks run on the engine. The two tracks the formatter used to add are passed explicitly. |
+| `api/tests/legacy-794589-convergence-r33.test.js` | C5 checked that the formatter only wrapped the engine. It now checks that both modules are gone. |
+
+
+- **Fail-first.** Not applicable: no defect is fixed, and no route or payload changes. The new C5 guard fails on `cf192b7e`
+  (`expected true to be false`: the modules still exist) and passes on the head.
+- **Mutation campaign** on `project-tracker/analytics.js`, against the three moved / rewritten test files only. The first run
+  left 3 of 7 mutants alive (L1, L3, L7): the formatter tests had never pinned these figures. Three tests were added to
+  `analytics-two-track.test.js`:
+  - an average of 37.5 rounds to 38;
+  - two stages waiting for review on one student count 2;
+  - a retired stage stays out of stage completion and the heatmap.
+
+  Re-run, all 7 are KILLED:
+  - L1: class averages floored;
+  - L2: everyone complete;
+  - L3: ready stages counted per student;
+  - L4: per-student rows sorted highest first;
+  - L5: «waiting for review» counted as approved;
+  - L6: the track average reads the overall;
+  - L7: inactive stages charted.
+
+  The file was restored byte-for-byte (SHA-256 verified).

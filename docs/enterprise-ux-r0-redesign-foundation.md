@@ -986,3 +986,281 @@ the hardening and UX-4 platform suites, and the colour ratchet. Each file was re
 - R5 changes only CSS, which Vitest does not process (happy-dom never sees `page-parts.css`), so the change cannot affect that
   test.
 - It is recorded here and not patched (`AGENTS.md` §12).
+
+---
+
+# Phase UX-R6a — Assignments: the home and the creation wizard
+
+**Owner direction (2026-10-21):** start R6a. It depends on R3 (merged), so it branches from `main` `76df1cdf` as
+`feature/ux-r6a-assignments`. It ran in parallel with R5 (PR #395); the two share no source file.
+
+**Reconciliation.** R5 merged into `main` (`20c850f5`) while R6a waited for review. R6a took `main` in with a normal merge commit
+(`git merge origin/main`).
+- **Conflict:** one, in this record, where both phases had appended a section. It was resolved by keeping both, R5 first.
+- **Re-validation:** the full suite, lint, typecheck, build and `git diff --check` were re-run on the merged head (§R6a.5).
+- **Baselines:** `76df1cdf` → `20c850f5`.
+
+## R6a.1 What changes for the user
+
+On the «الواجبات» home:
+- **The toolbar sits on the page, not in a card.**
+- **The four headline figures are one hairline strip.**
+  - The dividers are a 1 px gap over the hairline colour, so they follow 4 / 2 columns.
+  - Each tile keeps its tone accent bar and a transparent 1 px border (the 21E.2 invariant). The values read in ink.
+- **The two view switches are the reference segmented group:** «الواجبات الحالية / المؤرشفة», and the wizard's content source.
+- **The time filters read as sub-navigation:** «الكل · مفتوحة · تُغلق قريبًا · مجدولة · مغلقة · مسودات».
+  - They are quiet text items; the pressed one is a grey pill with bold text instead of a purple fill.
+  - Counts are muted.
+- **The list is one hairline card of rows, not one card per assignment.**
+  - Each row is the title line, then the details on one wrapping line, then the time chip and the submission bar side by side.
+  - The selected row is grey.
+  - The rows are about a third shorter than before.
+
+In the wizard:
+- **The wizard is a flat 8 px panel.** Its primary inline-start bar stays.
+- **The content source, the policy groups and the library items use the 8 px radius.**
+
+**Not changed, on purpose:**
+- **No «واجب جديد» popover, no status side column.** The mockup's popover would be new behaviour. The time filters already
+  cover the mockup's sub-navigation (current / scheduled / ended / drafts), now in its look, and keep their place above the list.
+- **The full-width assignment page, the gradebook and the overview.** They are R6b. Nothing in the R6a block targets
+  `.eb-assign-detail`, the gradebook or the overview, and a guard pins that.
+- **All markup, names, labels and logic files**: `assignmentWizard.ts`, `assignmentsHome.ts`, `assignmentsView.ts` and
+  `useAssignmentComposer.ts` are untouched.
+
+## R6a.2 Edit set
+
+**`src/assignments-pro.css`:** one block appended at the end of the sheet. It comes after the 21G.7 coarse block, so it wins by
+order at the same specificity. Every pinned rule above it is untouched.
+- Stacking contexts: none. The 21E section forbids them to the end of the file.
+- Transitions: none. Every transition selector must be in the first reduced-motion list.
+- Coarse-pointer block: no new one. The 21G.7 guard reads the last coarse block.
+- Colour literals: none. The sheet must stay at 0.
+
+**Tests:** a new file, `src/assignments/assignmentsHome.ux-r6a.test.ts`, with 9 guards. They also pin that the block is last
+and stays clear of R6b's selectors. No existing test changed.
+
+## R6a.3 Fail-first evidence
+
+Not applicable: R6a restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R6a.4 Mutation proof
+
+Each mutant was planted alone in `src/assignments-pro.css`. The run covered `src/assignments`, the home / page / gradebook
+panel suites, `ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour ratchet. Each file was restored byte-for-byte
+(SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the toolbar card returns (shadow) | KILLED | ux-r6a «the toolbar sits on the page» |
+| M2 | the KPI strip loses its hairline dividers | KILLED | ux-r6a «the headline figures are ONE hairline strip…» |
+| M3 | the KPI tile border set to 0 (the 21E.2 uniform 1 px border) | KILLED | ux-r6a «… tiles keep a transparent 1 px border» |
+| M4 | the pressed time filter back to the purple fill | KILLED | ux-r6a «time filters read as sub-navigation…» |
+| M5 | a card per assignment again (row border and radius) | KILLED | ux-r6a «the list is ONE hairline card of rows…» |
+| M6 | the selected row back to the purple tint | KILLED | ux-r6a «… the selected row grey» |
+| M7 | a stacking context in the R6a block (`z-index`) | KILLED | 21E «does not introduce stacking…»; ux-r6a «adds no stacking context…» |
+| M8 | a transition in the R6a block | KILLED | ux2-shell-foundation «UX-8b reduced motion…»; ux-r6a «… no transition» |
+| M9 | the restyle reaches the detail page (R6b scope) | KILLED | ux-r6a «… never targets the detail page…» |
+| M10 | a colour literal in the R6a block | KILLED | colour ratchet; ux2-shell-foundation «assignments-pro.css is token-only» |
+| M11 | the wizard keeps its card shadow | KILLED | ux-r6a «is a flat 8 px panel…» |
+| M12 | rows lose the compact layout (a column again) | KILLED | ux-r6a «a row is compact…» |
+
+12 / 12 KILLED, no TIMEOUT. `git status` showed only the R6a edit set before and after the campaign.
+
+## R6a.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture of «الواجبات» (1440 / 1024 / 390 px) | 3 / 3 clean, no horizontal overflow, no page error |
+| `npm test`, full root suite | **1 176 / 1 176 files, 14 030 / 14 030 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (assignments-pro.css stays at 0) |
+| Browser gates | none is triggered by `assignments-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R6b — Assignments: the assignment page, gradebook and question analysis
+
+**Owner direction (2026-10-21):** start R6b. R6a (PR #396) was green and waiting for review, and both phases edit
+`assignments-pro.css`. R6b is therefore stacked on the reconciled R6a head `51f1a764` as `feature/ux-r6b-gradebook`, the same
+stacking used for R4 on R3.
+
+**Reconciliation.** R6a merged into `main` (`fc40d203`, which also carried an unrelated change from another window,
+`docs/development/secrecy-canaries.md`). R6b took `main` in with a normal merge commit (`58ea4c4a`).
+- **Conflicts:** none.
+- **Validation:** the full validation and the mutation campaign below ran on that reconciled head. The PR diff shows R6b
+  alone.
+
+## R6b.1 What changes for the user
+
+The assignment page (opened with «فتح»):
+- **The page is a flat 8 px hairline panel:** no card shadow, no purple side bar.
+- **The four headline figures, and the question-analysis figures, are one hairline strip each.**
+  - Before, a legacy rule from `platform.css` (`.gradebook-stats article` / `article span`) still reached these tiles and gave
+    them a blue-grey tint, a tinted border and an 11 px label. The tiles are now white, with the 13 px muted label of every
+    other figure.
+- **The section switch «الطلاب · نظرة عامة · تحليل الأسئلة» has the reference segmented look.** That rule already comes from
+  R6a (`.eb-assignments .eb-segmented`); R6b adds nothing for it.
+- **The gradebook controls sit on the page**, no longer on a tinted band.
+- **The status filters and the question sort read as sub-navigation:**
+  - status filters: «الكل · بانتظار التصحيح · نهائي · لم يسلّم · قيد المحاولة»;
+  - question sort: «ترتيب الأسئلة».
+  - The pressed one is a grey pill with bold text instead of the navy fill.
+- **The gradebook and analysis tables are quiet:**
+  - a white header, still opaque because it is sticky;
+  - hairline rows and a grey hover.
+  - A selected student and the student a Today-hub row asked for keep their tint, because it carries state.
+- **The overview's settings card uses the 8 px radius.**
+
+**Not changed, on purpose:**
+- **No grading, status, release or export logic.** No markup or label changes either.
+- **The phone layout of one card per student (21G.4)**, the per-question colour grid (already token-only), the distribution and
+  status bars, the row-editor dialogs, and the bulk bar (selection state).
+
+## R6b.2 Edit set
+
+**`src/assignments-pro.css`:** one block appended after the R6a block, the last block of the sheet.
+- **Scoping:** every selector starts with `.eb-assign-detail`, so nothing reaches the home, the wizard or other pages (guarded).
+- **Forbidden in the block:**
+  - stacking contexts, transitions, a coarse block and colour literals;
+  - `position: sticky`;
+  - a repeat of the mutation anchors.
+- **`src/assignments/assignmentPage.ux-r6b.test.ts`:** new, 9 guards.
+
+**`src/assignments/assignmentsHome.ux-r6a.test.ts`: updated explicitly.**
+- Its block slice ran to the end of the file, so its rule "the R6a block never targets `.eb-assign-detail`" would have applied
+  to the R6b block appended after it.
+- The slice now stops at the R6b block. The R6a invariants are unchanged: block position, no stacking context or transition, no
+  coarse block, no detail-page selector inside the R6a block.
+- Mutant M13 shows the bound is needed.
+
+## R6b.3 Fail-first evidence
+
+Not applicable: R6b restyles. The legacy tile tint is a look inherited from an older layer, not a functional defect. The
+mutation campaign below proves the new invariants.
+
+## R6b.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/assignments`, the home / page / gradebook panel suites,
+`ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour ratchet. Each file was restored byte-for-byte (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the page card shadow returns | KILLED | ux-r6b «is a flat 8 px hairline panel…» |
+| M2 | the figures strip loses its hairline dividers | KILLED | ux-r6b «… ONE hairline strip each…» |
+| M3 | the legacy tinted tile leaks back (tile override removed) | KILLED | ux-r6b «… the tiles outrank the legacy tinted…» |
+| M4 | the pressed status filter back to the navy fill | KILLED | ux-r6b «… sub-navigation with a grey pressed pill» |
+| M5 | the gradebook controls band returns | KILLED | ux-r6b «gradebook controls sit on the page…» |
+| M6 | the table header back to a grey band | KILLED | ux-r6b «quiet tables: white opaque header…» |
+| M7 | the selected row loses its state tint (the hover rule wins) | KILLED | ux-r6b «… the selected and drill rows keep their state tint» |
+| M8 | an unscoped rule reaches other pages | KILLED | ux-r6b «every rule is scoped to the assignment page…» |
+| M9 | a stacking context in the R6b block | KILLED | ux-r6b «adds no stacking context…»; 21E stacking guard |
+| M10 | a transition in the R6b block | KILLED | ux2-shell-foundation «UX-8b reduced motion…»; ux-r6b |
+| M11 | a colour literal in the R6b block | KILLED | colour ratchet; ux2-shell-foundation «token-only» |
+| M12 | phone: the per-student card wrapper gets a border again | KILLED | ux-r6b «phone: the per-student cards keep their borderless wrapper…» |
+| M13 | the R6a guard's slice runs to the end of the file again | KILLED | ux-r6a «… never targets the detail page…» (the bound is needed) |
+
+13 / 13 KILLED, no TIMEOUT. `git status` was clean before and after the campaign.
+
+## R6b.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| 21E.2 results / gradebook gate (`scripts/capture-visual-gate-21e2.mjs`) on the R6b build | **28 / 28 results and gradebook checks pass** at 1280, 150 %, 200 % and 390 px touch: chart tables, CSV exports, G-03 export target, and V-01 / V-02 no horizontal overflow |
+| Same gate, builder part | 38 checks fail identically on the baseline build: the builder flow waits for a «الامتحانات المحفوظة» button that is no longer in the navigation. Stale harness, not R6b; the baseline build (`main` `76df1cdf`) gives the same 28 / 66 with the same 38 builder failures and 0 results / gradebook failures |
+| `npm test`, full root suite | **1 178 / 1 178 files, 14 049 / 14 049 tests** on the reconciled head `58ea4c4a` |
+| `npm run lint`, `npx tsc -b`, build (bundle guard), `git diff --check` | lint exit 0 (pre-existing warnings only); build (tsc -b + vite + bundle guard) exit 0, «bundle guard passed»; `git diff --check origin/main..HEAD` clean |
+| colour ratchet | 2 294, unchanged |
+
+---
+
+# Phase UX-R8 — Messages
+
+**Owner direction (2026-10-21):** start R8. It depends on R3 (merged), so it branches from `main` `59ffac32` as
+`feature/ux-r8-messages`. It ran in parallel with R7 (PR #399); the two share no source file. The capture harness and this record
+are shared, so whichever merges second takes a reconciliation merge.
+
+**Reconciliation.** R6b (#398) merged into `main` (`f51bd90d`) during R8. R8 took `main` in with a normal merge commit
+(`git merge origin/main`), without conflicts (R8 had not yet written this section), and the full root suite was re-run on the
+merged head (§R8.5). Baselines: `59ffac32` → `f51bd90d`.
+
+## R8.1 What changes for the user
+
+No reference mockup shows the messages pages, so R8 applies the record's general patterns (§3.2: hairline card, 44 px rows,
+sub-navigation, quiet surfaces) to the existing chat layout.
+
+On the teacher's «الرسائل» page:
+- **The workspace is a flat 8 px panel** without a card shadow (also the phone conversation card); the thread sits on white.
+- **The student roster is 44 px rows split by hairlines** (52 px on a narrow screen), with 28 px avatars and medium-weight
+  names; an unread student keeps a bold name and the «N جديدة» count.
+- **The selected student is a grey row with bold text.** The primary tint and the inline-start accent bar are gone; the state is
+  still carried by `aria-pressed` and the weight, never by colour alone.
+- **The roster search is a plain 8 px field; «الكل / غير المقروءة» read as sub-navigation**: quiet items, the pressed one a grey
+  pill with bold text instead of the navy fill.
+
+In every conversation (teacher and student):
+- **Quiet bubbles.** The other party's bubble is white on a hairline; the viewer's own is a soft primary tint with ink text
+  (the solid primary gradient with white text is gone). The sender label, time, «مُعدّلة» mark and the edit / delete actions are
+  re-inked for the tint. Bubbles have the 8 px radius and no shadow; the clipped first-message corner stays.
+- **One composer look.** The teacher's and the student's composers share the same field (8 px, white, a `--eb-line-2` border) and
+  send button (8 px). Their layouts stay as they were (the teacher's compact grid, the student's labelled field), since the
+  labels and hints are pinned.
+
+**Not changed, on purpose:** markup, roles, labels, unread texts, the announcements feed cards, the deleted-message look, the
+day separators, the tabs, the class start state's layout, and all behaviour (polling, read markers, edit / delete, history).
+
+## R8.2 Edit set
+
+- **`src/messages/messages.css`:** one block appended at the end of the sheet. It wins by order at the same or a higher
+  specificity than the rules it overrides; those rules stay as they are — notably the M.2 own-bubble rule, which
+  `messagesPresentation.m2.test.tsx` pins verbatim. The block adds no stacking context, transition, colour literal or physical
+  side (the M.2 slice to the end of the file forbids the last two). The sheet's colour count stays at 4.
+- **`src/messages/messages.ux-r8.test.ts`:** new, 10 guards (the implementation commit message says 11; the count is 10).
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** messages fixtures in the shapes of the 5C / 5D / M.2 fixtures, and two scripted
+  pages: `messages-thread` (class «العاشر – أ», the second roster row, so the unread student listed first keeps its count and the
+  roster filters stay shown) and `student-messages` (the student's dedicated view). The roster unread summary is answered for
+  class `c1` only, so the sidebar's «الرسائل» keeps its exact accessible name.
+
+## R8.3 Fail-first evidence
+
+Not applicable: R8 restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R8.4 Mutation proof
+
+Each mutant was planted alone in `src/messages/messages.css`. The run covered `src/messages`, `phase8b`, `src/designSystem`, the
+colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the workspace card shadow returns | KILLED | ux-r8 «… flat 8 px panels…» |
+| M2 | the student card back to the 16 px radius | KILLED | ux-r8 «… flat 8 px panels…» |
+| M3 | the phone conversation card keeps the large radius | KILLED | ux-r8 «… (also the phone conversation card)…» |
+| M4 | roster rows back to 56 px | KILLED | ux-r8 «the roster is 44 px hairline rows…» |
+| M5 | the selected student back to the purple tint | KILLED | ux-r8 «the selected student is a grey row…» |
+| M6 | the selected accent bar returns | KILLED | ux-r8 «… no accent bar…» |
+| M7 | the pressed filter back to the navy fill | KILLED | ux-r8 «the roster filters read as sub-navigation…» |
+| M8 | the own bubble back to the solid primary with white text | KILLED | ux-r8 «bubbles are quiet…» |
+| M9 | the own time stays light (unreadable on the tint) | KILLED | ux-r8 «the own bubble's label, time, edited mark and actions are re-inked…» |
+| M10 | the bubble shadow returns | KILLED | ux-r8 «bubbles are quiet…» |
+| M11 | the student composer keeps its own look | KILLED | ux-r8 «one composer look…» |
+| M12 | a colour literal in the R8 block | KILLED | colour ratchet; ux-r8 «… no colour literal…» |
+| M13 | a physical side in the R8 block | KILLED | ux-r8 «… no physical side»; messagesPresentation.m2 «M.2 styles…» |
+| M14 | a transition in the R8 block | KILLED | ux-r8 «adds no stacking context, no transition…» |
+| M15 | editing the pinned M.2 own-bubble rule instead of overriding it | KILLED | ux-r8 «overrides instead of editing…»; messagesPresentation.m2 «M.2 styles…» |
+
+15 / 15 KILLED, no TIMEOUT. `git status` showed only the R8 edit set before and after the campaign.
+
+## R8.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `messages`, `messages-thread`, `student-messages` (1440 / 1024 / 390 px), before and after | 9 / 9 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose messages CSS is identical to `main` |
+| `npm test`, full root suite (R8 head before the merge, `7d4b5928`) | **1 178 / 1 178 files, 14 054 / 14 054 tests** |
+| `npm test`, full root suite (merged head `7b6bbd92`) | **1 179 / 1 179 files, 14 062 / 14 062 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`messages.css` stays at 4) |
+| Browser gates | none is triggered by `src/messages/**` (no workflow path filter covers it); the Quality Gate runs on every PR |

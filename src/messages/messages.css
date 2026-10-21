@@ -354,3 +354,50 @@
 .eb-msg.is-mine.is-deleted .eb-msg-sender,.eb-msg.is-mine.is-deleted .eb-msg-time{ color:var(--eb-muted); }
 .eb-msg-body.is-deleted{ font-style:italic; color:var(--eb-muted); }
 @media (prefers-reduced-motion: reduce){ .eb-msg-actions{ transition:none; } }
+
+/* =====================================================================================================================
+   UX-R8 — the messages pages in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R8). Presentation only:
+   the same markup, roles, labels and behaviour. Flat 8 px hairline cards; the roster as 44 px hairline rows with a grey
+   selected row; quiet sub-navigation filters; quiet bubbles (the viewer's own a soft primary tint with ink text, the other
+   party white on a hairline); one composer look for the teacher and the student. It comes last, so it wins by order; it adds
+   no stacking context, no transition, no colour literal and no physical side. The rules above stay as they are.
+   ===================================================================================================================== */
+/* Cards: flat 8 px panels, no card shadow, on a white page area. */
+.eb-msg-workspace{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-msg-workspace.is-conversation,.eb-msg-workspace.is-announcements{ border-radius:var(--eb-r); }
+.eb-msg-student-card{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-msg-workspace .eb-msg-convo-body,.eb-msg-student-thread{ background:var(--eb-surface); }
+
+/* Roster: 44 px rows split by hairlines; the selected row is grey with bold text (aria-pressed carries the state). */
+.eb-msg-roster-item{ min-height:44px; padding-block:var(--eb-space-2); background:transparent; }
+.eb-msg-roster-item .eb-msg-avatar{ inline-size:28px; block-size:28px; font-size:var(--eb-fs-12); }
+.eb-msg-roster-name{ font-weight:var(--eb-fw-medium); }
+.eb-msg-roster-item[aria-pressed="true"]{ background:var(--eb-chrome-active); }
+.eb-msg-roster-item[aria-pressed="true"] .eb-msg-roster-name{ font-weight:var(--eb-fw-bold); }
+.eb-msg-roster-item[aria-pressed="true"]::before{ content:none; }
+
+/* Roster tools: a plain search field and filters that read as sub-navigation (the pressed one a grey pill). */
+.eb-msg-search{ border-color:var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.eb-msg-chip{ border-color:transparent; border-radius:var(--eb-r-sm); background:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
+.eb-msg-chip[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+
+/* Start state: the class picks are quiet 8 px buttons, the history control has no card shadow. */
+.eb-msg-class-pick{ border-radius:var(--eb-r-sm); box-shadow:none; }
+.eb-msg-older-btn{ box-shadow:none; }
+
+/* Bubbles: quiet. The other party's is white on a hairline; the viewer's own a soft primary tint with ink text. */
+.eb-msg-bubble{ border-color:var(--eb-line); border-radius:var(--eb-r); box-shadow:none; }
+.eb-msg.is-mine .eb-msg-bubble{ background:var(--eb-primary-050); border-color:var(--eb-primary-100); color:var(--eb-text); }
+.eb-msg.is-mine .eb-msg-sender{ color:var(--eb-text-heading); }
+.eb-msg.is-mine .eb-msg-time,.eb-msg.is-mine .eb-msg-edited{ color:var(--eb-muted); }
+.eb-msg.is-mine .eb-msg-action{ color:var(--eb-text-secondary); }
+.eb-msg.is-mine .eb-msg-action:hover{ background:var(--eb-surface); color:var(--eb-text-heading); }
+.eb-msg.is-mine .eb-msg-action:focus-visible{ outline-color:var(--eb-primary); }
+
+/* One composer look: a plain 8 px field on white and an 8 px send button, for the teacher and the student alike. */
+.eb-msg-workspace .eb-msg-input,.eb-msg-student-foot .eb-msg-input{ border-color:var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.eb-msg-workspace .eb-msg-composer-row .eb-button,.eb-msg-student-foot .eb-msg-composer-row .eb-button{ border-radius:var(--eb-r-sm); }
+
+@media (max-width: 899.98px){
+  .eb-msg-roster-item{ min-height:52px; }
+}
