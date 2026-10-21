@@ -70,3 +70,20 @@
 .eb-lm-overview .eb-lm-read, .eb-lm-overview .eb-lm-back { min-block-size: 44px; }
 .eb-lm-overview .eb-lm-read:focus-visible, .eb-lm-overview .eb-lm-back:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 @media (forced-colors: active) { .eb-lm-overview .eb-lm-batch-open { border-color: CanvasText; } }
+
+/* UX-R9a — the library and the course home in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R9a).
+   Presentation only: the page header sits on the page (no hero card); the course card is a flat 8 px hairline card; the course
+   home's sections are ONE hairline card of rows with a grey hover and an inset focus ring (the card clips its rows). It comes
+   last, so it wins by order; no stacking context, no transition, no colour literal, no physical side. */
+.eb-lm-library-hero { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.eb-lm-library-count { background: var(--eb-chrome-active); color: var(--eb-text-heading); border-color: transparent; }
+.eb-lm-premium-library .eb-lm-card { border-color: var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
+.eb-lm-premium-library .eb-lm-card:hover { border-color: var(--eb-line-2); box-shadow: none; }
+.eb-lm-premium-library .eb-lm-cover { border-radius: var(--eb-r); }
+.eb-lm-premium-library .eb-lm-card-title { font-size: var(--eb-fs-17); }
+.eb-lm-overview .eb-lm-batch-list { gap: 0; background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r); overflow: hidden; }
+.eb-lm-overview .eb-lm-batch { border: 0; border-block-start: 1px solid var(--eb-line); border-radius: 0; }
+.eb-lm-overview .eb-lm-batch:first-child { border-block-start: 0; }
+.eb-lm-overview .eb-lm-batch-open { min-block-size: 48px; background: transparent; border: 0; border-radius: 0; }
+.eb-lm-overview .eb-lm-batch-open:hover { background: var(--eb-chrome-hover); }
+.eb-lm-overview .eb-lm-batch-open:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }

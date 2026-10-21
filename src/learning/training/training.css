@@ -46,3 +46,8 @@
 .learning-training-review-item.is-manual{ border-inline-start-color:var(--eb-muted); }
 .learning-training-mark.is-manual{ color:var(--eb-muted); }
 .learning-training-review-manual{ color:var(--eb-muted); }
+
+/* UX-R9b — the training runner in the reference look: flat 8 px panels and a shadowless submit bar (it keeps its hairline
+   border and stays sticky). No stacking context, no transition, no colour literal, no physical side. */
+.learning-training-state, .learning-training-head, .learning-training-result{ border-radius:var(--eb-r); }
+.learning-training-submitbar{ border-radius:var(--eb-r); box-shadow:none; }
