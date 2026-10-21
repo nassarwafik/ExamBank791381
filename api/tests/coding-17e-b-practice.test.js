@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createRequire } from "node:module";
 import { createFakeCodingExecutionProvider } from "./fixtures/fake-coding-execution-provider.js";
 
@@ -17,7 +17,8 @@ const { createMemoryContainer } = require_("./fixtures/memory-container.js");
 const F = require_("./fixtures/coding-17c.js");
 
 const CANARY = Object.freeze({ stdin: "HIDDEN_STDIN_CANARY_17EB", expected: "HIDDEN_EXPECTED_CANARY_17EB", weight: 9.17, weightTag: "HIDDEN_WEIGHT_CANARY_17EB", reference: "REFERENCE_SOLUTION_CANARY_17EB", label: "HIDDEN_LABEL_CANARY_17EB" });
-const CANARY_RE = /HIDDEN_STDIN_CANARY_17EB|HIDDEN_EXPECTED_CANARY_17EB|HIDDEN_WEIGHT_CANARY_17EB|REFERENCE_SOLUTION_CANARY_17EB|HIDDEN_LABEL_CANARY_17EB|9\.17|scoringPolicy|allOrNothing|gradingMode|hiddenTests|referenceSolutions|comparator/;
+// The hidden weight matches only as a whole number (not inside a longer one, e.g. a timestamp "…:09.170Z" — see P16b).
+const CANARY_RE = /HIDDEN_STDIN_CANARY_17EB|HIDDEN_EXPECTED_CANARY_17EB|HIDDEN_WEIGHT_CANARY_17EB|REFERENCE_SOLUTION_CANARY_17EB|HIDDEN_LABEL_CANARY_17EB|(?<![\d.])9\.17(?!\d)|scoringPolicy|allOrNothing|gradingMode|hiddenTests|referenceSolutions|comparator/;
 const S1 = "11111111-1111-1111-1111-111111111111", S2 = "22222222-2222-2222-2222-222222222222", AID = "asg-17eb", AID2 = "asg-17eb-other";
 const CFG = {
   allowedLanguages: ["python", "java"], defaultLanguage: "python",
@@ -230,5 +231,22 @@ describe("17E-B P13–P15 — practice never touches official grading; attempt a
     const text = JSON.stringify(r.jsonBody);
     expect(text).toContain("print(1)");                                                     // public starter code is there
     expect(text).not.toMatch(CANARY_RE);
+  });
+  // T-1 — the payload carries live timestamps (dueAt, startedAt, endsAt, draftSavedAt). A clock reading "…:09.170Z" (a seconds digit
+  // 9, then milliseconds 17x: one timestamp in a thousand) used to match the weight canary 9\.17 inside the timestamp — a false
+  // leak report, the defect of the 19D hotfix (#377). The canary matches the weight only as a whole number.
+  it("P16b delivery under a clock whose timestamps contain the weight's digits («…:09.170Z»): still no false leak, still no real one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T19:20:09.170Z") });
+    try {
+      const ctx = seed();
+      const r = await studentAssignment().handler({ method: "GET", params: { assignmentId: AID }, headers: new Headers({}) }, { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }) });
+      expect(r.status).toBe(200);
+      const text = JSON.stringify(r.jsonBody);
+      expect(text).toContain("09.170Z");                                                    // the timestamps really carry the digits
+      expect(text).not.toMatch(CANARY_RE);
+    } finally { vi.useRealTimers(); }
+    // the anchored canary still catches the weight as a JSON number or as text, and every named canary
+    for (const leak of ['{"weight":9.17}', "[9.17,1]", "الوزن 9.17", '"' + CANARY.weightTag + '"', CANARY.label, '"hiddenTests"']) expect(leak).toMatch(CANARY_RE);
+    for (const other of ['{"t":19.17}', '"v":"1.9.17"', '{"t":9.175}']) expect(other).not.toMatch(CANARY_RE);   // another number holding the digits
   });
 });
