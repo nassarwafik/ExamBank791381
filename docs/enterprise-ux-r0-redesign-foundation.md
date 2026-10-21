@@ -1264,3 +1264,127 @@ colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte a
 | `git diff --check` | clean |
 | colour ratchet | 2 294, unchanged (`messages.css` stays at 4) |
 | Browser gates | none is triggered by `src/messages/**` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R11a — The exam bank and its surroundings
+
+**Owner direction (2026-10-21):** start R11a. It depends on R3 (merged), so it branches from `main` `f746c51a` as
+`feature/ux-r11a-bank`. It ran in parallel with R10 (#404) and the open R7 / R9a / R9b PRs; it shares no stylesheet with them, only
+the capture harness and this record.
+
+## R11a.1 What changes for the user
+
+No reference mockup shows these pages, so R11a applies the record's general patterns (§3.2) to «بنك الامتحانات», «استيراد من
+ملف», «مراجعات النشر» and «سجل النشاط».
+
+The bank:
+- **The view switch is the reference segmented group** (one border, hairline dividers, the pressed option grey with bold text).
+- **The five figures are one hairline strip** whose cells draw their own hairlines (no grey empty cell when a row wraps).
+- **The distribution cards and the questions table are flat 8 px panels**; the table header is a quiet white band.
+- **The saved exams and the official library are one hairline card of 44 px rows**, not a stack of cards.
+- **Fix: on a phone the page fits the screen** (§R11a.3).
+
+«استيراد من ملف»:
+- **The URL forms and the drop zone take the 8 px radius.**
+- **Fix: on a phone the page fits the screen** (§R11a.3).
+
+«مراجعات النشر»:
+- **The stage tabs read as sub-navigation**: the selected tab is a grey pill with bold text. Before, it was an indigo pill drawn
+  from the fallbacks of undefined `--accent*` variables.
+- **The tasks are one hairline card of 44 px rows**, each with a quiet «فتح المهمة» (one dark button per row otherwise).
+- **The page has the symmetric logical gutter** (16 px, 24 px from 768 px); it sat flush against the sidebar.
+- **Fix: the page is styled on a first visit** (§R11a.3).
+
+«سجل النشاط»:
+- **The navy hero banner becomes a plain page header** (heading-coloured text, a quiet 44 px «تحديث» instead of a native button).
+- **The records card is a flat 8 px hairline panel; the table header is a quiet white band.**
+
+**Not changed, on purpose:**
+- **Status colours:** the bank's source badges, «يحتاج مراجعة», the correct option, the inbox stage pills, the decision notes and
+  the workflow's current step.
+- **Shared pieces:** the builder's governance panel and the bank picker (both inside the builder, R11b), the smart import wizard
+  (opened from the builder), and the classic builder's shared `.builder-card`.
+- **Markup and behaviour.**
+
+## R11a.2 Edit set
+
+- **`src/bank-pro.css`:** one block appended at the end, every rule scoped to `.eb-bank`. Token-only. It has no `.eb-nav` or
+  `.eb-shell-content` substring and no 1024 px bank media (the sidebar-spacing guard), and no physical side.
+- **`src/builder-pro.css`:** one block appended at the end, scoped to the import panel's own `import-*` classes.
+- **`src/governance/reviewInbox.css`:** one block appended at the end, every rule scoped to `.gov-inbox` (the builder's
+  governance panel shares this sheet). It uses tokens only; the sheet's 32 legacy literals are untouched.
+- **`src/page-parts.css`:** one block appended at the end, scoped to the audit page (`.teacher-platform-inner > .platform-hero` —
+  the only `.platform-hero` user — `.platform-card:has(.audit-history-table)` and `.audit-history-table`). It is token-only, as
+  the UX-4 section to the end of the file requires; it adds no transition and no phone `min-height` below 44 px.
+- **`src/governance/ReviewInboxPage.tsx`:** one import line, `import "../structured-builder.css";`, before its own sheet (the
+  fix below). No markup or logic change.
+- **`src/bank/bankSurroundings.ux-r11a.test.ts`:** new, 12 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** bank questions and saved exams, review-inbox tasks and audit events (the
+  ExamBankPage.ux6c, ReviewInboxPage.14b and AuditHistoryPanel fixture shapes), and two scripted pages, `bank-questions` and
+  `bank-exams`.
+
+## R11a.3 Fail-first evidence (the three fixes)
+
+**Two phone overflows** (both assigned to R11a in §7). Measured by the capture harness: `document.documentElement.scrollWidth`
+against a 390 px viewport. "Before" is the R7 build, whose CSS for these pages is identical to `main` `f746c51a`.
+
+| Page | Cause | Before | After |
+|---|---|---|---|
+| «بنك الامتحانات» | the overview's three actions («إنشاء امتحان جديد · إضافة سؤال · استيراد أسئلة», 430 px on one line) sat in a section-actions group that never shrinks (`flex: 0 0 auto`) | **458 px** (FAIL) | 390 px |
+| «استيراد من ملف» | the URL forms' grid track was at least 260 px and the address field kept its intrinsic width, so the two «استيراد» buttons ran 15 px past the screen edge | **405 px** (FAIL) | 390 px |
+
+The bank's fix also lets its section header wrap (the title block keeps at least 14rem), so the actions move under the title
+instead of squeezing it into a one-word-wide column.
+
+**Unstyled first visit of «مراجعات النشر».**
+- **Cause:** the page renders the builder's base classes (`sb-btn`, `sb-btn-primary`, `sb-hint`, `sb-banner`, `sb-bp-h`,
+  `sb-gov-*`). Their sheet, `structured-builder.css`, was imported only by the builder, the import wizard and the structured
+  import dialog.
+- **Effect:** a session that opened the inbox first showed native buttons and an unstyled heading (the "before" capture shows it).
+- **Baseline:** `f746c51a`'s `ReviewInboxPage.tsx` has no import of that sheet.
+- **Fix:** the page imports it before its own sheet, so its own rules still win ties.
+- **Guard:** the R11a suite pins that import, and checks that each base class the page and its viewer render is defined in that
+  sheet.
+
+## R11a.4 Mutation proof
+
+Each mutant was planted alone in its file. The run covered `src/bank`, `src/governance`, `ux2-shell-foundation`, the 14B
+governance guards, the sidebar-spacing guard, `src/designSystem`, the colour ratchet, `src/students` and `phase8b`. The file was
+restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | bank: the actions group unbounded (the overflow returns) | KILLED | ux-r11a «bank: the overview's actions wrap inside the page…» |
+| M2 | bank: the header no longer wraps | KILLED | same |
+| M3 | import: the 260 px grid track returns | KILLED | ux-r11a «import: the URL forms' grid track never exceeds the panel…» |
+| M4 | import: the address field keeps its intrinsic width | KILLED | same |
+| M5 | inbox: the builder base sheet import removed | KILLED | ux-r11a «review inbox: the page loads the sheet…» |
+| M6 | bank: the pressed segment back to white with a shadow | KILLED | ux-r11a «the view switch is the reference segmented group…» |
+| M7 | bank: the figures back to separate cards | KILLED | same |
+| M8 | bank: the figure cells lose their own hairlines | KILLED | same |
+| M9 | bank: the table header back to the grey band | KILLED | ux-r11a «flat 8 px panels, a quiet white table header…» |
+| M10 | bank: the exam list back to separate cards | KILLED | same |
+| M11 | inbox: the selected tab back to the indigo fallback | KILLED | colour ratchet; ux-r11a |
+| M12 | inbox: the tasks back to separate cards | KILLED | ux-r11a «inbox: the stage tabs read as sub-navigation…» |
+| M13 | inbox: the page gutter removed | KILLED | ux-r11a «inbox: the page has the symmetric logical gutter…» |
+| M14 | inbox: an unscoped rule (reaches the governance panel) | KILLED | ux-r11a «scope every rule to its page…» |
+| M15 | log: the navy hero banner returns | KILLED | ux-r11a «log: the navy banner is a plain page header…» |
+| M16 | log: «تحديث» below the 44 px touch target | KILLED | same |
+| M17 | log: an unscoped platform-card rule (reaches the roster and the dashboard) | KILLED | ux-r11a «scope every rule to its page…» |
+| M18 | a colour literal in the audit block | KILLED | colour ratchet; ux-r11a |
+| M19 | a physical side in the bank block | KILLED | ux-r11a «add no stacking context, no transition, no colour literal, no physical side» |
+
+19 / 19 KILLED, no TIMEOUT. `git status` showed only the R11a edit set before and after the campaign.
+
+## R11a.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| U.1 Classes & Students browser gate (`scripts/check-classes-students-browser-u1.mjs`, CI's pinned playwright-core and axe-core; triggered by `page-parts.css`), R11a build | **passed**: 85 checks, 0 failures |
+| Visual capture `bank`, `bank-questions`, `bank-exams`, `import`, `reviews`, `audit` (1440 / 1024 / 390 px) | before: 16 / 18 clean (bank 458 px, import 405 px on the phone); after: **18 / 18 clean** |
+| `npm test`, full root suite (`299ff626`) | **1 181 / 1 181 files, 14 076 / 14 076 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`bank-pro.css` stays at 0; the other sheets gain no literal) |
