@@ -874,3 +874,89 @@ after the campaign.
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | 2 294 (was 2 298) |
+
+---
+
+# Phase UX-R6a — Assignments: the home and the creation wizard
+
+**Owner direction (2026-10-21):** start R6a. It depends on R3 (merged), so it branches from `main` `76df1cdf` as
+`feature/ux-r6a-assignments`. It runs in parallel with R5 (PR #395); the two share no source file.
+
+## R6a.1 What changes for the user
+
+On the «الواجبات» home:
+- **The toolbar sits on the page, not in a card.**
+- **The four headline figures are one hairline strip.**
+  - The dividers are a 1 px gap over the hairline colour, so they follow 4 / 2 columns.
+  - Each tile keeps its tone accent bar and a transparent 1 px border (the 21E.2 invariant). The values read in ink.
+- **The two view switches are the reference segmented group:** «الواجبات الحالية / المؤرشفة», and the wizard's content source.
+- **The time filters read as sub-navigation:** «الكل · مفتوحة · تُغلق قريبًا · مجدولة · مغلقة · مسودات».
+  - They are quiet text items; the pressed one is a grey pill with bold text instead of a purple fill.
+  - Counts are muted.
+- **The list is one hairline card of rows, not one card per assignment.**
+  - Each row is the title line, then the details on one wrapping line, then the time chip and the submission bar side by side.
+  - The selected row is grey.
+  - The rows are about a third shorter than before.
+
+In the wizard:
+- **The wizard is a flat 8 px panel.** Its primary inline-start bar stays.
+- **The content source, the policy groups and the library items use the 8 px radius.**
+
+**Not changed, on purpose:**
+- **No «واجب جديد» popover, no status side column.** The mockup's popover would be new behaviour. The time filters already
+  cover the mockup's sub-navigation (current / scheduled / ended / drafts), now in its look, and keep their place above the list.
+- **The full-width assignment page, the gradebook and the overview.** They are R6b. Nothing in the R6a block targets
+  `.eb-assign-detail`, the gradebook or the overview, and a guard pins that.
+- **All markup, names, labels and logic files**: `assignmentWizard.ts`, `assignmentsHome.ts`, `assignmentsView.ts` and
+  `useAssignmentComposer.ts` are untouched.
+
+## R6a.2 Edit set
+
+**`src/assignments-pro.css`:** one block appended at the end of the sheet. It comes after the 21G.7 coarse block, so it wins by
+order at the same specificity. Every pinned rule above it is untouched.
+- Stacking contexts: none. The 21E section forbids them to the end of the file.
+- Transitions: none. Every transition selector must be in the first reduced-motion list.
+- Coarse-pointer block: no new one. The 21G.7 guard reads the last coarse block.
+- Colour literals: none. The sheet must stay at 0.
+
+**Tests:** a new file, `src/assignments/assignmentsHome.ux-r6a.test.ts`, with 9 guards. They also pin that the block is last
+and stays clear of R6b's selectors. No existing test changed.
+
+## R6a.3 Fail-first evidence
+
+Not applicable: R6a restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R6a.4 Mutation proof
+
+Each mutant was planted alone in `src/assignments-pro.css`. The run covered `src/assignments`, the home / page / gradebook
+panel suites, `ux2-shell-foundation`, `premiumWorkspace.21e2` and the colour ratchet. Each file was restored byte-for-byte
+(SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the toolbar card returns (shadow) | KILLED | ux-r6a «the toolbar sits on the page» |
+| M2 | the KPI strip loses its hairline dividers | KILLED | ux-r6a «the headline figures are ONE hairline strip…» |
+| M3 | the KPI tile border set to 0 (the 21E.2 uniform 1 px border) | KILLED | ux-r6a «… tiles keep a transparent 1 px border» |
+| M4 | the pressed time filter back to the purple fill | KILLED | ux-r6a «time filters read as sub-navigation…» |
+| M5 | a card per assignment again (row border and radius) | KILLED | ux-r6a «the list is ONE hairline card of rows…» |
+| M6 | the selected row back to the purple tint | KILLED | ux-r6a «… the selected row grey» |
+| M7 | a stacking context in the R6a block (`z-index`) | KILLED | 21E «does not introduce stacking…»; ux-r6a «adds no stacking context…» |
+| M8 | a transition in the R6a block | KILLED | ux2-shell-foundation «UX-8b reduced motion…»; ux-r6a «… no transition» |
+| M9 | the restyle reaches the detail page (R6b scope) | KILLED | ux-r6a «… never targets the detail page…» |
+| M10 | a colour literal in the R6a block | KILLED | colour ratchet; ux2-shell-foundation «assignments-pro.css is token-only» |
+| M11 | the wizard keeps its card shadow | KILLED | ux-r6a «is a flat 8 px panel…» |
+| M12 | rows lose the compact layout (a column again) | KILLED | ux-r6a «a row is compact…» |
+
+12 / 12 KILLED, no TIMEOUT. `git status` showed only the R6a edit set before and after the campaign.
+
+## R6a.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture of «الواجبات» (1440 / 1024 / 390 px) | 3 / 3 clean, no horizontal overflow, no page error |
+| `npm test`, full root suite | **1 176 / 1 176 files, 14 030 / 14 030 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (assignments-pro.css stays at 0) |
+| Browser gates | none is triggered by `assignments-pro.css` (no workflow path filter covers it); the Quality Gate runs on every PR |
