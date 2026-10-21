@@ -447,3 +447,16 @@
 .audit-history-more{ display:flex; justify-content:center; padding-block-start:var(--eb-space-3); }
 .audit-history-more .eb-button{ min-height:44px; }
 .audit-history-table tbody tr:focus-visible{ outline:var(--eb-focus-ring); outline-offset:-2px; }
+
+/* UX-R11a — «سجل النشاط» in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R11a). Scoped to the audit page
+   (the only .platform-hero user and the .audit-history-* classes), so the shared .platform-card and .students-table keep their
+   look on the roster, the dashboard and the gradebook. The navy hero banner becomes a plain page header (heading-coloured text,
+   a quiet 44 px «تحديث»); the records card is a flat 8 px hairline panel; the table header is a quiet white band. Tokens only;
+   no physical side, no transition, no stacking context. */
+.teacher-platform-inner > .platform-hero{ padding:0; background:transparent; color:var(--eb-text-heading); border-radius:0; box-shadow:none; }
+.teacher-platform-inner > .platform-hero p{ color:var(--eb-text-secondary); }
+.teacher-platform-inner > .platform-hero .platform-eyebrow{ color:var(--eb-muted); opacity:1; }
+.teacher-platform-inner > .platform-hero > button{ flex:0 0 auto; min-height:44px; padding-inline:var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text-heading); font:inherit; font-weight:var(--eb-fw-semibold); cursor:pointer; }
+.teacher-platform-inner > .platform-hero > button:hover{ background:var(--eb-surface-2); }
+.teacher-platform-inner > .platform-card:has(.audit-history-table){ border-color:var(--eb-line); border-radius:var(--eb-r); box-shadow:none; }
+.audit-history-table.students-table thead th{ background:var(--eb-surface); color:var(--eb-muted); }

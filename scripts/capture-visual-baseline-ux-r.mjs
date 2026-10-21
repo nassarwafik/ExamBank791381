@@ -129,6 +129,21 @@ const STUDENT_MESSAGES = { ok: true, direct: DIRECT, announcements: [{ ...msg(7,
   classroom: { classId: "c1", name: "العاشر – أ", archived: false }, canSend: true, readOnlyReason: "" };
 const NO_UNREAD = { unread: 0, capped: false };
 
+// UX-R11a — the bank, the review inbox and the activity log (the shapes of the ExamBankPage.ux6c, ReviewInboxPage.14b and
+// AuditHistoryPanel fixtures), so the questions table, the saved exams, the inbox tasks and the log rows are captured.
+const bq = (id, over) => ({ id, sourceId: "import-quiz-20260301-abc123", sourceKind: "import", official: false, questionNumber: "1", section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, difficultyLabel: "",
+  type: "multipleChoice", presentationType: "multipleChoice", text: "ما هو الراوتر؟", options: [{ value: "a", text: "جهاز توجيه" }, { value: "b", text: "كابل" }], fields: [], wordBank: [],
+  answer: { mode: "singleChoice", correctOptionValue: "a", values: ["a"] }, hasImage: false, reviewStatus: "classified", createdAt: NOW, updatedAt: NOW, ...over });
+const BANK = [
+  bq("791381-2025-exam-q1", { sourceId: "791381-2025-exam", sourceKind: "official", official: true, text: "ما هو عنوان IP؟", topic: "IP_ADDRESSING", difficulty: 1 }),
+  bq("import-quiz-20260301-abc123-1", { text: "عرّف شبكة VLAN واذكر فائدتين لها", topic: "SWITCHING", difficulty: 3, presentationType: "open", type: "shortAnswer", options: [], answer: { mode: "manual", values: [] }, reviewStatus: "pending-classification" }),
+  bq("manual-x1", { sourceId: "manual", sourceKind: "manual", text: "أكمل: قناع الشبكة الافتراضي للفئة C هو ____", section: "INFRASTRUCTURE", topic: "SUBNETTING", difficulty: null, presentationType: "fillBlank", type: "multiField", options: [], fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }], answer: { mode: "exactSequence", values: ["255.255.255.0"] } }),
+  bq("manual-x2", { sourceId: "manual", sourceKind: "manual", text: "ما وظيفة بروتوكول DHCP؟", topic: "ROUTING" }),
+];
+const SAVED_EXAMS = [{ blobName: "exams/e1.json", examId: "e1", title: "امتحان الفصل الأول", savedAt: NOW, questionCount: 12, totalMarks: 100 }, { blobName: "exams/e2.json", examId: "e2", title: "اختبار قصير — الشبكات المحلية", savedAt: NOW, questionCount: 6, totalMarks: 30 }];
+const INBOX_TASKS = ["امتحان الشبكات — الفصل الأول", "اختبار التوجيه الديناميكي"].map((title, i) => ({ examId: "EX-" + i, cycleId: "cyc-" + i, revisionId: "rev-" + i, revisionNumber: 3 - i, stage: "review", title, authorId: "teacher-author", submittedAt: NOW, createdAt: NOW, lifecycleState: "in-review", stateVersion: 4, reviewStatus: "pending" }));
+const AUDIT_EVENTS = [["class.create", "class", "العاشر – أ", { grade: "10" }], ["student.bulkImport", "class", "الحادي عشر – ب", { createdCount: 5, duplicateCount: 1, failedCount: 0 }], ["student.archive", "student", "رنا سليمان", {}], ["class.create", "class", "الثاني عشر – أ", { grade: "12" }]]
+  .map(([action, targetType, targetLabel, details], i) => ({ eventId: "ev" + i, timestamp: NOW, actor: "t", action, targetType, targetId: "x" + i, targetLabel, details }));
 // UX-R10 — the projects pages (the shapes of the ProjectWorkspace.ux6 fixtures): two projects in the hub, and project 794589 for
 // class c1 with a dashboard, student cards, a student profile, analytics (charts and heatmap) and the stage settings. The sidebar
 // totals stay 0 so «المشاريع» keeps its exact accessible name; the per-project badge comes from byProject.
@@ -183,6 +198,10 @@ function api(req, res) {
   if (p === "/api/teacher-analytics") return send(200, analytics);
   if (p === "/api/reports") return send(REPORTS[u.searchParams.get("type")] ? 200 : 400, REPORTS[u.searchParams.get("type")] || { ok: false, error: "unknown report" });
   if (p === "/api/teacher-today") return send(200, teacherToday);
+  if (p === "/api/bank-questions" && req.method === "GET") return send(200, { ok: true, questions: BANK });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: SAVED_EXAMS });
+  if (p === "/api/governance-inbox") return send(200, { items: u.searchParams.get("stage") === "review" ? INBOX_TASKS : [], nextCursor: null, counts: { review: 2, approve: 0, publish: 0 }, actorId: "teacher-reviewer" });
+  if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
   if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
   if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
@@ -242,6 +261,11 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R11a — the bank's questions table and its saved exams (the overview is the sidebar page itself).
+  ...[["bank-questions", "بنك الأسئلة"], ["bank-exams", "الامتحانات المحفوظة"]].map(([id, view]) => ({ id, role: "teacher", nav: "بنك الامتحانات", run: async page => {
+    await page.locator(".eb-bank .eb-segmented").getByRole("button", { name: view }).click({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+  } })),
   // UX-R10 — the project tracker: its dashboard, the student cards, a student profile, the analytics (charts measured like the
   // report chart) and the stage settings.
   ...[["project-dashboard", null], ["project-students", /تقدّم الطلاب/], ["project-profile", /تقدّم الطلاب/], ["project-analytics", /الإحصائيات/], ["project-settings", /إعداد/]].map(([id, view]) => ({

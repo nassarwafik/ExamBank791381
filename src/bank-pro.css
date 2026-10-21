@@ -70,3 +70,28 @@
 @media (prefers-reduced-motion: reduce){
   .eb-bank *{ transition:none; animation:none; }
 }
+
+/* UX-R11a — the bank in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R11a). Presentation only; every rule is
+   scoped to .eb-bank, so the shared section header, segmented group, stat cards and badges keep their look elsewhere. The view
+   switch is the reference segmented group; the figures are ONE hairline strip whose cells draw their own hairlines (5 figures,
+   so no grey empty cell when a row wraps); the distribution cards and the table are flat 8 px panels with a quiet white table
+   header; the saved-exam and library lists are ONE hairline card of 44 px rows. Status colours (badges, «يحتاج مراجعة», the
+   correct option) are untouched. No colour literal, no physical side, no transition, no stacking context.
+   Fix: on a phone the overview's three actions («إنشاء امتحان جديد · إضافة سؤال · استيراد أسئلة», 430 px on one line) pushed
+   the page to 458 px; the header now wraps (the title block keeps at least 14rem, so the actions move under it on a phone)
+   and the actions group wraps inside the page width. */
+.eb-bank .eb-section-header{ flex-wrap:wrap; }
+.eb-bank .eb-section-header-text{ flex:1 1 14rem; min-width:0; }
+.eb-bank .eb-section-actions{ min-width:0; max-inline-size:100%; }
+.eb-bank .eb-segmented{ gap:0; padding:0; background:var(--eb-surface); border-color:var(--eb-line-2); overflow:hidden; }
+.eb-bank .eb-segmented > button{ border-radius:0; border-inline-start:1px solid var(--eb-line); }
+.eb-bank .eb-segmented > button:first-child{ border-inline-start:0; }
+.eb-bank .eb-segmented > button[aria-pressed="true"]{ background:var(--eb-chrome-active); font-weight:var(--eb-fw-bold); box-shadow:none; }
+.eb-bank .eb-bank-stats{ gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-bank .eb-bank-stats .eb-stat-card{ border-color:transparent; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.eb-bank .eb-bank-dist-card{ border-radius:var(--eb-r); }
+.eb-bank .eb-bank-table-wrap{ border-radius:var(--eb-r); }
+.eb-bank .eb-bank-table th{ background:var(--eb-surface); }
+.eb-bank .eb-bank-exam-list{ gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-bank .eb-bank-exam-row{ min-block-size:44px; border:0; border-block-start:1px solid var(--eb-line); border-radius:0; }
+.eb-bank .eb-bank-exam-row:first-child{ border-block-start:0; }
