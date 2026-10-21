@@ -1767,3 +1767,124 @@ restored byte-for-byte after each (SHA-256).
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | 2 294, unchanged (`bank-pro.css` stays at 0; the other sheets gain no literal) |
+
+---
+
+# Phase UX-R11b — The exam builder
+
+**Owner direction (2026-10-21):** close every open phase first, then start R11b. R11a (#405) merged, so R11b branches from
+`main` `2d19b070` as `feature/ux-r11b-builder`. No other R phase is open.
+
+## R11b.1 What changes for the user
+
+The builder destination «باني الامتحان» opens «امتحاناتي» (the Exam Studio's home) under the setup zone, and an exam opens in the
+**Exam Studio**: the default layout since 21F.9. No reference mockup shows the builder, so R11b applies the record's general
+patterns (§3.2).
+
+The Exam Studio:
+- **The top bar is white on a hairline** (it was navy). Text, crumbs and tools take the heading and muted colours; «حفظ مسودة»
+  and the tools are quiet bordered buttons; the next-step action stays the one primary button.
+- **The four steps are a bordered group, and the current step is a grey pill with bold text** (it was a white pill on the navy
+  bar); its number sits on a heading-coloured disc; completed steps show a purple disc with a check.
+- **One accent:** the purple primary family replaces the turquoise (completed steps, the save dot, the section badge, the meters,
+  the readiness ring, the AI insert action).
+- **The canvas is the page background, and the section and question cards and the review panels are flat 8 px hairline cards**
+  (they had a resting shadow and 12 px corners). The active question keeps its 3 px primary ring.
+
+«امتحاناتي»:
+- **It sits on the page** (no grey box inside the white card).
+- **The create tiles and the exam cards are flat 8 px hairline cards**; an exam card loses its 4 px coloured top rule, and its
+  «فتح» is quiet (one dark button per card otherwise).
+- **The pressed status filter is a grey pill with bold text** (it was a navy pill); the continue banner is a hairline panel.
+- **Fix: on a phone the create tiles stay inside «امتحاناتي»** (§R11b.3).
+
+The setup zone above it («إعداد الامتحان — الذكاء الاصطناعي، الامتحانات المحفوظة، القوالب»):
+- **The zone and the «ماذا تريد في الامتحان؟» card are flat 8 px hairline panels.** The card loses its 3 px primary rule and the
+  decorative tinted square that sat over its model picker; the «AI» badge is a plain primary tile.
+
+**Not changed, on purpose:**
+- **Status colours:** the validation tones (an error card, «خطأ يمنع الاعتماد», warnings), the readiness verdict, the publish
+  timeline's states.
+- **The classic builder** (`structured-builder.css`, the `.builder-card` / `.question-card` shell): the teacher's opt-out layout
+  («الواجهة الكلاسيكية»), unchanged. The exam cover (`structured-cover.css`) and the student preview (`ExamPreview`) draw the exam
+  paper the student sees; they belong to R15.
+- **Markup and behaviour**, focus mode, the studio's touch targets, focus ring and reduced-motion rules.
+
+## R11b.2 Edit set
+
+- **`src/studio/studio.css`:**
+  - **Token block:** the eleven brand tokens (`--st-top*`, `--st-teal*`, `--st-canvas`) now name canonical `--eb-*` tokens, and
+    the card shadows are `none` (the active card keeps a 3 px `--eb-primary-050` ring). The names are kept, so every studio rule
+    follows. No literal colour is left in the sheet: it leaves the colour baseline (12 → 0).
+  - **One block appended at the end**, every rule scoped to `.st-studio` or `.st-home`: the bar's hairline, the step group, the
+    current step's pill and disc, 8 px cards, the home's flat layout and the phone fix. Tokens only, logical sides only.
+- **`src/builder-pro.css`:** one block appended after the R11a block, scoped to `.builder-setup-zone` / `.builder-setup-body`.
+- **`src/studio/studioDesign.21f2.test.tsx`** (updated explicitly, §5): its brand-pair contrast check read literal hex values from
+  the token block. It now resolves a token through `design-tokens.css`, and checks the pairs R11b draws: text and muted text on the
+  white bar (≥ 7 and ≥ 4.5), the accent text on its tint, a completed step's number on the accent disc, the current step's number
+  on its heading disc and the current step's label on its grey pill. The invariant (AA on every brand pair) is kept.
+- **`src/bank/bankSurroundings.ux-r11a.test.ts`** (updated explicitly): a block now runs to the next `/* UX-R` phase block, so R11b
+  can append to `builder-pro.css`; the R11a rules are pinned exactly as before.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **2 282** (`studio.css` 12 → 0).
+- **`src/studio/studio.ux-r11b.test.ts`:** new, 13 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** five scripted pages, `studio-home` (it fails when a create tile spills out of
+  «امتحاناتي») and a blank exam on each step: `studio-setup`, `studio-content`, `studio-review`, `studio-publish`.
+
+## R11b.3 Fail-first evidence
+
+**The phone create tiles spilled out of «امتحاناتي».**
+- **Cause:** `.st-home` is a grid with one implicit `auto` track, which never shrinks below its content. On a 390 px phone the
+  create grid kept its 334 px min-content width inside a 300 px content box.
+- **Effect:** the two tiles of each row ran 20 px past the inline-end edge of «امتحاناتي» (and past its grey box).
+- **Measured by the capture harness** (the `studio-home` check), on a build of each SHA:
+
+| Build | 390 px | 1024 px | 1440 px |
+|---|---|---|---|
+| `main` `2d19b070` (baseline) | **FAIL**: «a create tile spills 20 px out of «امتحاناتي»» | clean | clean |
+| R11b | clean | clean | clean |
+
+- **Fix:** `.st-home { grid-template-columns: minmax(0, 1fr) }`. **Guard:** the R11b suite «the home's single grid track may
+  shrink below its content…» (mutant M1).
+
+## R11b.4 Mutation proof
+
+Each mutant was planted alone in its file. The run covered `src/studio`, `src/bank`, the 21E.2 exam-list guards,
+`src/designSystem`, the colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | home: the grid track no longer shrinks (the phone tiles spill again) | KILLED | ux-r11b «the home's single grid track may shrink…» |
+| M2 | palette: the navy bar returns | KILLED | colour ratchet; ux-r11b «the bar is white with heading text…» |
+| M3 | palette: the turquoise accent returns | KILLED | same |
+| M4 | palette: the bar's muted text too light on the white bar | KILLED | 21F.2 «the brand pairs meet WCAG AA…»; ux-r11b |
+| M5 | cards: the resting card shadow returns | KILLED | ux-r11b «cards rest flat…» |
+| M6 | chrome: the bar loses its hairline | KILLED | ux-r11b «the bar sits on a hairline…» |
+| M7 | chrome: the current step back to a white pill (invisible on the white bar) | KILLED | ux-r11b «the current step is a grey pill…» |
+| M8 | chrome: the current step's number back to a white disc | KILLED | same |
+| M9 | cards: the 12 px radius returns | KILLED | ux-r11b «the section cards, question cards and review panels…» |
+| M10 | home: the exam card's 4 px coloured top rule returns | KILLED | ux-r11b «sits on the page…» |
+| M11 | home: one dark «فتح» per card again | KILLED | ux-r11b «each card's «فتح» is quiet…» |
+| M12 | home: the pressed filter back to a white pill | KILLED | same |
+| M13 | a literal colour outside the token block | KILLED | colour ratchet; 21F.2; ux-r11b |
+| M14 | an unscoped rule (reaches the classic builder) | KILLED | 21F.2 «every rule is scoped…»; ux-r11b |
+| M15 | a physical side in the studio block | KILLED | 21F.2 «uses logical properties only»; ux-r11b |
+| M16 | setup: the decorative square returns over the model picker | KILLED | ux-r11b «the zone and its «ماذا تريد في الامتحان؟» card…» |
+| M17 | setup: the 3 px primary rule returns | KILLED | same |
+| M18 | setup: the zone keeps its card shadow | KILLED | same |
+| M19 | setup: an unscoped prompt-card rule | KILLED | ux-r11b «scope every rule…» |
+
+19 / 19 KILLED, no TIMEOUT. `git status` showed only the R11b edit set before and after the campaign. Under the campaign's load,
+`studioSetupPublish.21f7` also failed in a few runs (a timing case; vitest does not process CSS, so no mutant can reach it); run
+alone it passes 9 / 9 twice. No mutant relies on it.
+
+## R11b.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `studio-home`, `studio-setup`, `studio-content`, `studio-review`, `studio-publish`, `bank`, `import` (1440 / 1024 / 390 px) | before: 20 / 21 clean (the phone tile spill); after: **21 / 21 clean** |
+| `npm test`, full root suite (`6c1b0273`) | 1 186 files, 14 123 / 14 124 tests. The one failure, `AppEvaluationFinish.9g` «G3/G5 the last student…», is outside R11b (no CSS is processed under vitest) and timing-sensitive in this container: run alone it failed once and passed once (8 / 8), and the same case failed on `main` `5c207529` here earlier the same day |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **2 282** (was 2 294; `studio.css` 12 → 0) |
+| Browser gates | none is triggered by `src/studio/**` or `builder-pro.css` (U.1 covers `page-parts.css`, `platform.css`, `src/ui/**`); the Quality Gate runs on every PR |
