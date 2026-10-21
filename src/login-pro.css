@@ -22,16 +22,17 @@
 }
 
 /* ---------- Brand / hero panel (start side in RTL = right) — Phase 10A redesign ---------- */
-/* Deep navy → blue gradient with one soft light source at the top corner, a masked network constellation that fades
-   out before the lower third (no lines across the bottom), the brand mark, and a centred text block: kicker, headline,
-   lead, three capability points and the two compact role chips. No animation; contrast ≥ 7:1 on every text. */
+/* Deep purple gradient (UX-R16: the reference palette; it was navy → blue) with one soft light source at the top corner, a
+   masked network constellation that fades out before the lower third (no lines across the bottom), the brand mark, and a
+   centred text block: kicker, headline, lead, three capability points and the two compact role chips. No animation; contrast
+   ≥ 7:1 on every text. Tokens only. */
 .auth-brand{
-  position:relative; overflow:hidden; isolation:isolate; color:#fff;
+  position:relative; overflow:hidden; isolation:isolate; color:var(--eb-surface);
   padding:44px 52px 52px; display:flex; flex-direction:column; gap:36px; box-sizing:border-box;
   background:
     radial-gradient(760px 540px at 90% -4%, color-mix(in srgb, var(--eb-primary-300) 46%, transparent), transparent 62%),
-    radial-gradient(620px 460px at -6% 104%, rgba(14,165,233,.20), transparent 60%),
-    linear-gradient(168deg,#0b1220 0%,#0f1e3d 46%,#10306b 100%);
+    radial-gradient(620px 460px at -6% 104%, color-mix(in srgb, var(--eb-primary-strong) 40%, transparent), transparent 60%),
+    linear-gradient(168deg,var(--eb-navy) 0%,var(--eb-primary) 52%,var(--eb-primary-strong) 100%);
 }
 /* full panel width at its intrinsic 640:800 aspect, anchored to the top and clipped by the panel (no preserveAspectRatio). */
 .auth-net{ position:absolute; inset-block-start:0; inset-inline:0; width:100%; height:auto; pointer-events:none; z-index:0; }
@@ -44,29 +45,29 @@
 }
 .auth-logo img{ display:block; width:100%; height:100%; object-fit:cover; }
 .auth-logo-text{ font-weight:800; font-size:15px; letter-spacing:.3px; line-height:1.25; }
-.auth-logo-text small{ display:block; color:#9fb4d8; font-weight:600; font-size:12px; }
+.auth-logo-text small{ display:block; color:var(--eb-primary-200); font-weight:600; font-size:12px; }
 
 .auth-hero{ margin-block:auto; max-width:540px; display:flex; flex-direction:column; align-items:flex-start; gap:16px; padding-block:12px 24px; }
 .auth-kicker{
   margin:0; display:inline-flex; align-items:center; padding:6px 12px; border-radius:var(--lg-pill);
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+  background:color-mix(in srgb, var(--eb-surface) 8%, transparent); border:1px solid color-mix(in srgb, var(--eb-surface) 14%, transparent);
   color:var(--eb-primary-200); font-size:12.5px; font-weight:700; letter-spacing:.2px;
 }
 .auth-hero h2{ margin:0; font-size:clamp(28px,3.1vw,40px); font-weight:800; line-height:1.3; letter-spacing:.2px; }
-.auth-lead{ margin:0; color:#cdd9f0; font-size:16px; line-height:1.85; max-width:48ch; }
+.auth-lead{ margin:0; color:var(--eb-primary-200); font-size:16px; line-height:1.85; max-width:48ch; }
 .auth-points{ list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
-.auth-points li{ display:flex; align-items:center; gap:10px; color:#e4ecfb; font-weight:600; font-size:14.5px; }
+.auth-points li{ display:flex; align-items:center; gap:10px; color:var(--eb-primary-050); font-weight:600; font-size:14.5px; }
 .auth-points li svg{
   flex:0 0 auto; width:28px; height:28px; padding:6px; box-sizing:border-box; border-radius:8px;
-  background:rgba(125,211,252,.14); color:#7dd3fc;
+  background:color-mix(in srgb, var(--eb-primary-200) 14%, transparent); color:var(--eb-primary-200);
 }
 /* role chips: two compact pills in a row — never full-width bars along the bottom. Scoped to the hero (higher
    specificity) so the legacy light-theme `.login-role-note` / `.login-role-note span` rules in platform.css never
    restyle them on the dark panel. */
-.auth-brand .auth-features.login-role-note{ display:flex; flex-wrap:wrap; justify-content:flex-start; gap:10px; margin-top:6px; color:#eaf1ff; font-size:13px; }
+.auth-brand .auth-features.login-role-note{ display:flex; flex-wrap:wrap; justify-content:flex-start; gap:10px; margin-top:6px; color:var(--eb-primary-050); font-size:13px; }
 .auth-brand .login-role-note .auth-feature{
   display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border-radius:var(--lg-pill);
-  background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16); color:#eaf1ff; font-weight:700; font-size:13px;
+  background:color-mix(in srgb, var(--eb-surface) 10%, transparent); border:1px solid color-mix(in srgb, var(--eb-surface) 16%, transparent); color:var(--eb-primary-050); font-weight:700; font-size:13px;
 }
 .auth-brand .login-role-note .auth-feature svg{ flex:0 0 auto; }
 
@@ -82,7 +83,7 @@
 .auth-roles{ display:flex; gap:8px; margin-bottom:22px; }
 .auth-role{
   flex:1; text-align:center; padding:9px 10px; border-radius:var(--lg-r);
-  background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid #d9e5fb; font-weight:700; font-size:13px;
+  background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid var(--eb-primary-100); font-weight:700; font-size:13px;
 }
 
 .auth-form{ display:flex; flex-direction:column; gap:16px; }
@@ -107,19 +108,17 @@
 
 .auth-error{
   display:flex; align-items:center; gap:8px;
-  background:var(--lg-danger-bg); color:#b42318; border:1px solid #f2cccc;
+  background:var(--lg-danger-bg); color:var(--eb-danger-tx); border:1px solid color-mix(in srgb, var(--eb-danger) 24%, var(--eb-surface));
   border-radius:var(--lg-r); padding:10px 13px; font-size:13px; font-weight:600;
 }
 
 .auth-submit{
   margin-top:2px; width:100%; border:0; cursor:pointer;
-  padding:14px; border-radius:var(--lg-r); color:#fff; font-weight:800; font-size:15px;
-  background:linear-gradient(135deg,var(--eb-primary),var(--eb-primary-strong));
-  box-shadow:0 12px 24px -12px color-mix(in srgb, var(--eb-primary) 65%, transparent);
-  transition:.18s var(--lg-ease);
+  padding:14px; border-radius:var(--lg-r); color:var(--eb-surface); font-weight:800; font-size:15px;
+  background:var(--eb-primary); box-shadow:none;                       /* UX-R16: the reference's flat primary (no gradient, no glow) */
+  transition:background-color .18s var(--lg-ease);
 }
-.auth-submit:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 16px 30px -12px color-mix(in srgb, var(--eb-primary) 70%, transparent); }
-.auth-submit:active:not(:disabled){ transform:translateY(0); }
+.auth-submit:hover:not(:disabled){ background:var(--eb-primary-strong); }   /* no lift */
 .auth-submit:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
 
 .auth-note{ margin:20px 0 0; text-align:center; color:var(--lg-muted); font-size:12.5px; }
@@ -159,3 +158,19 @@
 @media (max-width: 900px) {
   .auth-card { max-width: min(100%, 400px); }
 }
+
+/* ============================================================
+   UX-R16 — the login illustration takes the palette (docs/enterprise-ux-r0-redesign-foundation.md R16). Its colours were
+   blue attributes in App.tsx; they now come from the purple tokens here (an SVG presentation attribute would lose to these
+   rules anyway, so App.tsx carries classes only). The mask's white stops are luminance and stay in the markup.
+   ============================================================ */
+.auth-net .auth-net-glow stop{ stop-color:var(--eb-primary-300); }
+.auth-net .auth-net-rings{ stroke:var(--eb-surface); }
+.auth-net .auth-net-links{ stroke:var(--eb-primary-200); }
+.auth-net .auth-net-halos{ fill:var(--eb-primary-200); }
+.auth-net .auth-net-nodes{ fill:var(--eb-primary-050); }
+.auth-net .auth-net-hubs{ fill:var(--eb-surface); }
+/* The form card is the reference's flat 8 px hairline card with the heading colour (App.css's legacy .login-card gave it a 12 px
+   radius, a large shadow and a slate #0f172a heading); scoped to the login root so the legacy rules elsewhere stay. */
+.auth .auth-card{ border-radius:var(--eb-r); box-shadow:none; }
+.auth .auth-card h1{ color:var(--eb-text-heading); }

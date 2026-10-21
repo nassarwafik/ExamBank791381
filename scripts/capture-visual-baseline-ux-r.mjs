@@ -277,6 +277,14 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R16 — the login error state (a refused sign-in) and the static offline page the service worker serves.
+  { id: "login-error", role: "", run: async page => {
+    await page.locator('input[autocomplete="username"]').fill("harness");
+    await page.locator('input[type="password"]').fill("wrong-password");
+    await page.locator("form.auth-form").evaluate(f => f.requestSubmit());
+    await page.locator(".auth-error").waitFor({ timeout: 15000 });
+  } },
+  { id: "offline", role: "", run: async page => { await page.goto(origin + "/offline.html", { waitUntil: "networkidle" }); } },
   // UX-R12 — the grading workspace, opened from the gradebook's «تصحيح الآن» (the pending student), and its pending filter.
   ...[["review-workspace", null], ["review-pending", /يحتاج إلى تصحيح يدوي/]].map(([id, filter]) => ({ id, role: "teacher", nav: "الواجبات", run: async page => {
     await page.getByRole("button", { name: "فتح", exact: true }).first().click({ timeout: 15000 });
