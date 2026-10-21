@@ -69,6 +69,21 @@ const results = { ok: true, assignment: { assignmentId: "a1", title: ASSIGNMENTS
 const studentDashboard = { ok: true, student: { userId: "u1", code: "C-101", displayName: "أحمد الحسن", classId: "c1", shareAchievements: false }, classroom: { classId: "c1", name: "العاشر – أ", grade: "10", schoolYear: "2026" },
   assignments: ASSIGNMENTS.filter(a => a.classId === "c1").map(a => ({ assignmentId: a.assignmentId, title: a.title, status: "published", dueAt: a.dueAt, totalMarks: 100, questionCount: a.questionCount, maxAttempts: 3, attemptsUsed: 0, durationMinutes: 0 })), stats: { assigned: 2, completed: 0, average: 0 } };
 
+// UX-R4 — the Today hub's summary (GET /api/teacher-today), so the dashboard's live attention cards render with rows.
+const teacherToday = { ok: true, generatedAt: NOW, scope: { activeClasses: 3, students: 10, publishedAssignments: 4 },
+  attention: {
+    activeAttempts: { count: 1, items: [{ assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي", startedAt: "2026-10-20T08:21:00.000Z", status: "started", lastActivityAt: "2026-10-20T08:27:00.000Z" }] },
+    staleAttempts: { count: 0, items: [] },
+    dueSoon: { count: 1, items: [{ assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", dueAt: ASSIGNMENTS[1].dueAt, notSubmitted: 3, expected: 4 }] },
+    resultsUnreleased: { count: 0, items: [] },
+    openingSoon: { count: 0, items: [] },
+    notStarted: { count: 5, assignments: 2, items: [{ assignmentId: "a3", title: ASSIGNMENTS[2].title, className: "الحادي عشر – ب", dueAt: ASSIGNMENTS[2].dueAt, notStarted: 3, expected: 4 }, { assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", dueAt: ASSIGNMENTS[0].dueAt, notStarted: 2, expected: 6 }] },
+    pendingReview: { count: 12, assignments: 1, items: [{ assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", pendingReview: 12 }] },
+    unreadMessages: { total: 2, capped: false },
+  },
+  recent: [{ kind: "submitted", at: "2026-10-20T08:12:00.000Z", assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", studentId: "u1", studentName: "أحمد الحسن", percentage: 86 }, { kind: "started", at: "2026-10-20T08:21:00.000Z", assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي" }],
+  partial: [] };
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -78,6 +93,7 @@ function api(req, res) {
   if (p === "/api/platform-session") return role ? send(200, { ok: true, role, displayName: role === "teacher" ? "أ. محمد" : "أحمد الحسن" }) : send(401, { ok: false });
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
+  if (p === "/api/teacher-today") return send(200, teacherToday);
   if (p === "/api/classrooms") return send(200, { ok: true, classes: CLASSES });
   if (p === "/api/students" && u.searchParams.get("profileUserId")) return send(200, { ok: true, profile: null });
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
