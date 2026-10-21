@@ -463,3 +463,37 @@
    8 px radius. */
 .eb-assign-composer { border-color: var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
 .eb-assign-composer .eb-source-card, .eb-assign-composer .eb-policy-group, .eb-assign-composer .library-item { border-radius: var(--eb-r); }
+
+/* UX-R6b — the assignment page (overview, gradebook, question analysis) in the reference look (docs/enterprise-ux-r0-redesign-
+   foundation.md §3.2). Presentation only: no grading, status or release logic, markup, names or order changes; every pinned rule
+   above is unchanged and these rules come last (they win by order at the same specificity). No stacking-context property, no
+   transition, no new coarse block, no colour literal. The section switch already takes the reference segmented look from R6a
+   (`.eb-assignments .eb-segmented`). */
+/* The page is a flat 8 px hairline panel: no card shadow, no primary inline-start bar. */
+.eb-assign-detail { border: 1px solid var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
+/* The headline figures (and the analysis figures) are ONE hairline strip each: cells on a 1 px gap over the hairline colour,
+   tiles flat with a transparent 1 px border (the 21E.2 invariant) and their tone accent bar. The doubled scope outranks the
+   legacy `.gradebook-stats article` / `article span` rules (tinted tile, 11 px label) that reached these tiles. */
+.eb-assign-detail .eb-assign-stats .eb-stat-grid.is-primary, .eb-assign-detail .eb-item-analysis .eb-stat-grid.is-secondary { margin: 0; gap: 1px; background: var(--eb-line); border: 1px solid var(--eb-line); border-radius: var(--eb-r); overflow: hidden; }
+.eb-assign-detail .gradebook-stats .eb-stat-card { background: var(--eb-surface); border-color: transparent; border-radius: 0; box-shadow: none; }
+.eb-assign-detail .gradebook-stats .eb-stat-label { color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.eb-assign-detail .eb-assign-stats .eb-stat-grid.is-primary .eb-stat-value { color: var(--eb-text-heading); }
+/* Overview: the settings card is flat 8 px. */
+.eb-assign-detail .eb-assign-settings { border-radius: var(--eb-r); }
+/* Gradebook controls sit on the page (no tinted band); the status filters and the question-sort read as sub-navigation: quiet
+   text items, the pressed one a grey pill with bold text (aria-pressed and weight mark it, never colour alone). */
+.eb-assign-detail .eb-gradebook-controls { padding: 0; background: transparent; border: 0; border-radius: 0; }
+.eb-assign-detail .gradebook-chip { border-color: transparent; border-radius: var(--eb-r-sm); background: transparent; color: var(--eb-text-heading); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-medium); }
+.eb-assign-detail .gradebook-chip:hover { border-color: transparent; background: var(--eb-surface-2); }
+.eb-assign-detail .gradebook-chip[aria-pressed="true"], .eb-assign-detail .gradebook-chip.active { background: var(--eb-chrome-active); border-color: transparent; color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+/* Quiet tables: a white (still opaque, the header is sticky) header of small muted labels, hairline rows, a grey hover; the
+   selected row and the Today-drill row keep their tint (they carry state). The analysis table takes the same card. */
+.eb-assign-detail .eb-gradebook-table-wrap, .eb-assign-detail .eb-item-analysis .students-table-wrap { border: 1px solid var(--eb-line); border-radius: var(--eb-r); }
+.eb-assign-detail .eb-gradebook-table th, .eb-assign-detail .item-analysis-table th { background: var(--eb-surface); color: var(--eb-muted); font-weight: var(--eb-fw-semibold); }
+.eb-assign-detail .eb-gradebook-table tbody tr:hover td, .eb-assign-detail .item-analysis-table tbody tr:hover td { background: var(--eb-surface-2); }
+.eb-assign-detail .eb-gradebook-table tbody tr.is-selected td, .eb-assign-detail .eb-gradebook-table tbody tr.is-drill-focus td { background: var(--eb-primary-050); }
+@media (max-width: 767px) {
+  /* Phone: the gradebook is one card per student (21G.4); its wrapper stays borderless there. */
+  .eb-assign-detail .eb-gradebook-table-wrap { border: 0; border-radius: 0; }
+  .eb-assign-detail .eb-gradebook-table tbody tr.is-selected td, .eb-assign-detail .eb-gradebook-table tbody tr.is-drill-focus td { background: transparent; }
+}
