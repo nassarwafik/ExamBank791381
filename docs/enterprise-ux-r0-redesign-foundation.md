@@ -1888,3 +1888,101 @@ alone it passes 9 / 9 twice. No mutant relies on it.
 | `git diff --check` | clean |
 | colour ratchet | **2 282** (was 2 294; `studio.css` 12 → 0) |
 | Browser gates | none is triggered by `src/studio/**` or `builder-pro.css` (U.1 covers `page-parts.css`, `platform.css`, `src/ui/**`); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R12 — The grading workspace
+
+**Owner direction (2026-10-21):** start R12 once R11b (#406) merged. It depends on R6b (merged), so it branches from `main`
+`6da77067` as `feature/ux-r12-review`. No other R phase is open.
+
+## R12.1 What changes for the user
+
+The grading workspace («تصحيح الآن» / «عرض التصحيح» in the gradebook) opens a student's attempt with its summary, filters, a
+question navigator and the question cards with the grade rows. No reference mockup shows it, so R12 applies the record's general
+patterns (§3.2). **Presentation only:** every grade, answer key, status, the `reviewRequired` route, the save body and the unsaved-
+change guard are unchanged.
+
+- **The attempt summary is one hairline strip** (twelve grey boxes before); its cells draw their own hairlines.
+- **The selected attempt and the selected filter read as a grey pill** (a raised white tab and a navy fill before). The
+  «يحتاج إلى تصحيح يدوي» filter keeps its warn tone: it is a status, and the most important filter of the page.
+- **The navigator is a white 8 px panel; the question cards are flat 8 px cards** without a resting shadow. The current question
+  keeps its 2 px primary ring, and every status edge (correct, wrong, partial, pending) is unchanged.
+- **The decorative gradient bar before each question number is gone;** the save button loses its glow.
+- **The internal eyebrow «Manual Review · Phase 2.0D» is no longer shown** (an English development label above the exam title;
+  the markup keeps it, so this is reversible by deleting one rule if the owner wants it back).
+- **Fix: on a phone the exam title keeps the header's row** (§R12.3).
+
+**Not changed, on purpose:** the status tones (`rv-status`, `rv-mode`, the choice ✓ / ✗, the technical-hold banner, the
+needs-review edge), the answer and key panels' colours, markup and behaviour, the 21G.7 touch targets, the UX-8 dvh rules.
+
+## R12.2 Edit set
+
+- **`src/review-workspace.css`:** one block appended at the end (after the 21G.7 coarse block, which the a11y gate reads as the
+  sheet's last coarse block), every rule scoped to `.rv-workspace`. Tokens only, logical sides only, no stacking context, no
+  transition; its phone rules are in a `max-width: 767px` block. Its two `#fff` became `var(--eb-surface)`.
+- **`src/review-pro.css`:** exact-value literals name their tokens (no colour changes): `#fff` → `--eb-surface` (7),
+  `#15803d` → `--eb-success-tx`, `#b45309` → `--eb-warn-tx`, `#b42318` → `--eb-danger-tx`, `#fef2f2` → `--eb-danger-bg`.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **2 266** (`review-pro.css` 25 → 11, `review-workspace.css` 33 → 31).
+- **`src/review/reviewWorkspace.ux-r12.test.ts`:** new, 11 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a `GET /api/assignment-review` mock (the reviewWorkspace.ux003 fixture shapes: a
+  correct and a wrong choice, two open answers pending a manual mark, a partial and an unanswered question) and two scripted pages,
+  `review-workspace` and `review-pending` (the pending filter), opened from the gradebook's «تصحيح الآن». Each fails when the exam
+  title wraps while narrower than half the header.
+
+## R12.3 Fail-first evidence
+
+**The exam title was squeezed on a phone.**
+- **Cause:** the header (`.review-top`) is a non-wrapping flex row of the title block, the student navigation (21G.5) and
+  «إغلاق». Below 768 px the navigation asks for the full width (`inline-size: 100%`), but the row never wraps, so all three shrink
+  together and the title block is left a sliver.
+- **Measured by the capture harness** (the `review-*` check), on a build of each SHA:
+
+| Build | 390 px | 1024 px | 1440 px |
+|---|---|---|---|
+| `main` `6da77067` (baseline) | **FAIL**: «the review title is squeezed to 72 of 332 px (3 lines)» | clean | clean |
+| R12 | clean | clean | clean |
+
+- **Fix:** below 768 px the header wraps; the title block takes the width beside «إغلاق» and the student navigation moves to its
+  own row (`order: 2`). **Guard:** the R12 suite «the header wraps below 768 px…» (mutants M1–M3).
+
+## R12.4 Mutation proof
+
+Each mutant was planted alone in its file. The run covered `src/review`, the three AssignmentReview suites (R14 grading, 21G.5
+navigation, 21E.3 technical hold), the 21G.7 a11y gate, `ux2-shell-foundation`, the colour ratchet and `src/designSystem`. The
+file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | phone: the header no longer wraps (the title is squeezed again) | KILLED | ux-r12 «the header wraps below 768 px…» |
+| M2 | phone: the title block no longer takes the remaining width | KILLED | same |
+| M3 | phone: the student navigation stays between the title and «إغلاق» | KILLED | same |
+| M4 | summary: back to separate grey boxes | KILLED | ux-r12 «the attempt summary is ONE hairline strip…» |
+| M5 | summary: the cells lose their own hairlines | KILLED | same |
+| M6 | attempt tabs: the selected attempt back to a raised white tab | KILLED | ux-r12 «the selected attempt is a grey pill…» |
+| M7 | filters: the selected filter back to the navy fill | KILLED | ux-r12 «scopes every rule… never restyles a status tone» |
+| M8 | filters: the restyle reaches the pending (warn) filter | KILLED | same |
+| M9 | navigator: back to the grey panel | KILLED | ux-r12 «… the navigator a white 8 px panel» |
+| M10 | questions: the card shadow returns | KILLED | ux-r12 «question cards are flat 8 px cards…» |
+| M11 | questions: the current question loses its ring | KILLED | same |
+| M12 | status: a correct question's edge restyled | KILLED | ux-r12 «… never restyles a status tone» |
+| M13 | the internal eyebrow shows again | KILLED | ux-r12 «the internal «Manual Review · Phase 2.0D» eyebrow is not shown…» |
+| M14 | a colour literal in the block | KILLED | colour ratchet; ux-r12 |
+| M15 | an unscoped rule (reaches every `.platform-primary`) | KILLED | ux-r12 «scopes every rule to the workspace…» |
+| M16 | a stacking context in the block | KILLED | ux-r12 «adds no stacking context…» |
+| M17 | review-pro: a converted literal returns | KILLED | colour ratchet; ux-r12 «exact-value literals become tokens» |
+| M18 | the block gains a coarse-pointer media (it would become the sheet's last coarse block) | KILLED | 21G.7 a11y gate; ux-r12 |
+
+18 / 18 KILLED, no TIMEOUT. `git status` showed only the R12 edit set before and after the campaign.
+
+## R12.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `review-workspace`, `review-pending` (1440 / 1024 / 390 px) | before: 4 / 6 clean (the squeezed title on the phone); after: **6 / 6 clean** |
+| `npm test`, full root suite (`8d47dbd9`) | **1 187 / 1 187 files, 14 133 / 14 133 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **2 266** (was 2 282) |
+| Browser gates | none is triggered by the review sheets (no workflow path filter covers them); the Quality Gate runs on every PR |
