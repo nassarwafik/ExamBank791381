@@ -1,6 +1,6 @@
 // UX-R11a — the exam bank, «استيراد من ملف», «مراجعات النشر» and «سجل النشاط» in the reference look
 // (docs/enterprise-ux-r0-redesign-foundation.md R11a). Presentation only: markup, roles and behaviour are pinned by the UX-6c /
-// 14B / 8B suites. These guards pin the UX-R11a blocks (last in their sheets, scoped to their page, free of stacking contexts,
+// 14B / 8B suites. These guards pin the UX-R11a blocks (once in their sheets, scoped to their page, free of stacking contexts,
 // transitions, colour literals and physical sides) and the three fixes: the bank's and the import page's phone overflow, and
 // the review inbox loading the builder's base classes it renders.
 import { describe, it, expect } from "vitest";
@@ -8,10 +8,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const read = (...p: string[]) => readFileSync(path.join(process.cwd(), "src", ...p), "utf8");
+// A block runs to the next phase block (UX-R11b appends its own after it in builder-pro.css) or to the end of the sheet.
 const block = (src: string) => {
   const at = src.lastIndexOf("/*", src.indexOf("UX-R11a"));
   expect(src.indexOf("UX-R11a"), "UX-R11a block").toBeGreaterThan(-1);
-  return { at, body: src.slice(at).replace(/\/\*[\s\S]*?\*\//g, "") };
+  const next = src.indexOf("/* UX-R", at + 2);
+  return { at, body: src.slice(at, next > -1 ? next : undefined).replace(/\/\*[\s\S]*?\*\//g, "") };
 };
 /** The declarations of the rule whose selector list is exactly `sel` (at a line start, optionally indented) inside a block. */
 const rule = (b: { body: string }, sel: string) => {
@@ -50,7 +52,7 @@ describe("UX-R11a — the fixes", () => {
 });
 
 describe("UX-R11a — the blocks themselves", () => {
-  it("each is the last thing in its sheet and appears once", () => {
+  it("each appears once in its sheet; only a later phase block may follow it", () => {
     for (const src of [bankSrc, importSrc, inboxSrc, partsSrc]) expect(src.indexOf("UX-R11a")).toBe(src.lastIndexOf("UX-R11a"));
   });
 
