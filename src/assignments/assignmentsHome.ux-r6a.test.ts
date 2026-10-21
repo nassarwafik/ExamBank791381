@@ -8,7 +8,9 @@ import path from "node:path";
 
 const all = readFileSync(path.join(process.cwd(), "src", "assignments-pro.css"), "utf8");
 const at = all.indexOf("/* UX-R6a");
-const block = all.slice(at).replace(/\/\*[\s\S]*?\*\//g, "");
+// The R6a block runs to the next phase's block (UX-R6b, the assignment page and gradebook, appended after it) or to the end.
+const next = all.indexOf("/* UX-R6b", at);
+const block = all.slice(at, next === -1 ? undefined : next).replace(/\/\*[\s\S]*?\*\//g, "");
 /** The declarations of the rule whose selector list is exactly `sel` inside the R6a block. */
 const rule = (sel: string) => {
   const i = block.indexOf("\n" + sel + " {");
@@ -17,7 +19,7 @@ const rule = (sel: string) => {
 };
 
 describe("UX-R6a — the block itself", () => {
-  it("is the last thing in the sheet (after the 21G.7 coarse block), so it wins by order", () => {
+  it("comes after the 21G.7 coarse block (so it wins by order), followed only by the R6b block", () => {
     expect(at).toBeGreaterThan(all.lastIndexOf("@media (pointer: coarse)"));
     expect(at).toBeGreaterThan(all.indexOf(".eb-assign-detail .students-table-wrap[tabindex]:focus-visible"));
   });
