@@ -84,6 +84,20 @@ const teacherToday = { ok: true, generatedAt: NOW, scope: { activeClasses: 3, st
   recent: [{ kind: "submitted", at: "2026-10-20T08:12:00.000Z", assignmentId: "a1", title: ASSIGNMENTS[0].title, className: "العاشر – أ", studentId: "u1", studentName: "أحمد الحسن", percentage: 86 }, { kind: "started", at: "2026-10-20T08:21:00.000Z", assignmentId: "a2", title: ASSIGNMENTS[1].title, className: "الحادي عشر – ب", studentId: "u7", studentName: "ليث فادي" }],
   partial: [] };
 
+// UX-R9a — the learning book page's «قراءة صفوفي» (the shapes of the ClassReadingPanel.l4 fixtures): class c1 carries the book
+// with two published units, so the panel shows its KPI strip and tables. Served only while a learning scene is captured, so the
+// shared classes payload (and every other page's capture) stays as it is.
+const LEARNING_COURSE = "791381";
+const LEARNING_MODULES = [["791381-m01", "الوحدة الأولى"], ["791381-m02", "الوحدة الثانية"], ["791381-m03", "الوحدة الثالثة"]].map(([moduleId, title], i) => ({ moduleId, title, order: i + 1 }));
+const LEARNING = {
+  classes: { ok: true, classes: CLASSES.map(c => c.classId === "c1" ? { ...c, learningMaterials: [{ courseId: LEARNING_COURSE, visibleModuleIds: ["791381-m01", "791381-m02"] }] } : c) },
+  catalog: { ok: true, courses: [{ courseId: LEARNING_COURSE, title: "شبكات الاتصال", subject: "أنظمة محوسبة", modules: LEARNING_MODULES }] },
+  reading: { ok: true, classId: "c1", courseId: LEARNING_COURSE, generatedAt: NOW, totalPages: 20,
+    modules: [{ ...LEARNING_MODULES[0], total: 10, started: 4, completed: 2, averageRead: 58 }, { ...LEARNING_MODULES[1], total: 10, started: 2, completed: 0, averageRead: 12 }],
+    students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
+};
+let scene = "";
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -94,6 +108,9 @@ function api(req, res) {
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
   if (p === "/api/teacher-today") return send(200, teacherToday);
+  if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
+  if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
+  if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
   if (p === "/api/classrooms") return send(200, { ok: true, classes: CLASSES });
   if (p === "/api/students" && u.searchParams.get("profileUserId")) return send(200, { ok: true, profile: null });
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
@@ -130,7 +147,22 @@ const TEACHER_PAGES = [
   ["messages", "الرسائل"], ["projects", "المشاريع"], ["reports", "التقارير"], ["games", "الألعاب التعليمية"], ["bank", "بنك الامتحانات"],
   ["import", "استيراد من ملف"], ["reviews", "مراجعات النشر"], ["audit", "سجل النشاط"],
 ];
-const PAGES = part === "gallery" ? [] : [...TEACHER_PAGES.map(([id, nav]) => ({ id, role: "teacher", nav })), { id: "student-portal", role: "student" }, { id: "login", role: "" }]
+// UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
+const SCRIPTED = [
+  { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
+    await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-lm-batch-details").first().waitFor({ timeout: 15000 });
+    await page.getByRole("button", { name: "عرض قراءة الصفوف" }).click({ timeout: 15000 });
+    await page.locator(".eb-lm-cr-kpis").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0)); // the full-page shot starts at the top (the top bar is sticky)
+  } },
+  { id: "learning-search", role: "teacher", nav: "المواد التعليمية", run: async page => {
+    await page.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }).click({ timeout: 15000 });
+    await page.getByRole("searchbox").fill("VLAN", { timeout: 15000 });
+    await page.locator("[data-search-hit]").first().waitFor({ timeout: 15000 });
+  } },
+];
+const PAGES = part === "gallery" ? [] : [...TEACHER_PAGES.map(([id, nav]) => ({ id, role: "teacher", nav })), ...SCRIPTED, { id: "student-portal", role: "student" }, { id: "login", role: "" }]
   .filter(pg => !only.length || only.includes(pg.id));
 const VIEWPORTS = [["desktop", { width: 1440, height: 900 }, false], ["tablet", { width: 1024, height: 768 }, false], ["phone", { width: 390, height: 844 }, true]]
   .filter(([n]) => !onlyVp.length || onlyVp.includes(n));
@@ -140,7 +172,7 @@ const record = { label, dist, generatedAt: new Date().toISOString(), pages: {} }
 for (const [vpName, viewport, touch] of VIEWPORTS) {
   fs.mkdirSync(path.join(out, vpName), { recursive: true });
   for (const pg of PAGES) {
-    role = pg.role;
+    role = pg.role; scene = pg.scene || "";
     const errors = [];
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);
@@ -155,6 +187,7 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
         await page.locator("#eb-sidebar").getByRole("button", { name: pg.nav, exact: true }).first().click({ timeout: 15000 });
         await page.waitForLoadState("networkidle");
       }
+      if (pg.run) { await pg.run(page); await page.waitForLoadState("networkidle"); }
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(500);
     } catch (e) { reached = false; errors.push("navigation: " + String(e).split("\n")[0]); }
