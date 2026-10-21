@@ -6,6 +6,7 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import NotificationBell, { type NotificationCenterProps } from "../notifications/NotificationBell";
 import InstallAppEntry from "../pwa/InstallAppEntry";
 import "../ui/ui.css";
+import "../ui/kit.css";
 import "../shell.css";
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps

@@ -1,4 +1,5 @@
 import {Fragment,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
+import { chartPalette } from "./projects/chartPalette";
 import {TodaySlot} from "./teacher/todaySlot";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
@@ -90,7 +91,9 @@ const maskIdentity=(value:string)=>value?"•••••"+value.slice(-4):"—"
 const trendText=(delta:number)=>delta>=5?"يتحسن":delta<=-5?"يتراجع":"مستقر";
 const trendIcon=(delta:number)=>delta>=5?"↑":delta<=-5?"↓":"→";
 const REDUCED_MOTION_QUERY="(prefers-reduced-motion: reduce)";
-const GRID_COLOR="rgba(148,163,184,.18)";
+/** UX-R3 — the dashboard charts read the shared token palette (projects/chartPalette: deep purple, its lavender step, semantic
+ *  hues) instead of blue literals; Chart.js needs resolved strings, so it is read once per chart mount. */
+const useChartPalette=()=>useMemo(()=>chartPalette(),[]);
 const ATTENTION_PREVIEW=5;
 
 /** Chart.js animation config honouring the OS reduced-motion preference (read once per mount, updated on change). */
@@ -117,29 +120,33 @@ const chartAnimation=(reduce:boolean,duration:number)=>reduce?false as const:{du
    canvas. The series handed to Chart.js are unchanged. */
 function LineChart({items,student=false}:{items:AssignmentTrend[];student?:boolean}){
  const reduce=usePrefersReducedMotion();
+ const palette=useChartPalette();
  const points=trendPoints(items);
  const seriesLabel=student?"علامة الطالب":"متوسط العلامات";
- const data=useMemo(()=>({labels:points.map(x=>x.title),datasets:[{label:seriesLabel,data:points.map(x=>clampPct(x.average)),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.13)",pointBackgroundColor:"#2563eb",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:4,pointHoverRadius:7,borderWidth:3,tension:.38,fill:true}]}),[points,seriesLabel]);
- const options:ChartOptions<"line">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1050),interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>(student?" العلامة: ":" المتوسط: ")+Number(i.raw||0).toFixed(1)+"%"}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}}}),[reduce,student]);
+ const data=useMemo(()=>({labels:points.map(x=>x.title),datasets:[{label:seriesLabel,data:points.map(x=>clampPct(x.average)),borderColor:palette.primary,backgroundColor:palette.primarySoft,pointBackgroundColor:palette.primary,pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:4,pointHoverRadius:7,borderWidth:3,tension:.38,fill:true}]}),[points,seriesLabel,palette]);
+ const options:ChartOptions<"line">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1050),interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>(student?" العلامة: ":" المتوسط: ")+Number(i.raw||0).toFixed(1)+"%"}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:palette.grid}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}}}),[reduce,student,palette]);
  return <div className="analytics-chart-canvas analytics-chart-line"><Line data={data} options={options} aria-hidden="true"/></div>;
 }
 function DonutChart({submitted,missing,pendingReview}:{submitted:number;missing:number;pendingReview:number}){
  const reduce=usePrefersReducedMotion();
+ const palette=useChartPalette();
  const total=Math.max(1,submitted+missing);
- const data=useMemo(()=>({labels:["تم التسليم","لم يُسلّم"],datasets:[{data:[submitted,missing],backgroundColor:["#2563eb","#e2e8f0"],borderColor:["#fff","#fff"],borderWidth:4,hoverOffset:8}]}),[submitted,missing]);
+ const data=useMemo(()=>({labels:["تم التسليم","لم يُسلّم"],datasets:[{data:[submitted,missing],backgroundColor:[palette.primary,palette.status.not_started],borderColor:["#fff","#fff"],borderWidth:4,hoverOffset:8}]}),[submitted,missing,palette]);
  const options:ChartOptions<"doughnut">=useMemo(()=>({responsive:true,maintainAspectRatio:false,cutout:"72%",animation:chartAnimation(reduce,1150),plugins:{legend:{display:false},tooltip:{rtl:true}}}),[reduce]);
  return <div className="analytics-donut-layout"><div className="analytics-chart-canvas analytics-chart-donut"><Doughnut data={data} options={options} aria-hidden="true"/><div className="analytics-donut-center"><strong>{fmtPct(submitted/total*100)}</strong><span>تسليم</span></div></div><div className="analytics-legend"><span><i className="legend-dot submitted"/>تم التسليم <b>{submitted}</b></span><span><i className="legend-dot missing"/>لم يُسلّم <b>{missing}</b></span><span><i className="legend-dot review"/>تحتاج مراجعة <b>{pendingReview}</b></span></div></div>;
 }
 function GradeDistributionChart({items,student=false}:{items:Array<{label:string;count:number}>;student?:boolean}){
  const reduce=usePrefersReducedMotion();
- const data=useMemo(()=>({labels:items.map(x=>x.label),datasets:[{label:student?"عدد الواجبات":"عدد الطلاب",data:items.map(x=>x.count),backgroundColor:"rgba(37,99,235,.78)",borderRadius:8,borderSkipped:false}]}),[items,student]);
- const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1000),plugins:{legend:{display:false},tooltip:{rtl:true}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:GRID_COLOR}},x:{grid:{display:false}}}}),[reduce]);
+ const palette=useChartPalette();
+ const data=useMemo(()=>({labels:items.map(x=>x.label),datasets:[{label:student?"عدد الواجبات":"عدد الطلاب",data:items.map(x=>x.count),backgroundColor:palette.series[0],borderRadius:8,borderSkipped:false}]}),[items,student,palette]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:chartAnimation(reduce,1000),plugins:{legend:{display:false},tooltip:{rtl:true}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:palette.grid}},x:{grid:{display:false}}}}),[reduce,palette]);
  return <div className="analytics-chart-canvas analytics-chart-bar"><Bar data={data} options={options} aria-hidden="true"/></div>;
 }
 function ClassComparisonChart({items,onSelect}:{items:ClassComparison[];onSelect:(id:string)=>void}){
  const reduce=usePrefersReducedMotion();
- const data=useMemo(()=>({labels:items.map(x=>x.name),datasets:[{label:"متوسط الصف",data:items.map(x=>clampPct(x.average)),backgroundColor:"rgba(14,165,233,.78)",borderRadius:8,borderSkipped:false}]}),[items]);
- const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1050),onClick:(_e,els)=>{const i=els[0]?.index;if(i!==undefined&&items[i])onSelect(items[i].classId)},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},y:{grid:{display:false}}}}),[items,onSelect,reduce]);
+ const palette=useChartPalette();
+ const data=useMemo(()=>({labels:items.map(x=>x.name),datasets:[{label:"متوسط الصف",data:items.map(x=>clampPct(x.average)),backgroundColor:palette.series[1],borderRadius:8,borderSkipped:false}]}),[items,palette]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1050),onClick:(_e,els)=>{const i=els[0]?.index;if(i!==undefined&&items[i])onSelect(items[i].classId)},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:palette.grid}},y:{grid:{display:false}}}}),[items,onSelect,reduce,palette]);
  return <div className="analytics-chart-canvas analytics-chart-class"><Bar data={data} options={options} aria-hidden="true"/></div>;
 }
 /* Phase 21H.5 — every canvas is aria-hidden: the ChartCard figure around it (role="img") carries the chart's name and summary,
@@ -150,9 +157,10 @@ function ClassPicker({items,selectedClassId,onSelect}:{items:ClassComparison[];s
 }
 function TopicChart({items}:{items:TopicAnalytics[]}){
  const reduce=usePrefersReducedMotion();
+ const palette=useChartPalette();
  const visible=topicPoints(items);
- const data=useMemo(()=>({labels:visible.map(x=>x.topic),datasets:[{label:"متوسط الموضوع",data:visible.map(x=>clampPct(x.average)),backgroundColor:visible.map(x=>Number(x.average||0)<60?"rgba(239,68,68,.76)":Number(x.average||0)>=80?"rgba(22,163,74,.76)":"rgba(245,158,11,.76)"),borderRadius:7,borderSkipped:false}]}),[visible]);
- const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1100),plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:GRID_COLOR}},y:{grid:{display:false}}}}),[reduce]);
+ const data=useMemo(()=>({labels:visible.map(x=>x.topic),datasets:[{label:"متوسط الموضوع",data:visible.map(x=>clampPct(x.average)),backgroundColor:visible.map(x=>Number(x.average||0)<60?palette.scale.low:Number(x.average||0)>=80?palette.scale.high:palette.scale.mid),borderRadius:7,borderSkipped:false}]}),[visible,palette]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:chartAnimation(reduce,1100),plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:palette.grid}},y:{grid:{display:false}}}}),[reduce,palette]);
  return <div className="analytics-chart-canvas analytics-chart-topic"><Bar data={data} options={options} aria-hidden="true"/></div>;
 }
 const emptyChart=(text:string)=><div className="analytics-empty-chart">{text}</div>;
@@ -548,27 +556,27 @@ function TeacherDashboard({token}:DashboardProps){
   {!isStudent&&<section className="eb-dash-section" aria-labelledby="eb-followup-title">
    <SectionHeader level={2} id="eb-followup-title" title="طلاب يحتاجون متابعة" count={data.followUp.length} description="عاجل: يحتاج تدخلًا فوريًا · متابعة: يحتاج مراقبة"/>
    <div className="eb-followup-grid">
-    <article className="analytics-card eb-span-2"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>الصف</th><th>المعدل</th><th>غير مسلّم</th><th>الاتجاه</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>{data.followUp.map(item=><tr key={item.userId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(item.userId)}>{item.displayName}</button><small>{maskIdentity(item.identityNumber)}</small></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{item.missing}</td><td><span className={"analytics-trend-badge "+item.trend}>{trendIcon(item.trendDelta)} {trendText(item.trendDelta)} {item.trendDelta?Math.abs(item.trendDelta)+"%":""}</span></td><td>{item.reasons.join("، ")}</td><td><span className={"analytics-risk "+item.severity}>{item.severity==="high"?"عاجل":"متابعة"}</span></td></tr>)}{!data.followUp.length&&<tr><td colSpan={7}>لا توجد حالات متابعة بارزة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
+    <article className="analytics-card is-flush eb-span-2"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>الصف</th><th>المعدل</th><th>غير مسلّم</th><th>الاتجاه</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>{data.followUp.map(item=><tr key={item.userId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(item.userId)}>{item.displayName}</button><small>{maskIdentity(item.identityNumber)}</small></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{item.missing}</td><td><span className={"analytics-trend-badge "+item.trend}>{trendIcon(item.trendDelta)} {trendText(item.trendDelta)} {item.trendDelta?Math.abs(item.trendDelta)+"%":""}</span></td><td>{item.reasons.join("، ")}</td><td><span className={"analytics-risk "+item.severity}>{item.severity==="high"?"عاجل":"متابعة"}</span></td></tr>)}{!data.followUp.length&&<tr><td colSpan={7}>لا توجد حالات متابعة بارزة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
     <article className="analytics-card"><SectionHeader level={3} title="أفضل تحسن"/><div className="analytics-improvers">{data.topImprovers.map((item,index)=><button type="button" key={item.userId} onClick={()=>void openProfile(item.userId)}><span className="analytics-rank">{index+1}</span><div><strong>{item.displayName}</strong><small>{item.className}</small></div><b>↑ {item.trendDelta}%</b></button>)}{!data.topImprovers.length&&<div className="analytics-empty-chart">نحتاج نتائج متتابعة أكثر لقياس التحسن.</div>}</div></article>
    </div>
   </section>}
 
-  <section className="eb-dash-section" aria-labelledby="eb-assignments-title">
+  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-assignments-title">
    <SectionHeader level={2} id="eb-assignments-title" title={isStudent?"واجبات الطالب":"متابعة الواجبات"} description={isStudent?"افتح أي واجب لعرض نتيجة الطالب ومحاولاته":"افتح أي واجب لعرض نتائج طلابه ومحاولاتهم"}/>
-   <article className="analytics-card"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>الصف</th><th>{isStudent?"العلامة":"المتوسط"}</th><th>{isStudent?"الحالة":"التسليم"}</th>{!isStudent&&<th>غير مسلّم</th>}<th>مراجعة</th><th>الموعد</th></tr></thead><tbody>{[...data.assignmentTrend].reverse().map(item=><tr key={item.assignmentId}><td><button type="button" className="analytics-link" onClick={()=>void openAssignment(item)}>{item.title}</button></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{isStudent?(item.submitted?"تم التسليم":"لم يُسلّم"):fmtPct(item.completionRate)}</td>{!isStudent&&<td>{item.missing}</td>}<td>{isStudent?(item.pendingReview?"بانتظار التصحيح":"—"):item.pendingReview}</td><td>{item.dueAt?fmtDate(item.dueAt):"—"}</td></tr>)}{!data.assignmentTrend.length&&<tr><td colSpan={isStudent?6:7}>لا توجد واجبات منشورة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
+   <article className="analytics-card is-flush"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>الصف</th><th>{isStudent?"العلامة":"المتوسط"}</th><th>{isStudent?"الحالة":"التسليم"}</th>{!isStudent&&<th>غير مسلّم</th>}<th>مراجعة</th><th>الموعد</th></tr></thead><tbody>{[...data.assignmentTrend].reverse().map(item=><tr key={item.assignmentId}><td><button type="button" className="analytics-link" onClick={()=>void openAssignment(item)}>{item.title}</button></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{isStudent?(item.submitted?"تم التسليم":"لم يُسلّم"):fmtPct(item.completionRate)}</td>{!isStudent&&<td>{item.missing}</td>}<td>{isStudent?(item.pendingReview?"بانتظار التصحيح":"—"):item.pendingReview}</td><td>{item.dueAt?fmtDate(item.dueAt):"—"}</td></tr>)}{!data.assignmentTrend.length&&<tr><td colSpan={isStudent?6:7}>لا توجد واجبات منشورة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
   </section>
 
-  <section className="eb-dash-section" aria-labelledby="eb-insights-title">
+  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-insights-title">
    <SectionHeader level={2} id="eb-insights-title" title="مؤشرات ذكية للمعلم"/>
    <article className="analytics-card"><div className="analytics-insights">{data.insights.map((item,index)=><article key={index} className={"analytics-insight "+item.tone}><div className="analytics-insight-icon" aria-hidden="true">{insightIcon(item.tone)}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}{!data.insights.length&&<div className="analytics-empty-chart">لا توجد مؤشرات ضمن النطاق الحالي.</div>}</div></article>
   </section>
 
-  <section className="eb-dash-section" aria-labelledby="eb-achievements-title">
+  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-achievements-title">
    <SectionHeader level={2} id="eb-achievements-title" title="إنجازات الطلاب الأخيرة" count={achievements.length>0?achievements.length:undefined}/>
    <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&!achievementsLoading&&!achievementsError&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}{achievementsLoading&&<div className="analytics-empty-chart" role="status">جارٍ تحميل الإنجازات...</div>}</div></article>
   </section>
 
-  <section className="eb-dash-section" aria-labelledby="eb-ai-title">
+  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-ai-title">
    <SectionHeader level={2} id="eb-ai-title" title={aiLabel} description={aiDescription}/>
    <article className="analytics-card"><button type="button" className="analytics-ai-button primary" onClick={()=>void runAiAnalysis()} disabled={aiBusy}><IconSparkles size={16}/>{aiBusy&&aiVisible?"جارٍ التحليل...":aiLabel}</button>{aiError&&aiVisible&&<div className="platform-error" role="alert">{aiError}</div>}{aiAdvice&&aiVisible&&adviceBlock(aiAdvice)}</article>
   </section>

@@ -17,7 +17,7 @@ const tokenHex = (name: string) => {
 };
 
 describe("UX-R1 — chart fallback colours mirror design-tokens.css", () => {
-  for (const name of ["--eb-primary", "--eb-primary-strong", "--eb-info", "--eb-success", "--eb-warn", "--eb-danger", "--eb-line-2", "--eb-faint", "--eb-muted"]) {
+  for (const name of ["--eb-primary", "--eb-primary-strong", "--eb-primary-300", "--eb-info", "--eb-success", "--eb-warn", "--eb-danger", "--eb-line-2", "--eb-faint", "--eb-muted"]) {
     it(name, () => {
       expect(tokenColor(name).toLowerCase()).toBe(tokenHex(name));
     });

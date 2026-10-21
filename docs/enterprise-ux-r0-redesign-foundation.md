@@ -613,3 +613,376 @@ test) failed once.
 - That test renders `TeacherPlatform` alone, none of the shell.
 - Measured afterwards: 0 / 8 failures in isolation on `main` `a70350c1` and 0 / 8 on the R2 head.
 - It is recorded here and not patched (`AGENTS.md` §12).
+
+---
+
+# Phase UX-R3 — The component kit
+
+**Owner direction (2026-10-20):** start R3. R2 had already merged (PR #392), so R3 branches from `main` `0ed8b9cb` as
+`feature/ux-r3-kit`, with no stacking.
+
+## R3.1 What changes for the user
+
+**On every page now**, because these shared primitives are used everywhere:
+- **Buttons** have a hairline border and a neutral grey hover; quiet buttons use ink text.
+- **Stat cards** are flat: hairline border, 8 px radius, no shadow. Their thin accent bar stays.
+- **Chart cards** take the same card look, with a card-sized title.
+- **Dialogs and empty states** use the 8 px radius.
+- **The «⋮» menu** is the reference popover: full-width rows, 14 px text, a soft lift, a hairline border.
+- **Progress bars** are thinner, and their second series is the lavender step.
+- **Every dashboard chart** draws in the redesign palette: deep purple, the lavender step, and the semantic danger / warn /
+  success scale for topic averages. **No blue is left in the teacher charts.**
+
+**New components, ready for the page phases (R4 onward)**, shown in the gallery:
+
+| Component | What it is |
+|---|---|
+| `ui/Card.tsx` | hairline container; a titled card is a region named by its heading |
+| `ui/ListRows.tsx` (`ListRows` / `ListRow` / `RowAction`) | the reference's ≥ 44 px rows split by hairlines: icon, title, muted context, meta, status, inline action. A real list; `RowAction` is a real button named by its text («تعديل» by default) |
+| `ui/SubNav.tsx` | settings-style text navigation: a named `<nav>`, labelled groups, the current item a grey pill with `aria-current="page"`, counts kept in the name |
+| `ui/KpiStrip.tsx` | one card split into cells by vertical hairlines. A description list, so each value is read with its label |
+| `ui/Segmented.tsx` | a WAI-ARIA radio group: one Tab stop; arrows follow the reading direction (in RTL the left arrow goes to the next option); Home / End |
+| `ui/Tooltip.tsx` | the dark hint. WCAG 1.4.13: hover **and** focus, it stays while the pointer is on it, Escape dismisses it without moving focus. It *describes* the control, never names it |
+
+**Not included:**
+- **No cascading submenu.** No page needs one yet, and the grouped menu (`.eb-menu-group` / `-label` / `-sep`) already covers the
+  reference popover. It can come with the first page that needs it.
+- **The exam-question chart palette (`src/charts/chartTheme.ts`, ECharts) is left unchanged on purpose.** It colours charts
+  *inside questions*, where a question's text may name a series by its colour («الخط الأزرق»), and question version families are
+  immutable. It is content, not chrome.
+
+## R3.2 Edit set
+
+**New components and their stylesheet:**
+- `src/ui/Card.tsx`, `ListRows.tsx`, `SubNav.tsx`, `KpiStrip.tsx`, `Segmented.tsx`, `Tooltip.tsx`: new.
+- `src/ui/kit.css`: new, imported by both shells after `ui.css`.
+  - Token-only: zero colour literals, as the ratchet requires of a new sheet.
+  - Logical properties only.
+  - 44 px targets on touch and below 1024 px.
+  - A canonical focus ring on every interactive part.
+  - `[hidden]` honoured on the tooltip.
+
+**Restyled primitives:**
+- `src/ui/ui.css`: buttons, stat card (flat; the pinned accent bar kept), dialog, empty state, progress bar, chart card, chip.
+- `src/page-parts.css`: the menu trigger and panel. `overflow:auto`, `overscroll-behavior:contain`, the
+  `calc(var(--eb-z-modal) + 1)` layer and every 44 px rule are unchanged, and no transition was added, so the reduced-motion
+  lists stay complete.
+
+**Chart theme:**
+- `src/projects/chartPalette.ts`:
+  - the second series is `--eb-primary-300`, replacing the info blue;
+  - a new `scale { low, mid, high }` comes from the danger / warn / success tokens;
+  - `--eb-primary-300` is added to the fallback copy.
+- `src/TeacherDashboard.tsx`: the five charts read `chartPalette()` instead of literals (`#2563eb`, `rgba(37,99,235,…)`, sky,
+  red / green / amber, slate grid), with the palette added to each chart's memo dependencies.
+
+**Gallery:** `browser-harness/ux-r-gallery.tsx` shows the new components (12 sections).
+
+**Tests:**
+- New:
+  - `src/ui/kit.ux-r3.test.tsx` (18 tests: semantics, keyboard, WCAG 1.4.13, kit.css guards);
+  - `src/projects/chartPalette.ux-r3.test.ts` (5 tests).
+- Updated:
+  - `src/projects/chartPalette.tokenMirror.ux-r1.test.ts`: adds `--eb-primary-300` to the mirror list.
+  - `src/TeacherDashboard.test.tsx`: the topic-colour pin. It compared the old rgba literals; it now checks the same threshold
+    mapping (< 60 → `scale.low`, ≥ 80 → `scale.high`, otherwise `scale.mid`). The mapping was the invariant; the literals were
+    the look.
+
+**Not changed:**
+- any component's markup, class names or props;
+- every pinned invariant listed in the constraint map: StatCard's DOM and accent bar, the menu's layer and scroll containment,
+  the phone / coarse 44 px rules, the reduced-motion lists, the focus-ring tokens, the dialog's first fixed rule;
+- ActionMenu's consumer list;
+- the colour ratchet (2 298).
+
+## R3.3 Fail-first evidence
+
+Not applicable: R3 adds components and restyles; it fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R3.4 Mutation proof
+
+Each mutant was run against `src/ui`, both chart palette tests, `TeacherDashboard.test.tsx` and the colour ratchet. Each file was
+restored byte-for-byte (SHA-256), and `git status` was clean afterwards.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | `RowAction` loses `type="button"` | KILLED | kit «RowAction is a real button…» |
+| M2 | SubNav marks every item current | KILLED | kit «exactly the current item carries aria-current=page…» |
+| M3 | Segmented ignores RTL | KILLED | kit «in RTL the LEFT arrow goes to the next option…» |
+| M4 | Tooltip: Escape no longer dismisses | KILLED | kit «… Escape dismisses it without moving focus» |
+| M5 | SubNav loses its 44 px touch target | KILLED | kit «touch screens and the drawer layout get 44 px targets…» |
+| M6 | a colour literal in kit.css | KILLED | colour ratchet (a new sheet must be 0); kit «is token-only…» |
+| M7 | chart series[1] back to the info blue | KILLED | chartPalette.ux-r3 «series: the deep purple, then its lavender step…» |
+| M8 | dashboard reintroduces a blue literal | KILLED | chartPalette.ux-r3 «no hard-coded chart colour remains…» |
+| M9 | Tooltip names the control instead of describing it | KILLED | kit Tooltip tests |
+| M10 | KpiStrip labels are not `<dt>` | KILLED | kit «a description list: each value paired with its label…» |
+
+**A test-hygiene fix found by M3.** The RTL test restored its `getComputedStyle` mock only at the end of its body, so a failing
+assertion leaked the mock into later tests: a Tooltip test failed under M3 too. The restore now runs in `afterEach`, and a re-run
+of M3 is killed by the RTL test alone.
+
+## R3.5 Browser gates (CI workflows, run locally with CI's tools: playwright-core 1.55.0, axe-core 4.10.2)
+
+A change to `src/ui/**` triggers two CI workflows. Both were run on the R3 build:
+- **L.8 reader journey, axe and touch targets:** «L.8 gate passed».
+- **U.1 class bar, roster, student sheet and axe:** «U.1 gate passed».
+
+## R3.6 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture (14 pages × 3 viewports + gallery) | 42 / 45 clean; the three recorded phone overflows only (§7) |
+| `npm test`, full root suite | **1 174 / 1 174 files, 14 012 / 14 012 tests** |
+| `npm run lint` | exit 0. The two `TeacherDashboard.tsx` warnings left (lines 276 / 301, about `loadDashboard` / `loadAchievements`) predate R3 |
+| `npm run build` (tsc -b + bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 298, unchanged (kit.css counts 0) |
+
+---
+
+# Phase UX-R4 — The dashboard
+
+**Owner direction (2026-10-21):** start R4. R3 (PR #393) was still open, waiting for the owner's merge and an Azure preview slot.
+R4 depends on it, so R4 branches from the R3 head `eab451aa` as `feature/ux-r4-dashboard`. This is the same stacking the owner
+chose for R1 on top of R0.
+
+**Reconciliation.** The owner merged R3 into `main` (`af7f9aab`) while R4 was being validated. R4 took `main` in with a normal
+merge commit (`b3e7bfc4`, `git merge origin/main`); there were no conflicts.
+- The merged tree is byte-identical to the validated R4 commit `fda35744`: same tree SHA `1ade5d7f`.
+- The full validation was re-run on the merge commit anyway (§R4.5).
+- The PR diff against `main` now shows R4 alone.
+- Baselines: R3 head `eab451aa` → `main` `af7f9aab`.
+
+## R4.1 What changes for the user
+
+«لوحة المتابعة» takes the mockup's look. The page keeps its content, its order and every number. Presentation only:
+
+- **The toolbar sits on the page, not in a card.**
+  - The class and student selects have hairline borders.
+  - The period control is the reference segmented group: one border, hairlines between the options, and the pressed option in
+    grey and bold.
+  - «تحديث», «تصدير CSV» and «طباعة» are quiet hairline buttons.
+- **Each KPI row is one hairline strip, split into cells by hairlines**, like the mockup's headline numbers.
+  - The headline values read in ink, and each label carries a plain ink icon.
+  - Each cell keeps its thin tone accent bar (pinned since 21E.2).
+- **Attention cards, in the live hub and in «يحتاج إلى انتباهك», are flat 8 px cards.**
+  - Their rows run edge to edge and are split by hairlines; each row is at least 44 px tall.
+  - Each row shows its title over its muted context, with a quiet chevron at the end.
+  - The count is a small tag on the tone's tint.
+  - The thin tone bar at the top stays.
+- **The Today hub's quick actions are flat hairline tiles**, each with an ink icon on a grey chip. The recent-activity card is
+  flat, with 44 px rows.
+- **Single-card sections are the card itself, with the title inside**, like the mockup's «مقارنة الصفوف» card. These are
+  «متابعة الواجبات», «مؤشرات ذكية للمعلم», «إنجازات الطلاب الأخيرة» and the AI section. Section titles outside a card are one step
+  quieter (17 px).
+- **Tables are quiet:** a white header of small muted labels, hairline rows and a grey hover. A card that holds only a table runs
+  the rows edge to edge.
+- **Insights are hairline rows.** The tone sits in the icon's tinted circle, not in a full-width fill.
+- **The chart cards' side notes** («آخر 4 واجبات», «الأضعف أولًا») are muted text, not purple pills.
+- **The drill panel** has a hairline border and the 8 px radius.
+
+**Not changed, on purpose:**
+- **No greeting heading and no «إنشاء واجب» button in the page head.** Both are new behaviour: a personalised title, and a
+  shortcut into the assignment wizard. They are left to an owner decision; the shell's page title stays «لوحة المتابعة».
+- **The section order is unchanged.** The mockup puts its trend chart beside the attention card. The dashboard's h2 order and
+  the hub-before-analytics order are pinned (`TeacherDashboard.test.tsx`, `TeacherDashboard.scope.21h2.test.tsx`), and they
+  carry the 21H.2 product decision.
+- **The class comparison stays a bar chart with the class picker**, not the mockup's progress rows. It has a data-table
+  equivalent and a picker, and both are pinned.
+- **The accent bars on KPI tiles and attention cards stay.** They are pinned (21E.2), and they carry the tone.
+
+## R4.2 Edit set
+
+**`src/dashboard-pro.css`.** Every pinned rule is kept verbatim: the 21H.5 touch block and its anchor comment, the phone-block
+strings, the reduced-motion list, the accent bars, the muted-text rules and the print block.
+- New rules:
+  - the toolbar without its card;
+  - the segmented group;
+  - `.eb-dash-panel`;
+  - the KPI strip: a 1 px gap over the hairline colour, so the dividers follow 4 / 2 / 1 columns without per-breakpoint
+    borders;
+  - flat cards and the attention rows, with a chevron drawn by borders. Its `content` is empty, so it adds nothing to a row's
+    accessible name;
+  - `.analytics-card.is-flush`;
+  - quiet tables;
+  - insight rows, improver rows and the drill panel.
+- **The shared `.analytics-view-tabs` block now uses tokens of the same value.**
+  - `#fff` → `var(--eb-surface)`;
+  - `#fff3` → `color-mix(in srgb, var(--eb-surface) 20%, transparent)`;
+  - `#fef2f2` / `#b42318` → `var(--eb-danger-bg)` / `var(--eb-danger-tx)`.
+  - The file holds 0 colour literals.
+  - **Colour ratchet: 2 298 → 2 294.** The baseline was rewritten by the script.
+- **A KPI tile in the strip keeps its uniform 1 px border, made transparent.** The 21E.2 Chromium gate
+  (`scripts/capture-visual-gate-21e2-workspace.mjs`) reads it as «a straight accent bar, never a thicker inline-start border».
+  A first attempt with `border:0` failed that gate locally, before any push.
+
+**`src/teacher/teacherToday.css`:**
+- plain rows: no grey box, 44 px high;
+- quick-action tiles: flat, with the grey icon chip;
+- the recent card: flat, with 44 px rows;
+- the end padding beside a row's «تذكير».
+
+**`src/TeacherDashboard.tsx`:** classes only.
+- `eb-dash-panel` on the four single-card sections.
+- `is-flush` on the two table-only cards (follow-up and assignments).
+
+**`scripts/capture-visual-baseline-ux-r.mjs`:** a `/api/teacher-today` fixture, so the captures show the live hub with rows
+instead of its error state.
+
+**Tests:** a new file, `src/dashboard.ux-r4.test.tsx`, with 9 tests. Two are DOM tests: which sections are panels, and which
+cards are flush. Seven guard the R4 rules in both stylesheets. No existing test changed.
+
+## R4.3 Fail-first evidence
+
+Not applicable: R4 restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R4.4 Mutation proof
+
+Each mutant was planted alone. The run covered the R4 suite plus the pinned dashboard suites:
+- `dashboard.ux-r4`, `premiumWorkspace.21e2`, `TeacherDashboard`, `TeacherDashboard.attention`, `dashboardGate.21h5`,
+  `ux2-shell-foundation`, and the colour ratchet.
+
+Each file was restored byte-for-byte (SHA-256), and `git status` was clean afterwards.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | KPI strip loses its hairline dividers (1 px gap → spaced tiles) | KILLED | ux-r4 «each KPI row is ONE hairline strip…» |
+| M2 | KPI tile border set to 0 (the 21E.2 «uniform 1 px border» invariant) | KILLED | ux-r4 «each KPI row is ONE hairline strip…» |
+| M3 | the attention chevron becomes generated text (it would be read into the row's name) | KILLED | ux-r4 «attention rows: … the chevron is decoration only» |
+| M4 | attention row loses its 44 px height | KILLED | ux-r4 «attention rows: … ≥ 44 px…» |
+| M5 | pressed period option back to the old white chip with a shadow | KILLED | ux-r4 «the period control is the reference segmented group…», «cards are flat…» |
+| M6 | the attention card's shadow returns | KILLED | ux-r4 «cards are flat 8 px…» |
+| M7 | a colour literal back in the shared view tabs | KILLED | colour ratchet; ux-r4 «the shared view tabs keep their look with tokens…» |
+| M8 | insights keep their full tone fill (the tone reset removed) | KILLED | ux-r4 «… insights carry no full tint» |
+| M9 | the attention card's accent bar removed | KILLED | premiumWorkspace.21e2 «attention cards: a ::before bar…» |
+| M10 | «متابعة الواجبات» is no longer a panel (its title back outside the card) | KILLED | ux-r4 «the four single-card sections ARE the card…» (DOM) |
+| M11 | the follow-up table card is no longer flush | KILLED | ux-r4 «the two table-only cards run flush…» (DOM) |
+| M12 | Today quick-action icon back on the purple tint | KILLED | ux-r4 «Today hub: flat quick-action tiles…» |
+| M13 | Today plain row back to the grey boxed chip | KILLED | ux-r4 «Today hub: … plain rows» |
+
+13 / 13 KILLED, no TIMEOUT. Every file was SHA-256-verified as restored, and `git status` showed only the R4 edit set before and
+after the campaign.
+
+## R4.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture (14 pages × 3 viewports) | 39 / 42 clean; the three recorded phone overflows only (§7: students 391, bank 458, import 405). The dashboard is clean at all three viewports |
+| 21E.2 Chromium gate on the dashboard (KPI and quick-action columns, accent bars, nav) | every CHECK passes at 1280, 150 %, 200 % and 390 px touch |
+| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests**: on `fda35744`, and again on the reconciled merge `b3e7bfc4` (lint, build and `git diff --check` re-run there too) |
+| `npm run lint` | exit 0. The `TeacherDashboard.tsx` warnings at lines 276 / 301 predate R4 |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294 (was 2 298) |
+
+---
+
+# Phase UX-R5 — Classes and students
+
+**Owner direction (2026-10-21):** start R5. R5 depends on R3, which is merged, so it branches from `main` `af7f9aab` as
+`feature/ux-r5-students`. It ran in parallel with R4 (PR #394); the two share no source file, and no unmerged work was copied.
+
+**Reconciliation.** R4 merged into `main` (`76df1cdf`) just after R5's first push (`97091881`). R5 took `main` in with a normal
+merge commit (`git merge origin/main`).
+- **Conflict:** one, in this record, where both phases had appended a section at the end. It was resolved by keeping both, R4
+  first.
+- **Re-validation:** the full suite, lint, typecheck, build and the U.1 gate were re-run on the reconciled head (§R5.5).
+- **Baselines:** `af7f9aab` → `76df1cdf`.
+
+**Owner decision on the layout (2026-10-21).** The mockup puts the classes in a narrow side column. The U.1 hardening phase chose
+the opposite on purpose: a class bar ABOVE a full-width roster, because a 260–300 px side column squeezed the table. That
+choice is pinned by the U.1 Chromium gate (classes above the roster, roster ≥ 90 % of the width) and by
+`classesStudents.u1.test.tsx`. Offered both options, the owner chose **to keep the U.1 layout in the reference look**. No U.1
+pin changes.
+
+## R5.1 What changes for the user
+
+- **The class bar reads as a sub-navigation.**
+  - Class items have no card border of their own and turn grey on hover.
+  - The selected class is a grey pill with a bold name.
+  - Each item's «⋯» is quiet (no box) until hovered or opened.
+  - The «الصفوف النشطة / الأرشيف» switch is the reference segmented group: one border, hairlines between the options, the
+    pressed one grey and bold. This applies in this workspace only; the shared base is unchanged for other pages.
+- **The five summary figures are one hairline strip.**
+  - Each figure is a cell, and the pressed figure (the active filter) is a grey cell.
+  - Each figure's tone is now a small dot before its label, replacing the 3 px coloured side stripe. The label names the figure;
+    the dot is decoration.
+  - The strip stays one row down to the phone; there it is 2 columns, and an odd last figure spans the row.
+- **The roster is a flat 8 px card of hairline rows** with a quiet white header. The sticky header keeps an opaque white fill.
+- **Search field and status select:** hairline borders.
+- **Other cards in the workspace use the 8 px radius:** the classes pane, the bulk bar, the credential box, the loading
+  skeleton, and the learning-materials panel (which also loses its shadow).
+
+**Fix: the phone overflow recorded in R0 §7 (students, 391 > 390 px).**
+- **Root cause:** the roster search `<input>` had no width. Its intrinsic size (the input's default size × the Arabic web font)
+  widened the phone toolbar column 1 px past the screen.
+- **Fix:** it now fills its field, like the class filter already did.
+
+**Not changed:**
+- **The U.1 layout** (owner decision above).
+- **The «إضافة طالب» popover of the mockup.** The current button opens the existing dialog; a popover would be new behaviour.
+- **Phone roster cards and the printed login cards.**
+- **All markup and every pinned rule.**
+
+## R5.2 Edit set
+
+**`src/page-parts.css`.** Only this stylesheet changed, and only in its UX-4 (literal-free) part. Every pinned string is kept:
+U.1 / U.2, the hardening rules, the touch-target blocks, the reduced-motion list and the menu layer.
+
+**Tests:** a new file, `src/students/classesStudents.ux-r5.test.ts`, with 9 guards. No existing test changed.
+
+**Colour ratchet:** R5 adds no literal. It is 2 294 after the merge, the count R4 set on `main`.
+
+## R5.3 Fail-first evidence (the overflow)
+
+The visual harness (`scripts/capture-visual-baseline-ux-r.mjs`) measures `scrollWidth` at 390 px.
+
+| Build | Result at 390 px |
+|---|---|
+| Baseline `af7f9aab` | `CHECK FAIL phone/students — horizontal overflow 391>390` |
+| R5 with only the one `inline-size:100%` line removed | `391>390` again |
+| R5 head | `CHECK PASS phone/students` |
+
+The isolation run proves that this line, and nothing else in R5, is the fix. `src/page-parts.css` was restored afterwards
+(SHA-256 identical). The R5 guard pins the line, and mutant M1 shows the guard kills its removal.
+
+## R5.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/students` (including U.1, U.2, S.3, S.4 and R5), `ux2-shell-foundation`,
+the hardening and UX-4 platform suites, and the colour ratchet. Each file was restored byte-for-byte (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the roster search box loses its width (the overflow returns) | KILLED | ux-r5 «the roster search box fills its field…» |
+| M2 | class items get their card border back | KILLED | ux-r5 «class items have no box of their own…» |
+| M3 | the selected class back to the purple tint with a shadow | KILLED | ux-r5 «… the selected class is a grey pill…» |
+| M4 | the summary strip loses its hairline dividers | KILLED | ux-r5 «cells sit on a 1 px gap…» |
+| M5 | the tone dot becomes generated text | KILLED | ux-r5 «the tone is a decorative dot…» |
+| M6 | the 3-column wrap at ≤ 1279 px returns (an empty hairline cell) | KILLED | ux-r5 «no wrap that would leave an empty hairline cell…» |
+| M7 | phone: the odd last figure no longer spans | KILLED | ux-r5 «no wrap…» |
+| M8 | the workspace's pressed view-switch option back to a white chip | KILLED | ux-r5 «the view switch is the reference segmented group…» |
+| M9 | the restyle leaks into the SHARED segmented base (other pages) | KILLED | ux-r5 «… the shared base is unchanged for other pages» |
+| M10 | the roster header back to a grey band | KILLED | ux-r5 «the roster is a flat 8 px card…» |
+| M11 | the roster card back to the large radius | KILLED | ux-r5 «the roster is a flat 8 px card…» |
+| M12 | U.1 broken: a 260 px side column for the classes | KILLED | u1 «one column at every width…»; ux-r5 «the U.1 layout is untouched…» |
+| M13 | the class «⋯» is boxed again | KILLED | ux-r5 «the «⋯» of a class item is quiet…» |
+
+13 / 13 KILLED, no TIMEOUT. `git status` showed only the R5 edit set before and after the campaign.
+
+## R5.5 Browser gate, visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| U.1 gate (CI workflow, run locally with CI's tools: playwright-core 1.55.0, axe-core 4.10.2) | «U.1 gate passed» at 390 / 834 / 1024 / 1440. Covers the bar above the roster, chips inside the cards, the phone strip, touch targets, axe, the student sheet and S.4 |
+| Visual capture (14 pages × 3 viewports) | **40 / 42 clean** (was 39 / 42): the students overflow is fixed. Left: bank 458 and import 405, which go to R11a |
+| `npm test`, full root suite | **1 175 / 1 175 files, 14 021 / 14 021 tests** on the second run on `97091881`. On the reconciled head (with R4): **1 176 / 1 176 files, 14 030 / 14 030 tests**; lint, build, `git diff --check` and the U.1 gate were re-run there and passed |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+
+**One timing failure, not R5's.** The first full run failed one test: `src/App.credentialsLeave.s3.test.tsx`, «no leave confirm».
+- The failure is a `waitFor` with the default 1 s timeout in a full-App DOM test, under suite load.
+- It passed 3 / 3 in isolation, and the whole suite passed on the second run.
+- R5 changes only CSS, which Vitest does not process (happy-dom never sees `page-parts.css`), so the change cannot affect that
+  test.
+- It is recorded here and not patched (`AGENTS.md` §12).

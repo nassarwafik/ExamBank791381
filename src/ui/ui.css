@@ -78,8 +78,8 @@
   position: relative; overflow: hidden;
   display: flex; flex-direction: column; gap: var(--eb-space-1);
   min-width: 0; padding: var(--eb-space-4) var(--eb-space-4);
-  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg);
-  box-shadow: var(--eb-sh-sm);
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+  box-shadow: none; /* UX-R3 — flat: the hairline border carries the card, as in the reference */
 }
 .eb-stat-card::before {
   content: ""; position: absolute; inset-inline: 0; inset-block-start: 0; height: 3px;
@@ -133,19 +133,20 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-button {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2);
   min-height: 40px; padding: 0 var(--eb-space-4);
-  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm);
-  background: var(--eb-surface); color: var(--eb-text);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-r-sm);
+  background: var(--eb-surface); color: var(--eb-text-heading);
   font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
   transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
 }
-.eb-button:hover { background: var(--eb-primary-050); border-color: var(--eb-primary); color: var(--eb-primary-strong); }
+/* UX-R3 — the reference's quiet buttons: a neutral grey hover, never a tinted outline. */
+.eb-button:hover { background: var(--eb-surface-2); border-color: var(--eb-border-strong); color: var(--eb-text-heading); }
 .eb-button:disabled { opacity: .55; cursor: default; }
 .eb-button.is-primary { background: var(--eb-primary); border-color: var(--eb-primary); color: var(--eb-surface); }
 .eb-button.is-primary:hover { background: var(--eb-primary-strong); border-color: var(--eb-primary-strong); color: var(--eb-surface); }
 .eb-button.is-danger { background: var(--eb-danger); border-color: var(--eb-danger); color: var(--eb-surface); }
 .eb-button.is-danger:hover { background: var(--eb-danger-tx); border-color: var(--eb-danger-tx); color: var(--eb-surface); }
-.eb-button.is-quiet { border-color: transparent; background: transparent; color: var(--eb-primary-strong); }
-.eb-button.is-quiet:hover { background: var(--eb-primary-050); }
+.eb-button.is-quiet { border-color: transparent; background: transparent; color: var(--eb-text-heading); }
+.eb-button.is-quiet:hover { background: var(--eb-surface-2); border-color: transparent; }
 .eb-button.is-small { min-height: 34px; padding: 0 var(--eb-space-3); font-size: var(--eb-fs-13); }
 .eb-link-button {
   display: inline-flex; align-items: center; gap: var(--eb-space-1);
@@ -165,7 +166,7 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-dialog {
   position: relative; display: flex; flex-direction: column; min-width: 0;
   width: min(640px, 100%); max-height: min(90vh, 960px);
-  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-lg);
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r); box-shadow: var(--eb-sh-lg);
   color: var(--eb-text);
 }
 .eb-dialog.size-sm { width: min(440px, 100%); }
@@ -226,7 +227,7 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 /* ---------- UX-4: EmptyState ---------- */
 .eb-empty {
   display: flex; flex-direction: column; align-items: center; gap: var(--eb-space-2); text-align: center;
-  padding: var(--eb-space-6) var(--eb-space-4); border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface-2);
+  padding: var(--eb-space-6) var(--eb-space-4); border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r); background: var(--eb-surface);
 }
 .eb-empty.is-compact { padding: var(--eb-space-4); }
 .eb-empty-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
@@ -241,22 +242,22 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-progress { display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 0; }
 .eb-progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--eb-space-2); font-size: var(--eb-fs-13); color: var(--eb-muted); font-weight: var(--eb-fw-semibold); }
 .eb-progress-value { color: var(--eb-text-heading); font-variant-numeric: tabular-nums; }
-.eb-progress-track { height: 10px; border-radius: var(--eb-pill); background: var(--eb-line); overflow: hidden; }
-.eb-progress.size-sm .eb-progress-track { height: 7px; }
+.eb-progress-track { height: 8px; border-radius: var(--eb-pill); background: var(--eb-chrome-active); overflow: hidden; }
+.eb-progress.size-sm .eb-progress-track { height: 6px; }
 .eb-progress.size-sm .eb-progress-head { font-size: var(--eb-fs-12); }
 .eb-progress-fill { display: block; height: 100%; border-radius: var(--eb-pill); background: var(--eb-primary); transition: width var(--eb-dur) var(--eb-ease); }
 .eb-progress-fill.tone-series-1 { background: var(--eb-primary); }
-.eb-progress-fill.tone-series-2 { background: var(--eb-info); }
+.eb-progress-fill.tone-series-2 { background: var(--eb-primary-300); }
 .eb-progress-fill.tone-series-3 { background: var(--eb-warn); }
 .eb-progress-fill.tone-series-4 { background: var(--eb-success); }
 .eb-progress-fill.tone-success { background: var(--eb-success); }
 @media (prefers-reduced-motion: reduce) { .eb-progress-fill { transition: none; } }
 
 /* ---------- UX-6a: ChartCard ---------- */
-.eb-chart-card { display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0; padding: var(--eb-space-4); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-xs); }
+.eb-chart-card { display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0; padding: var(--eb-space-4) var(--eb-space-5); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r); box-shadow: none; }
 .eb-chart-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--eb-space-2); }
 .eb-chart-card-text { min-width: 0; flex: 1 1 auto; }
-.eb-chart-card-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+.eb-chart-card-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); }
 .eb-chart-card-description { margin: var(--eb-space-1) 0 0; color: var(--eb-muted); font-size: var(--eb-fs-13); }
 .eb-chart-card-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
 .eb-chart-card-figure { position: relative; min-width: 0; }
@@ -272,7 +273,7 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 /* ---------- UX-6a: chip toggle + disclosure chevron ---------- */
 .eb-chip-button {
   display: inline-flex; align-items: center; gap: var(--eb-space-1); min-height: 34px; padding: 0 var(--eb-space-3);
-  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--eb-text-secondary);
+  border: 1px solid var(--eb-line-2); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--eb-text-secondary);
   font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); cursor: pointer;
   transition: background var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
 }

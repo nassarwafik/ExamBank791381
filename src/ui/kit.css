@@ -1,0 +1,124 @@
+/* ============================================================
+   UX-R3 — the component kit of the redesign (docs/enterprise-ux-r0-redesign-foundation.md §3.2):
+   Card · ListRows / ListRow / RowAction · SubNav · KpiStrip · Segmented · Tooltip.
+   Tokens only (--eb-*), logical properties only (RTL-first), no z-index literal, no stacking context on page columns.
+   Loaded by both shells after ui.css.
+   ============================================================ */
+
+/* ---------- Card: hairline, 8 px radius, flat ---------- */
+.eb-card { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r); min-width: 0; }
+.eb-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-3); padding: var(--eb-space-4) var(--eb-space-5) var(--eb-space-2); }
+.eb-card-title { margin: 0; font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); color: var(--eb-text-heading); }
+.eb-card-aside { display: flex; align-items: center; gap: var(--eb-space-2); color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.eb-card-body { padding: var(--eb-space-2) var(--eb-space-5) var(--eb-space-5); }
+.eb-card.is-flush .eb-card-body { padding: 0; }
+
+/* ---------- ListRows: ≥ 44 px rows split by hairlines ---------- */
+.eb-list { list-style: none; margin: 0; padding: 0; }
+.eb-list-row {
+  display: flex; align-items: center; gap: var(--eb-space-4);
+  min-height: 44px; padding: var(--eb-space-2) var(--eb-space-5);
+  border-block-start: 1px solid var(--eb-line);
+}
+.eb-list-row:first-child { border-block-start: 0; }
+.eb-list-icon { flex: 0 0 auto; display: inline-flex; color: var(--eb-text-heading); }
+.eb-list-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: var(--eb-space-2); flex-wrap: wrap; }
+.eb-list-title { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-medium); color: var(--eb-text-heading); overflow-wrap: anywhere; }
+.eb-list-context, .eb-list-meta { font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.eb-list-meta { flex: 0 0 auto; }
+.eb-list-status, .eb-list-action { flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--eb-space-2); }
+
+.eb-row-action {
+  display: inline-flex; align-items: center; gap: var(--eb-space-2);
+  min-height: 36px; padding: 0 var(--eb-space-2);
+  border: 0; border-radius: var(--eb-r-sm); background: transparent; color: var(--eb-text-heading);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-row-action:hover { background: var(--eb-surface-2); }
+.eb-row-action:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-row-action:disabled { opacity: .55; cursor: default; }
+.eb-row-action-icon { display: inline-flex; }
+
+/* Phones: a row wraps — title on the first line, meta / status / action below it. */
+@media (max-width: 639px) {
+  .eb-list-row { flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-3); padding-inline: var(--eb-space-4); }
+  .eb-list-main { flex-basis: calc(100% - 40px); }
+}
+@media (pointer: coarse), (max-width: 1023px) {
+  .eb-row-action { min-height: 44px; }
+}
+
+/* ---------- SubNav: settings-style text navigation, grey pill for the current item ---------- */
+.eb-subnav { display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0; }
+.eb-subnav-group { display: flex; flex-direction: column; gap: 2px; }
+.eb-subnav-label { margin: 0; padding: 0 var(--eb-space-3) var(--eb-space-1); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); color: var(--eb-muted); }
+.eb-subnav-item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2);
+  width: 100%; min-height: 36px; padding: var(--eb-space-1) var(--eb-space-3);
+  border: 0; border-radius: var(--eb-r-sm); background: transparent; color: var(--eb-text-heading);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-medium); text-align: start; cursor: pointer;
+}
+.eb-subnav-item:hover { background: var(--eb-surface-2); }
+.eb-subnav-item.is-current { background: var(--eb-chrome-active); font-weight: var(--eb-fw-bold); }
+.eb-subnav-item:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
+.eb-subnav-text { min-width: 0; overflow-wrap: anywhere; }
+.eb-subnav-count { flex: 0 0 auto; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium); color: var(--eb-muted); font-variant-numeric: tabular-nums; }
+@media (pointer: coarse), (max-width: 1023px) {
+  .eb-subnav-item { min-height: 44px; }
+}
+
+/* ---------- KpiStrip: one card, cells split by vertical hairlines ---------- */
+.eb-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 0; background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+}
+.eb-kpi { margin: 0; padding: var(--eb-space-4) var(--eb-space-5); border-inline-start: 1px solid var(--eb-line); min-width: 0; }
+.eb-kpi:first-child { border-inline-start: 0; }
+.eb-kpi-label { display: flex; align-items: center; gap: var(--eb-space-2); font-size: var(--eb-fs-13); font-weight: var(--eb-fw-medium); color: var(--eb-muted); }
+.eb-kpi-icon { display: inline-flex; color: var(--eb-text-heading); }
+.eb-kpi-value { margin: var(--eb-space-1) 0 0; font-size: var(--eb-fs-24); font-weight: var(--eb-fw-bold); line-height: var(--eb-lh-tight); color: var(--eb-text-heading); font-variant-numeric: tabular-nums; }
+.eb-kpi-hint { margin: 2px 0 0; font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.eb-kpi-hint.is-up { color: var(--eb-success-tx); }
+.eb-kpi-hint.is-down { color: var(--eb-danger-tx); }
+@media (max-width: 639px) {
+  .eb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eb-kpi:nth-child(odd) { border-inline-start: 0; }
+  .eb-kpi:nth-child(n + 3) { border-block-start: 1px solid var(--eb-line); }
+}
+
+/* ---------- Segmented: bordered group, grey fill for the checked option ---------- */
+.eb-segctl { display: inline-flex; border: 1px solid var(--eb-line); border-radius: var(--eb-r-sm); background: var(--eb-surface); overflow: hidden; }
+.eb-segment {
+  min-height: 34px; padding: 0 var(--eb-space-3);
+  border: 0; border-inline-start: 1px solid var(--eb-line); background: transparent; color: var(--eb-muted);
+  font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-medium); cursor: pointer;
+}
+.eb-segment:first-child { border-inline-start: 0; }
+.eb-segment:hover { color: var(--eb-text-heading); }
+.eb-segment.is-checked { background: var(--eb-chrome-active); color: var(--eb-text-heading); font-weight: var(--eb-fw-bold); }
+.eb-segment:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
+@media (pointer: coarse), (max-width: 1023px) {
+  .eb-segment { min-height: 44px; }
+}
+
+/* ---------- Tooltip: small dark hint above its trigger ---------- */
+.eb-tooltip-host { position: relative; display: inline-flex; }
+.eb-tooltip {
+  position: absolute; inset-block-end: calc(100% + var(--eb-space-2)); inset-inline-start: 50%;
+  transform: translateX(50%);
+  z-index: var(--eb-z-dropdown);
+  padding: var(--eb-space-1) var(--eb-space-2); border-radius: var(--eb-r-sm);
+  background: var(--eb-primary); color: var(--eb-surface);
+  font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium); line-height: var(--eb-lh-tight); white-space: nowrap;
+  box-shadow: var(--eb-sh-sm); pointer-events: auto;
+}
+[dir="ltr"] .eb-tooltip { transform: translateX(-50%); }
+.eb-tooltip[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eb-row-action, .eb-subnav-item, .eb-segment { transition: none; }
+}
+@media (forced-colors: active) {
+  .eb-subnav-item.is-current, .eb-segment.is-checked { outline: 2px solid Highlight; outline-offset: -2px; }
+  .eb-tooltip { border: 1px solid CanvasText; }
+}
