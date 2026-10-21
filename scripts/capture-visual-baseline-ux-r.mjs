@@ -187,6 +187,21 @@ function projectTracker(q) {
   return { ok: true, projects: [] };
 }
 
+// UX-R12 — the grading workspace (GET /api/assignment-review, the shapes of the reviewWorkspace.ux003 fixtures): a pending attempt
+// with a correct and a wrong choice, two open answers waiting for a manual mark, a partial and an unanswered question, so the
+// filters, the navigator, every status and the grade rows are captured.
+const RQ = (id, n, over) => ({ questionId: id, questionNumber: n, text: "نص السؤال " + n, marks: 4, type: "shortAnswer", studentAnswer: { kind: "text", value: "الراوتر يربط بين شبكتين مختلفتين ويختار أفضل مسار للحزم." }, expectedAnswer: { text: "جهاز يوجّه الحزم بين الشبكات" }, autoGrade: { score: 4, manualReview: false }, manualScore: null, teacherComment: "", ...over });
+const REVIEW_ATTEMPT = { attemptNumber: 1, submittedAt: "2026-10-01T09:05:00.000Z", score: 10, totalMarks: 24, percentage: 42, manualReviewMarks: 8, finalized: false, gradingStatus: "pendingReview", startedAt: "2026-10-01T08:30:00.000Z", endedAt: "2026-10-01T09:05:00.000Z", endReason: "submitted", timedOut: false };
+const REVIEW = { ok: true, assignment: { assignmentId: "a1", title: ASSIGNMENTS[0].title, totalMarks: 24 }, student: { studentId: STUDENTS[2].userId, studentName: STUDENTS[2].displayName, studentCode: STUDENTS[2].identityNumber }, attempt: { ...REVIEW_ATTEMPT, teacherFeedback: "" }, attempts: [REVIEW_ATTEMPT],
+  questions: [
+    RQ("q1", 1, { type: "multipleChoice", text: "ما الجهاز الذي يربط بين شبكتين مختلفتين؟", options: [{ text: "الراوتر" }, { text: "السويتش" }, { text: "الهب" }], studentAnswer: { kind: "choice", index: 0 }, expectedAnswer: { correctOptionIndex: 0 } }),
+    RQ("q2", 2, { type: "multipleChoice", text: "أي طبقة يعمل عليها السويتش؟", options: [{ text: "الطبقة الأولى" }, { text: "الطبقة الثانية" }], studentAnswer: { kind: "choice", index: 0 }, expectedAnswer: { correctOptionIndex: 1 }, autoGrade: { score: 0, manualReview: false } }),
+    RQ("q3", 3, { text: "اشرح وظيفة الراوتر في الشبكة.", autoGrade: { score: 0, manualReview: true } }),
+    RQ("q4", 4, { text: "اذكر فائدتين لتقسيم الشبكة.", autoGrade: { score: 2, manualReview: false } }),
+    RQ("q5", 5, { text: "ما عنوان الشبكة للعنوان 192.168.1.37/24؟", studentAnswer: null, autoGrade: { score: 0, manualReview: false } }),
+    RQ("q6", 6, { text: "قارن بين بروتوكولي TCP وUDP.", autoGrade: { score: 0, manualReview: true } }),
+  ] };
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -217,6 +232,7 @@ function api(req, res) {
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: ASSIGNMENTS });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
+  if (p === "/api/assignment-review" && req.method === "GET") return send(200, REVIEW);
   if (p === "/api/project-tracker") return send(200, projectTracker(u.searchParams));
   if (p === "/api/messages" && req.method === "POST") return send(200, { ok: true, ...NO_UNREAD });
   // The roster's unread count for class c1 only: the sidebar's own summary stays at 0, so «الرسائل» keeps its exact accessible name.
@@ -261,6 +277,23 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R12 — the grading workspace, opened from the gradebook's «تصحيح الآن» (the pending student), and its pending filter.
+  ...[["review-workspace", null], ["review-pending", /يحتاج إلى تصحيح يدوي/]].map(([id, filter]) => ({ id, role: "teacher", nav: "الواجبات", run: async page => {
+    await page.getByRole("button", { name: "فتح", exact: true }).first().click({ timeout: 15000 });
+    await page.getByRole("button", { name: "تصحيح الآن" }).first().click({ timeout: 15000 });
+    await page.locator(".review-modal.rv-workspace .review-question").first().waitFor({ timeout: 15000 });
+    // UX-R12 — a title that wraps must have at least half the header's width (on a phone the student navigation squeezed it to a
+    // sliver, three lines tall); a title that fits on one line may be as narrow as its text.
+    const squeeze = await page.evaluate(() => {
+      const top = document.querySelector(".rv-workspace .review-top"), h = top && top.querySelector("h2"); if (!h) return null;
+      const range = document.createRange(); range.selectNodeContents(h);
+      const lines = new Set([...range.getClientRects()].map(r => Math.round(r.top))).size;
+      return { lines, title: Math.round(h.getBoundingClientRect().width), header: Math.round(top.getBoundingClientRect().width) };
+    });
+    if (squeeze && squeeze.lines > 1 && squeeze.title < squeeze.header / 2) throw new Error("the review title is squeezed to " + squeeze.title + " of " + squeeze.header + " px (" + squeeze.lines + " lines)");
+    if (filter) await page.locator(".rv-filters").getByRole("button", { name: filter }).click({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+  } })),
   // UX-R11b — the Exam Studio: «امتحاناتي» (the builder destination itself), then a blank exam on each of its four steps.
   { id: "studio-home", role: "teacher", nav: "باني الامتحان", run: async page => {
     await page.locator(".st-home").waitFor({ timeout: 15000 });
