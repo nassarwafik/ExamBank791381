@@ -298,3 +298,11 @@
 .import-unassigned-grid figure{ margin:0; text-align:center; }
 .import-unassigned-grid img{ max-width:120px; max-height:100px; border:1px dashed var(--bp-line-2); border-radius:var(--bp-r); object-fit:contain; }
 .import-unassigned-grid figcaption{ font-size:10.5px; color:var(--bp-muted); margin-top:2px; }
+
+/* UX-R11a — «استيراد من ملف» (docs/enterprise-ux-r0-redesign-foundation.md R11a). Scoped to the import panel's own classes.
+   Fix: on a phone the two URL forms' grid track was at least 260 px and the address field kept its intrinsic width, so the
+   «استيراد» buttons ran 15 px past the screen edge (the page measured 405 px at 390 px); the track now never exceeds the panel
+   and the field may shrink. The forms and the drop zone take the 8 px radius. No colour literal, no physical side. */
+.import-url-forms{ grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); }
+.import-url-row input{ min-width:0; }
+.import-url-form,.import-drop-zone{ border-radius:var(--eb-r); }

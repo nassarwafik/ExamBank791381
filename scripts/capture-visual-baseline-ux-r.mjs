@@ -102,6 +102,22 @@ const STUDENT_MESSAGES = { ok: true, direct: DIRECT, announcements: [{ ...msg(7,
   classroom: { classId: "c1", name: "العاشر – أ", archived: false }, canSend: true, readOnlyReason: "" };
 const NO_UNREAD = { unread: 0, capped: false };
 
+// UX-R11a — the bank, the review inbox and the activity log (the shapes of the ExamBankPage.ux6c, ReviewInboxPage.14b and
+// AuditHistoryPanel fixtures), so the questions table, the saved exams, the inbox tasks and the log rows are captured.
+const bq = (id, over) => ({ id, sourceId: "import-quiz-20260301-abc123", sourceKind: "import", official: false, questionNumber: "1", section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, difficultyLabel: "",
+  type: "multipleChoice", presentationType: "multipleChoice", text: "ما هو الراوتر؟", options: [{ value: "a", text: "جهاز توجيه" }, { value: "b", text: "كابل" }], fields: [], wordBank: [],
+  answer: { mode: "singleChoice", correctOptionValue: "a", values: ["a"] }, hasImage: false, reviewStatus: "classified", createdAt: NOW, updatedAt: NOW, ...over });
+const BANK = [
+  bq("791381-2025-exam-q1", { sourceId: "791381-2025-exam", sourceKind: "official", official: true, text: "ما هو عنوان IP؟", topic: "IP_ADDRESSING", difficulty: 1 }),
+  bq("import-quiz-20260301-abc123-1", { text: "عرّف شبكة VLAN واذكر فائدتين لها", topic: "SWITCHING", difficulty: 3, presentationType: "open", type: "shortAnswer", options: [], answer: { mode: "manual", values: [] }, reviewStatus: "pending-classification" }),
+  bq("manual-x1", { sourceId: "manual", sourceKind: "manual", text: "أكمل: قناع الشبكة الافتراضي للفئة C هو ____", section: "INFRASTRUCTURE", topic: "SUBNETTING", difficulty: null, presentationType: "fillBlank", type: "multiField", options: [], fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }], answer: { mode: "exactSequence", values: ["255.255.255.0"] } }),
+  bq("manual-x2", { sourceId: "manual", sourceKind: "manual", text: "ما وظيفة بروتوكول DHCP؟", topic: "ROUTING" }),
+];
+const SAVED_EXAMS = [{ blobName: "exams/e1.json", examId: "e1", title: "امتحان الفصل الأول", savedAt: NOW, questionCount: 12, totalMarks: 100 }, { blobName: "exams/e2.json", examId: "e2", title: "اختبار قصير — الشبكات المحلية", savedAt: NOW, questionCount: 6, totalMarks: 30 }];
+const INBOX_TASKS = ["امتحان الشبكات — الفصل الأول", "اختبار التوجيه الديناميكي"].map((title, i) => ({ examId: "EX-" + i, cycleId: "cyc-" + i, revisionId: "rev-" + i, revisionNumber: 3 - i, stage: "review", title, authorId: "teacher-author", submittedAt: NOW, createdAt: NOW, lifecycleState: "in-review", stateVersion: 4, reviewStatus: "pending" }));
+const AUDIT_EVENTS = [["class.create", "class", "العاشر – أ", { grade: "10" }], ["student.bulkImport", "class", "الحادي عشر – ب", { createdCount: 5, duplicateCount: 1, failedCount: 0 }], ["student.archive", "student", "رنا سليمان", {}], ["class.create", "class", "الثاني عشر – أ", { grade: "12" }]]
+  .map(([action, targetType, targetLabel, details], i) => ({ eventId: "ev" + i, timestamp: NOW, actor: "t", action, targetType, targetId: "x" + i, targetLabel, details }));
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -112,6 +128,10 @@ function api(req, res) {
   if (p === "/api/teacher-profile") return send(200, { ok: true, profile: { teacherId: "t1", displayName: "أ. محمد", hasCustomName: false, avatarId: "", profilePhoto: null, updatedAt: "" } });
   if (p === "/api/teacher-analytics") return send(200, analytics);
   if (p === "/api/teacher-today") return send(200, teacherToday);
+  if (p === "/api/bank-questions" && req.method === "GET") return send(200, { ok: true, questions: BANK });
+  if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: SAVED_EXAMS });
+  if (p === "/api/governance-inbox") return send(200, { items: u.searchParams.get("stage") === "review" ? INBOX_TASKS : [], nextCursor: null, counts: { review: 2, approve: 0, publish: 0 }, actorId: "teacher-reviewer" });
+  if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
   if (p === "/api/classrooms") return send(200, { ok: true, classes: CLASSES });
   if (p === "/api/students" && u.searchParams.get("profileUserId")) return send(200, { ok: true, profile: null });
   if (p === "/api/students") return send(200, { ok: true, students: STUDENTS.filter(s => !u.searchParams.get("classId") || s.classId === u.searchParams.get("classId")) });
@@ -157,6 +177,11 @@ const TEACHER_PAGES = [
 ];
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R11a — the bank's questions table and its saved exams (the overview is the sidebar page itself).
+  ...[["bank-questions", "بنك الأسئلة"], ["bank-exams", "الامتحانات المحفوظة"]].map(([id, view]) => ({ id, role: "teacher", nav: "بنك الامتحانات", run: async page => {
+    await page.locator(".eb-bank .eb-segmented").getByRole("button", { name: view }).click({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+  } })),
   { id: "messages-thread", role: "teacher", nav: "الرسائل", run: async page => {
     await page.getByRole("combobox", { name: "الصف" }).selectOption("c1", { timeout: 15000 });
     await page.getByRole("list", { name: "طلاب الصف" }).getByRole("button").nth(1).click({ timeout: 15000 });

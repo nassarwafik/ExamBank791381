@@ -7,6 +7,9 @@ import {
   STAGE_LABEL, LIFECYCLE_LABEL, GOVERNANCE_ACTION_LABEL, PARTICIPANT_LABEL, GOVERNANCE_CONFLICT_MESSAGE, GovernanceRequestError,
   type WorkflowStage, type GovernanceStatus, type RevisionDocument, type GovernanceActor, type GovernanceAction, type WorkflowAction, type ActorContext
 } from "../examGovernance";
+// UX-R11a — the page uses the builder's base classes (sb-btn, sb-hint, sb-banner, sb-bp-h, sb-gov-*); a visit that STARTS here
+// must load their sheet too, or the buttons and the heading render unstyled until the builder or the import wizard is opened.
+import "../structured-builder.css";
 import "./reviewInbox.css";
 
 // Phase 14B Part J — «مراجعات النشر»: the GLOBAL Review Inbox of the signed-in teacher (reviewer / approver / publisher).
