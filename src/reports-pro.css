@@ -2,6 +2,9 @@
    ExamBank — Reports Center (UX-6b)
    Teacher-only. Token-only (--eb-*), RTL-first, no logic.
    Breakpoints align with the shell: 768 / 1024 / 1280.
+   UX-R7 — the reference look (docs/enterprise-ux-r0-redesign-foundation.md §3.2): the catalogue filter reads as quiet
+   sub-navigation, each catalogue group is ONE hairline card of report rows, the KPI figures are one hairline strip, cards and
+   tables are flat 8 px. Markup, names, CSV and print are unchanged; the pinned gutter / workspace / print rules are verbatim.
    ============================================================ */
 
 /* ---------- Page gutter (Phase 10A) ---------- */
@@ -16,18 +19,28 @@
 .eb-reports-hub{ display:flex; flex-direction:column; gap:var(--eb-space-5); }
 .eb-reports-group{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-reports-group-head{ display:flex; flex-direction:column; gap:2px; }
-.eb-report-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:var(--eb-space-3); }
+/* UX-R7 — the catalogue filter («الكل · الطلاب · …») reads as sub-navigation: quiet text items, the pressed one a grey pill with
+   bold text (aria-pressed and weight mark it, never colour alone). */
+.eb-reports-categories .eb-chip-button{ border-color:transparent; border-radius:var(--eb-r-sm); background:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
+.eb-reports-categories .eb-chip-button:hover{ background:var(--eb-surface-2); }
+.eb-reports-categories .eb-chip-button[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+/* UX-R7 — each group is ONE hairline card of report rows (icon · title over its description · «فتح التقرير»), not a grid of cards. */
+.eb-report-cards{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
 .eb-report-card{
-  display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
-  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+  display:flex; flex-direction:row; align-items:center; gap:var(--eb-space-4); min-width:0; min-height:44px;
+  padding:var(--eb-space-3) var(--eb-space-5); background:transparent; border:0; border-block-start:1px solid var(--eb-line); border-radius:0; box-shadow:none;
   transition:border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
 }
-.eb-report-card:hover{ border-color:var(--eb-primary); box-shadow:var(--eb-sh-sm); }
-.eb-report-card-icon{ display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-primary-strong); flex:0 0 auto; }
+.eb-report-card:first-child{ border-block-start:0; }
+.eb-report-card:hover{ background:var(--eb-surface-2); box-shadow:none; }
+.eb-report-card-icon{ display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:var(--eb-r-sm); background:var(--eb-chrome-active); color:var(--eb-text-heading); flex:0 0 auto; }
 .eb-report-card-text{ min-width:0; flex:1 1 auto; }
 .eb-report-card-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
 .eb-report-card-desc{ margin:2px 0 0; color:var(--eb-muted); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
-.eb-report-card .eb-button{ align-self:flex-start; margin-top:auto; }
+.eb-report-card .eb-button{ align-self:center; flex:0 0 auto; margin-top:0; }
+/* the row action is quiet (the reference «فتح» action), not one primary button per row */
+.eb-report-card .eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-report-card .eb-button.is-primary:hover{ background:var(--eb-surface-2); border-color:var(--eb-border-strong); color:var(--eb-text-heading); }
 
 /* ---------- Workspace ---------- */
 .eb-report-workspace{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
@@ -37,7 +50,7 @@
 .eb-report-print-title{ display:none; margin:0; font-size:var(--eb-fs-17); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
 .eb-report-filters{
   display:flex; flex-direction:column; gap:var(--eb-space-3);
-  padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+  padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:none;
 }
 .eb-report-filter-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); }
 .eb-report-filter-row select{ min-width:180px; max-width:100%; }
@@ -47,6 +60,17 @@
 .eb-report-result{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
 .eb-report-result-head .eb-section-title{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .eb-report-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+/* UX-R7 — the KPI figures are ONE hairline strip. A report shows 4 or 5 figures, so the cells draw their own hairlines (right and
+   bottom, clipped at the strip's edge) instead of a 1 px gap over the hairline colour, which would paint the empty cells of a
+   wrapped last row. Tiles keep a transparent 1 px border and their tone accent bar (21E.2); values read in ink. */
+.eb-report-stats.eb-stat-grid{ gap:0; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-report-stats .eb-stat-card{ border-color:transparent; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.eb-report-stats .eb-stat-card .eb-stat-value{ color:var(--eb-text-heading); }
+/* UX-R7 fix — a report chart's height. The charts draw with maintainAspectRatio:false, so their box sets the height, but
+   .eb-chart-canvas was defined only in projects-pro.css, which loads with the Projects pages: on a visit that starts in the
+   Reports Center the chart fell back to Chart.js's 150 px. The report result owns the same heights now. */
+.eb-report-result .eb-chart-canvas{ position:relative; height:260px; }
+.eb-report-result .eb-chart-canvas.is-tall{ height:360px; }
 .eb-report-actions .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
 .eb-report-note{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); background:var(--eb-surface-2); border-inline-start:3px solid var(--eb-info); border-radius:var(--eb-r); }
 .eb-report-legend{ font-size:var(--eb-fs-12); }
@@ -54,7 +78,7 @@
 .eb-report-project-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); }
 .eb-report-project{
   display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
-  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:none;
 }
 .eb-report-track-bars{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); }
 .eb-report-project-foot{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-fs-13); }
@@ -62,10 +86,11 @@
 .eb-report-reasons{ display:inline-flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 
 /* ---------- Tables ---------- */
-.eb-report-table-scroll{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
+.eb-report-table-scroll{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
 .eb-report-table{ width:100%; border-collapse:collapse; font-size:var(--eb-fs-13); }
 .eb-report-table th,.eb-report-table td{ padding:var(--eb-space-2) var(--eb-space-3); text-align:start; border-bottom:1px solid var(--eb-line); white-space:nowrap; vertical-align:middle; }
-.eb-report-table thead th{ position:sticky; top:0; background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-report-table thead th{ position:sticky; top:0; background:var(--eb-surface); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-report-table tbody tr:last-child > *{ border-bottom:0; }
 .eb-report-table tbody th{ font-weight:var(--eb-fw-medium); color:var(--eb-text); }
 .eb-report-table td.is-numeric{ font-variant-numeric:tabular-nums; }
 .eb-report-table td .eb-progress{ min-width:120px; }
@@ -85,7 +110,11 @@
   .eb-report-filter-row select{ min-width:160px; }
 }
 @media (max-width:767px){
-  .eb-report-cards{ grid-template-columns:minmax(0,1fr); }
+  .eb-report-card{ flex-wrap:wrap; padding-inline:var(--eb-space-4); }
+  .eb-report-card-text{ flex-basis:calc(100% - 52px); }
+  .eb-report-card .eb-button{ margin-inline-start:auto; }
+  .eb-report-result .eb-chart-canvas{ height:220px; }
+  .eb-report-result .eb-chart-canvas.is-tall{ height:280px; }
   .eb-report-track-bars{ grid-template-columns:minmax(0,1fr); }
   .eb-report-filter-row{ flex-direction:column; align-items:stretch; }
   .eb-report-filter-row .eb-field-inline{ width:100%; }

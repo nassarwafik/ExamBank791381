@@ -40,3 +40,21 @@
   .gov-task-open{width:100%}
   .gov-workflow{grid-template-columns:1fr 1fr}
 }
+
+/* UX-R11a — «مراجعات النشر» in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R11a). Scoped to the inbox page
+   (.gov-inbox), so the governance panel inside the builder keeps its look. The stage tabs read as sub-navigation (the selected
+   one a grey pill with bold text, instead of an indigo pill from undefined --accent* fallbacks); the tasks are ONE hairline card
+   of 44 px rows, each with a quiet «فتح» (one dark button per row otherwise). The stage pills keep their colours (and their text
+   and dot). The page also gets the symmetric logical gutter every other page has (16 px, 24 px from 768 px), instead of
+   sitting flush against the sidebar. Tokens only; no physical side, no transition, no stacking context. */
+.gov-inbox{box-sizing:border-box;padding-inline:var(--eb-space-4)}
+@media (min-width:768px){.gov-inbox{padding-inline:var(--eb-space-5)}}
+.gov-inbox .gov-inbox-tab{border-color:transparent;border-radius:var(--eb-r-sm);background:transparent;color:var(--eb-text-heading);font-weight:var(--eb-fw-medium)}
+.gov-inbox .gov-inbox-tab:hover{background:var(--eb-surface-2)}
+.gov-inbox .gov-inbox-tab[aria-selected="true"]{background:var(--eb-chrome-active);border-color:transparent;color:var(--eb-text-heading);font-weight:var(--eb-fw-bold)}
+.gov-inbox .gov-inbox-tab .gov-count{background:var(--eb-surface);color:var(--eb-muted)}
+.gov-inbox .gov-inbox-list{gap:0;background:var(--eb-surface);border:1px solid var(--eb-line);border-radius:var(--eb-r);overflow:hidden}
+.gov-inbox .gov-task{min-block-size:44px;border:0;border-block-start:1px solid var(--eb-line);border-radius:0;background:transparent}
+.gov-inbox .gov-task:first-child{border-block-start:0}
+.gov-inbox .gov-task-open.sb-btn-primary,.gov-inbox .gov-task-open.sb-btn-primary:hover{background:var(--eb-surface);border-color:var(--eb-line-2);color:var(--eb-text-heading)}
+.gov-inbox .gov-empty{border-color:var(--eb-line-2);border-radius:var(--eb-r);color:var(--eb-muted)}
