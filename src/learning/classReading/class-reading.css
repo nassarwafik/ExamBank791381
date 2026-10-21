@@ -37,3 +37,10 @@
 /* Counts and dates never break mid-phrase («5 من 6»); a narrow screen scrolls the table inside its own region instead. */
 .eb-lm-cr-table td, .eb-lm-cr-table .eb-progress-label{ white-space:nowrap; }
 @media (max-width: 600px){ .eb-lm-cr-table tbody th{ min-width:7rem; } .eb-lm-cr-table td:last-child{ min-width:7rem; } }
+
+/* UX-R9a — «قراءة صفوفي» in the reference look: the three figures are ONE hairline strip whose cells draw their own hairlines
+   (an inline-end and a block-end 1 px shadow, so a wrapped row paints no empty cell), and the table headers are a quiet white
+   band. No stacking context, no transition, no colour literal, no physical side property. */
+.eb-lm-cr-kpis{ gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-lm-cr-kpis > div{ border:0; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.eb-lm-cr-table thead th{ background:var(--eb-surface); font-size:var(--eb-fs-12); }

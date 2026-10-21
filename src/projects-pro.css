@@ -335,3 +335,36 @@
 .eb-review-group-count{ color:var(--eb-text-secondary); font-variant-numeric:tabular-nums; }
 .eb-review-group-head .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
 @media (max-width: 767px){ .eb-review-group-head .eb-button,.eb-review-list-controls .eb-segmented > button{ min-height:44px; } }
+
+/* ---------- UX-R10 — the projects pages in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R10) ----------
+   Presentation only. Every rule is scoped to the hub (.eb-projects-hub) or the workspace (.eb-project-workspace), so the shared
+   chips, segmented groups, stat grids, tables and charts keep their look on the student portal, the dashboard and the reports.
+   Flat 8 px hairline panels without a resting shadow; the hub card's «فتح المشروع» and the student card's «فتح ملف الطالب» are
+   quiet buttons (one dark button per card otherwise); the section and view switches are the reference segmented group; the filters read as
+   sub-navigation (the pressed one a grey pill with bold text); the headline figures are ONE hairline strip whose cells draw their
+   own hairlines (4 to 6 figures, so no grey empty cell when a row wraps); the students table header is a quiet white band and
+   stays sticky. The status colours (heatmap, stage rows, score cells, evaluation panels, danger zone) are untouched. No colour
+   literal, no physical side, no transition, no stacking context. Fix: on a phone the view switch buttons are 44 px tall (they were
+   40 px, below the touch-target floor). */
+.eb-projects-hub .eb-project-card{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-projects-hub .eb-project-card:hover{ border-color:var(--eb-line-2); box-shadow:none; }
+.eb-projects-hub .eb-project-card-foot .eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-projects-hub .eb-project-card-foot .eb-button.is-primary:hover{ background:var(--eb-surface-2); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-project-workspace .eb-project-toolbar{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-project-workspace .eb-student-card-foot .eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-project-workspace .eb-student-card-foot .eb-button.is-primary:hover{ background:var(--eb-surface-2); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-project-workspace :is(.eb-project-progress-card, .eb-student-card, .eb-student-profile-summary, .eb-stage-groups, .eb-stage-timeline, .eb-heatmap-card, .eb-stage-settings-bar, .eb-stage-settings-group){ border-radius:var(--eb-r); box-shadow:none; }
+.eb-project-workspace .eb-segmented{ gap:0; padding:0; background:var(--eb-surface); border-color:var(--eb-line-2); overflow:hidden; }
+.eb-project-workspace .eb-segmented > button{ border-radius:0; border-inline-start:1px solid var(--eb-line); }
+.eb-project-workspace .eb-segmented > button:first-child{ border-inline-start:0; }
+.eb-project-workspace .eb-segmented > button[aria-pressed="true"]{ background:var(--eb-chrome-active); font-weight:var(--eb-fw-bold); box-shadow:none; }
+.eb-project-workspace .eb-chip-button{ border-color:transparent; border-radius:var(--eb-r-sm); background:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
+.eb-project-workspace .eb-chip-button:hover{ background:var(--eb-surface-2); border-color:transparent; }
+.eb-project-workspace .eb-chip-button[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.eb-project-workspace .eb-project-stats.eb-stat-grid{ gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-project-workspace .eb-project-stats .eb-stat-card{ border-color:transparent; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.eb-project-workspace .eb-project-students-table.students-table-wrap{ border-color:var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+.eb-project-workspace .eb-project-students-table .students-table thead th{ background:var(--eb-surface); color:var(--eb-muted); }
+@media (max-width:767px){
+  .eb-project-workspace .eb-project-views > button{ min-height:44px; }
+}
