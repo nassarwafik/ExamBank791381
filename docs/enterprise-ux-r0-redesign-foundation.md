@@ -1176,11 +1176,109 @@ Each mutant was planted alone. The run covered `src/assignments`, the home / pag
 
 ---
 
+# Phase UX-R8 — Messages
+
+**Owner direction (2026-10-21):** start R8. It depends on R3 (merged), so it branches from `main` `59ffac32` as
+`feature/ux-r8-messages`. It ran in parallel with R7 (PR #399); the two share no source file. The capture harness and this record
+are shared, so whichever merges second takes a reconciliation merge.
+
+**Reconciliation.** R6b (#398) merged into `main` (`f51bd90d`) during R8. R8 took `main` in with a normal merge commit
+(`git merge origin/main`), without conflicts (R8 had not yet written this section), and the full root suite was re-run on the
+merged head (§R8.5). Baselines: `59ffac32` → `f51bd90d`.
+
+## R8.1 What changes for the user
+
+No reference mockup shows the messages pages, so R8 applies the record's general patterns (§3.2: hairline card, 44 px rows,
+sub-navigation, quiet surfaces) to the existing chat layout.
+
+On the teacher's «الرسائل» page:
+- **The workspace is a flat 8 px panel** without a card shadow (also the phone conversation card); the thread sits on white.
+- **The student roster is 44 px rows split by hairlines** (52 px on a narrow screen), with 28 px avatars and medium-weight
+  names; an unread student keeps a bold name and the «N جديدة» count.
+- **The selected student is a grey row with bold text.** The primary tint and the inline-start accent bar are gone; the state is
+  still carried by `aria-pressed` and the weight, never by colour alone.
+- **The roster search is a plain 8 px field; «الكل / غير المقروءة» read as sub-navigation**: quiet items, the pressed one a grey
+  pill with bold text instead of the navy fill.
+
+In every conversation (teacher and student):
+- **Quiet bubbles.** The other party's bubble is white on a hairline; the viewer's own is a soft primary tint with ink text
+  (the solid primary gradient with white text is gone). The sender label, time, «مُعدّلة» mark and the edit / delete actions are
+  re-inked for the tint. Bubbles have the 8 px radius and no shadow; the clipped first-message corner stays.
+- **One composer look.** The teacher's and the student's composers share the same field (8 px, white, a `--eb-line-2` border) and
+  send button (8 px). Their layouts stay as they were (the teacher's compact grid, the student's labelled field), since the
+  labels and hints are pinned.
+
+**Not changed, on purpose:** markup, roles, labels, unread texts, the announcements feed cards, the deleted-message look, the
+day separators, the tabs, the class start state's layout, and all behaviour (polling, read markers, edit / delete, history).
+
+## R8.2 Edit set
+
+- **`src/messages/messages.css`:** one block appended at the end of the sheet. It wins by order at the same or a higher
+  specificity than the rules it overrides; those rules stay as they are — notably the M.2 own-bubble rule, which
+  `messagesPresentation.m2.test.tsx` pins verbatim. The block adds no stacking context, transition, colour literal or physical
+  side (the M.2 slice to the end of the file forbids the last two). The sheet's colour count stays at 4.
+- **`src/messages/messages.ux-r8.test.ts`:** new, 10 guards (the implementation commit message says 11; the count is 10).
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** messages fixtures in the shapes of the 5C / 5D / M.2 fixtures, and two scripted
+  pages: `messages-thread` (class «العاشر – أ», the second roster row, so the unread student listed first keeps its count and the
+  roster filters stay shown) and `student-messages` (the student's dedicated view). The roster unread summary is answered for
+  class `c1` only, so the sidebar's «الرسائل» keeps its exact accessible name.
+
+## R8.3 Fail-first evidence
+
+Not applicable: R8 restyles and fixes no defect. Its invariants are proven by the mutation campaign below.
+
+## R8.4 Mutation proof
+
+Each mutant was planted alone in `src/messages/messages.css`. The run covered `src/messages`, `phase8b`, `src/designSystem`, the
+colour ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the workspace card shadow returns | KILLED | ux-r8 «… flat 8 px panels…» |
+| M2 | the student card back to the 16 px radius | KILLED | ux-r8 «… flat 8 px panels…» |
+| M3 | the phone conversation card keeps the large radius | KILLED | ux-r8 «… (also the phone conversation card)…» |
+| M4 | roster rows back to 56 px | KILLED | ux-r8 «the roster is 44 px hairline rows…» |
+| M5 | the selected student back to the purple tint | KILLED | ux-r8 «the selected student is a grey row…» |
+| M6 | the selected accent bar returns | KILLED | ux-r8 «… no accent bar…» |
+| M7 | the pressed filter back to the navy fill | KILLED | ux-r8 «the roster filters read as sub-navigation…» |
+| M8 | the own bubble back to the solid primary with white text | KILLED | ux-r8 «bubbles are quiet…» |
+| M9 | the own time stays light (unreadable on the tint) | KILLED | ux-r8 «the own bubble's label, time, edited mark and actions are re-inked…» |
+| M10 | the bubble shadow returns | KILLED | ux-r8 «bubbles are quiet…» |
+| M11 | the student composer keeps its own look | KILLED | ux-r8 «one composer look…» |
+| M12 | a colour literal in the R8 block | KILLED | colour ratchet; ux-r8 «… no colour literal…» |
+| M13 | a physical side in the R8 block | KILLED | ux-r8 «… no physical side»; messagesPresentation.m2 «M.2 styles…» |
+| M14 | a transition in the R8 block | KILLED | ux-r8 «adds no stacking context, no transition…» |
+| M15 | editing the pinned M.2 own-bubble rule instead of overriding it | KILLED | ux-r8 «overrides instead of editing…»; messagesPresentation.m2 «M.2 styles…» |
+
+15 / 15 KILLED, no TIMEOUT. `git status` showed only the R8 edit set before and after the campaign.
+
+## R8.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `messages`, `messages-thread`, `student-messages` (1440 / 1024 / 390 px), before and after | 9 / 9 clean each, no horizontal overflow, no page error. "Before" is the R7 build, whose messages CSS is identical to `main` |
+| `npm test`, full root suite (R8 head before the merge, `7d4b5928`) | **1 178 / 1 178 files, 14 054 / 14 054 tests** |
+| `npm test`, full root suite (merged head `7b6bbd92`) | **1 179 / 1 179 files, 14 062 / 14 062 tests** |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 294, unchanged (`messages.css` stays at 4) |
+| Browser gates | none is triggered by `src/messages/**` (no workflow path filter covers it); the Quality Gate runs on every PR |
+
+---
+
 # Phase UX-R9a — Learning: the library, the course home and the library search
 
 **Owner direction (2026-10-21):** start R9 (the plan splits it into R9a and R9b; R9b depends on R9a). R9a depends on R3 (merged),
 so it branches from `main` `f51bd90d` as `feature/ux-r9a-learning-library`. It ran in parallel with R7 (#399) and R8 (#401); they
 share no source file, only the capture harness and this record.
+
+
+**Reconciliation.** The create-class hotfix (#400) and R8 (#401) merged into `main` (`f746c51a`) while R9a waited for review. R9a
+took `main` in with a normal merge commit (`git merge origin/main`). Conflicts: this record (kept both sections, R8 first) and the
+capture harness (kept both: R8's messages fixtures and pages with R9a's, in one `SCRIPTED` list). The hotfix R9a had ported is
+identical to `main`'s and merged without a change. The full root suite was re-run on the merged head. Baselines: `f51bd90d` →
+`f746c51a`.
 
 ## R9a.1 What changes for the user
 

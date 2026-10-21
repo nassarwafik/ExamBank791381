@@ -97,6 +97,23 @@ const LEARNING = {
     students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
 };
 let scene = "";
+// UX-R8 — the messages pages (the shapes of the AppMessages.5c / StudentPortal.messages / 5D fixtures): a direct conversation over
+// two days with consecutive messages, an unread count in the roster, and the student's dedicated view, so a thread, its bubbles,
+// the roster rows and both composers are captured, not only the empty start state.
+const msg = (n, senderRole, senderDisplayName, body, createdAt) => ({ messageId: String(9000000000000 + n) + "-" + "a".repeat(16), kind: "direct", senderRole, senderDisplayName, body, createdAt });
+const directWith = (name, first) => [
+  msg(1, "student", name, "أستاذ، هل يمكن تأجيل تسليم واجب الدوال إلى الغد؟", "2026-10-19T17:05:00.000Z"),
+  msg(2, "teacher", "أ. محمد", "أهلًا " + first + ". " + "يمكنك التسليم حتى الغد الساعة الثامنة مساءً.", "2026-10-19T17:20:00.000Z"),
+  msg(3, "student", name, "شكرًا جزيلًا!", "2026-10-19T17:22:00.000Z"),
+  msg(4, "student", name, "أرسلت الحل الآن، هل وصل؟", "2026-10-20T07:58:00.000Z"),
+  msg(5, "teacher", "أ. محمد", "وصل، سأراجعه اليوم.", "2026-10-20T08:10:00.000Z"),
+  msg(6, "teacher", "أ. محمد", "تذكير: راجع السؤال الثالث قبل الاختبار.", "2026-10-20T08:11:00.000Z"),
+];
+const DIRECT = directWith("أحمد الحسن", "أحمد");
+const threadFor = id => { const st = STUDENTS.find(x => x.userId === id); return { ok: true, canSend: true, readOnlyReason: "", hasMore: false, hasNewer: false, messages: st ? directWith(st.displayName, st.firstName) : [] }; };
+const STUDENT_MESSAGES = { ok: true, direct: DIRECT, announcements: [{ ...msg(7, "teacher", "أ. محمد", "اختبار الوحدة الثانية يوم الأحد القادم.", "2026-10-19T09:00:00.000Z"), kind: "announcement" }],
+  classroom: { classId: "c1", name: "العاشر – أ", archived: false }, canSend: true, readOnlyReason: "" };
+const NO_UNREAD = { unread: 0, capped: false };
 
 const apiCalls = new Map();
 let role = "teacher";
@@ -117,7 +134,14 @@ function api(req, res) {
   if (p === "/api/assignments" && req.method === "GET") return send(200, { ok: true, assignments: ASSIGNMENTS });
   if (p === "/api/assignment-results" && req.method === "GET") return send(200, results);
   if (p === "/api/project-tracker") return send(200, u.searchParams.get("resource") === "projects-summary" ? { ok: true, totalReadyForReview: 0, byProject: {} } : { ok: true, projects: [] });
+  if (p === "/api/messages" && req.method === "POST") return send(200, { ok: true, ...NO_UNREAD });
+  // The roster's unread count for class c1 only: the sidebar's own summary stays at 0, so «الرسائل» keeps its exact accessible name.
+  if (p === "/api/messages" && u.searchParams.get("kind") === "unread-summary" && u.searchParams.get("classId") === "c1") return send(200, { ok: true, totalUnread: 2, capped: false, byStudent: { u2: { unread: 2, capped: false } } });
+  if (p === "/api/messages" && (u.searchParams.get("studentId") || u.searchParams.get("kind") === "announcements")) return send(200, threadFor(u.searchParams.get("studentId") || ""));
   if (p === "/api/messages") return send(200, { ok: true, totalUnread: 0, capped: false, threads: [] });
+  if (p === "/api/student-messages" && req.method === "POST") return send(200, { ok: true, directUnread: NO_UNREAD, announcementUnread: NO_UNREAD, totalUnread: 0, totalCapped: false });
+  if (p === "/api/student-messages" && u.searchParams.get("view")) return send(200, { ok: true, directUnread: NO_UNREAD, announcementUnread: NO_UNREAD, totalUnread: 0, totalCapped: false, items: [] });
+  if (p === "/api/student-messages") return send(200, STUDENT_MESSAGES);
   if (p === "/api/student-dashboard") return send(200, studentDashboard);
   if (p === "/api/student-notifications") return send(200, { ok: true, items: [], unread: 0, total: 0 });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [], threads: [] });
@@ -148,6 +172,7 @@ const TEACHER_PAGES = [
   ["import", "استيراد من ملف"], ["reviews", "مراجعات النشر"], ["audit", "سجل النشاط"],
 ];
 // UX-R9a — the learning book page (the section index and an opened «قراءة صفوفي») and the library search with results.
+// UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
   { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
     await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
@@ -160,6 +185,15 @@ const SCRIPTED = [
     await page.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }).click({ timeout: 15000 });
     await page.getByRole("searchbox").fill("VLAN", { timeout: 15000 });
     await page.locator("[data-search-hit]").first().waitFor({ timeout: 15000 });
+  } },
+  { id: "messages-thread", role: "teacher", nav: "الرسائل", run: async page => {
+    await page.getByRole("combobox", { name: "الصف" }).selectOption("c1", { timeout: 15000 });
+    await page.getByRole("list", { name: "طلاب الصف" }).getByRole("button").nth(1).click({ timeout: 15000 });
+    await page.locator(".eb-msg-conversation:not(.is-offscreen) .eb-msg-bubble").first().waitFor({ timeout: 15000 });
+  } },
+  { id: "student-messages", role: "student", run: async page => {
+    await page.getByRole("button", { name: /الرسائل/ }).first().click({ timeout: 15000 });
+    await page.locator(".eb-msg-student-card .eb-msg-bubble").first().waitFor({ timeout: 15000 });
   } },
 ];
 const PAGES = part === "gallery" ? [] : [...TEACHER_PAGES.map(([id, nav]) => ({ id, role: "teacher", nav })), ...SCRIPTED, { id: "student-portal", role: "student" }, { id: "login", role: "" }]
