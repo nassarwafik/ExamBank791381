@@ -2084,4 +2084,4 @@ colour ratchet, `ux2-shell-foundation` and `src/designSystem`. The file was rest
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | 2 266, unchanged (the fix and the block add no literal) |
-| Browser gates | none is triggered by `studentexam-pro.css` (L.8 reads `src/learning/**`, `src/student/**`: the new guard lives in `src/student/exam/`, so L.8 runs); the Quality Gate runs on every PR |
+| Browser gates | L.8 runs, because the new guard file lives under `src/student/**` (its path filter); `studentexam-pro.css` itself triggers no browser gate. The Quality Gate runs on every PR |
