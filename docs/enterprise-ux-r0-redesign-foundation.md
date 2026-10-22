@@ -2737,3 +2737,159 @@ mutant (SHA-256).
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | **1 563** (was 1 871) |
+
+---
+
+# Phase UX-R17c — Clean-up: the remaining sheets and the dead CSS
+
+**Owner direction (2026-10-22):** the third of the four R17 parts. R17a (#417) and R17b (#418) are open, and neither touches the
+sheets below. The phases share only this record and the colour baseline. R17c removes one unused alias from `builder-pro.css`, on a
+line R17b does not change. R17c branches from `main` `467ec80d` as `feature/ux-r17c-remaining-sheets`.
+
+## R17c.1 What changes for the user
+
+R17a and R17b cleaned the large legacy sheets. R17c cleans the rest of the app chrome:
+- the review inbox;
+- the preset library;
+- the question-type picker;
+- the simulation library;
+- the old page parts;
+- small shared rules (messages, the notification bell, the project status badges, the review modal's shadows);
+- the function-study widget.
+
+It also removes the CSS nothing reads, and the reads of variables nothing defines. **Presentation only:** no markup, data, API or
+grading changes.
+
+**Visible effects:**
+- **Fix: focus rings reach 3:1** (§R17c.3). The question-type picker's tabs and cards and the simulation drop zone drew a 3 px amber
+  ring at **2.15:1** on white. Non-text contrast requires 3:1. They now draw the app's ring (`--eb-focus-ring`, the primary, ≥ 13:1).
+- **The current step of the review workflow is marked in the primary.** In the builder's governance panel it read `--accent`, which
+  nothing defines, so it rendered an indigo fallback (`#4f46e5`).
+- **The base rule for the review inbox's selected tab is now the grey pill** (`--eb-chrome-active`, heading text, bold). It read three
+  undefined accent variables. On the inbox page R11a already overrides it with a more specific rule, so nothing changes there; the
+  base rule no longer carries the indigo fallbacks.
+- **The slate neutrals, white literals and slate shadows** of these sheets move to the palette:
+  - legacy aliases with a literal fallback (`var(--line,#e5e9f0)`) → the `--eb-*` token itself;
+  - slate shadows → `color-mix()` on `--eb-content-ink`;
+  - the page parts' ground → `--eb-bg`;
+  - the student table's header and hover → `--eb-surface-2`;
+  - its row lines → `--eb-line`.
+- **The simulation library's issue lines** read `--danger` / `--warn`, which only one lazily loaded sheet defines. They now read
+  `--eb-danger-tx` / `--eb-warn-tx`, the values their fallbacks already rendered.
+- **The function-study widget's content moves to the content tokens,** as R16a did for the simulators: grid, axis, ticks, notes,
+  inputs, buttons, the probe's fallbacks. The plotted curve, the markers and the dark scheme keep their hues.
+
+**Not changed, on purpose:**
+- **every status shade with no token of the same value** (the simulation error and conflict tints, the review workspace's verdict
+  shades, the project badges);
+- **the student exam's unsupported-activity placeholder** (`.iex-unsupported`, the exam paper);
+- **the learning activities' white labels on the primary.** The reader's dark theme redefines `--eb-surface` as a dark ground, so a
+  label reading it would vanish;
+- **the CLI terminals, the reading themes, the print sheet and the science simulators' dark scheme** (R16a);
+- **the 3D scene's drawn lines** (R16b).
+
+## R17c.2 Edit set
+
+- **Converted (14 sheets):**
+  - `governance/reviewInbox.css`
+  - `presets/presetLibrary.css`
+  - `questionTypes/questionTypes.css`
+  - `smartsim/smartsim.css`
+  - `page-parts.css`
+  - `messages/messages.css`
+  - `project794589.css`
+  - `review-pro.css`
+  - `review-workspace.css`
+  - `notifications/notifications.css`
+  - `learning/reader/reader.css`
+  - `learning/annotations/annotations.css`
+  - `functionStudy/function-study.css`
+  - `coding/coding.css` (the run error's `#fef2f2` now names `--eb-danger-bg`, at the same value)
+- **Undefined reads collapsed to the value they render (no visible change).** 36 reads of variables nothing defines were replaced by
+  their own fallback; a misnamed token renders its fallback, so nothing moves. Examples:
+  - `--eb-text-muted` (open response) and `--eb-warning` (coding, games, network CLI);
+  - `--eb-danger-050` / `--eb-success-050` (learning activities and visuals);
+  - `--eb-shadow-md` (reader annotations), `--eb-r-md` (games), `--eb-control-h-touch` (login);
+  - `--surface-2` (four simulator scenes), `--eb-fs-15` with a fallback (messages);
+  - `--iex-*` (the exam placeholder);
+  - the simulation library's `--danger-bg` / `--warn-bg` pairs.
+
+  The remaining reads are recorded in the guard, and that list may only shrink:
+  - `--eb-measure` (the reader's prose-measure contract, pinned by the reader guards);
+  - `--eb-fs-15` / `--eb-fs-18` without a fallback (already listed by R1; a size decision for R17d);
+  - seven reads in `structured-builder.css` (R17b's sheet, #418; R17d).
+- **Dead CSS removed:** the 24 custom properties no stylesheet or script reads.
+  - `design-tokens.css`: `--eb-nav-accent` (the dark rail's active pill; R2 made the sidebar light) and `--eb-container-wide`;
+  - `review-pro.css`: `--faint`, `--ok`, `--okbg`, `--dangerbg`, `--ease`;
+  - `page-parts.css`: seven `--pp-*` aliases;
+  - `login-pro.css`: five `--lg-*` aliases;
+  - one alias each in `builder-pro.css`, `function-graph.css`, `dynamic.css`, `studio.css`;
+  - `--eb-read-accent-bg` in the two reader sheets.
+- **`src/designSystem/tokensV2.ux-r1.test.ts`:** the `--eb-nav-accent` pin and its contrast line removed (the token is gone). The
+  R17c guard pins its absence.
+- **`scripts/ux-color-inventory.baseline.json`:** 1 502 → **1 386**.
+- **`src/designSystem/remainingSheets.ux-r17c.test.ts`:** new, 10 guards:
+  - no slate, grey or white literal in the chrome sheets;
+  - no legacy alias with a literal fallback and no undefined accent or focus read;
+  - the inbox's grey pill;
+  - both focus rings ≥ 3:1, resolved from the sheet;
+  - every `var()` read is defined beyond the recorded list;
+  - every defined custom property is read;
+  - the function-study content tokens and kept hues;
+  - the white labels in the learning activities;
+  - the status shades and the exam placeholder;
+  - the baseline.
+
+## R17c.3 Fail-first evidence
+
+The guards were run on `main` `467ec80d` (the test file copied into a detached worktree of the baseline): **9 of 10 fail**. The one
+that passes pins the learning activities' white labels, which R17c keeps.
+
+| Guard | `main` `467ec80d` | R17c |
+|---|---|---|
+| the focus rings … meet 3:1 on white | **FAIL**: «.qt-tab:focus-visible,.qt-card:focus-visible ring #f59e0b: expected 2.1476626917618766 to be greater than or equal to 3» | pass |
+| every var() a stylesheet reads is defined … | **FAIL**: 31 undefined reads beyond the recorded list | pass |
+| every custom property a stylesheet defines is read somewhere | **FAIL**: «expected [ '--bp-faint', …(23) ] to deeply equal []» | pass |
+| the review inbox's selected tab is the grey pill and the current workflow step is marked in the primary | **FAIL** (undefined accent reads, indigo fallbacks) | pass |
+| the chrome sheets hold no slate, grey or white literal | **FAIL**: «governance/reviewInbox.css: expected [ '#cdd5e0', '#ffffff', …(13) ] to deeply equal []» | pass |
+
+## R17c.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/designSystem`, the colour ratchet, `ux2-shell-foundation`, `src/governance`,
+`src/questionTypes`, `src/smartsim`, `src/students`, `src/learning/reader`, `src/functionStudy` and `src/messages`. Each file was
+restored byte-for-byte after its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the picker's focus ring back to the 2.15:1 amber | KILLED | colour ratchet; ux-r17c «the focus rings … meet 3:1» |
+| M2 | the drop zone's ring on an undefined variable (renders its amber fallback) | KILLED | colour ratchet; ux-r17c «read the palette directly…», «the focus rings…» |
+| M3 | the base selected-tab rule back to the undefined accent fallbacks | KILLED | colour ratchet; ux-r17c «read the palette directly…» |
+| M4 | a legacy alias with a slate fallback returns | KILLED | colour ratchet; ux-r17c «hold no slate, grey or white literal…» |
+| M5 | a white literal returns in the page parts | KILLED | colour ratchet; ux-r17c |
+| M6 | a slate shadow returns | KILLED | colour ratchet; ux-r17c |
+| M7 | a misnamed `--eb-*` token read returns | KILLED | ux-r17c «every var() a stylesheet reads is defined…»; ux-r1 |
+| M8 | the dark rail's accent comes back, unread | KILLED | ux-r17c «every custom property a stylesheet defines is read somewhere» (in the same run, the documented timing-sensitive `GovernancePanel.14b` 409 test also failed; it does not read CSS) |
+| M9 | an unused alias comes back | KILLED | ux-r17c «every custom property…» |
+| M10 | the function-study note text on the stroke token | KILLED | ux-r17c «the function-study widget…» |
+| M11 | the plotted curve loses its hue | KILLED | same |
+| M12 | a white label on the primary takes `--eb-surface` (dark in the reader's dark theme) | KILLED | ux-r17c «the learning activities keep white labels…» |
+| M13 | a status shade loses its tint | KILLED | ux-r17c «the status shades keep their hue and value…» |
+| M14 | the exam's placeholder converted | KILLED | same |
+
+14 / 14 KILLED, no TIMEOUT. The first campaign stopped at M3 on an anchor that matched twice (the inbox page's own R11a rule); the
+anchor was narrowed to the base rule and M3–M14 ran again. `git status` was identical before and after each campaign.
+
+## R17c.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture: every page and scene of the harness (55 pages × 1440 / 1024 / 390 px) | before (`main` `467ec80d`) **165 / 165** clean; after **165 / 165** clean (no horizontal overflow, no page error) |
+| Pixel comparison, before vs after (a pixel counts when a channel moves by more than 12 levels) | **165 / 165** identical. The visible changes sit in states the harness does not open: the focus rings, the builder's governance panel, the function-study widget, hover states and the review modal's shadow |
+| `npm test`, full root suite (`df33b4c3`) | 1 195 files, **14 207 / 14 207** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **1 386** (was 1 502) |
+
+An earlier full run on the working tree had one failure, `AppEvaluationFinish.9g` (a behaviour test that reads no CSS), while another
+full suite ran in parallel on the same machine. It passed 3 / 3 in isolation and in the full run above.
