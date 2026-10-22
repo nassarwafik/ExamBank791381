@@ -1,6 +1,6 @@
 {
   "description": "UX-R colour ratchet: hard-coded colour literals per stylesheet (scripts/ux-color-inventory.mjs). A count may only go down; regenerate with --write after a phase converts literals to tokens.",
-  "total": 1851,
+  "total": 1810,
   "files": {
     "src/App.css": 241,
     "src/aiComposer/ai-composer.css": 34,
@@ -15,8 +15,7 @@
     "src/coding/workspace/workspace.css": 14,
     "src/composite/composite-editor.css": 17,
     "src/composite/composite-review.css": 8,
-    "src/functionGraphs/function-graph.css": 36,
-    "src/functionGraphs/graph-editor.css": 19,
+    "src/functionGraphs/function-graph.css": 14,
     "src/functionStudy/function-study.css": 34,
     "src/functionSurfaces/surface-3d.css": 6,
     "src/functionSurfaces/surface-plot.css": 5,
