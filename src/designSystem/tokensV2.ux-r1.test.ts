@@ -97,9 +97,7 @@ describe("UX-R1 — every --eb-* token read without a fallback is defined", () =
   // Pre-existing at the R0 baseline 56ce097 (the declaration is dropped today); each is fixed by the phase that owns the page,
   // which then removes it here. The list may only shrink.
   const KNOWN_UNDEFINED = new Set([
-    "games/games.css: --eb-font-mono",                 // R13
     "learning/activities/activities.css: --eb-fs-18",  // R9b
-    "learning/visuals/visuals.css: --eb-font-mono",    // R9b
     "projects/performance.css: --eb-fs-15",            // R10
     "projects-pro.css: --eb-fs-15",                    // R10
   ]);

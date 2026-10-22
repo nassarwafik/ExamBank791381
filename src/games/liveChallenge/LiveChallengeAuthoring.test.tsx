@@ -404,7 +404,9 @@ describe("import dialog — stale async loads are ignored (request generation)",
 
 describe("responsive / scope contracts (CSS)", () => {
   const css = readFileSync(path.join(process.cwd(), "src", "games", "games.css"), "utf8");
-  const lc = css.slice(css.indexOf("/* ---------- Live Challenge Generator"));
+  // The Live Challenge section runs to the next phase block (UX-R13 appends its own after it) or to the end of the sheet.
+  const lcAt = css.indexOf("/* ---------- Live Challenge Generator"), nextPhase = css.indexOf("/* UX-R", lcAt);
+  const lc = css.slice(lcAt, nextPhase > -1 ? nextPhase : undefined);
   it("every new rule is scoped under .eb-lc / .eb-lcq (no broad main/button/input/select selectors)", () => {
     const selectors = lc.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]+(?=\{)/g)!.map(s => s.trim()).filter(s => !s.startsWith("@media"));
     for (const sel of selectors) for (const part of sel.split(",")) expect(part.trim(), part).toMatch(/^\.eb-(lc|lcq|dialog\.eb-lc)/);
