@@ -1,6 +1,6 @@
 /* Phase 20C — networkTopology@2 workspace / desktop / editor / review. RTL page, LTR technical islands (addresses, ports, CLI, URLs). */
 .net2 { display: grid; gap: 12px; min-width: 0; }
-.net2-diagram { border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 12px; background: var(--surface-2, var(--eb-surface)); overflow: hidden; }
+.net2-diagram { border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 12px; background: var(--eb-surface); overflow: hidden; }
 .net2-diagram svg { display: block; width: 100%; height: auto; max-height: 440px; touch-action: none; }
 .net2-link { stroke: var(--eb-content-muted); stroke-width: 4; }
 .net2-link.is-down { stroke: var(--eb-content-faint); stroke-dasharray: 10 8; }

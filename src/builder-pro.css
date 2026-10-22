@@ -7,7 +7,7 @@
 @import "./teacher/exam-lists-premium.css";
 :root{
   --bp-navy:var(--eb-navy); --bp-primary:var(--eb-primary); --bp-primary-2:var(--eb-primary-strong); --bp-primary-050:var(--eb-primary-050);
-  --bp-text:var(--eb-text); --bp-muted:var(--eb-muted); --bp-faint:var(--eb-faint);
+  --bp-text:var(--eb-text); --bp-muted:var(--eb-muted);
   --bp-line:var(--eb-line); --bp-line-2:var(--eb-line-2); --bp-surface:var(--eb-surface); --bp-surface-2:var(--eb-surface-2);
   --bp-warn:var(--eb-warn); --bp-warn-bg:var(--eb-warn-bg); --bp-danger:var(--eb-danger);
   --bp-r:var(--eb-r); --bp-r-lg:var(--eb-r-lg); --bp-r-xl:var(--eb-r-xl); --bp-pill:var(--eb-pill); --bp-ease:var(--eb-ease);

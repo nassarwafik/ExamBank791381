@@ -23,7 +23,7 @@
 .cx-engine-status { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-muted)); direction: rtl; }
 .cx-code-editor--fill .cx-code-input { max-height: none; }
 .cx-code-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--eb-muted, var(--eb-content-muted)); direction: rtl; }
-.cx-code-size.is-near { color: var(--eb-warning, var(--eb-warn-tx)); font-weight: 600; }
+.cx-code-size.is-near { color: var(--eb-warn-tx); font-weight: 600; }
 .cx-code-alert { color: var(--eb-danger, #b91c1c); font-size: 13px; direction: rtl; }
 
 .cx-samples { display: grid; gap: 8px; }
@@ -81,7 +81,7 @@
 .cx-run-button[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
 .cx-run-progress { font-size: 13px; color: var(--eb-muted, var(--eb-content-text)); }
 .cx-run-results { display: grid; gap: 8px; min-width: 0; }
-.cx-run-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-danger-soft, #fef2f2); color: var(--eb-danger, #b91c1c); font-size: 13px; }
+.cx-run-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-danger-bg); color: var(--eb-danger, #b91c1c); font-size: 13px; }
 .cx-run-output { max-width: 100%; max-height: 16rem; overflow: auto; white-space: pre; direction: ltr; text-align: left; }
 @media (max-width: 600px) {
   .cx-run-output { max-height: 12rem; font-size: 12px; }
@@ -148,7 +148,7 @@
 .cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
 .cx-run-button[aria-busy="true"] { cursor: progress; }
 .cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-text)); }
-.cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-warning-soft, #fffbeb); color: var(--eb-warning, #92400e); font-size: 12px; }
+.cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 12px; }
 .cx-public-results { display: grid; gap: 8px; min-width: 0; }
 .cx-public-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .cx-public-list .cx-result[data-status="pending"] .cx-result-status { color: var(--eb-muted, var(--eb-content-text)); }

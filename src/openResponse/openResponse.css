@@ -2,14 +2,14 @@
    chrome, `dir="auto"` text); controls are ≥ 40px touch targets; focus uses the canonical ring tokens (never a box-shadow token as an
    outline). No animation, no canvas. */
 .or-response { display: grid; gap: 10px; }
-.or-profile { justify-self: start; padding: 2px 10px; border-radius: 999px; background: var(--eb-surface-2, var(--eb-content-ground)); color: var(--eb-text-muted, var(--eb-content-text)); font-size: 13px; }
+.or-profile { justify-self: start; padding: 2px 10px; border-radius: 999px; background: var(--eb-surface-2, var(--eb-content-ground)); color: var(--eb-content-text); font-size: 13px; }
 .or-instructions { margin: 0; white-space: pre-wrap; unicode-bidi: plaintext; color: var(--eb-text, var(--eb-content-ink)); }
 .or-textarea { box-sizing: border-box; width: 100%; min-height: 220px; padding: 12px; border: 1px solid var(--eb-border, var(--eb-content-grid)); border-radius: 10px; background: var(--eb-surface); color: inherit; font: inherit; line-height: 1.7; resize: vertical; unicode-bidi: plaintext; }
 .or-textarea:focus-visible, .or-btn:focus-visible, .or-level:focus-within, .or-field input:focus-visible, .or-field select:focus-visible, .or-field textarea:focus-visible { outline: var(--eb-focus-ring, 3px solid #f59e0b); outline-offset: var(--eb-focus-offset, 2px); }
 .or-textarea[aria-invalid="true"] { border-color: #b91c1c; }
-.or-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; color: var(--eb-text-muted, var(--eb-content-text)); font-size: 13px; }
+.or-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; color: var(--eb-content-text); font-size: 13px; }
 .or-meta [data-full="true"] { color: #b91c1c; font-weight: 700; }
-.or-hint { margin: 0; color: var(--eb-text-muted, var(--eb-content-text)); font-size: 13px; }
+.or-hint { margin: 0; color: var(--eb-content-text); font-size: 13px; }
 .or-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fffbeb; color: #78350f; font-size: 13px; }
 .or-unavailable { margin: 0; padding: 10px; border-radius: 8px; background: #fef2f2; color: #991b1b; }
 .or-rubric { border: 1px solid var(--eb-border, var(--eb-content-grid)); border-radius: 10px; background: var(--eb-surface-2, var(--eb-surface)); }
@@ -50,5 +50,5 @@
 .or-level { display: flex; gap: 8px; align-items: flex-start; min-height: 40px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
 .or-level:has(input:checked) { background: #ecfdf5; }
 .or-level input { margin-top: 4px; }
-.or-level small { display: block; color: var(--eb-text-muted, var(--eb-content-text)); white-space: pre-wrap; unicode-bidi: plaintext; }
+.or-level small { display: block; color: var(--eb-content-text); white-space: pre-wrap; unicode-bidi: plaintext; }
 .or-grade-summary { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, var(--eb-content-ground)); font-weight: 700; }

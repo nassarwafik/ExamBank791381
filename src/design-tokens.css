@@ -81,14 +81,13 @@
   --eb-text-heading: var(--eb-navy);
   --eb-text-secondary: var(--eb-text);
   --eb-info: #0284c7; --eb-info-bg: #e0f2fe; --eb-info-tx: #075985;
-  /* UX-R1 — the sidebar stays a dark rail until R2 makes it light; it is re-tinted to the purple ink family. Its active pill is
-     tinted with --eb-nav-accent (a light lavender), because the deep purple primary would vanish on the dark rail. */
+  /* UX-R1 — the sidebar stays a dark rail until R2 makes it light; it is re-tinted to the purple ink family.
+     R17c: the rail's lavender active-pill token (--eb-nav-accent) is removed; R2 made the sidebar light and nothing reads it. */
   --eb-nav-bg: #1c1330;
   --eb-nav-text: #ece8f5;
   --eb-nav-text-muted: #b3aac9;
   --eb-nav-hover: rgba(255, 255, 255, 0.07);
   --eb-nav-border: rgba(255, 255, 255, 0.09);
-  --eb-nav-accent: #b9a3e3;
   --eb-backdrop: rgba(28, 19, 48, 0.45);
 
   /* Typography scale (12–28) and weights (400–700) */
@@ -116,7 +115,7 @@
   --eb-z-sticky: 10; --eb-z-dropdown: 20; --eb-z-nav: 30; --eb-z-drawer: 40; --eb-z-toast: 50; --eb-z-overlay: 60; --eb-z-modal: 70;
 
   /* Containers */
-  --eb-container: 1280px; --eb-container-wide: 1440px; --eb-container-reading: 720px; --eb-container-student: 960px;
+  --eb-container: 1280px; --eb-container-reading: 720px; --eb-container-student: 960px;
 
   /* Shell dimensions (UX-R2: the full-width top bar above the sidebar and the page column) */
   --eb-sidebar-w: 236px; --eb-sidebar-w-compact: 72px; --eb-topbar-h: 58px;

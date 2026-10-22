@@ -9,7 +9,6 @@
   /* UX-R11b re-maps the brand tokens to the reference look: a white bar on a hairline, and the purple primary family as the studio's accent (it was a
      navy bar and a turquoise accent). The token names are kept, so every studio rule follows; no literal colour is left. */
   --st-top: var(--eb-surface);
-  --st-top-2: var(--eb-surface-2);
   --st-top-tx: var(--eb-text-heading);
   --st-top-mute: var(--eb-muted);
   --st-top-line: var(--eb-line-2);

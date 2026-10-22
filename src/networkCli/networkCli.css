@@ -27,7 +27,7 @@
 .ncli-run:focus-visible { outline: 2px solid #9fd3a8; outline-offset: 2px; }
 .ncli-status { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; font-size: 13px; color: var(--eb-muted, var(--eb-content-muted)); }
 .ncli-status code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; direction: ltr; unicode-bidi: isolate; }
-.ncli-status .is-warn { color: var(--eb-warning, var(--eb-warn-tx)); font-weight: 600; }
+.ncli-status .is-warn { color: var(--eb-warn-tx); font-weight: 600; }
 .ncli-readonly { margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--eb-surface-2, var(--eb-content-ground)); color: var(--eb-muted, var(--eb-content-text)); font-size: 13px; }
 .ncli-unavailable { margin: 0; padding: 10px 12px; border: 1px dashed var(--eb-border, var(--eb-content-grid)); border-radius: 8px; color: var(--eb-muted, var(--eb-content-muted)); }
 

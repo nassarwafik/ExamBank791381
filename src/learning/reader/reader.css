@@ -21,7 +21,7 @@
   --eb-read-lh:1.85; --eb-read-lh-heading:1.35;
   --eb-read-gap:var(--eb-space-4);
   --eb-read-measure-wide:92ch;
-  --eb-read-accent:var(--eb-primary); --eb-read-accent-strong:var(--eb-primary-strong); --eb-read-accent-bg:var(--eb-primary-050);
+  --eb-read-accent:var(--eb-primary); --eb-read-accent-strong:var(--eb-primary-strong);
   --eb-read-accent-2:var(--eb-info-tx); --eb-read-accent-2-bg:var(--eb-info-bg);
 }
 
@@ -199,7 +199,7 @@
 
 /* ---------- Mobile drawer ---------- */
 .learning-reader-drawer-root{ position:fixed; inset:0; z-index:50; }
-.learning-reader-drawer-backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.5); }
+.learning-reader-drawer-backdrop{ position:absolute; inset:0; background:color-mix(in srgb, var(--eb-content-ink) 50%, transparent); }
 .learning-reader-drawer{
   position:absolute; inset-block:0; inset-inline-start:0; inline-size:min(88vw, 360px); display:flex; flex-direction:column;
   background:var(--eb-surface); box-shadow:var(--eb-sh-lg); overflow-y:auto; padding:var(--eb-space-2);

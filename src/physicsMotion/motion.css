@@ -4,7 +4,7 @@
 .motion { display: grid; gap: 12px; min-width: 0; }
 .motion-stage { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; min-width: 0; }
 @media (max-width: 760px) { .motion-stage { grid-template-columns: minmax(0, 1fr); } }
-.motion-scene { border: 1px solid var(--xp-border, var(--line, var(--eb-content-grid))); border-radius: 12px; background: var(--xp-surface-alt, var(--surface-2, var(--eb-surface))); overflow: hidden; direction: ltr; min-width: 0; }
+.motion-scene { border: 1px solid var(--xp-border, var(--line, var(--eb-content-grid))); border-radius: 12px; background: var(--xp-surface-alt, var(--eb-surface)); overflow: hidden; direction: ltr; min-width: 0; }
 .motion-graphs { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); direction: ltr; min-width: 0; }
 .motion-scene svg, .motion-graphs svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .motion-ground { fill: var(--eb-content-grid); }
