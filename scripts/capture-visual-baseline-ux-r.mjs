@@ -14,6 +14,10 @@
 // axe-core's WCAG 2.1 A / AA rules, and a keyboard pass (Tab through the page, recording every stop that shows no focus indicator).
 // PRINT_PAGES=a,b additionally captures those pages with print media emulated (<page>-print.png). The audit only records; it never
 // changes a CHECK result, so the capture contract of every earlier phase is unchanged.
+// UX-R19a — the capture is deterministic: every page runs on a frozen clock (Date is fixed at the fixtures' NOW; timers still run),
+// and every scripted scene picks its rows by name, never by position. It also captures the states a page capture cannot show
+// (state-* scenes): keyboard focus, hover, a pressed control and an open menu, the classic builder, the builder's governance panel
+// and AI composer, and the function-study widget. Two runs of the same build are pixel-identical on every page and scene.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -155,6 +159,16 @@ const ED_QUESTIONS = [
 const ED_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-editors", title: "المحرّرات", schemaVersion: 2,
   sections: [{ id: "s1", title: "المحرّرات", gradingPolicy: "all", stimuli: {}, questions: ED_QUESTIONS }] });
 const ED_ASSIGNMENT = { ...SIM_ASSIGNMENT, title: "المحرّرات", questionCount: ED_KEYS.length, totalMarks: 6 * ED_KEYS.length, exam: ED_EXAM };
+// UX-R19a — the function-study widget as one student exam (scene "fnstudy"): the rational certification preset of
+// functionStudyTemplates (scripts/ux-r19a-scene-fixtures.json, pinned to it by scripts/ux-r19a-scenes.test.mjs), sanitized by the API's
+// own student sanitizer. The builder's governance panel reads an exam in review with an assigned workflow (the 14B fixture shapes).
+const R19A = JSON.parse(fs.readFileSync(path.join(root, "scripts", "ux-r19a-scene-fixtures.json"), "utf8"));
+const FN_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-fnstudy", title: "دراسة دالة", schemaVersion: 2,
+  sections: [{ id: "s1", title: "الدوال", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "fn", presentationType: "smartSim", questionTypeVersion: 1, text: "ادرس الدالة", marks: 13,
+    smartSim: { schemaVersion: 1, pluginKey: "functionStudy2d", pluginVersion: 1, config: R19A.functionStudy }, answer: { scoring: "proportional", checks: [] } }] }] });
+const FN_ASSIGNMENT = { ...SIM_ASSIGNMENT, title: "دراسة دالة", questionCount: 1, totalMarks: 13, exam: FN_EXAM };
+const GOV_MANIFEST = examId => ({ examId, lifecycleState: "in-review", stateVersion: 3, latestRevisionId: "rev-aaaa1111-latest", latestRevisionNumber: 3, createdAt: "2026-10-19T09:00:00.000Z",
+  updatedAt: "2026-10-19T09:40:00.000Z", lastTransition: { type: "submitted", at: "2026-10-19T09:40:00.000Z", by: "teacher-author" }, reviewRevisionId: "rev-aaaa1111-latest", reviewRevisionNumber: 3, reviewWorkflow: R19A.governance.workflow });
 // UX-R16d — one student exam rendered through a presentation preset (scene "preset-<id>"): the same three questions under the new
 // "reference" preset and under "default", sanitized by the API's student sanitizer (which keeps only the strict canonical presentation).
 const PRESET_EXAM = id => createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-preset", title: "امتحان الوحدة الأولى", schemaVersion: 2,
@@ -291,6 +305,14 @@ function api(req, res) {
   if (scene === "graphs" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: GRAPH_STATE } : { ok: true, savedAt: NOW, state: GRAPH_STATE });
   if (scene === "editors" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: ED_ASSIGNMENT });
   if (scene === "editors" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: SIM_STATE } : { ok: true, savedAt: NOW, state: SIM_STATE });
+  if (scene === "fnstudy" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: FN_ASSIGNMENT });
+  if (scene === "fnstudy" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: SIM_STATE } : { ok: true, savedAt: NOW, state: SIM_STATE });
+  if (scene === "governance" && p === "/api/exam-governance" && req.method === "POST") {
+    let b = {}; try { b = JSON.parse(req.body || "{}"); } catch { /* an empty body reads as {} */ }
+    if (b.action === "directory") return send(200, { mode: "assigned", actors: R19A.governance.directory });
+    if (["revisions", "events", "decisions"].includes(b.action)) return send(200, { items: [], nextCursor: null });
+    return send(200, { governed: true, manifest: GOV_MANIFEST(b.examId || "ex1"), capabilities: ["review"], capabilitySource: "configured", workflowMode: "assigned", actorId: "teacher-reviewer" });
+  }
   if (scene.startsWith("preset-") && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: PRESET_ASSIGNMENT(scene.slice(7)) });
   if (scene.startsWith("preset-") && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: PRESET_STATE } : { ok: true, savedAt: NOW, state: PRESET_STATE });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
@@ -333,7 +355,7 @@ if (part === "gallery" || part === "all") {
 }
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://localhost");
-  if (u.pathname.startsWith("/api/")) { req.resume(); req.on("end", () => api(req, res)); return; }
+  if (u.pathname.startsWith("/api/")) { let body = ""; req.on("data", c => { body += c; }); req.on("end", () => { req.body = body; api(req, res); }); return; }
   const gallery = u.pathname.startsWith("/gallery/");
   const base = gallery ? galleryDir : u.pathname.startsWith("/fonts/") && part === "gallery" ? path.join(root, "public") : dist;
   let full = path.resolve(base, "." + decodeURIComponent(gallery ? u.pathname.slice("/gallery".length) : u.pathname));
@@ -534,8 +556,77 @@ const SCRIPTED = [
   } },
   { id: "messages-thread", role: "teacher", nav: "الرسائل", run: async page => {
     await page.getByRole("combobox", { name: "الصف" }).selectOption("c1", { timeout: 15000 });
-    await page.getByRole("list", { name: "طلاب الصف" }).getByRole("button").nth(1).click({ timeout: 15000 });
+    // UX-R19a — by name, not by position (the roster's order is not fixed).
+    await page.getByRole("list", { name: "طلاب الصف" }).getByRole("button", { name: /أحمد الحسن/ }).click({ timeout: 15000 });
     await page.locator(".eb-msg-conversation:not(.is-offscreen) .eb-msg-bubble").first().waitFor({ timeout: 15000 });
+  } },
+  // UX-R19a — the function-study widget on its exam page.
+  { id: "sim-functionStudy", role: "student", scene: "fnstudy", run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".fnstudy-graph").first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+  } },
+  // UX-R19a — keyboard focus (Tab first, so :focus-visible applies), hover, an open menu, and the builder's states and dialogs.
+  ...[["state-focus-field", "الصفوف والطلاب", p => p.locator(".eb-shell-content input[type='search'], .eb-shell-content .eb-search-field input").first()],
+     ["state-focus-row-action", "الصفوف والطلاب", p => p.locator(".eb-roster-table .eb-row-actions button").first()],
+     // on a phone the sidebar is a drawer: it opens before the Tab, so the focus stays keyboard-driven
+     ["state-focus-nav", "الصفوف والطلاب", async p => { const t = p.locator(".eb-drawer-toggle"); if (await t.isVisible().catch(() => false)) await t.click(); return p.locator("#eb-sidebar").getByRole("button", { name: "الواجبات", exact: true }).first(); }],
+     ["state-focus-primary", "الواجبات", p => p.locator(".eb-shell-content .eb-button.is-primary").first()]].map(([id, nav, target]) => ({ id, role: "teacher", nav, run: async page => {
+    const el = await target(page);
+    await page.keyboard.press("Tab");
+    await el.focus({ timeout: 15000 });
+    await page.waitForTimeout(200);
+  } })),
+  { id: "state-hover-row", role: "teacher", nav: "الصفوف والطلاب", run: async page => {
+    await page.locator(".eb-roster-table tbody tr").first().hover({ timeout: 15000 });
+    await page.waitForTimeout(200);
+  } },
+  { id: "state-menu-open", role: "teacher", nav: "الصفوف والطلاب", run: async page => {
+    await page.getByRole("button", { name: "المزيد من إجراءات الصف" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-menu-panel[data-ready='true']").waitFor({ timeout: 15000 });
+    await page.waitForTimeout(200);
+  } },
+  { id: "state-studio-title-focus", role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.locator(".sb-builder.st-studio").waitFor({ timeout: 15000 });
+    await page.keyboard.press("Tab");
+    await page.locator(".st-title-input").focus({ timeout: 15000 });
+    await page.waitForTimeout(200);
+  } },
+  { id: "state-question-types", role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
+    await page.locator(".st-add-zone[data-add-question]").first().click({ timeout: 15000 });
+    await page.locator(".qt-card").first().waitFor({ timeout: 15000 });
+    await page.keyboard.press("Tab");
+    await page.locator(".qt-card").first().focus();
+    await page.waitForTimeout(200);
+  } },
+  // The builder's menus open from the keyboard, as a keyboard user opens them: at 1024 px the studio's top-bar tools sit under
+  // «حفظ مؤقت» and «متابعة», so a pointer cannot reach them (a product finding the record carries, §R19a.5).
+  { id: "state-classic-builder", role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
+    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".eb-menu-panel[data-ready='true'] [data-action='layout']").click({ timeout: 15000 });
+    await page.locator(".sb-builder:not(.st-studio)").waitFor({ timeout: 15000 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+  } },
+  { id: "state-governance", role: "teacher", nav: "باني الامتحان", scene: "governance", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
+    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".eb-menu-panel[data-ready='true'] [data-action='governance']").click({ timeout: 15000 });
+    await page.getByTestId("gov-workflow").waitFor({ timeout: 15000 });
+    await page.waitForTimeout(300);
+  } },
+  { id: "state-ai-composer", role: "teacher", nav: "باني الامتحان", run: async page => {
+    await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
+    await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
+    await page.locator(".st-menu[aria-label='إضافة أسئلة']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".eb-menu-panel[data-ready='true'] [data-action='ai-composer']").click({ timeout: 15000 });
+    await page.getByRole("dialog").last().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(300);
   } },
   { id: "student-messages", role: "student", run: async page => {
     await page.getByRole("button", { name: /الرسائل/ }).first().click({ timeout: 15000 });
@@ -556,6 +647,7 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
     const errors = [];
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);
+    await ctx.clock.setFixedTime(new Date(NOW));                 // UX-R19a — relative times ("منذ 3 ساعات") never move between runs
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(String(e))); page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push("console: " + m.text()); });
     let reached = true;
