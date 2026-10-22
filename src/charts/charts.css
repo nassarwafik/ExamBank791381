@@ -7,8 +7,8 @@
    no page overflow (the stage is 100% of its column), print-safe.
    ============================================================ */
 .xp-chart{
-  --_c-text:var(--xp-text,var(--eb-text,#334155)); --_c-muted:var(--xp-muted,var(--eb-muted,#64748b)); --_c-border:var(--xp-border,var(--eb-line,#e2e8f0));
-  --_c-surface:var(--xp-surface,var(--eb-surface,#fff)); --_c-alt:var(--xp-surface-alt,var(--eb-surface-2,#f7f9fc)); --_c-primary:var(--xp-primary,var(--eb-primary,#2563eb));
+  --_c-text:var(--xp-text,var(--eb-text,var(--eb-content-text))); --_c-muted:var(--xp-muted,var(--eb-muted,var(--eb-content-muted))); --_c-border:var(--xp-border,var(--eb-line,var(--eb-content-line)));
+  --_c-surface:var(--xp-surface,var(--eb-surface)); --_c-alt:var(--xp-surface-alt,var(--eb-surface-2,var(--eb-surface))); --_c-primary:var(--xp-primary,var(--eb-primary,var(--eb-content-accent)));
   --_c-radius:var(--xp-radius,var(--eb-r-sm,8px)); --_c-selected:#F59E0B;
   margin:0; display:flex; flex-direction:column; gap:var(--eb-space-2,8px); min-width:0; max-width:100%; color:var(--_c-text);
   padding:var(--eb-space-3,12px); border:1px solid var(--_c-border); border-radius:var(--_c-radius); background:var(--_c-surface);
@@ -31,7 +31,7 @@
 .xp-chart-status{ position:absolute; inset:0; display:grid; place-items:center; color:var(--_c-muted); font-size:.875em; direction:rtl; }
 .xp-chart-tip{ position:absolute; z-index:2; pointer-events:none; max-inline-size:min(260px,80%); display:flex; flex-direction:column; gap:2px;
   padding:6px 10px; border:1px solid var(--_c-border); border-radius:6px; background:var(--_c-surface); color:var(--_c-text);
-  box-shadow:0 4px 14px rgba(15,23,42,.14); font-size:.8125em; line-height:1.4; direction:rtl; overflow-wrap:anywhere; }
+  box-shadow:0 4px 14px color-mix(in srgb, var(--eb-content-ink) 14%, transparent); font-size:.8125em; line-height:1.4; direction:rtl; overflow-wrap:anywhere; }
 .xp-chart-tip-title{ font-weight:var(--eb-fw-semibold,600); }
 .xp-chart-error{ margin:0; padding:var(--eb-space-2,8px); border:1px dashed var(--_c-border); border-radius:var(--_c-radius); color:var(--_c-muted); font-size:.875em; }
 .xp-chart-retry,.xp-chart-table-toggle{ font:inherit; font-size:.875em; color:var(--_c-primary); background:none; border:0; padding:4px 2px; cursor:pointer; text-decoration:underline; }
@@ -50,7 +50,7 @@
 .xp-chart-option:disabled{ cursor:default; opacity:1; }
 .xp-chart-option[data-xp-review="correct"]{ border-color:#047857; }
 .xp-chart-option[data-xp-review="incorrect"]{ border-color:#B91C1C; }
-.xp-chart-option[data-xp-review="missed"]{ border-style:dashed; border-color:#B45309; }
+.xp-chart-option[data-xp-review="missed"]{ border-style:dashed; border-color:var(--eb-warn-tx); }
 .xp-chart-option-mark{ font-size:.875em; color:var(--_c-muted); }
 
 .xp-chart-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; }
@@ -65,7 +65,7 @@
 
 @media (prefers-reduced-motion: reduce){ .xp-chart *{ transition:none !important; animation:none !important; } }
 @media print{
-  .xp-chart{ break-inside:avoid; page-break-inside:avoid; border-color:#999; }
+  .xp-chart{ break-inside:avoid; page-break-inside:avoid; border-color:var(--eb-content-axis); }
   /* the picture flows in print: the engine's fixed-size box becomes fluid and the SVG (it carries a viewBox) scales to the printed column */
   .xp-chart-stage{ overflow:visible; block-size:auto !important; }
   .xp-chart-host{ position:static; }

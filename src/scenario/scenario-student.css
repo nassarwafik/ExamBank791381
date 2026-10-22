@@ -21,6 +21,6 @@
   .iex-page.has-scenario > .iex-page-heading, .iex-page.has-scenario > .iex-section-context{ grid-column:1 / -1; }
   .iex-page.has-scenario > .iex-page-scenario{ position:sticky; inset-block-start:calc(56px + var(--eb-space-3)); max-height:calc(100vh - 88px); overflow:auto; }
 }
-.review-scenario{ margin:0 0 var(--eb-space-3, 12px); border:1px solid var(--eb-line, #e5e9f0); border-radius:var(--eb-r, 10px); padding:0 var(--eb-space-3, 12px) var(--eb-space-2, 8px); background:var(--eb-surface, #fff); }
+.review-scenario{ margin:0 0 var(--eb-space-3, 12px); border:1px solid var(--eb-line, var(--eb-content-ground)); border-radius:var(--eb-r, 10px); padding:0 var(--eb-space-3, 12px) var(--eb-space-2, 8px); background:var(--eb-surface); }
 .review-scenario > summary{ cursor:pointer; min-height:40px; display:flex; align-items:center; gap:8px; font-weight:700; }
-.review-scenario-tag{ font-style:normal; font-size:12px; color:var(--eb-primary, #1d4ed8); }
+.review-scenario-tag{ font-style:normal; font-size:12px; color:var(--eb-primary, var(--eb-content-accent)); }
