@@ -7,6 +7,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { CHART_PALETTE_COLORS } from "../charts/chartTheme";
+import { intersectionGraph } from "./testing/graphFixtures";
+import { stackedArea } from "../charts/testing/chartFixtures";
 
 const read = (...p: string[]) => readFileSync(path.join(process.cwd(), ...p), "utf8");
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -70,5 +72,11 @@ describe("UX-R16c — the chart categorical palette", () => {
 
   it("stays at least as distinguishable as before for every vision type", () => {
     for (const [k, m] of Object.entries(CVD)) expect(minDelta(CHART_PALETTE_COLORS.categorical, m), k).toBeGreaterThanOrEqual(minDelta(OLD_CATEGORICAL, m) - 1e-9);
+  });
+});
+
+describe("UX-R16c — the capture fixture", () => {
+  it("scripts/ux-r16c-graph-fixtures.json is exactly the suites' own graph and chart fixtures (no drift)", () => {
+    expect(JSON.parse(read("scripts", "ux-r16c-graph-fixtures.json"))).toEqual({ functionGraph: intersectionGraph(), chart: stackedArea() });
   });
 });
