@@ -7,10 +7,13 @@
    The plot itself is LTR mathematics inside an RTL page; text runs isolate themselves.
    ============================================================ */
 .fg{
-  --_g-text:var(--xp-text,var(--eb-text,#334155)); --_g-muted:var(--xp-muted,var(--eb-muted,#64748b)); --_g-border:var(--xp-border,var(--eb-line,#e2e8f0));
-  --_g-surface:var(--xp-surface,var(--eb-surface,#fff)); --_g-alt:var(--xp-surface-alt,var(--eb-surface-2,#f7f9fc)); --_g-primary:var(--xp-primary,var(--eb-primary,#2563eb));
-  --_g-radius:var(--xp-radius,var(--eb-r-sm,8px)); --_g-selected:#B45309;
-  --fg-c1:#1D4ED8; --fg-c2:#B91C1C; --fg-c3:#047857; --fg-c4:#7C3AED; --fg-c5:#C2410C; --fg-c6:#475569;
+  --_g-text:var(--xp-text,var(--eb-text)); --_g-muted:var(--xp-muted,var(--eb-muted)); --_g-border:var(--xp-border,var(--eb-line));
+  --_g-surface:var(--xp-surface,var(--eb-surface)); --_g-alt:var(--xp-surface-alt,var(--eb-surface-2)); --_g-primary:var(--xp-primary,var(--eb-primary));
+  --_g-radius:var(--xp-radius,var(--eb-r-sm,8px)); --_g-selected:var(--eb-warn-tx);
+  /* UX-R16c — the six stored series indices (style.color 1–6) keep their meaning; the palette behind them takes the theme's series
+     order: the deep purple first (--eb-primary-strong, 11.4:1 on white), the former first blue moves to 4 where the violet was.
+     Every pair stays distinguishable for normal, protan, deutan and tritan vision (functionGraphSeries.ux-r16c.test.ts). */
+  --fg-c1:var(--eb-primary-strong); --fg-c2:#B91C1C; --fg-c3:#047857; --fg-c4:#1D4ED8; --fg-c5:#C2410C; --fg-c6:#475569;
   margin:0; display:flex; flex-direction:column; gap:var(--eb-space-2,8px); min-width:0; max-width:100%; color:var(--_g-text);
   padding:var(--eb-space-3,12px); border:1px solid var(--_g-border); border-radius:var(--_g-radius); background:var(--_g-surface);
 }
@@ -27,8 +30,8 @@
 .fg-svg{ display:block; inline-size:100%; block-size:auto; overflow:hidden; user-select:none; -webkit-user-select:none; }
 .fg-plot-bg{ fill:var(--_g-surface); }
 .fg-frame{ fill:none; stroke:var(--_g-border); stroke-width:1; pointer-events:none; }
-.fg-grid{ stroke:#E2E8F0; stroke-width:1; }
-.fg-axis{ stroke:#334155; stroke-width:1.4; }
+.fg-grid{ stroke:var(--eb-line); stroke-width:1; }
+.fg-axis{ stroke:var(--eb-text); stroke-width:1.4; }
 .fg-tick{ fill:var(--_g-muted); font-variant-numeric:tabular-nums; }
 .fg-axis-label{ fill:var(--_g-text); font-style:italic; font-weight:600; }
 .fg-curve{ fill:none; stroke-width:2.4; stroke-linejoin:round; stroke-linecap:round; }
@@ -40,11 +43,11 @@
 .fg-region{ stroke:none; }
 .fg-hatch{ stroke:#0369A1; stroke-width:1.5; opacity:.55; }
 .fg-region-tint{ fill:#0EA5E9; opacity:.12; stroke:#0369A1; stroke-width:1; }
-.fg-interval{ stroke:#0F172A; stroke-width:5; stroke-linecap:butt; opacity:.8; }
-.fg-end{ fill:var(--_g-surface); stroke:#0F172A; stroke-width:1.6; }
-.fg-end-closed{ fill:#0F172A; }
-.fg-point{ fill:#0F172A; stroke:var(--_g-surface); stroke-width:1.5; }
-.fg-point-open{ fill:var(--_g-surface); stroke:#0F172A; stroke-width:2; }
+.fg-interval{ stroke:var(--eb-navy); stroke-width:5; stroke-linecap:butt; opacity:.8; }
+.fg-end{ fill:var(--_g-surface); stroke:var(--eb-navy); stroke-width:1.6; }
+.fg-end-closed{ fill:var(--eb-navy); }
+.fg-point{ fill:var(--eb-navy); stroke:var(--_g-surface); stroke-width:1.5; }
+.fg-point-open{ fill:var(--_g-surface); stroke:var(--eb-navy); stroke-width:2; }
 .fg-label{ fill:var(--_g-text); font-weight:600; paint-order:stroke; stroke:var(--_g-surface); stroke-width:3px; stroke-linejoin:round; }
 .fg-hit{ cursor:pointer; }
 /* selection is never colour alone: a thick halo, a dashed ring, a bigger marker, ✓ in the list */
@@ -52,11 +55,11 @@
 .fg-ring{ fill:none; stroke:var(--_g-selected); stroke-width:2.5; stroke-dasharray:4 3; }
 [data-fg-selected] .fg-region-tint{ stroke:var(--_g-selected); stroke-width:3; stroke-dasharray:6 3; }
 .fg-review-glyph{ font-weight:700; font-size:15px; paint-order:stroke; stroke:var(--_g-surface); stroke-width:3px; }
-.fg-review-glyph[data-fg-review="correct"]{ fill:#047857; } .fg-review-glyph[data-fg-review="incorrect"]{ fill:#B91C1C; } .fg-review-glyph[data-fg-review="missed"]{ fill:#B45309; }
-.fg-crosshair line{ stroke:#64748B; stroke-width:1; stroke-dasharray:3 3; }
+.fg-review-glyph[data-fg-review="correct"]{ fill:#047857; } .fg-review-glyph[data-fg-review="incorrect"]{ fill:#B91C1C; } .fg-review-glyph[data-fg-review="missed"]{ fill:var(--eb-warn-tx); }
+.fg-crosshair line{ stroke:var(--eb-muted); stroke-width:1; stroke-dasharray:3 3; }
 .fg-trace{ fill:var(--_g-primary); stroke:var(--_g-surface); stroke-width:2; }
 .fg-readout{ position:absolute; inset-block-start:6px; inset-inline-start:8px; max-inline-size:calc(100% - 16px); padding:4px 8px; border:1px solid var(--_g-border); border-radius:6px;
-  background:var(--_g-surface); color:var(--_g-text); font-size:.8125em; direction:rtl; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 2px 8px rgba(15,23,42,.12); }
+  background:var(--_g-surface); color:var(--_g-text); font-size:.8125em; direction:rtl; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 2px 8px color-mix(in srgb, var(--eb-navy) 12%, transparent); }
 
 /* the keyboard / screen-reader selection list — the same targets the picture accepts */
 .fg-select{ display:flex; flex-direction:column; gap:6px; }
@@ -67,7 +70,7 @@
 .fg-option[aria-pressed="true"]{ border-color:var(--_g-selected); box-shadow:inset 0 0 0 2px var(--_g-selected); background:#FFFBEB; font-weight:var(--eb-fw-semibold,600); }
 .fg-option[aria-pressed="true"]:not([data-fg-review])::before{ content:"✓ "; }
 .fg-option:disabled{ cursor:default; opacity:1; }
-.fg-option[data-fg-review="correct"]{ border-color:#047857; } .fg-option[data-fg-review="incorrect"]{ border-color:#B91C1C; } .fg-option[data-fg-review="missed"]{ border-style:dashed; border-color:#B45309; }
+.fg-option[data-fg-review="correct"]{ border-color:#047857; } .fg-option[data-fg-review="incorrect"]{ border-color:#B91C1C; } .fg-option[data-fg-review="missed"]{ border-style:dashed; border-color:var(--eb-warn-tx); }
 .fg-option-detail{ color:var(--_g-muted); font-variant-numeric:tabular-nums; }
 
 .fg-alt summary{ cursor:pointer; color:var(--_g-primary); font-size:.875em; }
@@ -79,12 +82,12 @@
 .fg-source{ margin:0; color:var(--_g-muted); font-size:.8125em; }
 .fg-sr-only{ position:absolute !important; inline-size:1px; block-size:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .fg-print{ display:none; }
-.fg-pending{ margin:0; padding:var(--eb-space-3,12px); border:1px dashed var(--xp-border,var(--eb-line,#e2e8f0)); border-radius:var(--xp-radius,8px); }
+.fg-pending{ margin:0; padding:var(--eb-space-3,12px); border:1px dashed var(--xp-border,var(--eb-line)); border-radius:var(--xp-radius,8px); }
 
 @media print{
-  .fg{ break-inside:avoid; border-color:#94A3B8; }
+  .fg{ break-inside:avoid; border-color:var(--eb-faint); }
   .fg-toolbar,.fg-readout,.fg-alt,.fg-crosshair,.fg-trace{ display:none !important; }
   .fg-stage[data-fg-zoomed] .fg-svg{ display:none; }
   .fg-print{ display:block; }
-  .fg-option{ border-color:#64748B; }
+  .fg-option{ border-color:var(--eb-muted); }
 }
