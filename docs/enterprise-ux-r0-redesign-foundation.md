@@ -3262,3 +3262,233 @@ anchor was narrowed to the base rule and M3–M14 ran again. `git status` was id
 
 An earlier full run on the working tree had one failure, `AppEvaluationFinish.9g` (a behaviour test that reads no CSS), while another
 full suite ran in parallel on the same machine. It passed 3 / 3 in isolation and in the full run above.
+
+---
+
+# Phase UX-R17d — Final audit, the recorded leftovers and the programme close-out
+
+**Owner direction (2026-10-22):** the fourth R17 part, planned in §4.2 (#420). It covers:
+- the leftovers R17c recorded;
+- a measured audit of every harness page;
+- final captures;
+- the programme summary.
+
+The owner chose option (a) for the status shades: they keep their literals. R17d branches from `main` `30dce949` (#419, R17c) as
+`feature/ux-r17d-final-audit`.
+
+## R17d.1 What changes for the user
+
+**Fixes the audit found.** The audit ran on `main`: axe-core 4.10.2 with its WCAG 2.1 A / AA rules, plus a keyboard pass, on 57
+pages × 1440 / 1024 / 390 (§R17d.5).
+- **Charts reach screen readers by name only.** The projects' six and the reports' two Chart.js canvases are now `aria-hidden`. The
+  figure around each one already carries the chart's name and summary, and Chart.js marks its canvas `role="img"` with no name of its
+  own. The dashboard has done this since 21H.5. axe `role-img-alt`: 21 elements → 0.
+- **Wide tables can be scrolled by keyboard.** Each of these now sits in a named, focusable region (axe
+  `scrollable-region-focusable`):
+  - the report tables (named by their caption);
+  - the student × assessment matrix;
+  - the activity log.
+- **The exam title shows the app's focus ring** when reached by keyboard. Its dashed hairline alone also marked hover.
+- **No text is dimmed below AA by opacity** (axe `color-contrast`: 20 elements → 0):
+  - **Chemical reactions simulator:** an unset coefficient group dimmed its whole content (3.45:1). It now dims only its particle
+    drawings and keeps the dashed border.
+  - **Messages roster:** an archived student's avatar was grey and translucent (4.2:1). It is now grey only.
+
+**The leftovers R17c recorded.**
+- **`structured-builder.css`, seven undefined reads:** each collapses to the value it renders, so nothing moves.
+- **One exception, the pressed button:** the classic builder's pressed button read an undefined `--primary-soft` and rendered its old
+  blue fallback (`#e8effc`). It now takes `--eb-primary-100`, as R17b's pressed states do.
+- **Two new type sizes:** `--eb-fs-15` and `--eb-fs-18` join the type scale. Three titles read them without a fallback and so
+  inherited their parent's size; they now get the size they were written for:
+  - the evaluation title and the evaluation-finish title (projects);
+  - the octet buttons of the IP-address activity (learning).
+- **The recorded lists shrink:**
+  - R1's list of undefined reads is now empty;
+  - R17c's list keeps one entry, the reader's prose measure, which the reader guards pin as a contract.
+
+**Not changed, on purpose** (recorded in §R17d.6): the findings inside the simulators and the code editor, and the student messages
+list.
+
+## R17d.2 Edit set
+
+- **`src/projects/ProjectAnalyticsCharts.tsx`, `src/reports/ReportViews.tsx`:** `aria-hidden="true"` on eight charts. The matrix
+  table also gets its region.
+- **`src/reports/ui.tsx`:** `ReportTable`'s scroll wrapper becomes `role="region"`, named by the caption, with `tabIndex={0}`.
+- **`src/AuditHistoryPanel.tsx`:** the activity log's scroll wrapper becomes a named, focusable region.
+- **`src/studio/studio.css`:** a `:focus-visible` ring on the exam title.
+- **`src/chemistryReactions/rxn.css`, `src/messages/messages.css`:** the two opacity fixes.
+- **`src/structured-builder.css`:** the seven reads and the pressed tint.
+- **`src/design-tokens.css`:** `--eb-fs-15`, `--eb-fs-18`.
+- **`src/designSystem/tokensV2.ux-r1.test.ts`, `src/designSystem/remainingSheets.ux-r17c.test.ts`** (updated explicitly): their
+  recorded lists shrink by the entries R17d fixes. Each list's "may only shrink" assertion is what requires this.
+- **`scripts/capture-visual-baseline-ux-r.mjs`** gains two modes. Both only record, so no earlier phase's capture contract changes.
+  - **`AUDIT=1`:**
+    - axe-core's WCAG 2.1 A / AA rules on every page;
+    - a keyboard pass that Tabs through the page and records every stop whose focus visibly changes nothing, on the element or
+      its three nearest ancestors.
+  - **`PRINT_PAGES`:** captures with print media emulated.
+- **`scripts/ux-color-inventory.baseline.json`:** 757 → **756**.
+- **`src/designSystem/finalAudit.ux-r17d.test.tsx`:** new, 7 guards:
+  - every react-chartjs-2 chart in `src` is `aria-hidden`; there are 13, so the guard also counts that it found them;
+  - a rendered `ReportTable` is a named, focusable region;
+  - the matrix and the activity log regions;
+  - the title ring;
+  - the two sizes;
+  - the two opacity fixes;
+  - the pressed tint.
+
+## R17d.3 Fail-first evidence
+
+The guard file was copied into a detached worktree of `main` `30dce949`: **7 of 7 fail**.
+
+| Guard | `main` `30dce949` | R17d |
+|---|---|---|
+| every react-chartjs-2 chart in the app is aria-hidden | **FAIL**: «expected [ …(8) ] to deeply equal []» | pass |
+| a report table scrolls inside a named, focusable region | **FAIL** (no region) | pass |
+| the matrix and the activity log scroll inside named, focusable regions | **FAIL** | pass |
+| the exam title's keyboard focus shows the app's ring | **FAIL** | pass |
+| the type scale defines 15 px and 18 px | **FAIL** | pass |
+| no text is dimmed below AA by opacity | **FAIL** | pass |
+| the classic builder's pressed button takes the primary tint | **FAIL** | pass |
+
+**The audit tells the same story** (§R17d.5): `role-img-alt` drops from 21 elements to 0 and `color-contrast` from 20 to 0, both on
+the same pages, between the two builds.
+
+## R17d.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/designSystem`, the colour ratchet, `src/reports`, `src/projects`, `src/studio`,
+`src/chemistryReactions`, `src/messages`, the activity log and the builder overlay. Each file was restored byte-for-byte after its
+mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | a project chart canvas loses `aria-hidden` (an unnamed `role="img"` again) | KILLED | ux-r17d «every react-chartjs-2 chart…» |
+| M2 | the trend line, whose props contain `>`, loses `aria-hidden` | KILLED | same |
+| M3 | the report table's scroll region loses its `tabindex` | KILLED | ux-r17d «a report table scrolls inside a named, focusable region» |
+| M4 | the matrix scroll region loses its role | KILLED | ux-r17d «the matrix and the activity log…» |
+| M5 | the activity log's scroll region reverted | KILLED | same |
+| M6 | the exam title's keyboard ring removed | KILLED | ux-r17d «the exam title's keyboard focus…» |
+| M7 | `--eb-fs-15` dropped from the scale | KILLED | ux-r17d «the type scale…»; ux-r17c «every var() a stylesheet reads is defined…» |
+| M8 | the pressed button back to the old blue | KILLED | colour ratchet; ux-r17d |
+| M9 | an undefined read returns in the classic builder | KILLED | ux-r17c «every var() a stylesheet reads is defined…» |
+| M10 | the unset reaction group dims its text again (3.45:1) | KILLED | ux-r17d «no text is dimmed below AA by opacity…» |
+| M11 | the archived avatar dimmed again (4.2:1) | KILLED | same |
+
+**Result:** 11 / 11 KILLED, no TIMEOUT. `git status` was identical before and after the campaign.
+
+## R17d.5 The audit, the captures and local validation
+
+**The audit.** Both builds were audited with the same harness run: 57 pages × 3 viewports, 171 page views each. The keyboard pass
+made 2 768 stops on `main` and 2 775 on R17d.
+
+| axe rule (WCAG 2.1 A / AA) | `main` `30dce949` | R17d | Where |
+|---|---|---|---|
+| `role-img-alt` | 21 elements | **0** | project analytics, report-assignments |
+| `color-contrast` | 20 | **0** | messages-thread (archived avatar), chemical reactions (unset groups) |
+| `scrollable-region-focusable` | 6 | 4 | fixed: audit, report-assignments. Left: chemical reactions (phone) and the student messages list (§R17d.6) |
+| `list`, `nested-interactive`, `aria-prohibited-attr` | 6 / 3 / 3 | 6 / 3 / 3 | chemical reactions, physics lab, code editor (§R17d.6) |
+| keyboard stops with no visible focus change | 3 | 3 | the physics lab's draggable bob (§R17d.6) |
+
+| Check | Result |
+|---|---|
+| Visual capture: every page and scene (57 pages × 1440 / 1024 / 390 px), plus four pages with print media emulated | before (`main` `30dce949`) **171 / 171** clean; after **171 / 171** clean (no horizontal overflow, no page error) |
+| Pixel comparison, before vs after (a pixel counts when a channel moves by more than 12 levels) | **176 / 183** identical |
+| `npm test`, full root suite (`41d47ffc`) | 1 199 files, **14 235 / 14 235** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **756** (was 757) |
+
+The seven captures that differ:
+- **`messages-thread`, desktop and tablet:** the archived avatar.
+- **`sim-chemistryReactions`, three viewports:** the unset groups' text at full contrast.
+- **`assignments` and its print capture, phone:** a relative time that moved by an hour between the two runs (§R17d.6).
+
+**Changes the harness does not open:** the exam title's ring, the classic builder's pressed button and the three resized titles.
+The guards pin them, and R19a adds scenes for them.
+
+## R17d.6 Recorded, not fixed
+
+Each finding stays for the reason given. None is a colour or a chrome rule, and each belongs to a page whose behaviour other phases
+own.
+
+- **Chemical reactions simulator:**
+  - **`list`:** its particle lists hold `role="img"` items directly.
+  - **`scrollable-region-focusable`:** its coefficient table scrolls on a phone.
+
+  Both are markup inside the simulator. R16a scoped the simulator to colour only, and changing its list structure is a content
+  change for the simulator's owner.
+- **Physics lab:**
+  - **`nested-interactive`:** the scene's SVG is focusable and holds the draggable bob.
+  - **The keyboard pass flags the bob:** the bob's focus ring is drawn on its inner circle (`.lab-bob.is-draggable:focus-visible
+    circle`). That is a descendant, which the detector does not read, so the ring exists and this one entry is a limit of the
+    detector.
+- **Code editor, `aria-prohibited-attr`:** the run-results panel in the student's coding answer (`CodingResponse`,
+  `CodingTemplateResponse`) carries an `aria-label` on a live region with no role. Fixing it means giving a live region in the
+  student exam a role (`status`), which changes what assistive technology announces during an exam. That is left for a
+  coding-question phase, not a presentation audit.
+- **Student messages, `scrollable-region-focusable`:** the student's thread list is not focusable. `TeacherMessagesResponsive.5e`
+  pins this on purpose: «the student page is unchanged: its thread is not a follow/scroll region».
+- **Status shades:** the about 170 success / warn / danger shades with no token of the same value keep their literals (option (a)).
+  They carry meaning.
+- **The harness clock:** relative times («منذ 18 ساعة») move between two runs an hour apart. R19a fixes this.
+
+## R17d.7 Programme summary (R0–R17)
+
+**What the programme did:**
+- **The approved language is everywhere:** §3 ran from R0 to R17d, across every teacher page, the student portal, the student exam
+  frame and the login and public pages:
+  - the purple palette;
+  - flat 8 px hairline cards;
+  - 44 px rows;
+  - grey-pill selection;
+  - KPI strips;
+  - quiet actions.
+- **Presentation only, throughout:** no grading, API, stored-data or Runner change. The exam presets (R16d) were added, never
+  retuned.
+
+**The colour ratchet** (`scripts/ux-color-inventory.mjs`):
+
+| Point | Literals | Stylesheets with literals |
+|---|---|---|
+| R0 baseline | 2 477 | 62 |
+| R17d head | **756** | 52 |
+
+**What is left is kept on purpose:**
+- the student's exam paper and cover;
+- meaning-carrying shades (status, difficulty, legend, series);
+- the dark CLI and code surfaces;
+- the reading themes;
+- the simulators' dark schemes;
+- the old exam themes' thumbnails;
+- printed output.
+
+**Phases and pull requests:**
+
+| Phase | PR | Phase | PR |
+|---|---|---|---|
+| R0 foundation | #390 | R11b exam builder | #406 |
+| R1 tokens | #391 | R12 grading workspace | #407 |
+| R2 shell | #392 | plan: content colours | #408 |
+| R3 kit | #393 | R13 games | #409 |
+| R4 dashboard | #394 | R14 student portal | #410 |
+| R5 classes and students | #395 | R15 student exam | #411 |
+| R6a assignments | #396 | R16 login and public pages | #412 |
+| R6b gradebook | #398 | R16a simulator colours | #413 |
+| hotfix: create-class dialog | #400 | R16c series colours | #414 |
+| R7 reports | #399 | R16d reference preset | #415 |
+| R8 messages | #401 | R16b editor colours | #416 |
+| R9a library | #402 | R17a base sheets | #417 |
+| R9b reader | #403 | R17b builder sheets | #418 |
+| R10 projects | #404 | R17c remaining sheets, dead CSS | #419 |
+| R11a exam bank | #405 | plan addendum (§4.2) | #420 |
+
+**Guards.** Every phase added a guard suite under `src/` or `scripts/`, named after it (`*.ux-r<N>.test.*`). Together they pin:
+- the palette and its contrast;
+- the shell's layers;
+- each page's look;
+- the colour ratchet;
+- the dead-CSS rules (§R17c);
+- this phase's audit fixes.
+
+**What comes next (§4.2):** R19a interactive-state captures, R19b the visual regression gate, then dark mode (R18a–R18c).

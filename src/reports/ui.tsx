@@ -34,7 +34,7 @@ type Col<T> = { key: string; label: string; render?: (row: T) => ReactNode; nume
 export function ReportTable<T extends Record<string, unknown>>({ columns, rows, caption, empty, rowHeader = true, className }: { columns: Col<T>[]; rows: T[]; caption: string; empty?: string; rowHeader?: boolean; className?: string }) {
   if (!rows.length) return <EmptyState text={empty} />;
   return (
-    <div className={"eb-report-table-scroll" + (className ? " " + className : "")}>
+    <div className={"eb-report-table-scroll" + (className ? " " + className : "")} role="region" aria-label={caption} tabIndex={0}>
       <table className="eb-report-table">
         <caption className="eb-visually-hidden">{caption}</caption>
         <thead><tr>{columns.map(c => <th key={c.key} scope="col">{c.label}</th>)}</tr></thead>

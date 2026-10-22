@@ -10,6 +10,10 @@
 // component kit (closed and with the action menu open); run it from a worktree of the baseline to get the "before" kit.
 //   DIST=./dist LABEL=before PAGES=dashboard,students VIEWPORTS=desktop PART=all node scripts/capture-visual-baseline-ux-r.mjs
 // Output: HARNESS_OUT/<label>/<viewport>/<page>.png (+ gallery/<viewport>*.png) + record.json; one CHECK line per capture.
+// UX-R17d — AUDIT=1 (with AXE_CORE_DIR, a directory whose node_modules holds axe-core) also audits each page after its capture:
+// axe-core's WCAG 2.1 A / AA rules, and a keyboard pass (Tab through the page, recording every stop that shows no focus indicator).
+// PRINT_PAGES=a,b additionally captures those pages with print media emulated (<page>-print.png). The audit only records; it never
+// changes a CHECK result, so the capture contract of every earlier phase is unchanged.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -22,10 +26,17 @@ const label = process.env.LABEL || "after";
 const only = (process.env.PAGES || "").split(",").map(s => s.trim()).filter(Boolean);
 const onlyVp = (process.env.VIEWPORTS || "").split(",").map(s => s.trim()).filter(Boolean);
 const part = process.env.PART || "pages";
+const audit = process.env.AUDIT === "1";
+const printPages = (process.env.PRINT_PAGES || "").split(",").map(s => s.trim()).filter(Boolean);
 const out = path.resolve(process.env.HARNESS_OUT || path.join(root, ".harness-ux-r"), label);
 let chromium;
 try { ({ chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core")); }
 catch { console.error("playwright-core unavailable (set PLAYWRIGHT_CORE_DIR)"); process.exit(2); }
+let axeSource = "";
+if (audit) {
+  try { axeSource = fs.readFileSync(createRequire(path.join(process.env.AXE_CORE_DIR || root, "package.json")).resolve("axe-core/axe.min.js"), "utf8"); }
+  catch { console.error("axe-core unavailable (set AXE_CORE_DIR)"); process.exit(2); }
+}
 if (part !== "gallery" && !fs.existsSync(path.join(dist, "index.html"))) { console.error("no production build at " + dist); process.exit(2); }
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 
@@ -580,6 +591,38 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       const chart = await page.evaluate(() => { const box = document.querySelector(".eb-report-result .eb-chart-canvas"); const canvas = box?.querySelector("canvas"); return { box: box ? Math.round(box.getBoundingClientRect().height) : null, canvas: canvas ? Math.round(canvas.getBoundingClientRect().height) : null }; });
       m.chart = chart;
       if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("report chart has no usable height: " + JSON.stringify(chart));
+    }
+    if (audit && reached) {
+      await page.addScriptTag({ content: axeSource });
+      m.axe = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] }))
+        .violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, targets: v.nodes.slice(0, 6).map(n => n.target.join(" ")), detail: v.nodes.slice(0, 3).map(n => (n.any[0] || n.all[0] || n.none[0] || {}).message || "") })));
+      // Keyboard: Tab from the top of the document. A stop "shows focus" when focusing it visibly changes it or one of its three
+      // nearest ancestors (outline, box shadow, border colour or background), which also covers :focus-within rings on a wrapper.
+      await page.evaluate(() => { document.activeElement?.blur?.(); window.scrollTo(0, 0); });
+      const stops = [], seen = new Set();
+      for (let i = 0; i < 60; i++) {
+        await page.keyboard.press("Tab");
+        const st = await page.evaluate(() => {
+          const el = document.activeElement; if (!el || el === document.body) return null;
+          const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+          const chain = []; for (let n = el; n && n !== document.body && chain.length < 4; n = n.parentElement) chain.push(n);
+          const look = () => chain.map(n => { const c = getComputedStyle(n); return [c.outlineStyle, c.outlineWidth, c.outlineColor, c.boxShadow, c.borderTopColor, c.borderBottomColor, c.backgroundColor].join("|"); }).join("§");
+          const focused = look(); el.blur(); const blurred = look(); el.focus();
+          const outline = cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0;
+          const shadow = focused !== blurred;
+          const path = []; for (let n = el; n && n !== document.body && path.length < 4; n = n.parentElement) path.unshift(n.tagName.toLowerCase() + (n.id ? "#" + n.id : "") + (n.classList.length ? "." + [...n.classList].slice(0, 2).join(".") : ""));
+          return { key: path.join(" > ") + "|" + (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40), visible: r.width > 0 && r.height > 0, indicator: outline || shadow, outline: outline ? cs.outlineWidth + " " + cs.outlineStyle + " " + cs.outlineColor : "" };
+        });
+        if (!st) continue;
+        if (seen.has(st.key)) break;
+        seen.add(st.key); stops.push(st);
+      }
+      m.keyboard = { stops: stops.length, noIndicator: stops.filter(x => x.visible && !x.indicator).map(x => x.key), hidden: stops.filter(x => !x.visible).map(x => x.key) };
+    }
+    if (printPages.includes(pg.id) && reached) {
+      await page.emulateMedia({ media: "print" });
+      await page.screenshot({ path: path.join(out, vpName, pg.id + "-print.png"), fullPage: true });
+      await page.emulateMedia({ media: "screen" });
     }
     (record.pages[pg.id] ||= {})[vpName] = { reached, overflow, ...m, errors, screenshot: path.relative(out, file) };
     checks.push({ ok: reached && !overflow && !errors.length, id: vpName + "/" + pg.id, detail: (reached ? "reached" : "NOT reached") + (overflow ? " · horizontal overflow " + m.scrollWidth + ">" + m.clientWidth : "") + (errors.length ? " · " + errors.length + " error(s)" : "") });

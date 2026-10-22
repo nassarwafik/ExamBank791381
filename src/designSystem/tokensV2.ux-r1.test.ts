@@ -97,11 +97,8 @@ describe("UX-R1 — no stylesheet renders the old blue primary family", () => {
 describe("UX-R1 — every --eb-* token read without a fallback is defined", () => {
   // Pre-existing at the R0 baseline 56ce097 (the declaration is dropped today); each is fixed by the phase that owns the page,
   // which then removes it here. The list may only shrink.
-  const KNOWN_UNDEFINED = new Set([
-    "learning/activities/activities.css: --eb-fs-18",  // R9b
-    "projects/performance.css: --eb-fs-15",            // R10
-    "projects-pro.css: --eb-fs-15",                    // R10
-  ]);
+  // R17d defined --eb-fs-15 and --eb-fs-18 on the type scale; the last three recorded reads are gone.
+  const KNOWN_UNDEFINED = new Set<string>([]);
   it("no stylesheet reads an undefined --eb-* token beyond the recorded pre-existing ones", () => {
     const definedEb = new Set<string>();
     for (const s of sheets) for (const m of s.text.matchAll(/(--eb-[\w-]+)\s*:/g)) definedEb.add(m[1]);

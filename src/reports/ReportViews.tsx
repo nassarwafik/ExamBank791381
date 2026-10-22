@@ -209,7 +209,7 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
       </div>
       <ReportNote>{LATEST_ATTEMPT_NOTE}</ReportNote>
       <ChartCard level={3} title="توزيع النتائج" description={"عدد التسليمات في كل نطاق (%) — " + LATEST_ATTEMPT_LABEL} table={{ columns: ["النطاق %", "عدد التسليمات"], rows: distLabels.map(k => [k, data.overall.distribution[k]]) }}>
-        {({ reducedMotion }) => dist && <div className="eb-chart-canvas"><Bar data={dist} options={{ ...barOptions, ...motion(reducedMotion) }} /></div>}
+        {({ reducedMotion }) => dist && <div className="eb-chart-canvas"><Bar data={dist} options={{ ...barOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
       </ChartCard>
       <section aria-labelledby="eb-report-per-assignment">
         <h3 id="eb-report-per-assignment" className="eb-subheading">ملخص كل تقييم</h3>
@@ -225,7 +225,7 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
         <section aria-labelledby="eb-report-matrix-title">
           <h3 id="eb-report-matrix-title" className="eb-subheading">مصفوفة الطالب × التقييم</h3>
           <p className="eb-muted eb-report-legend">القيمة = {LATEST_ATTEMPT_LABEL} (%) · 0 = سلّم بعلامة صفر · «{PENDING_LABEL}» = سلّم والنتيجة لم تُصحَّح بعد · «{MISSING_LABEL}» = لا توجد محاولة مسلّمة</p>
-          <div className="eb-report-table-scroll">
+          <div className="eb-report-table-scroll" role="region" aria-labelledby="eb-report-matrix-title" tabIndex={0}>
             <table className="eb-report-table eb-report-matrix">
               <caption className="eb-visually-hidden">مصفوفة الطالب × التقييم — {LATEST_ATTEMPT_LABEL} بالنسبة المئوية لكل طالب في كل تقييم؛ «{MISSING_LABEL}» تعني عدم وجود محاولة مسلّمة</caption>
               <thead><tr><th scope="col">الطالب</th>{data.matrix.map(m => <th key={m.assignmentId} scope="col" title={m.title}>{m.title}</th>)}</tr></thead>
@@ -400,7 +400,7 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
       {data.trend.length === 1 && <ReportNote>الفترة المختارة تغطي أسبوعًا واحدًا فقط، فيظهر نقطة واحدة دون اتجاه؛ اختر فترة أطول لرؤية تطوّر التقدّم.</ReportNote>}
       {data.trend.length
         ? <ChartCard level={3} title="متوسط التقدّم الأسبوعي" description="متوسط التقدّم (%) في نهاية كل أسبوع" table={{ columns: ["الأسبوع", "متوسط التقدّم %"], rows: data.trend.map(t => [t.weekStart, t.avgOverall]) }}>
-            {({ reducedMotion }) => chart && <div className="eb-chart-canvas"><Line data={chart} options={{ ...lineOptions, ...motion(reducedMotion) }} /></div>}
+            {({ reducedMotion }) => chart && <div className="eb-chart-canvas"><Line data={chart} options={{ ...lineOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
           </ChartCard>
         : <EmptyState text="لا توجد بيانات زمنية كافية بعد." />}
     </div>

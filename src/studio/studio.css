@@ -76,6 +76,8 @@
   padding: 0; min-inline-size: 0; inline-size: min(340px, 100%);
 }
 .st-studio .st-title-input:hover, .st-studio .st-title-input:focus { border-block-end-color: var(--st-top-mute); outline: none; }
+/* UX-R17d — the keyboard focus of the exam title shows the app's ring (the dashed hairline alone also marks hover). */
+.st-studio .st-title-input:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-radius: var(--eb-r-xs); }
 .st-studio .st-title-input::placeholder { color: var(--st-top-mute); }
 .st-studio .st-chip-dark { font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); padding: 2px 10px; border-radius: var(--eb-pill); background: var(--st-top-hover); color: var(--st-top-tx); white-space: nowrap; }
 .st-studio .st-chip-dark.is-final { background: var(--st-teal); color: var(--st-top); }
