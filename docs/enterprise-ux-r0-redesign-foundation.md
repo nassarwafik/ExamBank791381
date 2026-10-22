@@ -2112,6 +2112,108 @@ ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte after ea
 | `git diff --check` | clean |
 | colour ratchet | **2 263** (was 2 266) |
 | Browser gates | the L.8 reader gate is triggered by `src/learning/**` only and R13 touches no file there (the token it now resolves lives in `design-tokens.css`); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R15 — The student exam
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R15 depends on R14 only for order (it
+shares no file with it), so it branches from `main` `ea357456` as `feature/ux-r15-student-exam`, in parallel with R13 (#409)
+and R14 (#410); the three share only this record and the capture harness.
+
+## R15.1 What changes for the student
+
+The exam runtime (`StudentExamPage`): the top bar, the position / progress / save row, «تفاصيل الامتحان والتعليمات», the paged
+question, the section context, the bottom navigation, «قائمة الأسئلة», the review screen, the start gate and the result. No
+reference mockup shows it, so R15 applies the record's general patterns (§3.2). **Presentation only:** no answer, autosave,
+timer, attempt policy, paging order, navigation or grading change.
+
+- **The exam frame is flat 8 px hairline panels** on every exam: the position and save row, the details disclosure, the review
+  screen, the start gate and the result lose their resting shadow and their 10 px radius.
+- **The review counts (answered / unanswered / unavailable) are one hairline strip;** the warn and unavailable cells keep their
+  tint.
+- **The section context drops its 4 px decorative edge;** the first question of a section keeps its tint.
+- **On the legacy `default` theme only, the question card is a flat 8 px card and the sticky bars sit on their hairline** (no
+  shadow; 8 px from 768 px). The other legacy themes (`cards`, `classic`, `compact`, `modern`) and every presentation preset keep
+  their own look: changing a preset is R16d's decision (§4.1, option A).
+- **Fix: the assessment-activity status line reads defined tokens** (§R15.3).
+
+**Not changed, on purpose:** markup and behaviour; every status tone (saved / saving / offline / error, answered / unanswered /
+unavailable, the warn and danger clock, the strict-policy notices, the recovery cards); the selected answer option (primary);
+the current question in the navigator (2 px primary ring); the distinct final submit; the 44 px touch rules; the scroll
+clearance; the code and CLI stimuli; the simulators and activities inside a question (R16a / R16b).
+
+## R15.2 Edit set
+
+- **`src/studentexam-pro.css`:** the activity status / fallback line reads `--eb-muted` and `--eb-fs-13`; one block appended at
+  the end (every selector starts with `.interactive-exam-page`; the card and bar rules with
+  `.interactive-exam-page.exam-theme-default`; tokens only; no coarse-pointer block, the 21E.3 guards read the last one).
+- **`src/designSystem/tokensV2.ux-r1.test.ts`:** the two `studentexam-pro.css` entries leave `KNOWN_UNDEFINED`, as the test asks
+  once a token is fixed.
+- **`src/student/exam/studentExam.ux-r15.test.ts`:** new, 9 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** a structured five-question assignment (multiple choice, open, table fill,
+  multiple true / false, CLI fill), the student assignment and submission routes, and two scripted pages opened from the
+  portal's «ابدأ الحل»: `student-exam` and `student-exam-navigator` (the dialog open). Both fail when the activity status line
+  does not resolve the muted colour and 13 px.
+
+## R15.3 Fail-first evidence
+
+**The activity status line read two undefined tokens.**
+- **Cause:** `.iex-activity-status, .iex-activity-fallback` (the status and the static fallback of an interactive assessment
+  context, Phase 13C-A) read `--eb-text-muted` and `--eb-fs-sm`. Neither token exists (they were recorded as pre-existing in
+  `KNOWN_UNDEFINED`, owned by R15), so both declarations were dropped: the line took the body text colour and 16 px instead of
+  a quiet note.
+- **Fix:** `--eb-muted` and `--eb-fs-13`.
+
+| Run | `main` `ea357456` | R15 |
+|---|---|---|
+| Capture harness, `student-exam` and `student-exam-navigator` at 1440 / 1024 / 390 px | **FAIL** 6 / 6: «the activity status line reads {"color":"rgb(45, 39, 64)","muted":"rgb(95, 90, 110)","fontSize":"16px"}» | clean |
+| `tokensV2.ux-r1` «every --eb-* token … is defined» with the two entries removed | **FAIL**: «define the token in design-tokens.css: expected [ …(2) ] to deeply equal []» | pass |
+| `studentExam.ux-r15` «the status and fallback lines are muted 13 px text…» | **FAIL** | pass |
+
+## R15.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/student/exam`, the UX-7b-1 and 7b-2 suites, the overlay layer guard, the
+colour ratchet, `ux2-shell-foundation` and `src/designSystem`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the status line reads the undefined muted token again | KILLED | UX-R1 undefined-token test; ux-r15 «the status and fallback lines…» |
+| M2 | the status line reads the undefined size token again | KILLED | same |
+| M3 | the frame panels keep their shadow | KILLED | ux-r15 «the frame panels…» |
+| M4 | the frame panels keep the 10 px radius | KILLED | same |
+| M5 | the review counts back to separate tiles | KILLED | ux-r15 «the review counts are ONE hairline strip…» |
+| M6 | the review cells lose their hairlines | KILLED | same |
+| M7 | the strip blanks the warn / unavailable tints | KILLED | same |
+| M8 | the 4 px section edge returns | KILLED | ux-r15 «the section context…» |
+| M9 | the card rule reaches every theme and preset | KILLED | ux-r15 «scopes every rule…»; «on the default theme…» |
+| M10 | the restyle overrides a legacy theme (`modern`) | KILLED | ux-r15 «scopes every rule…» |
+| M11 | the question card keeps its shadow | KILLED | ux-r15 «on the default theme…» |
+| M12 | the sticky bars keep their shadow | KILLED | same |
+| M13 | the bars keep the 10 px radius from 768 px | KILLED | same |
+| M14 | the restyle reaches a status tone (answered) | KILLED | ux-r15 «never restyles a status tone…» |
+| M15 | the restyle quiets the final submit | KILLED | same |
+| M16 | a colour literal in the block | KILLED | colour ratchet; UX-7b-1 foundation guard; ux-r15 |
+| M17 | an unscoped rule | KILLED | ux-r15 «scopes every rule…» |
+| M18 | a physical side in the block | KILLED | ux-r15 «adds no stacking context…» |
+| M19 | the block gains a coarse-pointer block | KILLED | ux-r15 «is the last thing in the sheet…» |
+
+19 / 19 KILLED, no TIMEOUT. `git status` showed only the committed R15 edit set before and after the campaign.
+
+## R15.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `student-portal`, `student-exam`, `student-exam-navigator` (1440 / 1024 / 390 px) | before: 3 / 9 clean (the six exam captures fail on the status line, §R15.3); after: **9 / 9 clean** |
+| `npm test`, full root suite (`4644f547`) | 1 188 files, **14 142 / 14 142** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 266, unchanged (the fix and the block add no literal) |
+| Browser gates | L.8 runs, because the new guard file lives under `src/student/**` (its path filter); `studentexam-pro.css` itself triggers no browser gate. The Quality Gate runs on every PR |
+
+---
+
 # Phase UX-R14 — The student portal
 
 **Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R14 depends on R2 and R3 (merged), so it
