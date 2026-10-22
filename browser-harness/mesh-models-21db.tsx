@@ -3,6 +3,8 @@
 // Query: ?nowebgl=1 makes WebGL 2 unavailable (fallback path); ?only=<id> renders one section.
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import MeshModel3DView from "../src/meshModels/MeshModel3DView";
 import { sha256Hex } from "../src/meshModels/meshAssetLoader";
 import { meshRendererLiveCount, type MeshRenderer } from "../src/meshModels/meshRenderer";

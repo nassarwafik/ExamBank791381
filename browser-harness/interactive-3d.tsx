@@ -1,6 +1,8 @@
 // Phase 21C — real production-Vite browser harness: geometry + anatomy + chemistry + semantic selection.
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import Interactive3DView from "../src/interactive3d/Interactive3DView";
 import Scene3DEditor from "../src/interactive3d/Scene3DEditor";
 import { scene3DPreset } from "../src/interactive3d/scenePresets";

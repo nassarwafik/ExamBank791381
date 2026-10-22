@@ -4,6 +4,8 @@
 // Query: ?only=<id> renders one section.
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import MeshModel3DView from "../src/meshModels/MeshModel3DView";
 import MeshModelEditor from "../src/meshModels/MeshModelEditor";
 import { MESH_LIBRARY } from "../src/meshModels/meshAssetCatalog";

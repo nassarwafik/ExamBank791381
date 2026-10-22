@@ -1,0 +1,322 @@
+{
+ "physicsFreeFall": {
+  "v": 1,
+  "model": {
+   "initialHeight": 20,
+   "initialVelocity": 0,
+   "gravity": 9.8
+  },
+  "view": {
+   "maxTime": 3,
+   "showVelocityGraph": true
+  },
+  "tasks": {
+   "measurements": [
+    {
+     "id": "impactTime",
+     "label": "زمن الوصول إلى الأرض",
+     "unit": "s"
+    },
+    {
+     "id": "impactSpeed",
+     "label": "سرعة الارتطام بالأرض (مقدار)",
+     "unit": "m/s"
+    },
+    {
+     "id": "heightAt1s",
+     "label": "الارتفاع عند الزمن 1 ث",
+     "unit": "m"
+    },
+    {
+     "id": "velocityAt1s",
+     "label": "السرعة المتجهة عند الزمن 1 ث (الأعلى موجب)",
+     "unit": "m/s"
+    }
+   ],
+   "points": [
+    {
+     "id": "impactPoint",
+     "label": "نقطة الارتطام على منحنى الارتفاع–الزمن"
+    },
+    {
+     "id": "pointAt1s",
+     "label": "نقطة من منحنى الارتفاع–الزمن عند 1 ث"
+    }
+   ]
+  }
+ },
+ "physicsMotion": {
+  "v": 1,
+  "experiment": "projectile",
+  "params": {
+   "initialSpeed": 20,
+   "launchAngle": 45,
+   "launchHeight": 0,
+   "gravity": 9.8
+  },
+  "controls": [
+   {
+    "param": "initialSpeed",
+    "min": 5,
+    "max": 40,
+    "step": 1
+   },
+   {
+    "param": "launchAngle",
+    "min": 5,
+    "max": 85,
+    "step": 1
+   },
+   {
+    "param": "launchHeight",
+    "min": 0,
+    "max": 20,
+    "step": 1
+   }
+  ],
+  "view": {
+   "maxTime": 10,
+   "graphs": [
+    "height",
+    "velocity"
+   ],
+   "showVectors": true
+  },
+  "tasks": {
+   "measurements": [
+    {
+     "id": "range",
+     "label": "المدى الأفقي",
+     "unit": "m"
+    },
+    {
+     "id": "maxHeight",
+     "label": "أقصى ارتفاع",
+     "unit": "m"
+    },
+    {
+     "id": "flightTime",
+     "label": "زمن الطيران",
+     "unit": "s"
+    }
+   ],
+   "points": [
+    {
+     "id": "landingPoint",
+     "label": "نقطة سقوط المقذوف على المسار"
+    }
+   ]
+  }
+ },
+ "physicsLab": {
+  "v": 1,
+  "experiment": "pendulum",
+  "params": {
+   "length": 1,
+   "initialAngle": 10,
+   "damping": 0,
+   "mass": 0.5,
+   "gravity": 9.8
+  },
+  "controls": [
+   {
+    "param": "length",
+    "min": 0.2,
+    "max": 5,
+    "step": 0.1
+   },
+   {
+    "param": "initialAngle",
+    "min": 1,
+    "max": 90,
+    "step": 1
+   },
+   {
+    "param": "damping",
+    "min": 0,
+    "max": 1,
+    "step": 0.05
+   },
+   {
+    "param": "gravity",
+    "min": 1.6,
+    "max": 24.8,
+    "step": 0.1
+   }
+  ],
+  "view": {
+   "maxTime": 10,
+   "graphs": [
+    "angularVelocity",
+    "energy"
+   ],
+   "showVectors": true
+  },
+  "tasks": {
+   "measurements": [
+    {
+     "id": "period",
+     "label": "دور البندول المقيس",
+     "unit": "s"
+    },
+    {
+     "id": "smallAnglePeriod",
+     "label": "الدور المحسوب بتقريب الزاوية الصغيرة",
+     "unit": "s"
+    },
+    {
+     "id": "maxSpeed",
+     "label": "أقصى سرعة للثقل",
+     "unit": "m/s"
+    }
+   ],
+   "points": []
+  }
+ },
+ "chemistryStructure": {
+  "v": 1,
+  "activity": "atom",
+  "subject": {
+   "element": "Na",
+   "massNumber": 23,
+   "charge": 1
+  },
+  "view": {
+   "periodicTable": "basic",
+   "identity": false,
+   "details": false,
+   "measure": false
+  },
+  "tasks": {
+   "build": true,
+   "shells": true,
+   "values": [
+    {
+     "id": "outer",
+     "label": "عدد إلكترونات الغلاف الخارجي للأيون",
+     "unit": "1"
+    }
+   ],
+   "formulas": [],
+   "classifications": [
+    {
+     "id": "ionKind",
+     "label": "نوع هذا النوع الكيميائي",
+     "property": "ionType"
+    },
+    {
+     "id": "blockKind",
+     "label": "فئة الصوديوم في الجدول الدوري",
+     "property": "block"
+    }
+   ],
+   "selection": null
+  }
+ },
+ "chemistryReactions": {
+  "v": 1,
+  "reaction": {
+   "catalog": "waterFormation"
+  },
+  "view": {
+   "conservation": true,
+   "particles": true,
+   "states": true,
+   "names": true
+  },
+  "tasks": {
+   "balance": {
+    "locked": []
+   },
+   "classifications": [
+    {
+     "id": "family",
+     "label": "نوع هذا التفاعل",
+     "mode": "single",
+     "options": [
+      "synthesis",
+      "decomposition",
+      "singleDisplacement",
+      "doubleDisplacement"
+     ]
+    }
+   ],
+   "selections": []
+  }
+ },
+ "chemistryLab": {
+  "v": 1,
+  "experiment": {
+   "kind": "titration",
+   "analyte": {
+    "species": "HCl",
+    "volume": "25.00",
+    "concentration": "0.100",
+    "equivalence": null
+   },
+   "titrant": {
+    "species": "NaOH",
+    "concentration": "0.100"
+   },
+   "indicators": [
+    "methylOrange",
+    "bromothymolBlue",
+    "phenolphthalein"
+   ]
+  },
+  "view": {
+   "readouts": true,
+   "graph": true
+  },
+  "tasks": [
+   {
+    "id": "veq",
+    "label": "ما حجم NaOH عند نقطة التكافؤ؟",
+    "kind": "number",
+    "quantity": "equivalenceVolume",
+    "subject": null,
+    "other": null,
+    "at": null,
+    "unit": "mL",
+    "precision": {
+     "decimals": 2
+    }
+   },
+   {
+    "id": "nOH",
+    "label": "احسب عدد مولات NaOH المستهلكة حتى نقطة التكافؤ (بالملي مول).",
+    "kind": "number",
+    "quantity": "titrantMoles",
+    "subject": null,
+    "other": null,
+    "at": null,
+    "unit": "mmol",
+    "precision": {
+     "significant": 3
+    }
+   },
+   {
+    "id": "eqph",
+    "label": "عند نقطة التكافؤ يكون الرقم الهيدروجيني:",
+    "kind": "choice",
+    "question": "equivalencePh",
+    "subject": null,
+    "other": null,
+    "mode": "single",
+    "options": [
+     "below7",
+     "equal7",
+     "above7"
+    ]
+   },
+   {
+    "id": "bracket",
+    "label": "سجّل قراءة قبل نقطة التكافؤ وأخرى بعدها.",
+    "kind": "observe",
+    "requirement": "bracketEquivalence",
+    "subject": null,
+    "count": null
+   }
+  ]
+ }
+}
