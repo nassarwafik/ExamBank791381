@@ -78,26 +78,26 @@ export default function ProjectAnalyticsCharts({ analytics: data, tracks, groups
     <>
       <div className="eb-chart-grid">
         <ChartCard level={level} title="تقدّم كل طالب" table={{ columns: ["الطالب", "التقدم العام %"], rows: data.perStudent.map(s => [s.name, s.overall]) }}>
-          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={perStudentData} options={{ ...barOptions, ...motion(reducedMotion) }} /></div>}
+          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={perStudentData} options={{ ...barOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
         </ChartCard>
         <ChartCard level={level} title="مقارنة المسارات" table={{ columns: ["الطالب", ...tracks.map(t => t.title + " %")], rows: data.perStudent.map(s => [s.name, ...tracks.map(t => s.trackProgress[t.trackId] || 0)]) }}>
-          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={trackCompareData} options={{ ...barOptions, ...motion(reducedMotion) }} /></div>}
+          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={trackCompareData} options={{ ...barOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
         </ChartCard>
         <ChartCard level={level} title="نسبة إنجاز كل مرحلة" description={"المسار: " + (tracks.find(t => t.trackId === stageTrack)?.title || "")}
           actions={<div className="eb-segmented" role="group" aria-label="مسار المراحل">{tracks.map(t => <button key={t.trackId} type="button" aria-pressed={stageTrack === t.trackId} onClick={() => onStageTrack(t.trackId)}>{t.title}</button>)}</div>}
           table={{ columns: ["المرحلة", "العنوان", "نسبة الاعتماد %"], rows: stageRows.map(s => [s.stageId, s.title, s.approvedPct]) }}>
-          {({ reducedMotion }) => <div className="eb-chart-canvas is-tall"><Bar data={stageData} options={{ ...barOptions, ...motion(reducedMotion) }} /></div>}
+          {({ reducedMotion }) => <div className="eb-chart-canvas is-tall"><Bar data={stageData} options={{ ...barOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
         </ChartCard>
         <ChartCard level={level} title="توزيع الطلاب حسب التقدم" table={{ columns: ["النطاق", "عدد الطلاب"], rows: BUCKETS.map((b, i) => [BUCKET_LABELS[i], data.buckets[b]]) }}>
-          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={bucketData} options={{ ...countOptions, ...motion(reducedMotion) }} /></div>}
+          {({ reducedMotion }) => <div className="eb-chart-canvas"><Bar data={bucketData} options={{ ...countOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
         </ChartCard>
         <ChartCard level={level} title="تطوّر متوسط تقدّم الصف" table={{ columns: ["الأسبوع", "متوسط التقدّم %"], rows: data.weeklyTrend.map(w => [w.weekStart, w.avgOverall]) }}>
           {({ reducedMotion }) => data.weeklyTrend.length
-            ? <div className="eb-chart-canvas"><Line data={trendData} options={{ ...(barOptions as unknown as ChartOptions<"line">), ...motion(reducedMotion) }} /></div>
+            ? <div className="eb-chart-canvas"><Line data={trendData} options={{ ...(barOptions as unknown as ChartOptions<"line">), ...motion(reducedMotion) }} aria-hidden="true" /></div>
             : <EmptyState compact title="لا توجد بيانات زمنية كافية بعد." />}
         </ChartCard>
         <ChartCard level={level} title="توزيع حالات المراحل في الصف" table={{ columns: ["الحالة", "عدد المراحل"], rows: STAGE_STATUS_ORDER.map(s => [stageStatusLabel(s), statusCounts[s]]) }}>
-          {({ reducedMotion }) => <div className="eb-chart-canvas"><Doughnut data={statusDist} options={{ ...doughnutOptions, ...motion(reducedMotion) }} /></div>}
+          {({ reducedMotion }) => <div className="eb-chart-canvas"><Doughnut data={statusDist} options={{ ...doughnutOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
         </ChartCard>
       </div>
       <section className="eb-heatmap-card" aria-labelledby="eb-heatmap-title">

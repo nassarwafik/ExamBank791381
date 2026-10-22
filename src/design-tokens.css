@@ -91,8 +91,8 @@
   --eb-backdrop: rgba(28, 19, 48, 0.45);
 
   /* Typography scale (12–28) and weights (400–700) */
-  --eb-fs-12: 12px; --eb-fs-13: 13px; --eb-fs-14: 14px; --eb-fs-16: 16px;
-  --eb-fs-17: 17px; --eb-fs-20: 20px; --eb-fs-24: 24px; --eb-fs-28: 28px;
+  --eb-fs-12: 12px; --eb-fs-13: 13px; --eb-fs-14: 14px; --eb-fs-15: 15px; --eb-fs-16: 16px;
+  --eb-fs-17: 17px; --eb-fs-18: 18px; --eb-fs-20: 20px; --eb-fs-24: 24px; --eb-fs-28: 28px;
   --eb-lh-tight: 1.3; --eb-lh-body: 1.65;
   --eb-fw-regular: 400; --eb-fw-medium: 500; --eb-fw-semibold: 600; --eb-fw-bold: 700;
 

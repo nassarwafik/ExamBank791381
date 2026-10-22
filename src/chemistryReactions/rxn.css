@@ -34,7 +34,9 @@
 .rxn-particles-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
 .rxn-side { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-width: 0; }
 .rxn-group { display: grid; justify-items: center; gap: 4px; padding: 6px 8px; border: 1px solid var(--xp-border, var(--eb-content-grid)); border-radius: 10px; min-width: 76px; max-width: 100%; }
-.rxn-group.is-unset { opacity: 0.55; border-style: dashed; }
+/* UX-R17d — an unset group dims its particle drawings, not its text (the whole-group opacity left the formula and caption at 3.45:1). */
+.rxn-group.is-unset { border-style: dashed; }
+.rxn-group.is-unset .rxn-copies { opacity: 0.55; }
 .rxn-group-head { font-size: 0.95rem; } .rxn-group-head b { font-size: 1.05rem; }
 .rxn-copies { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 280px; }
 .rxn-particle { display: inline-grid; place-items: center; }

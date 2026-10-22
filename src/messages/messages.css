@@ -183,7 +183,8 @@
 .eb-msg-roster-item .eb-msg-avatar{ grid-area:avatar; }
 .eb-msg-roster-item.is-active{ grid-template-areas:"avatar name badge"; }
 .eb-msg-roster-item.has-unread .eb-msg-roster-name{ font-weight:var(--eb-fw-bold); }
-.eb-msg-roster-item.is-archived .eb-msg-avatar,.eb-msg-roster-item.is-disabled .eb-msg-avatar{ filter:grayscale(1); opacity:.7; }
+/* UX-R17d — the archived or disabled avatar is greyscale only: the extra opacity left its initials at 4.2:1. */
+.eb-msg-roster-item.is-archived .eb-msg-avatar,.eb-msg-roster-item.is-disabled .eb-msg-avatar{ filter:grayscale(1); }
 .eb-msg-roster-item.is-archived .eb-msg-roster-status,.eb-msg-roster-item.is-disabled .eb-msg-roster-status{ justify-self:start; padding-inline:var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); border:1px solid var(--eb-line); }
 .eb-msg-roster-item.is-archived .eb-msg-roster-name,.eb-msg-roster-item.is-disabled .eb-msg-roster-name{ color:var(--eb-muted); }
 /* Selected: tint + weight + an inline-start accent bar (never colour alone; aria-pressed carries the state). */

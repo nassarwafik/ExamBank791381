@@ -86,10 +86,9 @@ describe("UX-R17c — the chrome sheets", () => {
 
 describe("UX-R17c — dead CSS", () => {
   // Pre-existing undefined reads that belong to another open phase or need a design decision; the list may only shrink.
+  // R17d collapsed the seven reads in structured-builder.css and defined --eb-fs-15 / --eb-fs-18; only the reader's contract is left.
   const KNOWN = new Set([
     "learning/reader/reader.css: --eb-measure",            // the prose measure contract, pinned by the reader guards
-    "projects/performance.css: --eb-fs-15", "projects-pro.css: --eb-fs-15", "learning/activities/activities.css: --eb-fs-18",  // R1 list: sizes, R17d
-    ...["primary-soft", "success", "success2", "success-text", "text-muted", "warning", "warning-text"].map(v => "structured-builder.css: --" + v),  // R17b's sheet (#418), R17d
   ]);
   it("every var() a stylesheet reads is defined (outside the exam's run-time --xp-* tokens and the recorded list)", () => {
     const missing = new Set<string>();

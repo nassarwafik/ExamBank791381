@@ -111,7 +111,7 @@ function AuditHistoryPanel({ token }: Props) {
         {!loading && filtered.length > visible.length && <p className="eb-muted audit-history-limit" role="note">يُعرض أحدث {visible.length} من {filtered.length} سجلًا مطابقًا.</p>}
         {loading && <div className="platform-loading">⏳ جارٍ تحميل السجل...</div>}
         {!loading && (
-          <div className="students-table-wrap"><table className="students-table audit-history-table">
+          <div className="students-table-wrap" role="region" aria-label="جدول سجل النشاط" tabIndex={0}><table className="students-table audit-history-table">
             <thead><tr><th>التاريخ والوقت</th><th>العملية</th><th>النوع</th><th>الهدف</th><th>تفاصيل</th></tr></thead>
             <tbody ref={bodyRef}>
               {visible.map(ev => (
