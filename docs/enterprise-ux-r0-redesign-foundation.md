@@ -2900,3 +2900,109 @@ Each mutant was planted alone. The run covered `src/designSystem`, `ux2-shell-fo
 | `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
 | `git diff --check` | clean |
 | colour ratchet | **1 165** (was 1 502) |
+
+---
+
+# Phase UX-R17b — Clean-up: the exam builder's legacy sheets
+
+**Owner direction (2026-10-22):** the second of the four R17 parts. R17a (#417, the two base sheets) is open and touches neither these
+five sheets nor their guards; the two phases share only this record and the colour baseline, so R17b branches from `main`
+`467ec80d` as `feature/ux-r17b-builder-sheets`.
+
+## R17b.1 What changes for the user
+
+Five sheets still carried the builder's colours from before the redesign:
+- `structured-builder.css` — the classic builder;
+- `smart-import.css` — smart import;
+- `builder-pro.css` — the builder's toolbars, the question action bar, the theme picker;
+- `presentation/presentation-studio.css` — the presentation studio;
+- `aiComposer/ai-composer.css` — the AI composer.
+
+R11b already redesigned the studio around them, so most of what is left sits under the page phases' overrides. R17b moves the rest
+onto the palette. **Presentation only:** no markup, data, API or grading changes.
+
+- **The slate neutrals move to the content tokens** (by luminance: a foreground is never lighter, a ground or line never darker).
+- **The white literals move to `--eb-surface`.**
+- **A status value equal to a token names it, at the same value.**
+- **The old blue chrome moves to the purple family:**
+  - the blue selected and pressed grounds (`#eef4ff`, `#eff6ff`, `#dbeafe`, …) → `--eb-primary-050` and `--eb-primary-100`;
+  - the blue hairlines → `--eb-line-2`;
+  - the blue-tinted grounds → `--eb-surface-2` and `--eb-content-ground-2`;
+  - the old navy text → `--eb-primary-strong`.
+- **The blue fallbacks of the `var()` references go too.** The legacy variables are aliases of the palette, so a fallback never renders,
+  but it would come back the day an alias is removed.
+- **Visible effect:** none in the harness's builder, bank, import and review captures (33 / 33 pixel-identical, §R17b.5). The
+  changes sit in states the captures do not open: hover, pressed, the classic builder and the AI composer's panels.
+
+**Not changed, on purpose:**
+- **the classic builder's CLI textarea and code chips:** dark, monospace surfaces drawn for their own ground (`#0f172a` / `#1e293b`);
+- **the thumbnails of the old exam themes** in the theme picker: each draws its theme's own paper colours;
+- **every status shade that has no token of the same value** (the success banner's `#ecfdf5` / `#a7f3d0` / `#047857`, …);
+- **`structured-cover.css`, the exam cover:** the paper the student sees (as R15 kept the exam paper), still 22 literals.
+
+## R17b.2 Edit set
+
+- **The five sheets:** the colour count drops from 403 to **111**:
+
+  | Sheet | Before | After |
+  |---|---|---|
+  | `structured-builder.css` | 247 | 59 |
+  | `smart-import.css` | 43 | 16 |
+  | `builder-pro.css` | 40 | 21 |
+  | `presentation-studio.css` | 39 | 9 |
+  | `ai-composer.css` | 34 | 6 |
+
+  No rule, selector or property was added or removed.
+- **`scripts/ux-color-inventory.baseline.json`:** 1 502 → **1 210**.
+- **`src/designSystem/builderSheets.ux-r17b.test.ts`:** new, 7 guards:
+  - no slate, grey or white literal outside the dark code surfaces and the theme thumbnails;
+  - none of the old blue chrome, fallbacks included, and the selected and pressed states read the primary family;
+  - no text colour on the axis or faint (stroke) tokens;
+  - the CLI and code surfaces, the theme thumbnails and the status shades unchanged;
+  - the baseline counts, and the cover's 22 literals counted from the file itself.
+
+## R17b.3 Fail-first evidence
+
+**Not applicable.** R17b is a colour migration: it fixes no defect.
+
+The converter's first pass touched the dark code surfaces and the theme thumbnails. They were restored from `main` before the commit.
+As in R17a, any text the converter maps to the axis token is re-pointed to `--eb-content-muted`.
+
+Two guards pin these: «the classic builder's CLI and code chips keep their dark, monospace surfaces» and «no text colour reads the axis
+or faint token». They are pins, not fail-first tests.
+
+## R17b.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/designSystem` and the colour ratchet. Each file was restored byte-for-byte after
+its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | a slate literal returns in the classic builder | KILLED | colour ratchet; ux-r17b «hold no slate, grey or white literal…» |
+| M2 | the old blue hairline returns | KILLED | colour ratchet; ux-r17b «hold none of the old blue chrome…» |
+| M3 | the old blue hover border returns on the question action bar | KILLED | same |
+| M4 | the studio's pressed button back to the blue fallback | KILLED | same |
+| M5 | the CLI textarea loses its dark surface | KILLED | ux-r17b «the classic builder's CLI and code chips…» |
+| M6 | the code chip converted | KILLED | same |
+| M7 | a theme thumbnail drifts from its theme | KILLED | ux-r17b «the old exam themes' thumbnails…» |
+| M8 | the success banner loses its tint | KILLED | ux-r17b «the status shades keep their hue and value» |
+| M9 | a text colour on the axis (stroke) token | KILLED | ux-r17b «no text colour reads the axis or faint token» |
+| M10 | the exam cover converted, baseline not rewritten | KILLED (re-run, after the guard was strengthened) | ux-r17b «the colour baseline: … the exam cover untouched» |
+| M11 | a white literal returns | KILLED | colour ratchet; ux-r17b «hold no slate, grey or white literal…» |
+
+**M10 survived the first campaign.** The guard read the cover's count only from the baseline, and the ratchet allows a count to
+drop. The guard now also counts the cover's literals from the file itself. The re-run of M10 is in the table.
+
+**Result:** 11 / 11 KILLED, no TIMEOUT. `git status` was identical before and after each campaign.
+
+## R17b.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture: the builder, bank, import and review pages and the studio's five steps (11 pages × 1440 / 1024 / 390 px) | before (`main` `467ec80d`) **33 / 33** clean; after **33 / 33** clean (no horizontal overflow, no page error) |
+| Pixel comparison, before vs after (a pixel counts when a channel moves by more than 12 levels) | **33 / 33** identical. The classic builder, the AI composer's panels and the hover and pressed states have no capture in the harness; the guards pin their rules |
+| `npm test`, full root suite (`75cf7df4`) | 1 195 files, **14 205 / 14 205** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **1 210** (was 1 502) |
