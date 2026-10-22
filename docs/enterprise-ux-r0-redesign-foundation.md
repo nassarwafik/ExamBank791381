@@ -2214,6 +2214,84 @@ colour ratchet, `ux2-shell-foundation` and `src/designSystem`. The file was rest
 
 ---
 
+# Phase UX-R14 — The student portal
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R14 depends on R2 and R3 (merged), so it
+branches from `main` `ea357456` as `feature/ux-r14-student-portal`, in parallel with R13 (#409); the two share only this record.
+
+## R14.1 What changes for the student
+
+The portal's home (the welcome hero, the four figures, «أكمل من حيث توقفت», «ماذا عليّ أن أفعل الآن؟», the learning materials,
+progress, tasks and the class achievements). No reference mockup shows the student pages, so R14 applies the record's general
+patterns (§3.2). **Presentation only:** no data, priority, filter, availability, result or grading text changes.
+
+- **The welcome hero is a quiet hairline card** with the heading colour, a grey code tag and a tinted avatar frame (it was a navy
+  gradient banner with white text).
+- **The four figures are one hairline strip** whose cells draw their own hairlines; a hover tints the cell grey and no longer
+  lifts it.
+- **Panels, task cards, the «الآن» items and the next-step card are flat 8 px hairline cards;** the coloured bar before each
+  section title is gone. Every status edge and tint stays (task states, «الآن» states, the next-step kinds, the KPI icon tones,
+  the result tints).
+- **The task filter is quiet sub-navigation** with a grey pressed pill (a grey pill track and a dark pressed chip before).
+- **Each task card's «ابدأ الحل» is quiet;** the «الآن» list keeps its primary action, because it is the page's next step.
+
+**Not changed, on purpose:** markup and behaviour, the student top bar (R2), the phone quick navigation, the 44 px touch rules
+(L.8), the install card, the printed identity card, and every status tone.
+
+## R14.2 Edit set
+
+- **`src/student/student-portal-v2.css`:** one block appended at the end. It follows the sheet's rules (every selector starts with
+  `.eb-sp-v2`, `.eb-student-shell` or `.eb-sp-kpi`; tokens only) and adds no coarse-pointer block, because the L.8 gate reads the
+  sheet's last one.
+- **`src/student/studentPortal.ux-r14.test.ts`:** new, 9 guards.
+- The capture harness already covers the portal (`student-portal`, `student-messages`, `student-games`); no change.
+
+## R14.3 Fail-first evidence
+
+Not applicable: R14 fixes no defect. The portal's phone, tablet and desktop captures were clean before and after.
+
+## R14.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/student`, the 21E V2 portal suite, the L.8 reader guards, the colour ratchet,
+`ux2-shell-foundation` and `src/designSystem`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the navy gradient hero returns | KILLED | ux-r14 «the welcome hero is a quiet 8 px hairline card…» |
+| M2 | the hero heading stays white (invisible on white) | KILLED | same |
+| M3 | the hero keeps its card shadow | KILLED | same |
+| M4 | the figures back to separate cards | KILLED | ux-r14 «the four figures are ONE hairline strip…» |
+| M5 | the figure cells lose their own hairlines | KILLED | same |
+| M6 | a hover lifts the figure cell again | KILLED | same |
+| M7 | the panels keep their shadow | KILLED | ux-r14 «panels, task cards, «الآن» items…» |
+| M8 | the section-title bar returns | KILLED | same |
+| M9 | the task cards keep their 10 px radius and shadow | KILLED | same |
+| M10 | the pressed filter back to the dark fill | KILLED | ux-r14 «the task filter is quiet sub-navigation…» |
+| M11 | the filter keeps its grey pill track | KILLED | same |
+| M12 | one dark action per task card again | KILLED | same |
+| M13 | the quiet action reaches the «الآن» primary | KILLED | same |
+| M14 | the restyle reaches a status edge | KILLED | ux-r14 «never restyles a status edge or tint…» |
+| M15 | a colour literal in the block | KILLED | colour ratchet; 21E V2 «tokens only» |
+| M16 | an unscoped rule (reaches the teacher's chips) | KILLED | 21E V2 «every rule is scoped…» |
+| M17 | the block gains a coarse-pointer block | KILLED | ux-r14 «… follows the L.8 coarse block without adding one» |
+| M18 | a physical side in the block | KILLED | ux-r14 «adds no stacking context…» |
+
+18 / 18 KILLED, no TIMEOUT. `git status` showed only the R14 edit set before and after the campaign.
+
+## R14.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `student-portal`, `student-messages` (1440 / 1024 / 390 px) | before: 6 / 6 clean; after: **6 / 6 clean** (no overflow, no console error) |
+| `npm test`, full root suite (`bc50f8e2`) | 1 188 files, **14 140 / 14 140** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | 2 266, unchanged (the block adds no literal) |
+| Browser gates | L.8 runs on student changes (`src/student/**`); the Quality Gate runs on every PR |
+
+---
+
 # Phase UX-R16 — The login and public pages
 
 **Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R16 depends on R1 (merged), so it branches
