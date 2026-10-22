@@ -4,7 +4,9 @@ import type { ChartAnimation, ChartPalette } from "./chartSpec";
 
 /** Series colours per semantic palette. Every entry has at least 4.7:1 contrast against white (WCAG 1.4.11 needs 3:1 for graphics). */
 export const CHART_PALETTE_COLORS: Readonly<Record<ChartPalette, readonly string[]>> = Object.freeze({
-  categorical: Object.freeze(["#2563EB", "#C2410C", "#047857", "#B91C1C", "#6D28D9", "#0E7490", "#BE185D", "#4D7C0F"]),
+  // UX-R16c — the theme's series order: the deep purple first (the value of --eb-primary-strong), the former first blue takes the
+  // violet's place 5; the pairwise distinguishability (normal, protan, deutan, tritan) is unchanged (functionGraphSeries.ux-r16c.test.ts).
+  categorical: Object.freeze(["#4A2380", "#C2410C", "#047857", "#B91C1C", "#2563EB", "#0E7490", "#BE185D", "#4D7C0F"]),
   sequential: Object.freeze(["#1E3A8A", "#1D4ED8", "#2563EB", "#3B6FD4", "#0369A1", "#0E7490", "#155E75", "#164E63"]),
   diverging: Object.freeze(["#1D4ED8", "#0E7490", "#64748B", "#B45309", "#B91C1C", "#7C3AED", "#047857", "#9D174D"]),
   neutral: Object.freeze(["#1E293B", "#475569", "#64748B", "#334155", "#0F172A", "#52525B", "#57534E", "#3F3F46"])
