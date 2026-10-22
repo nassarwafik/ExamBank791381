@@ -1986,3 +1986,146 @@ file was restored byte-for-byte after each (SHA-256).
 | `git diff --check` | clean |
 | colour ratchet | **2 266** (was 2 282) |
 | Browser gates | none is triggered by the review sheets (no workflow path filter covers them); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R16a — The science simulators' colours
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence. The owner added R16a–R16d to the plan
+(§4.1, #408). R16a depends on R3 (merged), so it branches from `main` `ea357456` as `feature/ux-r16a-science-colours`, in
+parallel with R13–R16. They share only this record, the colour baseline and the capture harness.
+
+## R16a.1 What changes for the user
+
+The six science simulators (free fall, motion, the physics lab, chemistry structure, reactions and the chemistry lab), the mesh
+models, the function surfaces and the interactive 3D viewer's interface. This covers the student workspaces, the teacher editors
+and the reviews, because the three share each sheet. No reference mockup shows them, so R16a moves their own colours onto the
+palette, as §4.1 asks. **Presentation only:** nothing a simulator computes, grades or stores changes, and no question, key or
+API changes.
+
+- **A content-token family** (`--eb-content-*` in `design-tokens.css`) holds the neutrals that simulators and diagrams draw
+  with: ink, text, muted, axis, faint, grid, line, two grounds, and the simulators' own control colour. The slate and
+  blue-grey literals they replace map by luminance:
+  - a foreground is never lighter than before;
+  - a ground or line is never darker;
+  - so no contrast drops.
+- **The simulators' control blue becomes the content accent** (`--eb-primary-strong`). This covers buttons, pressed toggles,
+  focus rings, progress, tabs and the current item. White text on it is 11.4:1; the blue gave 4.9:1.
+- **The hues that carry meaning stay exactly as they were:**
+  - forces: applied, weight / normal, friction, gravity components;
+  - quantities: velocity and acceleration;
+  - kinetic energy, electrons and their cloud;
+  - a lab series, the free-fall curve;
+  - reaction states;
+  - the mesh and surface tints;
+  - correct / wrong marks.
+  The status hues that equal a token (`#b42318`, `#15803d`, `#d97706`, `#b45309`) now name it, at the same value.
+- **Presentation presets still win:** every `var(--xp-*, …)` keeps its preset variable. Only the fallback, which an exam
+  without a preset and the teacher editors render, moves to the content tokens. The presets themselves are R16d.
+- **Fix 1: a measurement box never spills** (§R16a.3).
+- **Fix 2: the chemistry column fits a phone** (§R16a.3).
+
+**Not changed, on purpose:**
+- the dark-scheme and more-contrast blocks, which are tuned for their own grounds;
+- the 3D viewer's scene drawing (lines, edges, vertices, the selected and review tints), which the 21E viewer guards pin as
+  drawn; only its interface is converted;
+- every meaning-carrying hue listed above.
+
+## R16a.2 Edit set
+
+- **`src/design-tokens.css`:** the `--eb-content-*` family. Every token is an alias of a palette token except
+  `--eb-content-axis` (`#7c7690`, ≥ 3 : 1 on every ground for strokes, axes and guides).
+- **The eleven sheets:**
+  - `physicsMotion/motion.css`, `physicsFreeFall/freefall.css`, `physicsLab/lab.css`;
+  - `chemistryStructure/chem.css`, `chemistryReactions/rxn.css`, `chemistryLab/chemLab.css`;
+  - `meshModels/mesh-model.css`, `functionSurfaces/surface-plot.css`, `functionSurfaces/surface-3d.css`;
+  - `interactive3d/interactive3d.css`;
+  - the simulators' shared dynamic layer `smartsim/dynamic/dynamic.css`. It is not named in the plan's R16a row, but it draws every
+    physics simulator's controls and plots, and its single column caused the last 3 px phone overflow.
+  - **404 literals converted**, 116 kept. The kept literals are:
+    - the meaning-carrying hues;
+    - the dark-scheme and more-contrast blocks;
+    - the 20 literals of the pinned 3D scene drawing.
+  - The layout fixes:
+    - `motion.css` (the shared widgets: boxes, point fields, the time field, the root);
+    - `freefall.css` (its own boxes, time field and root);
+    - `dynamic.css` (its column);
+    - `chem.css` (its column).
+  - The sliders take the control colour (`accent-color`) in `motion.css`, `freefall.css` and `chemLab.css`.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **1 874** (was 2 266).
+- **`src/scienceColours.ux-r16a.test.ts`:** new, 12 guards:
+  - the family and its legibility, computed from the token values;
+  - no neutral or control-blue literal left;
+  - the meaningful hues unchanged;
+  - the fixes;
+  - the fixture pinned to the starters.
+- **`scripts/ux-r16a-sim-starters.json`:** the six plugins' code-owned starter configs. The guard pins it to
+  `smartSimStarterConfig`, so it cannot drift.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:**
+  - a `sims` scene: one student exam with the six simulators, sanitized by the API's own student sanitizer;
+  - six scripted pages (`sim-physicsFreeFall` … `sim-chemistryLab`);
+  - a check that fails when a control spills out of its box.
+
+## R16a.3 Fail-first evidence
+
+**1. The measurement boxes spilled in every physics simulator.**
+- **Cause:** the shared widgets (`physicsShared/labWidgets.tsx`, styled by `motion.css`) put the text field in a one-column grid
+  box whose track was sized to the field's intrinsic width.
+- **Effect:** the field ran 64–69 px past the box's edge, over the next box. On a tablet and a phone it scrolled the whole exam
+  page sideways (1036 > 1024, 421 > 390).
+- **Fix:** the tracks may shrink (`grid-template-columns: minmax(0, 1fr)`) for the box, a point task's labelled field, the
+  simulator root and the shared dynamic layer. The text field takes the free width of its row, and the time field keeps a field's
+  width (7em). The free-fall simulator has its own boxes and gets the same rules in `freefall.css`.
+
+**2. The chemistry column was wider than a phone.**
+- **Cause:** `.chem` is a one-column grid sized to its widest child, so the reaction workspace's column was 329 px inside a
+  narrower card.
+- **Effect:** the exam page scrolled sideways (402 > 390).
+- **Fix:** `minmax(0, 1fr)`. The formula rows wrap and the table scrolls inside its own box.
+
+| Capture (1440 / 1024 / 390 px) | `main` `ea357456` | R16a |
+|---|---|---|
+| `sim-physicsFreeFall`, `sim-physicsMotion`, `sim-physicsLab` | **FAIL** 9 / 9: «a control spills out of its box: [{"box":"زمن الوصول إلى الأرض (ث)","by":69}, …]»; tablet and phone also «horizontal overflow 1036>1024», «421>390» | clean 9 / 9 |
+| `sim-chemistryReactions` (phone) | **FAIL**: «horizontal overflow 402>390» | clean |
+| `sim-chemistryStructure`, `sim-chemistryLab` | clean | clean |
+
+## R16a.4 Mutation proof
+
+Each mutant was planted alone. The run covered the R16a guards, every converted simulator's own suites, the colour ratchet and
+`src/designSystem`. Each file was restored byte-for-byte after its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the axis token too light for strokes (< 3:1) | KILLED | ux-r16a «text tokens are AA … the axis token is ≥ 3:1» |
+| M2 | the muted text token below AA | KILLED | same |
+| M3 | the control colour back to a mid purple (white text < 7:1) | KILLED | ux-r16a «the control colour carries white text at AAA…» |
+| M4 | a slate literal returns in a simulator sheet | KILLED | colour ratchet; ux-r16a «hold no neutral … literal» |
+| M5 | the control blue returns in the mesh viewer | KILLED | colour ratchet; ux-r16a |
+| M6 | the applied-force vector loses its own hue (purple, like weight) | KILLED | ux-r16a «the hues that carry meaning did not move…» |
+| M7 | the electrons take the control colour | KILLED | same |
+| M8 | the velocity vector loses its success hue | KILLED | ux-r16a «status hues name their tokens…» |
+| M9 | the trail ignores the presentation variable | KILLED | same |
+| M10 | the measurement box track sized to the field again (spill) | KILLED | ux-r16a «a measurement or point box's track may shrink…» |
+| M11 | the point task's labelled field cannot shrink | KILLED | same |
+| M12 | the free-fall boxes spill again | KILLED | same |
+| M13 | the dynamic layer sized to its widest child again | KILLED | ux-r16a «the time field keeps a field's width; the dynamic layer…» |
+| M14 | the chemistry column sized to its widest child again | KILLED | same |
+| M15 | the time field stretches again | KILLED | same |
+| M16 | the bench sliders back to the browser's blue | KILLED | ux-r16a «the sliders take the control colour…» |
+| M17 | the pinned 3D scene drawing converted | KILLED | 21E viewer «the scene drawing rules … are unchanged» |
+| M18 | the kinetic-energy series loses its hue | **SURVIVED** on the first run; the guard now pins the series rule too (`fce5be7f`): **KILLED** on the re-run | ux-r16a «the hues that carry meaning…» |
+
+18 / 18 KILLED (one after the guard was strengthened), no TIMEOUT. `git status` showed only the committed R16a edit set before and
+after.
+
+## R16a.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture: the six simulators (1440 / 1024 / 390 px) | before **8 / 18** clean (the spills and the sideways scroll, §R16a.3); after **18 / 18** clean |
+| `npm test`, full root suite (`fce5be7f`) | 1 188 files, **14 145 / 14 145** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **1 874** (was 2 266) |
+| Browser gates | none is triggered by these sheets (U.1 and L.8 path filters); the Quality Gate and the Runner CI run on every PR |
