@@ -131,6 +131,22 @@
   --eb-chrome-field: #f3f3f6;
   --eb-chrome-shadow: 0 1px 0 var(--eb-line), 0 4px 14px -10px rgba(28,19,48,.12);
 
+  /* UX-R16a — CONTENT colours: the neutrals simulators and diagrams draw with (grounds, panels, grids, axes, labels) and their own
+     control colour, on the purple-neutral palette (the slate / blue-grey literals they replace). A hue that carries meaning (a
+     force, a series, an electron, a correct / wrong mark) is not a content token. Legibility is pinned by
+     src/scienceColours.ux-r16a.test.ts: text tokens AA on every ground, --eb-content-axis ≥ 3:1 (strokes, axes, guides). */
+  --eb-content-ink: var(--eb-navy);
+  --eb-content-text: var(--eb-text);
+  --eb-content-muted: var(--eb-muted);
+  --eb-content-axis: #7c7690;
+  --eb-content-faint: var(--eb-faint);
+  --eb-content-grid: var(--eb-line-2);
+  --eb-content-line: var(--eb-line);
+  --eb-content-ground: var(--eb-surface-2);
+  --eb-content-ground-2: var(--eb-bg-tint);
+  --eb-content-accent: var(--eb-primary-strong);
+  --eb-content-accent-strong: var(--eb-primary);
+
   /* UX-7 — medal / personal-rank accents (same values as src/medals.ts MEDAL_COLORS) */
   --eb-medal-gold: #eab308; --eb-medal-silver: #94a3b8; --eb-medal-bronze: #c2703d;
 }
