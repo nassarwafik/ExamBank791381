@@ -363,7 +363,7 @@
    activity host brings its own .learning-activity styles; the fallback is a quiet static note. */
 .iex-activity{ margin-block-end:var(--eb-space-3); border:1px dashed var(--eb-line); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface-2); }
 .iex-activity-stimulus{ margin-block-start:var(--eb-space-2); }
-.iex-activity-status,.iex-activity-fallback{ margin:0; color:var(--eb-text-muted); font-size:var(--eb-fs-sm); }
+.iex-activity-status,.iex-activity-fallback{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
 
 /* ============================================================
    Phase 21E.3 — student exam reliability and accessibility
@@ -404,4 +404,28 @@
    controls themselves; desktop layouts with a fine pointer keep their sizes. */
 @media (pointer: coarse){
   .iex-cli-input{ min-height:44px; }   /* review fix 1: the 90px minimum width stays */
+}
+
+/* ============================================================
+   UX-R15 — the student exam in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R15). Presentation only:
+   answers, autosave, timers, attempt policy, navigation order and grading are untouched. The exam frame (position and save
+   row, details, review screen, start gate and result) becomes flat 8 px hairline panels on every exam; the review counts become
+   ONE hairline strip; the section context loses its 4 px decorative edge. The question card and the sticky bars change only on
+   the legacy `default` theme: the other legacy themes and every presentation preset keep their own look (the reference preset
+   is R16d). Every status tone (saved / saving / offline, answered / unanswered / unavailable, warn / danger clock, strict
+   policy, recovery) is untouched. Scoped, tokens only, logical sides, no stacking context and no transition.
+   ============================================================ */
+.interactive-exam-page .iex-progress, .interactive-exam-page .iex-details, .interactive-exam-page .iex-review,
+.interactive-exam-page .iex-start-card, .interactive-exam-page .iex-result-card{ border-radius:var(--eb-r); box-shadow:none; }
+.interactive-exam-page .iex-details-toggle{ border-radius:var(--eb-r); }
+.interactive-exam-page .iex-review-stats{ gap:0; border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.interactive-exam-page .iex-review-stats > div{ border-radius:0; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.interactive-exam-page .iex-review-stats > div:not(.is-warn):not(.is-unavailable){ background:transparent; }
+.interactive-exam-page .iex-section-context{ border-inline-start:1px solid var(--eb-line); }
+.interactive-exam-page.exam-theme-default .iex-card{ border-radius:var(--eb-r); box-shadow:none; }
+.interactive-exam-page.exam-theme-default .iex-topbar, .interactive-exam-page.exam-theme-default .iex-bottom-nav,
+.interactive-exam-page.exam-theme-default .iex-foot{ box-shadow:none; }
+@media (min-width: 768px){
+  .interactive-exam-page.exam-theme-default .iex-topbar, .interactive-exam-page.exam-theme-default .iex-bottom-nav,
+  .interactive-exam-page.exam-theme-default .iex-foot{ border-radius:var(--eb-r); }
 }
