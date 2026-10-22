@@ -1,0 +1,17 @@
+{
+  "functionStudy": {
+    "v": 1,
+    "expression": { "language": 2, "variable": "x", "source": "(2*x-4)/((x-1)*(x+2))" },
+    "window": { "xMin": -6, "xMax": 8, "yMin": -6, "yMax": 6, "sampleCount": 701 },
+    "tasks": { "domainExclusions": true, "xIntercepts": true, "yIntercept": true, "verticalAsymptotes": true, "horizontalAsymptotes": true, "extrema": true, "monotonicIntervals": true }
+  },
+  "governance": {
+    "directory": [
+      { "actorId": "teacher-author", "displayName": "أ. سامر", "capabilities": ["author"] },
+      { "actorId": "teacher-reviewer", "displayName": "أ. ليلى", "capabilities": ["review"] },
+      { "actorId": "teacher-approver", "displayName": "أ. هدى", "capabilities": ["approve"] },
+      { "actorId": "teacher-publisher", "displayName": "أ. مازن", "capabilities": ["publish"] }
+    ],
+    "workflow": { "cycleId": "cyc-1", "revisionId": "rev-aaaa1111-latest", "revisionNumber": 3, "authorId": "teacher-author", "reviewerId": "teacher-reviewer", "approverId": "teacher-approver", "publisherId": "teacher-publisher", "submittedAt": "2026-10-19T09:40:00.000Z", "submittedBy": "teacher-author", "reviewStatus": "pending" }
+  }
+}

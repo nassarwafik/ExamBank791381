@@ -3492,3 +3492,156 @@ own.
 - this phase's audit fixes.
 
 **What comes next (§4.2):** R19a interactive-state captures, R19b the visual regression gate, then dark mode (R18a–R18c).
+
+---
+
+# Phase UX-R19a — Interactive-state capture scenes and a deterministic harness
+
+**Owner direction (2026-10-22):** the first phase after R17, planned in §4.2. **Harness only:** no product code changes. R19a branches
+from `main` `6991094c` (#421, R17d) as `feature/ux-r19a-interactive-scenes`.
+
+## R19a.1 What changes
+
+R17b, R17c and R17d each changed something the captures could not show:
+- a focus ring;
+- the builder's governance panel;
+- the classic builder;
+- hover and pressed states.
+
+Two runs of the same build were also not pixel-identical:
+- `messages-thread` clicked the second row of a roster whose order can change;
+- relative times («منذ 18 ساعة») moved with the wall clock.
+
+R19a fixes both. **The capture is deterministic:**
+- **A frozen clock:** every page runs with `Date` fixed at the fixtures' `NOW` (`2026-10-20T08:30:00.000Z`), through Playwright's
+  `clock.setFixedTime`. Timers still run, and relative times no longer move.
+- **No positional picks:** every scripted scene picks its row by name. `messages-thread` opens «أحمد الحسن». The only positional pick
+  left is the exam navigator's question index, whose order the exam fixes.
+- **Request bodies are kept:** the mock API keeps each request's body. It used to discard it, so the governance scene can now answer
+  by action.
+
+**Twelve new scenes** capture states a page capture cannot show, each at 1440 / 1024 / 390:
+
+| Scene | State |
+|---|---|
+| `state-focus-field` | keyboard focus on the class roster's search field |
+| `state-focus-row-action` | keyboard focus on a roster row's action |
+| `state-focus-nav` | keyboard focus on a sidebar destination |
+| `state-focus-primary` | keyboard focus on a primary button (assignments) |
+| `state-hover-row` | a roster row under the pointer |
+| `state-menu-open` | the class's «المزيد» menu, open |
+| `state-studio-title-focus` | the exam title's keyboard ring (R17d) |
+| `state-question-types` | the question-type picker with a focused card (R17c's ring) |
+| `state-classic-builder` | the builder in its classic layout (R17b, R17d) |
+| `state-governance` | the builder's governance panel on an exam in review, with an assigned workflow (R17c's current step) |
+| `state-ai-composer` | the builder's AI composer |
+| `sim-functionStudy` | the function-study widget on its exam page (R17c) |
+
+**How a focus scene is captured:** it presses Tab first, so the browser treats the session as keyboard-driven and `:focus-visible`
+applies, then focuses its target. On a phone the sidebar is a drawer, so `state-focus-nav` opens the drawer before the Tab.
+
+**How a builder menu is opened:** from the keyboard (Enter on «أدوات الامتحان» or «إضافة أسئلة»), as a keyboard user opens it. At
+1024 px a pointer cannot reach those menus: the studio's top bar covers them (finding 1, §R19a.5).
+
+**Fixtures:** `scripts/ux-r19a-scene-fixtures.json` holds them, and both are the product's own shapes:
+- **Function study:** the rational certification preset of `functionStudyTemplates`, sanitized by the API's student sanitizer.
+- **Governance:** the 14B workflow shapes.
+
+**The reference captures are taken anew.** Freezing the clock moves the fixtures' «now» from the run's real date to `NOW`, so dated
+statuses and relative times differ from captures taken before R19a. Every later phase compares two captures taken by this harness.
+
+## R19a.2 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:**
+  - the frozen clock;
+  - the roster pick by name;
+  - the mock API keeps request bodies;
+  - a governance mock (scene `governance` only);
+  - the function-study scene;
+  - the eleven `state-*` scenes and `sim-functionStudy`;
+  - the builder's menus opened from the keyboard.
+- **`scripts/ux-r19a-scene-fixtures.json`:** new; the function-study preset and the governance directory and workflow.
+- **`scripts/ux-r19a-scenes.test.mjs`:** new, 7 guards:
+  - the function-study fixture equals `rationalCertificationConfig()`;
+  - the governance workflow's roles are all in the directory;
+  - the frozen clock at `NOW`;
+  - no positional pick outside the exam navigator;
+  - request bodies kept;
+  - every planned scene present;
+  - focus scenes press Tab first.
+
+## R19a.3 Fail-first evidence
+
+The guard file and the fixture file were copied into a detached worktree of `main` `6991094c`.
+
+**Result:** 5 of 7 guards fail: the frozen clock, the positional pick, request bodies, the scenes and the Tab-first rule.
+
+**Pins:** the two fixture guards pass there, because they check the new fixture file itself.
+
+## R19a.4 Mutation proof
+
+Seven mutants. Each was planted alone; `scripts` and `src/designSystem` ran against it, and the file was restored and SHA-256 checked
+afterwards. `git status` was identical before and after the campaign.
+
+| # | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the frozen clock removed | KILLED | the frozen clock guard |
+| M2 | `messages-thread` back to a positional pick (`nth(1)`) | KILLED | the positional pick guard |
+| M3 | the mock API discards request bodies (`req.resume()`) | KILLED | the request body guard |
+| M4 | the governance scene renamed out of the plan's list | KILLED | the scene list guard |
+| M5 | a focus scene no longer presses Tab | KILLED | the Tab-first guard |
+| M6 | the function-study fixture drifts (`sampleCount` 700) | KILLED | the preset guard |
+| M7 | the governance workflow's reviewer is not in the directory | KILLED | the role guard |
+
+**7 / 7 killed**, no timeout, every file restored.
+
+## R19a.5 The determinism proof and local validation
+
+**Determinism.** The same build (`main` `6991094c`) was captured twice with the R19a harness. Each run produced 207 captures: 69 pages
+and scenes at 1440 / 1024 / 390.
+
+| Measure | Result |
+|---|---|
+| bit-identical | 201 / 207 |
+| differ by 1–2 levels | 6 (`login-error`, `sim-chemistryLab`, `sim-chemistryReactions` and `state-governance` at 1024; `ed-inlineCloze` and `state-ai-composer` at 390) |
+| differ by more than 12 levels | **0 / 207** |
+
+The 1–2 level differences are Chromium's raster noise, not the page. Another pair of runs put them on different pages. At the threshold
+every phase uses, and R19b will use (a channel moves by more than 12 levels), the two runs are identical.
+
+**Every scene reaches its state** at all three viewports, in both runs. The only failing checks are the function-study widget's
+overflow (finding 2).
+
+**Product findings.** R19a changes no product code, so it records these two; neither is fixed here.
+
+1. **The studio's top bar covers its own tools between 1024 and 1439 px.** The bar's three columns are `1fr auto 1fr`, so the end
+   column shrinks with the viewport. The tools group (`.st-topbar-tools`, `min-inline-size: 0`) then shrinks below its contents, and
+   its buttons slide under «حفظ مؤقت» and «متابعة». Measured with `elementFromPoint` at the centre of each button:
+
+   | Viewport | Tools width (contents need 302 px) | Buttons a pointer cannot reach |
+   |---|---|---|
+   | 1024 | 41 px | «إضافة أسئلة», «الأوامر», «أدوات الامتحان», «معاينة» |
+   | 1100 / 1180 | 79 / 119 px | the same four |
+   | 1280 | 169 px | «أدوات الامتحان», «معاينة» |
+   | 1366 | 212 px | «معاينة» |
+   | 1440 | 249 px | none |
+   | 1536 and wider | 297–302 px | none |
+
+   The keyboard still reaches every one; below 1024 px the bar wraps to two rows and is not affected.
+2. **The function-study widget overflows the page.** At 1024 the page is 1036 px wide: three rows of the task cards (`.fnstudy-row`,
+   `.fnstudy-saved` and a task label) run 12 px past the inline-end edge. At 390 it is 421 px wide; no box crosses the edge, so the
+   source is a child no box measure sees (likely SVG text) and needs its own investigation.
+
+**Proposed:** a small fix phase for both findings before R19b, so the gate starts from a page set with no failing check.
+
+**Local validation on the head:**
+
+| Check | Result |
+|---|---|
+| `npx vitest run` | 1 203 files, 14 257 tests passed, 0 failed |
+| `npm run lint` | exit 0, 0 errors (the existing warnings only) |
+| `npx tsc -b` | exit 0 |
+| `npm run build` | passed, bundle guard passed |
+| `git diff --check` | clean |
+| `scripts/ux-r19a-scenes.test.mjs` | 7 / 7 |
+| colour inventory | unchanged (no stylesheet touched) |
