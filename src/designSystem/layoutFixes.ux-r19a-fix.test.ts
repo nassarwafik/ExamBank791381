@@ -2,7 +2,7 @@
 // layout, so these guards pin the rules that fix them, and that the capture harness clicks the builder's menus with a pointer (a
 // covered trigger fails the scene); the browser measurements (every top-bar button reachable from 1024 to 1920 px,
 // the function-study page as wide as the viewport) are recorded in the design record.
-//   1. The studio's top bar: its end column is never narrower than its tools (they slid under «حفظ مؤقت» and «متابعة» from 1024 to
+//   1. The studio's top bar: its end column is never narrower than its tools (they slid under «حفظ مسودة» and «متابعة» from 1024 to
 //      1439 px), and below 1280 px, where one row cannot hold the title, the steps and the tools, the steps take a second row.
 //   2. The function-study cards: a text field's natural width no longer widens a card's column past the card (the page ran 12 px
 //      wider than a 1024 px viewport and 31 px wider than a 390 px one).

@@ -3616,7 +3616,7 @@ overflow (finding 2).
 
 1. **The studio's top bar covers its own tools between 1024 and 1439 px.** The bar's three columns are `1fr auto 1fr`, so the end
    column shrinks with the viewport. The tools group (`.st-topbar-tools`, `min-inline-size: 0`) then shrinks below its contents, and
-   its buttons slide under «حفظ مؤقت» and «متابعة». Measured with `elementFromPoint` at the centre of each button:
+   its buttons slide under «حفظ مسودة» and «متابعة». Measured with `elementFromPoint` at the centre of each button:
 
    | Viewport | Tools width (contents need 302 px) | Buttons a pointer cannot reach |
    |---|---|---|
@@ -3657,7 +3657,7 @@ page set with no failing check. R19a-fix branches from `main` `5fd56323` (#422, 
 
 **1. The studio's top bar keeps every tool reachable.**
 - **The defect:** the bar's three columns were `minmax(0, 1fr) auto minmax(0, 1fr)`, so the end column shrank with the viewport. The
-  tools group (`min-inline-size: 0`) then shrank below its contents, and its buttons slid under «حفظ مؤقت» and «متابعة».
+  tools group (`min-inline-size: 0`) then shrank below its contents, and its buttons slid under «حفظ مسودة» and «متابعة».
 - **The fix:**
   - the end column is `minmax(max-content, 1fr)`: it is never narrower than its contents. Where there is room (about 1550 px and wider)
     both side columns stay equal and the steps stay centred, as before.

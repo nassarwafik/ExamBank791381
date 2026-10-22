@@ -603,7 +603,7 @@ const SCRIPTED = [
     await page.waitForTimeout(200);
   } },
   // The builder's menus open with a pointer click, which fails if anything covers the trigger: before UX-R19a-fix the studio's
-  // top-bar tools sat under «حفظ مؤقت» and «متابعة» from 1024 to 1439 px (§R19a.5), and these scenes guard that fix.
+  // top-bar tools sat under «حفظ مسودة» and «متابعة» from 1024 to 1439 px (§R19a.5), and these scenes guard that fix.
   { id: "state-classic-builder", role: "teacher", nav: "باني الامتحان", run: async page => {
     await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
     await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
