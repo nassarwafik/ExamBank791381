@@ -106,8 +106,10 @@ describe("UX-3 dashboard — request contract", () => {
     const calls = await mount();
     expect(calls.map(c => c.url)).toEqual(["/api/teacher-analytics", "/api/teacher-achievement-feed"]);
     for (const c of calls) {
-      const h = c.init?.headers as Record<string, string>;
-      expect(h["x-builder-token"]).toBe("tkn-1"); expect(h.Authorization).toBe("Bearer tkn-1"); expect(c.init?.method).toBeUndefined();
+      // Batch 5 (F1), updated deliberately: the request goes through teacherFetch, which sends a Headers object (the same two
+      // headers); read it through Headers so the contract, not the container type, is what is pinned.
+      const h = new Headers(c.init?.headers);
+      expect(h.get("x-builder-token")).toBe("tkn-1"); expect(h.get("Authorization")).toBe("Bearer tkn-1"); expect(c.init?.method).toBeUndefined();
     }
   });
   it("class → student → period filters build the same query string (classId, studentId, from/to) and the refresh button repeats it", async () => {

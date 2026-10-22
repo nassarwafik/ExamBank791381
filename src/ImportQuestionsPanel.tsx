@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QuestionTextBlock, parseTable, promptText } from "./questionContent";
 import type { ExamQuestion, QuestionOption, TopicOption } from "./App";
 import { difficultyNames, typeNames } from "./App";
+import { teacherFetchJson } from "./teacherFetch";
 
-type ApiError = { ok?: boolean; error?: string };
 
 type FileStatus = "uploading" | "analyzing" | "partial" | "done" | "failed";
 
@@ -301,17 +301,9 @@ export default function ImportQuestionsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveTopics.length]);
 
-  async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
-    const headers = new Headers(options.headers || {});
-    headers.set("Content-Type", "application/json");
-    headers.set("x-builder-token", token);
-    headers.set("Authorization", "Bearer " + token);
-    const response = await fetch(url, { ...options, headers });
-    const result = (await response.json()) as T & ApiError;
-    if (!response.ok) {
-      throw new Error(result.error || "حدث خطأ.");
-    }
-    return result;
+  // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text.
+  function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+    return teacherFetchJson<T>(token, url, options);
   }
 
   function updateFile(importJobId: string, patch: Partial<ImportedFile>) {
@@ -409,18 +401,11 @@ export default function ImportQuestionsPanel({
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const headers = new Headers();
-      headers.set("x-builder-token", token);
-      headers.set("Authorization", "Bearer " + token);
-      headers.set("x-file-name", encodeURIComponent(file.name));
-      headers.set("x-file-type", file.type || "application/octet-stream");
-
-      const response = await fetch("/api/import-upload", { method: "POST", headers, body: arrayBuffer });
-      const result = (await response.json()) as { ok: true; importJobId: string; fileName: string } & ApiError;
-
-      if (!response.ok) {
-        throw new Error(result.error || "تعذر رفع الملف.");
-      }
+      const result = await teacherFetchJson<{ ok: true; importJobId: string; fileName: string }>(token, "/api/import-upload", {
+        method: "POST",
+        headers: { "x-file-name": encodeURIComponent(file.name), "x-file-type": file.type || "application/octet-stream" },
+        body: arrayBuffer
+      }, "تعذر رفع الملف.");
 
       patchSession(previous => ({
         files: previous.files.map(item => (item.importJobId === placeholderId

@@ -19,6 +19,7 @@ import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
 import ChartCard from "./ui/ChartCard";
 import {fmtPct,trendPoints,topicPoints,trendModel,submissionModel,distributionModel,classComparisonModel,topicModel} from "./teacher/dashboardChartTables";
+import {teacherFetchJson} from "./teacherFetch";
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
@@ -47,7 +48,6 @@ type Analytics={
  students:Array<{userId:string;displayName:string}>;
  studentDetail:StudentDetail|null;
 };
-type ApiError={ok?:boolean;error?:string};
 type StudentProfile={
  student:{userId:string;displayName:string;identityNumber:string;firstName:string;familyName:string;classId:string;active:boolean;archived:boolean;createdAt:string;lastLoginAt:string};
  classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;
@@ -240,12 +240,8 @@ function TeacherDashboard({token}:DashboardProps){
  // Drill panels opened for one scope never land in another: a scope change bumps the generation.
  const drillGen=useRef(0);
 
- async function teacherApi<T>(url:string):Promise<T>{
-  const response=await fetch(url,{headers:{"x-builder-token":token,"Authorization":"Bearer "+token}});
-  const result=await response.json() as T&ApiError;
-  if(!response.ok)throw new Error(result.error||"تعذر تحميل البيانات.");
-  return result;
- }
+ // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text.
+ function teacherApi<T>(url:string):Promise<T>{return teacherFetchJson<T>(token,url,{},"تعذر تحميل البيانات.")}
 
  function queryString(){
   const params=new URLSearchParams();

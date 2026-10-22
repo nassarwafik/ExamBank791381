@@ -35,6 +35,7 @@ import type { Dashboard, Detail, Summary } from "./student/types";
 import StudentTodayHub from "./student/today/StudentTodayHub";
 import { selectTodayContinue, type TodayContinue } from "./student/today/todayPriority";
 import { loadReaderPosition, saveReaderPosition } from "./student/today/readerPosition";
+import { NETWORK_ERROR_TEXT, errorText, safeJson, userFacingMessage } from "./userFacingErrors";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
 
@@ -120,14 +121,14 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     const seq = ++dashSeq.current;
     if (!silent) { setLoading(true); setError(""); }
     try {
-      const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
+      const r = await fetch("/api/student-dashboard", { headers }), j = ((await safeJson<any>(r)) || {}) as any;   // Batch 5 (F2): a non-JSON body never hides the status
       if (r.status === 401) { onLogout(); return; }
       if (seq < dashApplied.current) return;                                         // an older response: a newer one is shown
-      if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
+      if (!r.ok || !j.student || !j.stats) throw new Error(userFacingMessage(j.error, r.status, "تعذر تحميل صفحة الطالب."));
       dashApplied.current = seq;
       setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition), study: j.study && typeof j.study === "object" ? { lastActivity: j.study.lastActivity || null } : undefined });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
-    } catch (e) { if (!silent && seq >= dashApplied.current) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker; a superseded load's failure is not reported over newer data
+    } catch (e) { if (!silent && seq >= dashApplied.current) setError(errorText(e, NETWORK_ERROR_TEXT)); }   // silent failure: keep last-good data, no flicker; a superseded load's failure is not reported over newer data
     finally { if (!silent) setLoading(false); }
   }
   // OPTIONAL/auxiliary panel. Its failure — including a 401 — must NEVER end the authenticated session:
@@ -317,12 +318,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     if (avatarSaving) return;
     setAvatarSaving(true);
     try {
-      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setAvatar", avatarId }) }), j = await r.json() as any;
+      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setAvatar", avatarId }) }), j = ((await safeJson<any>(r)) || {}) as any;   // Batch 5 (F2): a non-JSON body never hides the status
       if (r.status === 401) { onLogout(); return; }
-      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر تحديث الأيقونة.");
+      if (!r.ok || !j.ok) throw new Error(userFacingMessage(j.error, r.status, "تعذر تحديث الأيقونة."));
       setData(prev => prev ? { ...prev, student: { ...prev.student, avatarId: j.avatarId } } : prev);
       setAvatarPickerOpen(false);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث الأيقونة."); }
+    } catch (e) { setError(errorText(e, "تعذر تحديث الأيقونة.")); }
     finally { setAvatarSaving(false); }
   }
   async function toggleShareAchievements() {
@@ -330,33 +331,33 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     const next = !(data.student.shareAchievements !== false);
     setShareSaving(true);
     try {
-      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setShareAchievements", share: next }) }), j = await r.json() as any;
+      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setShareAchievements", share: next }) }), j = ((await safeJson<any>(r)) || {}) as any;   // Batch 5 (F2): a non-JSON body never hides the status
       if (r.status === 401) { onLogout(); return; }
-      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر تحديث الإعداد.");
+      if (!r.ok || !j.ok) throw new Error(userFacingMessage(j.error, r.status, "تعذر تحديث الإعداد."));
       setData(prev => prev ? { ...prev, student: { ...prev.student, shareAchievements: j.shareAchievements } } : prev);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث الإعداد."); }
+    } catch (e) { setError(errorText(e, "تعذر تحديث الإعداد.")); }
     finally { setShareSaving(false); }
   }
   // Reacting hits the SAME optional achievement-feed endpoint, so a 401 here also degrades locally
   // (feature unavailable) and never logs the student out — the primary dashboard governs the session.
   async function react(postId: string, reaction: ReactionId) {
     try {
-      const r = await fetch("/api/achievement-feed", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "react", postId, reaction }) }), j = await r.json() as any;
+      const r = await fetch("/api/achievement-feed", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "react", postId, reaction }) }), j = ((await safeJson<any>(r)) || {}) as any;   // Batch 5 (F2): a non-JSON body never hides the status
       if (r.status === 401) { setFeedError(""); return; }
-      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر إرسال ردّ الفعل.");
+      if (!r.ok || !j.ok) throw new Error(userFacingMessage(j.error, r.status, "تعذر إرسال ردّ الفعل."));
       setFeed(prev => prev.map(p => p.postId === postId ? { ...p, reactionCounts: j.reactionCounts, myReaction: j.myReaction } : p));
-    } catch (e) { setFeedError(e instanceof Error ? e.message : "تعذر إرسال ردّ الفعل."); }
+    } catch (e) { setFeedError(errorText(e, "تعذر إرسال ردّ الفعل.")); }
   }
   async function open(item: Summary) {
     if (item.availability === "scheduled") return;
     setBusy(true); setError("");
     try {
-      const r = await fetch("/api/student-assignment/" + encodeURIComponent(item.assignmentId), { headers }), j = await r.json() as any;
+      const r = await fetch("/api/student-assignment/" + encodeURIComponent(item.assignmentId), { headers }), j = ((await safeJson<any>(r)) || {}) as any;   // Batch 5 (F2): a non-JSON body never hides the status
       if (r.status === 401) { onLogout(); return; }
-      if (!r.ok || !j.assignment) throw new Error(j.error || "تعذر فتح الواجب.");
+      if (!r.ok || !j.assignment) throw new Error(userFacingMessage(j.error, r.status, "تعذر فتح الواجب."));
       setDetail(j.assignment);
       window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); // UX-8b — reduced-motion aware
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر فتح الواجب."); }
+    } catch (e) { setError(errorText(e, "تعذر فتح الواجب.")); }
     finally { setBusy(false); }
   }
 

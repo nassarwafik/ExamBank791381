@@ -7,7 +7,7 @@ import Dialog from "../ui/Dialog";
 import IconButton from "../ui/IconButton";
 import { useConfirm } from "../ui/useConfirm";
 import { IconPlus, IconUpload, IconBuilder, IconSearch, IconEye, IconEdit, IconTrash, IconRefresh, IconLock } from "../icons";
-import { withTrackingCode } from "../lib/requestTrace";
+import { teacherFetchJson } from "../teacherFetch";
 import {
   type BankQuestionRow, type BankQuestionInput, type BankFilters, type BankPresentationType, type BankSection,
   EMPTY_FILTERS, PRESENTATION_TYPES, SECTIONS, SECTION_LABELS, TYPE_LABELS, SOURCE_LABELS,
@@ -68,14 +68,8 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   const questionsHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const filterId = useId();
 
-  const api = useCallback(async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
-    const h = new Headers(options.headers || {});
-    h.set("Content-Type", "application/json"); h.set("x-builder-token", token); h.set("Authorization", "Bearer " + token);
-    const r = await fetch(url, { ...options, headers: h });
-    const j = await r.json() as T & { error?: string };
-    if (!r.ok) throw new Error(withTrackingCode(j.error || "حدث خطأ.", r.status, r));
-    return j;
-  }, [token]);
+  // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text.
+  const api = useCallback(<T,>(url: string, options: RequestInit = {}): Promise<T> => teacherFetchJson<T>(token, url, options), [token]);
 
   // One bank load per entry; a stale (out-of-order) response never overwrites a newer one (sequence guard). The
   // mount effect only starts the two requests and applies their results asynchronously; "loading" is derived (no

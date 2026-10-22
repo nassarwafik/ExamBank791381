@@ -1,16 +1,13 @@
-// Phase 21G.1 — the ONE request helper of the assignments workspace (extracted unchanged from AssignmentsPanel): JSON body, the
-// teacher token on both headers the API accepts, and a non-2xx answer becomes an Error whose message is the server's Arabic error
-// with its tracking code.
-import { withTrackingCode } from "../lib/requestTrace";
+// Phase 21G.1 — the ONE request helper of the assignments workspace: JSON body, the teacher token on both headers the API
+// accepts, and a non-2xx answer becomes an Error whose message is the server's Arabic error with its tracking code.
+// Batch 5 (F1): built on teacherFetch (an expired session signs the teacher out; never English or parser text).
+import { teacherFetchJson } from "../teacherFetch";
 
 export type AssignmentsApi = <T>(url: string, options?: RequestInit) => Promise<T>;
 
 export function assignmentsApi(token: string): AssignmentsApi {
-  return async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
-    const h = new Headers(options.headers || {}); h.set("Content-Type", "application/json"); h.set("x-builder-token", token); h.set("Authorization", "Bearer " + token);
-    const r = await fetch(url, { ...options, headers: h }), j = await r.json() as T & { error?: string };
-    if (!r.ok) throw new Error(withTrackingCode(j.error || "حدث خطأ.", r.status, r));
-    return j;
+  return function api<T>(url: string, options: RequestInit = {}): Promise<T> {
+    return teacherFetchJson<T>(token, url, options);
   };
 }
 
