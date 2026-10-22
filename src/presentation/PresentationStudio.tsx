@@ -10,7 +10,7 @@ import PresentationRoot, { PresentationExamSection } from "./PresentationRoot";
 import {
   COLOR_TOKENS, CONTRAST_POLICY, PRESENTATION_PRESETS, PRESENTATION_VOCABULARY, contrastRatio, normalizeHexColor, presentationContrastIssues,
   resolvePresentation, validatePresentation, validateSectionPresentation,
-  type ColorToken, type ContrastIssue, type Palette, type PresentationIssue, type PresetId, type Slot
+  type ColorToken, type ContrastIssue, type Palette, type PresentationIssue, type PresetId, type Slot, STARTING_PRESET
 } from "./presentationModel";
 import "./presentation-studio.css";
 
@@ -51,7 +51,8 @@ type Analysis =
   | { kind: "absent" | "ok"; raw: Json; preset: PresetId; contrast: ContrastIssue[] }
   | { kind: "malformed"; issues: PresentationIssue[]; preset: PresetId | null };
 function analyze(value: unknown): Analysis {
-  if (value === undefined || value === null) return { kind: "absent", raw: { schemaVersion: 1, preset: "default" }, preset: "default", contrast: [] };
+  // UX-R16d (option A) — an exam with no presentation yet starts from the reference preset; existing presentations keep theirs.
+  if (value === undefined || value === null) return { kind: "absent", raw: { schemaVersion: 1, preset: STARTING_PRESET }, preset: STARTING_PRESET, contrast: [] };
   const r = validatePresentation(value);
   if (r.ok && r.value) return { kind: "ok", raw: clone(r.value) as Json, preset: r.value.preset, contrast: [] };
   // A structurally valid value whose ONLY problem is contrast stays editable (that is how the author fixes it); finalization blocks it.
