@@ -289,6 +289,31 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R13 — the games: the teacher's number-conversion preview and live-challenge authoring, and the student's games page.
+  { id: "games-conversion", role: "teacher", nav: "الألعاب التعليمية", run: async page => {
+    await page.getByRole("button", { name: "معاينة اللعبة" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-ncgame").waitFor({ timeout: 15000 });
+    // UX-R13 — inside the teacher shell the game view must not paint the student portal's gradient band.
+    const band = await page.evaluate(() => getComputedStyle(document.querySelector(".eb-shell-content .eb-games-surface")).backgroundImage);
+    if (band !== "none") throw new Error("the teacher game view paints the student background: " + band.slice(0, 60));
+  } },
+  { id: "games-live", role: "teacher", nav: "الألعاب التعليمية", run: async page => {
+    await page.getByRole("button", { name: "إنشاء تحدٍّ" }).first().click({ timeout: 15000 });
+    await page.locator(".eb-lc").first().waitFor({ timeout: 15000 });
+    // UX-R13 — inside the teacher shell the game view must not paint the student portal's gradient band.
+    const band = await page.evaluate(() => getComputedStyle(document.querySelector(".eb-shell-content .eb-games-surface")).backgroundImage);
+    if (band !== "none") throw new Error("the teacher game view paints the student background: " + band.slice(0, 60));
+  } },
+  ...[["student-games", false], ["student-games-join", true]].map(([id, join]) => ({ id, role: "student", run: async page => {
+    await page.getByRole("button", { name: /الألعاب/ }).first().click({ timeout: 15000 });
+    await page.locator(".eb-games-surface").waitFor({ timeout: 15000 });
+    if (!join) return;
+    await page.getByRole("button", { name: "انضم إلى غرفة" }).click({ timeout: 15000 });
+    await page.locator(".eb-lc-code-input").waitFor({ timeout: 15000 });
+    // UX-R13 — the room code is typed in the monospace face (it read an undefined token and fell back to the body font).
+    const face = await page.evaluate(() => getComputedStyle(document.querySelector(".eb-lc-code-input")).fontFamily);
+    if (!/mono/i.test(face)) throw new Error("the room code field is not monospace: " + face);
+  } })),
   // UX-R16d — the same exam under the new "reference" preset and under "default"; the reference page fails unless the presentation root
   // carries the reference primary (so a missing preset, or a fallback to default, is caught).
   ...["reference", "default"].map(id => ({ id: "preset-" + id, role: "student", scene: "preset-" + id, run: async page => {
