@@ -138,6 +138,106 @@ content sheets of R16a–R16b hold **≈ 935 of the 2 266 remaining literals**; 
   changes look, published ones included.
 - Either way the WCAG policy, the fallback rule and the schema stay as they are.
 
+### 4.2 Plan addendum: R17d, R19a, R19b, R18a–R18c (owner direction, 2026-10-22)
+
+**Context.** R17a–R17c were the first three parts of R17. They moved the legacy sheets onto the palette and removed the dead CSS.
+Along the way they found three things the plan did not cover:
+- **The harness does not show the states that changed.** R17b and R17c each fixed or changed something the captures cannot show:
+  - a focus ring;
+  - the builder's governance panel;
+  - the classic builder and the AI composer;
+  - hover and pressed states.
+
+  Their 33 / 33 and 165 / 165 pixel-identical results are true, but they cover only what the harness opens.
+- **The before / after comparison is manual.** It runs on the author's machine for each phase. `messages-thread` is not
+  deterministic: it clicks the second student of a list whose order can change between runs.
+- **Dark mode became practical.** The colour literals dropped from 2 266 (R0, §4.1) to about 760 once R17c is merged, and most of what is left is kept
+  on purpose (§R17c.1). The owner approved dark mode, which §4 had left as an optional R18 feature.
+
+The owner approved all of it. Global search and persisted drag reorder stay **R18 features on a separate owner decision**; this
+addendum does not schedule them.
+
+| # | Phase | Scope | Deliverables | Size | Depends on |
+|---|---|---|---|---|---|
+| R17d | Final audit and the recorded leftovers | all stylesheets; `scripts/`; the record | the seven undefined reads in `structured-builder.css` collapsed to the values they render; `--eb-fs-15` / `--eb-fs-18` defined on the type scale; a keyboard, focus, contrast, RTL, phone and print audit of every harness page; final "after" captures; the R0–R17 programme summary that closes the record | M | R17c merged |
+| R19a | Interactive-state capture scenes | `scripts/capture-visual-baseline-ux-r.mjs`, its fixtures | scenes for focus, hover, pressed and open states; the classic builder, the AI composer, the builder's governance panel, the function-study widget; `messages-thread` made deterministic | S–M | R17d |
+| R19b | Visual regression gate in CI | a new workflow under `.github/workflows/`, `scripts/` | every PR builds its head and `main`, captures both, compares pixels (> 12 levels per channel) and fails on a page that changed unless the PR declares it | M | R19a |
+| R18a | Dark mode: tokens, switch and shell | `design-tokens.css`, the shell, the settings menu | dark values for every `--eb-*` token, AA checked by guard; a per-user switch (system / light / dark) remembered on the device; the teacher and student shells | M | R19b |
+| R18b | Dark mode: teacher pages | every teacher page and its sheets | each page captured in dark at 1440 / 1024 / 390; the leftovers fixed (shadows, tints, charts) | L | R18a |
+| R18c | Dark mode: student pages and content | the student portal, the reader, the simulators, the editors | the student portal in dark; the reader keeps its own reading themes; the simulators and content keep their `prefers-color-scheme` blocks, reconciled with the switch | M–L | R18b |
+
+```
+R17c → R17d → R19a → R19b → R18a → R18b → R18c
+```
+
+**One phase at a time.** Each phase appends to this record and most change the colour baseline, so a parallel phase only adds
+reconciliation merges (R17a–R17c needed six).
+
+#### R17d — Final audit and the recorded leftovers
+
+- **Leftovers that R17c recorded in its guard list.** The guard list may only shrink; R17d empties all but one entry, and removes the two size reads from the R1 list too.
+  - **The seven undefined reads in `structured-builder.css`** (`--success`, `--success2`, `--success-text`, `--warning`,
+    `--warning-text`, `--text-muted`, `--primary-soft`) collapse to the value each one renders. Nothing changes visually.
+  - **`--eb-fs-15` and `--eb-fs-18`** are read without a fallback in three rules, so today the text inherits its parent's size.
+    R17d defines both on the type scale (15 px, 18 px), which gives those three titles the size they were written for. That is a
+    visible change, captured before and after.
+  - **`--eb-measure`** (the reader's prose measure) stays a recorded read, because the reader guards pin it as a contract.
+- **The audit.** It is measured, not eyeballed, on every harness page at 1440 / 1024 / 390:
+  - **Keyboard:** every interactive element is reachable by Tab, in reading order, with a visible focus ring of ≥ 3 : 1.
+  - **Contrast:** axe-core on every page. Any text below AA is fixed in this phase or recorded with its reason.
+  - **RTL and phone:** no horizontal overflow and no mirrored icon that should not be, at 390.
+  - **Print:** the printed exam, the report and the login cards, captured with print media emulation.
+- **Status shades: option (a).** The about 170 success / warn / danger shades with no token of the same value keep their literals.
+  They carry meaning, and aligning them would change their look.
+- **Close-out.** Final captures of every page, and a programme summary: what each phase changed, the colour ratchet from 2 266 to
+  its final count, the guards added, and what is kept on purpose and why.
+
+#### R19a — Interactive-state capture scenes
+
+- **New scenes**, each a scripted state at the three viewports:
+  - the focus ring on a primary button, a row action, a sub-nav item and a text field;
+  - the hover and pressed states of the question action bar and of a row;
+  - an open popover menu;
+  - the classic builder;
+  - the AI composer;
+  - the builder's governance panel with a workflow in progress;
+  - the function-study widget;
+  - the question-type picker with a focused card.
+- **`messages-thread` made deterministic.** It picks the student by name, not by position.
+- **Proof of determinism.** Two runs of the same build must be pixel-identical on every page and scene before the phase is done.
+- **Harness only:** no product code changes.
+
+#### R19b — Visual regression gate in CI
+
+- **What the workflow does:**
+  - builds the PR's head and its `main` base;
+  - runs the R19a harness on both;
+  - compares every page and scene pixel by pixel, with the threshold the phases already use (a channel moves by more than 12 levels).
+- **Pass or fail:**
+  - **Fail:** any changed page or scene the PR does not declare.
+  - **Pass:** when every change is declared in a manifest the PR carries (`docs/ux-r/visual-changes.json`: page, viewport, reason).
+  - **Artifacts:** the before, after and diff images are uploaded for the reviewer.
+- **Governance:** this adds a gate and weakens none (`AGENTS.md` §1, §12). It runs on PRs that touch `src/` or the harness, and
+  the PR that adds it explains its cost and its path filter.
+- **Proof:** a planted visual change fails the gate (fail-first), declaring it makes it pass, and an unrelated PR passes untouched.
+
+#### R18a–R18c — Dark mode
+
+- **The switch.**
+  - **Options:** system, light and dark.
+  - **Default:** system.
+  - **Storage:** remembered on the device. A dark mode setting is a per-viewer convenience, not account data.
+  - **Implementation:** dark values for the tokens under `[data-theme="dark"]` and the system preference.
+- **What stays light, on purpose:**
+  - **the student's exam paper and its presets** (R15, R16d): an exam looks the same for every student, and its presets pass the
+    WCAG policy as they are;
+  - **printed output.**
+- **Measured, as in every phase:**
+  - every token pair the light palette checks is checked in dark (text AA, strokes ≥ 3 : 1);
+  - every page is captured in both themes;
+  - R19b compares both themes.
+- **No behaviour change** besides the switch itself: no data, API or grading change.
+
 ## 5. Per-phase protocol and definition of done
 
 Every phase follows the canonical loop in `AGENTS.md` §3:
