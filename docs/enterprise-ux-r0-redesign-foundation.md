@@ -2014,6 +2014,104 @@ file was restored byte-for-byte after each (SHA-256).
 
 ---
 
+# Phase UX-R13 — Learning games
+
+**Owner direction (2026-10-21):** start R13, and carry on through every remaining phase in sequence without asking. It depends
+on R3 (merged), so it branches from `main` `ea357456` (after R12, #407) as `feature/ux-r13-games`.
+
+## R13.1 What changes for the user
+
+The teacher's «الألعاب التعليمية» (the games hub, the number-conversion preview and the live-challenge authoring) and the
+student's games page (and its «انضم إلى غرفة» form). No reference mockup shows them, so R13 applies the record's general patterns
+(§3.2). **Presentation only:** no game rule, score, timer, session, room code or stored value changes.
+
+- **Game cards and the game panels are flat 8 px hairline cards;** each game card's action is a quiet button (one dark button
+  per card otherwise). The mode tags and the restrained mode edge stay: they name the mode.
+- **The selected path, the selected assistance level and the selected question source read as the grey pill** (a dark pill and
+  a raised white tab before). The live-challenge cards lose their resting shadow and their 3 px primary rule.
+- **Fix 1: the teacher's game views no longer paint the student portal's background** (§R13.3).
+- **Fix 2: the room code is typed in a monospace face again** (§R13.3).
+
+## R13.2 Edit set
+
+- **`src/design-tokens.css`:** `--eb-font-mono` defined (`ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation
+  Mono", monospace`). Two sheets read it without a fallback: `games/games.css` (the room code, its input) and
+  `learning/visuals/visuals.css` (the learning diagrams' token labels).
+- **`src/designSystem/tokensV2.ux-r1.test.ts`:** the two `--eb-font-mono` entries leave `KNOWN_UNDEFINED`, as the test asks once
+  a token is defined (its list may only shrink).
+- **`src/games/games.css`:** one block appended at the end, scoped to the games classes; three exact `color:#fff` became
+  `var(--eb-surface)`.
+- **`src/games/liveChallenge/LiveChallengeAuthoring.test.tsx`** (updated explicitly): its scope guard reads the Live Challenge
+  section up to the next `/* UX-R` phase block, so R13 can append after it; the section is pinned exactly as before.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **2 263** (`games.css` 4 → 1).
+- **`src/games/games.ux-r13.test.ts`:** new, 11 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** four scripted pages: `games-conversion` and `games-live` (each fails when the
+  teacher view paints a background image), `student-games`, and `student-games-join` (fails when the room code field is not
+  monospace).
+
+## R13.3 Fail-first evidence
+
+**1. The student band in the teacher page.**
+- **Cause:** `NumberConversionGame` and `LiveChallengeGenerator` render their root with the student surface's classes
+  (`student-portal eb-student-shell eb-games-surface`) in both portals. Inside the teacher shell this painted the student
+  portal's gradient band (`platform.css` `.student-portal`, `student-portal-v2.css` `.eb-student-shell`) and stretched the view
+  to a full screen height.
+- **Fix:** `.eb-shell-content .eb-games-surface { background: transparent; min-height: 0 }`; the student destination is not inside
+  `.eb-shell-content`, so it keeps its surface (guarded).
+
+**2. The room code in the body font.**
+- **Cause:** `--eb-font-mono` was never defined, so `font-family: var(--eb-font-mono)` was invalid at computed-value time and the
+  field inherited the Arabic body face.
+- **Fix:** the token is defined in `design-tokens.css`.
+
+Both measured by the capture harness on a build of each SHA:
+
+| Build | `games-conversion`, `games-live` (1440 / 1024 / 390 px) | `student-games-join` (1440 / 1024 / 390 px) |
+|---|---|---|
+| `main` `ea357456` (baseline) | **FAIL**: «the teacher game view paints the student background: linear-gradient(rgb(243, 239, 250) 0px, …» | **FAIL**: «the room code field is not monospace: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif» |
+| R13 | clean | clean |
+
+**Guards:** the R13 suite «--eb-font-mono is defined once…» (mutants M1, M2) and «inside the teacher shell a game view drops
+the student portal's background…» (M3–M5); the UX-R1 undefined-token test also fails if the token disappears (M1).
+
+## R13.4 Mutation proof
+
+Each mutant was planted alone in its file. The run covered `src/games`, `src/designSystem`, the sidebar-spacing guard, the colour
+ratchet and `ux2-shell-foundation`. The file was restored byte-for-byte after each (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the monospace token removed | KILLED | UX-R1 «every --eb-* token read without a fallback is defined»; ux-r13 |
+| M2 | the monospace token without a generic family | KILLED | ux-r13 «--eb-font-mono is defined once…» |
+| M3 | the teacher game view paints the student gradient again | KILLED | ux-r13 «inside the teacher shell a game view drops…» |
+| M4 | the teacher game view keeps the full-screen height | KILLED | same |
+| M5 | the background fix unscoped (the student destination loses its surface) | KILLED | same |
+| M6 | game cards back to the 10 px radius | KILLED | ux-r13 «game cards are flat 8 px cards…» |
+| M7 | one dark action per game card again | KILLED | same |
+| M8 | the live-challenge card shadow returns | KILLED | ux-r13 «the game panels take the 8 px radius…» |
+| M9 | the 3 px primary rule on the header card returns | KILLED | same |
+| M10 | the selected path keeps a white fill | KILLED | ux-r13 «the selected path, assistance level and question source…» |
+| M11 | the selected assistance level back to the dark pill | KILLED | same |
+| M12 | the selected source back to a raised white tab | KILLED | same |
+| M13 | the restyle reaches the mode edge | KILLED | ux-r13 «… keeps the mode tags and the restrained mode edge» |
+| M14 | a colour literal in the block | KILLED | colour ratchet; ux-r13 |
+| M15 | an unscoped chip rule (reaches every chip group) | KILLED | ux-r13 «scopes every rule…» |
+| M16 | a converted literal returns | KILLED | colour ratchet; ux-r13 |
+| M17 | a physical side in the block | KILLED | ux-r13 «adds no stacking context…» |
+
+17 / 17 KILLED, no TIMEOUT. `git status` showed only the R13 edit set before and after the campaign.
+
+## R13.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `games`, `games-conversion`, `games-live`, `student-games`, `student-games-join` (1440 / 1024 / 390 px) | before: 6 / 15 clean (the band and the room-code font); after: **15 / 15 clean** |
+| `npm test`, full root suite (`21b1152a`) | 1 188 files, 14 141 / 14 142 tests. The one failure, `AppEvaluationFinish.9g` «G3/G5…», is the timing-sensitive case outside R13 seen on `main` in this container the same day (R11b, R12 records) |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **2 263** (was 2 266) |
+| Browser gates | the L.8 reader gate is triggered by `src/learning/**` only and R13 touches no file there (the token it now resolves lives in `design-tokens.css`); the Quality Gate runs on every PR |
 # Phase UX-R16a — The science simulators' colours
 
 **Owner direction (2026-10-21):** carry on through every remaining phase in sequence. The owner added R16a–R16d to the plan
@@ -2154,3 +2252,28 @@ after.
 | `git diff --check` | clean |
 | colour ratchet | **1 874** (was 2 266) |
 | Browser gates | none is triggered by these sheets (U.1 and L.8 path filters); the Quality Gate and the Runner CI run on every PR |
+
+**CI follow-up (`470f4035`).** The first CI run (`d610a920`) failed 1 / 47 checks of the 21D-D.3 virtual-lab browser exam: «a1: a
+keyboard-focused bench button shows a visible focus ring» read `none`. The cause was the browser harness: it mounts the lab without
+`design-tokens.css`, which `main.tsx` loads in the app. The ring's `--eb-content-accent` was therefore undefined, and the whole
+`outline` declaration was dropped.
+
+The fix: the twelve simulator harnesses (`browser-harness/*.tsx`) now load the tokens, as the app does. Every check stays as strict.
+
+Local real-Chromium results:
+
+| Check | Result |
+|---|---|
+| 21D-D.3 on `d610a920` (reproduced) | «FAILED 1 / 47» |
+| 21D-D.3 with the fix | 47 / 47 |
+| physics motion | 45 / 45 |
+| physics lab | 43 / 43 |
+| chemistry 21dd1 | 36 / 36 |
+| chemistry 21dd2 | 41 / 41 |
+| function surfaces | 14 / 14 |
+| mesh | 37 / 37, 32 / 32 and 37 / 37 |
+| 3D 21c | 18 / 18 |
+| 3D 21d | 41 / 42 |
+
+The 3D 21d frame-pacing check also fails on `d610a920` in this container; it passes in CI. On the fixed head, CI runs every
+simulator browser check, and all are green.

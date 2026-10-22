@@ -6,6 +6,7 @@
 :root {
   /* Typography */
   --eb-font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --eb-font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "Liberation Mono", monospace; /* UX-R13 — read by the games room code and the learning visuals; it was never defined */
 
   /* UX-R1 — the approved redesign palette (docs/enterprise-ux-r0-redesign-foundation.md §3.1): quiet lavender-grey neutrals and a
      deep purple primary instead of slate and blue. Names are unchanged, so every sheet that already reads a token follows. */

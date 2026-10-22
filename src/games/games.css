@@ -72,7 +72,7 @@
 .eb-ncb-place{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
 .eb-ncb-nibweight{ color:var(--eb-info); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .eb-ncb-bit{ inline-size:44px; block-size:44px; border-radius:var(--eb-r-sm); border:2px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text-secondary); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); cursor:pointer; transition:transform var(--eb-dur, .15s) var(--eb-ease, ease), background-color var(--eb-dur, .15s) var(--eb-ease, ease); }
-.eb-ncb-bit.is-on{ background:var(--eb-primary); border-color:var(--eb-primary); color:#fff; }
+.eb-ncb-bit.is-on{ background:var(--eb-primary); border-color:var(--eb-primary); color:var(--eb-surface); }
 .eb-ncb-bit:active{ transform:scale(0.94); }
 .eb-ncb-bit.is-missed{ outline:3px dashed var(--eb-info); outline-offset:2px; }
 .eb-ncb-bit:disabled{ cursor:default; opacity:.9; }
@@ -296,7 +296,7 @@
 .eb-lc-standings-correct{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); white-space:nowrap; flex:none; }
 .eb-lc-standings-points{ font-weight:600; color:var(--eb-text-heading); white-space:nowrap; flex:none; }
 .eb-lc-standings-row.is-you{ border-color:var(--eb-primary); background:var(--eb-surface-2); }
-.eb-lc-you-badge{ display:inline-block; padding:0 var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-primary); color:#fff; font-size:var(--eb-fs-12, 12px); font-weight:600; }
+.eb-lc-you-badge{ display:inline-block; padding:0 var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-primary); color:var(--eb-surface); font-size:var(--eb-fs-12, 12px); font-weight:600; }
 .eb-lc-podium{ display:flex; flex-wrap:wrap; align-items:stretch; justify-content:center; gap:var(--eb-space-2); min-width:0; }
 .eb-lc-podium-place{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); flex:1 1 8rem; min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-md, 12px); background:var(--eb-surface-2); text-align:center; }
 .eb-lc-podium-rank-1{ border-color:var(--eb-warning, #d99a00); }
@@ -309,7 +309,7 @@
 .eb-lc-join-card{ gap:var(--eb-space-3); }
 .eb-lc-code-input{ font-family:var(--eb-font-mono); font-size:var(--eb-fs-24, 24px); letter-spacing:.3em; text-align:center; text-transform:uppercase; }
 .eb-lc-ready-toggle{ align-self:flex-start; min-height:44px; }
-.eb-lc-ready-toggle.is-ready{ background:var(--eb-success); color:#fff; }
+.eb-lc-ready-toggle.is-ready{ background:var(--eb-success); color:var(--eb-surface); }
 
 @media (max-width: 639.98px){
   .eb-lc-saved-row{ flex-direction:column; }
@@ -318,3 +318,20 @@
   .eb-lc-lobby-actions .eb-button{ flex:1 1 auto; }
   .eb-lc-round-head{ flex-direction:column; align-items:flex-start; }
 }
+
+/* UX-R13 — the games pages in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R13). Presentation only: no
+   game rule, score, timer, session or stored value changes. Inside the teacher shell the number-conversion preview and the
+   live-challenge authoring reuse the student surface's classes, so the fix keeps the student portal's gradient (and its full-
+   screen height) out of the teacher page; cards and panels are flat 8 px hairline panels; each card's action is quiet; the
+   selected path and assistance level read as the grey pill. The mode tags and the restrained mode edge stay (they name the
+   mode). Tokens only, logical sides only, no stacking context, no transition. */
+.eb-shell-content .eb-games-surface{ background:transparent; min-height:0; }
+.eb-game-card{ border-radius:var(--eb-r); }
+.eb-game-card .eb-game-card-action.eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
+.eb-ncgame-path, .eb-ncgame-answer, .eb-lc-card, .eb-lc-saved-item, .eb-lc-exam-card, .eb-lc-file{ border-radius:var(--eb-r); }
+.eb-ncb{ border-radius:var(--eb-r); }
+.eb-lc-card{ box-shadow:none; }
+.eb-lc-headcard{ border-block-start:1px solid var(--eb-line); }
+.eb-ncgame-path.is-selected{ background:var(--eb-chrome-active); border-color:var(--eb-text-heading); }
+.eb-ncgame-level-row .eb-chip-button[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.eb-lc-srcswitch-btn[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); box-shadow:none; }
