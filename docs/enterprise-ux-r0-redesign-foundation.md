@@ -101,17 +101,42 @@ The work is done in this order. R0–R3 run in sequence. After R3, at most two p
 | R14 | Student portal | `StudentPortal.tsx`, `student/*`, `studentportal-pro.css` | today, tasks, progress, achievements, ranks, identity card; phone first | L | R2, R3 |
 | R15 | Student exam experience | `StudentExamPage.tsx`, `student/exam`, `studentexam-pro.css`, `questionTypes/` frame | exam frame, navigator, question card, save state; simulators: frame only | L | R14 |
 | R16 | Login and public pages | `login-pro.css`, student login, `pwa/`, `ErrorBoundary`, empty states | login screens, install card, error pages | S | R1 |
-| R17 | Clean-up and final audit | all stylesheets | remaining literals → tokens (ratchet towards zero), dead CSS removed, consistency, accessibility (keyboard, focus, contrast), RTL / phone / print, final "after" captures | M | all above |
+| R16a | Content colours: science simulators | `physicsMotion/`, `physicsFreeFall/`, `physicsLab/`, `chemistryStructure/`, `chemistryReactions/`, `chemistryLab/`, `meshModels/`, `functionSurfaces/`, `interactive3d/` | the sheets' literals (≈ 495, mostly slate neutrals) → a content-token family on the purple-neutral palette; before / after captures of every simulator; legibility checked (text AA, strokes and grids ≥ 3 : 1 on their ground); **no change to what a simulator computes, grades or stores** | L | R3 |
+| R16b | Content colours: network, coding and rich-content editors | `networkTopology/`, `networkTopology2/`, `networkCli/`, `coding/` (incl. `workspace/`, `codingTemplate.css`), `visual/`, `richContent/`, `openResponse/`, `inlineCloze/`, `composite/`, `scenario/`, `parametric/`, `charts/` editors | the same content tokens (≈ 440 literals); a CLI and code keep their dark, LTR, monospace surfaces; status tones (✓ / ✗ / pending) stay; **no grading, key or stored-data change** | L | R16a |
+| R16c | Function-graph and chart series colours | `functionGraphs/function-graph.css`, `functionGraphs/graph-editor.css`, the chart / graph selection reviews | the six stored series indices (`style.color` 1–6 in question data) keep their meaning; only the palette behind them moves to the theme's series order (purple first). Each pair of series must stay distinguishable (also for colour-blind readers), every series ≥ 3 : 1 on the plot, labels AA. **Stored question data is untouched** | S–M | R3 |
+| R16d | Exam presentation presets | `presentation/presentationModel.ts` (`PRESENTATION_PRESETS`), `presentation/presentation-studio.css`, `presentation/presentation.css` | **owner decision first** (§4.1): a preset's colours reach every exam that already uses it, published ones included. Every preset keeps passing the existing WCAG policy (it blocks finalization); stored exams keep resolving (an unknown id still falls back to the safe default); no schema change | S–M | R15, owner decision |
+| R17 | Clean-up and final audit | all stylesheets | remaining literals → tokens (ratchet towards zero), dead CSS removed, consistency, accessibility (keyboard, focus, contrast), RTL / phone / print, final "after" captures | M | all above (incl. R16a–R16d) |
 | R18 | Optional features (each only on an owner decision) | new behaviour | real global search; drag reorder where it is persisted server-side; dark mode | per feature | R17 |
 
 ```
 R0 → R1 → R2 → R3 ─┬─ R4 → R5 → R6a → R6b → R12
                     ├─ R7 → R8 → R13
                     ├─ R9a → R9b → R10 → R11a → R11b
-                    └─ R14 → R15 → R16
+                    ├─ R14 → R15 → R16
+                    │           └──────── R16d (owner decision)
+                    └─ R16a → R16b    R16c
                                       ↓
                                     R17 → (R18)
 ```
+
+### 4.1 Content colours (owner direction, 2026-10-21)
+
+The owner asked to bring into the plan the three areas §R1 had left out: the simulators' and diagrams' own colours, the function-
+graph series colours, and the exam presentation presets. Measured on `main` `6da77067` with `scripts/ux-color-inventory.mjs`, the
+content sheets of R16a–R16b hold **≈ 935 of the 2 266 remaining literals**; R16c's two sheets hold 55 and the presentation studio 39
+(the presets themselves are hex values in `presentationModel.ts`, outside the stylesheet count). Rules shared by the four phases:
+- **Presentation only.** No simulator, grader, answer key, stored question, stored exam or API changes; a colour that carries a
+  state (correct / wrong / pending, a selected target, a fault) keeps its meaning and stays distinguishable.
+- **Legibility is measured, not assumed:** text AA (4.5 : 1, 3 : 1 for large text), strokes, grids and series ≥ 3 : 1 on their
+  ground, focus rings unchanged; every changed simulator is captured before / after at 1440 / 1024 / 390 px.
+- **Each phase lowers the colour ratchet** for the sheets it converts, as every page phase does.
+
+**R16d needs an owner decision before it starts**, because presets are teacher-chosen themes that published exams already use:
+- **Option A (recommended):** add one new code-owned preset in the reference palette and make it the default for **new** exams
+  only. Existing presets keep their ids and colours, so every existing exam keeps its look.
+- **Option B:** retune `default` (and the blue presets `modernAcademic`, `compact`) to the purple palette. Every exam that uses them
+  changes look, published ones included.
+- Either way the WCAG policy, the fallback rule and the schema stay as they are.
 
 ## 5. Per-phase protocol and definition of done
 
@@ -342,12 +367,12 @@ decision (UX-8b: «the token itself is NOT darkened»).
 
 | Item | Why | Phase |
 |---|---|---|
-| ≈ 540 slate neutral literals (`#64748b`, `#0f172a`, `rgba(15,23,42,…)` …) in 38 sheets | many draw simulator / diagram content. The difference from the new lavender-greys is subtle and needs per-page judgement | each page phase, then R17 |
+| ≈ 540 slate neutral literals (`#64748b`, `#0f172a`, `rgba(15,23,42,…)` …) in 38 sheets | many draw simulator / diagram content. The difference from the new lavender-greys is subtle and needs per-page judgement | each page phase; the simulator and diagram sheets in R16a–R16b (§4.1); the rest in R17 |
 | Chart.js palettes (`src/charts/chartTheme.ts`, dashboard chart colours in `TeacherDashboard.tsx`) | the charts still draw in blue | R3 (theme) and R4 |
 | the login illustration SVG in `App.tsx` | page art | R16 |
 | the studio top bar's own navy / teal palette (`--st-*`) | pinned by its own contrast tests; part of the builder redesign | R11b |
 | the reader's light island inside its dark theme (`reader-enterprise-l1.css`) | literal copies of the old light tokens | R9b |
-| the function-graph colours, the exam presentation presets | content and teacher-chosen themes | not planned |
+| the function-graph colours, the exam presentation presets | content and teacher-chosen themes | R16c and R16d (added to the plan by the owner, §4.1) |
 
 ## R1.3 Fail-first evidence
 
