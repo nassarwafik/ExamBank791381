@@ -111,6 +111,16 @@ const LEARNING = {
     students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
 };
 let scene = "";
+// UX-R16a — the six science simulators as one student exam (scene "sims"): each question carries a plugin's code-owned starter
+// config (scripts/ux-r16a-sim-starters.json, pinned to smartSimStarterConfig by src/scienceColours.ux-r16a.test.ts), sanitized by
+// the API's own student sanitizer, so the student page renders exactly what a real attempt would.
+const SIM_KEYS = ["physicsFreeFall", "physicsMotion", "physicsLab", "chemistryStructure", "chemistryReactions", "chemistryLab"];
+const SIM_STARTERS = JSON.parse(fs.readFileSync(path.join(root, "scripts", "ux-r16a-sim-starters.json"), "utf8"));
+const SIM_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-sims", title: "تجارب العلوم", schemaVersion: 2,
+  sections: [{ id: "s1", title: "التجارب", gradingPolicy: "all", stimuli: {}, questions: SIM_KEYS.map((k, i) => ({ examQuestionId: "sim-" + k, presentationType: "smartSim", questionTypeVersion: 1, text: "التجربة " + (i + 1), marks: 6,
+    smartSim: { schemaVersion: 1, pluginKey: k, pluginVersion: 1, config: SIM_STARTERS[k] }, answer: { scoring: "proportional", checks: [] } })) }] });
+const SIM_ASSIGNMENT = { assignmentId: "a1", title: "تجارب العلوم", instructions: "", openAt: "2026-10-01T08:00:00.000Z", dueAt: "2026-10-30T20:00:00.000Z", maxAttempts: 3, questionCount: SIM_KEYS.length, totalMarks: 6 * SIM_KEYS.length, exam: SIM_EXAM };
+const SIM_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, dueClosed: false, draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [] };
 // UX-R16c — a two-curve function graph and a two-series chart as one student exam (scene "graphs"): the specs are the suites' own
 // fixtures (scripts/ux-r16c-graph-fixtures.json, pinned to them by functionGraphSeries.ux-r16c.test.ts), sanitized by the API's student
 // sanitizer, so the page draws exactly what a real attempt would.
@@ -241,6 +251,8 @@ function api(req, res) {
   if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: SAVED_EXAMS });
   if (p === "/api/governance-inbox") return send(200, { items: u.searchParams.get("stage") === "review" ? INBOX_TASKS : [], nextCursor: null, counts: { review: 2, approve: 0, publish: 0 }, actorId: "teacher-reviewer" });
   if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
+  if (scene === "sims" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: SIM_ASSIGNMENT });
+  if (scene === "sims" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: SIM_STATE } : { ok: true, savedAt: NOW, state: SIM_STATE });
   if (scene === "graphs" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: GRAPH_ASSIGNMENT });
   if (scene === "graphs" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: GRAPH_STATE } : { ok: true, savedAt: NOW, state: GRAPH_STATE });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
@@ -345,6 +357,24 @@ const SCRIPTED = [
     if (nav) await page.locator(".iex-nav-trigger").click({ timeout: 15000 });
     await page.waitForLoadState("networkidle");
     if (process.env.PROBE) console.log("PROBE", JSON.stringify(await page.evaluate(new Function(process.env.PROBE))));
+  } })),
+  // UX-R16a — each science simulator on its own exam page (opened from «ابدأ الحل», then picked in «قائمة الأسئلة»).
+  ...SIM_KEYS.map((k, i) => ({ id: "sim-" + k, role: "student", scene: "sims", run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".iex-page-heading").first().waitFor({ timeout: 15000 });
+    if (i > 0) { await page.locator(".iex-nav-trigger").click({ timeout: 15000 }); await page.locator(".iex-nav-q").nth(i).click({ timeout: 15000 }); }
+    await page.locator(".iex-page .iex-card").first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    if (process.env.PROBE) console.log("PROBE", JSON.stringify(await page.evaluate(new Function(process.env.PROBE))));
+    // UX-R16a — every control of the simulator stays inside its own box (a field that spills past its fieldset's edge is
+    // drawn over the next box and cut off on a phone).
+    const spills = await page.evaluate(() => [...document.querySelectorAll(".iex-page fieldset")].flatMap(fs => {
+      const b = fs.getBoundingClientRect();
+      return [...fs.querySelectorAll("input:not([type=range]):not([type=checkbox]):not([type=radio]), select, button")].filter(c => c.offsetParent).map(c => {
+        const r = c.getBoundingClientRect(); return { box: (fs.querySelector("legend")?.textContent || "").trim().slice(0, 30), by: Math.round(Math.max(b.left - r.left, r.right - b.right)) };
+      }).filter(x => x.by > 1);
+    }));
+    if (spills.length) throw new Error("a control spills out of its box: " + JSON.stringify(spills.slice(0, 3)));
   } })),
   // UX-R16c — the function graph (question 1) and the chart (question 2) of the "graphs" exam; each page fails when the drawing is
   // missing or when the first series is not drawn in the theme's first series colour.

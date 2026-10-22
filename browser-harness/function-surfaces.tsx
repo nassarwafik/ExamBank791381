@@ -1,6 +1,8 @@
 // Phase 21B — isolated production-Vite browser harness using the real Surface3D viewer/editor.
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import Surface3DView from "../src/functionSurfaces/Surface3DView";
 import Surface3DEditor from "../src/functionSurfaces/Surface3DEditor";
 import { surfaceTemplate } from "../src/functionSurfaces/surfaceEditing";

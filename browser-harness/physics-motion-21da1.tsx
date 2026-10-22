@@ -3,6 +3,8 @@
 // scripts/check-physics-motion-browser-21da1.mjs; never shipped (only index.html is a production entry).
 import { Suspense, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import MotionWorkspace from "../src/physicsMotion/MotionWorkspace";
 import MotionEditor from "../src/physicsMotion/MotionEditor";
 import { MOTION_PRESETS } from "../src/physicsMotion/motionTemplates";

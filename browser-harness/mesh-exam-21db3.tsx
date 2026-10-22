@@ -8,6 +8,8 @@
 // assembly), and exposes the authored question to the import → save → export → import round trip of the real builder functions.
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import exam from "../docs/fixtures/mesh-models-21db3/ExamBank_21DB3_Mesh_Models_Acceptance.json";
 import MeshPartSelectionResponse from "../src/questionTypes/student/MeshPartSelectionResponse";
 import MeshPartSelectionEditor from "../src/questionTypes/editors/MeshPartSelectionEditor";
