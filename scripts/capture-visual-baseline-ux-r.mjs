@@ -212,6 +212,20 @@ const REVIEW = { ok: true, assignment: { assignmentId: "a1", title: ASSIGNMENTS[
     RQ("q6", 6, { text: "قارن بين بروتوكولي TCP وUDP.", autoGrade: { score: 0, manualReview: true } }),
   ] };
 
+// UX-R15 — the student exam (GET /api/student-assignment/:id and /api/student-submission/:id, the shapes of the StudentExamPage.ux7b1
+// fixtures): a structured, untimed exam with a choice, an open answer, a table, true/false statements and a CLI fill, so the exam
+// frame, the question cards, the navigator and the save state are captured.
+const EXAM_QUESTIONS = [
+  { examQuestionId: "q1", presentationType: "multipleChoice", text: "ما الجهاز الذي يربط بين شبكتين مختلفتين؟", marks: 2, options: [{ text: "الراوتر" }, { text: "السويتش" }, { text: "الهب" }] },
+  { examQuestionId: "q2", presentationType: "open", text: "اشرح مفهوم الشبكة المحلية.", marks: 3 },
+  { examQuestionId: "q3", presentationType: "tableFill", text: "أكمل الجدول\n| الجهاز | الطبقة |\n| --- | --- |\n| Switch | |\n| Router | |", marks: 2 },
+  { examQuestionId: "q4", presentationType: "multiTrueFalse", text: "حدد صحة العبارات", marks: 2, fields: [{ id: "f1", statement: "IP في الطبقة الثالثة" }, { id: "f2", statement: "TCP بلا اتصال" }] },
+  { examQuestionId: "q5", presentationType: "cliFill", text: "أكمل الأمر", marks: 1, cli: "Router(config)# hostname [[h1]]\nRouter(config)# enable secret [[s1]]", fields: [{ id: "h1" }, { id: "s1" }] },
+];
+const STUDENT_ASSIGNMENT = { assignmentId: "a1", title: ASSIGNMENTS[0].title, instructions: "أجب عن كل الأسئلة بعناية.", openAt: "", dueAt: ASSIGNMENTS[0].dueAt, effectiveDueAt: "", maxAttempts: 3, durationMinutes: 0, requiresStart: false, timed: false, questionCount: EXAM_QUESTIONS.length, totalMarks: 10,
+  exam: { title: ASSIGNMENTS[0].title, metadata: {}, presentationTheme: "default", sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", questions: EXAM_QUESTIONS }] } };
+const STUDENT_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, canWrite: true, dueClosed: false, availability: "open", draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [], timed: false, attemptModelVersion: 0, requiresStart: false, serverNow: NOW, activeAttempt: null, effectiveAttemptEndsAt: "", attemptExpired: false, canStartAttempt: false, durationMinutes: 0 };
+
 const apiCalls = new Map();
 let role = "teacher";
 function api(req, res) {
@@ -254,6 +268,8 @@ function api(req, res) {
   if (p === "/api/student-messages" && req.method === "POST") return send(200, { ok: true, directUnread: NO_UNREAD, announcementUnread: NO_UNREAD, totalUnread: 0, totalCapped: false });
   if (p === "/api/student-messages" && u.searchParams.get("view")) return send(200, { ok: true, directUnread: NO_UNREAD, announcementUnread: NO_UNREAD, totalUnread: 0, totalCapped: false, items: [] });
   if (p === "/api/student-messages") return send(200, STUDENT_MESSAGES);
+  if (p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: STUDENT_ASSIGNMENT });
+  if (p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: STUDENT_STATE } : { ok: true, savedAt: NOW, state: STUDENT_STATE });
   if (p === "/api/student-dashboard") return send(200, studentDashboard);
   if (p === "/api/student-notifications") return send(200, { ok: true, items: [], unread: 0, total: 0 });
   return send(200, { ok: true, items: [], exams: [], templates: [], questions: [], classes: [], students: [], assignments: [], projects: [], posts: [], threads: [] });
@@ -313,6 +329,22 @@ const SCRIPTED = [
     // UX-R13 — the room code is typed in the monospace face (it read an undefined token and fell back to the body font).
     const face = await page.evaluate(() => getComputedStyle(document.querySelector(".eb-lc-code-input")).fontFamily);
     if (!/mono/i.test(face)) throw new Error("the room code field is not monospace: " + face);
+  } })),
+  // UX-R15 — the student exam, opened from the portal's «ابدأ الحل», and its question navigator.
+  ...[["student-exam", false], ["student-exam-navigator", true]].map(([id, nav]) => ({ id, role: "student", run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".iex-page-heading").first().waitFor({ timeout: 15000 });
+    // UX-R15 — the assessment-activity status line must resolve its muted colour and 13 px size (it read two undefined tokens,
+    // so it inherited the body text colour and size).
+    const status = await page.evaluate(() => {
+      const p = document.createElement("p"); p.className = "iex-activity-status"; document.querySelector(".iex-wrap").append(p);
+      const cs = getComputedStyle(p), probe = document.createElement("span"); probe.style.color = "var(--eb-muted)"; p.append(probe);
+      const out = { color: cs.color, muted: getComputedStyle(probe).color, fontSize: cs.fontSize }; p.remove(); return out;
+    });
+    if (status.color !== status.muted || status.fontSize !== "13px") throw new Error("the activity status line reads " + JSON.stringify(status));
+    if (nav) await page.locator(".iex-nav-trigger").click({ timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+    if (process.env.PROBE) console.log("PROBE", JSON.stringify(await page.evaluate(new Function(process.env.PROBE))));
   } })),
   // UX-R16c — the function graph (question 1) and the chart (question 2) of the "graphs" exam; each page fails when the drawing is
   // missing or when the first series is not drawn in the theme's first series colour.
