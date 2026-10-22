@@ -177,7 +177,7 @@ html[data-eb-reading-focus] .eb-lm-reader { padding: var(--eb-space-2) var(--eb-
   --eb-warn: var(--eb-read-dark-warn); --eb-warn-tx: var(--eb-read-dark-warn-tx); --eb-warn-bg: var(--eb-read-dark-warn-bg);
   --eb-success: var(--eb-read-dark-success); --eb-success-tx: var(--eb-read-dark-success-tx); --eb-success-bg: var(--eb-read-dark-success-bg);
   --eb-danger: var(--eb-read-dark-danger); --eb-danger-tx: var(--eb-read-dark-danger-tx); --eb-danger-bg: var(--eb-read-dark-danger-bg);
-  --eb-read-accent: var(--eb-primary); --eb-read-accent-strong: var(--eb-primary-strong); --eb-read-accent-bg: var(--eb-primary-050);
+  --eb-read-accent: var(--eb-primary); --eb-read-accent-strong: var(--eb-primary-strong);
   --eb-read-accent-2: var(--eb-info-tx); --eb-read-accent-2-bg: var(--eb-info-bg);
   color-scheme: dark; color: var(--eb-text);
   padding: var(--eb-space-2); background: var(--eb-bg); border-radius: var(--eb-r-lg);

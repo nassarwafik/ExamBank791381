@@ -42,7 +42,9 @@ describe("UX-R1 — approved palette (pins)", () => {
   const APPROVED: Record<string, string> = {
     primary: "#2a0a4e", "primary-strong": "#4a2380", "primary-050": "#f3effa", "primary-100": "#ebe5f4", "primary-200": "#d9cfea", "primary-300": "#8b74b8",
     navy: "#1c1330", ink: "#241b38", text: "#2d2740", muted: "#5f5a6e", placeholder: "#6c6879", faint: "#a9a5b4",
-    line: "#e9e8ee", "line-2": "#dedce6", bg: "#f7f6fa", surface: "#ffffff", "surface-2": "#f5f4f8", "nav-bg": "#1c1330", "nav-accent": "#b9a3e3",
+    line: "#e9e8ee", "line-2": "#dedce6", bg: "#f7f6fa", surface: "#ffffff", "surface-2": "#f5f4f8", "nav-bg": "#1c1330",
+    // R17c removed --eb-nav-accent (the dark rail's active pill; R2 made the sidebar light and nothing reads it). The R17c guard
+    // pins its absence and that every custom property a stylesheet defines is read somewhere.
   };
   for (const [name, value] of Object.entries(APPROVED)) it(`--eb-${name} is ${value}`, () => expect(hex(name)).toBe(value));
   it("radius scale is the flat one (controls 6 px, cards 8 px)", () => {
@@ -63,11 +65,10 @@ describe("UX-R1 — contrast of the pairs the redesign relies on (WCAG AA)", () 
     expect(ratio(hex("placeholder"), hex("surface"))).toBeGreaterThanOrEqual(AA);
     expect(ratio(hex("placeholder"), hex("surface-2"))).toBeGreaterThanOrEqual(AA);
   });
-  it("the dark rail: labels ≥ 7:1, secondary labels and the accent ≥ AA on both ends of its gradient", () => {
+  it("the dark rail: labels ≥ 7:1, secondary labels ≥ AA on both ends of its gradient", () => {
     for (const bg of ["nav-bg", "navy-2"]) {
       expect(ratio(hex("nav-text"), hex(bg)), "nav-text on " + bg).toBeGreaterThanOrEqual(7);
       expect(ratio(hex("nav-text-muted"), hex(bg)), "nav-text-muted on " + bg).toBeGreaterThanOrEqual(AA);
-      expect(ratio(hex("nav-accent"), hex(bg)), "nav-accent on " + bg).toBeGreaterThanOrEqual(AA);
     }
   });
   it("the hover step stays visibly distinct from the primary (a hover that cannot be seen is no hover)", () => {

@@ -4,8 +4,7 @@
    no second theming system. Logical properties, visible focus, reduced motion, print = static snapshot (controls and moving decorations hidden).
    ============================================================ */
 .smartsim-dyn { --dyn-primary: var(--xp-primary, var(--eb-content-accent)); --dyn-accent: var(--xp-accent, #b4561d); --dyn-text: var(--xp-text, var(--eb-content-ink));
-  --dyn-muted: var(--xp-muted, var(--eb-content-text)); --dyn-surface: var(--xp-surface, var(--eb-surface)); --dyn-border: var(--xp-border, var(--eb-content-grid)); --dyn-danger: var(--xp-danger, var(--eb-danger-tx));
-  --dyn-success: var(--xp-success, var(--eb-success-tx)); display: grid; gap: 10px; min-width: 0; }
+  --dyn-muted: var(--xp-muted, var(--eb-content-text)); --dyn-surface: var(--xp-surface, var(--eb-surface)); --dyn-border: var(--xp-border, var(--eb-content-grid)); --dyn-danger: var(--xp-danger, var(--eb-danger-tx)); display: grid; gap: 10px; min-width: 0; }
 .xp-dyn-plot { direction: ltr; display: block; width: 100%; height: auto; max-width: 100%; background: var(--dyn-surface, var(--eb-surface)); border: 1px solid var(--dyn-border, var(--eb-content-grid)); border-radius: 10px; }
 .xp-dyn-axis { stroke: var(--dyn-muted, var(--eb-content-text)); stroke-width: 1.5; }
 .xp-dyn-grid { stroke: var(--dyn-border, var(--eb-content-grid)); stroke-width: 1; opacity: 0.6; }

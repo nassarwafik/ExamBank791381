@@ -1,6 +1,6 @@
 /* Phase 20B — networkTopology@1 workspace / editor / review. RTL page, LTR technical islands (addresses, ports, CLI). */
 .nettopo { display: grid; gap: 12px; min-width: 0; }
-.nettopo-diagram { border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 12px; background: var(--surface-2, var(--eb-surface)); overflow: hidden; }
+.nettopo-diagram { border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 12px; background: var(--eb-surface); overflow: hidden; }
 .nettopo-diagram svg { display: block; width: 100%; height: auto; max-height: 420px; touch-action: none; }
 .nettopo-link { stroke: var(--eb-content-muted); stroke-width: 4; }
 .nettopo-link.is-down { stroke: var(--eb-content-faint); stroke-dasharray: 10 8; }

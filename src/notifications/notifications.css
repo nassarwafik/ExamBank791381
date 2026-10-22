@@ -6,7 +6,7 @@
 .student-topbar{ position:relative; }
 .eb-notif{ display:inline-flex; }
 .eb-notif-bell{ position:relative; }
-.eb-notif-bell[aria-expanded="true"]{ border-color:var(--eb-primary); background:rgba(255,255,255,.08); }
+.eb-notif-bell[aria-expanded="true"]{ border-color:var(--eb-primary); background:color-mix(in srgb, var(--eb-surface) 8%, transparent); }
 .eb-notif-bell:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .student-topbar-link .eb-notif-badge{ margin-inline-start:var(--eb-space-1); }
 

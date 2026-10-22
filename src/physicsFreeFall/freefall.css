@@ -4,7 +4,7 @@
 .freefall { display: grid; gap: 12px; min-width: 0; }
 .freefall-stage { display: grid; gap: 12px; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); align-items: start; min-width: 0; }
 @media (max-width: 640px) { .freefall-stage { grid-template-columns: minmax(0, 1fr); } }
-.freefall-scene { border: 1px solid var(--xp-border, var(--line, var(--eb-content-grid))); border-radius: 12px; background: var(--xp-surface-alt, var(--surface-2, var(--eb-surface))); overflow: hidden; direction: ltr; min-width: 0; }
+.freefall-scene { border: 1px solid var(--xp-border, var(--line, var(--eb-content-grid))); border-radius: 12px; background: var(--xp-surface-alt, var(--eb-surface)); overflow: hidden; direction: ltr; min-width: 0; }
 .freefall-graph { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); direction: ltr; min-width: 0; }
 .freefall-scene svg, .freefall-graph svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .freefall-scene svg { max-height: 340px; }

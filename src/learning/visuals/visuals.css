@@ -52,7 +52,7 @@
 .eb-visual-leaf{ fill:var(--eb-info-bg); stroke:var(--eb-info); stroke-width:1.5; }
 .eb-visual-leaf-label{ fill:var(--eb-text-heading); font-size:13px; font-weight:600; }
 
-.eb-visual-printer{ fill:var(--eb-success-050, var(--eb-surface)); stroke:var(--eb-success); stroke-width:2; }
+.eb-visual-printer{ fill:var(--eb-surface); stroke:var(--eb-success); stroke-width:2; }
 .eb-visual-printer-slot{ fill:var(--eb-surface); stroke:var(--eb-success); stroke-width:1; }
 
 .eb-visual-pillar{ fill:var(--eb-surface); stroke:var(--eb-primary); stroke-width:2; }
@@ -140,7 +140,7 @@
 /* octets / mask */
 .eb-visual-octet{ fill:var(--eb-surface); stroke:var(--eb-line-2); stroke-width:1.5; }
 .eb-visual-octet.is-network{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); }
-.eb-visual-octet.is-host{ fill:var(--eb-success-050, var(--eb-surface)); stroke:var(--eb-success); }
+.eb-visual-octet.is-host{ fill:var(--eb-surface); stroke:var(--eb-success); }
 .eb-visual-token.is-octet{ fill:var(--eb-text-heading); font-size:15px; }
 .eb-visual-mask-cell{ fill:var(--eb-text-secondary); font-size:13px; font-weight:700; font-family:var(--eb-font-mono); }
 .eb-visual-prefix{ fill:var(--eb-primary-strong); font-weight:700; }

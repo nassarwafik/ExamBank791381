@@ -28,14 +28,14 @@
 .p794-stage-title { flex: 1; color: var(--eb-ink); font-weight: 600; font-size: 13.5px; }
 .p794-stage-row-main small { color: var(--eb-muted); font-size: 11px; }
 .p794-note-dot { font-size: 12px; }
-.p794-note-view { background: var(--eb-primary-050, #eef4ff); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.p794-note-view { background: var(--eb-primary-050); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 
 /* ===== Status badge colors (student panel) ===== */
 .p794-status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
-.p794-status-badge.status-not-started { background: #f1f5f9; color: #64748b; }
+.p794-status-badge.status-not-started { background: var(--eb-content-ground); color: var(--eb-content-muted); }
 .p794-status-badge.status-in-progress { background: #fef9c3; color: #a16207; }
 .p794-status-badge.status-ready { background: var(--eb-primary-100); color: var(--eb-primary-strong); }
-.p794-status-badge.status-approved { background: #dcfce7; color: #15803d; }
+.p794-status-badge.status-approved { background: #dcfce7; color: var(--eb-success-tx); }
 
 /* ===== Student portal project section ===== */
 .p794-portal-tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
