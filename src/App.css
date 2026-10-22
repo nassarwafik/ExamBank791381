@@ -15,19 +15,19 @@ body {
 
 /* Selection + custom scrollbars */
 ::selection { background: color-mix(in srgb, var(--eb-primary) 16%, transparent); }
-* { scrollbar-width: thin; scrollbar-color: #cdd6e4 transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--eb-content-grid) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
-  background: #cdd6e4; border-radius: var(--eb-pill);
+  background: var(--eb-content-grid); border-radius: var(--eb-pill);
   border: 3px solid transparent; background-clip: content-box;
 }
-*::-webkit-scrollbar-thumb:hover { background: #b6c1d4; }
+*::-webkit-scrollbar-thumb:hover { background: var(--eb-content-grid); }
 
 /* Micro-interactions */
 @keyframes ebFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes ebSkeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .eb-skeleton {
-  background: linear-gradient(90deg,#eef1f7 25%,#e3e8f1 37%,#eef1f7 63%);
+  background: linear-gradient(90deg,var(--eb-content-ground) 25%,var(--eb-content-line) 37%,var(--eb-content-ground) 63%);
   background-size: 200% 100%;
   animation: ebSkeleton 1.3s ease-in-out infinite;
   border-radius: var(--eb-r-sm);
@@ -63,18 +63,18 @@ button {
   padding: 24px;
   background:
     radial-gradient(circle at top right, var(--eb-primary-100) 0, transparent 32%),
-    radial-gradient(circle at bottom left, #e0e7ff 0, transparent 28%),
-    #f5f7fa;
+    radial-gradient(circle at bottom left, var(--eb-primary-100) 0, transparent 28%),
+    var(--eb-content-ground-2);
 }
 
 .login-card {
   width: 100%;
   max-width: 430px;
-  background: #ffffff;
-  border: 1px solid #e9edf4;
+  background: var(--eb-surface);
+  border: 1px solid var(--eb-content-ground);
   border-radius: 20px;
   padding: 36px;
-  box-shadow: 0 24px 60px -28px rgba(15,23,42,.18);
+  box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--eb-content-ink) 18%, transparent);
 }
 
 .brand-mark {
@@ -85,7 +85,7 @@ button {
   justify-content: center;
   margin-bottom: 22px;
   border-radius: 18px;
-  background: #0f172a;
+  background: var(--eb-content-ink);
   color: white;
   font-weight: 800;
   font-size: 20px;
@@ -94,13 +94,13 @@ button {
 
 .login-card h1 {
   margin: 0;
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 30px;
 }
 
 .subtitle {
   margin: 8px 0 30px;
-  color: #64748b;
+  color: var(--eb-content-muted);
 }
 
 .login-card form {
@@ -113,19 +113,19 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  color: #334155;
+  color: var(--eb-content-text);
   font-weight: 700;
   font-size: 14px;
 }
 
 .login-card input {
   width: 100%;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 12px;
   padding: 13px 14px;
   font-size: 15px;
   outline: none;
-  background: #ffffff;
+  background: var(--eb-surface);
 }
 
 .login-card input:focus {
@@ -157,7 +157,7 @@ button {
 .login-note {
   margin: 24px 0 0;
   text-align: center;
-  color: #94a3b8;
+  color: var(--eb-content-muted);
   font-size: 13px;
 }
 
@@ -177,11 +177,11 @@ button {
 
 .builder-page {
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--eb-content-ground-2);
 }
 
 .logout-button {
-  border: 1px solid #475569;
+  border: 1px solid var(--eb-content-text);
   background: transparent;
   color: white;
   border-radius: 10px;
@@ -190,7 +190,7 @@ button {
 }
 
 .logout-button:hover {
-  background: #1e293b;
+  background: var(--eb-content-ink);
 }
 
 .builder-content {
@@ -205,8 +205,8 @@ button {
 .question-card,
 .bottom-actions-card {
   background: white;
-  border: 1px solid #e9edf4;
-  box-shadow: 0 10px 30px -18px rgba(15,23,42,.12);
+  border: 1px solid var(--eb-content-ground);
+  box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--eb-content-ink) 12%, transparent);
 }
 
 .builder-card {
@@ -249,13 +249,13 @@ button {
 
 .builder-heading h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 26px;
 }
 
 .builder-heading p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--eb-content-muted);
   line-height: 1.8;
 }
 
@@ -266,11 +266,11 @@ button {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 16px;
   padding: 16px 18px;
-  background: #f5f7fa;
-  color: #0f172a;
+  background: var(--eb-content-ground-2);
+  color: var(--eb-content-ink);
   font-family: inherit;
   line-height: 1.9;
 }
@@ -298,7 +298,7 @@ button {
 }
 
 .helper-text {
-  color: #94a3b8;
+  color: var(--eb-content-muted);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -359,7 +359,7 @@ button {
 .section-title-row h2,
 .section-title-row h3 {
   margin: 4px 0 0;
-  color: #0f172a;
+  color: var(--eb-content-ink);
 }
 
 .eyebrow {
@@ -389,7 +389,7 @@ button {
 }
 
 .plan-explanation {
-  color: #475569;
+  color: var(--eb-content-text);
   line-height: 1.9;
 }
 
@@ -406,18 +406,18 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--eb-content-ground);
   border-radius: 16px;
-  background: #f5f7fa;
+  background: var(--eb-content-ground-2);
 }
 
 .stat-box strong {
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 25px;
 }
 
 .stat-box span {
-  color: #64748b;
+  color: var(--eb-content-muted);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -435,8 +435,8 @@ button {
 
 .info-chip {
   padding: 7px 10px;
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
   font-size: 12px;
 }
 
@@ -455,7 +455,7 @@ button {
 
 .exam-id {
   margin: 5px 0 0;
-  color: #94a3b8;
+  color: var(--eb-content-muted);
   font-family: Consolas, monospace;
   font-size: 12px;
 }
@@ -501,13 +501,13 @@ button {
 .global-ai-box {
   margin-top: 22px;
   padding-top: 22px;
-  border-top: 1px solid #e9edf4;
+  border-top: 1px solid var(--eb-content-ground);
 }
 
 .global-ai-box label,
 .per-question-ai label {
   display: block;
-  color: #334155;
+  color: var(--eb-content-text);
   font-weight: 800;
   font-size: 14px;
 }
@@ -542,7 +542,7 @@ button {
 }
 
 .question-card:hover {
-  box-shadow: 0 18px 42px -22px rgba(15,23,42,.16);
+  box-shadow: 0 18px 42px -22px color-mix(in srgb, var(--eb-content-ink) 16%, transparent);
 }
 
 .question-locked {
@@ -558,7 +558,7 @@ button {
 }
 
 .question-number {
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 19px;
   font-weight: 900;
 }
@@ -573,23 +573,23 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--eb-content-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .marks-field input {
   width: 72px;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 10px;
   padding: 8px 10px;
   text-align: center;
 }
 
 .lock-button {
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   background: white;
-  color: #334155;
+  color: var(--eb-content-text);
   border-radius: 10px;
   padding: 8px 11px;
   cursor: pointer;
@@ -607,14 +607,14 @@ button {
 
 .question-meta span {
   padding: 5px 9px;
-  background: #f1f4f9;
-  color: #475569;
+  background: var(--eb-content-ground);
+  color: var(--eb-content-text);
   font-size: 11px;
 }
 
 .question-text {
   margin-top: 24px;
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 18px;
   line-height: 2;
   white-space: pre-wrap;
@@ -623,7 +623,7 @@ button {
 .question-options {
   margin: 16px 0 0;
   padding-right: 27px;
-  color: #334155;
+  color: var(--eb-content-text);
   line-height: 2;
 }
 
@@ -637,13 +637,13 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #475569;
+  color: var(--eb-content-text);
 }
 
 .blank-line {
   flex: 1;
   height: 34px;
-  border-bottom: 1px dashed #94a3b8;
+  border-bottom: 1px dashed var(--eb-content-axis);
 }
 
 /* =========================
@@ -652,9 +652,9 @@ button {
 
 .question-image-slot {
   margin-top: 24px;
-  border: 1px dashed #dce2ec;
+  border: 1px dashed var(--eb-content-line);
   border-radius: 18px;
-  background: #f5f7fa;
+  background: var(--eb-content-ground-2);
   overflow: hidden;
 }
 
@@ -681,7 +681,7 @@ button {
   justify-content: center;
   text-align: center;
   padding: 24px;
-  color: #64748b;
+  color: var(--eb-content-muted);
 }
 
 .hidden-image-placeholder > span {
@@ -690,7 +690,7 @@ button {
 
 .hidden-image-placeholder strong {
   margin-top: 7px;
-  color: #334155;
+  color: var(--eb-content-text);
 }
 
 .hidden-image-placeholder p {
@@ -710,9 +710,9 @@ button {
 
 .image-controls button,
 .question-footer-actions button {
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   background: white;
-  color: #334155;
+  color: var(--eb-content-text);
   border-radius: 10px;
   padding: 8px 11px;
   cursor: pointer;
@@ -720,8 +720,8 @@ button {
 
 .image-controls button:hover,
 .question-footer-actions button:hover {
-  border-color: #94a3b8;
-  background: #f5f7fa;
+  border-color: var(--eb-content-axis);
+  background: var(--eb-content-ground-2);
 }
 
 /* =========================
@@ -738,10 +738,10 @@ button {
 .question-action-bar > button,
 .select-action {
   min-height: 48px;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 12px;
   background: white;
-  color: #334155;
+  color: var(--eb-content-text);
 }
 
 .question-action-bar > button {
@@ -769,7 +769,7 @@ button {
   flex: 1;
   border: 0;
   background: transparent;
-  color: #0f172a;
+  color: var(--eb-content-ink);
   cursor: pointer;
 }
 
@@ -778,20 +778,20 @@ button {
   padding: 18px;
   border: 1px solid var(--eb-primary-100);
   border-radius: 16px;
-  background: #f7f9fd;
+  background: var(--eb-surface-2);
 }
 
 .teacher-note-panel {
   margin-top: 14px;
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--eb-content-ground);
   border-radius: 12px;
-  background: #f7f9fc;
+  background: var(--eb-surface);
 }
 
 .teacher-note-panel summary {
   padding: 12px 14px;
   cursor: pointer;
-  color: #475569;
+  color: var(--eb-content-text);
   font-weight: 800;
 }
 
@@ -807,7 +807,7 @@ button {
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e9edf4;
+  border-top: 1px solid var(--eb-content-ground);
 }
 
 .answer-box {
@@ -839,10 +839,10 @@ button {
 
 .bottom-actions-card button {
   min-height: 50px;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 12px;
   background: white;
-  color: #334155;
+  color: var(--eb-content-text);
   font-weight: 800;
   cursor: pointer;
 }
@@ -934,18 +934,18 @@ button {
 }
 
 .model-picker > span {
-  color: #64748b;
+  color: var(--eb-content-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .model-picker select {
   min-height: 46px;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 12px;
   padding: 0 12px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--eb-surface);
+  color: var(--eb-content-ink);
   font-weight: 700;
   outline: none;
   cursor: pointer;
@@ -966,7 +966,7 @@ button {
 }
 
 .model-chip {
-  border-color: #cfe0f8;
+  border-color: var(--eb-line-2);
   background: var(--eb-primary-050);
   color: var(--eb-primary-strong);
 }
@@ -1060,12 +1060,12 @@ button {
 }
 
 .exam-preview-heading strong {
-  color: #0f172a;
+  color: var(--eb-content-ink);
   font-size: 20px;
 }
 
 .exam-preview-heading small {
-  color: #64748b;
+  color: var(--eb-content-muted);
   font-size: 12px;
 }
 
@@ -1263,12 +1263,12 @@ button {
   border:
     1px
     solid
-    #e6edf5;
+    var(--eb-content-ground);
 
   border-radius: 16px;
 
   background:
-    #f9fbfe;
+    var(--eb-surface);
 }
 
 .question-text-panel
@@ -1297,7 +1297,7 @@ button {
   border:
     1px
     solid
-    #e4e9f1;
+    var(--eb-content-line);
 
   border-radius: 16px;
 
@@ -1316,13 +1316,13 @@ button {
   border-bottom:
     1px
     solid
-    #e4e9f1;
+    var(--eb-content-line);
 
   background:
-    #f5f7fa;
+    var(--eb-content-ground-2);
 
   color:
-    #334155;
+    var(--eb-content-text);
 
   font-size:
     13px;
@@ -1359,12 +1359,12 @@ button {
   border-left:
     1px
     solid
-    #e9edf4;
+    var(--eb-content-ground);
 
   border-bottom:
     1px
     solid
-    #e9edf4;
+    var(--eb-content-ground);
 
   text-align:
     center;
@@ -1383,10 +1383,10 @@ td:last-child {
 
 .exam-data-table th {
   background:
-    #f1f4f9;
+    var(--eb-content-ground);
 
   color:
-    #334155;
+    var(--eb-content-text);
 
   font-size:
     12px;
@@ -1397,7 +1397,7 @@ td:last-child {
 
 .exam-data-table td {
   color:
-    #0f172a;
+    var(--eb-content-ink);
 
   font-size:
     14px;
@@ -1440,7 +1440,7 @@ td {
   border:
     2px
     solid
-    #94a3b8;
+    var(--eb-content-axis);
 
   border-radius: 10px;
 
@@ -1668,10 +1668,10 @@ td {
   border-radius: 20px;
 
   background:
-    #f1f4f9;
+    var(--eb-content-ground);
 
   color:
-    #475569;
+    var(--eb-content-text);
 
   font-size:
     12px;
@@ -1953,28 +1953,18 @@ td {
   border:
     1px
     solid
-    #cfe0f8;
+    var(--eb-line-2);
 
   border-radius: 16px;
 
   background:
-    rgba(
-      239,
-      246,
-      255,
-      0.97
-    );
+    color-mix(in srgb, var(--eb-primary-050) 97%, transparent);
 
   box-shadow:
     0
     10px
     28px
-    rgba(
-      15,
-      23,
-      42,
-      0.08
-    );
+    color-mix(in srgb, var(--eb-content-ink) 8%, transparent);
 
   backdrop-filter:
     blur(8px);
@@ -2001,7 +1991,7 @@ td {
 
 .preview-mode-bar span {
   color:
-    #64748b;
+    var(--eb-content-muted);
 
   font-size:
     12px;
@@ -2019,7 +2009,7 @@ td {
   border:
     1px
     solid
-    #cfe0f8;
+    var(--eb-line-2);
 
   border-radius: 10px;
 
@@ -2149,12 +2139,7 @@ td {
     0
     6px
     20px
-    rgba(
-      15,
-      23,
-      42,
-      0.045
-    );
+    color-mix(in srgb, var(--eb-content-ink) 4.5%, transparent);
 }
 
 /* =========================
@@ -2226,12 +2211,7 @@ button {
   border-radius: 20px;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.7
-    );
+    color-mix(in srgb, var(--eb-surface) 70%, transparent);
 
   font-size:
     18px;
@@ -2273,7 +2253,7 @@ button {
   font-weight: 700;
   cursor: pointer;
   background: var(--eb-primary-strong);
-  color: #fff;
+  color: var(--eb-surface);
 }
 
 .quality-autofix-actions button:disabled {
@@ -2455,7 +2435,7 @@ button:disabled {
   border-radius: 16px;
 
   background:
-    #f7f9fd;
+    var(--eb-surface-2);
 }
 
 .saved-exams-access
@@ -2468,7 +2448,7 @@ button {
   border:
     1px
     solid
-    #cfe0f8;
+    var(--eb-line-2);
 
   border-radius: 12px;
 
@@ -2507,7 +2487,7 @@ button:disabled {
 .saved-exams-access
 span {
   color:
-    #64748b;
+    var(--eb-content-muted);
 
   font-size:
     12px;
@@ -2530,7 +2510,7 @@ span {
   border:
     1px
     solid
-    #e4e9f1;
+    var(--eb-content-line);
 
   border-radius: 20px;
 
@@ -2541,12 +2521,7 @@ span {
     0
     14px
     36px
-    rgba(
-      15,
-      23,
-      42,
-      0.06
-    );
+    color-mix(in srgb, var(--eb-content-ink) 6%, transparent);
 }
 
 .saved-exams-heading {
@@ -2571,7 +2546,7 @@ h3 {
     0;
 
   color:
-    #0f172a;
+    var(--eb-content-ink);
 }
 
 .saved-exams-heading
@@ -2579,7 +2554,7 @@ h3 {
   border:
     1px
     solid
-    #dce2ec;
+    var(--eb-content-line);
 
   border-radius: 10px;
 
@@ -2591,7 +2566,7 @@ h3 {
     white;
 
   color:
-    #334155;
+    var(--eb-content-text);
 
   font-weight:
     800;
@@ -2631,12 +2606,12 @@ h3 {
   border:
     1px
     solid
-    #e9edf4;
+    var(--eb-content-ground);
 
   border-radius: 16px;
 
   background:
-    #f9fbfe;
+    var(--eb-surface);
 }
 
 .saved-exam-main {
@@ -2653,7 +2628,7 @@ h3 {
 .saved-exam-main
 strong {
   color:
-    #0f172a;
+    var(--eb-content-ink);
 
   font-size:
     15px;
@@ -2662,7 +2637,7 @@ strong {
 .saved-exam-main
 span {
   color:
-    #475569;
+    var(--eb-content-text);
 
   font-size:
     12px;
@@ -2674,7 +2649,7 @@ span {
 .saved-exam-main
 small {
   color:
-    #94a3b8;
+    var(--eb-content-muted);
 
   font-size:
     11px;
@@ -2707,7 +2682,7 @@ button {
   border:
     1px
     solid
-    #cfe0f8;
+    var(--eb-line-2);
 
   background:
     var(--eb-primary-050);
@@ -2739,15 +2714,15 @@ button {
   border:
     1px
     dashed
-    #dce2ec;
+    var(--eb-content-line);
 
   border-radius: 16px;
 
   background:
-    #f5f7fa;
+    var(--eb-content-ground-2);
 
   color:
-    #64748b;
+    var(--eb-content-muted);
 
   text-align:
     center;
@@ -2900,12 +2875,12 @@ button {
 .templates-panel {
   margin-top: 14px;
   padding: 22px;
-  border: 1px solid #ddd6fe;
+  border: 1px solid var(--eb-primary-100);
   border-radius: 20px;
-  background: #fff;
+  background: var(--eb-surface);
   box-shadow:
     0 14px 36px
-    rgba(15, 23, 42, 0.06);
+    color-mix(in srgb, var(--eb-content-ink) 6%, transparent);
 }
 
 /* Save status */
@@ -2917,19 +2892,19 @@ button {
   flex-wrap: wrap;
   gap: 7px;
   padding: 10px 13px;
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--eb-content-ground);
   border-radius: 12px;
-  background: #fff;
-  color: #475569;
+  background: var(--eb-surface);
+  color: var(--eb-content-text);
   font-size: 12px;
 }
 
 .save-status-line strong {
-  color: #334155;
+  color: var(--eb-content-text);
 }
 
 .save-status-line small {
-  color: #94a3b8;
+  color: var(--eb-content-muted);
 }
 
 .save-dot {
@@ -2951,17 +2926,17 @@ button {
 
 .exam-metadata-card {
   margin-top: 16px;
-  border: 1px solid #e4e9f1;
+  border: 1px solid var(--eb-content-line);
   border-radius: 18px;
-  background: #fff;
+  background: var(--eb-surface);
   overflow: hidden;
 }
 
 .exam-metadata-card summary {
   cursor: pointer;
   padding: 14px 17px;
-  background: #f5f7fa;
-  color: #1e293b;
+  background: var(--eb-content-ground-2);
+  color: var(--eb-content-ink);
   font-weight: 900;
 }
 
@@ -2977,7 +2952,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #475569;
+  color: var(--eb-content-text);
   font-size: 12px;
   font-weight: 800;
 }
@@ -2986,11 +2961,11 @@ button {
 .exam-metadata-grid textarea {
   box-sizing: border-box;
   width: 100%;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--eb-content-line);
   border-radius: 12px;
   padding: 10px 11px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--eb-surface);
+  color: var(--eb-content-ink);
   font: inherit;
 }
 
@@ -3018,7 +2993,7 @@ button {
   padding: 12px 14px;
   border: 1px solid var(--eb-primary-100);
   border-radius: 16px;
-  background: #f7f9fd;
+  background: var(--eb-surface-2);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -3026,7 +3001,7 @@ button {
 
 .question-jump-bar > strong {
   flex: 0 0 auto;
-  color: #334155;
+  color: var(--eb-content-text);
   font-size: 12px;
 }
 
@@ -3039,7 +3014,7 @@ button {
 .question-jump-bar button {
   min-width: 38px;
   min-height: 36px;
-  border: 1px solid #cfe0f8;
+  border: 1px solid var(--eb-line-2);
   border-radius: 10px;
   background: white;
   color: var(--eb-primary-strong);
@@ -3066,9 +3041,9 @@ button {
   display: inline-flex;
   gap: 5px;
   padding: 3px;
-  border: 1px solid #e9edf4;
+  border: 1px solid var(--eb-content-ground);
   border-radius: 10px;
-  background: #f5f7fa;
+  background: var(--eb-content-ground-2);
 }
 
 .question-order-actions button {
@@ -3077,13 +3052,13 @@ button {
   border: 1px solid transparent;
   border-radius: 10px;
   background: white;
-  color: #475569;
+  color: var(--eb-content-text);
   font-weight: 900;
   cursor: pointer;
 }
 
 .question-order-actions button:hover:not(:disabled) {
-  border-color: #cfe0f8;
+  border-color: var(--eb-line-2);
   color: var(--eb-primary-strong);
 }
 
@@ -3195,9 +3170,9 @@ button {
 
 /* .logout-button is reused as a secondary class on .app-sidebar-logout */
 .logout-button {
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.04);
-  color: #e2e8f0;
+  border: 1px solid color-mix(in srgb, var(--eb-surface) 14%, transparent);
+  background: color-mix(in srgb, var(--eb-surface) 4%, transparent);
+  color: var(--eb-content-line);
   border-radius: var(--eb-r);
   padding: 11px 14px;
   font-weight: 700;
@@ -3247,7 +3222,7 @@ button {
 /* ---------- Buttons ---------- */
 .primary-button, .generate-button {
   border: 0; border-radius: var(--eb-r);
-  background: var(--eb-primary); color: #fff; font-weight: 700;
+  background: var(--eb-primary); color: var(--eb-surface); font-weight: 700;
   box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--eb-primary) 55%, transparent);
   transition: var(--eb-dur) var(--eb-ease);
 }
@@ -3296,7 +3271,7 @@ button {
 /* Structured Exam Builder overlay + entry button (Phase 2). Full styling lives in
    structured-builder.css which loads with the lazy builder; these two rules are here because the
    overlay shell and the convert button in the legacy builder render before that chunk loads. */
-.structured-builder-overlay{position:fixed;inset:0;z-index:var(--eb-z-overlay,60);background:var(--surface,#f5f7fa);overflow:auto;padding:16px}
+.structured-builder-overlay{position:fixed;inset:0;z-index:var(--eb-z-overlay,60);background:var(--surface,var(--eb-content-ground-2));overflow:auto;padding:16px}
 /* Phase 21F.3 — the Exam Studio fills the overlay and scrolls inside its own panes (the toast reserve lives on its canvas). */
 .structured-builder-overlay:has(> .st-studio),.structured-builder-overlay:has(> .st-studio):has(.eb-toast),.structured-builder-overlay:has(> .st-studio)[data-toast-reserve]{overflow:hidden;padding:0}
 .convert-structured-btn{margin-top:10px;width:100%;border:1px dashed var(--eb-primary);background:#eff4ff;color:var(--eb-primary-strong);border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}

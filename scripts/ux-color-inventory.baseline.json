@@ -1,8 +1,8 @@
 {
   "description": "UX-R colour ratchet: hard-coded colour literals per stylesheet (scripts/ux-color-inventory.mjs). A count may only go down; regenerate with --write after a phase converts literals to tokens.",
-  "total": 1210,
+  "total": 873,
   "files": {
-    "src/App.css": 241,
+    "src/App.css": 97,
     "src/aiComposer/ai-composer.css": 6,
     "src/builder-pro.css": 21,
     "src/charts/chart-editor.css": 7,
@@ -41,7 +41,7 @@
     "src/physicsFreeFall/freefall.css": 7,
     "src/physicsLab/lab.css": 10,
     "src/physicsMotion/motion.css": 18,
-    "src/platform.css": 267,
+    "src/platform.css": 74,
     "src/presentation/presentation-studio.css": 9,
     "src/presets/presetLibrary.css": 10,
     "src/project794589.css": 8,
