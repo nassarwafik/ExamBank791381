@@ -121,6 +121,16 @@ const SIM_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-san
     smartSim: { schemaVersion: 1, pluginKey: k, pluginVersion: 1, config: SIM_STARTERS[k] }, answer: { scoring: "proportional", checks: [] } })) }] });
 const SIM_ASSIGNMENT = { assignmentId: "a1", title: "تجارب العلوم", instructions: "", openAt: "2026-10-01T08:00:00.000Z", dueAt: "2026-10-30T20:00:00.000Z", maxAttempts: 3, questionCount: SIM_KEYS.length, totalMarks: 6 * SIM_KEYS.length, exam: SIM_EXAM };
 const SIM_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, dueClosed: false, draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [] };
+// UX-R16c — a two-curve function graph and a two-series chart as one student exam (scene "graphs"): the specs are the suites' own
+// fixtures (scripts/ux-r16c-graph-fixtures.json, pinned to them by functionGraphSeries.ux-r16c.test.ts), sanitized by the API's student
+// sanitizer, so the page draws exactly what a real attempt would.
+const GRAPH_FIXTURES = JSON.parse(fs.readFileSync(path.join(root, "scripts", "ux-r16c-graph-fixtures.json"), "utf8"));
+const GRAPH_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-graphs", title: "الرسوم والمنحنيات", schemaVersion: 2,
+  sections: [{ id: "s1", title: "الرسوم", gradingPolicy: "all", stimuli: {}, questions: [
+    { examQuestionId: "fg", presentationType: "functionGraphSelection", questionTypeVersion: 1, text: "اختر نقطة تقاطع المنحنيين", marks: 2, functionGraphSelection: { v: 1, graph: GRAPH_FIXTURES.functionGraph, target: "point", mode: "single", maxSelections: 1 }, answer: { scoring: "allOrNothing", correct: ["point:e1"] } },
+    { examQuestionId: "ch", presentationType: "chartSelection", questionTypeVersion: 1, text: "اختر سلسلة الطاقة الشمسية", marks: 2, chartSelection: { v: 1, chart: GRAPH_FIXTURES.chart, target: "series", mode: "single", maxSelections: 1 }, answer: { scoring: "allOrNothing", correct: ["series:solar"] } }] }] });
+const GRAPH_ASSIGNMENT = { assignmentId: "a1", title: "الرسوم والمنحنيات", instructions: "", openAt: "2026-10-01T08:00:00.000Z", dueAt: "2026-10-30T20:00:00.000Z", maxAttempts: 3, questionCount: 2, totalMarks: 4, exam: GRAPH_EXAM };
+const GRAPH_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, dueClosed: false, draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [] };
 // UX-R16b — the network, CLI, cloze, open-response and coding editors as one student exam (scene "editors"): each question is the
 // builder's own default (newQuestion) and the network topology the «roas» classroom template (scripts/ux-r16b-editor-fixtures.json,
 // pinned to both by src/editorColours.ux-r16b.test.ts), sanitized by the API's own student sanitizer.
@@ -256,6 +266,8 @@ function api(req, res) {
   if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
   if (scene === "sims" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: SIM_ASSIGNMENT });
   if (scene === "sims" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: SIM_STATE } : { ok: true, savedAt: NOW, state: SIM_STATE });
+  if (scene === "graphs" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: GRAPH_ASSIGNMENT });
+  if (scene === "graphs" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: GRAPH_STATE } : { ok: true, savedAt: NOW, state: GRAPH_STATE });
   if (scene === "editors" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: ED_ASSIGNMENT });
   if (scene === "editors" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: SIM_STATE } : { ok: true, savedAt: NOW, state: SIM_STATE });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
@@ -378,6 +390,20 @@ const SCRIPTED = [
       }).filter(x => x.by > 1);
     }));
     if (spills.length) throw new Error("a control spills out of its box: " + JSON.stringify(spills.slice(0, 3)));
+  } })),
+  // UX-R16c — the function graph (question 1) and the chart (question 2) of the "graphs" exam; each page fails when the drawing is
+  // missing or when the first series is not drawn in the theme's first series colour.
+  ...[["graph-function", 0, ".fg-curve.fg-c1"], ["graph-chart", 1, ".iex-page canvas, .iex-page svg"]].map(([id, i, sel]) => ({ id, role: "student", scene: "graphs", run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".iex-page-heading").first().waitFor({ timeout: 15000 });
+    if (i > 0) { await page.locator(".iex-nav-trigger").click({ timeout: 15000 }); await page.locator(".iex-nav-q").nth(i).click({ timeout: 15000 }); }
+    await page.locator(sel).first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    if (i === 0) {
+      const stroke = await page.locator(".fg-curve.fg-c1").first().evaluate(e => getComputedStyle(e).stroke);
+      const primary = await page.evaluate(() => { const s = document.createElement("span"); s.style.color = "var(--eb-primary-strong)"; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; });
+      if (stroke !== primary) throw new Error("the first series is drawn in " + stroke + ", not the theme's first series colour " + primary);
+    }
   } })),
   // UX-R16b — each editor on its own exam page; a control or a dark code / CLI surface never spills past the question card.
   ...ED_KEYS.map((k, i) => ({ id: "ed-" + k, role: "student", scene: "editors", run: async page => {

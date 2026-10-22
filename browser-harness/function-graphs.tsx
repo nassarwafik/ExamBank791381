@@ -2,6 +2,8 @@
 // This fixture deliberately reuses the REAL editor/viewer and the SAME authored graph fixtures.
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16c — the graph reads the platform's design tokens (the series and the plot neutrals) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import GraphEditor from "../src/functionGraphs/GraphEditor";
 import FunctionGraphView from "../src/functionGraphs/FunctionGraphView";
 import { quadraticGraph, rationalGraph, sineGraph, tangentGraph, areaGraph, circleGraph } from "../src/functionGraphs/testing/graphFixtures";
