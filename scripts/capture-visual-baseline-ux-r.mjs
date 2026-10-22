@@ -111,6 +111,16 @@ const LEARNING = {
     students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
 };
 let scene = "";
+// UX-R16d — one student exam rendered through a presentation preset (scene "preset-<id>"): the same three questions under the new
+// "reference" preset and under "default", sanitized by the API's student sanitizer (which keeps only the strict canonical presentation).
+const PRESET_EXAM = id => createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-preset", title: "امتحان الوحدة الأولى", schemaVersion: 2,
+  presentation: { schemaVersion: 1, preset: id },
+  sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", stimuli: {}, questions: [
+    { examQuestionId: "q1", presentationType: "multipleChoice", questionTypeVersion: 1, text: "ما الجهاز الذي يربط بين شبكتين مختلفتين؟", marks: 2, options: [{ text: "الراوتر" }, { text: "السويتش" }, { text: "الهب" }, { text: "المكرر" }], answer: { correctIndex: 0 } },
+    { examQuestionId: "q2", presentationType: "trueFalse", questionTypeVersion: 1, text: "عنوان IPv4 يتكوّن من 32 بتًا.", marks: 1, answer: { value: true } },
+    { examQuestionId: "q3", presentationType: "shortAnswer", questionTypeVersion: 1, text: "اذكر وظيفة بروتوكول DHCP.", marks: 3, answer: { keywords: ["عنوان"] } }] }] });
+const PRESET_ASSIGNMENT = id => ({ assignmentId: "a1", title: "امتحان الوحدة الأولى", instructions: "", openAt: "2026-10-01T08:00:00.000Z", dueAt: "2026-10-30T20:00:00.000Z", maxAttempts: 3, questionCount: 3, totalMarks: 6, exam: PRESET_EXAM(id) });
+const PRESET_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, dueClosed: false, draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [] };
 // UX-R8 — the messages pages (the shapes of the AppMessages.5c / StudentPortal.messages / 5D fixtures): a direct conversation over
 // two days with consecutive messages, an unread count in the roster, and the student's dedicated view, so a thread, its bubbles,
 // the roster rows and both composers are captured, not only the empty start state.
@@ -217,6 +227,8 @@ function api(req, res) {
   if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: SAVED_EXAMS });
   if (p === "/api/governance-inbox") return send(200, { items: u.searchParams.get("stage") === "review" ? INBOX_TASKS : [], nextCursor: null, counts: { review: 2, approve: 0, publish: 0 }, actorId: "teacher-reviewer" });
   if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
+  if (scene.startsWith("preset-") && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: PRESET_ASSIGNMENT(scene.slice(7)) });
+  if (scene.startsWith("preset-") && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: PRESET_STATE } : { ok: true, savedAt: NOW, state: PRESET_STATE });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
   if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
   if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
@@ -277,6 +289,15 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R16d — the same exam under the new "reference" preset and under "default"; the reference page fails unless the presentation root
+  // carries the reference primary (so a missing preset, or a fallback to default, is caught).
+  ...["reference", "default"].map(id => ({ id: "preset-" + id, role: "student", scene: "preset-" + id, run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".iex-page-heading").first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(500);
+    const primary = await page.locator(".exam-presentation").first().evaluate(e => getComputedStyle(e).getPropertyValue("--xp-primary").trim().toUpperCase());
+    if (id === "reference" && primary !== "#2A0A4E") throw new Error("the reference preset is not applied: --xp-primary " + primary);
+  } })),
   // UX-R12 — the grading workspace, opened from the gradebook's «تصحيح الآن» (the pending student), and its pending filter.
   ...[["review-workspace", null], ["review-pending", /يحتاج إلى تصحيح يدوي/]].map(([id, filter]) => ({ id, role: "teacher", nav: "الواجبات", run: async page => {
     await page.getByRole("button", { name: "فتح", exact: true }).first().click({ timeout: 15000 });
