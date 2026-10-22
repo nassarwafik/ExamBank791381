@@ -402,6 +402,14 @@ const SCRIPTED = [
       if (stroke !== primary) throw new Error("the first series is drawn in " + stroke + ", not the theme's first series colour " + primary);
     }
   } })),
+  // UX-R16 — the login error state (a refused sign-in) and the static offline page the service worker serves.
+  { id: "login-error", role: "", run: async page => {
+    await page.locator('input[autocomplete="username"]').fill("harness");
+    await page.locator('input[type="password"]').fill("wrong-password");
+    await page.locator("form.auth-form").evaluate(f => f.requestSubmit());
+    await page.locator(".auth-error").waitFor({ timeout: 15000 });
+  } },
+  { id: "offline", role: "", run: async page => { await page.goto(origin + "/offline.html", { waitUntil: "networkidle" }); } },
   // UX-R16d — the same exam under the new "reference" preset and under "default"; the reference page fails unless the presentation root
   // carries the reference primary (so a missing preset, or a fallback to default, is caught).
   ...["reference", "default"].map(id => ({ id: "preset-" + id, role: "student", scene: "preset-" + id, run: async page => {
