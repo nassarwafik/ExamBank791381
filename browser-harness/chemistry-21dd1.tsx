@@ -7,6 +7,8 @@
 // the authored question to the builder's real import → save → export → import round trip.
 import { StrictMode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import exam from "../docs/fixtures/chemistry-structure-21dd1/ExamBank_21DD1_Chemistry_Structure_Acceptance.json";
 import "../src/trustedSimPlugins";
 import { bindSmartSimAnswerToQuestion, evaluateSmartSim, projectSmartSimForStudent, validateSmartSimQuestion } from "../src/trustedSimQuestion";

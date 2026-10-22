@@ -4,6 +4,8 @@
 // not memoize would). Driven by scripts/check-interactive-3d-browser-21d.mjs; never shipped (only index.html is a production entry).
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import Interactive3DView from "../src/interactive3d/Interactive3DView";
 import StudentQuestionCard from "../src/StudentQuestionCard";
 import { scene3DPreset } from "../src/interactive3d/scenePresets";

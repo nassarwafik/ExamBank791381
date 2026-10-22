@@ -3,6 +3,8 @@
 // scripts/check-physics-lab-browser-21da2.mjs; never shipped (only index.html is a production entry).
 import { Suspense, useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import "../src/trustedSimPlugins";
 import LabWorkspace from "../src/physicsLab/LabWorkspace";
 import LabEditor from "../src/physicsLab/LabEditor";
