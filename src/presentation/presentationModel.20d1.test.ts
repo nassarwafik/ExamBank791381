@@ -9,7 +9,7 @@ const base = () => ({ schemaVersion: 1, preset: "modernAcademic" });
 
 describe("20D1-P1 vocabulary and presets", () => {
   it("eleven code-owned production presets, each resolving to complete tokens, layout, components and type variants", () => {
-    expect(Object.keys(P.PRESENTATION_PRESETS)).toEqual(["default", "classicPaper", "modernAcademic", "cards", "focus", "compact", "scienceLab", "networkLab", "developerWorkspace", "friendly", "highContrast"]);
+    expect(Object.keys(P.PRESENTATION_PRESETS)).toEqual(["default", "classicPaper", "modernAcademic", "cards", "focus", "compact", "scienceLab", "networkLab", "developerWorkspace", "friendly", "highContrast", "reference"]);   // UX-R16d appends "reference"
     for (const id of Object.keys(P.PRESENTATION_PRESETS)) {
       const r = P.resolvePresentation({ schemaVersion: 1, preset: id })!;
       expect(r.fallback, id).toBe(false);

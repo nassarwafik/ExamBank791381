@@ -2740,6 +2740,81 @@ mutant (SHA-256).
 
 ---
 
+# Phase UX-R16d — The exam presentation presets (option A)
+
+**Owner decision (2026-10-21):** option A of §4.1. The owner authorized every remaining phase in sequence, and was told R16d would use
+option A unless they said otherwise. R16d branches from `main` `ea357456` as `feature/ux-r16d-reference-preset`, in parallel with
+R13–R16c. Its dependency on R15 is order only; they share no file.
+
+## R16d.1 What changes for the teacher and the student
+
+- **A new code-owned preset, «المرجعي البنفسجي» (`reference`), carries the reference look.** It is appended after the eleven
+  existing presets.
+  - **Colours:** the design tokens' values, namely the purple primary, the lavender-grey ground, the hairline border and the status
+    tokens.
+  - **Shape:** 8 px radius, no shadow, outlined question cards.
+  - **Contrast:** it passes the same WCAG policy that blocks finalization.
+- **The studio starts an exam that has no presentation yet from it.** The first preset choice or setting a teacher makes on such an
+  exam creates `{ preset: "reference", … }`.
+- **Option A, so nothing existing moves:**
+  - the eleven presets keep their ids, order and colours;
+  - every stored exam keeps its look, published ones included;
+  - an exam with no presentation keeps the legacy theme until a teacher acts;
+  - a malformed stored value still falls back to the safe `default` preset, at run time and in the studio;
+  - the schema is unchanged.
+
+## R16d.2 Edit set
+
+- **`src/presentation/presentationModel.ts`:** the `reference` preset, and `STARTING_PRESET` (the studio's starting preset).
+- **`src/presentation/PresentationStudio.tsx`:** an absent presentation starts from `STARTING_PRESET`; a malformed one still starts from `default`.
+- **`api/src/lib/shared-finalization/presentation/presentationModel.js`:** regenerated with `scripts/build-shared-finalization.mjs`.
+  The server validates an exam saved with the new preset; the drift test keeps the two copies equal.
+- **`src/presentation/presentationModel.20d1.test.ts`** (updated explicitly): the preset list gains the appended id.
+- **`api/tests/certification-21a1/…` and `…-21a2/…-compat-freeze.test.js`** (updated explicitly, as a declared delta):
+  - The AI composer's catalog prompt lists the presets, and both certification freezes pin that prompt.
+  - The only new allowance: the «Presentation presets:» line may gain exactly «, reference» at its end.
+  - Every other baseline line stays immutable, and every other added line is still rejected.
+  - This follows the precedent of 21A.2, which declared its own delta in the 21A.1 freeze. **It is a change to a certification
+    test, so the owner should review it.**
+- **`src/presentation/referencePreset.ux-r16d.test.ts`:** new, 7 guards.
+- **The capture harness:** a `preset-<id>` scene renders the same three-question exam under `reference` and under `default`.
+
+## R16d.3 Fail-first evidence
+
+Not applicable: R16d adds a preset, it fixes no defect. The harness check proves the preset is effective. On `main` `ea357456`, an
+exam naming `reference` falls back to the default preset: «the reference preset is not applied: --xp-primary #1D4ED8» at every
+viewport. On R16d it renders with `#2A0A4E`.
+
+## R16d.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/presentation`, `src/aiComposer`, both certification freezes and the API
+presentation suite, and each file was restored byte-for-byte after its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | an existing preset retuned (default's primary to purple: option B by accident) | KILLED | ux-r16d «… the eleven existing presets keep their ids, order and colours»; 21E.0 RF1 exam focus ring |
+| M2 | the reference preset fails the contrast policy (light muted text) | KILLED | 20D.1 «every preset passes the contrast policy»; ux-r16d |
+| M3 | the reference preset drifts from the tokens (blue primary) | KILLED | ux-r16d «carries the design tokens' values…» |
+| M4 | the reference preset keeps a shadow | KILLED | ux-r16d «is the flat reference look…» |
+| M5 | the studio's starting preset back to default | KILLED | ux-r16d «the studio starts an exam with no presentation from the reference preset» |
+| M6 | the studio ignores the starting preset | KILLED | same |
+| M7 | a malformed value starts from the new preset (the safe default lost) | KILLED | ux-r16d «a missing or malformed stored value still falls back to the safe default» |
+
+7 / 7 KILLED, no TIMEOUT. `git status` showed only the committed R16d edit set before and after.
+
+## R16d.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `preset-reference`, `preset-default` (1440 / 1024 / 390 px) | before 3 / 6 (main falls back to default for the new id); after **6 / 6** |
+| `npm test`, full root suite incl. the API suites and both certification freezes (`2baea3b7`) | 1 188 files, **14 140 / 14 140** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| shared finalization | regenerated with `scripts/build-shared-finalization.mjs`; the drift test passes |
+
+---
+
 # Phase UX-R17a — Clean-up: the two base sheets
 
 **Owner direction (2026-10-22):** start R17 once R16a–R16d are merged, split in four parts (R17a base sheets, R17b builder sheets,

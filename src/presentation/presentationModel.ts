@@ -96,9 +96,17 @@ export const PRESENTATION_PRESETS = Object.freeze({
   friendly: def("ودود", "ألوان دافئة وزوايا مستديرة للمراحل الأصغر", { primary: "#C2410C", accent: "#DB2777", background: "#FFF7ED", surface: "#FFFFFF", surfaceAlt: "#FFF1E6", text: "#1F2937", muted: "#57534E", border: "#FED7AA", ...SLATE },
     { typography: { family: "systemArabic", scale: "large", lineHeight: "relaxed", questionWeight: "bold" }, radius: "xl", shadow: "subtle", spacing: "comfortable", components: { questionNumber: "circle", sectionHeader: "card", questionCard: "elevated" } }),
   highContrast: def("تباين عالٍ", "أقصى وضوح بصري لإمكانية الوصول", { primary: "#000000", accent: "#0000CC", background: "#FFFFFF", surface: "#FFFFFF", surfaceAlt: "#F2F2F2", text: "#000000", muted: "#222222", border: "#000000", success: "#006400", warning: "#6B4E00", danger: "#8B0000" },
-    { typography: { family: "systemSans", scale: "large", lineHeight: "relaxed", questionWeight: "bold" }, radius: "sm", shadow: "none", components: { questionCard: "outlined", sectionHeader: "underline", marksBadge: "outline", table: "bordered", callout: "outline", answerArea: "contained", code: "light" }, motion: "none" })
+    { typography: { family: "systemSans", scale: "large", lineHeight: "relaxed", questionWeight: "bold" }, radius: "sm", shadow: "none", components: { questionCard: "outlined", sectionHeader: "underline", marksBadge: "outline", table: "bordered", callout: "outline", answerArea: "contained", code: "light" }, motion: "none" }),
+  // UX-R16d (owner direction, option A — docs/enterprise-ux-r0-redesign-foundation.md §4.1): the reference look as a NEW code-owned preset,
+  // appended so every existing id keeps its colours and meaning. It is the starting preset the studio offers an exam that has no
+  // presentation yet; stored exams, the runtime fallback ("default") and the schema are unchanged. The values are the design tokens'.
+  reference: def("المرجعي البنفسجي", "واجهة هادئة بلون الهوية البنفسجي وحدود رفيعة دون ظلال", { primary: "#2A0A4E", accent: "#4A2380", background: "#F7F6FA", surface: "#FFFFFF", surfaceAlt: "#F5F4F8", text: "#2D2740", muted: "#5F5A6E", border: "#DEDCE6", success: "#15803D", warning: "#B45309", danger: "#B42318" },
+    { radius: "md", shadow: "none", components: { questionCard: "outlined", marksBadge: "pill", questionNumber: "badge", sectionHeader: "plain" } })
 } satisfies Record<string, PresetDef>);
 export type PresetId = keyof typeof PRESENTATION_PRESETS;
+/** UX-R16d (option A) — the preset the studio starts an exam from when it has no presentation yet. The runtime fallback for a missing or
+ *  malformed stored value stays "default" (resolvePresentation), so no stored exam changes look. */
+export const STARTING_PRESET: PresetId = "reference";
 const PRESET_IDS: readonly string[] = Object.freeze(Object.keys(PRESENTATION_PRESETS));
 
 // ── colour authority ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
