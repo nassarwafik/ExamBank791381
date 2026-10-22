@@ -1,14 +1,9 @@
-// Teacher-side fetch wrapper for the generic Project Tracker API (route /api/project-tracker),
-// matching the app's teacherApi pattern (x-builder-token + Bearer, JSON in/out, throw on !ok).
-export async function projectApi<T>(token: string, url: string, options: RequestInit = {}): Promise<T> {
-  const headers = new Headers(options.headers || {});
-  headers.set("Content-Type", "application/json");
-  headers.set("x-builder-token", token);
-  headers.set("Authorization", "Bearer " + token);
-  const response = await fetch(url, { ...options, headers });
-  const data = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(data.error || "حدث خطأ.");
-  return data;
+import { teacherFetchJson } from "../teacherFetch";
+
+// Teacher-side fetch wrapper for the generic Project Tracker API (route /api/project-tracker): x-builder-token + Bearer,
+// JSON in/out, throw on !ok. Batch 5 (F1): built on teacherFetch (an expired session signs the teacher out; Arabic text only).
+export function projectApi<T>(token: string, url: string, options: RequestInit = {}): Promise<T> {
+  return teacherFetchJson<T>(token, url, options);
 }
 
 // GET helper: /api/project-tracker?projectCode=..&resource=..&...extra

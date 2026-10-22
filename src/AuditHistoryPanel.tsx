@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IconSearch } from "./icons";
 import { type AuditEvent, AUDIT_VISIBLE_LIMIT, auditActionLabel, auditTargetTypeLabel, filterAuditEvents, newestAuditEvents } from "./auditLog";
+import { teacherFetchJson } from "./teacherFetch";
 
 // Roadmap #19 — compact builder/admin activity-log surface (سجل النشاط). Loads the bounded, redacted
 // history from /api/audit-history once (server enforces the newest-window bound + redaction), then does
@@ -40,12 +41,9 @@ function AuditHistoryPanel({ token }: Props) {
   async function load() {
     setLoading(true); setError("");
     try {
-      const headers = new Headers();
-      headers.set("x-builder-token", token);
-      headers.set("Authorization", "Bearer " + token);
-      const response = await fetch("/api/audit-history?limit=100", { headers });
-      const result = await response.json() as { ok?: boolean; events?: AuditEvent[]; error?: string };
-      if (!response.ok || !result.ok) throw new Error(result.error || "تعذر تحميل سجل النشاط.");
+      // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text.
+      const result = await teacherFetchJson<{ ok?: boolean; events?: AuditEvent[]; error?: string }>(token, "/api/audit-history?limit=100", {}, "تعذر تحميل سجل النشاط.");
+      if (!result.ok) throw new Error("تعذر تحميل سجل النشاط.");
       setEvents(result.events || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذر تحميل سجل النشاط.");

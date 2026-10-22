@@ -92,6 +92,8 @@ import "./assignments-pro.css";
 import "./studentportal-pro.css";
 import { teacherProfileApi, resolveTeacherDisplayName, type TeacherProfile } from "./teacher/teacherProfile";
 import { hasRecoveryDraft, purgeLegacyRecoveryDraft, readRecoveryDraft, removeRecoveryDraft, writeRecoveryDraft } from "./legacyRecoveryDraft";
+import { TEACHER_SESSION_EXPIRED_EVENT } from "./teacherFetch";
+import { NETWORK_ERROR_TEXT, UNEXPECTED_RESPONSE_TEXT, userFacingMessage } from "./userFacingErrors";
 import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
 // FINAL_BUILDER_PHASE_6
@@ -1032,6 +1034,16 @@ function App() {
     );
   }, [recoveryTeacherId]);
 
+  // Batch 5 (F1): a teacher page that is not under TeacherPlatform reports an expired session (401) through teacherFetch's
+  // event; only a confirmed TEACHER session is signed out by it (never a student session).
+  useEffect(() => {
+    const onExpired = () => {
+      if (sessionRole === "teacher") handleLogout();
+    };
+    window.addEventListener(TEACHER_SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(TEACHER_SESSION_EXPIRED_EVENT, onExpired);
+  });
+
   const loggedIn = Boolean(token);
 
   const totalCurrentMarks = useMemo(() => {
@@ -1121,12 +1133,25 @@ function App() {
       headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+    // Batch 5 (F2): a dropped connection or a non-JSON body (a gateway HTML page) is never shown as browser / parser text.
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers
+      });
+    }
+    catch {
+      throw new Error(NETWORK_ERROR_TEXT);
+    }
 
-    const data = (await response.json()) as T & ApiError;
+    let data = null as (T & ApiError) | null;
+    try {
+      data = (await response.json()) as T & ApiError;
+    }
+    catch {
+      data = null;
+    }
 
     if (!response.ok) {
       // apiRequest is the TEACHER (builder-auth) helper: it sends x-builder-token. Only a confirmed
@@ -1140,11 +1165,15 @@ function App() {
       // Phase 14A — callers that need the HTTP status / server payload (the governance client maps 409 / 422 / 403 to
       // authoritative-state handling) read them from the thrown error; the message contract is unchanged.
       const requestError = new Error(
-        data.error || `HTTP ${response.status}`
+        data?.error || userFacingMessage(undefined, response.status, "حدث خطأ.")
       ) as Error & { status?: number; payload?: unknown };
       requestError.status = response.status;
       requestError.payload = data;
       throw requestError;
+    }
+
+    if (data === null) {
+      throw new Error(UNEXPECTED_RESPONSE_TEXT);
     }
 
     return data;

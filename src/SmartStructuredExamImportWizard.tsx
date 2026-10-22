@@ -10,7 +10,7 @@ import { validateStructuredExam, type StructuredIssue } from "./examQuality";
 import { repairStructuredExamSafely, type SafeRepairChange } from "./structuredSafeRepair";
 import { collectAiTargets, applyProposal, proposalIsFresh, groupOfCode, ISSUE_GROUP_LABELS, type StructuredAiProposal, type AiTarget, type IssueGroup } from "./structuredAiProposal";
 import { detectedQuestionsToStructuredExam, type PdfDetectedQuestion } from "./structuredPdfImport";
-import { withTrackingCode } from "./lib/requestTrace";
+import { teacherFetchJson } from "./teacherFetch";
 import "./structured-builder.css";
 import "./smart-import.css";
 
@@ -69,15 +69,9 @@ export default function SmartStructuredExamImportWizard({ token, onClose, onOpen
   const titleId = "ux6d-title-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const liveId = "ux6d-live-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
-  const api = useCallback(async <T,>(url: string, options: RequestInit = {}): Promise<T> => {
-    const h = new Headers(options.headers || {});
-    if (!(options.body instanceof ArrayBuffer)) h.set("Content-Type", "application/json");
-    h.set("x-builder-token", token); h.set("Authorization", "Bearer " + token);
-    const r = await fetch(url, { ...options, headers: h });
-    const j = await r.json() as T & { error?: string };
-    if (!r.ok) throw new Error(withTrackingCode(j.error || "حدث خطأ.", r.status, r));
-    return j;
-  }, [token]);
+  // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text (a binary body
+  // keeps its own content type).
+  const api = useCallback(<T,>(url: string, options: RequestInit = {}): Promise<T> => teacherFetchJson<T>(token, url, options), [token]);
 
   const liveIssues = useMemo(() => (exam ? validateStructuredExam(exam) : []), [exam]);
   const remainingBlocking = liveIssues.filter(i => i.severity === "error").length;

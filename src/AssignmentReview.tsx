@@ -42,6 +42,7 @@ import type {RubricAwardsInput} from "./openResponse/RubricGradingPanel";
 // hydrated), whether a selection is complete (save gate) and the provisional score — never through child effects.
 import {openResponseReviewModel,scoreOpenResponseRubric} from "./openResponseQuestion";
 import {SAVE_LABELS} from "./teacher/saveLabels";
+import {announceTeacherSessionExpired,teacherFetchJson} from "./teacherFetch";
 const RubricGradingPanel=lazy(lazyWithRetry(()=>import("./openResponse/RubricGradingPanel"),"teacher-rubric-grading"));
 // Phase 19G — the scenario CONTEXT (title, instructions, shared sources) a linked question was answered in: the server emits the same strict
 // projection the student saw, once per scenario; shown above the response so the teacher grades in context. Lazy (own chunk).
@@ -109,7 +110,8 @@ export default function AssignmentReview({token,assignmentId,studentId,initialAt
  const localRef=useRef<Local>({s:{},c:{},f:"",rb:{},po:{},baseline:"",attempt:initialAttempt});
  useEffect(()=>{mountedRef.current=true;return ()=>{mountedRef.current=false}},[]);
  const headers=()=>{const h=new Headers();h.set("Content-Type","application/json");h.set("x-builder-token",token);h.set("Authorization","Bearer "+token);return h};
- async function api<T>(url:string,options:RequestInit={}):Promise<T>{const r=await fetch(url,{...options,headers:headers()}),j=await r.json() as T&{error?:string};if(!r.ok)throw new Error(j.error||"حدث خطأ.");return j}
+ // Batch 5 (F1): teacherFetch — an expired session signs the teacher out; never English or parser text.
+ function api<T>(url:string,options:RequestInit={}):Promise<T>{return teacherFetchJson<T>(token,url,options)}
  async function load(n=attemptNumber){
   const seq=++readSeq.current,ctx=assignmentId+"|"+studentId+"|"+n;contextRef.current=ctx;
   // A different student / assignment is a different review: its previous data is never shown while the new one loads.
@@ -141,6 +143,7 @@ export default function AssignmentReview({token,assignmentId,studentId,initialAt
   finally{actionRef.current=false}
   if(!mountedRef.current||contextRef.current!==ctx)return {stale:true};
   if(!res)return {ok:false,message:actionErrorMessage(0,"")};
+  if(res.status===401)announceTeacherSessionExpired();
   if(res.ok){void load(n);return {ok:true}}
   if(res.status===404||res.status===409)void load(n);
   return {ok:false,message:actionErrorMessage(res.status,typeof body?.code==="string"?body.code:"",extractRequestId(res))};
