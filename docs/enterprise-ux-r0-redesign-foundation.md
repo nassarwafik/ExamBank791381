@@ -2540,6 +2540,101 @@ guard named in the table.
 
 ---
 
+# Phase UX-R16 — The login and public pages
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R16 depends on R1 (merged), so it branches
+from `main` `ea357456` as `feature/ux-r16-login-public`, in parallel with R13–R15; they share only this record and the capture
+harness.
+
+## R16.1 What changes for the user
+
+The screens a visitor sees before or outside a session: the login (teachers and students share it), the login illustration, the
+error screen of the application boundary and the offline page the service worker serves. **Presentation only:** the login form,
+session validation, role selection, routing, the boundary's messages and logging and the offline page's static contract are
+unchanged.
+
+- **The login hero takes the purple palette:** a deep purple gradient (`--eb-navy` → `--eb-primary` → `--eb-primary-strong`) with
+  one soft light at the top corner. It was navy → blue with a sky-blue light. Every hero text keeps ≥ 7:1 on each stop
+  (guarded by computing the ratios from the tokens).
+- **The illustration takes the palette too.** Its colours were blue attributes in `App.tsx`; they are classes now, coloured
+  from the purple tokens in `login-pro.css`. The mask's white stops are luminance and stay.
+- **The form card is the reference's flat 8 px hairline card** with the heading colour. App.css's legacy `.login-card` gave it a
+  12 px radius, a large shadow and a slate `#0f172a` heading; the override is scoped to the login root.
+- **The submit is the reference's flat primary:** no gradient, no glow, no lift on hover (a lighter purple instead).
+- **The role chips and the error message read tokens** (the blue `#d9e5fb` border and the `#b42318` / `#f2cccc` literals are gone).
+  `login-pro.css` holds no colour literal any more.
+- **The error screen** reads the tokens, with the reference values as fallbacks: a flat 8 px card on the page background, the
+  heading and muted text colours, an 8 px primary button. It was a slate card (`#0f172a`, `#64748b`, `#f5f7fa`) with a 20 px
+  radius and a large shadow.
+- **The offline page** mirrors the palette as literals (it is served offline and loads nothing, so it cannot read the tokens):
+  the page background, heading, hairline, muted text and an 8 px primary button. It was slate with a blue `#2563eb` button.
+
+**Not changed, on purpose:** the Tadris+ navy brand colour (`theme-color`, the manifest and the offline brand mark, BRAND-005);
+the login layout, the phone banner and its 900 px collapse (brand.10a); the 44 px controls and focus ring (21E); the install card
+and the empty state, which already use the kit (R3: flat card, dashed 8 px empty state, quiet tones).
+
+## R16.2 Edit set
+
+- **`src/login-pro.css`:** the hero, kicker, lead, points, role chips, role pills, error and submit read tokens; one block
+  appended for the illustration's colours and the flat form card.
+- **`src/App.tsx`:** the illustration's six colour attributes become classes (`auth-net-glow`, `-rings`, `-links`, `-halos`,
+  `-nodes`, `-hubs`). Its shapes, mask and `aria-hidden` are unchanged (brand.10a).
+- **`src/ErrorBoundary.tsx`:** the inline styles read the tokens with the reference values as fallbacks; the card shadow is gone.
+- **`public/offline.html`:** the reference values; the brand mark and theme colour unchanged.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **2 246** (`login-pro.css` 20 → 0, its entry removed).
+- **`src/login.ux-r16.test.ts`:** new, 10 guards.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** two scripted pages: `login-error` (a refused sign-in) and `offline`.
+
+## R16.3 Fail-first evidence
+
+Not applicable: R16 fixes no defect. The login, its error state and the offline page were clean before and after at every
+viewport.
+
+## R16.4 Mutation proof
+
+Each mutant was planted alone. The run covered the R16 guards, brand.10a, ErrorBoundary, the service-worker suite, the student
+login isolation suite, the colour ratchet, `ux2-shell-foundation` and `src/designSystem`. Each file was restored byte-for-byte
+after its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | the hero back to the navy → blue gradient | KILLED | colour ratchet; ux-r16 «the hero is the deep purple gradient…» |
+| M2 | the sky-blue light source returns | KILLED | colour ratchet; ux-r16 |
+| M3 | the lead takes a mid purple (below 7:1) | KILLED | ux-r16 «every hero text colour keeps ≥ 7:1…» |
+| M4 | the submit gradient returns | KILLED | ux-r16 «the submit is a flat primary…» |
+| M5 | the submit glow returns | KILLED | same |
+| M6 | the hover lift returns | KILLED | same |
+| M7 | the error text back to a literal | KILLED | colour ratchet; ux-r16 |
+| M8 | the role chip border back to the blue literal | KILLED | colour ratchet; ux-r16 |
+| M9 | an illustration part loses its token colour | KILLED | ux-r16 «login-pro.css colours each part…» |
+| M10 | the glow stop back to blue | KILLED | colour ratchet; ux-r16 |
+| M11 | a blue colour attribute back in the constellation | KILLED | ux-r16 «App.tsx carries classes only…» |
+| M12 | an illustration group loses its class | KILLED | same |
+| M13 | the error card shadow returns | KILLED | ux-r16 «the error boundary reads the tokens…» |
+| M14 | the error heading back to slate | KILLED | same |
+| M15 | the error card back to 20 px | SURVIVED on the first run (the radius string also appears on the button); the guard now counts both radii and bans a numeric one: **KILLED** on the re-run | same |
+| M16 | the offline button back to blue | KILLED | ux-r16 «the offline page…» (the run also showed the student-login isolation suite failing; it passes alone and on the full suite — a load-timing failure, not this mutant) |
+| M17 | the offline brand mark recoloured (BRAND-005) | KILLED | ux-r16 «… the brand mark and theme colour stay navy» |
+| M18 | a physical side in the login sheet | KILLED | brand.10a «hero … uses logical/RTL-safe properties» |
+| M19 | the form card keeps the legacy shadow | KILLED | ux-r16 «the form card is a flat 8 px card…» |
+| M20 | the form card heading stays slate | KILLED | same |
+
+20 / 20 KILLED (one after the guard was strengthened), no TIMEOUT. `git status` showed only the committed R16 edit set before and after.
+
+## R16.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `login`, `login-error`, `offline` (1440 / 1024 / 390 px) | before **9 / 9** clean; after **9 / 9** clean |
+| `npm test`, full root suite (`b457ee0d`) | 1 188 files, **14 143 / 14 143** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **2 246** (was 2 266) |
+| Browser gates | none is triggered by these files (U.1 and L.8 path filters); the Quality Gate runs on every PR |
+
+---
+
 # Phase UX-R16b — The network, coding and rich-content editors' colours
 
 **Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R16b depends on R16a (merged, #413) for the

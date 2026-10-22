@@ -69,7 +69,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             alignItems: "center",
             justifyContent: "center",
             padding: 24,
-            background: "#f5f7fa",
+            background: "var(--eb-bg, #f7f6fa)",
             fontFamily: '"IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif',
           }}
         >
@@ -77,25 +77,24 @@ export default class ErrorBoundary extends Component<Props, State> {
             style={{
               maxWidth: 440,
               width: "100%",
-              background: "#fff",
-              border: "1px solid #e9edf4",
-              borderRadius: 20,
+              background: "var(--eb-surface, #ffffff)",
+              border: "1px solid var(--eb-line, #e9e8ee)",
+              borderRadius: "var(--eb-r, 8px)",
               padding: "32px 28px",
               textAlign: "center",
-              boxShadow: "0 24px 60px -28px rgba(15,23,42,.18)",
             }}
           >
-            <h1 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 800, color: "#0f172a" }}>{title}</h1>
-            <p style={{ margin: "0 0 22px", color: "#64748b", fontSize: 14, lineHeight: 1.8 }}>{body}</p>
+            <h1 style={{ margin: "0 0 10px", fontSize: 20, fontWeight: 800, color: "var(--eb-text-heading, #1c1330)" }}>{title}</h1>
+            <p style={{ margin: "0 0 22px", color: "var(--eb-muted, #5f5a6e)", fontSize: 14, lineHeight: 1.8 }}>{body}</p>
             <button
               onClick={() => window.location.reload()}
               style={{
                 border: 0,
                 cursor: "pointer",
                 padding: "12px 26px",
-                borderRadius: 12,
+                borderRadius: "var(--eb-r, 8px)",
                 background: "var(--eb-primary, #2a0a4e)",
-                color: "#fff",
+                color: "var(--eb-surface, #ffffff)",
                 fontWeight: 800,
                 fontSize: 14,
               }}

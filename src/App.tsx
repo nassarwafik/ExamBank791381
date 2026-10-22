@@ -5648,7 +5648,8 @@ function App() {
           {/* Phase 10A — hero illustration: a network constellation + signal rings that FADE OUT before the lower third
               (mask), so nothing draws across the bottom of the panel; decorative only. Sized by CSS (width 100%, intrinsic
               aspect, clipped by the panel) — deliberately NO preserveAspectRatio: that attribute is the bundle guard's
-              signature for lazy learning visuals and must never appear in the initial chunk. */}
+              signature for lazy learning visuals and must never appear in the initial chunk. UX-R16: the colours come from
+              login-pro.css (the purple tokens), never from attributes; the mask's white is luminance, not a colour. */}
           <svg className="auth-net" viewBox="0 0 640 800" aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="auth-net-fade" x1="0" y1="0" x2="0" y2="1">
@@ -5657,29 +5658,29 @@ function App() {
                 <stop offset=".82" stopColor="#fff" stopOpacity="0" />
               </linearGradient>
               <mask id="auth-net-mask"><rect width="640" height="800" fill="url(#auth-net-fade)" /></mask>
-              <radialGradient id="auth-net-glow"><stop offset="0" stopColor="#60a5fa" stopOpacity=".5" /><stop offset="1" stopColor="#60a5fa" stopOpacity="0" /></radialGradient>
+              <radialGradient id="auth-net-glow" className="auth-net-glow"><stop offset="0" stopOpacity=".5" /><stop offset="1" stopOpacity="0" /></radialGradient>
             </defs>
             <circle cx="520" cy="110" r="280" fill="url(#auth-net-glow)" />
             <g mask="url(#auth-net-mask)">
-              <g fill="none" stroke="#fff" strokeOpacity=".07" strokeWidth="1.25">
+              <g className="auth-net-rings" fill="none" strokeOpacity=".07" strokeWidth="1.25">
                 <circle cx="520" cy="110" r="90" /><circle cx="520" cy="110" r="165" /><circle cx="520" cy="110" r="240" />
               </g>
-              <g fill="none" stroke="#93c5fd" strokeOpacity=".38" strokeWidth="1.5" strokeLinecap="round">
+              <g className="auth-net-links" fill="none" strokeOpacity=".38" strokeWidth="1.5" strokeLinecap="round">
                 <path d="M92 150 L212 218 L332 156 L452 236 L560 176" />
                 <path d="M212 218 L184 366 L322 424 L452 236" />
                 <path d="M332 156 L322 424" />
                 <path d="M92 150 L62 306 L184 366" />
                 <path d="M560 176 L598 336 L452 236" />
               </g>
-              <g fill="#bfdbfe" fillOpacity=".16">
+              <g className="auth-net-halos" fillOpacity=".16">
                 <circle cx="92" cy="150" r="16" /><circle cx="212" cy="218" r="20" /><circle cx="332" cy="156" r="16" /><circle cx="452" cy="236" r="20" />
                 <circle cx="560" cy="176" r="16" /><circle cx="184" cy="366" r="14" /><circle cx="322" cy="424" r="16" /><circle cx="62" cy="306" r="12" /><circle cx="598" cy="336" r="12" />
               </g>
-              <g fill="#dbeafe">
+              <g className="auth-net-nodes">
                 <circle cx="92" cy="150" r="5" /><circle cx="332" cy="156" r="5" /><circle cx="560" cy="176" r="5" /><circle cx="184" cy="366" r="4.5" />
                 <circle cx="322" cy="424" r="5" /><circle cx="62" cy="306" r="4" /><circle cx="598" cy="336" r="4" />
               </g>
-              <g fill="#7dd3fc"><circle cx="212" cy="218" r="6.5" /><circle cx="452" cy="236" r="6.5" /></g>
+              <g className="auth-net-hubs"><circle cx="212" cy="218" r="6.5" /><circle cx="452" cy="236" r="6.5" /></g>
             </g>
           </svg>
 
