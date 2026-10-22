@@ -67,6 +67,7 @@ describe("UX-R16a — the converted sheets", () => {
     expect(css["physicsMotion/motion.css"]).toContain(".motion-vector.is-weight line, .motion-vector.is-normal line { stroke: #6b3fa0; }");
     expect(css["physicsMotion/motion.css"]).toContain(".motion-vector.is-friction line { stroke: #b4561d; }");
     expect(css["physicsLab/lab.css"]).toContain(".lab-bar.is-ke rect, .lab-legend .is-ke .lab-swatch { fill: #1d6fd6; background: #1d6fd6; }");
+    expect(css["physicsLab/lab.css"]).toContain(".lab-dyn .xp-dyn-series.is-ke { stroke: #1d6fd6; }");
     expect(css["chemistryStructure/chem.css"]).toContain(".chem-electron { fill: #1d6fd6; stroke: #0d3f80; stroke-width: 1; }");
     expect(css["chemistryLab/chemLab.css"]).toContain(".clab-swatch.clab-s1, .xp-dyn-series.clab-s1 { background: #1d6fd6; stroke: #1d6fd6; }");
     expect(css["physicsFreeFall/freefall.css"]).toContain(".freefall-curve { fill: none; stroke: #1d6fd6; stroke-width: 2.5; }");
