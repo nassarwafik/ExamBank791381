@@ -602,12 +602,12 @@ const SCRIPTED = [
     await page.locator(".qt-card").first().focus();
     await page.waitForTimeout(200);
   } },
-  // The builder's menus open from the keyboard, as a keyboard user opens them: at 1024 px the studio's top-bar tools sit under
-  // «حفظ مؤقت» and «متابعة», so a pointer cannot reach them (a product finding the record carries, §R19a.5).
+  // The builder's menus open with a pointer click, which fails if anything covers the trigger: before UX-R19a-fix the studio's
+  // top-bar tools sat under «حفظ مسودة» and «متابعة» from 1024 to 1439 px (§R19a.5), and these scenes guard that fix.
   { id: "state-classic-builder", role: "teacher", nav: "باني الامتحان", run: async page => {
     await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
     await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
-    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().click({ timeout: 15000 });
     await page.locator(".eb-menu-panel[data-ready='true'] [data-action='layout']").click({ timeout: 15000 });
     await page.locator(".sb-builder:not(.st-studio)").waitFor({ timeout: 15000 });
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -615,7 +615,7 @@ const SCRIPTED = [
   { id: "state-governance", role: "teacher", nav: "باني الامتحان", scene: "governance", run: async page => {
     await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
     await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
-    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".st-menu[aria-label='أدوات الامتحان']").first().click({ timeout: 15000 });
     await page.locator(".eb-menu-panel[data-ready='true'] [data-action='governance']").click({ timeout: 15000 });
     await page.getByTestId("gov-workflow").waitFor({ timeout: 15000 });
     await page.waitForTimeout(300);
@@ -623,7 +623,7 @@ const SCRIPTED = [
   { id: "state-ai-composer", role: "teacher", nav: "باني الامتحان", run: async page => {
     await page.getByRole("button", { name: /امتحان فارغ/ }).first().click({ timeout: 15000 });
     await page.getByRole("navigation", { name: "خطوات العمل" }).getByRole("button", { name: /المحتوى/ }).click({ timeout: 15000 });
-    await page.locator(".st-menu[aria-label='إضافة أسئلة']").first().press("Enter", { timeout: 15000 });
+    await page.locator(".st-menu[aria-label='إضافة أسئلة']").first().click({ timeout: 15000 });
     await page.locator(".eb-menu-panel[data-ready='true'] [data-action='ai-composer']").click({ timeout: 15000 });
     await page.getByRole("dialog").last().waitFor({ timeout: 15000 });
     await page.waitForTimeout(300);

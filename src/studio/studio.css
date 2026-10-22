@@ -51,7 +51,7 @@
 /* ---------- top bar ---------- */
 .st-studio .st-topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr); /* the end column never narrower than its tools (UX-R19a finding 1) */
   align-items: center;
   gap: var(--eb-space-4);
   min-block-size: var(--st-topbar-h);
@@ -454,11 +454,12 @@
 @media (max-width: 1279px) {
   .st-studio .st-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .st-studio .st-cols > :first-child { grid-column: 1 / -1; }
+  /* one row no longer holds title, steps and tools: the steps take a second row */
+  .st-studio .st-topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .st-studio .st-topbar .st-steps { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
 }
 @media (max-width: 1023px) {
   .st-studio { --st-outline-w: 248px; }
-  .st-studio .st-topbar { grid-template-columns: minmax(0, 1fr) auto; }
-  .st-studio .st-topbar .st-steps { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
   .st-studio .st-btn .st-btn-label { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .st-studio .st-btn.is-primary .st-btn-label { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; }
   .st-studio .st-canvas { padding: 20px 16px 96px; }

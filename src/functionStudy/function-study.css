@@ -17,6 +17,8 @@
 .fnstudy-task { display: grid; gap: 8px; margin: 0; padding: 10px 12px; border: 1px solid var(--eb-line); border-radius: 10px; min-width: 0; }
 .fnstudy-task legend { font-weight: 700; padding: 0 4px; }
 .fnstudy-task label, .fnstudy-editor label { display: grid; gap: 4px; }
+/* UX-R19a finding 2 — a text field's natural width (about 335 px) no longer widens its card's column past the card, nor the page */
+.fnstudy-task, .fnstudy-task label, .fnstudy-editor label { grid-template-columns: minmax(0, 1fr); }
 .fnstudy-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
 .fnstudy input, .fnstudy select, .fnstudy-editor input, .fnstudy-editor select { min-height: 40px; padding: 6px 8px; border: 1px solid var(--eb-line); border-radius: 8px; font: inherit; max-width: 100%; box-sizing: border-box; }
 .fnstudy-row input { width: 7.5em; }

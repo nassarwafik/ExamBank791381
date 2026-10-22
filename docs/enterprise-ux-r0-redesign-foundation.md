@@ -3616,7 +3616,7 @@ overflow (finding 2).
 
 1. **The studio's top bar covers its own tools between 1024 and 1439 px.** The bar's three columns are `1fr auto 1fr`, so the end
    column shrinks with the viewport. The tools group (`.st-topbar-tools`, `min-inline-size: 0`) then shrinks below its contents, and
-   its buttons slide under «حفظ مؤقت» and «متابعة». Measured with `elementFromPoint` at the centre of each button:
+   its buttons slide under «حفظ مسودة» and «متابعة». Measured with `elementFromPoint` at the centre of each button:
 
    | Viewport | Tools width (contents need 302 px) | Buttons a pointer cannot reach |
    |---|---|---|
@@ -3645,3 +3645,126 @@ overflow (finding 2).
 | `git diff --check` | clean |
 | `scripts/ux-r19a-scenes.test.mjs` | 7 / 7 |
 | colour inventory | unchanged (no stylesheet touched) |
+
+---
+
+# Phase UX-R19a-fix — The studio's top bar and the function-study cards
+
+**Owner direction (2026-10-22):** fix the two product findings of §R19a.5 before R19a's successor, R19b, so the gate starts from a
+page set with no failing check. R19a-fix branches from `main` `5fd56323` (#422, R19a) as `feature/ux-r19a-fix-layout-overflow`.
+
+## R19a-fix.1 What changes
+
+**1. The studio's top bar keeps every tool reachable.**
+- **The defect:** the bar's three columns were `minmax(0, 1fr) auto minmax(0, 1fr)`, so the end column shrank with the viewport. The
+  tools group (`min-inline-size: 0`) then shrank below its contents, and its buttons slid under «حفظ مسودة» and «متابعة».
+- **The fix:**
+  - the end column is `minmax(max-content, 1fr)`: it is never narrower than its contents. Where there is room (about 1550 px and wider)
+    both side columns stay equal and the steps stay centred, as before.
+  - below 1280 px, where one row cannot hold the title, the steps and the tools, the steps take a second row. The rule moved from
+    the 1023 px block to the 1279 px block, so the tablet layout of 1023 px and below now starts at 1279 px.
+
+**2. The function-study cards stay inside the page.**
+- **The defect:** a card (`.fnstudy-task`, a grid) and its labels (grids) sized their single column by their contents. A text field's
+  natural width (about 335 px) was wider than four of the cards (exclusions, y-intercept and the two asymptote cards), so the field
+  and the rows below it ran past the card. At 1024 px the page was 1036 px wide; at 390 px it was 421 px, and the page scrolled 31 px
+  sideways. At 1440 px the fields ran into the neighbouring cards without widening the page.
+- **The fix:** the card's column and its labels' columns are `minmax(0, 1fr)`. The field keeps its `max-width: 100%`, so it now
+  fits its card, and long labels wrap. The teacher's editor labels take the same rule.
+
+**3. The capture harness clicks the builder's menus again.** R19a opened them from the keyboard, because a pointer could not reach them
+at 1024 px. With the fix, the three builder scenes click with a pointer, and Playwright fails a click on a covered trigger. The scenes
+now guard the fix at every viewport.
+
+## R19a-fix.2 Edit set
+
+- **`src/studio/studio.css`:** the top bar's end column; the steps' second row moved to the 1279 px block.
+- **`src/functionStudy/function-study.css`:** one rule, `.fnstudy-task, .fnstudy-task label, .fnstudy-editor label { grid-template-columns: minmax(0, 1fr); }`.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the three builder scenes click their menus.
+- **`src/designSystem/layoutFixes.ux-r19a-fix.test.ts`:** new, 4 guards:
+  - the end column is never narrower than its contents;
+  - the steps' second row below 1280 px, with the phone's grid areas kept;
+  - the harness clicks the builder's menus;
+  - the function-study rule.
+
+No markup, behaviour, data or colour changes. The colour inventory is unchanged.
+
+## R19a-fix.3 Fail-first evidence
+
+**In the browser (the defect itself).** Each button of the top bar was tested with `elementFromPoint` at its centre, on the `main`
+build and on the fix:
+
+| Viewport | `main`: buttons a pointer cannot reach | Fix |
+|---|---|---|
+| 1024 | «إضافة أسئلة», «الأوامر», «أدوات الامتحان», «معاينة», «حفظ مسودة» | none |
+| 1100 / 1180 | «إضافة أسئلة», «الأوامر», «أدوات الامتحان», «معاينة» | none |
+| 1279 | «الأوامر», «أدوات الامتحان», «معاينة» | none |
+| 1280 | «أدوات الامتحان», «معاينة» | none |
+| 1366 | «معاينة» | none |
+| 1440 / 1536 / 1600 / 1920 | none | none |
+
+The function-study page with the harness's overflow check:
+
+| Viewport | `main` | Fix |
+|---|---|---|
+| 1024 | FAIL, 1036 > 1024 | PASS |
+| 390 | FAIL, 421 > 390 | PASS |
+
+**The guards.** The guard file was copied into a detached worktree of `main` (`6991094c` sources, `5fd56323` harness). There, **4 of 4
+fail**. On the head, 4 / 4 pass.
+
+## R19a-fix.4 Mutation proof
+
+Five mutants. Each was planted alone, and `src/designSystem`, `src/studio`, `src/functionStudy` and `scripts` ran against it. Each
+file was restored and SHA-256 checked, and `git status` was identical before and after the campaign.
+
+| # | Planted defect | Result | Killed by |
+|---|---|---|---|
+| F1 | the end column back to `minmax(0, 1fr)` | KILLED | the end column guard |
+| F2 | the steps' second row dropped from the 1279 px block | KILLED | the second row guard |
+| F3 | the function-study rule removed | KILLED | the function-study guard |
+| F4 | only the card's column fixed, not its labels' | KILLED | the function-study guard |
+| F5 | the harness opens the tools menu from the keyboard again | KILLED | the harness guard |
+
+**5 / 5 killed**, no timeout, every file restored.
+
+**F4 in the browser.** A guard that pins a string can kill a mutant the browser would not notice, so F4 was also built and captured.
+The overflow returns (1036 > 1024 and 421 > 390), so the labels' part of the rule is needed.
+
+**The harness as a guard.** The three builder scenes, which now click, were run on both builds:
+- **Fix:** 9 / 9 reached.
+- **`main`:** the three scenes fail at 1024 (`locator.click` times out on the covered trigger).
+
+## R19a-fix.5 Captures and local validation
+
+**Captures.** The fix build was captured with the R19a harness and compared with the `main` build, threshold > 12 levels per
+channel.
+
+| Result | Captures |
+|---|---|
+| clean checks | **207 / 207** (`main`: 205 / 207, the function-study overflow) |
+| unchanged | 187 (183 bit-identical, 4 by 1–2 levels) |
+| changed, as intended | 19: at 1440 and 1024, the studio's four steps and its four scenes (title focus, question types, governance, AI composer); `sim-functionStudy` at all three viewports |
+| changed, not by this phase | 1: `assignments` at 1440, 63 px shorter |
+
+**What each intended change shows:**
+- **The studio at 1440:** «إضافة» is whole again (before, it was squeezed and lost its «+» icon), and the steps shift toward the
+  title.
+- **The studio at 1024:** the steps take a second row, and every tool is visible.
+- **The function-study cards:** every field fits its card, and long labels wrap. Each viewport is 48–72 px taller.
+
+**`assignments` is a capture flake, not a change.** Its content is identical, and only the empty space below it is shorter. The
+record's page height is 1021 px in every run. Captured three more times on each build, it is 1021 px every time. R19a's two-run
+proof did not show it, so the full-page screenshot can, rarely, catch the document mid-resize. **R19b has to handle this** before it
+gates on pixels, for example by waiting for a stable document height before the screenshot.
+
+**Local validation on the head:**
+
+| Check | Result |
+|---|---|
+| `npx vitest run` | 1 204 files, 14 261 tests passed, 0 failed |
+| `npm run lint` | exit 0, 0 errors (the existing warnings only) |
+| `npx tsc -b` | exit 0 |
+| `npm run build` | passed, bundle guard passed |
+| `git diff --check` | clean |
+| colour inventory | unchanged, 756 in 52 sheets |
