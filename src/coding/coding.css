@@ -4,48 +4,48 @@
 .cx-coding-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .cx-coding-toolbar label { display: inline-flex; align-items: center; gap: 6px; }
 .cx-coding-toolbar select, .cx-coding-toolbar button, .cx-run-button { min-height: 44px; }
-.cx-lang-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--eb-border, #cbd5e1); font: 600 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; direction: ltr; }
+.cx-lang-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--eb-border, var(--eb-content-grid)); font: 600 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; direction: ltr; }
 
 .cx-code-editor { direction: ltr; text-align: left; display: grid; gap: 4px; min-width: 0; }
-.cx-code-frame { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--eb-border, #cbd5e1); border-radius: 10px; overflow: hidden; background: var(--eb-surface, #fff); }
+.cx-code-frame { display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--eb-border, var(--eb-content-grid)); border-radius: 10px; overflow: hidden; background: var(--eb-surface); }
 .cx-code-frame:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter {
   margin: 0; padding: 10px 12px; font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; tab-size: 4;
 }
-.cx-code-gutter, .cx-code-view-gutter { min-width: 3ch; padding-inline: 8px; text-align: right; color: var(--eb-muted, #64748b); background: var(--eb-surface-2, #f8fafc); border-inline-end: 1px solid var(--eb-border, #e2e8f0); white-space: pre; overflow: hidden; user-select: none; }
+.cx-code-gutter, .cx-code-view-gutter { min-width: 3ch; padding-inline: 8px; text-align: right; color: var(--eb-muted, var(--eb-content-muted)); background: var(--eb-surface-2, var(--eb-surface)); border-inline-end: 1px solid var(--eb-border, var(--eb-content-line)); white-space: pre; overflow: hidden; user-select: none; }
 .cx-code-input { display: block; width: 100%; min-height: 12rem; max-height: 70vh; resize: vertical; border: 0; outline: none; background: transparent; color: inherit; white-space: pre; overflow: auto; direction: ltr; text-align: left; }
-.cx-code-input[readonly] { background: var(--eb-surface-2, #f8fafc); }
+.cx-code-input[readonly] { background: var(--eb-surface-2, var(--eb-surface)); }
 /* Phase 18B — native editor presentation preferences: font size through a CSS variable set on the frame (never on the text), soft wrap
    through the textarea's own `wrap` attribute (horizontal scrolling stays the default), and a polite engine status row. */
 .cx-code-frame { --cx-font-size: 14px; }
 .cx-code-gutter, .cx-code-input { font-size: var(--cx-font-size, 14px); }
 .cx-code-input[wrap="soft"] { white-space: pre-wrap; overflow-wrap: anywhere; }
-.cx-engine-status { margin: 0; font-size: 12px; color: var(--eb-muted, #64748b); direction: rtl; }
+.cx-engine-status { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-muted)); direction: rtl; }
 .cx-code-editor--fill .cx-code-input { max-height: none; }
-.cx-code-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--eb-muted, #64748b); direction: rtl; }
-.cx-code-size.is-near { color: var(--eb-warning, #b45309); font-weight: 600; }
+.cx-code-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--eb-muted, var(--eb-content-muted)); direction: rtl; }
+.cx-code-size.is-near { color: var(--eb-warning, var(--eb-warn-tx)); font-weight: 600; }
 .cx-code-alert { color: var(--eb-danger, #b91c1c); font-size: 13px; direction: rtl; }
 
 .cx-samples { display: grid; gap: 8px; }
-.cx-sample { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-sample { border: 1px solid var(--eb-border, var(--eb-content-line)); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
 .cx-io-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 8px; }
 .cx-io-block { display: grid; gap: 2px; min-width: 0; }
-.cx-io-block pre, .cx-result pre { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-surface-2, #f8fafc); direction: ltr; text-align: left; white-space: pre; overflow: auto; max-height: 14rem; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.cx-run-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, #f1f5f9); font-size: 13px; }
-.cx-result { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-io-block pre, .cx-result pre { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-surface-2, var(--eb-surface)); direction: ltr; text-align: left; white-space: pre; overflow: auto; max-height: 14rem; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.cx-run-note { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, var(--eb-content-ground)); font-size: 13px; }
+.cx-result { border: 1px solid var(--eb-border, var(--eb-content-line)); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
 .cx-result-status::before { content: "● "; }
-.cx-result[data-status="success"] .cx-result-status { color: var(--eb-success, #15803d); }
+.cx-result[data-status="success"] .cx-result-status { color: var(--eb-success, var(--eb-success-tx)); }
 .cx-result:not([data-status="success"]) .cx-result-status { color: var(--eb-danger, #b91c1c); }
 
 /* Teacher authoring */
 .cx-author { display: grid; gap: 14px; }
-.cx-author fieldset { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.cx-author fieldset { border: 1px solid var(--eb-border, var(--eb-content-line)); border-radius: 10px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; min-width: 0; }
 .cx-author legend { font-weight: 700; padding-inline: 4px; }
 .cx-lang-grid { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .cx-lang-grid label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
-.cx-inspector { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--eb-surface-2, #f8fafc); font-size: 13px; }
-.cx-help { margin: 0; font-size: 13px; color: var(--eb-muted, #475569); }
-.cx-test-row { border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.cx-inspector { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--eb-surface-2, var(--eb-surface)); font-size: 13px; }
+.cx-help { margin: 0; font-size: 13px; color: var(--eb-muted, var(--eb-content-text)); }
+.cx-test-row { border: 1px solid var(--eb-border, var(--eb-content-line)); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
 .cx-test-row.is-private { border-style: dashed; }
 .cx-test-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 .cx-test-actions { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -58,7 +58,7 @@
 /* Teacher review (read-only source) */
 .cx-code-view-wrap { direction: ltr; text-align: left; display: grid; gap: 6px; min-width: 0; }
 .cx-code-view-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; direction: rtl; }
-.cx-code-view-body { display: grid; grid-template-columns: auto minmax(0, 1fr); max-height: 28rem; overflow: auto; border: 1px solid var(--eb-border, #e2e8f0); border-radius: 10px; }
+.cx-code-view-body { display: grid; grid-template-columns: auto minmax(0, 1fr); max-height: 28rem; overflow: auto; border: 1px solid var(--eb-border, var(--eb-content-line)); border-radius: 10px; }
 .cx-code-view { white-space: pre; overflow: visible; }
 .cx-code-view:focus-visible { outline: var(--eb-focus-ring); outline-offset: -2px; }
 .cx-key-summary { display: grid; gap: 6px; direction: rtl; font-size: 13px; }
@@ -79,7 +79,7 @@
 .cx-sample-pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .cx-sample-pick button { min-height: 44px; }
 .cx-run-button[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
-.cx-run-progress { font-size: 13px; color: var(--eb-muted, #475569); }
+.cx-run-progress { font-size: 13px; color: var(--eb-muted, var(--eb-content-text)); }
 .cx-run-results { display: grid; gap: 8px; min-width: 0; }
 .cx-run-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-danger-soft, #fef2f2); color: var(--eb-danger, #b91c1c); font-size: 13px; }
 .cx-run-output { max-width: 100%; max-height: 16rem; overflow: auto; white-space: pre; direction: ltr; text-align: left; }
@@ -92,31 +92,31 @@
 .cx-grading-mode label { display: inline-flex; gap: 6px; align-items: center; }
 /* Phase 17E-D — teacher coding EVIDENCE panel (AssignmentReview). Code / outputs are LTR monospace blocks inside the RTL review;
    every output block is bounded and scrolls INTERNALLY so a long compiler message or 4 KB preview never widens the page. */
-.cx-ev { display: grid; gap: 10px; grid-column: 1 / -1; min-width: 0; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; direction: rtl; font-size: 13px; }
+.cx-ev { display: grid; gap: 10px; grid-column: 1 / -1; min-width: 0; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line, var(--eb-content-grid)); border-radius: 10px; direction: rtl; font-size: 13px; }
 .cx-ev-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .cx-ev-head h4 { margin: 0; font-size: 14px; }
 .cx-ev-head h4:focus { outline: 2px solid currentColor; outline-offset: 2px; }
-.cx-ev-status, .cx-ev-badge { padding: 2px 10px; border-radius: 999px; background: #eef2f7; color: #2b3542; }
+.cx-ev-status, .cx-ev-badge { padding: 2px 10px; border-radius: 999px; background: var(--eb-content-ground); color: var(--eb-content-text); }
 .cx-ev-status.is-success { background: #e6f6ec; color: #17633a; }
 .cx-ev-status.is-warn { background: #fff4e0; color: #7a4a00; }
 .cx-ev-status.is-info { background: #e8f0fb; color: #1d4f91; }
 .cx-ev-badge { background: #efe9fb; color: #4b2a8a; font-weight: 600; }
-.cx-ev-note { margin: 0; padding: 6px 10px; border-radius: 8px; background: #f4f6f9; }
+.cx-ev-note { margin: 0; padding: 6px 10px; border-radius: 8px; background: var(--eb-content-ground-2); }
 .cx-ev-note.is-warn, .cx-ev-technical { background: #fff8eb; }
 .cx-ev-technical { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; }
 .cx-ev-technical p { margin: 0; }
 .cx-ev-support summary { cursor: pointer; }
 .cx-ev-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }
 .cx-ev-facts div { display: flex; gap: 6px; }
-.cx-ev-facts dt { color: #5b6573; }
+.cx-ev-facts dt { color: var(--eb-content-muted); }
 .cx-ev-facts dd { margin: 0; font-weight: 600; }
 .cx-ev-scores { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .cx-ev-score strong { font-size: 15px; }
-.cx-ev-score.is-evidence { color: #5b6573; }
+.cx-ev-score.is-evidence { color: var(--eb-content-muted); }
 .cx-ev-score.is-evidence strong { font-size: 13px; font-weight: 500; }
 .cx-ev-score.is-authority strong { color: #4b2a8a; }
 .cx-ev-summary, .cx-ev-revision, .cx-ev-muted { margin: 0; }
-.cx-ev-muted { color: #5b6573; }
+.cx-ev-muted { color: var(--eb-content-muted); }
 .cx-ev-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .cx-ev-filter button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; }
 .cx-ev-cases { display: grid; gap: 6px; margin: 0; padding-inline-start: 18px; }
@@ -126,14 +126,14 @@
 .cx-ev-case.is-pass .cx-ev-case-outcome { color: #17633a; }
 .cx-ev-io, .cx-ev-compile { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); margin-top: 4px; min-width: 0; }
 .cx-ev-io > div { min-width: 0; }
-.cx-ev-output { max-height: 16rem; overflow: auto; margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; text-align: left; unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f6f8fa; padding: 6px 8px; border-radius: 6px; font-size: 12px; min-width: 0; max-width: 100%; }
+.cx-ev-output { max-height: 16rem; overflow: auto; margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; text-align: left; unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--eb-surface); padding: 6px 8px; border-radius: 6px; font-size: 12px; min-width: 0; max-width: 100%; }
 .cx-ev-actions { display: flex; flex-wrap: wrap; gap: 10px 16px; }
 .cx-ev-actions > div { display: grid; gap: 2px; }
-.cx-ev-actions small { color: #5b6573; max-width: 32ch; }
+.cx-ev-actions small { color: var(--eb-content-muted); max-width: 32ch; }
 /* Phase 17E-A — authoring: limit range hints and the inline validation panel (the canonical validator's issues) */
-.cx-limit-hint { color: var(--eb-muted, #64748b); font-size: 12px; }
+.cx-limit-hint { color: var(--eb-muted, var(--eb-content-muted)); font-size: 12px; }
 .cx-limit-hint.is-invalid { color: #b91c1c; font-weight: 600; }
-.cx-validation { border: 1px dashed var(--eb-border, #e2e8f0); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
+.cx-validation { border: 1px dashed var(--eb-border, var(--eb-content-line)); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
 .cx-validation h4 { margin: 0; font-size: 14px; }
 .cx-validation ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; }
 
@@ -141,17 +141,17 @@
    Every panel may shrink to the column (min-width: 0); code, stdin and output scroll INSIDE their own boxes, so the page never
    scrolls sideways on a phone; controls wrap and stay ≥ 44 px touch targets; status is always TEXT (colour is only a hint). */
 .cx-editor-panel, .cx-stdin-panel { display: grid; gap: 6px; min-width: 0; }
-.cx-limits { margin: 0; font-size: 12px; color: var(--eb-muted, #475569); }
+.cx-limits { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-text)); }
 .cx-run-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 .cx-run-controls .cx-run-button { min-height: 44px; padding: 0 18px; font-weight: 700; }
 .cx-run-button.is-secondary { font-weight: 600; }
 .cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
 .cx-run-button[aria-busy="true"] { cursor: progress; }
-.cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, #475569); }
+.cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-text)); }
 .cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--eb-warning-soft, #fffbeb); color: var(--eb-warning, #92400e); font-size: 12px; }
 .cx-public-results { display: grid; gap: 8px; min-width: 0; }
 .cx-public-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-.cx-public-list .cx-result[data-status="pending"] .cx-result-status { color: var(--eb-muted, #475569); }
+.cx-public-list .cx-result[data-status="pending"] .cx-result-status { color: var(--eb-muted, var(--eb-content-text)); }
 .cx-public-list .cx-result[data-status="pending"] .cx-result-status::before { content: "○ "; }
 .cx-samples, .cx-io-grid, .cx-io-block { min-width: 0; }
 @media (max-width: 640px) {
@@ -164,8 +164,8 @@
 /* Phase 17F-C1 — the professional (Monaco) editor surface. The host is a bounded, resizable frame inside the question; the engine
    lays itself out to it (automaticLayout) and scrolls INTERNALLY — the exam page never widens. Colours come from the SmartAssess
    light theme defined with the engine (editor/editorOptions.ts); this only frames it like the rest of the coding UI. */
-.cx-code-rich { display: block; position: relative; min-height: 10rem; max-height: 70vh; resize: vertical; overflow: hidden; background: var(--eb-surface, #fff); box-sizing: content-box; }
+.cx-code-rich { display: block; position: relative; min-height: 10rem; max-height: 70vh; resize: vertical; overflow: hidden; background: var(--eb-surface); box-sizing: content-box; }
 .cx-code-rich .monaco-editor, .cx-code-rich .monaco-editor .overflow-guard { border-radius: 10px; }
-.cx-code-rich .monaco-editor .margin { border-inline-end: 1px solid var(--eb-border, #e2e8f0); }
+.cx-code-rich .monaco-editor .margin { border-inline-end: 1px solid var(--eb-border, var(--eb-content-line)); }
 .cx-code-rich .monaco-editor .find-widget { direction: ltr; }
 .cx-code-editor--rich .cx-code-frame:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }

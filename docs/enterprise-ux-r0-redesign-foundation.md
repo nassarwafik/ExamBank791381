@@ -2635,6 +2635,111 @@ after its mutant (SHA-256).
 
 ---
 
+# Phase UX-R16b — The network, coding and rich-content editors' colours
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence. R16b depends on R16a (merged, #413) for the
+content tokens, so it branches from `main` `a5c38b2d` as `feature/ux-r16b-editor-colours`, in parallel with R16, R16c and R16d.
+They share only this record, the colour baseline and the capture harness.
+
+## R16b.1 What changes for the user
+
+The editors and student views of the network topology (both versions), the network CLI, coding (with its workspace and
+templates), visual questions, rich content, open response, cloze, composite, scenario, parametric and the chart editor. As in
+R16a, one sheet serves the student view, the teacher editor and the review. No reference mockup shows these editors, so R16b moves
+their own colours onto the palette (§4.1). **Presentation only:** nothing an editor validates, a student stores or the API grades
+changes, and no question, key or stored value changes.
+
+- **The slate neutrals move to the content tokens of R16a** (`--eb-content-*`), mapped by luminance:
+  - a foreground is never lighter than before;
+  - a ground or line is never darker;
+  - so no contrast drops.
+- **The control blue becomes the content accent** (buttons, focus rings, pressed toggles, the selected chip).
+- **A selected device, app or chip takes the primary tint** (`--eb-primary-050`) with the content accent. It was a pale blue next to
+  the control blue, and would have clashed with the purple.
+- **The old blue-tinted grounds** (`#f6f8fc`, `#f9fbff`) become the content ground.
+
+**Not changed, on purpose:**
+- **the dark code and CLI surfaces:** the CLI terminal and transcript, and the configuration listings of both network versions,
+  keep their dark ground, light text, LTR direction and monospace font, with everything drawn on them (title bar, prompt, typed
+  text, output, hint, input row, run button);
+- **the status tints:** success, warn, info, the ping and flow results, the issues boxes, the evidence badges and the pass / fail
+  outcomes;
+- **the device kinds:** router blue, switch green, PC amber, access point violet;
+- **the meaning-carrying hues of the visual and scenario editors:** the filled-zone cyan, the context teal, the sandbox violet.
+
+**What counts as a neutral (stricter than R16a):** a grey, or a slate — blue-leaning with HSL saturation ≤ 0.5. A pale warm,
+green, violet or info tint has low chroma too, but it carries a status or a kind, so it stays. The slates measure 0.16–0.40 and
+the tints 0.70–1.0, so the line separates them cleanly.
+
+## R16b.2 Edit set
+
+- **The seventeen sheets:** `charts/chart-editor.css`, `charts/charts.css`, `coding/coding.css`, `coding/codingTemplate.css`,
+  `coding/workspace/workspace.css`, `composite/composite-editor.css`, `composite/composite-review.css`,
+  `inlineCloze/inlineCloze.css`, `networkCli/networkCli.css`, `networkTopology/network-topology.css`, `networkTopology2/net2.css`,
+  `openResponse/openResponse.css`, `parametric/parametric.css`, `richContent/rich-content-editor.css`,
+  `scenario/scenario-builder.css`, `scenario/scenario-student.css`, `visual/visual.css`.
+  - **308 literals converted, 130 kept** (the dark surfaces, the status tints, the device kinds and the meaning-carrying hues).
+  - `var(--x, #fallback)` keeps its variable; only the fallback moves.
+- **`scripts/ux-color-inventory.baseline.json`:** 1 871 → **1 563**. Three sheets leave the baseline (no literal left).
+- **`src/editorColours.ux-r16b.test.ts`:** new, 9 guards:
+  - no slate, grey or white literal outside the dark surfaces;
+  - no control blue;
+  - the selected tint;
+  - each sheet's count;
+  - the dark surfaces, the device kinds and the status tints unchanged;
+  - the fixture pinned to its sources.
+- **`scripts/ux-r16b-editor-fixtures.json`:** the builder's own defaults (`newQuestion`) for the CLI, cloze, open-response and coding
+  questions, and the «roas» classroom template for the network topology. The guard pins it to both, so it cannot drift.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:**
+  - an `editors` scene: one student exam with the five editors, sanitized by the API's own student sanitizer;
+  - five scripted pages (`ed-networkTopology` … `ed-coding`);
+  - a check that fails when a control or a dark surface spills out of the question card.
+
+## R16b.3 Fail-first evidence
+
+Not applicable — R16b fixes no defect. The five editor pages were clean before and after at every viewport (§R16b.5).
+
+## R16b.4 Mutation proof
+
+Each mutant was planted alone. The run covered the R16b guards, the coding suites, the CLI, cloze and coding question suites,
+the second network version, the charts, `src/designSystem` and the colour ratchet. Each file was restored byte-for-byte after its
+mutant (SHA-256).
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| M1 | a slate literal returns (muted help text) | KILLED | colour ratchet; ux-r16b «no slate or grey literal» |
+| M2 | the control blue returns on the pressed focus toggle | KILLED | colour ratchet; ux-r16b «no control blue» |
+| M3 | the CLI terminal loses its dark surface | KILLED | ux-r16b «the CLI terminal … dark» |
+| M4 | the CLI prompt converted to a light neutral | KILLED | same |
+| M5 | a configuration listing loses its LTR direction | KILLED | same |
+| M6 | the router kind tint neutralised | KILLED | ux-r16b «the device kinds» |
+| M7 | the switch kind tint neutralised | KILLED | same |
+| M8 | the success status tint neutralised | KILLED | ux-r16b «the status tints» |
+| M9 | the failed-ping tint neutralised | KILLED | same |
+| M10 | a pressed device back to the blue border | KILLED | colour ratchet; ux-r16b |
+| M11 | a pressed device loses the primary tint | KILLED | ux-r16b «a selected device or app» |
+| M12 | the success hue names the wrong token | KILLED | ux-r16b «status hues that equal a token» |
+| M13 | the filled-zone cyan neutralised | **SURVIVED** first: no guard pinned the visual editor's meaning-carrying hues. The guard now pins the filled zone, the composite context teal and the sandbox violet: **KILLED** | ux-r16b «the hues that carry meaning» |
+| M14 | the answer box back to a white literal | KILLED | colour ratchet; ux-r16b |
+| M15 | the CLI typed text converted (white → surface token) | KILLED | ux-r16b «the CLI terminal … dark» |
+| M16 | the capture fixture drifts from the builder default | KILLED | ux-r16b «the capture fixture» |
+
+16 / 16 KILLED (one after the guard was strengthened), no TIMEOUT. `git status` was identical before and after the campaign.
+
+## R16b.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Capture `ed-networkTopology`, `ed-networkCli`, `ed-inlineCloze`, `ed-openResponse`, `ed-coding` at 1440 / 1024 / 390 px | `main` `a5c38b2d`: **15 / 15** clean; R16b: **15 / 15** clean (no control or dark surface spills out of the question card). The editors render (the diagram, the dark terminal, the fields); the change is the quiet move of the neutrals to the purple-greys |
+| `scripts/check-code-editor-browser.mjs` (real Chromium, local) | **41 / 41** |
+| `npm test`, full root suite (`566210cf`) | 1 192 files, **14 180 / 14 180** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **1 563** (was 1 871) |
+
+---
+
 # Phase UX-R16d — The exam presentation presets (option A)
 
 **Owner decision (2026-10-21):** option A of §4.1. The owner authorized every remaining phase in sequence, and was told R16d would use
