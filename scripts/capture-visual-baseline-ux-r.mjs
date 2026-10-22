@@ -18,6 +18,8 @@
 // and every scripted scene picks its rows by name, never by position. It also captures the states a page capture cannot show
 // (state-* scenes): keyboard focus, hover, a pressed control and an open menu, the classic builder, the builder's governance panel
 // and AI composer, and the function-study widget. Two runs of the same build are pixel-identical on every page and scene.
+// UX-R19b — scripts/ux-visual-gate.mjs runs this harness on a pull request's build and its base's build and compares them; each
+// page waits for a stable document height before its full-page screenshot.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -668,6 +670,12 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       if (pg.run) { await pg.run(page); await page.waitForLoadState("networkidle"); }
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(500);
+      // UX-R19b — a full-page screenshot takes the document's height at that moment: wait until it holds (three equal reads)
+      for (let last = -1, same = 0, i = 0; same < 3 && i < 30; i++) {
+        const h = await page.evaluate(() => document.documentElement.scrollHeight);
+        same = h === last ? same + 1 : 0; last = h;
+        if (same < 3) await page.waitForTimeout(100);
+      }
     } catch (e) { reached = false; errors.push("navigation: " + String(e).split("\n")[0]); }
     const file = path.join(out, vpName, pg.id + ".png");
     await page.screenshot({ path: file, fullPage: true });

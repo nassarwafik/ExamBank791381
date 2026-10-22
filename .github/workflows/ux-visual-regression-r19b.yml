@@ -1,0 +1,74 @@
+name: UX-R19b Visual Regression Gate
+# Adds a gate and weakens none (AGENTS.md §1, §12; docs/enterprise-ux-r0-redesign-foundation.md R19b). Every pull request that
+# touches the app or the capture harness builds its head (the merge commit) and its base (the merge commit's first parent),
+# captures both with the head's harness, and compares every page and scene pixel by pixel, one job per viewport. A change the
+# pull request does not declare in docs/ux-r/visual-changes.json fails it; the before, after and diff images are uploaded.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/capture-visual-baseline-ux-r.mjs"
+      - "scripts/ux-r19a-scene-fixtures.json"
+      - "scripts/ux-visual-gate.mjs"
+      - "scripts/ux-visual-gate-lib.mjs"
+      - "docs/ux-r/visual-changes.json"
+      - ".github/workflows/ux-visual-regression-r19b.yml"
+permissions:
+  contents: read
+concurrency:
+  group: ux-visual-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  visual:
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: [desktop, tablet, phone]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    name: Visual regression (${{ matrix.viewport }})
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Build the head and its base
+        run: |
+          npm ci
+          npm run build
+          base="$(git rev-parse HEAD^1)"
+          echo "base: $base"
+          git worktree add --detach ../base "$base"
+          npm ci --prefix ../base
+          npm run build --prefix ../base
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Compare every page and scene (${{ matrix.viewport }})
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          BASE_DIST: ../base/dist
+          HEAD_DIST: dist
+          BASE_MANIFEST: ../base/docs/ux-r/visual-changes.json
+          VIEWPORTS: ${{ matrix.viewport }}
+          GATE_OUT: .harness-visual
+        run: node scripts/ux-visual-gate.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-visual-${{ matrix.viewport }}
+          path: |
+            .harness-visual/report.json
+            .harness-visual/summary.md
+            .harness-visual/changes/
+          if-no-files-found: ignore
+          retention-days: 14
