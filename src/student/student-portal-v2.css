@@ -224,3 +224,29 @@
   .eb-student-shell .eb-chip-button,
   .eb-sp-v2 .eb-sp-filters .eb-chip-button { min-height: 44px; }
 }
+
+/* UX-R14 — the student portal in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R14). Presentation only: no
+   data, priority, filter, availability, result or grading text changes. The welcome hero becomes a quiet hairline card (it was
+   a navy gradient banner); the four figures are ONE hairline strip whose cells draw their own hairlines; the panels, the task
+   cards, the «الآن» items and the «أكمل من حيث توقفت» card are flat 8 px hairline cards (every status edge and tint stays);
+   the section-title bar is gone; the task filter is quiet sub-navigation with a grey pressed pill; each task card's action is
+   quiet (the «الآن» list keeps its primary action: it is the page's next step). Scoped like the rest of this sheet, tokens only,
+   logical sides only; no coarse-pointer block (L.8 reads the sheet's last one). */
+.eb-sp-v2 .eb-sp-identity{ color:var(--eb-text); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); box-shadow:none; }
+.eb-sp-v2 .eb-sp-identity-text h2{ color:var(--eb-text-heading); }
+.eb-sp-v2 .eb-sp-identity-text p, .eb-sp-v2 .eb-sp-identity-text .eb-muted{ color:var(--eb-muted); }
+.eb-sp-v2 .eb-sp-identity .eb-sp-code{ background:var(--eb-chrome-active); color:var(--eb-text-heading); border-color:transparent; }
+.eb-sp-v2 .eb-sp-identity .eb-sp-code strong{ color:var(--eb-text-heading); }
+.eb-sp-v2 .eb-sp-avatar-frame{ background:var(--eb-primary-050); }
+.eb-sp-kpis{ gap:0; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; }
+.eb-sp-kpi{ border-color:transparent; border-radius:0; background:transparent; box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); }
+.eb-sp-kpi:hover{ border-color:transparent; background:var(--eb-chrome-hover); box-shadow:1px 0 0 0 var(--eb-line), 0 1px 0 0 var(--eb-line); transform:none; }
+.eb-sp-kpi:focus-visible{ outline-offset:-2px; }
+.eb-sp-v2 .eb-sp-panel{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-sp-v2 .eb-sp-panel > .eb-section-header .eb-section-title::before{ content:none; }
+.eb-sp-v2 .eb-sp-today-hero, .eb-sp-v2 .eb-sp-now-item, .eb-sp-v2 .eb-sp-task{ border-radius:var(--eb-r); box-shadow:none; }
+.eb-sp-v2 .eb-sp-task:hover{ box-shadow:none; border-color:var(--eb-line-2); }
+.eb-sp-v2 .eb-sp-filters{ padding:0; border-radius:var(--eb-r-sm); background:transparent; }
+.eb-sp-v2 .eb-sp-filters .eb-chip-button{ border-color:transparent; border-radius:var(--eb-r-sm); background:transparent; }
+.eb-sp-v2 .eb-sp-filters .eb-chip-button[aria-pressed="true"]{ background:var(--eb-chrome-active); border-color:transparent; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.eb-sp-v2 .eb-sp-task .eb-sp-task-action.eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
