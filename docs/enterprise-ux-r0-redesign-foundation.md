@@ -1986,3 +1986,83 @@ file was restored byte-for-byte after each (SHA-256).
 | `git diff --check` | clean |
 | colour ratchet | **2 266** (was 2 282) |
 | Browser gates | none is triggered by the review sheets (no workflow path filter covers them); the Quality Gate runs on every PR |
+
+---
+
+# Phase UX-R16c — The function-graph and chart series colours
+
+**Owner direction (2026-10-21):** carry on through every remaining phase in sequence (R16c was added by the owner, §4.1). R16c
+depends on R3 (merged), so it branches from `main` `ea357456` as `feature/ux-r16c-series-colours`, in parallel with R13–R16a. They
+share only this record, the colour baseline and the capture harness.
+
+## R16c.1 What changes for the user
+
+Function graphs (questions, rich content, reviews) and the content charts' default «categorical» palette. **Presentation only.**
+A graph stores a series index (`style.color` 1–6) and a chart names a palette, never a colour. No stored question, key, answer or
+grading changes; only the colours behind the indices move.
+
+- **The series take the theme's order.** The deep purple (`--eb-primary-strong`, 11.4:1 on white) comes first. The former first
+  blue moves to index 4 in graphs and to index 5 in the chart palette, where the violet was. Every other series keeps its colour.
+- **Every pair of series stays at least as distinguishable as before.** The check simulates normal, protan, deutan and tritan
+  vision (Machado 2009) and measures CIE76 ΔE between the simulated colours. In graphs, the smallest deutan distance rises from
+  6.6 (blue beside violet) to 10.6; no vision type gets worse. Every series and its label keep AA on the plot.
+- **The plot's neutrals read tokens:** grid, axis, points and intervals, crosshair, the readout shadow, and the print borders. The
+  selection amber names `--eb-warn-tx`, at the same value. The graph editor holds no colour literal any more: errors name the danger
+  tokens and focus uses the primary.
+- **Kept as drawn:** the hues that carry meaning (the tangent teal, the region blue, the review green / red, the selected tint),
+  the chart's sequential / diverging / neutral palettes, the heat scale and the selected-target amber.
+
+## R16c.2 Edit set
+
+- **`src/functionGraphs/function-graph.css`:** the series variables; the neutrals → tokens; the `var(--eb-*, #literal)` fallbacks
+  reduced to the tokens.
+- **`src/functionGraphs/graph-editor.css`:** the neutrals, errors and focus → tokens (0 literals).
+- **`src/charts/chartTheme.ts`:** the categorical palette starts with `#4A2380` (the value of `--eb-primary-strong`; Chart / ECharts
+  need resolved colours). The blue takes the violet's place.
+- **`scripts/ux-color-inventory.baseline.json`:** lowered to **2 225** (was 2 266).
+- **`src/functionGraphs/functionGraphSeries.ux-r16c.test.ts`:** new, 8 guards: the order, the index-to-class mapping, the
+  colour-vision distances against the old palettes, AA, the tokens, and the fixture pinned to the suites' own fixtures.
+- **`scripts/ux-r16c-graph-fixtures.json` and the capture harness:** a `graphs` scene with a two-curve function graph and a
+  two-series chart as one student exam (sanitized by the API's student sanitizer), and two pages. The graph page fails unless the
+  first series is drawn in the theme's first series colour.
+
+## R16c.3 Fail-first evidence
+
+Not applicable: R16c fixes no defect; it re-orders a palette. The harness check proves the change is effective. On `main`
+`ea357456`, `graph-function` fails at every viewport with «the first series is drawn in rgb(29, 78, 216), not the theme's first
+series colour rgb(74, 35, 128)»; on R16c it passes.
+
+## R16c.4 Mutation proof
+
+Each mutant was planted alone. The run covered `src/functionGraphs`, `src/charts`, the colour ratchet and `src/designSystem`, and
+each file was restored byte-for-byte after its mutant (SHA-256).
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| M1 | series 1 back to the blue | KILLED | colour ratchet; ux-r16c «take the theme's order…» |
+| M2 | the blue and the violet side by side again (deutan 6.6) | KILLED | ux-r16c «take the theme's order…» |
+| M3 | series 1 a light lavender (below AA) | KILLED | ux-r16c «every series and its label keep AA…» |
+| M4 | two indices share one class colour | KILLED | ux-r16c «… the six indices still map one-to-one» |
+| M5 | the grid back to slate | KILLED | colour ratchet; ux-r16c |
+| M6 | the tangent loses its teal | KILLED | ux-r16c «… the hues that carry meaning stay» |
+| M7 | the selection colour back to a literal | KILLED | colour ratchet; ux-r16c |
+| M8 | an error literal returns in the editor | KILLED | colour ratchet; ux-r16c |
+| M9 | the chart palette back to blue first | KILLED | ux-r16c «starts with the deep purple…» |
+| M10 | two near-identical reds in the chart palette | KILLED | ux-r16c «stays at least as distinguishable as before…» |
+
+10 / 10 KILLED, no TIMEOUT. In four runs the list also showed `ChartEditor.21a1` «'+ رسم بياني' adds a valid chart block … the
+preview renders it» failing. That test fails alone on `main` `ea357456` in this container too (the lazy preview had not rendered:
+«expected +0 to be 2»), so it is an environment timing failure outside R16c. Each of those mutants was also killed by the ux-r16c
+guard named in the table.
+
+## R16c.5 Visual evidence and local validation
+
+| Check | Result |
+|---|---|
+| Visual capture `graph-function`, `graph-chart` (1440 / 1024 / 390 px) | before 3 / 6 (the graph page catches the blue first series); after **6 / 6** |
+| 21A.2 function-graph real-browser check (`scripts/check-function-graph-browser.mjs`, local Chromium) | **19 / 19** |
+| `npm test`, full root suite (`b0753f65`) | 1 188 files, **14 141 / 14 141** tests |
+| `npm run lint` | exit 0 (pre-existing warnings only) |
+| `npx tsc -b`, `npm run build` (bundle guard) | exit 0, «bundle guard passed» |
+| `git diff --check` | clean |
+| colour ratchet | **2 225** (was 2 266) |
