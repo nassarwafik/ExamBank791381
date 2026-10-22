@@ -3,13 +3,13 @@
    Drop-in stylesheet. Pairs with the login JSX in App.tsx (hero redesigned in Phase 10A).
    ============================================================ */
 :root{
-  --lg-navy:var(--eb-navy); --lg-navy-2:var(--eb-navy-2);
-  --lg-primary:var(--eb-primary); --lg-primary-2:var(--eb-primary-strong);
+  --lg-navy:var(--eb-navy);
+  --lg-primary:var(--eb-primary);
   --lg-bg:var(--eb-bg); --lg-surface:var(--eb-surface);
   --lg-text:var(--eb-text); --lg-muted:var(--eb-muted); --lg-faint:var(--eb-faint);
-  --lg-line:var(--eb-line); --lg-line-2:var(--eb-line-2);
-  --lg-danger:var(--eb-danger); --lg-danger-bg:var(--eb-danger-bg);
-  --lg-r:var(--eb-r); --lg-r-lg:var(--eb-r-xl); --lg-pill:var(--eb-pill);
+  --lg-line-2:var(--eb-line-2);
+  --lg-danger-bg:var(--eb-danger-bg);
+  --lg-r:var(--eb-r); --lg-pill:var(--eb-pill);
   --lg-ease:var(--eb-ease);
   --lg-font:var(--eb-font);
 }
@@ -150,10 +150,10 @@
   outline-offset: var(--eb-focus-offset);
 }
 .auth-submit {
-  min-height: var(--eb-control-h-touch, 44px);
+  min-height: 44px;
 }
 .auth-input input {
-  min-height: var(--eb-control-h-touch, 44px);
+  min-height: 44px;
 }
 @media (max-width: 900px) {
   .auth-card { max-width: min(100%, 400px); }

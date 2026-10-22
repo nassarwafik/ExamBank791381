@@ -8,7 +8,7 @@
    ============================================================ */
 .fg{
   --_g-text:var(--xp-text,var(--eb-text)); --_g-muted:var(--xp-muted,var(--eb-muted)); --_g-border:var(--xp-border,var(--eb-line));
-  --_g-surface:var(--xp-surface,var(--eb-surface)); --_g-alt:var(--xp-surface-alt,var(--eb-surface-2)); --_g-primary:var(--xp-primary,var(--eb-primary));
+  --_g-surface:var(--xp-surface,var(--eb-surface)); --_g-primary:var(--xp-primary,var(--eb-primary));
   --_g-radius:var(--xp-radius,var(--eb-r-sm,8px)); --_g-selected:var(--eb-warn-tx);
   /* UX-R16c — the six stored series indices (style.color 1–6) keep their meaning; the palette behind them takes the theme's series
      order: the deep purple first (--eb-primary-strong, 11.4:1 on white), the former first blue moves to 4 where the violet was.

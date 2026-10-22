@@ -298,8 +298,8 @@
 .eb-lc-standings-row.is-you{ border-color:var(--eb-primary); background:var(--eb-surface-2); }
 .eb-lc-you-badge{ display:inline-block; padding:0 var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-primary); color:var(--eb-surface); font-size:var(--eb-fs-12, 12px); font-weight:600; }
 .eb-lc-podium{ display:flex; flex-wrap:wrap; align-items:stretch; justify-content:center; gap:var(--eb-space-2); min-width:0; }
-.eb-lc-podium-place{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); flex:1 1 8rem; min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-md, 12px); background:var(--eb-surface-2); text-align:center; }
-.eb-lc-podium-rank-1{ border-color:var(--eb-warning, #d99a00); }
+.eb-lc-podium-place{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); flex:1 1 8rem; min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:12px; background:var(--eb-surface-2); text-align:center; }
+.eb-lc-podium-rank-1{ border-color:#d99a00; }
 .eb-lc-podium-medal{ font-size:var(--eb-fs-28, 28px); line-height:1; }
 .eb-lc-podium-name{ font-weight:600; color:var(--eb-text-heading); overflow-wrap:anywhere; display:inline-flex; align-items:center; gap:var(--eb-space-1); flex-wrap:wrap; justify-content:center; }
 .eb-lc-podium-points{ color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }

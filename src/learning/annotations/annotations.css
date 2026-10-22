@@ -3,7 +3,7 @@
 
 /* The highlight is painted through the CSS Custom Highlight API (no DOM change). Colour plus an underline, so it never relies
    on colour alone; the dark reading theme gets its own pair. */
-.learning-reader { --eb-reader-hl-bg: #fde68a; --eb-reader-hl-line: #b45309; }
+.learning-reader { --eb-reader-hl-bg: #fde68a; --eb-reader-hl-line: var(--eb-warn-tx); }
 .learning-reader:not(.is-presentation)[data-read-theme="dark"] { --eb-reader-hl-bg: #6b5300; --eb-reader-hl-line: #fbbf24; }
 ::highlight(eb-reader-highlight) { background-color: var(--eb-reader-hl-bg); color: inherit; text-decoration: underline 2px var(--eb-reader-hl-line); }
 
@@ -11,7 +11,7 @@
   position: fixed; z-index: 45; inset-block-start: var(--eb-hl-chip-top); inset-inline-start: var(--eb-hl-chip-left);
   transform: translateX(50%); display: flex; align-items: center; gap: var(--eb-space-2);
   padding: var(--eb-space-1); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
-  box-shadow: var(--eb-shadow-md, 0 4px 16px rgba(15, 23, 42, .16));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--eb-content-ink) 16%, transparent);
 }
 .learning-reader-hl-chip .eb-button { min-block-size: 44px; min-inline-size: 64px; }
 .learning-reader-hl-chip-note { padding: var(--eb-space-2); font-size: var(--eb-fs-13); color: var(--eb-text); }
@@ -55,6 +55,6 @@
   position: fixed; z-index: 45; inset-block-end: calc(var(--eb-space-4) + 64px); inset-inline-start: 50%; transform: translateX(50%);
   max-inline-size: min(92vw, 28rem); margin: 0; padding: var(--eb-space-2) var(--eb-space-3); font-size: var(--eb-fs-13);
   color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
-  box-shadow: var(--eb-shadow-md, 0 4px 16px rgba(15, 23, 42, .16));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--eb-content-ink) 16%, transparent);
 }
 .learning-reader-notes-toast.is-error { color: var(--eb-danger-tx); background: var(--eb-danger-bg); border-color: currentColor; }
