@@ -4,6 +4,8 @@
 // is a production entry).
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+// UX-R16a — the simulators read the platform's design tokens (the content family) exactly as in the app, where main.tsx loads them.
+import "../src/design-tokens.css";
 import RichContentRenderer from "../src/richContent/RichContentRenderer";
 import SurfacePlot3DEditor from "../src/functionSurfaces/SurfacePlot3DEditor";
 import { surfacePlotPreset } from "../src/functionSurfaces/surfacePlotPresets";
