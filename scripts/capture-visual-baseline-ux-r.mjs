@@ -111,6 +111,16 @@ const LEARNING = {
     students: STUDENTS.slice(0, 4).map((st, i) => ({ userId: st.userId, displayName: st.displayName, code: st.code, modules: { "791381-m01": [10, 7, 3, 0][i], "791381-m02": [4, 1, 0, 0][i] }, readPages: [14, 8, 3, 0][i], totalPages: 20, lastReadAt: i === 3 ? null : NOW })) },
 };
 let scene = "";
+// UX-R16c — a two-curve function graph and a two-series chart as one student exam (scene "graphs"): the specs are the suites' own
+// fixtures (scripts/ux-r16c-graph-fixtures.json, pinned to them by functionGraphSeries.ux-r16c.test.ts), sanitized by the API's student
+// sanitizer, so the page draws exactly what a real attempt would.
+const GRAPH_FIXTURES = JSON.parse(fs.readFileSync(path.join(root, "scripts", "ux-r16c-graph-fixtures.json"), "utf8"));
+const GRAPH_EXAM = createRequire(import.meta.url)("../api/src/lib/student-exam-sanitize.js").sanitizeExamForStudent({ examId: "E-graphs", title: "الرسوم والمنحنيات", schemaVersion: 2,
+  sections: [{ id: "s1", title: "الرسوم", gradingPolicy: "all", stimuli: {}, questions: [
+    { examQuestionId: "fg", presentationType: "functionGraphSelection", questionTypeVersion: 1, text: "اختر نقطة تقاطع المنحنيين", marks: 2, functionGraphSelection: { v: 1, graph: GRAPH_FIXTURES.functionGraph, target: "point", mode: "single", maxSelections: 1 }, answer: { scoring: "allOrNothing", correct: ["point:e1"] } },
+    { examQuestionId: "ch", presentationType: "chartSelection", questionTypeVersion: 1, text: "اختر سلسلة الطاقة الشمسية", marks: 2, chartSelection: { v: 1, chart: GRAPH_FIXTURES.chart, target: "series", mode: "single", maxSelections: 1 }, answer: { scoring: "allOrNothing", correct: ["series:solar"] } }] }] });
+const GRAPH_ASSIGNMENT = { assignmentId: "a1", title: "الرسوم والمنحنيات", instructions: "", openAt: "2026-10-01T08:00:00.000Z", dueAt: "2026-10-30T20:00:00.000Z", maxAttempts: 3, questionCount: 2, totalMarks: 4, exam: GRAPH_EXAM };
+const GRAPH_STATE = { attemptsUsed: 0, allowedAttempts: 3, canAttempt: true, dueClosed: false, draftAnswers: {}, draftSavedAt: "", latestResult: null, attempts: [] };
 // UX-R8 — the messages pages (the shapes of the AppMessages.5c / StudentPortal.messages / 5D fixtures): a direct conversation over
 // two days with consecutive messages, an unread count in the roster, and the student's dedicated view, so a thread, its bubbles,
 // the roster rows and both composers are captured, not only the empty start state.
@@ -217,6 +227,8 @@ function api(req, res) {
   if (p === "/api/saved-exams" && req.method === "GET") return send(200, { ok: true, exams: SAVED_EXAMS });
   if (p === "/api/governance-inbox") return send(200, { items: u.searchParams.get("stage") === "review" ? INBOX_TASKS : [], nextCursor: null, counts: { review: 2, approve: 0, publish: 0 }, actorId: "teacher-reviewer" });
   if (p === "/api/audit-history") return send(200, { ok: true, events: AUDIT_EVENTS, count: AUDIT_EVENTS.length, limit: 100 });
+  if (scene === "graphs" && p.startsWith("/api/student-assignment/")) return send(200, { ok: true, assignment: GRAPH_ASSIGNMENT });
+  if (scene === "graphs" && p.startsWith("/api/student-submission/")) return send(200, req.method === "GET" ? { ok: true, state: GRAPH_STATE } : { ok: true, savedAt: NOW, state: GRAPH_STATE });
   if (scene === "learning" && p === "/api/classrooms") return send(200, LEARNING.classes);
   if (scene === "learning" && p === "/api/learning-materials-catalog") return send(200, LEARNING.catalog);
   if (scene === "learning" && p.startsWith("/api/learning-class-progress/")) return send(200, LEARNING.reading);
@@ -277,6 +289,20 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // UX-R16c — the function graph (question 1) and the chart (question 2) of the "graphs" exam; each page fails when the drawing is
+  // missing or when the first series is not drawn in the theme's first series colour.
+  ...[["graph-function", 0, ".fg-curve.fg-c1"], ["graph-chart", 1, ".iex-page canvas, .iex-page svg"]].map(([id, i, sel]) => ({ id, role: "student", scene: "graphs", run: async page => {
+    await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
+    await page.locator(".iex-page-heading").first().waitFor({ timeout: 15000 });
+    if (i > 0) { await page.locator(".iex-nav-trigger").click({ timeout: 15000 }); await page.locator(".iex-nav-q").nth(i).click({ timeout: 15000 }); }
+    await page.locator(sel).first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(800);
+    if (i === 0) {
+      const stroke = await page.locator(".fg-curve.fg-c1").first().evaluate(e => getComputedStyle(e).stroke);
+      const primary = await page.evaluate(() => { const s = document.createElement("span"); s.style.color = "var(--eb-primary-strong)"; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; });
+      if (stroke !== primary) throw new Error("the first series is drawn in " + stroke + ", not the theme's first series colour " + primary);
+    }
+  } })),
   // UX-R12 — the grading workspace, opened from the gradebook's «تصحيح الآن» (the pending student), and its pending filter.
   ...[["review-workspace", null], ["review-pending", /يحتاج إلى تصحيح يدوي/]].map(([id, filter]) => ({ id, role: "teacher", nav: "الواجبات", run: async page => {
     await page.getByRole("button", { name: "فتح", exact: true }).first().click({ timeout: 15000 });

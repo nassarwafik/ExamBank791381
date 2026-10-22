@@ -1,0 +1,121 @@
+{
+ "functionGraph": {
+  "version": 1,
+  "id": "g-meet",
+  "title": "تقاطع منحنيين",
+  "description": "منحنيا الدالتين f(x) = x² − 1 و g(x) = x + 1 مع ثلاث نقاط مسمّاة E1 و E2 و E3.",
+  "viewport": {
+   "xMin": -4,
+   "xMax": 4,
+   "yMin": -2,
+   "yMax": 8
+  },
+  "axes": {
+   "x": {
+    "label": "x",
+    "grid": true
+   },
+   "y": {
+    "label": "y",
+    "grid": true
+   }
+  },
+  "curves": [
+   {
+    "id": "c1",
+    "kind": "explicit",
+    "label": "المنحنى 1",
+    "expression": "x^2 - 1"
+   },
+   {
+    "id": "c2",
+    "kind": "explicit",
+    "label": "المنحنى 2",
+    "expression": "x + 1",
+    "style": {
+     "line": "dashed"
+    }
+   }
+  ],
+  "points": [
+   {
+    "id": "e1",
+    "x": -1,
+    "y": 0,
+    "label": "E1",
+    "role": "intersection",
+    "on": [
+     "c1",
+     "c2"
+    ]
+   },
+   {
+    "id": "e2",
+    "x": 2,
+    "y": 3,
+    "label": "E2",
+    "role": "intersection",
+    "on": [
+     "c1",
+     "c2"
+    ]
+   },
+   {
+    "id": "e3",
+    "x": 1,
+    "y": 0,
+    "label": "E3",
+    "role": "root",
+    "on": [
+     "c1"
+    ]
+   }
+  ]
+ },
+ "chart": {
+  "version": 1,
+  "id": "energy-mix",
+  "kind": "area",
+  "title": "مزيج الطاقة",
+  "description": "إنتاج الكهرباء (GWh) حسب المصدر.",
+  "stacked": true,
+  "categories": [
+   {
+    "id": "y2019",
+    "label": "2019"
+   },
+   {
+    "id": "y2020",
+    "label": "2020"
+   },
+   {
+    "id": "y2021",
+    "label": "2021"
+   }
+  ],
+  "series": [
+   {
+    "id": "solar",
+    "label": "شمسية",
+    "values": [
+     10,
+     14,
+     20
+    ]
+   },
+   {
+    "id": "wind",
+    "label": "رياح",
+    "values": [
+     5,
+     7,
+     9
+    ]
+   }
+  ],
+  "yAxis": {
+   "label": "الإنتاج",
+   "unit": "GWh"
+  }
+ }
+}
