@@ -4131,3 +4131,151 @@ The R18a section above describes the result. Its toggle, placement and mutation 
   clean; the colour inventory is unchanged (756).
 - **No user-visible change.** The toggle renders only once released. The visual gate in CI compares the light theme on the exact
   head.
+
+---
+
+# Phase UX-R18b — Dark mode: the teacher's pages
+
+**Owner direction (§4.2; owner decisions of 2026-10-23):** the teacher's pages in the dark theme; dark pages are shown to users only
+once everything is finished (R18c). R18b branches from `main` `7e138d24` (#426) as `feature/ux-r18b-dark-teacher-pages`. No user
+sees a change: the toggle is still not rendered, and the visual gate compares the light theme.
+
+## R18b.1 What was wrong in dark, measured
+
+The tokens of R18a already carried most of every page. What did not follow is what the sheets write as **literals**: the about 170
+status shades R17d kept on purpose (option (a), so their light look would not change), the neutrals, the keyword `white`, and
+shadows and scrims mixed from the heading ink. They broke in three ways:
+- **Light islands.** A literal light background stays light on the dark page: the import card, the builder's AI composer card, the
+  review window's pending question and partial status, the governance stage chip.
+- **Unreadable text.** Dark literal text on a background that turned dark; white literal text on a primary fill that turned light;
+  a dark literal fill (`#9a3412`) under a token label (`--eb-surface`) that turned dark.
+- **Glowing shadows and light scrims.** `color-mix(in srgb, var(--eb-content-ink) N%, transparent)` mixes the heading ink, which is
+  light in dark: shadows glowed and the review window's backdrop turned light grey.
+
+**Measured on `main`, harness `THEME=dark`, 1440 px:**
+
+| Measure | Result |
+|---|---|
+| axe contrast failures | 15 (review filter, review pending, classic builder save state) |
+| light islands (light background over 1 500 px²) | on 18 captures (import, the studio pages and builder states, reviews, review window, governance) |
+| static audit (below), the final script on `main` | **371** unanswered declarations in the 20 teacher sheets (literals, keywords and ink-mixed shadows) |
+
+## R18b.2 The approach
+
+**One rule:** the light theme is untouched. Every dark fix is either a rule that applies only in dark, or a token whose light value
+is the literal it replaces.
+
+- **Dark rules, tokens only.** Each sheet ends with a dark block. For every literal that breaks, it gives the same selector under
+  `:root[data-theme="dark"]`, setting the same property from a token:
+  - **The role picks the token:**
+    - a light background → the status tint (`--eb-success-bg`, `-warn-bg`, `-danger-bg`, `-info-bg`, `--eb-primary-050`) or the surface;
+    - dark text → the status text colour, or `--eb-text` / `--eb-muted`;
+    - a light line → `--eb-line-2`, or a status colour mixed at 45 %;
+    - white text on a fill that turns light → `--eb-surface`.
+  - **The literal's hue picks the family:** green success, orange / amber warning, red danger, blue info, violet primary, grey
+    neutral.
+  - The rules were generated from that mapping and reviewed. One was set by hand: the login page takes the page ground, not the info
+    tint its blue gradient pointed to.
+  - **The guarantees:** no dark rule applies in light, no dark rule writes a literal, and the colour inventory does not grow (756).
+- **`--eb-scrim`, the ink of shadows and scrims.** A new token, `#1c1330` in light (the same as `--eb-navy`, so nothing changes) and
+  `#000` in dark.
+  - The shadows of 12 sheets read it.
+  - So do three backdrops: the review window, the builder preview and the reader's drawer.
+  - Two inverted pairs keep the ink: a badge and a 3D tooltip, an ink fill with a `--eb-surface` label, which invert together and
+    stay readable.
+- **The keyword `white`.** The colour inventory counts `#hex` and functions only, so 38 `background: white` / `color: white`
+  declarations had escaped it. The audit reads keywords too.
+
+## R18b.3 The static audit and its guard
+
+**`scripts/ux-dark-audit.mjs`** reads every rule of a sheet and flags each declaration that breaks in dark:
+- a light background;
+- dark text (unless its own literal background is dark, so it reads the same);
+- white text on a token fill that turns light;
+- a dark literal fill under a label that turns dark;
+- a light line;
+- a shadow mixed from an ink that turns light.
+
+It leaves alone what reads the same in both themes (a saturated fill with white text, a dark shadow), print rules, and the fallback
+of a defined variable, which never renders. It then checks that each flagged declaration is answered by a dark rule: the same
+selector, the same property family, from tokens.
+
+**`DARK_SCOPE`** lists the sheets R18b finished: the 20 sheets of the teacher's pages and the builder. R18c adds the rest.
+
+**`src/designSystem/darkSheets.ux-r18b.test.ts`:**
+- every scoped sheet has no unanswered declaration;
+- its dark rules read tokens only;
+- the audit's own behaviour (what it flags, what it leaves, what counts as an answer, keywords, ink-mixed shadows).
+
+## R18b.4 Edit set
+
+- **Dark blocks** at the end of the 16 sheets that needed them: `App.css`, `platform.css`, `structured-builder.css`,
+  `review-workspace.css`, `structured-cover.css`, `builder-pro.css`, `smart-import.css`, `governance/reviewInbox.css`,
+  `review-pro.css`, `charts/chart-editor.css`, `composite/composite-editor.css`, `composite/composite-review.css`,
+  `questionTypes/questionTypes.css`, `richContent/rich-content-editor.css`, `project794589.css`, `presets/presetLibrary.css`.
+- **`--eb-scrim`** in `design-tokens.css` and its dark half in `design-tokens-dark.css`; 12 sheets' shadows and three backdrops read it.
+- **`scripts/ux-dark-audit.mjs`** (new) and **`src/designSystem/darkSheets.ux-r18b.test.ts`** (new).
+- **Three dead keywords in `App.css`.** The exam lists' access buttons, saved-exams panel and heading button wrote
+  `background: white`, which the premium sheet `teacher/exam-lists-premium.css` (loaded after App.css) already overrides with
+  `var(--eb-surface)` in both themes. A dark answer in App.css (`:root[data-theme="dark"] …`, more specific) would have outranked
+  that sheet, which its guard `examListsPremium.21e2p4` forbids. So the dead keyword now reads `var(--eb-surface)` (`#ffffff` in
+  light: no change) and needs no dark answer.
+
+## R18b.5 Evidence
+
+**After the fix, harness `THEME=dark`:**
+
+| Measure | `main` | R18b |
+|---|---|---|
+| axe contrast failures (1440) | 15 | **0** |
+| light islands on the teacher's pages (1440 / 1024 / 390) | the import card, the studio's AI card, review, governance | **none** |
+| static audit, 20 sheets | 371 | **0** |
+
+The light islands left are R18c's:
+- the offline page;
+- the code editor;
+- the two exam presentation presets, which stay light on purpose and become a light island in R18c.
+
+The **12 teacher sidebar pages** were reviewed in dark at 1440, together with the builder, the review window and the import page.
+They are dark and legible throughout.
+
+**Light is unchanged.** The R19b gate script ran, `main` against this branch, at all three viewports, on the final tree: **GATE PASS**, 207 / 207 captures compared, 0 changed, 0 failures, 0 notes.
+
+**Fail-first.** The guard file (then 24 tests; a 25th audit case was added for mutant B4) was run against `main` `7e138d24`: **16 of 24 fail** (the 16 sheets with unanswered declarations), 8 pass (the four sheets that needed nothing, the scope check and three of the audit's own tests). On the head, 24 / 24 pass (25 / 25 with the B4 case).
+
+## R18b.6 Mutation proof
+
+Each mutant planted alone in the worktree; the guard file and the colour-inventory ratchet run; the file restored byte-for-byte
+(SHA-256 verified) after each run; `git status` unchanged afterwards. **11 / 11 KILLED**, no timeout.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| B1 | a dark rule removed (the review window's partial status stays a light island) | KILLED | `src/review-workspace.css` sheet guard |
+| B2 | a dark rule writes a literal | KILLED | colour-inventory ratchet; sheet guard (tokens only) |
+| B3 | a dark rule loses its dark root (it would apply in light) | KILLED | sheet guard |
+| B4 | only near-white backgrounds count as light | KILLED | audit: flags a mid-light tint |
+| B5 | dark text is never flagged | KILLED | audit: flags; audit: answers |
+| B6 | white text on a fill that turns light is never flagged | KILLED | audit: flags |
+| B7 | a dark fill under a label that turns dark is never flagged | KILLED | audit: flags |
+| B8 | print rules are audited too | KILLED | `src/App.css` sheet guard; audit: leaves print |
+| B9 | a selector list counts as answered by its first selector | KILLED | audit: answers |
+| B10 | a sheet leaves the scope | KILLED | scope check |
+| B11 | the fallback literal of a defined variable counts | KILLED | four sheet guards (structured-builder, ai-composer, presentation-studio, scenario-builder) |
+
+The first campaign run let B4 survive (the audit's tests used only near-white tints): the guard gained the mid-light case
+`#c7d2fe` and the re-run kills it.
+
+## R18b.7 Local validation
+
+On the final tree, run in order:
+- **`npx vitest run`:** 1 208 files, 14 327 tests; **14 324 passed, 3 failed**. None of the three is caused by this phase:
+  - `GovernancePanel.14b` (the 409 conflict alert) is the repository's one documented timing-sensitive test (AGENTS.md §12). It
+    failed under the full run's load and passes alone (7 / 7).
+  - `AppEvaluationFinish.9g` (two tests) times out at 5 000 ms in this environment. It fails the same way **alone on `main`
+    `7e138d24`** in a clean worktree, so it is the environment's speed, not R18b. CI on the exact head is the reference.
+- **`npm run lint`:** 0 errors (warnings only, unchanged).
+- **`npx tsc -b`:** passes.
+- **`npm run build`:** passes, bundle guard passed.
+- **`git diff --check`:** clean.
+- **Colour inventory:** 756, unchanged.
+- **`node scripts/ux-dark-audit.mjs`:** 0 unanswered in 20 sheets.

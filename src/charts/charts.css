@@ -31,7 +31,7 @@
 .xp-chart-status{ position:absolute; inset:0; display:grid; place-items:center; color:var(--_c-muted); font-size:.875em; direction:rtl; }
 .xp-chart-tip{ position:absolute; z-index:2; pointer-events:none; max-inline-size:min(260px,80%); display:flex; flex-direction:column; gap:2px;
   padding:6px 10px; border:1px solid var(--_c-border); border-radius:6px; background:var(--_c-surface); color:var(--_c-text);
-  box-shadow:0 4px 14px color-mix(in srgb, var(--eb-content-ink) 14%, transparent); font-size:.8125em; line-height:1.4; direction:rtl; overflow-wrap:anywhere; }
+  box-shadow:0 4px 14px color-mix(in srgb, var(--eb-scrim) 14%, transparent); font-size:.8125em; line-height:1.4; direction:rtl; overflow-wrap:anywhere; }
 .xp-chart-tip-title{ font-weight:var(--eb-fw-semibold,600); }
 .xp-chart-error{ margin:0; padding:var(--eb-space-2,8px); border:1px dashed var(--_c-border); border-radius:var(--_c-radius); color:var(--_c-muted); font-size:.875em; }
 .xp-chart-retry,.xp-chart-table-toggle{ font:inherit; font-size:.875em; color:var(--_c-primary); background:none; border:0; padding:4px 2px; cursor:pointer; text-decoration:underline; }

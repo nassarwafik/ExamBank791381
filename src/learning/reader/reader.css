@@ -199,7 +199,7 @@
 
 /* ---------- Mobile drawer ---------- */
 .learning-reader-drawer-root{ position:fixed; inset:0; z-index:50; }
-.learning-reader-drawer-backdrop{ position:absolute; inset:0; background:color-mix(in srgb, var(--eb-content-ink) 50%, transparent); }
+.learning-reader-drawer-backdrop{ position:absolute; inset:0; background:color-mix(in srgb, var(--eb-scrim) 50%, transparent); }
 .learning-reader-drawer{
   position:absolute; inset-block:0; inset-inline-start:0; inline-size:min(88vw, 360px); display:flex; flex-direction:column;
   background:var(--eb-surface); box-shadow:var(--eb-sh-lg); overflow-y:auto; padding:var(--eb-space-2);

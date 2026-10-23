@@ -2,7 +2,7 @@
    (var(--primary), --line, --surface, --navy, --muted, --pill, --r) so it reads as part of ExamBank.
    No visual redesign; compact editor cards, RTL. */
 .sb-builder{display:flex;flex-direction:column;gap:14px;padding-block:8px}
-.sb-toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:var(--surface,var(--eb-surface));border:1px solid var(--line,var(--eb-content-ground));border-radius:var(--r,12px);padding:10px 14px;box-shadow:0 6px 20px -16px color-mix(in srgb, var(--eb-content-ink) 40%, transparent)}
+.sb-toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:var(--surface,var(--eb-surface));border:1px solid var(--line,var(--eb-content-ground));border-radius:var(--r,12px);padding:10px 14px;box-shadow:0 6px 20px -16px color-mix(in srgb, var(--eb-scrim) 40%, transparent)}
 .sb-toolbar-main,.sb-toolbar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .sb-exam-title{min-width:200px;font-weight:700}
 .sb-stat{background:var(--primary050,var(--eb-primary-050));border:1px solid var(--eb-primary-100);color:var(--primary2,var(--eb-content-accent));border-radius:var(--pill,999px);padding:3px 10px;font-size:12px;font-weight:700}
@@ -26,7 +26,7 @@
 .sb-issue-warn{color:#92400e;font-size:12.5px}
 
 .sb-sections{display:flex;flex-direction:column;gap:16px}
-.sb-section{border:1px solid var(--line,var(--eb-content-ground));border-radius:16px;background:var(--surface,var(--eb-surface));padding:16px;box-shadow:0 10px 30px -24px color-mix(in srgb, var(--eb-content-ink) 35%, transparent)}
+.sb-section{border:1px solid var(--line,var(--eb-content-ground));border-radius:16px;background:var(--surface,var(--eb-surface));padding:16px;box-shadow:0 10px 30px -24px color-mix(in srgb, var(--eb-scrim) 35%, transparent)}
 .sb-section-head{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;border-bottom:1px dashed var(--line2,var(--eb-content-grid));padding-bottom:12px}
 .sb-section-eyebrow{font-size:11px;font-weight:800;color:var(--primary2,var(--eb-content-accent))}
 .sb-section-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -111,7 +111,7 @@
 .sb-thumb{max-height:80px;border-radius:8px;border:1px solid var(--line,var(--eb-content-ground))}
 
 /* preview overlay */
-.sb-preview-overlay{position:fixed;inset:0;z-index:1000;background:color-mix(in srgb, var(--eb-content-ink) 55%, transparent);overflow:auto;padding:0}
+.sb-preview-overlay{position:fixed;inset:0;z-index:1000;background:color-mix(in srgb, var(--eb-scrim) 55%, transparent);overflow:auto;padding:0}
 .sb-preview-head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--eb-surface);border-bottom:1px solid var(--line,var(--eb-content-ground));padding:12px 16px;z-index:2}
 .sb-preview-note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;margin:12px 0}
 
@@ -225,7 +225,7 @@
 .sb-q-flash{animation:sb-q-flash 1.2s ease-out}
 @keyframes sb-q-flash{0%{box-shadow:0 0 0 4px var(--eb-primary-200)}100%{box-shadow:0 0 0 0 transparent}}
 @media (prefers-reduced-motion:reduce){.sb-q-flash{animation:none;box-shadow:0 0 0 3px var(--eb-primary-200)}}
-.sb-bulk-bar{position:sticky;top:64px;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface,var(--eb-surface));border:1px solid var(--primary,var(--eb-content-accent));border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px -18px color-mix(in srgb, var(--eb-content-ink) 50%, transparent)}
+.sb-bulk-bar{position:sticky;top:64px;z-index:4;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface,var(--eb-surface));border:1px solid var(--primary,var(--eb-content-accent));border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px -18px color-mix(in srgb, var(--eb-scrim) 50%, transparent)}
 .sb-bulk-group{display:inline-flex;gap:6px;align-items:center}
 .sb-bulk-count{font-size:12.5px}
 .sb-bulk-wait{font-size:12px;font-weight:700;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:var(--pill,999px);padding:3px 10px}
@@ -379,3 +379,33 @@
    over «+ إضافة قسم» at the end of the scroll range (150–200 %, phones). 96px ≈ the tallest toast card at ≥ 390px (two 16px lines
    + a 44px action); narrower cards are taller and belong to the 21E.2 toolbar work (F1). */
 .structured-builder-overlay:has(.eb-toast),.structured-builder-overlay[data-toast-reserve]{padding-block-end:calc(var(--eb-space-4) * 2 + 96px);scroll-padding-block-end:calc(var(--eb-space-4) * 2 + 96px)}
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .sb-banner-error { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .sb-banner-ok,
+:root[data-theme="dark"] .sb-import-stats li { background: var(--eb-success-bg); border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
+:root[data-theme="dark"] .sb-issues-error { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); }
+:root[data-theme="dark"] .sb-issues-warn { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:root[data-theme="dark"] .sb-issues-block,
+:root[data-theme="dark"] .sb-issue-error,
+:root[data-theme="dark"] .sb-media-error,
+:root[data-theme="dark"] .sb-bulk-error { color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .sb-issue-warn,
+:root[data-theme="dark"] .sb-activity-trust.is-unsafe { color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .sb-danger,
+:root[data-theme="dark"] .sb-warn-error { color: var(--eb-danger-tx); border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); }
+:root[data-theme="dark"] .sb-warn,
+:root[data-theme="dark"] .sb-bulk-wait { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:root[data-theme="dark"] .sb-preview-note { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .sb-stat-final,
+:root[data-theme="dark"] .sb-save-state.is-saved { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
+:root[data-theme="dark"] .sb-media-notice,
+:root[data-theme="dark"] .eb-bank-options .is-correct,
+:root[data-theme="dark"] .sb-activity-trust.is-safe { color: var(--eb-success-tx); }
+:root[data-theme="dark"] .sb-save-state.is-dirty,
+:root[data-theme="dark"] .sb-save-state.is-recovered { border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .sb-btn-danger { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .sb-nav-badge { color: var(--eb-success-tx); background: var(--eb-success-bg); border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:root[data-theme="dark"] .sb-gov-state.is-in-review { color: var(--eb-warn-tx); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:root[data-theme="dark"] .sb-gov-state.is-published { background: var(--eb-success-bg); color: var(--eb-success-tx); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }

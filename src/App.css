@@ -74,7 +74,7 @@ button {
   border: 1px solid var(--eb-content-ground);
   border-radius: 20px;
   padding: 36px;
-  box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--eb-content-ink) 18%, transparent);
+  box-shadow: 0 24px 60px -28px color-mix(in srgb, var(--eb-scrim) 18%, transparent);
 }
 
 .brand-mark {
@@ -206,7 +206,7 @@ button {
 .bottom-actions-card {
   background: white;
   border: 1px solid var(--eb-content-ground);
-  box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--eb-content-ink) 12%, transparent);
+  box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--eb-scrim) 12%, transparent);
 }
 
 .builder-card {
@@ -542,7 +542,7 @@ button {
 }
 
 .question-card:hover {
-  box-shadow: 0 18px 42px -22px color-mix(in srgb, var(--eb-content-ink) 16%, transparent);
+  box-shadow: 0 18px 42px -22px color-mix(in srgb, var(--eb-scrim) 16%, transparent);
 }
 
 .question-locked {
@@ -1964,7 +1964,7 @@ td {
     0
     10px
     28px
-    color-mix(in srgb, var(--eb-content-ink) 8%, transparent);
+    color-mix(in srgb, var(--eb-scrim) 8%, transparent);
 
   backdrop-filter:
     blur(8px);
@@ -2139,7 +2139,7 @@ td {
     0
     6px
     20px
-    color-mix(in srgb, var(--eb-content-ink) 4.5%, transparent);
+    color-mix(in srgb, var(--eb-scrim) 4.5%, transparent);
 }
 
 /* =========================
@@ -2457,7 +2457,7 @@ button {
     15px;
 
   background:
-    white;
+    var(--eb-surface);
 
   color:
     var(--eb-primary-strong);
@@ -2515,13 +2515,13 @@ span {
   border-radius: 20px;
 
   background:
-    white;
+    var(--eb-surface);
 
   box-shadow:
     0
     14px
     36px
-    color-mix(in srgb, var(--eb-content-ink) 6%, transparent);
+    color-mix(in srgb, var(--eb-scrim) 6%, transparent);
 }
 
 .saved-exams-heading {
@@ -2563,7 +2563,7 @@ h3 {
     12px;
 
   background:
-    white;
+    var(--eb-surface);
 
   color:
     var(--eb-content-text);
@@ -2880,7 +2880,7 @@ button {
   background: var(--eb-surface);
   box-shadow:
     0 14px 36px
-    color-mix(in srgb, var(--eb-content-ink) 6%, transparent);
+    color-mix(in srgb, var(--eb-scrim) 6%, transparent);
 }
 
 /* Save status */
@@ -3276,3 +3276,78 @@ button {
 .structured-builder-overlay:has(> .st-studio),.structured-builder-overlay:has(> .st-studio):has(.eb-toast),.structured-builder-overlay:has(> .st-studio)[data-toast-reserve]{overflow:hidden;padding:0}
 .convert-structured-btn{margin-top:10px;width:100%;border:1px dashed var(--eb-primary);background:#eff4ff;color:var(--eb-primary-strong);border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}
 .convert-structured-btn:hover{background:#e0eaff}
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .error-message,
+:root[data-theme="dark"] .builder-error,
+:root[data-theme="dark"] .saved-delete-button { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .success-chip { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:root[data-theme="dark"] .topic-chip { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+:root[data-theme="dark"] .warning-panel,
+:root[data-theme="dark"] .quality-warning { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .lock-button.active { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .answer-box,
+:root[data-theme="dark"] .quality-good { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:root[data-theme="dark"] .generated-exam,
+:root[data-theme="dark"] .generated-exam .question-card,
+:root[data-theme="dark"] .generated-exam .question-options li,
+:root[data-theme="dark"] .generated-exam .field-preview { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
+:root[data-theme="dark"] .generated-exam .exam-toolbar-card,
+:root[data-theme="dark"] .generated-exam .question-image-slot { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
+:root[data-theme="dark"] .generated-exam .question-card .difficulty-1 { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:root[data-theme="dark"] .generated-exam .question-card.difficulty-2::before { background: var(--eb-success-bg); }
+:root[data-theme="dark"] .generated-exam .question-meta { border-bottom: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); }
+:root[data-theme="dark"] .generated-exam .question-meta span,
+:root[data-theme="dark"] .generated-exam .question-action-bar { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface-2); }
+:root[data-theme="dark"] .word-bank-box { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-info-bg); }
+:root[data-theme="dark"] .word-bank-title { color: var(--eb-info-tx); }
+:root[data-theme="dark"] .word-bank-items span { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); color: var(--eb-info-tx); }
+:root[data-theme="dark"] .generated-exam .per-question-ai { background: var(--eb-surface); }
+:root[data-theme="dark"] .generated-exam .teacher-note-panel { background: var(--eb-warn-bg); }
+:root[data-theme="dark"] .generated-exam .bottom-actions-card,
+:root[data-theme="dark"] .secondary-primary-button:hover,
+:root[data-theme="dark"] .saved-open-button:hover,
+:root[data-theme="dark"] .select-action:hover,
+:root[data-theme="dark"] .preview-download-button:hover { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); }
+:root[data-theme="dark"] .export-ai-button { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent) !important; background: var(--eb-info-bg) !important; color: var(--eb-info-tx) !important; }
+:root[data-theme="dark"] .export-ai-button:hover:not(:disabled) { background: var(--eb-info-bg) !important; }
+:root[data-theme="dark"] .recovery-draft-bar { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }
+:root[data-theme="dark"] .recovery-draft-bar strong,
+:root[data-theme="dark"] .recovery-draft-bar span { color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .recovery-discard { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .question-order-actions .question-delete-mini:hover { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .login-page { background: var(--eb-bg); }
+:root[data-theme="dark"] .convert-structured-btn,
+:root[data-theme="dark"] .convert-structured-btn:hover { background: var(--eb-info-bg); }
+:root[data-theme="dark"] .question-delete-mini { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); }
+
+/* UX-R18b — the dark theme, continued: the colours this sheet writes as keywords («white»), which the colour inventory does not
+   count. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .primary-button,
+:root[data-theme="dark"] .generate-button,
+:root[data-theme="dark"] .secondary-primary-button,
+:root[data-theme="dark"] .preview-mode-actions .preview-print-button { color: var(--eb-surface); }
+:root[data-theme="dark"] .builder-card,
+:root[data-theme="dark"] .plan-card,
+:root[data-theme="dark"] .exam-toolbar-card,
+:root[data-theme="dark"] .question-card,
+:root[data-theme="dark"] .bottom-actions-card,
+:root[data-theme="dark"] .builder-card > textarea:focus,
+:root[data-theme="dark"] .global-ai-box textarea:focus,
+:root[data-theme="dark"] .per-question-ai textarea:focus,
+:root[data-theme="dark"] .teacher-note-panel textarea:focus,
+:root[data-theme="dark"] .lock-button,
+:root[data-theme="dark"] .question-image-slot.image-visible,
+:root[data-theme="dark"] .image-controls button,
+:root[data-theme="dark"] .question-footer-actions button,
+:root[data-theme="dark"] .question-action-bar > button,
+:root[data-theme="dark"] .select-action,
+:root[data-theme="dark"] .bottom-actions-card button,
+:root[data-theme="dark"] .structured-data-block,
+:root[data-theme="dark"] .answer-square,
+:root[data-theme="dark"] .word-bank-items span,
+:root[data-theme="dark"] .preview-mode-actions button,
+:root[data-theme="dark"] .recovery-discard,
+:root[data-theme="dark"] .question-jump-bar button,
+:root[data-theme="dark"] .question-order-actions button { background: var(--eb-surface); }

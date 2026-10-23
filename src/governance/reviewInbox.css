@@ -58,3 +58,14 @@
 .gov-inbox .gov-task:first-child{border-block-start:0}
 .gov-inbox .gov-task-open.sb-btn-primary,.gov-inbox .gov-task-open.sb-btn-primary:hover{background:var(--eb-surface);border-color:var(--eb-line-2);color:var(--eb-text-heading)}
 .gov-inbox .gov-empty{border-color:var(--eb-line-2);border-radius:var(--eb-r);color:var(--eb-muted)}
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .gov-stage.is-review { background: var(--eb-warn-bg); color: var(--eb-warn-tx); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:root[data-theme="dark"] .gov-stage.is-publish { background: var(--eb-success-bg); color: var(--eb-success-tx); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:root[data-theme="dark"] .gov-decision-note { background: var(--eb-warn-bg); }
+:root[data-theme="dark"] .gov-decision-note[data-decision="review-completed"],
+:root[data-theme="dark"] .gov-decision-note[data-decision="approved"] { background: var(--eb-success-bg); }
+:root[data-theme="dark"] .sb-gov-note-count.is-error,
+:root[data-theme="dark"] .sb-hint.is-error,
+:root[data-theme="dark"] .sb-gov-problems { color: var(--eb-danger-tx); }

@@ -28,3 +28,7 @@
   .ap-actions .sb-btn{flex:1 1 100%}
   .ap-facts{grid-template-columns:1fr 1fr}
 }
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .ap-issues { color: var(--eb-danger-tx); }

@@ -59,7 +59,7 @@
 .fg-crosshair line{ stroke:var(--eb-muted); stroke-width:1; stroke-dasharray:3 3; }
 .fg-trace{ fill:var(--_g-primary); stroke:var(--_g-surface); stroke-width:2; }
 .fg-readout{ position:absolute; inset-block-start:6px; inset-inline-start:8px; max-inline-size:calc(100% - 16px); padding:4px 8px; border:1px solid var(--_g-border); border-radius:6px;
-  background:var(--_g-surface); color:var(--_g-text); font-size:.8125em; direction:rtl; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 2px 8px color-mix(in srgb, var(--eb-navy) 12%, transparent); }
+  background:var(--_g-surface); color:var(--_g-text); font-size:.8125em; direction:rtl; pointer-events:none; overflow-wrap:anywhere; box-shadow:0 2px 8px color-mix(in srgb, var(--eb-scrim) 12%, transparent); }
 
 /* the keyboard / screen-reader selection list — the same targets the picture accepts */
 .fg-select{ display:flex; flex-direction:column; gap:6px; }
