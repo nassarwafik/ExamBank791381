@@ -79,3 +79,15 @@
 @media (min-width: 1024px) {
   .net2-student { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
 }
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .net2-node .net2-shape { fill: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .net2-node[data-kind="router"] .net2-shape { fill: var(--eb-info-bg); }
+:where(:root[data-theme="dark"]) .net2-node[data-kind="switch"] .net2-shape { fill: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .net2-node[data-kind="ap"] .net2-shape { fill: var(--eb-primary-050); }
+:where(:root[data-theme="dark"]) .net2-status[data-ok="true"] { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .net2-status[data-ok="false"] { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .net2-sandbox { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .net2-flow-status[data-ok="true"] { background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .net2-flow-status[data-ok="false"] { background: var(--eb-danger-bg); }

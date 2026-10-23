@@ -15,6 +15,15 @@
 :root { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 .eb-light-island { color-scheme: light; }
+/* UX-R18c — the islands the plan keeps light: the student's exam paper and the teacher's previews of it (.interactive-exam-page,
+   with or without a presentation preset: an exam looks the same for every student; its question-list dialog, rendered
+   outside the page, too), and the reader's sepia page (it re-maps the
+   grounds and the ink to its own paper tones, so the rest of its tokens must stay light too). The 3D viewer's scene is drawn as a
+   light figure: its lines, edges and vertices are pinned as drawn (21E) and its colours are an owner-visible decision. */
+.interactive-exam-page,
+.iex-navigator,
+.i3d-scene,
+.learning-reader:not(.is-presentation)[data-read-theme="sepia"] .learning-reader-page { color-scheme: light; }
 @media print {
   :root[data-theme] { color-scheme: light; }
 }

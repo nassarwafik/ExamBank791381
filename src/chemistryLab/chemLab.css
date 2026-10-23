@@ -80,10 +80,15 @@
 @media (prefers-contrast: more) {
   .clab-glass { stroke: #000; stroke-width: 2.8; } .clab-bench, .clab-card { border-color: #000; } .clab-illustrative, .clab-saved { color: inherit; }
 }
-@media (prefers-color-scheme: dark) {
-  .clab-card, .clab-readout, .clab-meter { background: #14202e; border-color: #3a4a60; }
-  .clab-glass, .clab-tick { stroke: #c5d2e3; } .clab-svg-text, .clab-svg-small { fill: #dbe5f2; } .clab-ph-mark { fill: #f3f4f6; }
-  .clab-status { color: #9cc4ff; }
-}
 /* UX-R16a — the bench sliders take the control colour (the browser's blue otherwise). */
 .clab input[type="range"] { accent-color: var(--eb-content-accent); }
+
+/* UX-R18c — the dark theme follows the switch, not the device: the former block of this sheet that followed the device's dark scheme
+   is gone (the owner's decision: the device's preference is not followed). Where the light rule reads a token it flips by itself;
+   where it writes a literal, the dark rule below gives its token. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .clab-display { fill: var(--eb-scrim); }                          /* the digital display stays a dark panel */
+:where(:root[data-theme="dark"]) .clab-display-text { fill: var(--eb-success); }
+@media (prefers-contrast: more) {
+  :where(:root[data-theme="dark"]) .clab-glass { stroke: var(--eb-text); }
+  :where(:root[data-theme="dark"]) .clab-bench, :where(:root[data-theme="dark"]) .clab-card { border-color: var(--eb-text); }
+}

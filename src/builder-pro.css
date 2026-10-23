@@ -309,15 +309,15 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .lock-button.active { color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .question-option.correct { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
-:root[data-theme="dark"] .question-option.correct .choice-letter { background: var(--eb-success-bg); }
-:root[data-theme="dark"] .theme-mini-cards .tm-card,
-:root[data-theme="dark"] .theme-mini-modern .tm-card { background: var(--eb-surface); }
-:root[data-theme="dark"] .theme-mini-classic { background: var(--eb-warn-bg); }
-:root[data-theme="dark"] .import-url-warning { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:root[data-theme="dark"] .import-badge-review { background: var(--eb-warn-bg) !important; border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent) !important; color: var(--eb-warn-tx) !important; }
-:root[data-theme="dark"] .import-duplicate-badge { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .lock-button.active { color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .question-option.correct { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .question-option.correct .choice-letter { background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .theme-mini-cards .tm-card,
+:where(:root[data-theme="dark"]) .theme-mini-modern .tm-card { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .theme-mini-classic { background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .import-url-warning { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:where(:root[data-theme="dark"]) .import-badge-review { background: var(--eb-warn-bg) !important; border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent) !important; color: var(--eb-warn-tx) !important; }
+:where(:root[data-theme="dark"]) .import-duplicate-badge { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
 
 /* UX-R11b — the builder page's setup zone (docs/enterprise-ux-r0-redesign-foundation.md R11b): «إعداد الامتحان» and its
    «ماذا تريد في الامتحان؟» card are flat 8 px hairline panels; the card loses its 3 px primary rule and the decorative tinted

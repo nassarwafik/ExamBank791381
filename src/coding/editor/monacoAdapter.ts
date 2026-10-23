@@ -1,6 +1,7 @@
 import type { EditorEngine, EditorEngineCreateOptions, EditorEngineHandle } from "./editorEngine";
 import { MONACO_ENGINE_KIND } from "./editorEngine";
-import { SMARTASSESS_EDITOR_THEME, editorCreateOptions, editorPreferenceOptions } from "./editorOptions";
+import { SMARTASSESS_EDITOR_THEME, SMARTASSESS_EDITOR_THEME_DARK, editorCreateOptions, editorPreferenceOptions } from "./editorOptions";
+import { isDarkScheme } from "../../ui/themeColor";
 
 // Phase 17F-C1 — the Monaco ADAPTER: turns the Monaco API into the small EditorEngine handle that CodingEditor drives. It is a
 // factory over a structural `MonacoLike` type so the unit tests prove it against a fake API (no worker, no layout); the engine
@@ -35,6 +36,7 @@ export type MonacoEditorLike = {
 export type MonacoLike = {
   editor: {
     defineTheme(name: string, data: unknown): void;
+    setTheme?(name: string): void;
     createModel(value: string, language?: string): MonacoModelLike;
     setModelLanguage(model: MonacoModelLike, languageId: string): void;
     create(host: HTMLElement, options: Record<string, unknown>): MonacoEditorLike;
@@ -50,9 +52,21 @@ export const INPUT_ANTI_ASSIST_ATTRIBUTES: readonly (readonly [string, string])[
   ["aria-autocomplete", "none"], ["autocomplete", "off"], ["autocorrect", "off"], ["autocapitalize", "off"], ["spellcheck", "false"]
 ]);
 
+/** UX-R18c — the editor's theme follows the ground it sits on: dark where the host's computed color-scheme is dark (the dark theme),
+ *  light everywhere else (the light theme, the exam paper's light island, environments without computed styles). */
+export function editorThemeFor(host: Element): string {
+  return isDarkScheme(host) ? SMARTASSESS_EDITOR_THEME_DARK.name : SMARTASSESS_EDITOR_THEME.name;
+}
+
 export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
-  let themed = false;
+  let themed = false, themedDark = false;
   const ensureTheme = () => { if (!themed) { monaco.editor.defineTheme(SMARTASSESS_EDITOR_THEME.name, SMARTASSESS_EDITOR_THEME.data); themed = true; } };
+  // UX-R18c — the dark theme is registered only the first time an editor sits on a dark ground (so the light path is unchanged).
+  const themeFor = (host: HTMLElement) => {
+    const name = editorThemeFor(host);
+    if (name === SMARTASSESS_EDITOR_THEME_DARK.name && !themedDark) { monaco.editor.defineTheme(SMARTASSESS_EDITOR_THEME_DARK.name, SMARTASSESS_EDITOR_THEME_DARK.data); themedDark = true; }
+    return name;
+  };
 
   return {
     kind: MONACO_ENGINE_KIND,
@@ -88,8 +102,15 @@ export function createMonacoEngine(monaco: MonacoLike): EditorEngine {
 
       function build(): EditorEngineHandle {
         model.setEOL(monaco.editor.EndOfLineSequence?.LF ?? 0);                   // LF, exactly like the textarea it replaces
-        const created = monaco.editor.create(host, { ...editorCreateOptions({ value: o.value, languageMode: o.languageMode, label: o.label, readOnly: o.readOnly, indentUnit: o.indentUnit }), model });
+        const theme = themeFor(host);
+        const created = monaco.editor.create(host, { ...editorCreateOptions({ value: o.value, languageMode: o.languageMode, label: o.label, readOnly: o.readOnly, indentUnit: o.indentUnit }), ...(theme === SMARTASSESS_EDITOR_THEME.name ? {} : { theme }), model });
         editor = created;
+        // UX-R18c — the switch flips <html data-theme> on a live page: the editor follows (Monaco's theme is global to the page).
+        if (typeof MutationObserver === "function" && typeof document !== "undefined" && monaco.editor.setTheme) {
+          const themeObserver = new MutationObserver(() => monaco.editor.setTheme?.(themeFor(host)));
+          themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+          subscriptions.push({ dispose: () => themeObserver.disconnect() });
+        }
         let accepted = model.getValue(), applying = false, armed = false, invalid = false, disposed = false;
 
         // Our attributes on Monaco's input: the anti-assist contract (no autocomplete announced or offered by the browser — there

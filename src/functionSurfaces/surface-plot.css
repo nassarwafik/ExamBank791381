@@ -52,3 +52,8 @@
 .sp3d-editor-errors{border:1px solid #b14f4f;color:#842424;background:var(--eb-content-ground-2);padding:.6rem .8rem;border-radius:9px;margin:0}
 .sp3d-editor-errors li{margin:.2rem 0}
 @media (max-width:620px){.sp3d-editor .sp3d-surface{grid-template-columns:1fr 1fr}}
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .sp3d-unavailable,
+:where(:root[data-theme="dark"]) .sp3d-editor-errors { color: var(--eb-danger-tx); }

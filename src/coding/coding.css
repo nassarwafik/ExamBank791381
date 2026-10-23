@@ -169,3 +169,17 @@
 .cx-code-rich .monaco-editor .margin { border-inline-end: 1px solid var(--eb-border, var(--eb-content-line)); }
 .cx-code-rich .monaco-editor .find-widget { direction: ltr; }
 .cx-code-editor--rich .cx-code-frame:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .cx-ev-status.is-success { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .cx-ev-status.is-warn,
+:where(:root[data-theme="dark"]) .cx-result-stale { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .cx-ev-status.is-info { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .cx-ev-badge { background: var(--eb-primary-050); color: var(--eb-primary); }
+:where(:root[data-theme="dark"]) .cx-ev-note.is-warn,
+:where(:root[data-theme="dark"]) .cx-ev-technical { background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .cx-ev-score.is-authority strong { color: var(--eb-primary); }
+:where(:root[data-theme="dark"]) .cx-ev-case.is-fail .cx-ev-case-outcome,
+:where(:root[data-theme="dark"]) .cx-limit-hint.is-invalid { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .cx-ev-case.is-pass .cx-ev-case-outcome { color: var(--eb-success-tx); }

@@ -81,12 +81,6 @@
   .motion-timeline, .motion-controls, .motion-explore { display: none !important; }
   .motion-stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
-@media (prefers-color-scheme: dark) {
-  .motion-readout, .motion-reference { background: #1b2a3d; }
-  .motion-saved { color: #7fd1a0; }
-  .motion-banner { background: #3a2a10; color: #ffd9a0; border-color: #8a6420; }
-  .motion-note { color: #a9b6c8; }
-}
 
 /* UX-R16a — a measurement box never spills: its grid track may shrink below the text field's intrinsic width (the field and
    its buttons wrap inside the box). The field spilled 64–69 px past the box's edge in every physics simulator (shared widgets),
@@ -98,3 +92,8 @@
 .motion-task label input[type="text"] { width: 100%; min-width: 0; }
 .motion-timeline label input[type="number"] { width: 7em; }   /* the time field keeps a field's width; the slider takes the rest of the row */
 .motion input[type="range"], .motion-explore input[type="range"], .smartsim-dyn input[type="range"], .motion-editor input[type="range"] { accent-color: var(--eb-content-accent); }   /* the sliders take the control colour (the browser's blue otherwise) */
+
+/* UX-R18c — the dark theme follows the switch, not the device: the former block of this sheet that followed the device's dark scheme
+   is gone (the owner's decision: the device's preference is not followed). Where the light rule reads a token it flips by itself;
+   where it writes a literal, the dark rule below gives its token. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .motion-banner { color: var(--eb-warn-tx); }

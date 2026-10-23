@@ -4,25 +4,29 @@
 // light background), unreadable text (dark text on the dark page, or white text on a token fill that turns light) or a bright
 // hairline. This script finds every such declaration and checks that the sheet answers it with a dark rule: the same selector
 // under :root[data-theme="dark"], setting the same property from tokens. Literals that read the same in both themes (a saturated
-// fill with white text, a dark shadow) need nothing.
-//   node scripts/ux-dark-audit.mjs                 → the unanswered declarations of the scoped sheets, grouped by sheet
-//   node scripts/ux-dark-audit.mjs --all           → every sheet
-// The guard is src/designSystem/darkSheets.ux-r18b.test.ts: every sheet in DARK_SCOPE has no unanswered declaration.
+// fill with white text, a dark shadow) need nothing. UX-R18c: neither do a selector rooted in a light island (the exam paper, the
+// 3D scene) nor a declaration a later rule of the same sheet overrides with tokens (it never renders).
+//   node scripts/ux-dark-audit.mjs                 → the unanswered declarations of every sheet under src/, grouped by sheet
+// The guards are src/designSystem/darkSheets.ux-r18b.test.ts (every sheet in DARK_SCOPE has no unanswered declaration) and
+// darkSheets.ux-r18c.test.ts (the scope is every sheet; the islands; no sheet follows the device's colour scheme).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const DARK = ':root[data-theme="dark"]';
+/** UX-R18c — the form every dark answer takes: :where() adds no specificity, so the answer beats the literal it answers (the same
+ *  selector, later in its sheet) and still loses to whatever overrides that selector in light (a later sheet, a more specific rule). */
+export const DARK_WHERE = ":where(" + DARK + ")";
+/** The selector a dark rule answers ("" when the selector is not a dark rule). */
+export const darkBase = s => (s.startsWith(DARK_WHERE + " ") ? s.slice(DARK_WHERE.length + 1) : s.startsWith(DARK + " ") ? s.slice(DARK.length + 1) : "");
+const isDark = s => s.startsWith(DARK) || s.startsWith(DARK_WHERE);
 
-/** The sheets whose dark look is done (R18b: the teacher's pages and the builder). R18c adds the student's pages and content. */
-export const DARK_SCOPE = [
-  "src/App.css", "src/platform.css", "src/structured-builder.css", "src/review-workspace.css", "src/structured-cover.css",
-  "src/builder-pro.css", "src/smart-import.css", "src/governance/reviewInbox.css", "src/review-pro.css", "src/charts/chart-editor.css",
-  "src/composite/composite-editor.css", "src/composite/composite-review.css", "src/aiComposer/ai-composer.css",
-  "src/questionTypes/questionTypes.css", "src/presentation/presentation-studio.css", "src/richContent/rich-content-editor.css",
-  "src/project794589.css", "src/games/games.css", "src/presets/presetLibrary.css", "src/scenario/scenario-builder.css",
-];
+/** Every stylesheet under src/ (UX-R18c: the dark look is done everywhere; R18b covered the teacher's pages and the builder). */
+export const DARK_SCOPE = (function walk(dir, out = []) {
+  for (const n of fs.readdirSync(dir).sort()) { const p = path.join(dir, n); if (fs.statSync(p).isDirectory()) walk(p, out); else if (n.endsWith(".css")) out.push(path.relative(ROOT, p).split(path.sep).join("/")); }
+  return out;
+})(path.join(ROOT, "src"));
 
 // ---- colour maths ----
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g;
@@ -69,6 +73,10 @@ export function parseRules(css) {
 const FAMILY = p => (p === "background" || p === "background-color" || p === "background-image" ? "background"
   : p === "color" ? "color" : /^border(-(top|right|bottom|left|block|inline)(-(start|end))?)?(-color)?$/.test(p) || p === "outline" || p === "outline-color" ? "border"
   : p === "fill" ? "fill" : p === "stroke" ? "stroke" : null);
+// Selectors rooted in a light island (design-tokens-dark.css: the exam paper and its previews) render light by design: no answer needed.
+export const ISLAND = /^(\.eb-light-island|\.interactive-exam-page|\.iex-navigator|\.exam-presentation|\.exam-theme-[\w-]+)(?![\w-])/;
+// The parts of the 3D viewer's scene (.i3d-scene is an island): drawn only inside it.
+export const ISLAND_PARTS = /^\.i3d-(bg|face|line|line-crease|line-silhouette|edge-target|edge-hit|vertex-target)(?![\w-])/;
 const INK_MIX = /color-mix\(in srgb,\s*var\(--eb-(content-ink|navy|navy-2|ink|text|text-heading)\)/;
 // Token labels that turn DARK in dark (the page grounds: a light label on a coloured fill in light).
 const DARKENING_LABEL = /var\(--eb-(surface|surface-2|bg|bg-tint)\)/;
@@ -103,16 +111,20 @@ export function needOf(rule, decl) {
 export function auditSheet(css) {
   const rules = parseRules(css);
   const answered = new Set();
-  for (const r of rules) for (const s of r.selectors) if (s.startsWith(DARK + " ")) for (const d of r.decls) { if (FAMILY(d.prop)) answered.add(s.slice(DARK.length + 1) + "|" + FAMILY(d.prop)); if (d.prop === "background-image" || d.prop === "background") answered.add(s.slice(DARK.length + 1) + "|background"); }
+  for (const r of rules) for (const s of r.selectors) if (darkBase(s)) for (const d of r.decls) { if (FAMILY(d.prop)) answered.add(darkBase(s) + "|" + FAMILY(d.prop)); if (d.prop === "background-image" || d.prop === "background") answered.add(darkBase(s) + "|background"); }
+  // A declaration a LATER top-level rule of the same sheet overrides (the same selector, the same property family, tokens only)
+  // never renders in either theme: superseded[selector|family] = the index of the last such rule.
+  const superseded = new Map();
+  rules.forEach((r, i) => { if (r.context || r.selectors.some(isDark)) return; for (const d of r.decls) if (FAMILY(d.prop) && !literalsOf(d.value).length) for (const s of r.selectors) superseded.set(s + "|" + FAMILY(d.prop), i); });
   const open = [];
-  for (const r of rules) {
-    if (r.selectors.some(s => s.startsWith(DARK))) continue;
+  for (const [i, r] of rules.entries()) {
+    if (r.selectors.some(isDark)) continue;
     if (/\bprint\b/.test(r.context)) continue;                                   // print is always light
     for (const d of r.decls) {
       // a shadow mixed from the heading ink glows in dark (that ink turns light): shadows read --eb-scrim, which stays dark
       if (d.prop === "box-shadow" && INK_MIX.test(d.value)) { open.push({ selectors: r.selectors, prop: d.prop, value: d.value, need: "shadow mixed from an ink that turns light", context: r.context }); continue; }
       const need = needOf(r, d); if (!need) continue;
-      const missing = r.selectors.filter(s => !answered.has(s + "|" + FAMILY(d.prop)));
+      const missing = r.selectors.filter(s => !ISLAND.test(s) && !ISLAND_PARTS.test(s) && !answered.has(s + "|" + FAMILY(d.prop)) && !(superseded.get(s + "|" + FAMILY(d.prop)) > i));
       if (missing.length) open.push({ selectors: missing, prop: d.prop, value: d.value, need, context: r.context });
     }
   }
@@ -121,12 +133,16 @@ export function auditSheet(css) {
 
 /** Every dark rule of a sheet sets its colours from tokens only (no literal, so the colour inventory never grows). */
 export function darkRuleLiterals(css) {
-  return parseRules(css).filter(r => r.selectors.some(s => s.startsWith(DARK))).flatMap(r => r.decls.filter(d => FAMILY(d.prop) && literalsOf(d.value).length).map(d => r.selectors[0] + " { " + d.prop + ": " + d.value + " }"));
+  return parseRules(css).filter(r => r.selectors.some(isDark)).flatMap(r => r.decls.filter(d => FAMILY(d.prop) && literalsOf(d.value).length).map(d => r.selectors[0] + " { " + d.prop + ": " + d.value + " }"));
+}
+
+/** UX-R18c — the dark rules of a sheet not written in the :where() form (they would outrank the light theme's own overrides). */
+export function darkRulesNotWhere(css) {
+  return parseRules(css).flatMap(r => r.selectors.filter(s => s.startsWith(DARK + " ")));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const all = process.argv.includes("--all");
-  const files = all ? (function walk(d, out = []) { for (const n of fs.readdirSync(d)) { const p = path.join(d, n); if (fs.statSync(p).isDirectory()) walk(p, out); else if (n.endsWith(".css")) out.push(path.relative(ROOT, p).split(path.sep).join("/")); } return out; })(path.join(ROOT, "src")) : DARK_SCOPE;
+  const files = DARK_SCOPE;
   let total = 0;
   for (const f of files) {
     const open = auditSheet(fs.readFileSync(path.join(ROOT, f), "utf8")); total += open.length;

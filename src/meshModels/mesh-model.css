@@ -87,3 +87,10 @@
 .mm3d-review-list li.is-correct{border-color:#1f8a45;background:var(--eb-content-ground-2)}
 .mm3d-review-list li.is-incorrect{border-color:var(--eb-danger-tx);background:var(--eb-content-ground)}
 .mm3d-review-list li.is-missed{border-color:#c58a06;background:var(--eb-surface)}
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .mm3d-error,
+:where(:root[data-theme="dark"]) .mm3d-unavailable,
+:where(:root[data-theme="dark"]) .mm3d-issues { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .mm3d-ok { color: var(--eb-success-tx); }

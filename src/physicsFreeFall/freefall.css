@@ -64,10 +64,6 @@
   .freefall-timeline { display: none !important; }
   .freefall-stage { grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); }
 }
-@media (prefers-color-scheme: dark) {
-  .freefall-readout { background: #1b2a3d; }
-  .freefall-saved { color: #7fd1a0; }
-}
 
 /* UX-R16a — the free-fall measurement and point boxes never spill (the same fix as the shared physics widgets in motion.css):
    the box's track and a labelled field may shrink; a field takes the free width of its row. The field spilled 64–69 px past the

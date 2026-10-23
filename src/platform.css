@@ -1024,7 +1024,6 @@
 /* ---------- Status badges ---------- */
 .status-active { background: var(--eb-success-bg); color: var(--eb-success-tx); }
 
-
 /* ---------- Interactive exam (student solving) ---------- */
 
 /* Sidebar layout: platform view fills full height (top bar no longer reserves height) */
@@ -1086,67 +1085,65 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .status-active,
-:root[data-theme="dark"] .assignment-status.published,
-:root[data-theme="dark"] .review-state.final,
-:root[data-theme="dark"] .analytics-trend-badge.improving { background: var(--eb-success-bg); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .platform-error { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .platform-notice { background: var(--eb-success-bg); border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .platform-warning { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .credential-box { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
-:root[data-theme="dark"] .credential-box h3,
-:root[data-theme="dark"] .credential-box p,
-:root[data-theme="dark"] .iex-coding-grading.is-complete .iex-coding-grading-text strong,
-:root[data-theme="dark"] .review-grade-status.iex-grade-final { color: var(--eb-success-tx); }
-:root[data-theme="dark"] .credential-values > div { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); }
-:root[data-theme="dark"] .credential-box button { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .assignment-status.draft,
-:root[data-theme="dark"] .review-state.pending,
-:root[data-theme="dark"] .analytics-risk.medium,
-:root[data-theme="dark"] .analytics-feedback { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .assignment-delete-button { color: var(--eb-danger-tx); border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent) !important; }
-:root[data-theme="dark"] .gradebook-stats article.warn,
-:root[data-theme="dark"] .review-question.needs-review,
-:root[data-theme="dark"] .analytics-insight.warning { border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:root[data-theme="dark"] .review-qhead em,
-:root[data-theme="dark"] .never-login,
-:root[data-theme="dark"] .analytics-chip.warning,
-:root[data-theme="dark"] .iex-provisional,
-:root[data-theme="dark"] .student-pending-note,
-:root[data-theme="dark"] .review-grade-status.iex-grade-pending { color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .iex-finalized { color: var(--eb-success-tx) !important; background: var(--eb-success-bg); }
-:root[data-theme="dark"] .import-row-duplicate { background: var(--eb-warn-bg); }
-:root[data-theme="dark"] .import-row-invalid { background: var(--eb-danger-bg); }
-:root[data-theme="dark"] .analytics-insight.success { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
-:root[data-theme="dark"] .analytics-trend-badge.declining,
-:root[data-theme="dark"] .analytics-risk.high { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .iex-coding-grading.is-retrying,
-:root[data-theme="dark"] .iex-coding-grading.is-delayed { border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }
-:root[data-theme="dark"] .iex-coding-grading.is-complete { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
-:root[data-theme="dark"] .student-status-badge.dash-closedUnsubmitted { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .assignment-status.published,
+:where(:root[data-theme="dark"]) .review-state.final,
+:where(:root[data-theme="dark"]) .analytics-trend-badge.improving { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .platform-error { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .platform-notice { background: var(--eb-success-bg); border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .platform-warning { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .credential-box { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .credential-box h3,
+:where(:root[data-theme="dark"]) .credential-box p,
+:where(:root[data-theme="dark"]) .iex-coding-grading.is-complete .iex-coding-grading-text strong,
+:where(:root[data-theme="dark"]) .review-grade-status.iex-grade-final { color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .credential-values > div { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .credential-box button { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .assignment-status.draft,
+:where(:root[data-theme="dark"]) .review-state.pending,
+:where(:root[data-theme="dark"]) .analytics-risk.medium,
+:where(:root[data-theme="dark"]) .analytics-feedback { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .assignment-delete-button { color: var(--eb-danger-tx); border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent) !important; }
+:where(:root[data-theme="dark"]) .gradebook-stats article.warn,
+:where(:root[data-theme="dark"]) .review-question.needs-review,
+:where(:root[data-theme="dark"]) .analytics-insight.warning { border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:where(:root[data-theme="dark"]) .review-qhead em,
+:where(:root[data-theme="dark"]) .never-login,
+:where(:root[data-theme="dark"]) .analytics-chip.warning,
+:where(:root[data-theme="dark"]) .iex-provisional,
+:where(:root[data-theme="dark"]) .student-pending-note,
+:where(:root[data-theme="dark"]) .review-grade-status.iex-grade-pending { color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .iex-finalized { color: var(--eb-success-tx) !important; background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .import-row-duplicate { background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .import-row-invalid { background: var(--eb-danger-bg); }
+:where(:root[data-theme="dark"]) .analytics-insight.success { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .analytics-trend-badge.declining,
+:where(:root[data-theme="dark"]) .analytics-risk.high { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .iex-coding-grading.is-retrying,
+:where(:root[data-theme="dark"]) .iex-coding-grading.is-delayed { border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .iex-coding-grading.is-complete { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .student-status-badge.dash-closedUnsubmitted { color: var(--eb-danger-tx); }
 
 /* UX-R18b — the dark theme, continued: the colours this sheet writes as keywords («white»), which the colour inventory does not
    count. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .platform-hero,
-:root[data-theme="dark"] .platform-primary,
-:root[data-theme="dark"] .student-assignment-header,
-:root[data-theme="dark"] .review-attempt-tabs button.active,
-:root[data-theme="dark"] .analytics-ai-button.primary { color: var(--eb-surface); }
-:root[data-theme="dark"] .platform-card,
-:root[data-theme="dark"] .student-panel,
-:root[data-theme="dark"] .credential-values > div,
-:root[data-theme="dark"] .credential-box button,
-:root[data-theme="dark"] .assignment-create-grid input,
-:root[data-theme="dark"] .assignment-create-grid select,
-:root[data-theme="dark"] .assignment-create-grid textarea,
-:root[data-theme="dark"] .assignment-publish-toggle,
-:root[data-theme="dark"] .assignment-row,
-:root[data-theme="dark"] .student-question-card,
-:root[data-theme="dark"] .student-word-bank span,
-:root[data-theme="dark"] .achievement-reaction,
-:root[data-theme="dark"] .review-top>button,
-:root[data-theme="dark"] .review-footer button,
-:root[data-theme="dark"] .review-grade-row button,
-:root[data-theme="dark"] .review-summary>div,
-:root[data-theme="dark"] .review-attempt-tabs button,
-:root[data-theme="dark"] .review-question { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .platform-hero,
+:where(:root[data-theme="dark"]) .student-assignment-header,
+:where(:root[data-theme="dark"]) .review-attempt-tabs button.active,
+:where(:root[data-theme="dark"]) .analytics-ai-button.primary { color: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .platform-card,
+:where(:root[data-theme="dark"]) .student-panel,
+:where(:root[data-theme="dark"]) .credential-values > div,
+:where(:root[data-theme="dark"]) .credential-box button,
+:where(:root[data-theme="dark"]) .assignment-create-grid input,
+:where(:root[data-theme="dark"]) .assignment-create-grid select,
+:where(:root[data-theme="dark"]) .assignment-create-grid textarea,
+:where(:root[data-theme="dark"]) .assignment-publish-toggle,
+:where(:root[data-theme="dark"]) .assignment-row,
+:where(:root[data-theme="dark"]) .student-question-card,
+:where(:root[data-theme="dark"]) .student-word-bank span,
+:where(:root[data-theme="dark"]) .achievement-reaction,
+:where(:root[data-theme="dark"]) .review-top>button,
+:where(:root[data-theme="dark"]) .review-footer button,
+:where(:root[data-theme="dark"]) .review-grade-row button,
+:where(:root[data-theme="dark"]) .review-summary>div,
+:where(:root[data-theme="dark"]) .review-attempt-tabs button,
+:where(:root[data-theme="dark"]) .review-question { background: var(--eb-surface); }

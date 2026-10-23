@@ -71,10 +71,10 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .rc-editor .rc-block-badge { background: var(--eb-primary-050); color: var(--eb-primary); }
-:root[data-theme="dark"] .rc-editor .rc-math-ok { color: var(--eb-success-tx); }
-:root[data-theme="dark"] .rc-editor .rc-math-bad,
-:root[data-theme="dark"] .rc-editor .rc-error { color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .rc-editor .rc-issues { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .rc-editor .rc-note { color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .rc-convert-warnings { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .rc-editor .rc-block-badge { background: var(--eb-primary-050); color: var(--eb-primary); }
+:where(:root[data-theme="dark"]) .rc-editor .rc-math-ok { color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .rc-editor .rc-math-bad,
+:where(:root[data-theme="dark"]) .rc-editor .rc-error { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .rc-editor .rc-issues { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .rc-editor .rc-note { color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .rc-convert-warnings { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }

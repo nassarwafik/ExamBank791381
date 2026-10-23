@@ -156,18 +156,18 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .iex-cover-banner img { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
-:root[data-theme="dark"] .iex-cover-card,
-:root[data-theme="dark"] .iex-cover-info { background: var(--eb-surface); border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); }
-:root[data-theme="dark"] .iex-cover-title,
-:root[data-theme="dark"] .iex-cover-subtitle,
-:root[data-theme="dark"] .iex-cover-info-label,
-:root[data-theme="dark"] .iex-cover-info-value,
-:root[data-theme="dark"] .iex-cover-materials span,
-:root[data-theme="dark"] .iex-cover-section-title,
-:root[data-theme="dark"] .iex-cover-instructions li,
-:root[data-theme="dark"] .iex-cover-preview-note { color: var(--eb-info-tx); }
-:root[data-theme="dark"] .iex-cover-materials { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:root[data-theme="dark"] .iex-cover-materials strong { color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .iex-cover-marks li { background: var(--eb-surface); border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); color: var(--eb-info-tx); }
-:root[data-theme="dark"] .iex-cover-start { color: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .iex-cover-banner img { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .iex-cover-card,
+:where(:root[data-theme="dark"]) .iex-cover-info { background: var(--eb-surface); border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); }
+:where(:root[data-theme="dark"]) .iex-cover-title,
+:where(:root[data-theme="dark"]) .iex-cover-subtitle,
+:where(:root[data-theme="dark"]) .iex-cover-info-label,
+:where(:root[data-theme="dark"]) .iex-cover-info-value,
+:where(:root[data-theme="dark"]) .iex-cover-materials span,
+:where(:root[data-theme="dark"]) .iex-cover-section-title,
+:where(:root[data-theme="dark"]) .iex-cover-instructions li,
+:where(:root[data-theme="dark"]) .iex-cover-preview-note { color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .iex-cover-materials { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:where(:root[data-theme="dark"]) .iex-cover-materials strong { color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .iex-cover-marks li { background: var(--eb-surface); border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .iex-cover-start { color: var(--eb-surface); }

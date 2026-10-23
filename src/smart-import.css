@@ -44,11 +44,11 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .smart-import .si-step.is-done { color: var(--eb-success-tx); background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
-:root[data-theme="dark"] .si-group-count { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .si-changes li { color: var(--eb-success-tx); }
-:root[data-theme="dark"] .si-policy { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:root[data-theme="dark"] .si-status-accepted .si-status-badge { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .si-status-needsManualReview .si-status-badge,
-:root[data-theme="dark"] .si-status-stale .si-status-badge { background: var(--eb-warn-bg); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .si-status-failed .si-status-badge { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .smart-import .si-step.is-done { color: var(--eb-success-tx); background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .si-group-count { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .si-changes li { color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .si-policy { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:where(:root[data-theme="dark"]) .si-status-accepted .si-status-badge { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .si-status-needsManualReview .si-status-badge,
+:where(:root[data-theme="dark"]) .si-status-stale .si-status-badge { background: var(--eb-warn-bg); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .si-status-failed .si-status-badge { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); color: var(--eb-danger-tx); }

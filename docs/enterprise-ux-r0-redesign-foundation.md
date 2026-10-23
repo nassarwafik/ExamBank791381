@@ -4279,3 +4279,189 @@ On the final tree, run in order:
 - **`git diff --check`:** clean.
 - **Colour inventory:** 756, unchanged.
 - **`node scripts/ux-dark-audit.mjs`:** 0 unanswered in 20 sheets.
+
+---
+
+# Phase UX-R18c1 — Dark mode: the student's pages and the content
+
+**Owner direction (§4.2; owner decisions of 2026-10-23):**
+- **Scope:** the student's pages and the content in the dark theme.
+- **Release:** dark pages are shown only once everything is finished.
+
+**The split.** R18c is split in two so each review stays readable:
+- **R18c1 (this phase)** finishes the look.
+- **R18c2** releases it: the toggle, the pre-paint script, the offline page and the gate comparing dark.
+
+**Branch and visibility.** R18c1 branches from `main` `9359a005` (#427) as `feature/ux-r18c1-dark-student-content`. No user sees a
+change: the toggle is still not rendered.
+
+## R18c1.1 What was left, measured
+
+On `main`, the R18b audit run over **every** sheet reported **121** unanswered declarations in the 24 sheets it had not covered:
+the coding evidence panels, the network simulators, the 3D viewer, the learning activities and visuals, the CLI terminals, the
+open response, the visual question and the student portal.
+
+**The device's dark blocks.** Seven sheets kept a block that followed the **device's** dark scheme, `@media (prefers-color-scheme: dark)`:
+- the sheets: the chemistry lab, reactions and structure, the physics lab, free fall and motion, and the function study;
+- each block wrote dark literals of its own;
+- in the light theme on a dark-scheme device, they darkened parts of a light page, including inside the exam paper;
+- the owner decided that the device's preference is not followed, so these blocks contradict that decision.
+
+**A defect R18b left.** R18b's dark answers carried the dark root's specificity (`:root[data-theme="dark"] .x`, two classes
+heavier than `.x`). One of them outranked a later sheet's override that wins in light:
+- the rule: R18b's `:root[data-theme="dark"] .review-attempt-tabs button.active { color: var(--eb-surface) }` answers `color: white` in `platform.css`;
+- the override: in the review window, `review-workspace.css` gives the active tab a light pill and a dark label;
+- in dark, the R18b answer won, and the tab read dark on dark;
+- axe measured **1.19 : 1** on the review window and the pending review, at all three viewports. The R18c1 capture before the
+  fix shows it (6 nodes).
+
+## R18c1.2 The approach
+
+**One rule, as in R18b:** the light theme is untouched. Every change is a dark-only rule, a light island, or a token whose light
+value is the literal it replaces.
+
+**Answers that add no specificity.** Every dark answer, R18b's and R18c1's, is now written
+`:where(:root[data-theme="dark"]) <selector>`. `:where()` adds nothing, so:
+- an answer wins over the literal it answers (the same selector, later in its sheet);
+- it still loses to whatever overrides that selector in light: a later sheet, a more specific rule.
+
+So the cascade of the dark theme is the light theme's. 320 selectors in 36 sheets were converted; the tokens file keeps its own
+`:root[data-theme="dark"]` (it is not an answer).
+
+**The device's dark blocks follow the switch.** Each block is gone:
+- where the light rule reads a token, it flips by itself and needs nothing;
+- where it writes a literal, a dark rule gives the token. For example, the reactions' status reads `--eb-success-tx` / `--eb-danger-tx`.
+
+**The plan's islands stay light.** `design-tokens-dark.css` gives `color-scheme: light` to these islands:
+- **The exam paper and the teacher's previews of it** (`.interactive-exam-page`, with or without a presentation preset), **and its
+  question-list dialog**, which renders outside the page. An exam looks the same for every student.
+- **The reader's sepia page.** It re-maps the grounds and the ink to its paper tones, so the rest of its tokens must stay light.
+  The reader's own dark reading theme is unchanged, and its default "light" reading theme follows the app.
+- **The 3D viewer's scene** (`.i3d-scene`). Its lines, edges and vertices are pinned as drawn (21E), and their colours are an
+  owner-visible decision, so the scene is drawn as a light figure.
+
+Inside an island, every token resolves its light half, R18b's dark answers included.
+
+**Panels that stay dark.**
+- **The CLI terminal.** Its ground is `--eb-navy`, the heading ink, which turns light in dark. It takes `--eb-scrim` (always dark),
+  and its text and green lines take dark-theme tokens.
+- **The chemistry lab's digital display** takes `--eb-scrim` too.
+
+**The code editor follows its ground.** Monaco cannot read CSS variables, so:
+- a dark syntax theme (`smartassess-dark`, `vs-dark` base, the dark palette of `design-tokens-dark.css`) is registered **the first
+  time** an editor sits on a dark ground;
+- an editor is created with the theme its host's computed `color-scheme` shows: light inside the exam paper, dark in the reader
+  in dark;
+- it follows the toggle on a live page.
+
+The light path is byte-identical (the 17F-C1 contract): one theme registered, `smartassess-light` passed to `create()`.
+
+**The rest of the 121** took their token by role and hue, as in R18b. Most were status tints, the network diagrams' node
+fills and the activity labels on the primary.
+
+## R18c1.3 The audit
+
+`scripts/ux-dark-audit.mjs` changes in three ways.
+
+**1. Its scope is every stylesheet under `src/`** (102).
+
+**2. Two cases need no answer:**
+- **A selector rooted in a light island** (the exam paper, its question list) or **a part of the 3D scene**. These render light by design.
+- **A declaration a later top-level rule of the same sheet overrides**, with the same selector and the same property family,
+  using tokens only. It never renders in either theme.
+  - This removed eight R18b answers in `App.css` and `platform.css` that overrode those later token rules in dark.
+  - Example: the student portal's old banner whites, overridden by its R14 rules.
+
+**3. It reads the `:where()` form, and `darkRulesNotWhere` reports any answer not written in it.**
+
+**`src/designSystem/darkSheets.ux-r18c.test.ts`** (12 tests) pins:
+- the scope;
+- the `:where()` form everywhere;
+- no `prefers-color-scheme` in any sheet;
+- the converted simulator rules;
+- the islands;
+- the dark terminal;
+- the audit's island and override rules;
+- the editor: light on light, dark on dark, light inside the island, following the switch and released with the editor.
+
+**`darkSheets.ux-r18b.test.ts`** now runs over all 102 sheets.
+
+**A correction to the R18b record.** R18b's guard counted 24 tests, not 25: the case added for mutant B4 is an extra
+expectation inside an existing test. The R18b section says "25 / 25"; it should read 24 / 24.
+
+## R18c1.4 Edit set
+
+- **Dark blocks** (tokens only, `:where()` form):
+  - `charts/charts.css`, `coding/coding.css`, `functionGraphs/function-graph.css`, `functionSurfaces/surface-3d.css`, `functionSurfaces/surface-plot.css`;
+  - `meshModels/mesh-model.css`, `networkCli/networkCli.css`, `networkTopology/network-topology.css`, `networkTopology2/net2.css`;
+  - `openResponse/openResponse.css`, `smartsim/smartsim.css`, `visual/visual.css`, `learning/activities/activities.css`, `learning/cli/cli.css`, `learning/visuals/visuals.css`.
+- **The device's dark blocks:**
+  - replaced by dark rules: `chemistryLab/chemLab.css`, `chemistryReactions/rxn.css`, `chemistryStructure/chem.css`, `physicsMotion/motion.css`, `functionStudy/function-study.css`;
+  - removed (every rule read a token already): `physicsLab/lab.css`, `physicsFreeFall/freefall.css`.
+- **R18b's 16 dark blocks** converted to the `:where()` form, with eight redundant answers removed (`App.css`, `platform.css`).
+- **`design-tokens-dark.css`:** the islands.
+- **`coding/editor/editorOptions.ts`** (the dark theme) and **`coding/editor/monacoAdapter.ts`** (`editorThemeFor`, lazy registration,
+  following the switch).
+- **`scripts/ux-dark-audit.mjs`**, **`src/designSystem/darkSheets.ux-r18c.test.ts`** (new).
+- **`src/designSystem/remainingSheets.ux-r17c.test.ts`:** its pin on the function study's device-dark block becomes a pin on the
+  light rule that now flips with the theme. The plan (§4.2) asked for these blocks to be "reconciled with the switch".
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the function-graph check resolves the series token where the curve is drawn.
+  The exam paper is a light island, so the token read on `<body>` in dark no longer matches the curve, and the curve is correct.
+
+## R18c1.5 Evidence
+
+**Harness `THEME=dark`, every page and scene, three viewports:**
+
+| Measure | before (R18c1 tree with R18b's answer form) | R18c1 |
+|---|---|---|
+| captures clean | 204 / 207 (the graph check read the token on `<body>`) | **207 / 207** |
+| axe colour-contrast failures | 6 (the review window's active tab, 1.19 : 1) | **0** |
+| static audit, every sheet | 121 on `main` | **0** |
+
+**Reviewed in dark:**
+- **The student's pages:** the portal, messages, the games and their join page, and the library, the book and the reader. Dark and legible.
+- **The exam:** its paper, its question list, every simulator and editor inside it. Light, as planned.
+
+The axe findings left are structural rules that predate this phase and do not depend on the theme: a nested interactive SVG, a
+list's children, an `aria-label` on a plain `div`, a select without a label, and a scrollable region.
+
+**Light is unchanged.** The R19b gate script ran, `main` `9359a005` against this branch, at all three viewports, on the final tree: **GATE PASS**, 207 / 207 captures compared, 0 changed, 0 failures, 0 notes.
+
+**The colour inventory falls from 756 to 719.** The device's dark blocks were literals.
+
+**Fail-first.** The R18c guard file was run against `main` `9359a005`: **12 / 12 fail**. On the head, 12 / 12 pass.
+
+## R18c1.6 Mutation proof
+
+Each mutant was planted alone in the worktree. These suites then ran: both dark-sheet guard files, the code editor's tests and the
+colour-inventory ratchet. After each run the file was restored byte-for-byte (SHA-256 verified), and `git status` was unchanged
+afterwards. **15 / 15 KILLED**, no timeout.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| C1 | the exam paper is no longer a light island | KILLED | islands |
+| C2 | a sheet follows the device's colour scheme again | KILLED | no `prefers-color-scheme` |
+| C3 | an answer outranks the light theme's overrides (no `:where()`) | KILLED | the `:where()` form |
+| C4 | island selectors are audited like any other | KILLED | `studentexam-pro.css` sheet guard; audit: islands |
+| C5 | a declaration a later token rule overrides still needs an answer | KILLED | `App.css`, `platform.css`, `student-portal-v2.css` sheet guards |
+| C6 | an override inside `@media` counts as superseding | KILLED | audit: override rules |
+| C7 | an earlier token rule counts as superseding | KILLED | audit: override rules |
+| C8 | the scope is no longer every sheet | KILLED | the scope (both files) |
+| C9 | the editor never takes the dark theme | KILLED | editor: dark ground; follows the switch |
+| C10 | the editor's theme observer outlives the editor | KILLED | editor: released with the editor |
+| C11 | the dark editor theme is registered eagerly (the light path changes) | KILLED | editor: light ground |
+| C12 | the `:where()` form is not read as an answer | KILLED | every sheet with answers |
+| C13 | the CLI terminal's dark answer removed | KILLED | `cli.css` sheet guard; the dark terminal |
+| C14 | a converted device-dark rule removed | KILLED | `rxn.css` sheet guard; the converted rules |
+| C15 | the exam's question list leaves the island | KILLED | islands |
+
+## R18c1.7 Local validation
+
+On the final tree, run in order:
+- **`npx vitest run`:** 1 209 files, **14 421 / 14 421 passed**.
+- **`npm run lint`:** 0 errors (warnings only, unchanged).
+- **`npx tsc -b`:** passes.
+- **`npm run build`:** passes, bundle guard passed.
+- **`git diff --check`:** clean.
+- **Colour inventory:** 719 (from 756; the device's dark blocks are gone).
+- **`node scripts/ux-dark-audit.mjs`:** 0 unanswered in 102 sheets.

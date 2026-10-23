@@ -91,3 +91,7 @@
   .fg-print{ display:block; }
   .fg-option{ border-color:var(--eb-muted); }
 }
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .fg-option[aria-pressed="true"] { background: var(--eb-warn-bg); }

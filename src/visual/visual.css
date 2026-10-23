@@ -69,3 +69,9 @@
 .vq-keyboard-guide > summary { display: list-item; box-sizing: border-box; min-height: 44px; padding: 10px 4px; cursor: pointer; color: var(--eb-primary-strong, var(--eb-content-accent)); font-weight: 600; }
 .vq-keyboard-guide > summary:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-radius: 6px; }
 .vq-keyboard-guide > p { margin: 4px 0 0; line-height: 1.7; }
+
+/* UX-R18c — the dark theme: the literals of this sheet that would break in dark take their token here. Tokens only; the light
+   theme is untouched. */
+:where(:root[data-theme="dark"]) .vq-zone-btn[data-filled="true"] { background: var(--eb-info-bg); }
+:where(:root[data-theme="dark"]) .vq-zone-num { background: var(--eb-info); }                                          /* its --eb-surface label turns dark: the fill turns light */
+:where(:root[data-theme="dark"]) .vq-issues { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
