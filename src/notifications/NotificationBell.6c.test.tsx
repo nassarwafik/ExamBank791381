@@ -28,14 +28,16 @@ const bell = () => screen.getByRole("button", { name: /^الإشعارات/ });
 const panel = () => document.getElementById(bell().getAttribute("aria-controls") || "")!;
 
 describe("StudentShell — «الإشعارات» bell", () => {
-  it("1. rendered (first in the bar, before «الرسائل») only when notification support is supplied", () => {
+  it("1. rendered (first in the bar after the dark-mode toggle, before «الرسائل») only when notification support is supplied", () => {
     const a = mount({}, { total: 0, capped: false }, false);
     expect(screen.queryByRole("button", { name: /^الإشعارات/ })).toBeNull();
     a.unmount();
     mount();
-    const actions = Array.from(document.querySelectorAll(".student-topbar-actions > *")).map(el => el.textContent || "");
-    expect(actions[0]).toContain("الإشعارات");
-    expect(actions[1]).toContain("الرسائل");
+    const items = Array.from(document.querySelectorAll(".student-topbar-actions > *"));
+    const actions = items.map(el => el.textContent || "");
+    expect(items[0].getAttribute("aria-label")).toBe("الوضع الداكن");        // UX-R18c2: the released toggle opens the bar
+    expect(actions[1]).toContain("الإشعارات");
+    expect(actions[2]).toContain("الرسائل");
     expect(actions.some(t => t.includes("الألعاب التعليمية"))).toBe(true);
     expect(actions[actions.length - 1]).toContain("تسجيل الخروج");
     expect(bell().tagName).toBe("BUTTON");

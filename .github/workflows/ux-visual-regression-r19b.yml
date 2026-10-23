@@ -3,6 +3,8 @@ name: UX-R19b Visual Regression Gate
 # touches the app or the capture harness builds its head (the merge commit) and its base (the merge commit's first parent),
 # captures both with the head's harness, and compares every page and scene pixel by pixel, one job per viewport. A change the
 # pull request does not declare in docs/ux-r/visual-changes.json fails it; the before, after and diff images are uploaded.
+# UX-R18c2 — once dark mode is released, every viewport is compared in both themes (THEME=dark sets <html data-theme="dark">
+# and the stored choice before the page loads); the light jobs keep their names.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -30,9 +32,10 @@ jobs:
       fail-fast: false
       matrix:
         viewport: [desktop, tablet, phone]
+        theme: [light, dark]
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    name: Visual regression (${{ matrix.viewport }})
+    name: Visual regression (${{ matrix.viewport }}${{ matrix.theme == 'dark' && ', dark' || '' }})
     steps:
       - uses: actions/checkout@v5
         with:
@@ -52,7 +55,7 @@ jobs:
           npm run build --prefix ../base
           npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
           command -v google-chrome
-      - name: Compare every page and scene (${{ matrix.viewport }})
+      - name: Compare every page and scene (${{ matrix.viewport }}, ${{ matrix.theme }})
         env:
           PLAYWRIGHT_CORE_DIR: /tmp/pw
           CHROMIUM_PATH: /usr/bin/google-chrome
@@ -60,12 +63,13 @@ jobs:
           HEAD_DIST: dist
           BASE_MANIFEST: ../base/docs/ux-r/visual-changes.json
           VIEWPORTS: ${{ matrix.viewport }}
+          THEME: ${{ matrix.theme }}
           GATE_OUT: .harness-visual
         run: node scripts/ux-visual-gate.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ux-visual-${{ matrix.viewport }}
+          name: ux-visual-${{ matrix.viewport }}-${{ matrix.theme }}
           path: |
             .harness-visual/report.json
             .harness-visual/summary.md

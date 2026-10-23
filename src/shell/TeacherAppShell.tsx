@@ -172,7 +172,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         </button>
         <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />
         <div className="eb-topbar-actions">
-          {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; rendered once dark mode is released (R18c). */}
+          {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; released in UX-R18c2. */}
           {DARK_MODE_RELEASED && <ThemeSwitch className="eb-topbar-theme" />}
           {identity
             ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact size={44} />
