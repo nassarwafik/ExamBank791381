@@ -45,3 +45,51 @@ export function scoreGridChanges(drafts: Record<string, string>, board: Board): 
   }
   return out;
 }
+
+// ---- Phase G1 — the class matrix: a cell is a score AND a «منجز» decision. ----
+
+/** One status decision of the matrix: approve the stage («منجز») or reopen it (back to «قيد التنفيذ»). */
+export type GridStatusChange = { key: string; studentId: string; stageId: string; to: "approved" | "in_progress"; implied: boolean };
+
+const isApprovedCell = (board: Board, studentId: string, stageId: string) => {
+  const c = board.students.find(s => s.studentId === studentId)?.cells[stageId];
+  return !!c && c.status === "approved";
+};
+
+/**
+ * The status writes a save makes, in board order:
+ *   • an explicit «منجز» toggle that differs from the saved state approves (on) or reopens (off) the stage;
+ *   • with «اعتماد عند الحفظ» on, a cell that gets a score (never a cleared one) on a stage not yet approved is approved
+ *     too (`implied`), exactly as the student profile does (Phase P8); an explicit toggle on the same cell wins.
+ * A stage the student marked done (approved + selfReported) counts as approved: confirming it needs no status write,
+ * reopening it does. A cleared score never approves.
+ */
+export function gridStatusChanges(doneDrafts: Record<string, boolean>, scoreChanges: GridChange[], board: Board, approveOnSave: boolean): GridStatusChange[] {
+  const out: GridStatusChange[] = [];
+  const scored = new Map(scoreChanges.filter(c => !c.invalid).map(c => [c.key, c]));
+  const stages = board.stages.slice().sort((a, b) => a.order - b.order);
+  for (const student of board.students) {
+    for (const stage of stages) {
+      const key = student.studentId + "|" + stage.stageId;
+      const approved = isApprovedCell(board, student.studentId, stage.stageId);
+      if (key in doneDrafts) {
+        if (doneDrafts[key] !== approved) out.push({ key, studentId: student.studentId, stageId: stage.stageId, to: doneDrafts[key] ? "approved" : "in_progress", implied: false });
+        continue;
+      }
+      const change = scored.get(key);
+      if (approveOnSave && change && change.score !== null && !approved) out.push({ key, studentId: student.studentId, stageId: stage.stageId, to: "approved", implied: true });
+    }
+  }
+  return out;
+}
+
+/** The matrix's row filters: everyone, students with a stage waiting for the teacher, or with a stage that has no score. */
+export type GridFilter = "all" | "waiting" | "unscored";
+export function gridRowMatches(filter: GridFilter, student: Board["students"][number], stageIds: string[]): boolean {
+  if (filter === "all") return true;
+  return stageIds.some(id => {
+    const c = student.cells[id];
+    if (filter === "waiting") return !!c && (c.status === "ready_for_review" || c.selfReported === true);
+    return !c || typeof c.score !== "number";
+  });
+}

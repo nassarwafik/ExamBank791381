@@ -247,6 +247,22 @@ const P_ANALYTICS = {
 };
 const P_SUMMARY = { studentCount: 6, avgOverall: 53, trackAverages: { book: 60, packetTracer: 47 }, completedCount: 1, studentsReadyForReview: 3, totalReadyStages: 3, staleCount: 1, trackWeights: { book: 1, packetTracer: 1 }, staleDays: 7 };
 const P_CLASSES = CLASSES.slice(0, 2).map(c => ({ classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear, status: "active", studentCount: c.studentCount }));
+// Phase G1 — the class matrix («التقييم الجماعي» → «جدول العلامات»): a board of its own (a second book group, so the group
+// bands show) with every cell kind — approved with and without a score, waiting for review, marked by the student, a score
+// on an open stage, empty — and the server's summary at the end of each row. Only the `board` resource reads it.
+const PB_GROUPS = [...P_GROUPS, { groupId: "g3", track: "book", title: "الوحدة الثانية", order: 2 }];
+const PB_STAGES = [...P_STAGES.slice(0, 2), { stageId: "B03", track: "book", groupId: "g3", title: "عناوين IP", order: 3, required: true, active: true }, { stageId: "B04", track: "book", groupId: "g3", title: "تقسيم الشبكات", order: 4, required: true, active: true }, ...P_STAGES.slice(2)]
+  .map(st => ({ stageId: st.stageId, track: st.track, groupId: st.groupId, title: st.title, order: st.order, required: st.required !== false }));
+const PB_CELLS = [
+  { B01: { status: "approved", score: 92 }, B02: { status: "approved", score: 85 }, B03: { status: "ready_for_review", score: null }, P01: { status: "approved", score: 78 } },
+  { B01: { status: "approved", score: 100 }, B02: { status: "approved", score: null }, B03: { status: "approved", score: 95 }, B04: { status: "approved", score: 90 }, P01: { status: "approved", score: 88 }, P02: { status: "approved", score: 91 } },
+  { B01: { status: "approved", score: 70 }, B02: { status: "in_progress", score: 64 }, B03: { status: "approved", score: 88, selfReported: true } },
+  { B01: { status: "in_progress", score: null } },
+  {},
+  { B01: { status: "approved", score: 81 }, B02: { status: "approved", score: 77 }, B03: { status: "approved", score: 90 }, B04: { status: "ready_for_review", score: null }, P01: { status: "approved", score: 69 } }
+];
+const P_BOARD = { ok: true, projectCode: "794589", readOnly: false, stages: PB_STAGES, groups: PB_GROUPS,
+  students: P_STUDENTS.map((c, i) => ({ studentId: c.studentId, displayName: c.displayName, code: c.code, cells: PB_CELLS[i], summary: { overallProgress: c.overallProgress, grade: [41, 92, 47, 0, 0, 74][i] } })) };
 function projectTracker(q) {
   const r = q.get("resource");
   if (r === "projects-summary") return { ok: true, totalReadyForReview: 0, byProject: { "794589": 3 }, totalSelfReported: 0, selfReportedByProject: {}, byClass: {} };
@@ -256,6 +272,7 @@ function projectTracker(q) {
   if (r === "students") return { ok: true, students: P_STUDENTS, tracks: P_TRACKS, config: { lateThreshold: 40 }, readOnly: false };
   if (r === "student") return P_DETAIL;
   if (r === "analytics") return { ok: true, analytics: P_ANALYTICS, tracks: P_TRACKS, groups: P_GROUPS, readOnly: false };
+  if (r === "board") return P_BOARD;
   if (r === "template") return { ok: true, template: { stages: P_STAGES, groups: P_GROUPS, trackWeights: { book: 1, packetTracer: 1 }, config: { staleDays: 7, lateThreshold: 40 } }, tracks: P_TRACKS, readOnly: false };
   return { ok: true, projects: [] };
 }
@@ -524,7 +541,7 @@ const SCRIPTED = [
   } })),
   // UX-R10 — the project tracker: its dashboard, the student cards, a student profile, the analytics (charts measured like the
   // report chart) and the stage settings.
-  ...[["project-dashboard", null], ["project-students", /تقدّم الطلاب/], ["project-profile", /تقدّم الطلاب/], ["project-analytics", /الإحصائيات/], ["project-settings", /إعداد/]].map(([id, view]) => ({
+  ...[["project-dashboard", null], ["project-students", /تقدّم الطلاب/], ["project-profile", /تقدّم الطلاب/], ["project-analytics", /الإحصائيات/], ["project-settings", /إعداد/], ["project-matrix", /التقييم الجماعي/]].map(([id, view]) => ({
     id, role: "teacher", nav: "المشاريع", chartSel: id === "project-analytics" ? ".eb-project-analytics .eb-chart-canvas" : null, run: async page => {
       await page.getByRole("button", { name: "فتح المشروع" }).first().click({ timeout: 15000 });
       await page.getByRole("group", { name: "أقسام المشروع" }).waitFor({ timeout: 15000 });
@@ -535,6 +552,10 @@ const SCRIPTED = [
         await page.locator("#eb-student-profile-title").waitFor({ timeout: 15000 });
       }
       if (id === "project-analytics") await page.locator(".eb-heatmap").waitFor({ timeout: 15000 });
+      if (id === "project-matrix") {                                             // Phase G1 — the class matrix
+        await page.getByRole("button", { name: "جدول العلامات" }).click({ timeout: 15000 });
+        await page.locator(".eb-score-grid-table").waitFor({ timeout: 15000 });
+      }
       await page.evaluate(() => window.scrollTo(0, 0));
     } })),
   { id: "report-assignments", role: "teacher", nav: "التقارير", open: "فتح التقرير التقييمات والواجبات", pickClass: "c1", chart: true },

@@ -22,7 +22,8 @@ type Props = {
 
 export type BoardStage = { stageId: string; track: string; groupId: string; title: string; order: number; required: boolean };
 export type BoardCell = { status: StageStatus; score: number | null; selfReported?: boolean };
-export type BoardStudent = { studentId: string; displayName: string; code: string; cells: Record<string, BoardCell> };
+/** Phase G1 — `summary`: the server's progress and weighted grade for the student (the same calculators as the cards). */
+export type BoardStudent = { studentId: string; displayName: string; code: string; cells: Record<string, BoardCell>; summary?: { overallProgress: number; grade: number } };
 export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[] };
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
 type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
@@ -234,7 +235,7 @@ export default function ProjectBulkReview({ token, projectCode, classId, tracks,
 
       {mode === "grid" && (
         <ProjectScoreGrid token={token} projectCode={projectCode} classId={classId} tracks={tracks} board={board} locked={locked}
-          onSaved={() => load(true)} onDirtyChange={onGridDirty} />
+          onSaved={() => load(true)} onDirtyChange={onGridDirty} onStatusChanged={onReadyChanged} />
       )}
 
       {mode === "stage" && (

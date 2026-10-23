@@ -5,6 +5,7 @@ import { STAGE_STATUS_ORDER, STAGE_STATUS_TONE, STAGE_STATUS_CLASS, stageStatusL
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import ActionMenu from "../ui/ActionMenu";
+import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
@@ -62,15 +63,8 @@ type Patch = StagePatch;
 const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
 const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => { const next = { ...map }; delete next[key]; return next; };
 // Phase P8 — the operations a patch carries (a combined save is both a score and a status write for the busy / double-submit
-// state of the row), and the remembered switch (per device; a storage failure falls back to the default ON).
+// state of the row). The remembered switch lives in approveOnSave.ts (shared with the class matrix, Phase G1).
 const patchKinds = (patch: Patch): string[] => [patch.score !== undefined ? "score" : "", patch.status !== undefined ? "status" : "", patch.note !== undefined ? "note" : ""].filter(Boolean);
-const APPROVE_ON_SAVE_KEY = "eb.projects.approveOnSave";
-function readApproveOnSave(): boolean {
-  try { return window.localStorage.getItem(APPROVE_ON_SAVE_KEY) !== "0"; } catch { return true; }
-}
-function writeApproveOnSave(on: boolean) {
-  try { window.localStorage.setItem(APPROVE_ON_SAVE_KEY, on ? "1" : "0"); } catch { /* the switch still works for this session */ }
-}
 
 /**
  * Non-modal student profile for one project. Same single `student` read and the same `progress.update`

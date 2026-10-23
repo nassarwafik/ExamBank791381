@@ -180,6 +180,11 @@
       "page": "studio-home",
       "viewport": "all",
       "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "all",
+      "reason": "Phase G1 — «جدول العلامات» becomes the class matrix: the whole track with group bands, a «منجز» toggle beside each score, the approve-on-save switch, filters, column menus and the server progress · grade at the end of each row (owner decision of 2026-10-23)."
     }
   ]
 }
