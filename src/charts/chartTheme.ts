@@ -1,6 +1,7 @@
 // Phase 21A.1 — the ExamBank-owned chart THEME: a bounded set of semantic palettes (the spec only names one — never a colour), the animation
 // policy and the live design tokens a renderer needs. Pure apart from the optional token read (guarded; tests run without a DOM).
 import type { ChartAnimation, ChartPalette } from "./chartSpec";
+import { resolveThemeColor } from "../ui/themeColor";
 
 /** Series colours per semantic palette. Every entry has at least 4.7:1 contrast against white (WCAG 1.4.11 needs 3:1 for graphics). */
 export const CHART_PALETTE_COLORS: Readonly<Record<ChartPalette, readonly string[]>> = Object.freeze({
@@ -64,7 +65,8 @@ export function readChartTokens(el?: Element | null): ChartTokens {
   if (!el || typeof getComputedStyle !== "function") return { ...FALLBACK_TOKENS };
   try {
     const cs = getComputedStyle(el);
-    const v = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+    // UX-R18a — a colour token is light-dark(<light>, <dark>): resolve the half this element shows
+    const v = (name: string, fb: string) => resolveThemeColor(cs.getPropertyValue(name).trim(), el) || fb;
     return { text: v("--eb-text", FALLBACK_TOKENS.text), muted: v("--eb-muted", FALLBACK_TOKENS.muted), grid: v("--eb-line", FALLBACK_TOKENS.grid), surface: v("--eb-surface", FALLBACK_TOKENS.surface), font: v("--eb-font", FALLBACK_TOKENS.font) };
   } catch { return { ...FALLBACK_TOKENS }; }
 }

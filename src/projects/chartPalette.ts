@@ -4,6 +4,7 @@
 // chartPalette.tokenMirror.ux-r1.test.ts).
 // Presentation only: it never changes datasets, and status colours keep their semantic distinction.
 import type { StageStatus } from "./types";
+import { resolveThemeColor } from "../ui/themeColor";
 
 const FALLBACK: Record<string, string> = {
   "--eb-primary": "#2a0a4e",
@@ -21,7 +22,8 @@ const FALLBACK: Record<string, string> = {
 export function tokenColor(name: string): string {
   if (typeof document !== "undefined" && typeof getComputedStyle === "function") {
     try {
-      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      // UX-R18a — a colour token is light-dark(<light>, <dark>): resolve the half the page shows
+      const v = resolveThemeColor(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
       if (v) return v;
     } catch { /* fall back below */ }
   }

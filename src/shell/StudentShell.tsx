@@ -5,6 +5,8 @@ import { IconLogout, IconMail, IconSparkles } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import NotificationBell, { type NotificationCenterProps } from "../notifications/NotificationBell";
 import InstallAppEntry from "../pwa/InstallAppEntry";
+import ThemeSwitch from "../ui/ThemeSwitch";
+import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
@@ -57,6 +59,8 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
             </button>
           )}
           <InstallAppEntry />
+          {/* UX-R18a — «المظهر» (system / light / dark), on this device; rendered once dark mode is released (R18c). */}
+          {DARK_MODE_RELEASED && <ThemeSwitch className="student-theme" />}
           <button type="button" className="student-logout" onClick={onLogout}><IconLogout size={16} />تسجيل الخروج</button>
         </div>
       </header>
