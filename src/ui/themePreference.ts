@@ -1,32 +1,32 @@
-// UX-R18a — the device-level appearance choice «المظهر»: system (the default: follow the device), light or dark
-// (docs/enterprise-ux-r0-redesign-foundation.md R18a). A per-viewer convenience, not account data: stored on this device only
-// (localStorage, a fixed key, the literal "light" / "dark"; no key = system), never sent anywhere. Storage failures (privacy mode,
-// quota) keep the choice for the current page only. The choice is mirrored on <html data-theme="system|light|dark">, which
+// UX-R18a — the device-level appearance choice: the normal (light) mode or the dark mode, switched by one toggle button
+// (docs/enterprise-ux-r0-redesign-foundation.md R18a). Owner decision (2026-10-23): a single button between dark and normal, the
+// normal mode by default; the device's own preference is not followed. A per-viewer convenience, not account data: stored on this
+// device only (localStorage, a fixed key, the literal "dark"; no key = light), never sent anywhere. Storage failures (privacy mode,
+// quota) keep the choice for the current page only. The choice is mirrored on <html data-theme="light|dark">, which
 // design-tokens-dark.css turns into the color-scheme every light-dark() token reads.
 //
-// DARK_MODE_RELEASED: R18a ships the tokens, this module, the switch and the shells' dark look, but dark mode is released to
-// users only when every page has its dark look (R18c). Until then the attribute is never set, the switch is not rendered, and
-// the app is light for everyone, whatever the device prefers.
+// DARK_MODE_RELEASED: R18a ships the tokens, this module, the toggle and the shells' dark look, but dark mode is released to
+// users only when every page has its dark look (R18c; owner decision: dark pages are shown once everything is finished). Until
+// then the attribute is never set, the toggle is not rendered, and the app is light for everyone.
 import { useSyncExternalStore } from "react";
 
 export const DARK_MODE_RELEASED = false;
 
-export type ThemeChoice = "system" | "light" | "dark";
+export type ThemeChoice = "light" | "dark";
 export const THEME_KEY = "examBankTheme";
-export const THEME_LABELS: Record<ThemeChoice, string> = { system: "تلقائي", light: "فاتح", dark: "داكن" };
 
 const listeners = new Set<() => void>();
 let memory: ThemeChoice | null = null;
 
-/** The stored choice; "system" when the viewer never chose (or storage holds anything else). */
+/** The stored choice; light when the viewer never chose (or storage holds anything else). */
 export function getThemeChoice(): ThemeChoice {
   try {
     const v = localStorage.getItem(THEME_KEY);
-    if (v === "light" || v === "dark") return v;
+    if (v === "dark") return v;
     if (v === null && memory) return memory;
-    return "system";
+    return "light";
   } catch {
-    return memory ?? "system";
+    return memory ?? "light";
   }
 }
 
@@ -36,10 +36,10 @@ export function applyThemeChoice(choice: ThemeChoice = getThemeChoice()): void {
   document.documentElement.setAttribute("data-theme", choice);
 }
 
-/** Store the choice (system clears the key), apply it and notify every subscriber, even when storage is unavailable. */
+/** Store the choice (light clears the key), apply it and notify every subscriber, even when storage is unavailable. */
 export function setThemeChoice(choice: ThemeChoice): void {
   try {
-    if (choice === "system") localStorage.removeItem(THEME_KEY);
+    if (choice === "light") localStorage.removeItem(THEME_KEY);
     else localStorage.setItem(THEME_KEY, choice);
   } catch {
     /* storage unavailable — the in-memory choice below still applies to the current page */
@@ -62,7 +62,7 @@ export function subscribeThemeChoice(listener: () => void): () => void {
 
 /** The current choice, kept in sync across components and tabs. */
 export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
-  const choice = useSyncExternalStore(subscribeThemeChoice, getThemeChoice, () => "system" as ThemeChoice);
+  const choice = useSyncExternalStore(subscribeThemeChoice, getThemeChoice, () => "light" as ThemeChoice);
   return [choice, setThemeChoice];
 }
 

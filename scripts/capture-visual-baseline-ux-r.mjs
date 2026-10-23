@@ -34,7 +34,7 @@ const onlyVp = (process.env.VIEWPORTS || "").split(",").map(s => s.trim()).filte
 const part = process.env.PART || "pages";
 const audit = process.env.AUDIT === "1";
 const printPages = (process.env.PRINT_PAGES || "").split(",").map(s => s.trim()).filter(Boolean);
-// UX-R18a — THEME=dark captures every page in the dark theme (<html data-theme="dark"> and the stored «المظهر» choice, set before
+// UX-R18a — THEME=dark captures every page in the dark theme (<html data-theme="dark"> and the stored dark-mode choice, set before
 // the app starts); the default is light, as before.
 const theme = process.env.THEME === "dark" ? "dark" : "light";
 const out = path.resolve(process.env.HARNESS_OUT || path.join(root, ".harness-ux-r"), label);

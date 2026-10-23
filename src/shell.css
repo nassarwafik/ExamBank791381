@@ -327,12 +327,7 @@
   .eb-brand-mark { transition: none; }
 }
 
-/* UX-R18a — «المظهر» (system / light / dark) in the sidebar's account group and in the student top bar, rendered once dark mode
-   is released (R18c). The compact rail has no room for three options: the choice lives in the expanded sidebar and the drawer. */
-.eb-nav-theme { display: flex; width: 100%; margin-block-end: var(--eb-space-2); }
-.eb-nav-theme .eb-segment { flex: 1 1 0; }
-.eb-shell.is-compact .eb-nav-theme { display: none; }
-@media (min-width: 1024px) and (max-width: 1279px) {
-  .eb-nav-theme { display: none; }
-}
-.student-theme { flex: none; }
+/* UX-R18a — the dark-mode toggle (moon / sun) in the teacher's and the student's top bar, rendered once dark mode is released
+   (R18c). It is the kit's 40 px icon button on the chrome. */
+.eb-theme-toggle { flex: none; color: var(--eb-chrome-text-muted); }
+.eb-theme-toggle[aria-pressed="true"] { color: var(--eb-chrome-text); }

@@ -652,3 +652,21 @@ export function IconKeyboard(props: IconProps) {
     </svg>
   );
 }
+
+/** UX-R18a — the dark-mode toggle: the moon offers the dark mode, the sun returns to the normal one. */
+export function IconMoon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M16.5 12.2A6.8 6.8 0 0 1 7.8 3.5a6.8 6.8 0 1 0 8.7 8.7Z" />
+    </svg>
+  );
+}
+
+export function IconSun(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10" r="3.3" />
+      <path d="M10 2.5v1.8M10 15.7v1.8M2.5 10h1.8M15.7 10h1.8M4.7 4.7l1.3 1.3M14 14l1.3 1.3M4.7 15.3 6 14M14 6l1.3-1.3" />
+    </svg>
+  );
+}

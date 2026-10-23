@@ -9,14 +9,11 @@
    Browsers without light-dark() (before 2024) ignore the whole block and stay light.
    ============================================================ */
 
-/* The theme. <html data-theme="light|dark|system"> is set by src/ui/themePreference.ts (device-level, «المظهر»); without the
-   attribute the app is light. Print is always light; a light island (the student's exam paper, R18c) stays light inside a
-   dark page. */
+/* The theme. <html data-theme="light|dark"> is set by src/ui/themePreference.ts (the device-level dark-mode toggle; owner
+   decision: the normal mode by default, the device's own preference is not followed); without the attribute the app is light.
+   Print is always light; a light island (the student's exam paper, R18c) stays light inside a dark page. */
 :root { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] { color-scheme: dark; }
-}
 .eb-light-island { color-scheme: light; }
 @media print {
   :root[data-theme] { color-scheme: light; }
