@@ -22,7 +22,7 @@ proves readiness before pushing and how the reviewer re-verifies.
 | C12 | Shared-finalization drift | part of C1 (`api/tests/shared-finalization-drift-14a.test.js`) | Quality Gate | the generated CJS matches the TypeScript source; regenerate with `node scripts/build-shared-finalization.mjs` |
 | C13 | Route authorization inventory | part of C1 (`api/tests/route-auth-inventory-11a.test.js`) | Quality Gate | no new anonymous route |
 | C14 | Repository governance contract | part of C1 (`scripts/repo-governance-contract.test.mjs`) | Quality Gate | `AGENTS.md`, the development documents and the PR template exist and keep their non-negotiable rules |
-| C15 | UX visual regression | `node scripts/ux-visual-gate.mjs` with `BASE_DIST` / `HEAD_DIST` (UX-R19b; see the script's header) | UX-R19b visual regression gate (`ux-visual-regression-r19b.yml`, path-filtered: `src/**`, `public/**`, the capture harness, the manifest), one job per viewport | no page or scene the UX-R harness captures changes by more than 12 levels per channel unless the PR declares it in `docs/ux-r/visual-changes.json`; no harness check fails on the head only |
+| C15 | UX visual regression | `node scripts/ux-visual-gate.mjs` with `BASE_DIST` / `HEAD_DIST` (UX-R19b; see the script's header) | UX-R19b visual regression gate (`ux-visual-regression-r19b.yml`, path-filtered: `src/**`, `public/**`, the capture harness, the manifest), one job per viewport and theme (light and dark, UX-R18c2) | no page or scene the UX-R harness captures changes by more than 12 levels per channel unless the PR declares it in `docs/ux-r/visual-changes.json`; no harness check fails on the head only |
 
 ## 2. Required set per change class
 

@@ -1,4 +1,185 @@
 {
   "version": 1,
-  "changes": []
+  "changes": [
+    {
+      "page": "assignments",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "audit",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "bank",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "games",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "games-live",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "import",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "learning",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "messages",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "project-students",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "projects",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "reports",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "reviews",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "students",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "all",
+      "reason": "UX-R18c2 — dark mode released: the moon / sun toggle «الوضع الداكن» appears in the top bar (the owner's decision); nothing else on the page moves."
+    }
+  ]
 }

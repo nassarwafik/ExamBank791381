@@ -8,6 +8,9 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/pwa/icon-192.png?v=tadris1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tadris+ — التعليم المتكامل</title>
+    <!-- UX-R18c2 — the dark mode the viewer chose (src/ui/themePreference.ts: key "examBankTheme", the literal "dark"; no key = the
+         normal mode) is applied before the first paint, so a dark page never flashes light. Failures (storage blocked) leave it light. -->
+    <script>try{if(localStorage.getItem("examBankTheme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}</script>
     <!-- Phase 6A — installable web app (manifest + home-screen metadata). Installation is optional. BRAND-005 / PWA-006 — Tadris+ identity;
          the icon URLs carry a version query so browsers and launchers re-fetch the new artwork (the manifest id / start_url / scope are unchanged). -->
     <meta name="description" content="Tadris+ — التعليم المتكامل: منصة الامتحانات والواجبات والتدريب الذكي" />

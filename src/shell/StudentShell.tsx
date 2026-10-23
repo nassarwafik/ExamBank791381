@@ -41,7 +41,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           </div>
         )}
         <div className="student-topbar-actions">
-          {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; rendered once dark mode is released (R18c). */}
+          {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; released in UX-R18c2. */}
           {DARK_MODE_RELEASED && <ThemeSwitch className="student-theme" />}
           {notifications && <NotificationBell {...notifications} />}
           {onOpenMessages && (

@@ -5,12 +5,14 @@
 // quota) keep the choice for the current page only. The choice is mirrored on <html data-theme="light|dark">, which
 // design-tokens-dark.css turns into the color-scheme every light-dark() token reads.
 //
-// DARK_MODE_RELEASED: R18a ships the tokens, this module, the toggle and the shells' dark look, but dark mode is released to
-// users only when every page has its dark look (R18c; owner decision: dark pages are shown once everything is finished). Until
-// then the attribute is never set, the toggle is not rendered, and the app is light for everyone.
+// DARK_MODE_RELEASED: R18a shipped the tokens, this module, the toggle and the shells' dark look unreleased (owner decision: dark
+// pages are shown once everything is finished). UX-R18c2 releases it: every page has its dark look (R18b, R18c1), so the toggle is
+// rendered in both top bars and the stored choice is applied at start-up. index.html applies it before the first paint too (an
+// inline script reading the same key), so a dark page never flashes light. Setting it back to false hides the toggle and keeps
+// the app light, except that the pre-paint script would still honour a stored choice: remove both together.
 import { useSyncExternalStore } from "react";
 
-export const DARK_MODE_RELEASED = false;
+export const DARK_MODE_RELEASED = true;
 
 export type ThemeChoice = "light" | "dark";
 export const THEME_KEY = "examBankTheme";
@@ -66,7 +68,8 @@ export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
   return [choice, setThemeChoice];
 }
 
-/** At start-up: apply the stored choice. Inert until dark mode is released (the app stays light). */
+/** At start-up: apply the stored choice (the pre-paint script in index.html already did; this keeps the two in step). Inert when
+ *  dark mode is not released (the app stays light). */
 export function initThemePreference(released: boolean = DARK_MODE_RELEASED): void {
   if (!released) return;
   applyThemeChoice();

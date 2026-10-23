@@ -134,6 +134,8 @@ describe("UX-R19b — the wiring", () => {
     expect(workflow).toMatch(/permissions:\n  contents: read/);
     for (const p of ['"src/**"', '"public/**"', '"scripts/capture-visual-baseline-ux-r.mjs"', '"docs/ux-r/visual-changes.json"']) expect(workflow, p).toContain(p);
     expect(workflow).toContain("viewport: [desktop, tablet, phone]");
+    expect(workflow).toContain("theme: [light, dark]");                                       // UX-R18c2: both themes
+    expect(workflow).toContain("THEME: ${{ matrix.theme }}");
     expect(workflow).toContain("fail-fast: false");
     expect(workflow).toContain("node scripts/ux-visual-gate.mjs");
     expect(workflow).toContain("actions/upload-artifact@v4");

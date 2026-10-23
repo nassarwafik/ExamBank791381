@@ -51,12 +51,12 @@ describe("UX-R18a — the stored choice", () => {
     expect(screen.getByRole("button", { name: "الوضع الداكن" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("start-up is inert until dark mode is released; released, it applies the stored choice", () => {
-    expect(DARK_MODE_RELEASED).toBe(false);
+  it("released (UX-R18c2): start-up applies the stored choice; with the flag off it stays inert", () => {
+    expect(DARK_MODE_RELEASED).toBe(true);
     localStorage.setItem(THEME_KEY, "dark");
-    initThemePreference();
+    initThemePreference(false);
     expect(html().hasAttribute("data-theme")).toBe(false);
-    initThemePreference(true);
+    initThemePreference();
     expect(html().getAttribute("data-theme")).toBe("dark");
     localStorage.removeItem(THEME_KEY); applyThemeChoice();
     expect(html().getAttribute("data-theme")).toBe("light");
@@ -83,7 +83,7 @@ describe("UX-R18a — the toggle", () => {
   });
 });
 
-describe("UX-R18a — the top bars render the toggle only once dark mode is released", () => {
+describe("UX-R18a / R18c2 — the top bars render the toggle once dark mode is released (released in R18c2)", () => {
   async function shells() {
     const { default: TeacherAppShell } = await import("../shell/TeacherAppShell");
     const { default: StudentShell } = await import("../shell/StudentShell");
@@ -97,14 +97,14 @@ describe("UX-R18a — the top bars render the toggle only once dark mode is rele
     return { teacher, student };
   }
 
-  it("not before release", async () => {
-    expect(await shells()).toEqual({ teacher: 0, student: 0 });
+  it("released: both top bars (never the sidebar)", async () => {
+    expect(await shells()).toEqual({ teacher: 1, student: 1 });
   });
 
-  it("both top bars once released (never the sidebar)", async () => {
+  it("the flag still gates it: off, neither top bar renders the toggle", async () => {
     vi.resetModules();
-    vi.doMock("./themePreference", async orig => ({ ...(await orig<typeof import("./themePreference")>()), DARK_MODE_RELEASED: true }));
-    expect(await shells()).toEqual({ teacher: 1, student: 1 });
+    vi.doMock("./themePreference", async orig => ({ ...(await orig<typeof import("./themePreference")>()), DARK_MODE_RELEASED: false }));
+    expect(await shells()).toEqual({ teacher: 0, student: 0 });
     vi.doUnmock("./themePreference"); vi.resetModules();
   });
 });

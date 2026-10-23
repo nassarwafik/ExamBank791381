@@ -80,7 +80,7 @@ describe("21E nav — labelled sections, same destinations in the same order", (
     expect(iLogout).toBe(order.length - 1);
   });
 
-  it("keyboard order follows the visual order: the top bar start to end (menu toggles, home, quick navigation, profile), then the 13 destinations top to bottom, logout", () => {
+  it("keyboard order follows the visual order: the top bar start to end (menu toggles, home, quick navigation, the dark-mode toggle, profile), then the 13 destinations top to bottom, logout", () => {
     mount();
     // The shell's own chrome only (the page content is the caller's): top bar first in the DOM, then the sidebar.
     const chrome = [screen.getByRole("banner"), sidebar()];
@@ -88,7 +88,7 @@ describe("21E nav — labelled sections, same destinations in the same order", (
     const name = (el: HTMLElement) => (el.getAttribute("aria-label") || "").replace(/\s*\(.*\)$/, "") || (el.querySelector(".eb-nav-label")?.textContent || "").trim() || (el.textContent || "").trim();
     const focusables = chrome.flatMap(root => Array.from(root.querySelectorAll<HTMLElement>("button, input"))).filter(b => !b.hasAttribute("disabled") && b.tabIndex >= 0);
     expect(focusables.map(name)).toEqual([
-      "طيّ القائمة", "القائمة", "الرئيسية", "انتقل إلى صفحة", "تعديل صورة وملف المعلم",
+      "طيّ القائمة", "القائمة", "الرئيسية", "انتقل إلى صفحة", "الوضع الداكن", "تعديل صورة وملف المعلم",   // UX-R18c2: the toggle, released
       ...[...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]), "تسجيل الخروج",
     ]);
   });
