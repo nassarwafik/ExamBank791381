@@ -4465,3 +4465,123 @@ On the final tree, run in order:
 - **`git diff --check`:** clean.
 - **Colour inventory:** 719 (from 756; the device's dark blocks are gone).
 - **`node scripts/ux-dark-audit.mjs`:** 0 unanswered in 102 sheets.
+
+---
+
+# Phase UX-R18c2 — Dark mode released
+
+**Owner direction (§4.2; owner decisions of 2026-10-23):**
+- **When:** dark pages are shown once everything is finished.
+- **The control:** one moon / sun button in the teacher's and the student's top bar.
+- **The default:** the normal mode; the device's own preference is not followed.
+
+With R18b and R18c1 merged, every page has its dark look. R18c2 releases it. It branches from `main` `234dd3b2` (#428) as
+`feature/ux-r18c2-dark-release`.
+
+## R18c2.1 What changes for users
+
+- **The toggle.** The button «الوضع الداكن» appears in the teacher's top bar (next to the identity) and the student's (next to
+  the notifications). It is the R18a-fix button: `aria-pressed` gives the state, the moon offers dark, the sun brings the normal
+  mode back.
+- **The default stays the normal mode.** The choice is stored on the device (`examBankTheme` = `dark`; no key = normal), and the
+  device's colour scheme is ignored.
+- **No flash.** The page opens in the stored mode with no light frame first: an inline script in `index.html`'s `<head>`, before
+  any stylesheet or module, sets `<html data-theme="dark">` when the stored value is exactly `dark`. When storage is blocked, the
+  script leaves the page light. `initThemePreference()` applies the same choice when the app starts, so the two stay in step.
+- **What stays light, on purpose:**
+  - the exam paper, its previews and its question list (R18c1);
+  - the reader's sepia page and the 3D scene (R18c1);
+  - printed output (R18a);
+  - the offline page. It is a static page the service worker serves, and its 6A guard forbids any script, so it cannot read the
+    choice. It declares `color-scheme: light`.
+
+## R18c2.2 The gate compares both themes
+
+- **The workflow.** The R19b workflow (`ux-visual-regression-r19b.yml`) gains a `theme: [light, dark]` dimension and passes
+  `THEME` to the harness, so every viewport is compared in both themes.
+- **Job names.** The light jobs keep their names (`Visual regression (desktop)`, …); the dark ones read
+  `Visual regression (desktop, dark)`, ….
+- **The cost.** Three more jobs of about 9 minutes, run in parallel with the others.
+- **Governance.** This adds a gate and weakens none (AGENTS.md §1, §12). `docs/development/validation-matrix.md` (C15) says so.
+
+**The release's own change is declared.** The toggle in the top bars changes 36 pages and scenes at all three viewports, and
+nothing else moves on them:
+- the gate's diff images were checked: every change lies in the top bar, or in the sticky top bar captured mid-page on a phone;
+- `docs/ux-r/visual-changes.json` declares the 36 entries, with the reason.
+
+## R18c2.3 Edit set
+
+- **`src/ui/themePreference.ts`:** `DARK_MODE_RELEASED = true`; its comment explains the release and the pre-paint script.
+- **`index.html`:** the pre-paint script.
+- **`src/ui/themePreference.ux-r18a.test.tsx`:**
+  - start-up now applies the stored choice, and with the flag off it stays inert;
+  - the toggle renders in both top bars;
+  - with the flag mocked off, neither top bar renders it.
+- **`src/ui/darkRelease.ux-r18c2.test.ts` (new, 5 tests):**
+  - the flag;
+  - the pre-paint script: in `<head>` before every stylesheet and module, the toggle's key, only `dark`, failures leave it light
+    (run against a fake document and storage);
+  - the workflow's two themes and unchanged light job names;
+  - the offline page stays scriptless and light.
+- **Two placement pins now include the released toggle.** What they protect is kept: every control once, keyboard order = visual
+  order, the bell before «الرسائل».
+  - `src/shell/TeacherAppShell.nav21e.test.tsx`: the keyboard order reads «الوضع الداكن» between the quick navigation and the
+    profile.
+  - `src/notifications/NotificationBell.6c.test.tsx`: the student bar opens with the toggle, then the bell, then «الرسائل».
+- **The shells' comments** say the toggle is released.
+- **`.github/workflows/ux-visual-regression-r19b.yml`**, **`scripts/ux-visual-gate.test.mjs`** (pins the theme dimension),
+  **`docs/development/validation-matrix.md`**.
+- **`docs/ux-r/visual-changes.json`:** the 36 declarations.
+
+## R18c2.4 Evidence
+
+**The gate, `main` `234dd3b2` against this branch, all three viewports:**
+
+| Theme | Without the declarations | With them |
+|---|---|---|
+| light | 108 undeclared changes on 36 pages (the toggle) | **GATE PASS**: 207 / 207 compared, 108 changed and declared, 0 failures, 0 notes |
+| dark | the same pages | **GATE PASS**: 207 / 207 compared, the same 108 changed and declared, 0 failures, 0 notes |
+
+**Fail-first.** `darkRelease.ux-r18c2.test.ts` and the updated R18a tests were run against `main` `234dd3b2`: **7 fail**, 26 pass:
+- 4 of the 5 new tests: the flag, the script's place, the script's behaviour, the two themes. The offline page's test passes on
+  `main` too: it is a pin, not a fix.
+- the two updated R18a tests: start-up applies the choice; the toggle in both top bars.
+- the gate-wiring test, which now pins the theme dimension.
+
+On the head, all pass.
+
+## R18c2.5 Mutation proof
+
+Each mutant was planted alone. These suites then ran: `src/ui`, the gate's tests and the service worker's tests. After each run the
+file was restored byte-for-byte (SHA-256 verified), and `git status` was unchanged afterwards. **11 / 11 KILLED**, no timeout.
+
+| Id | Planted defect | Result | Killed by |
+|---|---|---|---|
+| D1 | dark mode not released | KILLED | the flag; start-up applies the choice |
+| D2 | no pre-paint script (a dark page flashes light) | KILLED | the script's place; its behaviour |
+| D3 | the pre-paint script reads another key | KILLED | the script's key; its behaviour |
+| D4 | the pre-paint script turns dark on any stored value | KILLED | its behaviour ("light", "DARK") |
+| D5 | the pre-paint script throws when storage is blocked | KILLED | the try / catch; blocked storage |
+| D6 | the pre-paint script moves after the app module | KILLED | the script's place |
+| D7 | the gate compares the light theme only | KILLED | the gate's wiring; the two themes |
+| D8 | the gate never passes the theme to the harness | KILLED | the gate's wiring; the two themes |
+| D9 | the offline page gains a script | KILLED | the 6A offline guard; the offline page stays light |
+| D10 | start-up ignores the release flag | KILLED | the flag off stays inert |
+| D11 | the student top bar ignores the release flag | KILLED | the flag still gates the toggle |
+
+## R18c2.6 Local validation
+
+On the final tree, run in order:
+- **`npx vitest run`:** 1 210 files, **14 426 / 14 426 passed**. The first full run caught the two placement pins above; they were
+  updated and the suite re-run.
+- **`npm run lint`:** 0 errors.
+- **`npx tsc -b`:** passes.
+- **`npm run build`:** passes, bundle guard passed.
+- **`git diff --check`:** clean.
+- **Colour inventory:** 719, unchanged.
+- **The dark audit:** 0 unanswered in 102 sheets.
+
+**Dark mode is complete (R18a → R18c2).** Every page has its dark look:
+- the static audit covers all 102 sheets;
+- 0 contrast failures in 207 dark captures;
+- the gate guards both themes from now on.
