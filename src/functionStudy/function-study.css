@@ -52,9 +52,9 @@
 @media print {
   .fnstudy-probe-controls, .fnstudy-probe-trace { display: none !important; }
 }
-@media (prefers-color-scheme: dark) {
-  .fnstudy-formula code { background: #1b2a3d; }
-  .fnstudy-saved { color: #7fd1a0; }
-  .fnstudy-probe-point { fill: #10192a; }
-  .fnstudy-probe-readout { color: inherit; }
-}
+
+/* UX-R18c — the dark theme follows the switch, not the device: the former block of this sheet that followed the device's dark scheme
+   is gone (the owner's decision: the device's preference is not followed). Where the light rule reads a token it flips by itself;
+   where it writes a literal, the dark rule below gives its token. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .fnstudy-exclusion { fill: var(--eb-content-ground-2); stroke: var(--eb-content-ink); }   /* a hollow point: the plot's ground inside */
+:where(:root[data-theme="dark"]) .fnstudy-saved { color: var(--eb-success-tx); }

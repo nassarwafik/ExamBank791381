@@ -21,5 +21,5 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .cmp-marks-mismatch { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:root[data-theme="dark"] .cmp-editor-issues { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .cmp-marks-mismatch { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:where(:root[data-theme="dark"]) .cmp-editor-issues { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }

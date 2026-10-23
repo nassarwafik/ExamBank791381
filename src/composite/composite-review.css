@@ -39,5 +39,5 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .cmp-review-part.needs-review { background: var(--eb-surface); }
-:root[data-theme="dark"] .cmp-review-expected { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .cmp-review-part.needs-review { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .cmp-review-expected { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }

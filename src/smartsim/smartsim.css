@@ -57,3 +57,7 @@
 .smartsim-preview{display:flex;flex-direction:column;gap:8px;min-width:0}
 @media (max-width:640px){.smartsim-lib-item{grid-template-columns:1fr}.smartsim-actions .eb-button{flex:1 1 140px}}
 @media (prefers-reduced-motion:reduce){.smartsim-frame{transition:none}}
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .smartsim-conflict { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }

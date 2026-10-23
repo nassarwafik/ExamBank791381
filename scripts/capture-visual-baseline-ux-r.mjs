@@ -451,7 +451,8 @@ const SCRIPTED = [
     await page.waitForTimeout(800);
     if (i === 0) {
       const stroke = await page.locator(".fg-curve.fg-c1").first().evaluate(e => getComputedStyle(e).stroke);
-      const primary = await page.evaluate(() => { const s = document.createElement("span"); s.style.color = "var(--eb-primary-strong)"; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; });
+      // UX-R18c — the token is resolved where the curve is drawn (the exam paper is a light island inside a dark page).
+      const primary = await page.locator(".fg-curve.fg-c1").first().evaluate(e => { const host = e.closest("svg")?.parentElement ?? document.body; const s = document.createElement("span"); s.style.color = "var(--eb-primary-strong)"; host.append(s); const c = getComputedStyle(s).color; s.remove(); return c; });
       if (stroke !== primary) throw new Error("the first series is drawn in " + stroke + ", not the theme's first series colour " + primary);
     }
   } })),

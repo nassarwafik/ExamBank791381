@@ -48,3 +48,9 @@
 .ncli-check[data-ok="false"] .ncli-check-mark { color: var(--eb-danger, #b91c1c); }
 .ncli-transcript { margin: 0; padding: 8px 10px; border-radius: 8px; background: #0f172a; color: #e6edf7; direction: ltr; unicode-bidi: isolate; text-align: left; white-space: pre; overflow: auto; max-height: 16rem; font: 12.5px/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 @media (max-width: 480px) { .ncli-liveprompt { max-width: 40%; } .ncli-screen { max-height: min(15rem, 50vh); } }
+
+/* UX-R18c — the dark theme: the literals of this sheet that would break in dark take their token here. Tokens only; the light
+   theme is untouched. */
+:where(:root[data-theme="dark"]) .ncli-input:focus-visible,
+:where(:root[data-theme="dark"]) .ncli-run:focus-visible { outline: 2px solid var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .ncli-run { border: 1px solid var(--eb-success-tx); }

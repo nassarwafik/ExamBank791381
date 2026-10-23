@@ -56,3 +56,10 @@
   .learning-cli-liveprompt{ max-width:40%; }
   .learning-cli-screen{ max-height:220px; }
 }
+
+/* UX-R18c — the dark theme: the literals of this sheet that would break in dark take their token here. Tokens only; the light
+   theme is untouched. */
+:where(:root[data-theme="dark"]) .learning-cli-terminal { background: var(--eb-scrim); color: var(--eb-text); }        /* the terminal stays a dark panel */
+:where(:root[data-theme="dark"]) .learning-cli-input:focus-visible { outline: 2px solid var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .learning-cli-run { border-color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .learning-cli-run:focus-visible { outline-color: var(--eb-success-tx); }

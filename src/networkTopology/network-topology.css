@@ -59,3 +59,13 @@
   .nettopo-student > .nettopo-diagram-col { grid-column: 1; }
   .nettopo-student > .nettopo-panel { grid-column: 2; }
 }
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .nettopo-node[data-kind="router"] .nettopo-shape { fill: var(--eb-info-bg); }
+:where(:root[data-theme="dark"]) .nettopo-node[data-kind="switch"] .nettopo-shape { fill: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .nettopo-node[data-kind="pc"] .nettopo-shape { fill: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .nettopo-ping-result[data-ok="true"] { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .nettopo-ping-result[data-ok="false"] { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .smartsim-check[data-passed="true"] { background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .smartsim-check[data-passed="false"] { background: var(--eb-danger-bg); }

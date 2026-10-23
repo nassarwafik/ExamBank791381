@@ -52,3 +52,13 @@
 .or-level input { margin-top: 4px; }
 .or-level small { display: block; color: var(--eb-content-text); white-space: pre-wrap; unicode-bidi: plaintext; }
 .or-grade-summary { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-surface-2, var(--eb-content-ground)); font-weight: 700; }
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .or-meta [data-full="true"],
+:where(:root[data-theme="dark"]) .or-field-error,
+:where(:root[data-theme="dark"]) .or-issues { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .or-note { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .or-unavailable { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .or-private { background: var(--eb-primary-050); color: var(--eb-primary); }
+:where(:root[data-theme="dark"]) .or-level:has(input:checked) { background: var(--eb-success-bg); }

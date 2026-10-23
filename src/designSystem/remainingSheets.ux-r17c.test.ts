@@ -111,13 +111,13 @@ describe("UX-R17c — dead CSS", () => {
 });
 
 describe("UX-R17c — what did not move", () => {
-  it("the function-study widget: its content draws on the content tokens; the curve, the markers and the dark scheme keep their hues", () => {
+  it("the function-study widget: its content draws on the content tokens; the curve and the markers keep their hues (the dark look follows the switch since UX-R18c)", () => {
     const s = flat(read("src", "functionStudy", "function-study.css"));
     expect(s).toContain(".fnstudy-axis { stroke: var(--eb-content-muted); stroke-width: 1.5; }");
     expect(s).toContain(".fnstudy-note { margin: 0; color: var(--eb-content-muted); font-size: 0.92rem; }");
     expect(s).toContain(".fnstudy-curve { fill: none; stroke: #1d6fd6;");
     expect(s).toContain(".fnstudy-marker { fill: #c0392b; stroke: var(--eb-surface);");
-    expect(s).toMatch(/@media \(prefers-color-scheme: dark\) \{ \.fnstudy-formula code \{ background: #1b2a3d; \}/);
+    expect(s).toContain('.fnstudy-formula code { padding: 2px 6px; border-radius: 6px; background: var(--eb-content-ground); }');   // flips with the theme
   });
 
   it("the learning activities keep white labels on the primary (the reader's dark theme redefines --eb-surface)", () => {

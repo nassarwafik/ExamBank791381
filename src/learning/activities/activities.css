@@ -654,3 +654,14 @@
 .learning-ipv6c-hint{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r);
   background:var(--eb-primary-050); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
 .learning-ipv6c-next{ align-self:flex-start; min-height:44px; }
+
+/* UX-R18c — the dark theme: the literals of this sheet that would break in dark take their token here. Tokens only; the light
+   theme is untouched. */
+:where(:root[data-theme="dark"]) .learning-gateway-step.is-done .learning-gateway-stepno,
+:where(:root[data-theme="dark"]) .learning-devices-step.is-done .learning-devices-stepno,
+:where(:root[data-theme="dark"]) .learning-topo-step.is-done .learning-topo-stepno,
+:where(:root[data-theme="dark"]) .learning-cable-scenario.is-active .learning-cable-scenario-no,
+:where(:root[data-theme="dark"]) .learning-msg-step.is-done .learning-msg-stepno,
+:where(:root[data-theme="dark"]) .learning-osi-layer.is-active .learning-osi-number { color: var(--eb-surface); }   /* the label on the primary, like the buttons' */
+:where(:root[data-theme="dark"]) .learning-cable-light { fill: var(--eb-surface); }                                   /* a hollow ring on the primary stroke */
+:where(:root[data-theme="dark"]) .learning-handshake-numtext { fill: var(--eb-surface); }

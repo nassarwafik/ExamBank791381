@@ -182,3 +182,11 @@
   :root:not([data-eb-motion="on"]) .eb-visual-pin-anim,
   :root:not([data-eb-motion="on"]) .eb-visual-prefix-anim{ animation:none !important; }
 }
+
+/* UX-R18c — the dark theme: the literals of this sheet that would break in dark take their token here. Tokens only; the light
+   theme is untouched. */
+:where(:root[data-theme="dark"]) .eb-visual-hub-label,
+:where(:root[data-theme="dark"]) .eb-visual-token.is-inverse,
+:where(:root[data-theme="dark"]) .eb-visual-node-label.is-inverse,
+:where(:root[data-theme="dark"]) .eb-visual-hex-label,
+:where(:root[data-theme="dark"]) .eb-visual-band-label { fill: var(--eb-surface); }                                  /* labels on the primary / info / success fills */

@@ -74,9 +74,12 @@
   .rxn-coef input { width: 2.6em; font-size: 1.1rem; }
   .rxn-step { min-width: 28px; }
 }
-@media (prefers-color-scheme: dark) {
-  .rxn-table tr.is-off td, .rxn-table tr.is-off th { background: #3a1f1c; } .rxn-table tr.is-ok td:last-child { background: #16301f; }
-  .rxn-ok { color: #6fd39a; } .rxn-off { color: #ff9a8f; }
-  .rxn-status.is-ok { background: #16301f; color: #9be3b6; } .rxn-status.is-off { background: #3a1f1c; color: #ffb4aa; }
-  .rxn-unit { background: #1b2a3d; } .rxn-bond { stroke: #b9c6d8; } .rxn-coef.is-locked { color: #dbe5f2; } .rxn-err { background: #1b2a3d; }
-}
+
+/* UX-R18c — the dark theme follows the switch, not the device: the former block of this sheet that followed the device's dark scheme
+   is gone (the owner's decision: the device's preference is not followed). Where the light rule reads a token it flips by itself;
+   where it writes a literal, the dark rule below gives its token. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .rxn-ok,
+:where(:root[data-theme="dark"]) .rxn-status.is-ok,
+:where(:root[data-theme="dark"]) .rxn-editor .rxn-status-yes { color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .rxn-status.is-off { color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .rxn-charge { color: var(--eb-primary); }

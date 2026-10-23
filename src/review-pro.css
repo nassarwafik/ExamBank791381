@@ -79,7 +79,7 @@
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .review-col.correct,
-:root[data-theme="dark"] .review-answer-grid>div:last-child { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
-:root[data-theme="dark"] .review-quick button.full { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
-:root[data-theme="dark"] .review-question.needs-review { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .review-col.correct,
+:where(:root[data-theme="dark"]) .review-answer-grid>div:last-child { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .review-quick button.full { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .review-question.needs-review { background: var(--eb-surface); }

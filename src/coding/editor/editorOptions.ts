@@ -177,6 +177,65 @@ export const SMARTASSESS_EDITOR_THEME = deepFreeze({
   }
 });
 
+/** UX-R18c — the SmartAssess DARK syntax theme, used only when the editor sits on a dark ground (the dark theme, outside the exam
+ *  paper's light island): `vs-dark` base, the dark palette of design-tokens-dark.css, the same token roles as the light theme. */
+export const SMARTASSESS_EDITOR_THEME_DARK = deepFreeze({
+  name: "smartassess-dark",
+  data: {
+    base: "vs-dark" as const,
+    inherit: true,
+    rules: [
+      { token: "", foreground: "dcd7e8" },
+      { token: "keyword", foreground: "b59cee", fontStyle: "bold" },
+      { token: "keyword.python", foreground: "b59cee", fontStyle: "bold" },
+      { token: "keyword.java", foreground: "b59cee", fontStyle: "bold" },
+      { token: "keyword.cs", foreground: "b59cee", fontStyle: "bold" },
+      { token: "string", foreground: "7fe2a6" },
+      { token: "string.escape", foreground: "5fd4c4" },
+      { token: "number", foreground: "f6c37f" },
+      { token: "comment", foreground: "a7a1b8", fontStyle: "italic" },
+      { token: "type", foreground: "8fd4f6" },
+      { token: "type.identifier", foreground: "8fd4f6" },
+      { token: "identifier", foreground: "dcd7e8" },
+      { token: "delimiter", foreground: "a7a1b8" },
+      { token: "delimiter.bracket", foreground: "a7a1b8" },
+      { token: "operator", foreground: "a7a1b8" },
+      { token: "tag", foreground: "8fd4f6" },
+      { token: "annotation", foreground: "8fd4f6" },
+      { token: "namespace", foreground: "8fd4f6" },
+      { token: "attribute.name", foreground: "8fd4f6" },
+      { token: "invalid", foreground: "f8a9a9" }
+    ],
+    colors: {
+      "editor.background": "#1b1825",
+      "editor.foreground": "#dcd7e8",
+      "editor.lineHighlightBackground": "#231f2e",
+      "editor.lineHighlightBorder": "#2e2a3a",
+      "editorLineNumber.foreground": "#5e5870",
+      "editorLineNumber.activeForeground": "#a7a1b8",
+      "editorGutter.background": "#231f2e",
+      "editor.selectionBackground": "#3d3360",
+      "editor.inactiveSelectionBackground": "#2e2a3a",
+      "editor.selectionHighlightBackground": "#332b4d",
+      "editorCursor.foreground": "#dcd7e8",
+      "editorBracketMatch.background": "#332b4d",
+      "editorBracketMatch.border": "#b59cee",
+      "editorBracketHighlight.foreground1": "#b59cee",
+      "editorBracketHighlight.foreground2": "#f6c37f",
+      "editorBracketHighlight.foreground3": "#8fd4f6",
+      "editorIndentGuide.background1": "#2e2a3a",
+      "editorIndentGuide.activeBackground1": "#3a3549",
+      "editorWidget.background": "#231f2e",
+      "editorWidget.border": "#3a3549",
+      "editorWhitespace.foreground": "#3a3549",
+      "scrollbarSlider.background": "#5e587080",
+      "scrollbarSlider.hoverBackground": "#7c7690a0",
+      "scrollbarSlider.activeBackground": "#a7a1b8b0",
+      "focusBorder": "#b59cee"
+    }
+  }
+});
+
 export type EditorCreateInput = { value: string; languageMode: string; label: string; readOnly: boolean; indentUnit: string };
 /** The complete `editor.create` option object of ONE instance (the model — value + mode — is created separately by the adapter). */
 export function editorCreateOptions(input: EditorCreateInput): Record<string, unknown> {

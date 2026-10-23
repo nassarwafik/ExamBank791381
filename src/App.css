@@ -993,7 +993,6 @@ button {
   }
 }
 
-
 /* ===== Exam UI Phase 3 ===== */
 
 /*
@@ -1914,7 +1913,6 @@ td {
   }
 }
 
-
 /* ===== Bottom Actions Phase 4 ===== */
 
 /* =========================
@@ -2403,7 +2401,6 @@ button:disabled {
   }
 }
 
-
 /* ===== Saved Exams + AI Export Phase 5 ===== */
 
 /* =========================
@@ -2813,7 +2810,6 @@ button {
       1fr;
   }
 }
-
 
 /* ===== Final Builder Phase 6 ===== */
 
@@ -3279,75 +3275,70 @@ button {
 
 /* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
    (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .error-message,
-:root[data-theme="dark"] .builder-error,
-:root[data-theme="dark"] .saved-delete-button { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .success-chip { background: var(--eb-success-bg); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .topic-chip { background: var(--eb-info-bg); color: var(--eb-info-tx); }
-:root[data-theme="dark"] .warning-panel,
-:root[data-theme="dark"] .quality-warning { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .lock-button.active { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .answer-box,
-:root[data-theme="dark"] .quality-good { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); color: var(--eb-success-tx); }
-:root[data-theme="dark"] .generated-exam,
-:root[data-theme="dark"] .generated-exam .question-card,
-:root[data-theme="dark"] .generated-exam .question-options li,
-:root[data-theme="dark"] .generated-exam .field-preview { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
-:root[data-theme="dark"] .generated-exam .exam-toolbar-card,
-:root[data-theme="dark"] .generated-exam .question-image-slot { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
-:root[data-theme="dark"] .generated-exam .question-card .difficulty-1 { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
-:root[data-theme="dark"] .generated-exam .question-card.difficulty-2::before { background: var(--eb-success-bg); }
-:root[data-theme="dark"] .generated-exam .question-meta { border-bottom: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); }
-:root[data-theme="dark"] .generated-exam .question-meta span,
-:root[data-theme="dark"] .generated-exam .question-action-bar { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface-2); }
-:root[data-theme="dark"] .word-bank-box { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-info-bg); }
-:root[data-theme="dark"] .word-bank-title { color: var(--eb-info-tx); }
-:root[data-theme="dark"] .word-bank-items span { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); color: var(--eb-info-tx); }
-:root[data-theme="dark"] .generated-exam .per-question-ai { background: var(--eb-surface); }
-:root[data-theme="dark"] .generated-exam .teacher-note-panel { background: var(--eb-warn-bg); }
-:root[data-theme="dark"] .generated-exam .bottom-actions-card,
-:root[data-theme="dark"] .secondary-primary-button:hover,
-:root[data-theme="dark"] .saved-open-button:hover,
-:root[data-theme="dark"] .select-action:hover,
-:root[data-theme="dark"] .preview-download-button:hover { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); }
-:root[data-theme="dark"] .export-ai-button { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent) !important; background: var(--eb-info-bg) !important; color: var(--eb-info-tx) !important; }
-:root[data-theme="dark"] .export-ai-button:hover:not(:disabled) { background: var(--eb-info-bg) !important; }
-:root[data-theme="dark"] .recovery-draft-bar { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }
-:root[data-theme="dark"] .recovery-draft-bar strong,
-:root[data-theme="dark"] .recovery-draft-bar span { color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .recovery-discard { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
-:root[data-theme="dark"] .question-order-actions .question-delete-mini:hover { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
-:root[data-theme="dark"] .login-page { background: var(--eb-bg); }
-:root[data-theme="dark"] .convert-structured-btn,
-:root[data-theme="dark"] .convert-structured-btn:hover { background: var(--eb-info-bg); }
-:root[data-theme="dark"] .question-delete-mini { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); }
+:where(:root[data-theme="dark"]) .error-message,
+:where(:root[data-theme="dark"]) .builder-error { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .saved-delete-button { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); }
+:where(:root[data-theme="dark"]) .success-chip { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .topic-chip { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .warning-panel,
+:where(:root[data-theme="dark"]) .quality-warning { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .lock-button.active { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .answer-box,
+:where(:root[data-theme="dark"]) .quality-good { border: 1px solid color-mix(in srgb, var(--eb-success) 45%, transparent); background: var(--eb-success-bg); color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .generated-exam,
+:where(:root[data-theme="dark"]) .generated-exam .question-card,
+:where(:root[data-theme="dark"]) .generated-exam .question-options li,
+:where(:root[data-theme="dark"]) .generated-exam .field-preview { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .generated-exam .exam-toolbar-card,
+:where(:root[data-theme="dark"]) .generated-exam .question-image-slot { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .generated-exam .question-card .difficulty-1 { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:where(:root[data-theme="dark"]) .generated-exam .question-card.difficulty-2::before { background: var(--eb-success-bg); }
+:where(:root[data-theme="dark"]) .generated-exam .question-meta { border-bottom: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); }
+:where(:root[data-theme="dark"]) .generated-exam .question-meta span,
+:where(:root[data-theme="dark"]) .generated-exam .question-action-bar { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-surface-2); }
+:where(:root[data-theme="dark"]) .word-bank-box { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); background: var(--eb-info-bg); }
+:where(:root[data-theme="dark"]) .word-bank-title { color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .word-bank-items span { border: 1px solid color-mix(in srgb, var(--eb-info) 45%, transparent); color: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .generated-exam .per-question-ai { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .generated-exam .teacher-note-panel { background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .generated-exam .bottom-actions-card,
+:where(:root[data-theme="dark"]) .secondary-primary-button:hover,
+:where(:root[data-theme="dark"]) .saved-open-button:hover,
+:where(:root[data-theme="dark"]) .select-action:hover,
+:where(:root[data-theme="dark"]) .preview-download-button:hover { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent); }
+:where(:root[data-theme="dark"]) .export-ai-button { border-color: color-mix(in srgb, var(--eb-info) 45%, transparent) !important; background: var(--eb-info-bg) !important; color: var(--eb-info-tx) !important; }
+:where(:root[data-theme="dark"]) .export-ai-button:hover:not(:disabled) { background: var(--eb-info-bg) !important; }
+:where(:root[data-theme="dark"]) .recovery-draft-bar { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); background: var(--eb-warn-bg); }
+:where(:root[data-theme="dark"]) .recovery-draft-bar strong,
+:where(:root[data-theme="dark"]) .recovery-draft-bar span { color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .recovery-discard { border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
+:where(:root[data-theme="dark"]) .question-order-actions .question-delete-mini:hover { border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+:where(:root[data-theme="dark"]) .login-page { background: var(--eb-bg); }
+:where(:root[data-theme="dark"]) .convert-structured-btn,
+:where(:root[data-theme="dark"]) .convert-structured-btn:hover { background: var(--eb-info-bg); }
+:where(:root[data-theme="dark"]) .question-delete-mini { border: 1px solid color-mix(in srgb, var(--eb-danger) 45%, transparent); }
 
 /* UX-R18b — the dark theme, continued: the colours this sheet writes as keywords («white»), which the colour inventory does not
    count. Tokens only; the light theme is untouched. */
-:root[data-theme="dark"] .primary-button,
-:root[data-theme="dark"] .generate-button,
-:root[data-theme="dark"] .secondary-primary-button,
-:root[data-theme="dark"] .preview-mode-actions .preview-print-button { color: var(--eb-surface); }
-:root[data-theme="dark"] .builder-card,
-:root[data-theme="dark"] .plan-card,
-:root[data-theme="dark"] .exam-toolbar-card,
-:root[data-theme="dark"] .question-card,
-:root[data-theme="dark"] .bottom-actions-card,
-:root[data-theme="dark"] .builder-card > textarea:focus,
-:root[data-theme="dark"] .global-ai-box textarea:focus,
-:root[data-theme="dark"] .per-question-ai textarea:focus,
-:root[data-theme="dark"] .teacher-note-panel textarea:focus,
-:root[data-theme="dark"] .lock-button,
-:root[data-theme="dark"] .question-image-slot.image-visible,
-:root[data-theme="dark"] .image-controls button,
-:root[data-theme="dark"] .question-footer-actions button,
-:root[data-theme="dark"] .question-action-bar > button,
-:root[data-theme="dark"] .select-action,
-:root[data-theme="dark"] .bottom-actions-card button,
-:root[data-theme="dark"] .structured-data-block,
-:root[data-theme="dark"] .answer-square,
-:root[data-theme="dark"] .word-bank-items span,
-:root[data-theme="dark"] .preview-mode-actions button,
-:root[data-theme="dark"] .recovery-discard,
-:root[data-theme="dark"] .question-jump-bar button,
-:root[data-theme="dark"] .question-order-actions button { background: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .preview-mode-actions .preview-print-button { color: var(--eb-surface); }
+:where(:root[data-theme="dark"]) .builder-card,
+:where(:root[data-theme="dark"]) .plan-card,
+:where(:root[data-theme="dark"]) .exam-toolbar-card,
+:where(:root[data-theme="dark"]) .question-card,
+:where(:root[data-theme="dark"]) .bottom-actions-card,
+:where(:root[data-theme="dark"]) .builder-card > textarea:focus,
+:where(:root[data-theme="dark"]) .global-ai-box textarea:focus,
+:where(:root[data-theme="dark"]) .per-question-ai textarea:focus,
+:where(:root[data-theme="dark"]) .teacher-note-panel textarea:focus,
+:where(:root[data-theme="dark"]) .question-image-slot.image-visible,
+:where(:root[data-theme="dark"]) .image-controls button,
+:where(:root[data-theme="dark"]) .question-footer-actions button,
+:where(:root[data-theme="dark"]) .question-action-bar > button,
+:where(:root[data-theme="dark"]) .bottom-actions-card button,
+:where(:root[data-theme="dark"]) .structured-data-block,
+:where(:root[data-theme="dark"]) .answer-square,
+:where(:root[data-theme="dark"]) .word-bank-items span,
+:where(:root[data-theme="dark"]) .preview-mode-actions button,
+:where(:root[data-theme="dark"]) .recovery-discard,
+:where(:root[data-theme="dark"]) .question-jump-bar button,
+:where(:root[data-theme="dark"]) .question-order-actions button { background: var(--eb-surface); }

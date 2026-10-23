@@ -35,4 +35,3 @@
 .lab-ammeter circle, .lab-voltmeter circle { fill: var(--eb-surface); stroke: var(--eb-content-text); stroke-width: 2; }
 .lab-ammeter text, .lab-voltmeter text { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--eb-content-text); }
 .lab-meter { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--xp-surface-alt, var(--eb-content-ground)); }
-@media (prefers-color-scheme: dark) { .lab-meter { background: #1b2a3d; } .lab-resistor rect { fill: #3a2a10; } }

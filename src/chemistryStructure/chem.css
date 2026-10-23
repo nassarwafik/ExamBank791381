@@ -86,13 +86,16 @@
 .chem-editor ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .chem-editor li { border: 1px dashed var(--xp-border, var(--eb-content-grid)); border-radius: 8px; padding: 6px 8px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); align-items: end; }
 .chem-expected { margin: 0; font-weight: 600; color: #0d5c2e; }
-@media (prefers-color-scheme: dark) {
-  .chem-mol-bg { fill: #142033; } .chem-bond line { stroke: #b9c6d8; } .chem-atom text.chem-atom-id { fill: #dbe5f2; }
-  .chem-cell { color: #172033; } .chem-identity { background: #1b2a3d; } .chem-expected { color: #6fd39a; }
-}
 @media (prefers-reduced-motion: reduce) { .chem * { transition: none !important; } }
 
 /* UX-R16a — the chemistry workspace's single column may shrink below its widest child (a formula row, a table), which then
    wraps or scrolls inside its own box: on a phone the column was 329 px inside a narrower card and scrolled the exam page
    sideways. */
 .chem { grid-template-columns: minmax(0, 1fr); }
+
+/* UX-R18c — the dark theme follows the switch, not the device: the former block of this sheet that followed the device's dark scheme
+   is gone (the owner's decision: the device's preference is not followed). Where the light rule reads a token it flips by itself;
+   where it writes a literal, the dark rule below gives its token. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .chem-expected { color: var(--eb-success-tx); }
+:where(:root[data-theme="dark"]) .chem-electron { stroke: var(--eb-info-tx); }
+:where(:root[data-theme="dark"]) .chem-cloud-label { fill: var(--eb-info-tx); }

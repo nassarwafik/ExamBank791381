@@ -37,3 +37,7 @@
 .ex3d-editor-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.65rem;border:1px solid var(--eb-content-grid);border-radius:10px;padding:.8rem}
 .ex3d-editor-fields label{min-width:0}.ex3d-editor-fields .ex3d-wide{grid-column:1/-1}.ex3d-editor-fields textarea{resize:vertical}
 @media(max-width:520px){.ex3d-editor-fields{grid-template-columns:1fr 1fr}.ex3d-editor-fields .ex3d-wide{grid-column:1/-1}}
+
+/* UX-R18c — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:where(:root[data-theme="dark"]) .ex3d-errors { color: var(--eb-danger-tx); }
