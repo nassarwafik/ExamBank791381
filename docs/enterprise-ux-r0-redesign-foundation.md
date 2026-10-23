@@ -3768,3 +3768,141 @@ gates on pixels, for example by waiting for a stable document height before the 
 | `npm run build` | passed, bundle guard passed |
 | `git diff --check` | clean |
 | colour inventory | unchanged, 756 in 52 sheets |
+
+---
+
+# Phase UX-R19b — The visual regression gate in CI
+
+**Owner direction (2026-10-22):** the third phase of §4.2, after R19a and R19a-fix. R19b branches from `main` `353bec35` (#423) as
+`feature/ux-r19b-visual-gate`. It adds a gate and weakens none (`AGENTS.md` §1, §12).
+
+## R19b.1 What the gate does
+
+**The workflow `ux-visual-regression-r19b.yml`** runs on a pull request that touches the app or the capture harness. It runs one job
+per viewport (desktop, tablet, phone), each in four steps:
+
+1. **Builds the head and its base.** The head is the merge commit GitHub checks out. The base is that commit's first parent, built in
+   its own worktree.
+2. **Captures both with one harness:** the head's `scripts/capture-visual-baseline-ux-r.mjs`. A change to the harness itself therefore
+   never shows up as a page change.
+3. **Compares every page and scene pixel by pixel**, with the rule every UX-R phase used: a capture changed when any channel of any
+   pixel moves by more than 12 levels, or its size changes.
+4. **Decides:**
+
+   | Fails on | Passes |
+   |---|---|
+   | a change the PR does not declare | every change declared in the manifest |
+   | a harness check (reached, no horizontal overflow, no page error) that fails on the head but passes on the base | a check that fails on the base too (recorded as a note) |
+   | an invalid manifest entry, or a capture missing on either side | |
+
+**The manifest `docs/ux-r/visual-changes.json`:**
+- **Shape:** `{ "version": 1, "changes": [{ "page", "viewport", "reason" }] }`. `viewport` is desktop, tablet, phone or `all`.
+- **What a PR declares:** only the entries its base's manifest does not have. Earlier PRs' entries stay in the file as history and
+  declare nothing for later PRs.
+- **Typos fail:** an entry naming a page the harness does not capture is an error, so a typo cannot silently declare nothing.
+
+**Re-capture before reporting.** A change the PR did not declare is captured once more on both builds before it is reported:
+- **The same change again:** it is real, and the gate fails.
+- **Identical the second time:** it is recorded as a flake note. R19a-fix saw one such flake (`assignments`, §R19a-fix.5).
+
+**Stable height.** Every page now waits for a stable document height (three equal reads, 100 ms apart) before its full-page
+screenshot.
+
+**Evidence for the reviewer.** The before, after and diff images of every change, declared or not, are uploaded as the job's
+artifact. The diff image is red where a pixel moved, magenta where only one image has the pixel, and the faded "after" elsewhere.
+The verdict also goes to the job summary.
+
+**No new dependency.** The PNG decoder and encoder use Node's `zlib`. The browser is the runner's Chrome with `playwright-core`,
+the same as the repository's other Chromium gates.
+
+**Cost and path filter:**
+- **When it runs:** only when a PR touches `src/**`, `public/**`, `index.html`, `vite.config.ts`, `package.json` /
+  `package-lock.json`, the harness, its fixtures, the gate's scripts, the manifest or the workflow. Documentation, API and Runner PRs
+  do not run it.
+- **What a job costs:** two `npm ci` runs, two builds and two captures of 69 pages and scenes at one viewport. Locally a full
+  three-viewport run took 18 minutes; in CI the three jobs run in parallel.
+- **Concurrency:** a newer push to the same PR cancels the older run.
+
+## R19b.2 Edit set
+
+- **`.github/workflows/ux-visual-regression-r19b.yml`** (new): `pull_request` only (never `pull_request_target`),
+  `permissions: contents: read`, a matrix over the three viewports with `fail-fast: false`, and artifacts kept 14 days.
+- **`scripts/ux-visual-gate.mjs`** (new): drives the two captures, the re-capture, the comparison, the images and the summary.
+  - It exits 2 when a build is missing, or when a capture run recorded no page.
+  - A run that captured nothing cannot pass by comparing nothing.
+- **`scripts/ux-visual-gate-lib.mjs`** (new): the pure parts: PNG decode and encode, the comparison, the manifest and the verdict.
+- **`scripts/ux-visual-gate.test.mjs`** (new): 17 guards on the decoder, the comparison, the manifest, the verdict and the wiring.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the stable-height wait.
+- **`docs/ux-r/visual-changes.json`** (new): the manifest, empty.
+- **`docs/development/validation-matrix.md`:** C15, the new gate, with its path filter.
+
+## R19b.3 Fail-first evidence
+
+The plan asks for three proofs. Each ran the gate script end to end locally, on real builds:
+
+| Case | Base | Head | Verdict |
+|---|---|---|---|
+| **An unrelated PR** | `main` `353bec35` | the R19b branch (no `src/` change) | **PASS**: 207 / 207 captures at all three viewports, 0 changed, 0 notes (18 minutes) |
+| **A planted visual change** | `main` | the login card title in `--eb-primary-strong` instead of `--eb-text-heading` | **FAIL** (exit 1): exactly `login` and `login-error`, 833 pixels each; both confirmed by the re-capture |
+| **The same change, declared** | `main` | the same build, with a manifest declaring `login` and `login-error` | **PASS**: 2 declared changes, 0 failures |
+
+**A first planted change found nothing, which is a limit, not a bug.** It changed `.eb-kpi-value` (the kit's `KpiStrip`), and the
+gate reported no change. The cause: no page of the app uses `KpiStrip` (the student portal has its own strip). **The gate sees what
+the harness captures**, so a component no captured page renders is outside it. The second planted change, on a captured page,
+failed the gate as it should.
+
+**The guards.** The 17 guards are new files, so they cannot run against the baseline. On the head they pass, and the mutation
+campaign below is their proof.
+
+## R19b.4 Mutation proof
+
+Twelve mutants. Each was planted alone, and `scripts` ran against it. Each file was restored and SHA-256 checked, and `git status`
+was identical before and after.
+
+| # | Planted defect | Result | Killed by |
+|---|---|---|---|
+| G1 | a 12-level move counts as a change (`>=` for `>`) | KILLED | the 12 / 13 level guard |
+| G2 | pixels only one image has are not counted | KILLED | the size guard |
+| G3 | the Paeth predictor picks the wrong neighbour | KILLED | the row filter guard |
+| G4 | every manifest entry counts, earlier PRs' too | KILLED | the declared-by-PR guard |
+| G5 | an unknown page in the manifest is accepted | KILLED | the manifest guard |
+| G6 | an undeclared change with no re-capture passes as a flake | KILLED | the verdict guard |
+| G7 | a check failing on the head only is ignored | KILLED | the check guard |
+| G8 | the re-capture never runs | KILLED (second round) | the wiring guard |
+| G9 | a run that captured nothing passes | KILLED | the wiring guard |
+| G10 | the workflow gets `contents: write` | KILLED | the workflow guard |
+| G11 | the base is the PR's own head | KILLED | the workflow guard |
+| G12 | no wait for a stable document height | KILLED | the harness guard |
+
+**G8 survived the first round.** The guard checked the re-capture's call, not the condition that runs it, so `if (false)` passed. A
+skipped re-capture fails safe (an undeclared change with no re-capture is a failure, G6), but it would turn a flake into a red gate.
+The guard now pins the condition too, and G8 is killed. **12 / 12 killed**, no timeout, every file restored.
+
+## R19b.5 Local validation and exact-head CI
+
+**Local validation on the head:**
+
+| Check | Result |
+|---|---|
+| `npx vitest run` | 1 205 files, 14 278 tests passed, 0 failed (third run; see below) |
+| `npm run lint` | exit 0, 0 errors (the existing warnings only) |
+| `npx tsc -b` | exit 0 |
+| `npm run build` | passed, bundle guard passed |
+| `git diff --check` | clean |
+| `scripts/ux-visual-gate.test.mjs` | 17 / 17 |
+| colour inventory | unchanged, 756 in 52 sheets |
+
+**An unrelated timing-sensitive test.** In two of three full local runs, `src/StudentExamPage.attemptPolicy.7a.test.tsx` failed once:
+«strict › an ordinary submit stays «submitted»; hiding afterwards sends no exit». Its last step waits (the default 1 s) for the
+in-process API to record the submit.
+
+R19b changes no `src/` file. The test passes:
+- alone, twice on this branch and twice on `main` `11dcecfb`;
+- alone three more times with six CPU-bound processes running;
+- in the third full run.
+
+Its root cause is not established, so it is recorded here and not patched in this PR (`AGENTS.md` §12). CI on the exact head is the
+authority.
+
+**The gate in CI.** This PR touches the workflow and the gate's scripts, so the gate runs on it. With no `src/` change it is the
+plan's "unrelated PR" case, live.

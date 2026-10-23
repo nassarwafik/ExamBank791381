@@ -22,6 +22,7 @@ proves readiness before pushing and how the reviewer re-verifies.
 | C12 | Shared-finalization drift | part of C1 (`api/tests/shared-finalization-drift-14a.test.js`) | Quality Gate | the generated CJS matches the TypeScript source; regenerate with `node scripts/build-shared-finalization.mjs` |
 | C13 | Route authorization inventory | part of C1 (`api/tests/route-auth-inventory-11a.test.js`) | Quality Gate | no new anonymous route |
 | C14 | Repository governance contract | part of C1 (`scripts/repo-governance-contract.test.mjs`) | Quality Gate | `AGENTS.md`, the development documents and the PR template exist and keep their non-negotiable rules |
+| C15 | UX visual regression | `node scripts/ux-visual-gate.mjs` with `BASE_DIST` / `HEAD_DIST` (UX-R19b; see the script's header) | UX-R19b visual regression gate (`ux-visual-regression-r19b.yml`, path-filtered: `src/**`, `public/**`, the capture harness, the manifest), one job per viewport | no page or scene the UX-R harness captures changes by more than 12 levels per channel unless the PR declares it in `docs/ux-r/visual-changes.json`; no harness check fails on the head only |
 
 ## 2. Required set per change class
 
@@ -43,6 +44,9 @@ filter then runs it in CI too). `—` = not applicable; say so in the report.
 
 Notes:
 
+- **C15 (UX-R19b)** is required in CI (`P`) for any change that touches `src/**`, `public/**` or the capture harness. A PR whose
+  pages change on purpose declares each change (page, viewport, reason) in `docs/ux-r/visual-changes.json`; the gate's artifact holds
+  the before, after and diff images for the reviewer.
 - A **documentation-only PR does not run Docker manually.** The Runner workflow still builds the images and runs the real
   Docker suites in CI on every PR; its result is reported like any other exact-head result.
 - **Production Runner changes must satisfy the existing Runner CI.** A missing Docker daemon or a missing worker image fails
