@@ -4,8 +4,8 @@
 //     without light-dark() keeps the light values (an unsupported light-dark() would otherwise blank every colour it reaches).
 //  2. The LIGHT half of each redeclared token is exactly the value design-tokens.css ships: the light theme renders as before.
 //  3. Every colour token design-tokens.css defines with a literal has a dark half, except the set kept in both themes on purpose.
-//  4. The theme: light by default, dark for data-theme="dark" and for "system" on a dark device, light in print and in a light
-//     island.
+//  4. The theme: light by default, dark only for data-theme="dark" (owner decision: one toggle between dark and normal, the
+//     device's preference not followed), light in print and in a light island.
 //  5. In dark, every pair the light palette checks holds (text AA, the chrome's ink ≥ 7:1, strokes ≥ 3:1), with the roles kept:
 //     the secondary steps are dimmer than the text, the primary carries the page-ground colour as its label.
 //  6. The colour inventory counts neither token file.
@@ -90,10 +90,10 @@ describe("UX-R18a — the dark token file", () => {
 
 describe("UX-R18a — the theme", () => {
   const flat = darkSrc.replace(/\s+/g, " ");
-  it("is light by default, dark for data-theme=\"dark\" and for \"system\" on a dark device", () => {
+  it("is light by default and dark only for data-theme=\"dark\" (owner decision: the device's own preference is not followed)", () => {
     expect(flat).toContain(":root { color-scheme: light; }");
     expect(flat).toContain(':root[data-theme="dark"] { color-scheme: dark; }');
-    expect(flat).toMatch(/@media \(prefers-color-scheme: dark\) \{ :root\[data-theme="system"\] \{ color-scheme: dark; \} \}/);
+    expect(flat).not.toContain("prefers-color-scheme");
   });
   it("is light in print and inside a light island", () => {
     expect(flat).toMatch(/@media print \{ :root\[data-theme\] \{ color-scheme: light; \} \}/);

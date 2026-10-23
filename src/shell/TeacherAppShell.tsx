@@ -172,6 +172,8 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         </button>
         <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />
         <div className="eb-topbar-actions">
+          {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; rendered once dark mode is released (R18c). */}
+          {DARK_MODE_RELEASED && <ThemeSwitch className="eb-topbar-theme" />}
           {identity
             ? <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact size={44} />
             : <div className="eb-topbar-user" title={displayName}><IconUser size={16} /><span>{displayName}</span></div>}
@@ -205,13 +207,11 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         <nav className="eb-nav eb-nav-footer" aria-label="إعدادات وحساب">
           {FOOTER_NAV.map(id => navButton(id))}
           {/* Phase 21E — the account controls at the bottom. UX-R2: who is signed in moved to the top bar; «تسجيل الخروج» stays here. */}
-          {section("account", ACCOUNT_SECTION_LABEL, (<>
-            {/* UX-R18a — «المظهر» (system / light / dark), on this device; rendered once dark mode is released (R18c). */}
-            {DARK_MODE_RELEASED && <ThemeSwitch className="eb-nav-theme" />}
+          {section("account", ACCOUNT_SECTION_LABEL, (
             <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
               <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
             </button>
-          </>), " eb-nav-account")}
+          ), " eb-nav-account")}
         </nav>
       </aside>
       <div className="app-shell-main eb-shell-main">

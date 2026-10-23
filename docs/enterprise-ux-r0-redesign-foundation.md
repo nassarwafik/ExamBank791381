@@ -3943,32 +3943,41 @@ plan's "unrelated PR" case, live.
 |---|---|
 | No attribute (every user until R18c) | light |
 | `data-theme="dark"` | dark |
-| `data-theme="system"` | follows the device (`prefers-color-scheme`) |
 | `data-theme="light"` | light |
+| The device prefers dark | still light: the device's preference is not followed (owner decision, below) |
 | Print | always light |
 | Inside an `.eb-light-island` | light, inside a dark page; the student's exam paper takes it in R18c, as the plan keeps the exam paper light |
 
 **Old browsers.** The `light-dark()` block sits inside `@supports (color: light-dark(#000, #fff))`. A browser from before 2024
 ignores it and stays light. Without the guard, an unsupported `light-dark()` would blank every colour it reaches.
 
-**«المظهر», the switch.**
-- `src/ui/themePreference.ts` stores the device-level choice: system (the default), light or dark.
-  - It uses `localStorage` (`examBankTheme`; system clears the key) and mirrors the choice on `<html data-theme>`.
+**Owner decisions (2026-10-23).** These replace the plan's three-option «المظهر» control (system / light / dark, default system):
+- **One button** switches between the dark mode and the normal mode.
+- **It is a moon / sun icon in the top bar,** for the teacher and the student. The owner chose it among three proposals: the icon,
+  an on / off switch in an account menu, and the three options.
+- **The normal mode is the default,** and the device's own preference is not followed.
+- **Dark pages are shown to users only once everything is finished** (R18c).
+
+**The toggle.**
+- `src/ui/themePreference.ts` stores the device-level choice, light (the default) or dark.
+  - It uses `localStorage` (`examBankTheme` = `dark`; light clears the key) and mirrors the choice on `<html data-theme>`.
   - It follows another tab's choice. When storage fails, it keeps the choice for the current page.
-- `src/ui/ThemeSwitch.tsx` is the kit's `Segmented` radio group: «تلقائي» / «فاتح» / «داكن».
-- **Where it goes:**
-  - the teacher's sidebar, in its account group before «تسجيل الخروج» (the compact rail has no room for it; the expanded sidebar
-    and the drawer show it);
-  - the student's top bar.
+- `src/ui/ThemeSwitch.tsx` is the kit's 40 px `IconButton`:
+  - its name is always «الوضع الداكن», and `aria-pressed` says whether dark mode is on;
+  - the moon offers the dark mode, and the sun brings the normal one back.
+- **Where it goes:** the teacher's top bar, next to the identity, and the student's top bar, next to the notifications. It is
+  visible at every width, phones included.
+- **Preview.** A build with the release flag on was captured once, not committed. It shows the moon and the sun in both top bars,
+  at 1440 and 390.
 
 **Released only when every page is dark (R18c).** R18a ships the tokens, the switch and the shells' dark look, but
 `DARK_MODE_RELEASED` is `false`. While it is false:
 - the start-up never sets the attribute;
-- neither shell renders the switch;
+- neither top bar renders the toggle;
 - the app is light for everyone, whatever the device prefers.
 
-The plan's default (system) therefore takes effect in R18c, once no page would show its unconverted literal colours to a user with
-a dark device. The dark look is reviewed through the harness (`THEME=dark`) until then.
+So no user sees a page whose literal colours are not converted yet. The dark look is reviewed through the harness (`THEME=dark`)
+until then.
 
 **Charts read tokens as strings.** Chart.js and the SVG charts read tokens with `getPropertyValue`, which returns the token as
 written. Since this phase, a colour token is written `light-dark(…)`, which no chart library parses. **Without a fix, the light
@@ -3985,8 +3994,9 @@ app starts. The default stays light.
 - **`src/design-tokens-dark.css`** (new): the theme rules and the dark half of 42 tokens.
 - **`src/main.tsx`:** loads it, and calls `initThemePreference()` (inert until released).
 - **`src/ui/themePreference.ts`, `src/ui/ThemeSwitch.tsx`, `src/ui/themeColor.ts`** (new).
-- **`src/shell/TeacherAppShell.tsx`, `src/shell/StudentShell.tsx`, `src/shell.css`:** the switch, rendered once released, and its
-  placement.
+- **`src/shell/TeacherAppShell.tsx`, `src/shell/StudentShell.tsx`, `src/shell.css`:** the toggle in both top bars, rendered once
+  released.
+- **`src/icons.tsx`:** `IconMoon` and `IconSun`.
 - **`src/projects/chartPalette.ts`, `src/charts/chartTheme.ts`:** tokens read through the resolver.
 - **`scripts/ux-color-inventory.mjs`:** the dark token file is a token source, not counted. `TOKEN_FILES` gains it.
 - **`scripts/capture-visual-baseline-ux-r.mjs`:** `THEME=dark`.
@@ -4028,7 +4038,7 @@ below is their proof.
 
 ## R18a.5 Mutation proof
 
-Fifteen mutants. Each was planted alone, and the two R18a test files plus the colour inventory's ratchet ran against it. Each file
+Eighteen mutants. Each was planted alone, and the two R18a test files plus the colour inventory's ratchet ran against it. Each file
 was restored and SHA-256 checked, and `git status` was identical before and after.
 
 | # | Planted defect | Result | Killed by |
@@ -4041,20 +4051,25 @@ was restored and SHA-256 checked, and `git status` was identical before and afte
 | D6 | print no longer forced light | KILLED | the print guard |
 | D7 | a literal colour token loses its dark half | KILLED | the coverage guard |
 | D8 | start-up applies the theme before release | KILLED | the release test |
-| D9 | system stored instead of clearing the key | KILLED | the stored-choice tests |
+| D9 | light stored instead of clearing the key | KILLED | the stored-choice tests |
 | D10 | a storage failure loses the choice for the page | KILLED (second round) | the storage-failure test |
 | D11 | the resolver always picks the light half | KILLED | the resolver test |
 | D12 | the project palette reads the raw `light-dark()` string | KILLED | the chart test |
 | D13 | the student shell renders the switch before release | KILLED | the shell test |
 | D14 | the inventory counts the dark token file | KILLED | the inventory ratchet and its guard |
 | D15 | the dark token file is not loaded | KILLED | the load-order guard |
+| D16 | the toggle no longer says whether dark mode is on (`aria-pressed`) | KILLED | the toggle tests |
+| D17 | the device's dark preference is followed again | KILLED | the theme guard |
+| D18 | the teacher's toggle leaves the top bar | KILLED | the top bar test |
 
 **D10 survived the first round.** The test mocked `Storage.prototype`, but happy-dom's `localStorage` does not route through it, so
 the failure path never ran. The test now mocks the storage object itself, asserts that the mock throws, and restores it.
 
 **Two container restarts interrupted the campaign.** The second left D14's mutant in place: the process was killed before its
-restore ran. The file was restored to its intended text before anything else ran, and checked by diff. D10, D14 and D15 were then
-re-run on the corrected test. **15 / 15 killed**, no timeout, every file restored.
+restore ran. The file was restored to its intended text before anything else ran, and checked by diff.
+
+**The whole campaign was re-run after the owner's decisions** (the toggle, light by default), with D16–D18 added for them. **18 / 18
+killed**, no timeout, every file restored.
 
 ## R18a.6 Local validation and what R18b and R18c inherit
 
@@ -4081,3 +4096,38 @@ re-run on the corrected test. **15 / 15 killed**, no timeout, every file restore
   - an inline script in `index.html` applies the stored choice before the first paint (the repository has no CSP that would block
     it);
   - the gate compares the dark theme too.
+
+---
+
+# Phase UX-R18a-fix — The owner's dark-mode toggle
+
+**Owner decisions (2026-10-23)**, given while #425 was in CI. #425 merged at `c4572119` before they could ride it, so they come
+as their own PR from `main` `b3add327`:
+- **One button** switches between the dark mode and the normal mode. It replaces the three-option «المظهر» control (system /
+  light / dark).
+- **It is a moon / sun icon in the top bar,** for the teacher and the student, chosen among three proposals (the icon, an on / off
+  switch in an account menu, and the three options).
+- **The normal mode is the default.** The device's own preference is not followed.
+- **Dark pages are shown to users only once everything is finished** (R18c), as R18a already does with `DARK_MODE_RELEASED`.
+
+**What changes against #425:**
+- **`themePreference.ts`:** two values, light (the default, no key) and dark (`examBankTheme` = `dark`).
+- **`ThemeSwitch.tsx`:** the kit's `IconButton`. Its name is always «الوضع الداكن» and `aria-pressed` gives the state; the moon
+  offers dark and the sun brings the normal mode back.
+- **Placement:** the teacher's top bar (next to the identity) and the student's top bar (next to the notifications). It is no
+  longer in the sidebar.
+- **`icons.tsx`:** `IconMoon` and `IconSun`.
+- **`design-tokens-dark.css`:** the `prefers-color-scheme` rule for "system" is removed.
+
+The R18a section above describes the result. Its toggle, placement and mutation paragraphs were updated in place.
+
+**Evidence:**
+- **Fail-first.** The updated guard and test files were run against `main` `b3add327`: **7 fail** (the device rule, light by
+  default, the stored values, the button, its state, the top-bar placement) and 18 pass. On the head, 25 / 25 pass.
+- **Mutation.** The whole R18a campaign was re-run, with D16–D18 added for the decisions: **18 / 18 killed**, every file restored.
+- **Preview.** A build with the release flag on was captured once, not committed. It shows the moon and the sun in both top bars,
+  at 1440 and 390.
+- **Local validation.** 1 207 files, 14 303 tests passed; lint 0 errors; `tsc -b` and the build pass; `git diff --check` is
+  clean; the colour inventory is unchanged (756).
+- **No user-visible change.** The toggle renders only once released. The visual gate in CI compares the light theme on the exact
+  head.

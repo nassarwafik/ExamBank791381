@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
-// UX-R18a — «المظهر», the device-level appearance choice, and the colour resolver charts read tokens through
-// (docs/enterprise-ux-r0-redesign-foundation.md R18a). These tests pin: system is the default and clears the key; light / dark
-// are stored and mirrored on <html data-theme>; a broken or full storage keeps the choice for the page; another tab's choice is
-// followed; nothing happens at start-up until dark mode is released; the switch is the kit's radio group; neither shell renders
-// it before release, both do after; and a light-dark() token resolves to the half the element's color-scheme shows.
+// UX-R18a — the dark-mode toggle and the colour resolver charts read tokens through (docs/enterprise-ux-r0-redesign-foundation.md
+// R18a). Owner decisions (2026-10-23): one button between the dark and the normal mode, a moon / sun icon in the top bar, the
+// normal mode by default, dark pages shown to users only once everything is finished. These tests pin: light is the default and
+// clears the key; dark is stored and mirrored on <html data-theme>; a broken storage keeps the choice for the page; another tab's
+// choice is followed; nothing happens at start-up until dark mode is released; the toggle is one named button with aria-pressed;
+// neither shell renders it before release, both top bars do after; and a light-dark() token resolves to the half the element's
+// color-scheme shows.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, act } from "@testing-library/react";
 import { THEME_KEY, DARK_MODE_RELEASED, getThemeChoice, setThemeChoice, initThemePreference, applyThemeChoice } from "./themePreference";
@@ -13,23 +15,20 @@ import { tokenColor } from "../projects/chartPalette";
 import { readChartTokens } from "../charts/chartTheme";
 
 const html = () => document.documentElement;
-beforeEach(() => { localStorage.clear(); html().removeAttribute("data-theme"); setThemeChoice("system"); html().removeAttribute("data-theme"); });
+beforeEach(() => { localStorage.clear(); setThemeChoice("light"); html().removeAttribute("data-theme"); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("UX-R18a — the stored choice", () => {
-  it("is system by default; light and dark are stored and mirrored on <html data-theme>; system clears the key", () => {
-    expect(getThemeChoice()).toBe("system");
+  it("is light by default; dark is stored and mirrored on <html data-theme>; light clears the key", () => {
+    expect(getThemeChoice()).toBe("light");
     setThemeChoice("dark");
     expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme"), getThemeChoice()]).toEqual(["dark", "dark", "dark"]);
     setThemeChoice("light");
-    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme")]).toEqual(["light", "light"]);
-    setThemeChoice("system");
-    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme"), getThemeChoice()]).toEqual([null, "system", "system"]);
+    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme"), getThemeChoice()]).toEqual([null, "light", "light"]);
   });
 
-  it("anything else in storage reads as system", () => {
-    localStorage.setItem(THEME_KEY, "sepia");
-    expect(getThemeChoice()).toBe("system");
+  it("anything else in storage reads as light", () => {
+    for (const v of ["system", "sepia", "DARK"]) { localStorage.setItem(THEME_KEY, v); expect(getThemeChoice(), v).toBe("light"); }
   });
 
   it("when storage throws, the choice still applies to the current page", () => {
@@ -49,7 +48,7 @@ describe("UX-R18a — the stored choice", () => {
     localStorage.setItem(THEME_KEY, "dark");
     act(() => { window.dispatchEvent(new StorageEvent("storage", { key: THEME_KEY })); });
     expect(html().getAttribute("data-theme")).toBe("dark");
-    expect(screen.getByRole("radio", { name: "داكن" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("button", { name: "الوضع الداكن" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("start-up is inert until dark mode is released; released, it applies the stored choice", () => {
@@ -60,40 +59,41 @@ describe("UX-R18a — the stored choice", () => {
     initThemePreference(true);
     expect(html().getAttribute("data-theme")).toBe("dark");
     localStorage.removeItem(THEME_KEY); applyThemeChoice();
-    expect(html().getAttribute("data-theme")).toBe("system");
+    expect(html().getAttribute("data-theme")).toBe("light");
   });
 });
 
-describe("UX-R18a — the switch", () => {
-  it("is a radio group «المظهر» of three options, system checked by default", () => {
+describe("UX-R18a — the toggle", () => {
+  it("is one button «الوضع الداكن», not pressed, showing the moon", () => {
     render(<ThemeSwitch />);
-    const group = screen.getByRole("radiogroup", { name: "المظهر" });
-    expect([...group.querySelectorAll("[role=radio]")].map(r => r.textContent)).toEqual(["تلقائي", "فاتح", "داكن"]);
-    expect(screen.getByRole("radio", { name: "تلقائي" }).getAttribute("aria-checked")).toBe("true");
+    const button = screen.getByRole("button", { name: "الوضع الداكن" });
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(button.querySelector("svg path")?.getAttribute("d")).toMatch(/^M16\.5 12\.2/);   // the moon
   });
 
-  it("choosing «داكن» stores it and darkens the page; the arrow keys move and select", () => {
+  it("a click turns dark mode on (stored, the page dark, pressed, the sun); a second click returns to the normal mode", () => {
     render(<ThemeSwitch />);
-    fireEvent.click(screen.getByRole("radio", { name: "داكن" }));
-    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme")]).toEqual(["dark", "dark"]);
-    expect(screen.getByRole("radio", { name: "داكن" }).getAttribute("aria-checked")).toBe("true");
-    fireEvent.keyDown(screen.getByRole("radio", { name: "داكن" }), { key: "Home" });
-    expect(html().getAttribute("data-theme")).toBe("system");
-    expect(localStorage.getItem(THEME_KEY)).toBeNull();
+    const button = screen.getByRole("button", { name: "الوضع الداكن" });
+    fireEvent.click(button);
+    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme"), button.getAttribute("aria-pressed")]).toEqual(["dark", "dark", "true"]);
+    expect(button.querySelector("svg circle")).not.toBeNull();                                // the sun
+    fireEvent.click(button);
+    expect([localStorage.getItem(THEME_KEY), html().getAttribute("data-theme"), button.getAttribute("aria-pressed")]).toEqual([null, "light", "false"]);
   });
 });
 
-describe("UX-R18a — the shells render «المظهر» only once dark mode is released", () => {
+describe("UX-R18a — the top bars render the toggle only once dark mode is released", () => {
   async function shells() {
     const { default: TeacherAppShell } = await import("../shell/TeacherAppShell");
     const { default: StudentShell } = await import("../shell/StudentShell");
     const nav = { teacherView: "platform", workspaceTab: "dashboard", projectCode: "", projectList: [] } as never;
     window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => true })) as never;
-    render(<TeacherAppShell nav={nav} projectReadyTotal={0} displayName="المعلم" onNavigate={() => {}} onLogout={() => {}}><p>x</p></TeacherAppShell>);
-    const teacher = screen.queryAllByRole("radiogroup", { name: "المظهر" }).length;
+    const { container } = render(<TeacherAppShell nav={nav} projectReadyTotal={0} displayName="المعلم" onNavigate={() => {}} onLogout={() => {}}><p>x</p></TeacherAppShell>);
+    const teacher = container.querySelectorAll("header .eb-topbar-actions .eb-theme-toggle").length + container.querySelectorAll("aside .eb-theme-toggle").length * 10;
     cleanup();
-    render(<StudentShell studentName="أحمد" onLogout={() => {}}><p>x</p></StudentShell>);
-    const student = screen.queryAllByRole("radiogroup", { name: "المظهر" }).length;
+    const s = render(<StudentShell studentName="أحمد" onLogout={() => {}}><p>x</p></StudentShell>);
+    const student = s.container.querySelectorAll("header.student-topbar .eb-theme-toggle").length;
     return { teacher, student };
   }
 
@@ -101,7 +101,7 @@ describe("UX-R18a — the shells render «المظهر» only once dark mode is 
     expect(await shells()).toEqual({ teacher: 0, student: 0 });
   });
 
-  it("both shells once released (the teacher's in the account group, before «تسجيل الخروج»)", async () => {
+  it("both top bars once released (never the sidebar)", async () => {
     vi.resetModules();
     vi.doMock("./themePreference", async orig => ({ ...(await orig<typeof import("./themePreference")>()), DARK_MODE_RELEASED: true }));
     expect(await shells()).toEqual({ teacher: 1, student: 1 });
