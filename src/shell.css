@@ -81,6 +81,7 @@
    (The query lists the pointer first: the drawer's own «@media (max-width: 1023px)» block below stays the first of its kind.) */
 @media (pointer: coarse), (max-width: 1023px) {
   .eb-quicknav-input, .eb-topbar-pill { min-height: 44px; }
+  .eb-theme-toggle { min-width: 44px; min-height: 44px; }   /* UX-R18c2 — the dark-mode toggle, released into both top bars */
 }
 /* Phones: the bar keeps the menu, the brand mark, the quick navigation and the avatar. The brand name leaves the screen
    (it stays in the accessibility tree) and the home pill hides — «لوحة المتابعة» is the drawer's first destination. */

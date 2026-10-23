@@ -4,6 +4,7 @@
 //  2. index.html applies the stored dark choice BEFORE the first paint: an inline script in <head>, ahead of every stylesheet and
 //     module, reading the same key as themePreference.ts and only its literal "dark"; storage failures leave the page light.
 //  3. The visual gate compares both themes; the offline page stays a static light page (its 6A guard forbids scripts).
+//  4. The toggle is a 44 px touch target wherever the top bar's other controls are (L.8 measures it at 834 px, touch).
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -49,6 +50,11 @@ describe("UX-R18c2 — dark mode released", () => {
     expect(wf).toContain("theme: [light, dark]");
     expect(wf).toContain("THEME: ${{ matrix.theme }}");
     expect(wf).toContain("name: Visual regression (${{ matrix.viewport }}${{ matrix.theme == 'dark' && ', dark' || '' }})");
+  });
+
+  it("the toggle is a 44 px target on touch screens and the drawer layout, like every other top-bar control (L.8)", () => {
+    const shell = read("src", "shell.css").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
+    expect(shell).toMatch(/@media \(pointer: coarse\), \(max-width: 1023px\) \{ \.eb-quicknav-input, \.eb-topbar-pill \{ min-height: 44px; \} \.eb-theme-toggle \{ min-width: 44px; min-height: 44px; \} \}/);
   });
 
   it("the offline page stays a static light page (no script: the 6A guard; color-scheme light)", () => {

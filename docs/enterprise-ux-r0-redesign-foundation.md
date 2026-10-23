@@ -4517,7 +4517,7 @@ nothing else moves on them:
   - start-up now applies the stored choice, and with the flag off it stays inert;
   - the toggle renders in both top bars;
   - with the flag mocked off, neither top bar renders it.
-- **`src/ui/darkRelease.ux-r18c2.test.ts` (new, 5 tests):**
+- **`src/ui/darkRelease.ux-r18c2.test.ts` (new, 6 tests; the sixth came with Review Fix 1):**
   - the flag;
   - the pre-paint script: in `<head>` before every stylesheet and module, the toggle's key, only `dark`, failures leave it light
     (run against a fake document and storage);
@@ -4580,6 +4580,15 @@ On the final tree, run in order:
 - **`git diff --check`:** clean.
 - **Colour inventory:** 719, unchanged.
 - **The dark audit:** 0 unanswered in 102 sheets.
+
+**Review Fix 1 — the toggle's touch target.** On the PR's first CI run, the L.8 gate (`check-learning-reader-browser-l8.mjs`)
+failed 4 checks at 834 px with touch: «الوضع الداكن 40×40», on the student portal and the teacher's library, book and reader.
+- **The cause:** the top bar's touch rule (`@media (pointer: coarse), (max-width: 1023px)`, `src/shell.css`) makes every other
+  top-bar control a 44 px target, but it did not list the toggle, which was hidden until now. At 390 px the phone rule of
+  `ui.css` already gave it 44 px.
+- **The fix:** the toggle joins that rule (`min-width` and `min-height` 44 px). A guard in `darkRelease.ux-r18c2.test.ts` pins it.
+- **The evidence:** L.8 reproduced the 4 failures locally on the first head and passes on the fix (0 failures). The visual gate's
+  captures do not move: the tablet capture is 1024 px without touch, and the phone was already 44 px.
 
 **Dark mode is complete (R18a → R18c2).** Every page has its dark look:
 - the static audit covers all 102 sheets;
