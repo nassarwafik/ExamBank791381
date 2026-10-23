@@ -4594,3 +4594,63 @@ failed 4 checks at 834 px with touch: «الوضع الداكن 40×40», on the
 - the static audit covers all 102 sheets;
 - 0 contrast failures in 207 dark captures;
 - the gate guards both themes from now on.
+
+---
+
+# Phase UX-R19b-fix — The visual gate's capture holds still
+
+Branched from `main` `26226fa7` (#429) as `hotfix/visual-gate-stable-capture`. A governance hotfix: the capture harness only.
+
+## R19b-fix.1 What went wrong, measured
+
+The gate on #430 (a change scoped to the projects matrix) went red twice on the tablet viewport, each time on a page the PR does
+not touch, and each time on a different page:
+
+| Attempt | Theme | Undeclared failure | Flakes noted (changed once, identical on the re-capture) |
+|---|---|---|---|
+| 1 | light | `studio-home`, the model select 1 px lower | `preset-default`, `sim-physicsMotion` |
+| 1 | dark | `sim-chemistryReactions`, its sticky bars a few pixels off | `preset-default` |
+| 2 | light | `report-assignments`, the **base** capture with a blank sidebar rail | `learning-search`, `sim-chemistryStructure`, `sim-physicsLab` |
+
+The images in the gate's artifacts agree: every changed region lies inside the first viewport and belongs to a `position: fixed`
+or `sticky` layer (the sidebar rail, the simulators' title and navigation bars, the studio's sticky select). The page content
+never differs. The same blank-rail base capture failed #427 once in R18b. It has never reproduced locally (210 / 210 clean in
+both themes, several times).
+
+**Cause.** A full-page screenshot resizes the viewport to the document for the capture. Chromium occasionally paints a fixed or
+sticky layer a frame late in that resized viewport, and the single shot the harness took kept whatever was painted at that
+moment. The stable-height loop (R19b) waits for the layout, not for the paint.
+
+## R19b-fix.2 The fix
+
+`scripts/capture-visual-baseline-ux-r.mjs` keeps a page's capture only once two full-page shots in a row are byte-identical
+(150 ms apart, at most four shots), the way a screenshot assertion settles. A late paint is then caught by the second shot and
+never compared. Nothing else changes: the same harness captures both builds, so the gate still compares like with like, and a
+real change is still a change on every shot.
+
+The cost is one extra shot per page when the first two agree: about +20 % on a job.
+
+## R19b-fix.3 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the settled capture.
+- **`scripts/ux-visual-gate.test.mjs`:** a guard that pins the settle loop and the single write (killed when the comparison is
+  removed, and when the old single shot comes back).
+- **This record.**
+
+## R19b-fix.4 Evidence
+
+- **Guard:** `ux-visual-gate.test.mjs` 18 / 18 on the head. Two mutants: the comparison removed (`break` unconditionally) and the
+  old single `page.screenshot({ path, fullPage })` restored — both **KILLED** by the new guard, the file restored (SHA-256).
+- **Same build on both sides** (the gate must report nothing): light, all three viewports, 207 / 207 compared, 0 changed, PASS;
+  dark, tablet, 69 / 69, 0 changed, PASS.
+- **A planted change** (`h1 { color: #ff0000 }` injected into a copy of the base build, tablet, light): 63 of 69 pages reported as undeclared changes (every page that shows an `h1`; the six without one unchanged), **GATE FAIL**, as it must. The fix does not blind the gate.
+- The fix is proven in CI only by the gate running on this hotfix's own PR and on #430 after it merges; this container has
+  never reproduced the flake.
+
+## R19b-fix.5 Local validation
+
+On the head's tree:
+- **Root suite** (`npx vitest run`): 1210 files, **14428 / 14428** pass.
+- `npm run lint`: 0 errors. `npx tsc -b`: clean. `git diff --check`: clean.
+- `npm run build` is unaffected (no change under `src/` or `public/`) and runs in CI.
+- **Not run:** the Runner suites (nothing under `runner/` changed).
