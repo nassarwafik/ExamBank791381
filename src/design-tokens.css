@@ -89,6 +89,9 @@
   --eb-nav-hover: rgba(255, 255, 255, 0.07);
   --eb-nav-border: rgba(255, 255, 255, 0.09);
   --eb-backdrop: rgba(28, 19, 48, 0.45);
+  /* UX-R18b — the ink of shadows and scrims: always dark (the heading ink --eb-navy / --eb-content-ink turns light in the dark theme,
+     so a shadow or backdrop mixed from it would glow). Same value as --eb-navy in light. */
+  --eb-scrim: #1c1330;
 
   /* Typography scale (12–28) and weights (400–700) */
   --eb-fs-12: 12px; --eb-fs-13: 13px; --eb-fs-14: 14px; --eb-fs-15: 15px; --eb-fs-16: 16px;

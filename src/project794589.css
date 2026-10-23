@@ -44,3 +44,8 @@
 @media (max-width: 900px) {
   .p794-portal-tracks { grid-template-columns: 1fr; }
 }
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .p794-status-badge.status-in-progress { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .p794-status-badge.status-approved { background: var(--eb-success-bg); }

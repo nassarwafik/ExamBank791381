@@ -36,3 +36,8 @@
 .cmp-review-comment textarea{inline-size:100%;box-sizing:border-box;border:1px solid var(--line2);border-radius:9px;padding:6px 8px;font:inherit;resize:vertical}
 .cmp-review input:disabled,.cmp-review textarea:disabled{background:var(--surface2);cursor:not-allowed}
 @media (max-width:640px){.cmp-review-answer{grid-template-columns:1fr}.cmp-review-auto{margin-inline-start:0}}
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .cmp-review-part.needs-review { background: var(--eb-surface); }
+:root[data-theme="dark"] .cmp-review-expected { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }

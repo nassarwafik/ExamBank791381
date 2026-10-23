@@ -55,7 +55,7 @@
 .review-question.rv-q.is-incorrect{ border-inline-start:4px solid #ef4444; }
 .review-question.rv-q.is-partial{ border-inline-start:4px solid #8b5cf6; }
 .review-question.rv-q.is-pending{ border-inline-start:4px solid var(--eb-warn); background:#fffdf8; }
-.review-question.rv-q.is-current{ box-shadow:0 0 0 2px var(--eb-primary), 0 8px 22px -20px color-mix(in srgb, var(--eb-content-ink) 18%, transparent); }
+.review-question.rv-q.is-current{ box-shadow:0 0 0 2px var(--eb-primary), 0 8px 22px -20px color-mix(in srgb, var(--eb-scrim) 18%, transparent); }
 .review-question.rv-q:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .rv-qmeta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin-block-start:var(--eb-space-2); font-size:var(--eb-fs-13); color:var(--eb-muted); }
 .rv-qmeta .rv-mark{ font-variant-numeric:tabular-nums; font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
@@ -110,6 +110,26 @@
 @media (pointer: coarse) {
   .rv-student-nav button, .review-attempt-tabs button, .rv-filter, .rv-pager button, .review-top > button { min-block-size: 44px; }
 }
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .rv-filter.is-pending,
+:root[data-theme="dark"] .rv-pager .is-primary,
+:root[data-theme="dark"] .rv-unsaved { color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .rv-nav-btn.is-correct,
+:root[data-theme="dark"] .rv-choice.is-right,
+:root[data-theme="dark"] .rv-choice.is-key:not(.is-picked) { border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:root[data-theme="dark"] .rv-nav-btn.is-partial { background: var(--eb-primary-050); }
+:root[data-theme="dark"] .rv-status.is-pending,
+:root[data-theme="dark"] .rv-mode.is-draft { color: var(--eb-warn-tx); border-color: color-mix(in srgb, var(--eb-warn) 45%, transparent); }
+:root[data-theme="dark"] .rv-status.is-correct { color: var(--eb-success-tx); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); }
+:root[data-theme="dark"] .rv-status.is-incorrect,
+:root[data-theme="dark"] .rv-choice.is-wrong .rv-choice-tag { color: var(--eb-danger-tx); }
+:root[data-theme="dark"] .rv-status.is-partial { background: var(--eb-primary-050); color: var(--eb-primary); }
+:root[data-theme="dark"] .review-question.rv-q.is-pending { background: var(--eb-surface); }
+:root[data-theme="dark"] .rv-choice.is-right .rv-choice-tag,
+:root[data-theme="dark"] .rv-choice-tag.is-key { color: var(--eb-success-tx); }
+:root[data-theme="dark"] .rv-filter.is-pending.is-active { background: var(--eb-warn); border-color: var(--eb-warn); color: var(--eb-surface); }
 
 /* UX-R12 — the grading workspace in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R12). Presentation only:
    every grade, key, status and save path is unchanged. The attempt summary is ONE hairline strip, the navigator and the

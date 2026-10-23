@@ -56,3 +56,8 @@
 
 /* Review Fix 1 — safe student state for a stored (type, version) without an implementation in this build */
 .iex-unsupported { margin: 0.5rem 0 0; padding: 0.6rem 0.8rem; border: 1px dashed #c9c9c9; border-radius: 8px; background: #f7f7f7; color: #555; font-size: 0.95rem; }
+
+/* UX-R18b — the dark theme: the status shades and neutrals this sheet writes as literals (kept for the light theme, R17d option
+   (a)) take their token here, so nothing stays a light island or unreadable in dark. Tokens only; the light theme is untouched. */
+:root[data-theme="dark"] .qt-unsupported { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+:root[data-theme="dark"] .iex-unsupported { border: 1px dashed var(--eb-line-2); background: var(--eb-surface); color: var(--eb-muted); }

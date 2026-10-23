@@ -15,7 +15,7 @@
 .vq-svg .vq-draft { fill: none; stroke: var(--eb-warn); stroke-width: 2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
 .vq-svg .vq-target-hit { fill: color-mix(in srgb, var(--eb-success) 18%, transparent); stroke: var(--eb-success-tx); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .vq-svg .vq-target-miss { fill: color-mix(in srgb, var(--eb-danger) 12%, transparent); stroke: #b91c1c; stroke-width: 2; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
-.vq-marker { position: absolute; z-index: 2; display: grid; place-items: center; min-width: 32px; min-height: 32px; padding: 0 6px; transform: translate(-50%, -50%); border: 2px solid var(--eb-surface); border-radius: 999px; background: var(--eb-primary, var(--eb-content-accent)); color: var(--eb-surface); font: 700 13px/1 inherit; line-height: 1; box-shadow: 0 1px 4px color-mix(in srgb, var(--eb-content-ink) 45%, transparent); cursor: grab; touch-action: none; }
+.vq-marker { position: absolute; z-index: 2; display: grid; place-items: center; min-width: 32px; min-height: 32px; padding: 0 6px; transform: translate(-50%, -50%); border: 2px solid var(--eb-surface); border-radius: 999px; background: var(--eb-primary, var(--eb-content-accent)); color: var(--eb-surface); font: 700 13px/1 inherit; line-height: 1; box-shadow: 0 1px 4px color-mix(in srgb, var(--eb-scrim) 45%, transparent); cursor: grab; touch-action: none; }
 .vq-marker:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
 .vq-marker[data-state="hit"] { background: var(--eb-success-tx); }
 .vq-marker[data-state="miss"] { background: #b91c1c; }
