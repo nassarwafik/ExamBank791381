@@ -34,6 +34,9 @@ const onlyVp = (process.env.VIEWPORTS || "").split(",").map(s => s.trim()).filte
 const part = process.env.PART || "pages";
 const audit = process.env.AUDIT === "1";
 const printPages = (process.env.PRINT_PAGES || "").split(",").map(s => s.trim()).filter(Boolean);
+// UX-R18a — THEME=dark captures every page in the dark theme (<html data-theme="dark"> and the stored «المظهر» choice, set before
+// the app starts); the default is light, as before.
+const theme = process.env.THEME === "dark" ? "dark" : "light";
 const out = path.resolve(process.env.HARNESS_OUT || path.join(root, ".harness-ux-r"), label);
 let chromium;
 try { ({ chromium } = createRequire(path.join(process.env.PLAYWRIGHT_CORE_DIR || root, "package.json"))("playwright-core")); }
@@ -641,7 +644,7 @@ const VIEWPORTS = [["desktop", { width: 1440, height: 900 }, false], ["tablet", 
   .filter(([n]) => !onlyVp.length || onlyVp.includes(n));
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ["--no-sandbox"] });
-const record = { label, dist, generatedAt: new Date().toISOString(), pages: {} }, checks = [];
+const record = { label, dist, theme, generatedAt: new Date().toISOString(), pages: {} }, checks = [];
 for (const [vpName, viewport, touch] of VIEWPORTS) {
   fs.mkdirSync(path.join(out, vpName), { recursive: true });
   for (const pg of PAGES) {
@@ -650,6 +653,11 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
     const ctx = await browser.newContext({ viewport, isMobile: touch, hasTouch: touch, deviceScaleFactor: 1, locale: "ar", reducedMotion: "reduce", serviceWorkers: "block" });
     if (pg.role) await ctx.addInitScript(r => { sessionStorage.setItem("examBankBuilderToken", "harness-token"); sessionStorage.setItem("examBankSessionRole", r); sessionStorage.setItem("examBankSessionDisplayName", r === "teacher" ? "أ. محمد" : "أحمد الحسن"); }, pg.role);
     await ctx.clock.setFixedTime(new Date(NOW));                 // UX-R19a — relative times ("منذ 3 ساعات") never move between runs
+    if (theme === "dark") await ctx.addInitScript(() => {
+      try { localStorage.setItem("examBankTheme", "dark"); } catch {}
+      const set = () => document.documentElement.setAttribute("data-theme", "dark");     // <html> may not exist yet when this runs
+      if (document.documentElement) set(); else new MutationObserver((_, o) => { if (document.documentElement) { set(); o.disconnect(); } }).observe(document, { childList: true });
+    });
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(String(e))); page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push("console: " + m.text()); });
     let reached = true;

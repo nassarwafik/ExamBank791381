@@ -13,8 +13,8 @@ import { fileURLToPath } from "node:url";
 
 export const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const BASELINE_FILE = path.join(ROOT, "scripts/ux-color-inventory.baseline.json");
-/** The token source: literals are its job. */
-export const TOKEN_FILES = new Set(["src/design-tokens.css"]);
+/** The token sources: literals are their job (UX-R18a — the dark half of every colour token lives in design-tokens-dark.css). */
+export const TOKEN_FILES = new Set(["src/design-tokens.css", "src/design-tokens-dark.css"]);
 
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/g;
 const FN = /\b(?:rgba?|hsla?)\(/g;

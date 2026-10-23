@@ -1,0 +1,73 @@
+// UX-R18a — the device-level appearance choice «المظهر»: system (the default: follow the device), light or dark
+// (docs/enterprise-ux-r0-redesign-foundation.md R18a). A per-viewer convenience, not account data: stored on this device only
+// (localStorage, a fixed key, the literal "light" / "dark"; no key = system), never sent anywhere. Storage failures (privacy mode,
+// quota) keep the choice for the current page only. The choice is mirrored on <html data-theme="system|light|dark">, which
+// design-tokens-dark.css turns into the color-scheme every light-dark() token reads.
+//
+// DARK_MODE_RELEASED: R18a ships the tokens, this module, the switch and the shells' dark look, but dark mode is released to
+// users only when every page has its dark look (R18c). Until then the attribute is never set, the switch is not rendered, and
+// the app is light for everyone, whatever the device prefers.
+import { useSyncExternalStore } from "react";
+
+export const DARK_MODE_RELEASED = false;
+
+export type ThemeChoice = "system" | "light" | "dark";
+export const THEME_KEY = "examBankTheme";
+export const THEME_LABELS: Record<ThemeChoice, string> = { system: "تلقائي", light: "فاتح", dark: "داكن" };
+
+const listeners = new Set<() => void>();
+let memory: ThemeChoice | null = null;
+
+/** The stored choice; "system" when the viewer never chose (or storage holds anything else). */
+export function getThemeChoice(): ThemeChoice {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === "light" || v === "dark") return v;
+    if (v === null && memory) return memory;
+    return "system";
+  } catch {
+    return memory ?? "system";
+  }
+}
+
+/** Mirror the choice on <html data-theme>. Safe without a document (SSR / tests without DOM). */
+export function applyThemeChoice(choice: ThemeChoice = getThemeChoice()): void {
+  if (typeof document === "undefined" || !document.documentElement) return;
+  document.documentElement.setAttribute("data-theme", choice);
+}
+
+/** Store the choice (system clears the key), apply it and notify every subscriber, even when storage is unavailable. */
+export function setThemeChoice(choice: ThemeChoice): void {
+  try {
+    if (choice === "system") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, choice);
+  } catch {
+    /* storage unavailable — the in-memory choice below still applies to the current page */
+  }
+  memory = choice;
+  applyThemeChoice(choice);
+  listeners.forEach(l => l());
+}
+
+/** Subscribe to choices made here or in another tab (storage event). Returns the unsubscribe. */
+export function subscribeThemeChoice(listener: () => void): () => void {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => { if (e.key === null || e.key === THEME_KEY) { memory = null; applyThemeChoice(); listener(); } };
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    if (typeof window !== "undefined" && typeof window.removeEventListener === "function") window.removeEventListener("storage", onStorage);
+  };
+}
+
+/** The current choice, kept in sync across components and tabs. */
+export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
+  const choice = useSyncExternalStore(subscribeThemeChoice, getThemeChoice, () => "system" as ThemeChoice);
+  return [choice, setThemeChoice];
+}
+
+/** At start-up: apply the stored choice. Inert until dark mode is released (the app stays light). */
+export function initThemePreference(released: boolean = DARK_MODE_RELEASED): void {
+  if (!released) return;
+  applyThemeChoice();
+}

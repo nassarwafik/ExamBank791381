@@ -3906,3 +3906,178 @@ authority.
 
 **The gate in CI.** This PR touches the workflow and the gate's scripts, so the gate runs on it. With no `src/` change it is the
 plan's "unrelated PR" case, live.
+
+---
+
+# Phase UX-R18a — Dark mode: the tokens, the switch and the shells
+
+**Owner direction (2026-10-22, §4.2):** dark mode in three phases (R18a–R18c), after the visual regression gate. R18a branches from
+`main` `52e4ac24` (#424, R19b) as `feature/ux-r18a-dark-mode-foundation`.
+
+## R18a.1 What changes
+
+**Every colour token gets a dark value, and light mode does not change by a pixel.**
+- `src/design-tokens-dark.css` (new, loaded right after `design-tokens.css`) redeclares each colour token as
+  `light-dark(<light>, <dark>)`.
+- The light half is exactly the value `design-tokens.css` ships, so the light theme renders as before. A guard pins every light
+  half, and the visual regression gate on this PR compares every page and scene in light (§R18a.4).
+- The browser picks the half from the element's `color-scheme`. No component reads a new token: every sheet already reads the
+  `--eb-*` names.
+
+**Roles are kept, not hues:**
+- **Grounds:** the page grounds are dark purple-greys (`--eb-bg` `#121019`, `--eb-surface` `#1b1825`).
+- **Ink:** the strongest ink stays the strongest ink. `--eb-navy`, the heading ink, is `#f4f1fb` on a dark page.
+- **Secondary steps:** they keep their order, now dimmer than the text: muted, then placeholder, then faint.
+- **The primary:** the deep purple becomes a light lavender (`#b59cee`, hover `#ddd0fa`). The primary button reads `--eb-surface`
+  for its label, so in dark it carries a dark label at 7.4 : 1. Its tints become deep purples.
+- **Status colours:** the fill lifts, the tint darkens and the text lightens.
+- **Shadows:** black and deeper.
+- **Kept in both themes, on purpose:**
+  - the dark rail / toast set (`--eb-nav-*`, already dark);
+  - the inverse focus ring;
+  - the medal accents.
+
+**The theme on `<html data-theme>`:**
+
+| Situation | Result |
+|---|---|
+| No attribute (every user until R18c) | light |
+| `data-theme="dark"` | dark |
+| `data-theme="system"` | follows the device (`prefers-color-scheme`) |
+| `data-theme="light"` | light |
+| Print | always light |
+| Inside an `.eb-light-island` | light, inside a dark page; the student's exam paper takes it in R18c, as the plan keeps the exam paper light |
+
+**Old browsers.** The `light-dark()` block sits inside `@supports (color: light-dark(#000, #fff))`. A browser from before 2024
+ignores it and stays light. Without the guard, an unsupported `light-dark()` would blank every colour it reaches.
+
+**«المظهر», the switch.**
+- `src/ui/themePreference.ts` stores the device-level choice: system (the default), light or dark.
+  - It uses `localStorage` (`examBankTheme`; system clears the key) and mirrors the choice on `<html data-theme>`.
+  - It follows another tab's choice. When storage fails, it keeps the choice for the current page.
+- `src/ui/ThemeSwitch.tsx` is the kit's `Segmented` radio group: «تلقائي» / «فاتح» / «داكن».
+- **Where it goes:**
+  - the teacher's sidebar, in its account group before «تسجيل الخروج» (the compact rail has no room for it; the expanded sidebar
+    and the drawer show it);
+  - the student's top bar.
+
+**Released only when every page is dark (R18c).** R18a ships the tokens, the switch and the shells' dark look, but
+`DARK_MODE_RELEASED` is `false`. While it is false:
+- the start-up never sets the attribute;
+- neither shell renders the switch;
+- the app is light for everyone, whatever the device prefers.
+
+The plan's default (system) therefore takes effect in R18c, once no page would show its unconverted literal colours to a user with
+a dark device. The dark look is reviewed through the harness (`THEME=dark`) until then.
+
+**Charts read tokens as strings.** Chart.js and the SVG charts read tokens with `getPropertyValue`, which returns the token as
+written. Since this phase, a colour token is written `light-dark(…)`, which no chart library parses. **Without a fix, the light
+charts would break too.**
+- `src/ui/themeColor.ts` resolves the half the element's `color-scheme` shows.
+- The project palette (`chartPalette.ts`) and the chart theme (`chartTheme.ts`) read tokens through it.
+- So a chart draws with the page's colours in either theme. The dark dashboard captures show its charts in the dark palette.
+
+**The harness.** `THEME=dark` captures every page in dark: it stores the dark choice and sets `<html data-theme="dark">` before the
+app starts. The default stays light.
+
+## R18a.2 Edit set
+
+- **`src/design-tokens-dark.css`** (new): the theme rules and the dark half of 42 tokens.
+- **`src/main.tsx`:** loads it, and calls `initThemePreference()` (inert until released).
+- **`src/ui/themePreference.ts`, `src/ui/ThemeSwitch.tsx`, `src/ui/themeColor.ts`** (new).
+- **`src/shell/TeacherAppShell.tsx`, `src/shell/StudentShell.tsx`, `src/shell.css`:** the switch, rendered once released, and its
+  placement.
+- **`src/projects/chartPalette.ts`, `src/charts/chartTheme.ts`:** tokens read through the resolver.
+- **`scripts/ux-color-inventory.mjs`:** the dark token file is a token source, not counted. `TOKEN_FILES` gains it.
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** `THEME=dark`.
+- **New guards:**
+  - `src/designSystem/darkTokens.ux-r18a.test.ts`: 14 guards;
+  - `src/ui/themePreference.ux-r18a.test.tsx`: 11 tests.
+
+## R18a.3 The dark palette
+
+| Token | Light | Dark |
+|---|---|---|
+| `--eb-bg` / `--eb-surface` / `--eb-surface-2` | `#f7f6fa` / `#ffffff` / `#f5f4f8` | `#121019` / `#1b1825` / `#231f2e` |
+| `--eb-navy` / `--eb-text` / `--eb-muted` / `--eb-faint` | `#1c1330` / `#2d2740` / `#5f5a6e` / `#a9a5b4` | `#f4f1fb` / `#dcd7e8` / `#a7a1b8` / `#5e5870` |
+| `--eb-line` / `--eb-line-2` | `#e9e8ee` / `#dedce6` | `#2e2a3a` / `#3a3549` |
+| `--eb-primary` / `--eb-primary-strong` | `#2a0a4e` / `#4a2380` | `#b59cee` / `#ddd0fa` |
+| `--eb-primary-050` / `-100` | `#f3effa` / `#ebe5f4` | `#221c31` / `#2a223e` |
+| `--eb-success-tx` / `--eb-warn-tx` / `--eb-danger-tx` | `#15803d` / `#b45309` / `#b42318` | `#7fe2a6` / `#f6c37f` / `#f8a9a9` |
+
+**Contrast, measured by the guard: 73 checks, all pass.** They are the pairs the light palette checks, in dark:
+- the button label on both primary steps, and both steps as link text on every ground and tint;
+- the heading ink ≥ 7 : 1, the text and placeholder AA;
+- muted AA on all ten grounds and tints;
+- the chrome's ink ≥ 7 : 1 and its secondary text AA on its four surfaces;
+- the content family (text AA, axis ≥ 3 : 1, the control colour ≥ 7 : 1);
+- each status text AA on its tint and on the surface, each status fill ≥ 3 : 1.
+
+## R18a.4 Evidence
+
+**Light is unchanged.** The R19b gate script ran locally, `main` `52e4ac24` against this branch: **PASS: 207 / 207 captures at 1440 / 1024 / 390, 0 changed, 0 notes.** The CI gate on this PR compares the same set on the exact head.
+
+**The shells in dark** (`THEME=dark`, 1440 and 390):
+- **Teacher:** the top bar, the sidebar (its active pill, hover and group labels) and the quick search field are dark and legible.
+- **Student:** the top bar is dark and legible too.
+- **Beyond the shell:** most of the dashboard and the student portal already follow, through their tokens, charts included. What
+  does not follow is R18b's and R18c's work (§R18a.6).
+
+**Fail-first: not applicable.** This is a new feature and no defect is fixed. The guards are new files, and the mutation campaign
+below is their proof.
+
+## R18a.5 Mutation proof
+
+Fifteen mutants. Each was planted alone, and the two R18a test files plus the colour inventory's ratchet ran against it. Each file
+was restored and SHA-256 checked, and `git status` was identical before and after.
+
+| # | Planted defect | Result | Killed by |
+|---|---|---|---|
+| D1 | a light half drifts from `design-tokens.css` | KILLED | the light-half guard |
+| D2 | the `light-dark()` block leaves `@supports` | KILLED | the `@supports` guard |
+| D3 | dark muted below AA | KILLED | the muted, chrome and content contrast guards |
+| D4 | the primary a mid purple that cannot carry the dark label | KILLED | the primary contrast guard |
+| D5 | `data-theme="dark"` no longer sets the dark scheme | KILLED | the theme guard |
+| D6 | print no longer forced light | KILLED | the print guard |
+| D7 | a literal colour token loses its dark half | KILLED | the coverage guard |
+| D8 | start-up applies the theme before release | KILLED | the release test |
+| D9 | system stored instead of clearing the key | KILLED | the stored-choice tests |
+| D10 | a storage failure loses the choice for the page | KILLED (second round) | the storage-failure test |
+| D11 | the resolver always picks the light half | KILLED | the resolver test |
+| D12 | the project palette reads the raw `light-dark()` string | KILLED | the chart test |
+| D13 | the student shell renders the switch before release | KILLED | the shell test |
+| D14 | the inventory counts the dark token file | KILLED | the inventory ratchet and its guard |
+| D15 | the dark token file is not loaded | KILLED | the load-order guard |
+
+**D10 survived the first round.** The test mocked `Storage.prototype`, but happy-dom's `localStorage` does not route through it, so
+the failure path never ran. The test now mocks the storage object itself, asserts that the mock throws, and restores it.
+
+**Two container restarts interrupted the campaign.** The second left D14's mutant in place: the process was killed before its
+restore ran. The file was restored to its intended text before anything else ran, and checked by diff. D10, D14 and D15 were then
+re-run on the corrected test. **15 / 15 killed**, no timeout, every file restored.
+
+## R18a.6 Local validation and what R18b and R18c inherit
+
+**Local validation on the head:**
+
+| Check | Result |
+|---|---|
+| `npx vitest run` | 1 207 files, 14 303 tests passed, 0 failed |
+| `npm run lint` | exit 0, 0 errors (the existing warnings only) |
+| `npx tsc -b` | exit 0 |
+| `npm run build` | passed, bundle guard passed |
+| `git diff --check` | clean |
+| colour inventory | unchanged, 756 in 52 sheets (both token files are token sources) |
+
+**What R18b and R18c inherit:**
+- **Literal colours on the pages.** About 750 remain (§R17c, §R17d). Some of them meet a token that flips and break in dark:
+  - a white literal label on a primary fill;
+  - `--eb-navy` used as a dark band behind the dark rail's light text (`--eb-nav-text`), or as a dark gradient stop behind white
+    text.
+  These are fixed per page, with the pages captured in both themes.
+- **The exam paper** takes `.eb-light-island` (R18c).
+- **The release (R18c):**
+  - `DARK_MODE_RELEASED` turns true;
+  - an inline script in `index.html` applies the stored choice before the first paint (the repository has no CSP that would block
+    it);
+  - the gate compares the dark theme too.

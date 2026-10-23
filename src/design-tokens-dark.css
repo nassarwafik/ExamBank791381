@@ -1,0 +1,77 @@
+/* ============================================================
+   UX-R18a — Dark mode: the dark value of every colour token (docs/enterprise-ux-r0-redesign-foundation.md R18a).
+   Each colour token is redeclared as light-dark(<light>, <dark>). The light half is EXACTLY the value design-tokens.css ships
+   (src/theme/darkTokens.ux-r18a.test.ts pins it), so the light theme renders as before; the dark half is picked wherever the
+   element's color-scheme is dark. Roles are kept, not hues: the strongest ink stays the strongest ink (--eb-navy is the light
+   heading ink on a dark page), the page grounds are dark, and the deep purple primary becomes a light lavender that carries
+   dark text (buttons read --eb-surface for their label), so every pair the light palette checks holds in dark too.
+   Kept as they are in both themes: the dark rail / toast set (--eb-nav-*), the inverse focus ring and the medal accents.
+   Browsers without light-dark() (before 2024) ignore the whole block and stay light.
+   ============================================================ */
+
+/* The theme. <html data-theme="light|dark|system"> is set by src/ui/themePreference.ts (device-level, «المظهر»); without the
+   attribute the app is light. Print is always light; a light island (the student's exam paper, R18c) stays light inside a
+   dark page. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] { color-scheme: dark; }
+}
+.eb-light-island { color-scheme: light; }
+@media print {
+  :root[data-theme] { color-scheme: light; }
+}
+
+@supports (color: light-dark(#000, #fff)) {
+  :root {
+    /* Surfaces & background */
+    --eb-bg: light-dark(#f7f6fa, #121019);
+    --eb-bg-tint: light-dark(#f8f7fb, #15121d);
+    --eb-surface: light-dark(#ffffff, #1b1825);
+    --eb-surface-2: light-dark(#f5f4f8, #231f2e);
+
+    /* Ink / text hierarchy: in dark the secondary steps are DIMMER than the text (muted, then placeholder, then faint) */
+    --eb-navy: light-dark(#1c1330, #f4f1fb);
+    --eb-navy-2: light-dark(#2a1d45, #e2daf2);
+    --eb-ink: light-dark(#241b38, #ece8f5);
+    --eb-text: light-dark(#2d2740, #dcd7e8);
+    --eb-muted: light-dark(#5f5a6e, #a7a1b8);
+    --eb-placeholder: light-dark(#6c6879, #958fa8);
+    --eb-faint: light-dark(#a9a5b4, #5e5870);
+
+    /* Lines / borders */
+    --eb-line: light-dark(#e9e8ee, #2e2a3a);
+    --eb-line-2: light-dark(#dedce6, #3a3549);
+    --eb-border-strong: light-dark(#cfcbd9, #4f4862);
+
+    /* Primary: a light lavender in dark (dark text on it), its hover step lighter still, its tints deep purples */
+    --eb-primary: light-dark(#2a0a4e, #b59cee);
+    --eb-primary-strong: light-dark(#4a2380, #ddd0fa);
+    --eb-primary-050: light-dark(#f3effa, #221c31);
+    --eb-primary-100: light-dark(#ebe5f4, #2a223e);
+    --eb-primary-200: light-dark(#d9cfea, #3f3459);
+    --eb-primary-300: light-dark(#8b74b8, #9c84d8);
+
+    /* Semantic: the fill / icon colour lifts, the tint darkens, the text colour lightens */
+    --eb-success: light-dark(#16a34a, #3ecf76); --eb-success-bg: light-dark(#ecfdf3, #10261a); --eb-success-tx: light-dark(#15803d, #7fe2a6);
+    --eb-warn: light-dark(#d97706, #f0a23b);    --eb-warn-bg: light-dark(#fff7ed, #2a1e0c);    --eb-warn-tx: light-dark(#b45309, #f6c37f);
+    --eb-danger: light-dark(#dc2626, #f26d6d);  --eb-danger-bg: light-dark(#fef2f2, #2d1517);  --eb-danger-tx: light-dark(#b42318, #f8a9a9);
+    --eb-info: light-dark(#0284c7, #3db4ea); --eb-info-bg: light-dark(#e0f2fe, #0c2431); --eb-info-tx: light-dark(#075985, #8fd4f6);
+
+    /* Shadows: black and deeper on a dark page */
+    --eb-sh-xs: 0 1px 2px light-dark(rgba(28,19,48,.04), rgba(0,0,0,.32));
+    --eb-sh-sm: 0 2px 8px -4px light-dark(rgba(28,19,48,.10), rgba(0,0,0,.5));
+    --eb-sh-md: 0 10px 28px -12px light-dark(rgba(28,19,48,.18), rgba(0,0,0,.6));
+    --eb-sh-lg: 0 18px 40px -18px light-dark(rgba(28,19,48,.24), rgba(0,0,0,.65));
+    --eb-focus: 0 0 0 4px light-dark(rgba(42,10,78,.14), rgba(181,156,238,.28));
+    --eb-backdrop: light-dark(rgba(28, 19, 48, 0.45), rgba(0, 0, 0, 0.6));
+
+    /* The light chrome becomes the dark chrome (top bar, sidebar, student top bar) */
+    --eb-chrome-active: light-dark(#eeedf3, #2b2639);
+    --eb-chrome-field: light-dark(#f3f3f6, #25212f);
+    --eb-chrome-shadow: 0 1px 0 var(--eb-line), 0 4px 14px -10px light-dark(rgba(28,19,48,.12), rgba(0,0,0,.5));
+
+    /* Content: the axis keeps ≥ 3:1 on every content ground */
+    --eb-content-axis: light-dark(#7c7690, #8d86a4);
+  }
+}
