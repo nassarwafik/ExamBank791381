@@ -12,7 +12,7 @@ import ProjectStudentDetail from "./ProjectStudentDetail";
 import { queueSummary, queueView, type ProjectEvaluationQueue, type ProjectEvaluationQueueView } from "./drillTarget";
 import type { TrackMeta } from "./types";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
@@ -92,11 +92,11 @@ describe("9G final-session panel", () => {
     const v = render(el(1, view({ summary: { total: 5, completed: 4, remaining: 1 }, currentCompleted: false, terminalCompleted: false }), { onFinish, onMove, onComplete }));
     await heading();
     const last = active[active.length - 1];
-    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("spinbutton")));
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("textbox")));
     expect(finish()).toBeNull();
     fireEvent.change(document.activeElement as HTMLInputElement, { target: { value: "80" } });
-    fireEvent.click(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة " + last }));
-    await screen.findByText("تم حفظ العلامة.");
+    fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
+    await screen.findByText("حُفظت 1 علامة.");
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));                                   // the server said ungraded 0 → reported…
     await flush();
     expect(finish()).toBeNull();                                                                         // …but the panel WAITS for App's record (no flash of «4 من 5»)
@@ -191,8 +191,8 @@ describe("9G final-session panel", () => {
     render(el(1, view(), { sid: "s9", cid: "c9", onFinish }));
     await heading("s9");
     await waitFor(() => expect(finish()).toBeTruthy());
-    expect(screen.queryByRole("spinbutton")).toBeNull();
-    expect(screen.queryByRole("button", { name: /حفظ علامة|اعتماد المرحلة|مسح العلامة|المرحلة التالية غير المقيّمة/ })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^حفظ التغييرات|: منجز$|مسح العلامة|المرحلة التالية غير المقيّمة/ })).toBeNull();
     fireEvent.click(within(finish()!).getByRole("button", { name: "إنهاء جلسة التقييم والعودة إلى لوحة اليوم" }));
     expect(onFinish).toHaveBeenCalledTimes(1);
     cleanup();

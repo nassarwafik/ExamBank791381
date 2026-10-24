@@ -77,7 +77,7 @@ describe("P7 — the student sees the condensed stages with their items", () => 
 });
 
 describe("P7 — the teacher's profile after the conversion", () => {
-  it("a partly done stage waits with the conversion note; «اعتماد» approves the merged stage; the old rows are gone", async () => {
+  it("a partly done stage waits with the conversion note; «منجز» + the save approve the merged stage; the old rows are gone", async () => {
     const ctx = seed();
     const posts = route(tracker, { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async () => {}, recordProjectMilestones: async () => {} });
     render(<ProjectStudentDetail token="t" projectCode={CODE} classId="c1" studentId="s1" tracks={DEF.tracks} onBack={() => {}} onChanged={() => {}} onReadyChanged={() => {}} />);
@@ -88,13 +88,17 @@ describe("P7 — the teacher's profile after the conversion", () => {
     const badge = (id: string) => (row(id)!.querySelector(".eb-stage-cell-status") as HTMLElement).textContent;
     expect(badge("BK02")).toBe(stageStatusLabel("approved"));
     expect(badge("BK01")).toBe(stageStatusLabel("ready_for_review"));
-    fireEvent.click(within(row("BK01")!).getByRole("button", { name: "تفاصيل وملاحظة المرحلة BK01" }));
+    fireEvent.click(within(row("BK01")!).getByRole("button", { name: "إجراءات المرحلة BK01" }));
+    fireEvent.click(within(await screen.findByRole("group", { name: "إجراءات المرحلة BK01" })).getByRole("button", { name: "التفاصيل والملاحظة" }));
     const panel = document.getElementById("eb-stage-BK01") as HTMLElement;
     expect(panel.textContent).toContain(items("BK01"));
     expect(panel.textContent).toContain("تحويل المراحل المختصرة — B01 صفحة الغلاف: معتمدة (90) · B02 الفهرست: جاهزة للفحص · لم تبدأ: B03");
-    fireEvent.click(within(row("BK01")!).getByRole("button", { name: "اعتماد المرحلة BK01" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "إغلاق" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(within(row("BK01")!).getByRole("button", { name: "BK01: منجز" }));                   // «منجز» approves the merged stage on save
+    fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
     await waitFor(() => expect(ctx.getJson(NS.progressName("c1", "s1")).stages.BK01.status).toBe("approved"));
-    expect(posts).toEqual([{ projectCode: CODE, action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK01", status: "approved" }]);
+    expect(posts).toEqual([{ projectCode: CODE, action: "progress.bulk", classId: "c1", items: [{ studentId: "s1", stageId: "BK01" }], status: "approved" }]);
     expect(ctx.getJson(NS.progressName("c1", "s1")).condensedFrom.stages.B01).toMatchObject({ status: "approved", score: 90 });   // archived, never lost
   });
 });

@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 /// <reference types="node" />
 // Phase 9E — Evaluation Focus Mode. A student opened from the Today Hub's «تقييم المشاريع» row (Phase 9D drill, seq > 0)
-// lands on the first ungraded ACTIVE stage (server `evaluation.stages` order): its track is selected, its group opened,
-// its score input focused and revealed. A banner shows how many stages still lack a score (latest evaluation) with a
+// lands on the first ungraded ACTIVE stage (server `evaluation.stages` order): its track is selected, its row of the
+// Phase G2 stage table shown, its score input focused and revealed. A banner shows how many stages still lack a score (latest evaluation) with a
 // «المرحلة التالية غير المقيّمة» action, or the completion state. Ungraded rows carry `is-evaluation-pending`. Manual
 // openings (seq 0) keep the 8C behaviour exactly (heading focus, no banner, no highlight). The browser talks to the REAL
 // project-tracker handler over the in-memory container, so `evaluation` is the server's (0 IS a grade).
@@ -14,7 +14,7 @@ import ProjectTracker from "./ProjectTracker";
 import type { TrackMeta } from "./types";
 import type { ProjectDrillTarget } from "./drillTarget";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
@@ -57,7 +57,8 @@ function server(seed: Record<string, unknown> = {}) {
 }
 const studentReads = (calls: { url: string; method: string }[]) => calls.filter(c => c.method === "GET" && c.url.includes("resource=student&")).map(c => new URL(c.url, "http://x").searchParams.get("studentId"));
 const row = (stageId: string) => document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement | null;
-const scoreInput = (stageId: string) => within(row(stageId)!).getByRole("spinbutton") as HTMLInputElement;
+const scoreInput = (stageId: string) => within(row(stageId)!).getByRole("textbox") as HTMLInputElement;
+const saveBtn = () => within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }) as HTMLButtonElement;
 const pressedTrack = () => within(screen.getByRole("group", { name: "مسارات المشروع" })).getAllByRole("button").find(b => b.getAttribute("aria-pressed") === "true")?.textContent;
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
 const heading = (sid = "s1") => screen.findByRole("heading", { level: 2, name: "ملف المشروع: طالب " + sid });
@@ -81,14 +82,15 @@ describe("9E ProjectStudentDetail — Evaluation Focus Mode", () => {
     expect(banner()!.getAttribute("role")).toBe("status");
     expect(pressedTrack()).toBe("الكتاب");
   });
-  it("E2 the first ungraded stage lives in ANOTHER track: the track switches automatically, its group is open and its input focused", async () => {
+  it("E2 the first ungraded stage lives in ANOTHER track: the track switches automatically, its group section is shown and its input focused", async () => {
     server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", allBookGraded()) });                        // every الكتاب stage graded → first ungraded is the first Access stage
     render(el(1));
     await heading();
     await waitFor(() => expect(document.activeElement).toBe(scoreInput(accessIds[0])));
     expect(pressedTrack()).toBe("Access");
-    const group = row(accessIds[0])!.closest(".eb-stage-group")!;
-    expect(within(group as HTMLElement).getByRole("button", { expanded: true })).toBeTruthy();
+    const group = row(accessIds[0])!.closest(".eb-stage-group") as HTMLElement;
+    expect(group.tagName).toBe("TBODY");
+    expect(within(group).getByRole("rowheader", { name: /منجزة/ })).toBeTruthy();                   // the group's section row
     expect(row(accessIds[0])!.className).toContain("is-evaluation-pending");
   });
   it("E3 a manual opening (seq 0) is exactly the 8C profile: heading focused, no banner, no highlight, no scroll", async () => {
@@ -119,8 +121,8 @@ describe("9E ProjectStudentDetail — Evaluation Focus Mode", () => {
     await waitFor(() => expect(document.activeElement).toBe(scoreInput(bookIds[1])));
     const before = banner()!.getAttribute("data-ungraded");
     fireEvent.change(scoreInput(bookIds[1]), { target: { value: "88" } });
-    fireEvent.click(within(row(bookIds[1])!).getByRole("button", { name: "حفظ علامة المرحلة " + bookIds[1] }));
-    await screen.findByText("تم حفظ العلامة.");
+    fireEvent.click(saveBtn());
+    await screen.findByText("حُفظت 1 علامة.");
     await waitFor(() => expect(banner()!.getAttribute("data-ungraded")).toBe(String(Number(before) - 1)));
     expect(row(bookIds[1])!.className).not.toContain("is-evaluation-pending");
     fireEvent.click(within(banner()!).getByRole("button", { name: "المرحلة التالية غير المقيّمة" }));
@@ -143,10 +145,11 @@ describe("9E ProjectStudentDetail — Evaluation Focus Mode", () => {
     render(el(1, "s9", "c9"));
     const h = await heading("s9");
     await flush(); await flush();
-    expect(screen.queryByRole("spinbutton")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(banner()!.textContent).toContain("وضع التقييم — بقيت");
     expect(within(banner()!).queryByRole("button")).toBeNull();
-    expect(screen.queryByRole("button", { name: /حفظ علامة|اعتماد المرحلة|مسح العلامة/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^حفظ التغييرات|: منجز$|مسح العلامة/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: "حفظ تغييرات الطالب" })).toBeNull();
     expect(document.activeElement).toBe(h);
     expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
   });

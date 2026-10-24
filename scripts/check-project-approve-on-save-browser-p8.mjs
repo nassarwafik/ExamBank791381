@@ -6,8 +6,9 @@
 //
 // At 390 px (touch) and 1024 and 1440 px, in «المشاريع» → the project → «تقدّم الطلاب» → a student's profile:
 //   1. the switch «اعتماد المرحلة عند حفظ العلامة» is visible and ON (a fresh device), its target ≥ 44 px on touch;
-//   2. typing a score and pressing «حفظ واعتماد» stores the score AND the approval in ONE progress.update (checked in storage);
-//   3. the switch turned off is remembered when the profile is opened again; a save is then score.set only and the status
+//   2. (Phase G2 — the stage table) typing a score shows the row as «منجز» and «حفظ التغييرات» stores the score AND the
+//      approval: ONE score.bulk then ONE progress.bulk (checked in storage);
+//   3. the switch turned off is remembered when the profile is opened again; a save is then score.bulk only and the status
 //      stays as it was (checked in storage);
 //   4. the page never scrolls sideways; axe-core (WCAG 2.1 A/AA): no serious or critical violation.
 //
@@ -165,12 +166,14 @@ for (const vp of VIEWPORTS) {
   const rows = page.locator("[data-stage-id]:has(input[data-stage-score])");
   const stageA = await rows.nth(0).getAttribute("data-stage-id"), stageB = await rows.nth(1).getAttribute("data-stage-id");
   const scoreA = String(60 + round);
+  const saveBar = page.getByRole("region", { name: "حفظ تغييرات الطالب" });
   await rows.nth(0).locator("input[data-stage-score]").fill(scoreA);
+  check("save " + at, (await rows.nth(0).getByRole("button", { name: stageA + ": منجز" }).getAttribute("aria-pressed")) === "true", "the typed score shows the row as «منجز»");
   let before = posts.length;
-  await rows.nth(0).getByRole("button", { name: "حفظ واعتماد علامة المرحلة " + stageA }).click();
-  await page.getByText("تم حفظ العلامة واعتماد المرحلة.").waitFor({ timeout: 15000 });
+  await saveBar.getByRole("button", { name: "حفظ التغييرات (1)" }).click();
+  await page.getByText("حُفظت 1 علامة، اعتُمدت 1 مرحلة.").waitFor({ timeout: 15000 });
   const sent = posts.slice(before);
-  check("save " + at, sent.length === 1 && sent[0].action === "progress.update" && sent[0].status === "approved" && String(sent[0].score) === scoreA, "ONE progress.update with the score and the approval (" + JSON.stringify(sent.map(p => [p.action, p.status, p.score])) + ")");
+  check("save " + at, sent.length === 2 && sent[0].action === "score.bulk" && sent[0].items?.length === 1 && String(sent[0].items[0].score) === scoreA && sent[1].action === "progress.bulk" && sent[1].status === "approved" && sent[1].items?.length === 1 && sent[1].items[0].stageId === stageA, "ONE score.bulk with the score, then ONE progress.bulk with the approval (" + JSON.stringify(sent.map(p => [p.action, p.status, (p.items || []).map(i => [i.stageId, i.score])])) + ")");
   check("save " + at, entry(sid, stageA)?.status === "approved" && entry(sid, stageA)?.score === Number(scoreA), "stored: " + stageA + " approved with " + scoreA);
   await page.screenshot({ path: path.join(out, "profile-on-" + vp.width + ".png"), fullPage: false });
   // 3. switch off, remembered, score only
@@ -184,11 +187,12 @@ for (const vp of VIEWPORTS) {
   const statusB = entry(sid, stageB)?.status ?? "not_started";
   const rowB = page.locator('[data-stage-id="' + stageB + '"]');
   await rowB.locator("input[data-stage-score]").fill("55");
+  check("off " + at, (await rowB.getByRole("button", { name: stageB + ": منجز" }).getAttribute("aria-pressed")) === "false", "the typed score does not show the row as «منجز»");
   before = posts.length;
-  await rowB.getByRole("button", { name: "حفظ علامة المرحلة " + stageB }).click();
-  await page.getByText("تم حفظ العلامة.", { exact: true }).waitFor({ timeout: 15000 });
+  await page.getByRole("region", { name: "حفظ تغييرات الطالب" }).getByRole("button", { name: "حفظ التغييرات (1)" }).click();
+  await page.getByText("حُفظت 1 علامة.", { exact: true }).waitFor({ timeout: 15000 });
   const sent2 = posts.slice(before);
-  check("off " + at, sent2.length === 1 && sent2[0].action === "score.set" && sent2[0].status === undefined, "ONE score.set, no status (" + JSON.stringify(sent2.map(p => p.action)) + ")");
+  check("off " + at, sent2.length === 1 && sent2[0].action === "score.bulk" && sent2[0].items?.length === 1 && sent2[0].items[0].score === 55, "ONE score.bulk, no status write (" + JSON.stringify(sent2.map(p => p.action)) + ")");
   check("off " + at, entry(sid, stageB)?.score === 55 && (entry(sid, stageB)?.status ?? "not_started") === statusB, "stored: " + stageB + " scored 55, status unchanged (" + statusB + ")");
   // 4. layout and accessibility
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);

@@ -37,6 +37,12 @@ function installFetch() {
           if (body.status !== undefined) ready -= 1;                                                 // server-side truth after the approval
           return res(200, { ok: true, summary: { ...CARD, readyForReviewCount: 0 }, stage: { stageId: "B01", status: body.status ?? "ready_for_review", note: body.note ?? "", updatedAt: "2026-03-05T10:00:00.000Z" }, nextStages: { book: null }, balance: null, history: [] });
         }
+        if (body?.action === "progress.bulk") {                                                          // Phase G2: «منجز» + the save bar
+          if (failProgress) return res(503, { ok: false, error: "تعارض مؤقت." });
+          const items = (body.items as { studentId: string; stageId: string }[]) || [];
+          ready -= items.length;
+          return res(200, { ok: true, readyChanged: true, results: items.map(it => ({ ...it, ok: true, changed: true })) });
+        }
         if (body?.action === "template.update") { return res(200, { ok: true, template: TEMPLATE }); }
         if (body?.action === "project.reset") { ready = 0; return res(200, { ok: true, deletedProgressCount: 1 }); }
         return res(400, { ok: false, error: "x" });
@@ -84,10 +90,13 @@ async function openProjectStudents() {
   await screen.findByText("زيد صالح");
   fireEvent.click(screen.getByRole("button", { name: "فتح ملف الطالب" }));
   await screen.findByRole("heading", { level: 2, name: "ملف المشروع: زيد صالح" });
-  // Phase 8C: the B01 row carries the grading controls inline; open its details / note disclosure too.
-  const row = document.querySelector('[data-stage-id="B01"]') as HTMLElement;
-  fireEvent.click(within(row).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
-  return row;
+  // Phase G2: the B01 row of the stage table («منجز» + the save bar; the note lives in the row menu's dialog).
+  return document.querySelector('[data-stage-id="B01"]') as HTMLElement;
+}
+const approveB01 = (row: HTMLElement) => { fireEvent.click(within(row).getByRole("button", { name: "B01: منجز" })); fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ })); };
+async function menuItem(row: HTMLElement, label: string) {
+  fireEvent.click(within(row).getByRole("button", { name: "إجراءات المرحلة B01" }));
+  return within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getByRole("button", { name: label });
 }
 function backToHub() {
   const crumbs = screen.getByRole("navigation", { name: "مسار الصفحة" });
@@ -113,8 +122,8 @@ describe("UX-6a review — App-owned ready summary invalidation", () => {
     // below is measured against that baseline — opening the project, a view or a student adds nothing.
     const base = summaryReads();
     expect(base).toBe(2);
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
-    await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "approved" }]));
+    approveB01(panel);
+    await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.bulk", classId: "c1", items: [{ studentId: "s1", stageId: "B01" }], status: "approved" }]));
     await waitFor(() => expect(summaryReads()).toBe(base + 1));                                       // exactly one refresh
     await waitFor(() => expect(projectsNav().textContent).toMatch(/1\s*مراحل بانتظار الفحص/));         // sidebar badge updated
     backToHub();
@@ -127,13 +136,17 @@ describe("UX-6a review — App-owned ready summary invalidation", () => {
     render(<App />); await login();
     const panel = await openProjectStudents();
     const base = summaryReads();
-    fireEvent.change(within(panel).getByLabelText("ملاحظة المعلم"), { target: { value: "أحسنت" } });
-    fireEvent.click(within(panel).getByRole("button", { name: "حفظ الملاحظة" }));
+    fireEvent.click(await menuItem(panel, "التفاصيل والملاحظة"));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("ملاحظة المعلم"), { target: { value: "أحسنت" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ الملاحظة" }));
     await screen.findByText("تم حفظ الملاحظة.");
     expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", note: "أحسنت" }]);
     expect(summaryReads()).toBe(base);
+    fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     failProgress = true;
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    approveB01(panel);
     await screen.findByText(/تعارض مؤقت/);
     expect(posts()).toHaveLength(2);
     expect(summaryReads()).toBe(base);

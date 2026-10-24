@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 /// <reference types="node" />
 // Phase 9B — Project Performance Foundation (frontend). The evaluation presentation helpers, the teacher's summary card
-// over the REAL project-tracker handler (score.set / score.clear through the in-memory container: 0 is a grade, clear
-// keeps the other stages, a failed save keeps the draft and shows a row error, saving A never disables B, no reload),
+// over the REAL project-tracker handler (Phase G2: the table's save bar writes score.bulk through the in-memory container and
+// re-reads the profile once: 0 is a grade, clear keeps the other stages, a failed save keeps the drafts and shows the error,
+// every cell rides one write),
 // the student's read-only evaluation block («لم تُقيّم بعد», 0 displayed as «0 / 100», no controls, project isolation,
 // the ungraded list), and the Today Hub chip (student — the only hub integration shipped in 9B).
 import { createRequire } from "node:module";
@@ -16,7 +17,7 @@ import { evaluationBriefs, evaluationSummaryText, fmtProjectScore, mutationBody,
 import { NOT_GRADED_LABEL } from "./projectPerformance";
 import type { ProjectEvaluation, TrackMeta } from "./types";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
@@ -54,8 +55,16 @@ async function mountTeacher(code = "899373", studentId = "s1") {
   await screen.findByRole("heading", { level: 2, name: "ملف المشروع: طالب " + studentId });
 }
 const row = (stageId: string) => document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement;
-const scoreInput = (stageId: string) => within(row(stageId)).getByRole("spinbutton") as HTMLInputElement;
-const saveBtn = (stageId: string) => within(row(stageId)).getByRole("button", { name: "حفظ علامة المرحلة " + stageId }) as HTMLButtonElement;
+const scoreInput = (stageId: string) => within(row(stageId)).getByRole("textbox") as HTMLInputElement;
+const saveBtn = () => within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^(حفظ التغييرات|جارٍ الحفظ)/ }) as HTMLButtonElement;
+const bulk = (items: Body[]) => ({ projectCode: "899373", action: "score.bulk", classId: "c1", items });
+async function menu(stageId: string, label: string) {
+  fireEvent.click(within(row(stageId)).getByRole("button", { name: "إجراءات المرحلة " + stageId }));
+  const panel = await screen.findByRole("group", { name: "إجراءات المرحلة " + stageId });
+  fireEvent.click(within(panel).getByRole("button", { name: label }));
+}
+const openDetails = (stageId: string) => menu(stageId, "التفاصيل والملاحظة");
+const closeDetails = async () => { fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "إغلاق" })); await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull()); };
 const type = (stageId: string, v: string) => fireEvent.change(scoreInput(stageId), { target: { value: v } });
 const card = () => document.querySelector(".eb-eval-card") as HTMLElement;
 const fact = (label: string) => { const dt = Array.from(card().querySelectorAll("dt")).find(d => d.textContent === label); return dt?.nextElementSibling?.textContent; };
@@ -131,76 +140,77 @@ describe("9B card — RTL-safe read-only summary", () => {
 });
 
 describe("9B teacher editor — the summary card over the real handler", () => {
-  it("G1 empty student → «لم تُقيّم بعد» and 0 / N; saving 85 then 0 updates the card live (0 is graded), with no reload of the profile", async () => {
+  it("G1 empty student → «لم تُقيّم بعد» and 0 / N; saving 85 then 0 updates the card from the server's evaluation (0 is graded), one re-read per save", async () => {
     const srv = server();
     await mountTeacher();
     const total = ACTIVE("899373");
     expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL); expect(fact("المراحل المقيّمة")).toBe("0 / " + total); expect(fact("نسبة التقييم")).toBe("0%");
     const gets = () => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(c => !(c[1] as RequestInit | undefined)?.method || (c[1] as RequestInit).method === "GET").length;
     const before = gets();
-    type("BK01", "85"); fireEvent.click(saveBtn("BK01"));
-    await screen.findByText("تم حفظ العلامة.");
-    expect(srv.posts).toEqual([{ projectCode: "899373", action: "score.set", classId: "c1", studentId: "s1", stageId: "BK01", score: "85" }]);
+    type("BK01", "85"); fireEvent.click(saveBtn());
+    await screen.findByText("حُفظت 1 علامة.");
+    expect(srv.posts).toEqual([bulk([{ studentId: "s1", stageId: "BK01", score: 85, expected: null }])]);
+    await waitFor(() => expect(gets()).toBe(before + 1));
     expect(fact("التقييم العام")).toBe("85 / 100"); expect(fact("المراحل المقيّمة")).toBe("1 / " + total); expect(fact("نسبة التقييم")).toBe(Math.round(100 / total) + "%");
-    type("BK02", "0"); fireEvent.click(saveBtn("BK02"));
+    type("BK02", "0"); fireEvent.click(saveBtn());
     await waitFor(() => expect(fact("المراحل المقيّمة")).toBe("2 / " + total));
     expect(fact("التقييم العام")).toBe("43 / 100");                                                    // round((85 + 0) / 2) — 0 counts; the server rounds projectScore for display
     expect(scoreInput("BK02").value).toBe("0");                                                          // the canonical saved 0 shows in the field
-    fireEvent.click(within(row("BK02")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة BK02" }));
+    await openDetails("BK02");
     expect(within(document.getElementById("eb-stage-BK02") as HTMLElement).getByText(/^العلامة:/).textContent).toBe("العلامة: 0 / 100");
-    expect(gets()).toBe(before);                                                                       // the response updated the view; no re-read
+    expect(gets()).toBe(before + 2);                                                                   // exactly one re-read per save
     expect(card().getAttribute("data-graded")).toBe("2");
   });
   it("G2 clear removes one stage's score and keeps the other; the card follows; the exact narrow body is sent", async () => {
     const srv = server();
     await mountTeacher();
-    type("BK01", "60"); fireEvent.click(saveBtn("BK01")); await screen.findByText("تم حفظ العلامة.");
-    type("BK02", "80"); fireEvent.click(saveBtn("BK02")); await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("2 /"));
+    type("BK01", "60"); type("BK02", "80"); fireEvent.click(saveBtn()); await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("2 /"));
     expect(fact("التقييم العام")).toBe("70 / 100");
-    fireEvent.click(within(row("BK01")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة BK01" }));
-    fireEvent.click(screen.getByRole("button", { name: "مسح العلامة" }));
+    await menu("BK01", "مسح العلامة");
+    expect(scoreInput("BK01").value).toBe("");
+    expect(fact("المراحل المقيّمة")).toContain("2 /");                                                  // nothing written yet
+    fireEvent.click(saveBtn());
     await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("1 /"));
-    expect(srv.posts.at(-1)).toEqual({ projectCode: "899373", action: "score.clear", classId: "c1", studentId: "s1", stageId: "BK01" });
+    expect(srv.posts.at(-1)).toEqual(bulk([{ studentId: "s1", stageId: "BK01", score: null, expected: 60 }]));
     expect(fact("التقييم العام")).toBe("80 / 100");
     expect(scoreInput("BK01").value).toBe(""); expect(scoreInput("BK02").value).toBe("80");
   });
-  it("G3 a failed save shows a visible row error, keeps the typed draft and leaves the card unchanged; retry succeeds", async () => {
+  it("G3 a failed save shows a visible error, keeps the typed draft and leaves the card unchanged; retry succeeds", async () => {
     const srv = server();
     await mountTeacher();
     srv.control.failNext = "تعذر الحفظ الآن.";
-    type("BK01", "77"); fireEvent.click(saveBtn("BK01"));
+    type("BK01", "77"); fireEvent.click(saveBtn());
     await screen.findByRole("alert");
     expect(screen.getByRole("alert").textContent).toContain("تعذر الحفظ الآن.");
     expect(scoreInput("BK01").value).toBe("77"); expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL);
-    fireEvent.click(saveBtn("BK01"));
-    await screen.findByText("تم حفظ العلامة.");
+    fireEvent.click(saveBtn());
+    await screen.findByText("حُفظت 1 علامة.");
     expect(fact("التقييم العام")).toBe("77 / 100"); expect(screen.queryByRole("alert")).toBeNull();
   });
-  it("G4 while stage A's save is in flight, stage B stays editable and saveable; A's save cannot be queued twice", async () => {
+  it("G4 stages A and B ride ONE write; while it is in flight every field is disabled and a second click is guarded", async () => {
     const srv = server();
     await mountTeacher();
     srv.control.hold = true;
-    type("BK01", "50"); fireEvent.click(saveBtn("BK01"));
+    type("BK01", "50"); type("BK02", "90"); fireEvent.click(saveBtn());
     await flush();
-    expect(saveBtn("BK01").disabled).toBe(true); expect(saveBtn("BK01").textContent).toBe("جارٍ الحفظ…");
-    fireEvent.click(saveBtn("BK01"));                                                                   // second click: guarded
-    expect(scoreInput("BK02").disabled).toBe(false);
-    type("BK02", "90"); expect(saveBtn("BK02").disabled).toBe(false); fireEvent.click(saveBtn("BK02"));
+    expect(saveBtn().disabled).toBe(true); expect(saveBtn().textContent).toBe("جارٍ الحفظ…");
+    fireEvent.click(saveBtn());                                                                         // second click: guarded
+    expect(scoreInput("BK02").disabled).toBe(true);
     srv.control.release();
     await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("2 /"));
-    expect(srv.posts.map(p => [p.stageId, p.score])).toEqual([["BK01", "50"], ["BK02", "90"]]);
+    expect(srv.posts).toEqual([bulk([{ studentId: "s1", stageId: "BK01", score: 50, expected: null }, { studentId: "s1", stageId: "BK02", score: 90, expected: null }])]);
     expect(fact("التقييم العام")).toBe("70 / 100");
   });
   it("G6 (review fix) clearing the only grade: the card returns to «لم تُقيّم بعد» / 0 graded but keeps «آخر تحديث للتقييم» — never «لم يُسجَّل أي تقييم بعد.»", async () => {
     const srv = server();
     await mountTeacher();
     expect(card().textContent).toContain("لم يُسجَّل أي تقييم بعد.");                                     // truly nothing recorded yet
-    type("BK01", "64"); fireEvent.click(saveBtn("BK01")); await screen.findByText("تم حفظ العلامة.");
+    type("BK01", "64"); fireEvent.click(saveBtn()); await screen.findByText("حُفظت 1 علامة.");
     expect(card().textContent).toContain("آخر تحديث للتقييم:");
-    fireEvent.click(within(row("BK01")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة BK01" }));
-    fireEvent.click(screen.getByRole("button", { name: "مسح العلامة" }));
+    await menu("BK01", "مسح العلامة");
+    fireEvent.click(saveBtn());
     await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("0 /"));
-    expect(srv.posts.at(-1)).toMatchObject({ action: "score.clear", stageId: "BK01" });
+    expect(srv.posts.at(-1)).toMatchObject({ action: "score.bulk", items: [{ stageId: "BK01", score: null, expected: 64 }] });
     expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL);
     expect(card().textContent).toContain("آخر تحديث للتقييم:");
     expect(card().textContent).not.toContain("لم يُسجَّل أي تقييم بعد.");
@@ -209,8 +219,9 @@ describe("9B teacher editor — the summary card over the real handler", () => {
   it("G5 the wording for an unscored stage is the shared «لم تُقيّم بعد» in the stage details; the card carries no reload button or prompt", async () => {
     server();
     await mountTeacher();
-    fireEvent.click(within(row("BK01")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة BK01" }));
+    await openDetails("BK01");
     expect(within(document.getElementById("eb-stage-BK01") as HTMLElement).getByText(/^العلامة:/).textContent).toBe("العلامة: " + NOT_GRADED_LABEL);
+    await closeDetails();
     expect(card().querySelector("button")).toBeNull();
   });
 });

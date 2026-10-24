@@ -349,22 +349,23 @@ describe("Projects — stage status ⋯ and toolbar ⋯ open on the first click;
     fireEvent.click(within(screen.getByText("زيد صالح").closest(".eb-student-card") as HTMLElement).getByRole("button", { name: "فتح ملف الطالب" }));
     const heading = await screen.findByRole("heading", { level: 2, name: "ملف المشروع: زيد صالح" });
     const profile = heading.closest(".eb-student-profile") as HTMLElement;
-    // Phase 8C: the stage status ⋯ sits on the row itself — no stage disclosure to open first.
+    // Phase G2: the stage ⋯ («إجراءات المرحلة») sits on the table row itself — no stage disclosure to open first.
     return { profile, toolbar };
   }
-  it("stage ⋯ (تغيير الحالة): one click → the three non-approved statuses, current one disabled, first enabled focused, no scroll; activation posts the unchanged progress.update body once", async () => {
+  it("stage ⋯ (إجراءات المرحلة): one click → details, clear and the two menu statuses, the unavailable ones disabled, first enabled focused, no scroll; a status posts the unchanged progress.update body once", async () => {
     const { profile, toolbar } = await openStudentProfile();
-    fireEvent.click(within(profile).getByRole("button", { name: "تغيير حالة المرحلة B01" })); await settle();
-    const menu = panelOf("تغيير حالة المرحلة B01") as HTMLElement;
+    fireEvent.click(within(profile).getByRole("button", { name: "إجراءات المرحلة B01" })); await settle();
+    const menu = panelOf("إجراءات المرحلة B01") as HTMLElement;
     expect(menu).not.toBeNull();
-    const items = within(menu).getAllByRole("button");
-    expect(items.map(b => b.textContent)).toEqual(["لم يبدأ", "قيد التنفيذ", "جاهز للفحص"]);
-    expect((items[2] as HTMLButtonElement).disabled).toBe(true);
+    const items = within(menu).getAllByRole("button") as HTMLButtonElement[];
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
+    expect(items[1].disabled).toBe(true);                                                               // no saved score
+    expect(items[3].disabled).toBe(true);                                                               // the current status
     expect(document.activeElement).toBe(items[0]);
     expect(simulatedScrolls).toBe(0);
-    fireEvent.click(items[1]);
-    await waitFor(() => expect(posts).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "in_progress" }]));
-    await waitFor(() => expect(panelOf("تغيير حالة المرحلة B01")).toBeNull());
+    fireEvent.click(items[2]);
+    await waitFor(() => expect(posts).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "not_started" }]));
+    await waitFor(() => expect(panelOf("إجراءات المرحلة B01")).toBeNull());
     fireEvent.click(within(toolbar).getByRole("button", { name: "المزيد من إجراءات المشروع" })); await settle();
     expect(panelOf("المزيد من إجراءات المشروع")).not.toBeNull();
     expect(inPanel("المزيد من إجراءات المشروع")).toBe(true);

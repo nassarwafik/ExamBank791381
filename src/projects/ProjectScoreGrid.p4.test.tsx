@@ -240,8 +240,8 @@ describe("P4 — «الطالب السابق / التالي» in the profile", (
   it("an unsaved score in the profile is confirmed before moving; staying keeps it", async () => {
     server();
     await openProfile("أحمد");
-    await screen.findAllByRole("spinbutton");
-    const input = screen.getByRole("spinbutton", { name: new RegExp("علامة المرحلة " + B2 + " ") }) as HTMLInputElement;
+    await screen.findAllByRole("textbox");
+    const input = screen.getByRole("textbox", { name: new RegExp("علامة المرحلة " + B2 + " ") }) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "60" } });
     fireEvent.click(screen.getByRole("button", { name: "الطالب التالي: بيان" }));
     const dialog = await screen.findByRole("dialog");
@@ -249,7 +249,7 @@ describe("P4 — «الطالب السابق / التالي» in the profile", (
     fireEvent.click(within(dialog).getByRole("button", { name: "البقاء هنا" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("heading", { name: "ملف المشروع: أحمد" })).toBeTruthy();
-    expect((screen.getByRole("spinbutton", { name: new RegExp("علامة المرحلة " + B2 + " ") }) as HTMLInputElement).value).toBe("60");
+    expect((screen.getByRole("textbox", { name: new RegExp("علامة المرحلة " + B2 + " ") }) as HTMLInputElement).value).toBe("60");
     fireEvent.click(screen.getByRole("button", { name: "الطالب التالي: بيان" }));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تجاهل والانتقال" }));
     await screen.findByRole("heading", { name: "ملف المشروع: بيان" });

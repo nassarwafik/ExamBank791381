@@ -117,18 +117,24 @@ describe("P2 teacher — confirm the students' marks", () => {
     await screen.findByText("لا توجد مراحل حدّدها الطلاب بانتظار تأكيدك.");
   });
 
-  it("the student profile flags the mark and its «تأكيد» button confirms it", async () => {
+  it("the student profile flags the mark; it shows as «منجز» and a typed score confirms it on save (Phase G2 — the P8 rule)", async () => {
     const s = server({ [NS.progressName("c1", "s1")]: { schemaVersion: 1, programCode: CODE, classId: "c1", studentId: "s1", startedAt: NOW, updatedAt: NOW, stages: { [B1.stageId]: { status: "approved", approvedBy: "s1", approvedAt: NOW, selfReportedAt: NOW, selfReportedBy: "s1", selfReportedFrom: "not_started" } }, history: [{ eventId: "e1", stageId: B1.stageId, type: "status", fromStatus: "not_started", toStatus: "approved", source: "student", actor: "s1", createdAt: NOW }] } });
     render(<ProjectStudentDetail token="t" projectCode={CODE} classId="c1" studentId="s1" tracks={TRACKS} onBack={() => {}} />);
     await screen.findByRole("heading", { level: 2, name: "ملف المشروع: أحمد" });
     const row = document.querySelector('[data-stage-id="' + B1.stageId + '"]') as HTMLElement;
     expect(within(row).getByText("حدّدها الطالب")).toBeTruthy();
+    expect(row.className).toContain("is-self");
     expect(screen.getByText("حدّدها الطالب كمنفّذة — " + B1.stageId)).toBeTruthy();
-    fireEvent.click(within(row).getByRole("button", { name: "تأكيد المرحلة " + B1.stageId }));
-    await screen.findByText("تم تحديث حالة المرحلة.");
+    expect(within(row).getByRole("button", { name: B1.stageId + ": منجز" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.change(within(row).getByRole("textbox"), { target: { value: "80" } });
+    fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
+    await screen.findByText("حُفظت 1 علامة، اعتُمدت 1 مرحلة.");
+    expect(s.posts.map(p => p.action)).toEqual(["score.bulk", "progress.bulk"]);
+    expect(s.doc().stages[B1.stageId]).toMatchObject({ status: "approved", score: 80 });
     expect(s.doc().stages[B1.stageId].selfReportedAt).toBeUndefined();
-    expect(within(row).queryByText("حدّدها الطالب")).toBeNull();
-    expect((within(row).getByRole("button", { name: "اعتماد المرحلة " + B1.stageId }) as HTMLButtonElement).disabled).toBe(true);
+    const after = document.querySelector('[data-stage-id="' + B1.stageId + '"]') as HTMLElement;
+    expect(within(after).queryByText("حدّدها الطالب")).toBeNull();
+    expect(after.className).not.toContain("is-self");
     expect(screen.getByText("تأكيد المعلم — " + B1.stageId)).toBeTruthy();
   });
 });

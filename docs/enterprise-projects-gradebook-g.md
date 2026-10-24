@@ -228,5 +228,225 @@ declared `project-matrix`.
   workflow, like the other project browser scripts. Wiring them into CI is a governance change, proposed for its own small pull
   request.
 - **Coming next:**
-  - **G2:** the compact student table replaces the profile's accordions.
+  - **G2:** the compact student table replaces the profile's accordions — delivered below.
   - **G3:** the export of scores to Excel and the per-cell history.
+
+# Phase G2 — The student's stage table
+
+G2 branches from `main` `b8ae5869` (#430) as `feature/g2-project-student-table`.
+
+## G2.1 What the teacher gets
+
+«تقدّم الطلاب» → a student's profile. The collapsible stage sections are gone (D4). The stages of the selected track are **one
+table**, with each group as a section row that counts its approved stages («n/N منجزة»). The columns are
+الموضوع | منجز؟ | العلامة من 100 | الموزونة | الحالة | ⋮. The changes are all in `src/projects/ProjectStudentDetail.tsx`.
+
+**Each row is a matrix cell (G1), for one student:**
+- **A score and a «منجز» decision.** The toggle (✓) marks the stage done or reopens it; Space in the score field toggles it too.
+- **Approve on save (D1).** With «اعتماد المرحلة عند حفظ العلامة» on (the same shared switch, ON by default, remembered per
+  device), a typed score shows the approval before saving and the save approves the stage. A cleared score never approves. An
+  explicit decision wins. With the switch off, a score never changes a status (the 8C / 9B rule).
+- **A stage the student marked** shows ✓ and «حدّدها الطالب». A typed score confirms it (the P8 rule); the toggle left on writes
+  nothing; turned off, it reopens the stage.
+- **The weighted value** («الموزونة») is the server's `performance.stageValues` — contribution / maximum, with «عند الاعتماد»
+  while the score is not counted. The table never computes a value or a grade.
+- **The status** column keeps the badge and the «حدّدها الطالب» badge; the row's tint follows the status; an unsaved change and an
+  invalid value are marked by the field's border and named in the legend, never by colour alone.
+
+**Keyboard:** Enter moves to the next topic (Shift+Enter back), the arrows move up and down, Space toggles «منجز», Escape restores
+the row. Nothing is written until the save bar.
+
+**One save bar (D2):** «حفظ التغييرات (N)» — N counts the stages with a change (a score and a decision on the same stage count
+once) — and «تجاهل التغييرات». An invalid value blocks the save and is named («صحّح علامة واحدة: العلامة رقم من 0 إلى 100.»). The
+notice after a save says what happened: «حُفظت N علامة، اعتُمدت A مرحلة، أُعيدت R مرحلة إلى قيد التنفيذ», and «وتعذر حفظ F
+(مُعلَّمة في الجدول)» when a row failed.
+
+**The row menu (⋮ «إجراءات المرحلة»):**
+- «التفاصيل والملاحظة»: a dialog with the stage's description, its score, its value in the project and the teacher's note,
+  which has its own «حفظ الملاحظة» (a note is never part of the bar).
+- «مسح العلامة»: an unsaved change the bar carries («تجاهل التغييرات» undoes it).
+- «لم يبدأ» and «جاهز للفحص»: the two workflow statuses the toggle does not cover, written at once.
+
+**Phones:** below 768 px a row becomes a card — the topic, then «منجز» + the score + the menu, then the value + the status — and the
+targets are 44 px on touch.
+
+**Unchanged:** the hero, the summary, the evaluation card, the timeline, Evaluation Focus Mode (9E: the focused stage's field
+is found by `[data-stage-id] input[data-stage-score]`), the queue (9F), the final-session panel (9G), the sibling navigation with
+its unsaved-changes confirmation (P4 — it now counts decisions and notes too), and the archived class: scores and ✓ as text, no
+field, toggle, switch or save bar, and the details dialog shows the note as text.
+
+## G2.2 How a save writes
+
+The same order as the matrix (G1.2), over one student:
+1. **`score.bulk`** with every changed score, in chunks of 300, each with the score the row showed (`expected`). A stale cell is
+   refused by the server, keeps the teacher's value and names the server's on its row.
+2. **`progress.bulk`** `approved`, then `in_progress`, in chunks of 300. **A stage whose score failed sends no status.**
+3. **`GET resource=student`**: the profile is re-read, so the weighted values, the grade, the evaluation and the history on screen
+   are the server's. Then `onChanged`, and `onReadyChanged` after any status write.
+
+A note and the two menu statuses stay the canonical single `progress.update` (`mutationBody`), serialized, double-submit guarded
+and bound to the (project, class, student) they were made for — the 8C rules. The component carries only the two bulk action
+literals; `mutationBody` builds every single write.
+
+## G2.3 Safety rules kept
+
+- **The server alone computes** values, grades and the evaluation; the table shows what it re-read.
+- **An empty cell is never a zero.** «منجز» without a score is an approval with no score written.
+- **A cleared score never approves;** an invalid value never leaves the browser.
+- **Writes are stale-guarded and idempotent;** a failed score never lets its status through.
+- **A save in flight disables the fields and the toggles**, so no edit can race an earlier response (the 8C-2b concern no longer
+  has a path for scores; for notes the rule is unchanged and still tested).
+- **A save, a note or a status of a previous selection never lands on the current one**, and never leaves its fields disabled.
+- **Two activations in one tick send one write** (the save bar keeps a ref beside its state).
+- **The archived class** exposes no mutation control at all.
+
+## G2.4 The shared helper
+
+`gridStatusChanges` (`src/projects/scoreGrid.ts`) now treats a student's unconfirmed mark as not yet approved by the teacher
+when it decides the implied approval: a score typed on such a stage confirms it (the P8 rule), the toggle left on writes
+nothing, and turned off it reopens the stage. The matrix (G1) gets the same behaviour, so the profile and the matrix agree. The
+G1 tests are unchanged and pass; the G2 pure test pins the rule.
+
+## G2.4b Layout details found in the captures
+
+- **A flex cell leaves the table.** The first capture showed the status badge under «الموزونة» and the menu under «الحالة»: the
+  topic, value and status cells had `display:flex`, which takes a cell out of the table's columns. On desktop they stay table
+  cells and their parts are spaced inline; flex is used only inside the phone card, where a row is a grid.
+- **The status stripe follows the reading direction.** It was an inset shadow, drawn on the left in RTL (the end of the row). It
+  is now `border-inline-start`, so it marks the start of every row in both directions and on the phone card.
+
+## G2.5 Edit set
+
+- **`src/projects/ProjectStudentDetail.tsx`:** the table, the save bar, the row menu and the details dialog. The focus mode, the
+  queue and the final panel are unchanged.
+- **`src/projects/scoreGrid.ts`:** the confirm rule (G2.4).
+- **`src/projects-pro.css`:** the 8C row block is replaced by the G2 table block (tokens only, both themes, 44 px targets, the
+  phone card). The dark audit stays at 0 and the colour inventory at 719.
+- **`src/projects/projectStudentTable.g2.test.tsx`** (new): 14 tests over the real handler.
+- **The migrated suites.** The profile's tests addressed the old markup (a spinbutton per row, a save and an approve button per
+  row, the «تفاصيل» disclosure, the status menu, the group's `aria-expanded`). Each is rewritten to the table — a textbox per
+  row, the «منجز» toggle, the save bar, the row menu, the details dialog — keeping every invariant that still exists:
+  `ProjectStudentDetail.8c` (27 → 26 tests), `ProjectApproveOnSave.p8` (8), `ProjectStudentDetail.focus.9e`,
+  `ProjectStudentDetail.queue.9f`, `ProjectStudentDetail.finish.9g`, `projectEvaluation.9b`, `ProjectWorkspace.ux6`,
+  `projectPerformance`, `StudentSelfReport.p2`, `ProjectCondensed.p7`, `ProjectScoreGrid.p4` and the `projects.ux-r10` guard.
+  Five App-level suites drive the same profile through App and are migrated the same way: `AppEvaluationQueue.9f` and
+  `AppEvaluationFinish.9g` (their mocks answer `score.bulk`; the profile reads they count include the one re-read of the same
+  student after its save, never a move), `AppProjectsReady.8e`, `AppProjectsReady.ux6` (the ready-count refresh after
+  «منجز» + the save bar, never after a score or a note) and `actionMenu.globalFirstClick` (the row menu opens on the first
+  click, focus on its first item, no scroll).
+- **`scripts/check-project-approve-on-save-browser-p8.mjs`:** the real-Chromium P8 gate, over the table's save bar.
+- **`docs/ux-r/visual-changes.json`:** `project-profile` declared.
+- **This document.**
+
+### Tests whose subject no longer exists (owner decisions D2 / D4) and what replaces them
+
+| Old test | Why it cannot stay | The invariant that replaces it |
+|---|---|---|
+| 8C-1 «saving stage A sends score.set … stage B is untouched» | there is no save per row | one `score.bulk` with the changed cell; Escape dropped B's draft; the value, summary and history show after the re-read |
+| 8C-1 «approving sends ONLY the status» (the approve button) | the button is the «منجز» toggle | the toggle + the bar send `progress.bulk` without a score |
+| 8C-1 «Enter saves that stage and moves focus» | Enter never writes (G2) | Enter moves without writing; the bar sends every draft in one write, in table order |
+| 8C-1 «button-save keeps focus on the field» | the fields are disabled during the save | after the save the bar is empty and the field shows the canonical value |
+| 8C-2 «an invalid score is rejected by the SERVER» | the table never sends an invalid value | it is caught before any write, named on the row and in the bar; the server's own rejection stays pinned by the API tests of `score.bulk` |
+| 8C-2b «score: type 70, hold, edit to 82» | a score field is disabled while its save is in flight | the field is disabled during the save (no edit can be lost); the note case is unchanged |
+| 8C-2b «an unchanged draft still clears … an empty draft is not savable» | emptying a saved score is now a clear | emptying a saved score is a change the bar carries (`score: null`, `expected` set) |
+| 8C-3 «a switch of project / class drops a queued write» (a queued score) | scores are no longer queued single writes | the same for the queued single writes (the menu statuses) |
+| P8 «حفظ واعتماد … ONE progress.update carrying both» | the save is the bar | `score.bulk` then `progress.bulk approved`; the audits are the same two actions |
+| P8 «Enter in the score field does the same» | Enter never writes | a `ready_for_review` stage gets the score and the approval in the same save; Enter only moves |
+| P8 «the row's save AND approve are busy» | one bar | the field, the toggle, the switch and the bar are busy; a double click sends once |
+| 9B G1 «no reload of the profile» | the profile is re-read on purpose (the values are the server's) | exactly one re-read per save |
+| 9B G4 «B stays editable while A's save is in flight» | one write for both | A and B ride one write; every field is disabled meanwhile; a second click is guarded |
+| P2 «the «تأكيد» button confirms the student's mark» | no confirm button | the stage shows as «منجز» + «حدّدها الطالب»; a typed score confirms it on save (the P8 rule) |
+| P7 «اعتماد approves the merged stage» | no approve button | «منجز» + the bar approve it (`progress.bulk`) |
+| UX-6a «aria-expanded groups, the status menu, the approve button» | no disclosure, one row menu, the toggle | the group section rows, the row menu's statuses (`progress.update`), «منجز» + the bar (`progress.bulk`) |
+
+## G2.6 Evidence
+
+This is a feature, not a defect fix, so fail-first is not required. The new tests were still run against the baseline, to show
+that they test the new behaviour and not something that already existed.
+
+- **On `main` `b8ae5869`:** `src/projects/projectStudentTable.g2.test.tsx` (copied alone into a detached worktree of the
+  baseline) fails **14 / 14** — the pure test included, because the confirm rule of G2.4 did not exist. For example:
+  - `Unable to find an accessible element with the role "table"`;
+  - the pure decisions: `expected [] to deeply equal [ { key: 's|a', … to: 'approved', implied: true } ]`.
+- **On the head:** 14 / 14 pass.
+- **Two defects found while migrating the 8C suite were fixed before the campaign**, and each has its test and its mutant: two
+  activations of the save in one tick sent two `score.bulk` writes (M5), and a save still in flight when the teacher moved to
+  another student left the new student's fields disabled (M6).
+- **In real Chromium** (production build, the real handler in process, 390 / 1024 / 1440 px):
+  - `scripts/check-project-approve-on-save-browser-p8.mjs`: **36 / 36** — the switch ON and its target, a typed score shown as
+    «منجز», one `score.bulk` then one `progress.bulk` and the stored document, the switch off remembered and a score-only
+    save, no horizontal overflow, axe (no serious or critical violation).
+  - `scripts/check-project-matrix-browser-g1.mjs` (the G1 gate, unchanged): **34 / 34**.
+- **The visual gate** (`scripts/ux-visual-gate.mjs`, base `main` `b8ae5869` vs head, 210 captures per theme): light
+  **PASS**, dark **PASS**. The only page that changes is `project-profile`, declared in `docs/ux-r/visual-changes.json`.
+
+## G2.7 Mutation proof
+
+`$S/mutate-g2.mjs` (scratch, not committed) plants each defect, runs the six suites that cover the table
+(`projectStudentTable.g2`, `ProjectStudentDetail.8c`, `ProjectApproveOnSave.p8`, `projectEvaluation.9b`, `ProjectScoreGrid.p4`,
+`projectGradebookMatrix.g1`) and restores the file byte-for-byte (SHA-256 checked) in a `finally`. `git status` was clean of
+mutants afterwards.
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| M1 | a score typed on a stage the student marked does not confirm it | KILLED | p8 › a stage the student marked …; g2 › the pure decisions |
+| M2 | statuses are written before the scores | KILLED | p8 › is visible and on …; a stage waiting for review … |
+| M3 | a status is sent for a stage whose score failed | KILLED (after strengthening) | g2 › a score that fails (stale) … |
+| M4 | the profile is not re-read after the save | KILLED | p8 › is visible and on …; 8c › saving stage A … |
+| M5 | two activations in one tick send two saves | KILLED | 8c › two activations in the SAME tick … |
+| M6 | a selection change leaves the previous save's busy state | KILLED | 8c › a slow save for the previous student … |
+| M7 | Enter writes instead of moving to the next topic | KILLED | p8 › a stage waiting for review …; 8c › Enter … |
+| M8 | Escape does not restore the row | KILLED | 8c › saving stage A … (Escape dropped B's draft) |
+| M9 | «مسح العلامة» creates no change | KILLED | p8 › clearing a score never approves |
+| M10 | a cleared score approves | KILLED | p8 › clearing a score never approves; g2 › the pure decisions |
+| M11 | an archived class shows the score field | KILLED | 8c › 8C-4 archived class … |
+| M12 | a typed score approves even with the switch off | KILLED | p8 › the switch OFF …; 8c › saving a score never approves |
+| M13 | a save's result lands on another selection | KILLED | 8c › a slow save for the previous student … |
+| M14 | the ready counts are not re-read after a status write | KILLED | p8 › is visible and on …; 8c › «منجز» sends ONLY the status |
+| M15 | moving to a sibling never asks about unsaved changes | KILLED | p4 › an unsaved score in the profile is confirmed before moving |
+| M16 | the save bar does not block an invalid value | KILLED (after strengthening) | g2 › an invalid value blocks the save … |
+
+**Two survived the first campaign.** M3: the stale test's failing cell was already approved, so no status was due for it; the test
+now also reopens that cell, and asserts that no `in_progress` write is sent for it. M16: with one invalid cell alone the bar is
+already empty, so the mutant was equivalent there; the test now types a valid value beside the invalid one and asserts the bar
+stays blocked and nothing is sent. Both are killed alone afterwards. 16 / 16 are killed, with no timeouts.
+
+## G2.8 Local validation
+
+These were run on the final tree of the branch.
+
+**The root suite** (`npx vitest run`): 1212 files, **14455 / 14456** tests pass.
+- **The one failure** is unrelated to this phase: `src/AppProjectsReady.ux6.test.tsx` › «status mutation …» cannot find the project
+  workspace region within Testing Library's 1000 ms wait, while opening the hub card. That step comes before anything this phase
+  changed.
+- **The same test fails the same way on `main` `b8ae5869`** in this container (the original file, run in the baseline worktree).
+  A temporary local copy with a longer wait, deleted afterwards, passes 3 / 3, including the migrated part. It passes on `main`
+  in CI. Per `AGENTS.md` §12 it is not patched here, and the exact-head CI decides.
+- **The first full run** also showed the five App-level suites still using the old markup (16 tests). They are migrated (G2.5).
+
+**Static checks:**
+- `npm run lint`: 0 errors, and no warning in a file this phase adds.
+- `npx tsc -b`: clean.
+- `npm run build`: the bundle guard passed.
+- `git diff --check`: clean.
+
+**Theme checks:**
+- `node scripts/ux-dark-audit.mjs`: 0 unanswered in 102 sheets.
+- `node scripts/ux-color-inventory.mjs`: 719, unchanged.
+
+**Real Chromium:**
+- `check-project-approve-on-save-browser-p8.mjs`: 36 / 36.
+- `check-project-matrix-browser-g1.mjs`: 34 / 34.
+
+**The visual gate** (210 captures per theme, base `main` vs head): light **PASS** and dark **PASS**. The only change
+is the declared `project-profile`.
+
+**Not run:** the Runner suites, because nothing under `runner/` and nothing in official grading changed.
+
+## G2.9 Known limitations and what comes next
+
+- **The browser checks still do not run in CI** (see G1.9).
+- **A note is its own write.** The teacher's note is saved from the details dialog, not by the bar, so the bar's count never
+  includes it; moving to a sibling still asks when a note is unsaved.
+- **Coming next — G3:** the export of scores to Excel (without the teacher's notes, D5) and the per-cell history from the row
+  menu («سجلّ التغييرات»).

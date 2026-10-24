@@ -2,7 +2,7 @@
 // Project Performance (frontend): presentation helpers over the server's `performance`, the grade/progress circle,
 // the student project cards → detail (hero + stage scores, read-only) with multi-project switching that never shows
 // a previous project's values, the legacy payload without `performance`, and the teacher's score control through
-// the narrow score.set / score.clear writes (Phase 9B) (plus the stale-selection guard on the teacher detail).
+// the table's save bar (Phase G2: score.bulk, then a re-read of the profile) (plus the stale-selection guard on the teacher detail).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { fmtContribution, fmtGrade, fmtStageScore, normalizeProjectPerformance, projectRankVisual } from "./projectPerformance";
@@ -111,54 +111,63 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
   });
 });
 
-describe("ProjectStudentDetail (teacher) — hero, score control through score.set / score.clear, stale-selection guard", () => {
+describe("ProjectStudentDetail (teacher) — hero, score control through score.bulk + re-read, stale-selection guard", () => {
   const detail = (studentId: string, perf: unknown, overall: number, score?: number) => ({
     ok: true, readOnly: false, projectCode: "AQ", student: { studentId, displayName: studentId === "s1" ? "ليان" : "كريم", code: studentId.toUpperCase() },
     tracks: TRACKS, summary: { ...summary(overall), studentId }, stages: STAGES, groups: GROUPS, trackWeights: { book: 50, lab: 50 }, config: { staleDays: 7, lateThreshold: 40, balanceWarningThreshold: 30 },
-    progress: { S01: { status: "approved", ...(score === undefined ? {} : { score }) } }, history: [], nextStages: { book: STAGES[1], lab: STAGES[2] }, balance: null, performance: perf
+    progress: { S01: { status: "approved", ...(score === undefined ? {} : { score }) } }, history: [] as unknown[], nextStages: { book: STAGES[1], lab: STAGES[2] }, balance: null, performance: perf
   });
-  it("saves a score with the exact body, shows the returned performance (hero + stage value) and the timeline entry; clears with null", async () => {
+  it("saves a score with the exact body, shows the re-read performance (hero + stage value) and the timeline entry; clears with null", async () => {
     const calls: { url: string; body?: Record<string, unknown> }[] = [];
-    let current = detail("s1", { ...perfA, grade: 0, gradePrecise: 0, projectStrength: 240, tier: "silver", level: 3, stageValues: { ...perfA.stageValues, S01: { ...perfA.stageValues.S01, score: null, contribution: 0, counted: false } } }, 80);
+    const initial = { ...perfA, grade: 0, gradePrecise: 0, projectStrength: 240, tier: "silver", level: 3, stageValues: { ...perfA.stageValues, S01: { ...perfA.stageValues.S01, score: null, contribution: 0, counted: false } } };
+    let current = detail("s1", initial, 80);
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input); const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ url, body });
       if (init?.method === "POST") {
-        const score = body.action === "score.clear" ? null : Number(body.score);
-        const perf = score === null ? current.performance : { ...perfA, projectStrength: 450, tier: "diamond", level: 5 };
-        current = { ...current, performance: perf, progress: { S01: { status: "approved", ...(score === null ? {} : { score }) } } };
-        return { ok: true, status: 200, json: async () => ({ ok: true, summary: current.summary, performance: perf, stage: { stageId: "S01", status: "approved", ...(score === null ? {} : { score }) }, nextStages: current.nextStages, balance: null, history: [{ eventId: "h1", stageId: "S01", type: "score", fromScore: null, toScore: score, actor: "t", createdAt: "2026-03-02T10:00:00.000Z" }] }) } as Response;
+        const item = (body.items as { stageId: string; score: number | null }[])[0];
+        const score = item.score;
+        const perf = score === null ? initial : { ...perfA, projectStrength: 450, tier: "diamond", level: 5 };
+        current = { ...current, performance: perf, progress: { S01: { status: "approved", ...(score === null ? {} : { score }) } }, history: [{ eventId: "h1", stageId: "S01", type: "score", fromScore: null, toScore: score, actor: "t", createdAt: "2026-03-02T10:00:00.000Z" }] };
+        return { ok: true, status: 200, json: async () => ({ ok: true, results: [{ studentId: "s1", stageId: "S01", ok: true, changed: true }], totals: { requested: 1, changed: 1, unchanged: 0, failed: 0 } }) } as Response;
       }
       return { ok: true, status: 200, json: async () => current } as Response;
     }) as unknown as typeof fetch;
     render(<ProjectStudentDetail token="t" projectCode="AQ" classId="c1" studentId="s1" tracks={TRACKS} onBack={() => {}} />);
     await screen.findByRole("heading", { level: 2, name: "ملف المشروع: ليان" });
     expect(strengthLine()).toBe("قوة المشروع: 240 / 600");
-    // Phase 8C: the score field and its save are on the stage row itself (no disclosure needed)
-    const input = screen.getByRole("spinbutton", { name: "علامة المرحلة S01 — المقدمة من 100" }) as HTMLInputElement;
+    // Phase G2: the score field is on the stage row itself; the save bar writes it (score.bulk) and the profile is re-read
+    const input = screen.getByRole("textbox", { name: "علامة المرحلة S01 — المقدمة من 100" }) as HTMLInputElement;
     expect(input.value).toBe("");
     fireEvent.change(input, { target: { value: "85" } });
-    fireEvent.click(screen.getByRole("button", { name: "حفظ علامة المرحلة S01" }));
-    await screen.findByText("تم حفظ العلامة.");
-    expect(calls.at(-1)?.body).toEqual({ action: "score.set", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01", score: "85" });
+    const saveBtn = () => within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ });
+    fireEvent.click(saveBtn());
+    await screen.findByText("حُفظت 1 علامة.");
+    expect(calls.filter(c => c.body).at(-1)?.body).toEqual({ action: "score.bulk", projectCode: "AQ", classId: "c1", items: [{ studentId: "s1", stageId: "S01", score: 85, expected: null }] });
     expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
     expect(screen.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "تفاصيل وملاحظة المرحلة S01" }));
+    const menu = async (label: string) => { fireEvent.click(screen.getByRole("button", { name: "إجراءات المرحلة S01" })); fireEvent.click(within(await screen.findByRole("group", { name: "إجراءات المرحلة S01" })).getByRole("button", { name: label })); };
+    await menu("التفاصيل والملاحظة");
     const panel = document.getElementById("eb-stage-S01") as HTMLElement;
     expect(within(panel).getByText(/القيمة في المشروع:/).textContent).toBe("القيمة في المشروع: 8.5 / 10");
     expect(within(panel).getByText(/^العلامة:/).textContent).toBe("العلامة: 85 / 100");
     expect(screen.getByText("علامة 85 / 100 — S01")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "مسح العلامة" }));
-    await waitFor(() => expect(calls.at(-1)?.body?.action).toBe("score.clear"));
-    expect(calls.at(-1)?.body).toEqual({ action: "score.clear", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01" });
-    expect(calls.filter(c => c.body).length).toBe(2);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "إغلاق" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await menu("مسح العلامة");
+    expect(input.value).toBe("");
+    fireEvent.click(saveBtn());
+    await waitFor(() => expect(calls.filter(c => c.body).length).toBe(2));
+    expect(calls.filter(c => c.body).at(-1)?.body).toEqual({ action: "score.bulk", projectCode: "AQ", classId: "c1", items: [{ studentId: "s1", stageId: "S01", score: null, expected: 85 }] });
+    await waitFor(() => expect(strengthLine()).toBe("قوة المشروع: 240 / 600"));
   });
   it("read-only (archived) shows the score and value as text with no input", async () => {
     globalThis.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ...detail("s1", perfA, 80, 85), readOnly: true }) })) as unknown as typeof fetch;
     render(<ProjectStudentDetail token="t" projectCode="AQ" classId="c1" studentId="s1" tracks={TRACKS} onBack={() => {}} />);
     await screen.findByRole("heading", { level: 2, name: "ملف المشروع: ليان" });
-    expect(screen.queryByRole("spinbutton")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "تفاصيل وملاحظة المرحلة S01" }));
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "إجراءات المرحلة S01" }));
+    fireEvent.click(within(await screen.findByRole("group", { name: "إجراءات المرحلة S01" })).getByRole("button", { name: "التفاصيل" }));
     expect(screen.getByText(/^العلامة:/).textContent).toBe("العلامة: 85 / 100");
   });
   it("a slow response for the previous student never overwrites the current one (stale-selection guard)", async () => {

@@ -90,6 +90,10 @@ function route(url: string, init?: RequestInit): Promise<Response> {
     const st = (body?.status as string) || "ready_for_review";
     return json({ ok: true, projectCode: "794589", summary: { ...STUDENTS[0], overallProgress: 50 }, stage: { stageId: body?.stageId, status: st, note: (body?.note as string) ?? "راجع القسم 2", updatedAt: "2026-03-05T10:00:00.000Z" }, nextStages: { book: STAGES[1], packetTracer: null }, balance: null, history: [{ eventId: "e3", stageId: body?.stageId, type: body?.note !== undefined ? "note" : "status", toStatus: st, actor: "t", createdAt: "2026-03-05T10:00:00.000Z" }] });
   }
+  if (action === "progress.bulk") {                                                                  // Phase G2: the table's «منجز» write
+    const items = (body?.items as { studentId: string; stageId: string }[]) || [];
+    return json({ ok: true, readyChanged: true, results: items.map(i => ({ ...i, ok: true, changed: true })) });
+  }
   if (action === "template.update") return json({ ok: true, projectCode: "794589", template: TEMPLATE });
   if (action === "project.reset") return json({ ok: true, projectCode: "794589", deletedProgressCount: 2 });
   return json({ ok: false, error: "إجراء غير معروف." }, 400);
@@ -263,7 +267,7 @@ describe("UX-6a students view — cards, labelled search, aria-pressed filters, 
 });
 
 describe("UX-6a student profile — non-modal, focus, disclosures, actions, exact payloads", () => {
-  it("opens with focus on the heading, one student read, aria-expanded groups/stages, primary approve + ActionMenu, exact progress.update bodies, notice, timeline; back returns focus to the opener without re-reading the list when nothing changed", async () => {
+  it("opens with focus on the heading, one student read, the stage table with its group sections, «منجز» + the row menu, exact progress.update / progress.bulk bodies, notice, timeline; back returns focus to the opener without re-reading the list when nothing changed", async () => {
     await mountTracker();
     await openStudents();
     const { opener, heading, profile } = await openStudent();
@@ -287,54 +291,61 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     expect(screen.getByText("أول طوبولوجيا")).toBeTruthy();
     fireEvent.click(within(trackGroup).getByRole("button", { name: "الكتاب" }));
     expect(calls.length).toBe(n);
-    // group disclosure
-    const group = within(profile).getByRole("button", { name: /الوحدة الأولى/ });
-    expect(group.getAttribute("aria-expanded")).toBe("true");
-    expect(document.getElementById(group.getAttribute("aria-controls") || "")).toBeTruthy();
-    fireEvent.click(group);
-    expect(group.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByText("مقدمة الشبكات")).toBeNull();
-    fireEvent.click(group);
-    // Phase 8C: the stage ROW is the grading workspace — status text + score field + save + ONE primary approve +
-    // the status menu are on the row itself; only description / note sit under the optional «تفاصيل» disclosure.
+    // Phase G2: the stages are ONE table; each group is a section row (no disclosure), every row is the grading workspace —
+    // status badge + score field + the «منجز» toggle + the row menu; description / note live in the details dialog.
+    const table = within(profile).getByRole("table");
+    expect(within(table).getByRole("rowheader", { name: /الوحدة الأولى/ })).toBeTruthy();
+    expect(within(profile).queryByRole("button", { name: /الوحدة الأولى/ })).toBeNull();
+    expect(screen.getByText("مقدمة الشبكات")).toBeTruthy();
     const panel = profile.querySelector('[data-stage-id="B01"]') as HTMLElement;
     expect(panel.textContent).toContain("جاهز للفحص");
-    expect(within(panel).getByRole("spinbutton", { name: "علامة المرحلة B01 — مقدمة الشبكات من 100" })).toBeTruthy();
-    expect(within(panel).getAllByRole("button").map(b => b.textContent)).toEqual(["حفظ", "اعتماد", "الحالة", "تفاصيل"]);   // one primary action + one menu
-    const details = within(panel).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" });
-    expect(details.getAttribute("aria-expanded")).toBe("false");
-    fireEvent.click(details);
-    expect(details.getAttribute("aria-expanded")).toBe("true");
-    const detailsPanel = document.getElementById(details.getAttribute("aria-controls") || "") as HTMLElement;
-    expect(detailsPanel.textContent).toContain("اقرأ الفصل الأول");
-    fireEvent.click(within(panel).getByRole("button", { name: "تغيير حالة المرحلة B01" }));
-    const menu = await screen.findByRole("group", { name: "تغيير حالة المرحلة B01" });
-    const items = within(menu).getAllByRole("button");
-    expect(items.map(b => b.textContent)).toEqual(["لم يبدأ", "قيد التنفيذ", "جاهز للفحص"]);
-    expect((items[2] as HTMLButtonElement).disabled).toBe(true);                                       // current status
-    fireEvent.click(items[1]);
-    await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "in_progress" }]));
+    expect(within(panel).getByRole("textbox", { name: "علامة المرحلة B01 — مقدمة الشبكات من 100" })).toBeTruthy();
+    expect(within(panel).getAllByRole("button").map(b => b.getAttribute("aria-label"))).toEqual(["B01: منجز", "إجراءات المرحلة B01"]);   // one toggle + one menu
+    expect(within(profile.querySelector('[data-stage-id="B02"]') as HTMLElement).getByText("(اختياري)")).toBeTruthy();
+    const openMenu = async () => { fireEvent.click(within(panel).getByRole("button", { name: "إجراءات المرحلة B01" })); return within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getAllByRole("button") as HTMLButtonElement[]; };
+    let items = await openMenu();
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
+    expect(items[1].disabled).toBe(true);                                                               // no saved score to clear
+    expect(items[3].disabled).toBe(true);                                                               // current status
+    fireEvent.click(items[0]);
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain("اقرأ الفصل الأول");
+    fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    items = await openMenu();
+    fireEvent.click(items[2]);
+    await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "not_started" }]));
     await screen.findByText("تم تحديث حالة المرحلة.");
     await waitFor(() => expect(within(profile).getByRole("progressbar", { name: "التقدم العام" }).getAttribute("aria-valuenow")).toBe("50"));
-    // approve = primary
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    // approve = «منجز» + the save bar (progress.bulk, then the profile is re-read)
+    const done = within(panel).getByRole("button", { name: "B01: منجز" });
+    expect(done.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(done);
+    expect(within(panel).getByRole("button", { name: "B01: منجز" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(within(profile).getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: "حفظ التغييرات (1)" }));
     await waitFor(() => expect(posts()).toHaveLength(2));
-    expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "approved" });
-    await waitFor(() => expect((within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }) as HTMLButtonElement).disabled).toBe(true));
-    // note save (exact body)
-    const note = within(panel).getByLabelText("ملاحظة المعلم") as HTMLTextAreaElement;
+    expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.bulk", classId: "c1", items: [{ studentId: "s1", stageId: "B01" }], status: "approved" });
+    await screen.findByText("اعتُمدت 1 مرحلة.");
+    await waitFor(() => expect(gets("student")).toHaveLength(2));                                        // the re-read
+    // note save (exact body) in the details dialog
+    items = await openMenu();
+    fireEvent.click(items[0]);
+    const noteDialog = await screen.findByRole("dialog");
+    const note = within(noteDialog).getByLabelText("ملاحظة المعلم") as HTMLTextAreaElement;
     expect(note.value).toBe("راجع القسم 2");
-    expect((within(panel).getByRole("button", { name: "حفظ الملاحظة" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(noteDialog).getByRole("button", { name: "حفظ الملاحظة" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(note, { target: { value: "أحسنت" } });
-    fireEvent.click(within(panel).getByRole("button", { name: "حفظ الملاحظة" }));
+    fireEvent.click(within(noteDialog).getByRole("button", { name: "حفظ الملاحظة" }));
     await waitFor(() => expect(posts()).toHaveLength(3));
     expect(posts()[2]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", note: "أحسنت" });
     await screen.findByText("تم حفظ الملاحظة.");
+    fireEvent.click(within(noteDialog).getByRole("button", { name: "إغلاق" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     // timeline text (dates + labels), max 20 events, no icons-only
     const timeline = profile.querySelector(".eb-timeline") as HTMLElement;
     expect(within(timeline).getAllByRole("listitem").map(li => li.querySelector(".eb-timeline-text")?.textContent)).toEqual(["ملاحظة — B01"]);   // last authoritative history (server returns the slice)
     expect(timeline.querySelector(".eb-timeline-date")?.textContent).toBeTruthy();
-    expect(gets("student")).toHaveLength(1);
+    expect(gets("student")).toHaveLength(2);
     expect(gets("students")).toHaveLength(1);
     // back → the list is re-read ONCE (a mutation happened) and focus returns to the opener
     fireEvent.click(within(profile).getByRole("button", { name: "عودة إلى تقدّم الطلاب" }));
@@ -344,25 +355,29 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     expect(opener.isConnected).toBe(true);
     // open again and back WITHOUT changes → no list request
     const again = await openStudent();
-    expect(gets("student")).toHaveLength(2);
+    expect(gets("student")).toHaveLength(3);
     fireEvent.click(within(again.profile).getByRole("button", { name: "عودة إلى تقدّم الطلاب" }));
     await waitFor(() => expect(screen.queryByRole("heading", { level: 2, name: "ملف المشروع: زيد صالح" })).toBeNull());
     expect(gets("students")).toHaveLength(2);
     expect(document.activeElement).toBe(again.opener);
     expect(EMOJI.test(document.body.textContent || "")).toBe(false);
   });
-  it("archived class → profile is read-only: no approve, no status menu, no note editor; note shown as text", async () => {
+  it("archived class → profile is read-only: no toggle, no save bar, no status items, no note editor; note shown as text", async () => {
     await mountTracker();
     fireEvent.change(within(toolbar()).getByLabelText("الصف"), { target: { value: "c2" } });
     await openStudents();
     const { profile } = await openStudent();
     expect(within(profile).getByText("مؤرشف — للقراءة فقط")).toBeTruthy();
-    fireEvent.click(within(profile).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
-    expect(within(profile).queryByRole("button", { name: /^اعتماد المرحلة/ })).toBeNull();
-    expect(within(profile).queryByRole("spinbutton")).toBeNull();
-    expect(within(profile).queryByRole("button", { name: /تغيير حالة/ })).toBeNull();
-    expect(within(profile).queryByLabelText("ملاحظة المعلم")).toBeNull();
-    expect(within(profile).getByText("ملاحظة المعلم: راجع القسم 2")).toBeTruthy();
+    fireEvent.click(within(profile).getByRole("button", { name: "إجراءات المرحلة B01" }));
+    const items = within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getAllByRole("button");
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل"]);
+    fireEvent.click(items[0]);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(profile).queryByRole("button", { name: /: منجز$/ })).toBeNull();
+    expect(within(profile).queryByRole("textbox")).toBeNull();
+    expect(within(profile).queryByRole("region", { name: "حفظ تغييرات الطالب" })).toBeNull();
+    expect(within(dialog).queryByLabelText("ملاحظة المعلم")).toBeNull();
+    expect(within(dialog).getByText("ملاحظة المعلم: راجع القسم 2")).toBeTruthy();
     expect(posts()).toHaveLength(0);
   });
 });
@@ -527,24 +542,28 @@ describe("UX-6a review — global ready-summary invalidation contract (onReadyCh
     await screen.findByRole("heading", { level: 2, name: "لوحة المشروع" });
     return onReadyChanged;
   }
-  // Phase 8C: the B01 row (grading controls inline) with its details / note disclosure opened.
-  async function openStagePanel() {
+  // Phase G2: the B01 row of the stage table; a workflow status is one item of its row menu, the note lives in its dialog.
+  async function openStageRow() {
     await openStudents();
     const { profile } = await openStudent();
-    const row = profile.querySelector('[data-stage-id="B01"]') as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
-    return row;
+    return profile.querySelector('[data-stage-id="B01"]') as HTMLElement;
+  }
+  async function menuItem(row: HTMLElement, label: string) {
+    fireEvent.click(within(row).getByRole("button", { name: "إجراءات المرحلة B01" }));
+    return within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getByRole("button", { name: label });
   }
   it("a successful STATUS mutation fires it exactly once; a note-only update never does", async () => {
     const spy = await mountWithSpy();
-    const panel = await openStagePanel();
+    const row = await openStageRow();
     expect(spy).toHaveBeenCalledTimes(0);
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    fireEvent.click(await menuItem(row, "لم يبدأ"));
     await waitFor(() => expect(posts()).toHaveLength(1));
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(spy).toHaveBeenCalledTimes(1);
-    fireEvent.change(within(panel).getByLabelText("ملاحظة المعلم"), { target: { value: "ملاحظة جديدة" } });
-    fireEvent.click(within(panel).getByRole("button", { name: "حفظ الملاحظة" }));
+    fireEvent.click(await menuItem(row, "التفاصيل والملاحظة"));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("ملاحظة المعلم"), { target: { value: "ملاحظة جديدة" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ الملاحظة" }));
     await waitFor(() => expect(posts()).toHaveLength(2));
     await screen.findByText("تم حفظ الملاحظة.");
     expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", note: "ملاحظة جديدة" });
@@ -553,13 +572,13 @@ describe("UX-6a review — global ready-summary invalidation contract (onReadyCh
   it("a failed or noChange status mutation never fires it", async () => {
     failProgress = true;
     const spy = await mountWithSpy();
-    const panel = await openStagePanel();
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    const row = await openStageRow();
+    fireEvent.click(await menuItem(row, "لم يبدأ"));
     await screen.findByText(/تعارض مؤقت/);
     expect(posts()).toHaveLength(1);
     expect(spy).toHaveBeenCalledTimes(0);
     failProgress = false; noChangeProgress = true;
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    fireEvent.click(await menuItem(row, "لم يبدأ"));
     await waitFor(() => expect(posts()).toHaveLength(2));
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(spy).toHaveBeenCalledTimes(0);
