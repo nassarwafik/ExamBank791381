@@ -1,4 +1,4 @@
-# Projects — professional grade entry (Phases G1–G3)
+# Projects — professional grade entry (Phases G1–G3, G4b)
 
 **Owner direction (2026-10-23).**
 - **The request:** in Projects → the students' progress, let the teacher enter each student's data as rows: the topics done, whether
@@ -611,9 +611,9 @@ declared `project-matrix`. A one-off flake on `phone/studio-setup` was identical
 
 ## G3.9 Known limitations
 
-- **The browser checks still do not run in CI** (see G1.9).
+- **The browser checks still do not run in CI** (see G1.9). G-CI closed this.
 - **The matrix has no per-cell history.** A cell's history is reached from the student's profile (the row menu); the matrix
-  cells carry no menu.
+  cells carry no menu. G4b closes this.
 - **The history names the teacher only as «أنت» or «معلم آخر».** It never resolves another account's name.
 
 # Phase G-CI — The project browser checks in CI
@@ -687,3 +687,100 @@ The gate's first run on `ddd59375` (run `40094093364`) passed seven checks and e
     level or threshold changed.
 - **The artifact uploaded nothing.** `actions/upload-artifact@v4` skips hidden folders by default, and `.harness-projects/` starts
   with a dot. The step now sets `include-hidden-files: true`, as the 21dd gates do, and the guard asserts it (M5).
+
+# Phase G4b — A cell's history from the class matrix
+
+G4b branches from `main` `38db902e` (#435) as `feature/g4b-matrix-stage-history`. It closes the limitation in G3.9: a cell's
+history could only be reached from the student's profile.
+
+## G4b.1 What the teacher gets
+
+«التقييم الجماعي» → «جدول العلامات» (the class matrix).
+- **«سجلّ الخلية»** joins the matrix's controls. The last cell the teacher focused (tapped, clicked or reached with the keyboard)
+  is the matrix's **active cell**.
+  - The button names the active cell for assistive technology, for example «سجلّ تغييرات الخلية: أحمد — BK01».
+  - It opens that student's stage history.
+  - It is disabled before a cell is chosen, and again once the active cell is no longer shown: a filter can hide its student,
+    and another track or group can hide its stage.
+- **Shift+F10, or the context-menu key, in a cell** opens its history directly. The help line above the matrix names the shortcut.
+- **In an archived class** the cells are read-only, and each one is a button that opens its own history. The read is allowed on an
+  archived class, as in G3.
+- **The dialog:**
+  - It is the student table's dialog (G3), now one shared component, `src/projects/StageHistoryDialog.tsx`.
+  - The same read (`resource=stage-history`), words and authors («أنت» / «معلم آخر» / «الطالب»). It never shows a note's text.
+  - In the matrix its title also names the student: «سجلّ تغييرات المرحلة BK01 — … · أحمد».
+- **Nothing in the matrix changes when the dialog opens.** Unsaved drafts, the save bar and the filters stay as they were.
+
+## G4b.2 Safety rules kept
+
+- **A read only.** No write path, no API change and no stored-document change. The history comes from G3's membership-gated
+  `resource=stage-history`.
+- **Read at each opening, never cached.** A new opening shows «جارٍ تحميل سجلّ التغييرات...» until its own read answers; it never
+  shows the previous cell's events. A response for an earlier opening, another cell or a closed dialog is dropped.
+- **No grade is computed in the browser**, and no draft is saved or discarded by opening a history.
+
+## G4b.3 Edit set
+
+- **`src/projects/StageHistoryDialog.tsx`** (new): the dialog, moved from `ProjectStudentDetail.tsx`. It owns the read, the stale
+  guard and the retry.
+- **`src/projects/ProjectStudentDetail.tsx`:** uses the shared dialog. Its row menu item, title and behaviour are unchanged; the
+  G3 suite still passes unchanged.
+- **`src/projects/ProjectScoreGrid.tsx`:**
+  - the active cell and «سجلّ الخلية»;
+  - Shift+F10 / the context-menu key;
+  - an archived cell becomes a button;
+  - the help line names the shortcut.
+- **`src/projects-pro.css`:** the archived cell button (tokens only; 44 px on touch).
+- **Tests and checks:**
+  - `src/projects/projectMatrixHistory.g4b.test.tsx` (new, 6 tests);
+  - `scripts/check-project-matrix-history-browser-g4b.mjs` (new), a step in `projects-browser-g.yml`.
+- **`docs/ux-r/visual-changes.json`:** `project-matrix` declared. **`.gitignore`:** `.harness-g4b/`.
+
+## G4b.4 Evidence
+
+- **The new suite:** 6 / 6, over the real tracker handler. Each test shows:
+  1. the focused cell's history opens, for that student only and with that title, and then another row's;
+  2. Shift+F10 and the context-menu key work, and the drafts are kept;
+  3. the button is disabled when a filter hides the student or a track hides the stage;
+  4. an archived cell is a button;
+  5. a new opening never shows the previous cell's events while it reads;
+  6. a late response for an earlier opening is dropped.
+- **Against the baseline's app code** (`src/` and `api/` identical to `38db902e`), the new suite fails 6 / 6: there is no
+  «سجلّ الخلية», Shift+F10 opens nothing, and an archived cell is not a button.
+- **Kept green:** the G3 suite (13 / 13) and the G1 matrix suite.
+  - **Found by G1:** a G1 test pins the archived cell's ✓ as «منجز». The icon keeps that label inside the new button.
+- **Real Chromium** (`check-project-matrix-history-browser-g4b.mjs`, 390 px touch and 1440 px): **23 / 23**. It checks:
+  - the button is disabled before a cell is chosen, is a 44 px touch target, and names the cell;
+  - the dialog's title, order, authors and missing note text;
+  - Shift+F10 on another student's cell, and the focus returning to the cell;
+  - no sideways scroll, and axe on the open dialog and on the matrix.
+
+  Re-run on the head, P4 (37), P8 (36), G1 (34) and G3 (36) still pass.
+
+## G4b.5 Mutation proof
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| M1 | the button opens the first shown student's history, not the chosen cell's | KILLED | g4b › opens the focused cell's history … |
+| M2 | another track no longer hides the active cell's stage | KILLED | g4b › the button is disabled once the active cell is no longer shown … |
+| M2b | a filter no longer hides the active cell's student | KILLED | same |
+| M3 | Shift+F10 / the context-menu key does nothing | KILLED | g4b › Shift+F10 or the context-menu key … |
+| M4 | a focused cell does not become the active cell | KILLED | g4b › opens the focused cell's history … |
+| M5 | an archived cell does not open its history | KILLED | g4b › in an archived class every cell is a button … |
+| M6 | a late response for an earlier opening is kept | KILLED | g4b › a response for an earlier opening is dropped … |
+| M7 | a new opening shows the previous cell's events | KILLED | g4b › a new opening never shows the previous cell's history … |
+| M9 | the matrix's title does not name the student | KILLED | g4b › opens the focused cell's history … |
+| M10 | the student table reads another student's history | KILLED | g3 › lists the stage's changes … |
+
+10 / 10 killed, with no timeouts. Files were restored byte-for-byte (SHA-256 checked in a `finally`), and `git status` showed only
+the phase's own changes afterwards.
+- **A planned cache mutant was dropped as not a real cache:** closing the dialog already changes its inputs, so the next opening
+  reads again either way.
+- **A first M2 survived as an equivalent mutant.** The check it removed was redundant: the stage lookup already disabled the
+  button. The redundant check was deleted, and M2 now targets the stage lookup itself.
+
+## G4b.6 Known limitations
+
+- **No right-click menu on a cell.** It would replace the browser's own copy and paste menu in the score field. The keyboard
+  shortcut and the controls button cover the same need.
+- **The history still names teachers only as «أنت» or «معلم آخر»** (as in G3).
