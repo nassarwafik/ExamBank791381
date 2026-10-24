@@ -51,18 +51,16 @@ export function scoreGridChanges(drafts: Record<string, string>, board: Board): 
 /** One status decision of the matrix: approve the stage («منجز») or reopen it (back to «قيد التنفيذ»). */
 export type GridStatusChange = { key: string; studentId: string; stageId: string; to: "approved" | "in_progress"; implied: boolean };
 
-const isApprovedCell = (board: Board, studentId: string, stageId: string) => {
-  const c = board.students.find(s => s.studentId === studentId)?.cells[stageId];
-  return !!c && c.status === "approved";
-};
+const cellOf = (board: Board, studentId: string, stageId: string) => board.students.find(s => s.studentId === studentId)?.cells[stageId];
 
 /**
  * The status writes a save makes, in board order:
  *   • an explicit «منجز» toggle that differs from the saved state approves (on) or reopens (off) the stage;
- *   • with «اعتماد عند الحفظ» on, a cell that gets a score (never a cleared one) on a stage not yet approved is approved
- *     too (`implied`), exactly as the student profile does (Phase P8); an explicit toggle on the same cell wins.
- * A stage the student marked done (approved + selfReported) counts as approved: confirming it needs no status write,
- * reopening it does. A cleared score never approves.
+ *   • with «اعتماد عند الحفظ» on, a cell that gets a score (never a cleared one) on a stage not yet approved by the TEACHER is
+ *     approved too (`implied`), exactly as the student profile does (Phase P8); an explicit toggle on the same cell wins.
+ * A stage the student marked done (approved + selfReported) shows as done: the toggle left on writes nothing, turned off it
+ * reopens the stage. A score typed on it still confirms it (Phase G2, the P8 rule: the teacher graded what the student
+ * marked), so the implied approval treats the student's unconfirmed mark as not yet approved. A cleared score never approves.
  */
 export function gridStatusChanges(doneDrafts: Record<string, boolean>, scoreChanges: GridChange[], board: Board, approveOnSave: boolean): GridStatusChange[] {
   const out: GridStatusChange[] = [];
@@ -71,13 +69,15 @@ export function gridStatusChanges(doneDrafts: Record<string, boolean>, scoreChan
   for (const student of board.students) {
     for (const stage of stages) {
       const key = student.studentId + "|" + stage.stageId;
-      const approved = isApprovedCell(board, student.studentId, stage.stageId);
+      const cell = cellOf(board, student.studentId, stage.stageId);
+      const approved = !!cell && cell.status === "approved";
+      const confirmed = approved && cell?.selfReported !== true;
       if (key in doneDrafts) {
         if (doneDrafts[key] !== approved) out.push({ key, studentId: student.studentId, stageId: stage.stageId, to: doneDrafts[key] ? "approved" : "in_progress", implied: false });
         continue;
       }
       const change = scored.get(key);
-      if (approveOnSave && change && change.score !== null && !approved) out.push({ key, studentId: student.studentId, stageId: stage.stageId, to: "approved", implied: true });
+      if (approveOnSave && change && change.score !== null && !confirmed) out.push({ key, studentId: student.studentId, stageId: stage.stageId, to: "approved", implied: true });
     }
   }
   return out;

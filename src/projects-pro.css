@@ -91,80 +91,83 @@
   padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
 }
 .eb-student-profile-counts,.eb-student-profile-next{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.eb-stage-groups{ display:flex; flex-direction:column; background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); overflow:hidden; }
-.eb-stage-group{ border-bottom:1px solid var(--eb-line); }
-.eb-stage-group:last-child{ border-bottom:0; }
-.eb-stage-group-head{
-  display:flex; align-items:center; gap:var(--eb-space-2); width:100%; min-height:44px; padding:var(--eb-space-2) var(--eb-space-4);
-  border:0; background:transparent; color:var(--eb-text-heading); font:inherit; font-weight:var(--eb-fw-semibold); text-align:start; cursor:pointer;
-}
-.eb-stage-group-head:hover{ background:var(--eb-surface-2); }
-.eb-stage-group-title{ flex:1 1 auto; min-width:0; }
-.eb-stage-list{ list-style:none; margin:0; padding:0 var(--eb-space-4) var(--eb-space-3); display:flex; flex-direction:column; gap:var(--eb-space-2); }
-.eb-stage-row{ border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:hidden; border-inline-start:3px solid var(--eb-line-2); }
-.eb-stage-row.is-in-progress{ border-inline-start-color:var(--eb-warn); }
-.eb-stage-row.is-ready{ border-inline-start-color:var(--eb-info); }
-.eb-stage-row.is-approved{ border-inline-start-color:var(--eb-success); }
-.eb-stage-row-main{
-  display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); width:100%; min-height:44px; padding:var(--eb-space-2) var(--eb-space-3);
-  border:0; background:var(--eb-surface); font:inherit; text-align:start; cursor:pointer;
-}
-.eb-stage-row-main:hover{ background:var(--eb-surface-2); }
 .eb-stage-code{ font-family:monospace; font-weight:var(--eb-fw-semibold); color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-stage-title{ flex:1 1 200px; min-width:0; color:var(--eb-text); font-weight:var(--eb-fw-medium); font-size:var(--eb-fs-13); }
 .eb-stage-optional{ color:var(--eb-muted); font-style:normal; font-size:var(--eb-fs-12); }
 .eb-stage-date{ font-size:var(--eb-fs-12); }
-.eb-stage-detail{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3); border-top:1px solid var(--eb-line); background:var(--eb-surface-2); }
+.eb-stage-detail{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-stage-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .eb-stage-actions .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
 .eb-stage-note-edit{ display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-stage-note-edit textarea{ width:100%; min-width:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); resize:vertical; }
 .eb-stage-note-view{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-primary-050); border-radius:var(--eb-r); font-size:var(--eb-fs-13); }
 .eb-stage-note-actions{ display:flex; }
-/* ---------- Phase 8C — inline stage grading (every row is gradeable; no stage disclosure needed) ----------
-   Desktop: one compact grid row per stage — المرحلة | الحالة | العلامة | القيمة | إجراء — with fixed column widths so
-   the columns line up down the list. Below 768px the row becomes a two-line card (stage on top; status + value, then
-   score, then actions), no horizontal overflow, 44px touch targets. Logical properties and tokens only. */
+/* ---------- Phase G2 — the student's stage table (replaces the collapsible sections, owner decision D4) ----------
+   One table for the selected track: الموضوع | منجز؟ | العلامة من 100 | الموزونة | الحالة | إجراءات, each group a
+   section row. A row's status tints its «منجز» side; an unsaved change and an invalid value are marked by the field's
+   border (named in the legend), never by colour alone. Below 768px a row becomes a card: the topic on top, then done +
+   score, then the weighted value + status, with the menu at the end; 44px targets on touch. Logical properties and
+   tokens only (both themes). */
 .eb-stage-grade-hint{ margin:0; font-size:var(--eb-fs-12); }
 /* Phase P8 — «اعتماد المرحلة عند حفظ العلامة»: a visible switch (ON by default) above the stage rows. */
 .eb-stage-grade-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); }
 .eb-stage-approve-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-2); min-height:44px; font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); cursor:pointer; }
 .eb-stage-approve-toggle input{ width:20px; height:20px; margin:0; accent-color:var(--eb-primary); }
-.eb-stage-grade-row{ background:var(--eb-surface); }
-.eb-stage-grade-row.is-busy{ background:var(--eb-surface-2); }
-.eb-stage-grade-grid{
-  display:grid; align-items:center; column-gap:var(--eb-space-3); row-gap:var(--eb-space-2);
-  grid-template-columns:minmax(0,1fr) 8.5rem 12.5rem 5.5rem minmax(13rem,auto);
-  grid-template-areas:"stage status score value actions";
-  min-height:52px; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3);
-}
-.eb-stage-cell-stage{ grid-area:stage; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-1) var(--eb-space-2); min-width:0; }
-.eb-stage-cell-stage .eb-stage-title{ flex:1 1 12rem; }
-.eb-stage-cell-status{ grid-area:status; min-width:0; }
-.eb-stage-cell-score{ grid-area:score; display:flex; align-items:center; gap:var(--eb-space-1); min-width:0; }
-.eb-stage-cell-value{ grid-area:value; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; font-size:var(--eb-fs-13); min-width:0; }
-.eb-stage-cell-actions{ grid-area:actions; display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:var(--eb-space-1); min-width:0; }
-.eb-stage-cell-actions .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+.eb-stage-save-bar{ position:sticky; inset-block-start:var(--eb-topbar-h, 0px); z-index:2; }
+.eb-stage-table-wrap{ background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); overflow:hidden; }
+.eb-stage-table{ width:100%; border-collapse:separate; border-spacing:0; font-size:var(--eb-fs-13); }
+.eb-stage-table th,.eb-stage-table td{ padding:var(--eb-space-2) var(--eb-space-3); border-block-end:1px solid var(--eb-line-2); text-align:start; vertical-align:middle; }
+.eb-stage-table thead th{ background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
+.eb-stage-table .eb-stage-col-done,.eb-stage-table .eb-stage-cell-done{ text-align:center; inline-size:4.5rem; }
+.eb-stage-table .eb-stage-col-score,.eb-stage-table .eb-stage-cell-score{ inline-size:7.5rem; }
+.eb-stage-table .eb-stage-col-value,.eb-stage-table .eb-stage-cell-value{ inline-size:6.5rem; font-variant-numeric:tabular-nums; }
+.eb-stage-table .eb-stage-col-status,.eb-stage-table .eb-stage-cell-status{ inline-size:11rem; }
+.eb-stage-table .eb-stage-col-actions,.eb-stage-table .eb-stage-cell-actions{ inline-size:3rem; text-align:end; }
+.eb-stage-group-row th{ background:var(--eb-primary-050); color:var(--eb-primary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-stage-group-title{ color:var(--eb-primary-strong); }
+.eb-stage-row th{ font-weight:var(--eb-fw-regular); }
+.eb-stage-row .eb-stage-cell-stage{ border-inline-start:3px solid var(--eb-line-2); }
+.eb-stage-row.is-in-progress .eb-stage-cell-stage{ border-inline-start-color:var(--eb-warn); }
+.eb-stage-row.is-ready .eb-stage-cell-stage{ border-inline-start-color:var(--eb-info); }
+.eb-stage-row.is-approved .eb-stage-cell-stage{ border-inline-start-color:var(--eb-success); }
+.eb-stage-row.is-approved .eb-stage-cell-done{ background:var(--eb-success-bg); }
+.eb-stage-row.is-ready .eb-stage-cell-done{ background:var(--eb-info-bg); }
+.eb-stage-row.is-self .eb-stage-cell-done{ background:var(--eb-warn-bg); }
+.eb-stage-row.is-busy{ background:var(--eb-surface-2); }
+/* The cells stay table cells (a flex cell leaves the table's columns); their parts are spaced inline. */
+.eb-stage-cell-stage .eb-stage-code{ margin-inline-end:var(--eb-space-2); }
+.eb-stage-cell-stage small{ margin-inline-start:var(--eb-space-2); }
+.eb-stage-cell-stage .eb-stage-row-error{ margin-block-start:var(--eb-space-1); border:0; border-radius:var(--eb-r-sm); }
+.eb-stage-cell-value small{ display:block; }
+.eb-stage-cell-status > * + *{ margin-inline-start:var(--eb-space-1); }
 .eb-stage-score-input{
   box-sizing:border-box; inline-size:5.25rem; min-height:36px; padding-block:0; padding-inline:var(--eb-space-2);
   border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text);
   font:inherit; font-variant-numeric:tabular-nums; text-align:center;
 }
 .eb-stage-score-input:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-color:var(--eb-primary); }
-.eb-stage-score-input[aria-invalid="true"]{ border-color:var(--eb-danger); }
-.eb-stage-score-max{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-stage-row.is-changed .eb-stage-score-input{ border:2px solid var(--eb-warn-tx); }
+.eb-stage-row.is-invalid .eb-stage-score-input,.eb-stage-score-input[aria-invalid="true"]{ border:2px dashed var(--eb-danger-tx); background:var(--eb-danger-bg); }
 .eb-stage-score-text{ font-variant-numeric:tabular-nums; }
 .eb-stage-note-flag{ padding-inline:var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); }
 .eb-stage-row-error{ margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
-@media (max-width:1279px){
-  .eb-stage-grade-grid{ grid-template-columns:minmax(0,1fr) 8rem 12rem 5rem; grid-template-areas:"stage status score value" "actions actions actions actions"; }
-}
+@media (pointer: coarse){ .eb-stage-score-input{ min-height:44px; } }
 @media (max-width:767px){
-  .eb-stage-grade-grid{ grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"stage stage" "status value" "score score" "actions actions"; }
-  .eb-stage-cell-value{ align-items:flex-end; }
-  .eb-stage-cell-actions{ justify-content:flex-start; }
-  .eb-stage-score-input{ flex:1 1 auto; min-height:44px; }
-  .eb-stage-cell-score .eb-button,.eb-stage-cell-actions .eb-button,.eb-stage-cell-actions .eb-icon-button{ min-height:44px; }
+  .eb-stage-table thead{ position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+  .eb-stage-table,.eb-stage-table tbody,.eb-stage-table tr{ display:block; }
+  .eb-stage-table .eb-stage-row{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"stage stage stage" "done score actions" "value status status"; align-items:center; column-gap:var(--eb-space-2); padding-block:var(--eb-space-2); border-block-end:1px solid var(--eb-line-2); }
+  .eb-stage-table .eb-stage-row th,.eb-stage-table .eb-stage-row td{ border-block-end:0; padding-block:var(--eb-space-1); inline-size:auto; }
+  .eb-stage-table .eb-stage-cell-stage{ grid-area:stage; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-1) var(--eb-space-2); min-width:0; }
+  .eb-stage-table .eb-stage-cell-stage > *{ margin:0; }
+  .eb-stage-table .eb-stage-cell-stage .eb-stage-row-error{ flex-basis:100%; }
+  .eb-stage-table .eb-stage-cell-done{ grid-area:done; }
+  .eb-stage-table .eb-stage-cell-score{ grid-area:score; }
+  .eb-stage-table .eb-stage-cell-actions{ grid-area:actions; }
+  .eb-stage-table .eb-stage-cell-value{ grid-area:value; }
+  .eb-stage-table .eb-stage-cell-status{ grid-area:status; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:var(--eb-space-1); }
+  .eb-stage-table .eb-stage-cell-status > *{ margin:0; }
+  .eb-stage-table .eb-stage-group-row th{ display:block; }
+  .eb-stage-score-input{ inline-size:100%; min-height:44px; }
 }
 
 .eb-stage-timeline{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
@@ -379,7 +382,7 @@
 .eb-project-workspace .eb-project-toolbar{ border-radius:var(--eb-r); box-shadow:none; }
 .eb-project-workspace .eb-student-card-foot .eb-button.is-primary{ background:var(--eb-surface); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
 .eb-project-workspace .eb-student-card-foot .eb-button.is-primary:hover{ background:var(--eb-surface-2); border-color:var(--eb-line-2); color:var(--eb-text-heading); }
-.eb-project-workspace :is(.eb-project-progress-card, .eb-student-card, .eb-student-profile-summary, .eb-stage-groups, .eb-stage-timeline, .eb-heatmap-card, .eb-stage-settings-bar, .eb-stage-settings-group){ border-radius:var(--eb-r); box-shadow:none; }
+.eb-project-workspace :is(.eb-project-progress-card, .eb-student-card, .eb-student-profile-summary, .eb-stage-table-wrap, .eb-stage-timeline, .eb-heatmap-card, .eb-stage-settings-bar, .eb-stage-settings-group){ border-radius:var(--eb-r); box-shadow:none; }
 .eb-project-workspace .eb-segmented{ gap:0; padding:0; background:var(--eb-surface); border-color:var(--eb-line-2); overflow:hidden; }
 .eb-project-workspace .eb-segmented > button{ border-radius:0; border-inline-start:1px solid var(--eb-line); }
 .eb-project-workspace .eb-segmented > button:first-child{ border-inline-start:0; }

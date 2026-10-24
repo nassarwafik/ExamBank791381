@@ -5,16 +5,20 @@ import { STAGE_STATUS_ORDER, STAGE_STATUS_TONE, STAGE_STATUS_CLASS, stageStatusL
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import ActionMenu from "../ui/ActionMenu";
+import Dialog from "../ui/Dialog";
 import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
-import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
+import { IconChevronBack, IconCheck } from "../icons";
 import { useConfirm } from "../ui/useConfirm";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 import ProjectRankHero from "./ProjectRankHero";
 import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
 import { mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
-import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation } from "./types";
+import { gridStatusChanges, parseGridScore, scoreGridChanges, type GridChange } from "./scoreGrid";
+import type { Board } from "./ProjectBulkReview";
+import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation, StageStatus } from "./types";
 import type { ProjectEvaluationQueueView } from "./drillTarget";
 
 type Props = {
@@ -28,7 +32,7 @@ type Props = {
   /** Phase 9E — Evaluation Focus Mode: the drill `seq` that opened this student from the Today Hub («تقييم المشاريع»).
    * 0 / undefined = a normal opening (heading focus, no banner, no highlight). Each seq is applied exactly once: after
    * THIS selection's detail has loaded, the first ungraded active stage (server `evaluation.stages` order) gets its
-   * track selected, its group opened and its score input focused. */
+   * track selected and its score input focused. */
   evaluationFocusSeq?: number;
   /** Phase 9F — the evaluation queue session around this student (only in focus mode): position and neighbours. */
   evaluationQueue?: ProjectEvaluationQueueView | null;
@@ -58,37 +62,49 @@ type UpdateResponse = {
   balance?: BalanceInsight;
   history: HistoryEvent[];
 };
+type ScoreBulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string; score?: number | null };
+type ScoreBulkResponse = { results: ScoreBulkResult[]; totals: { requested: number; changed: number; unchanged: number; failed: number } };
+type StatusBulkResponse = { readyChanged?: boolean; results: { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string }[] };
 
 type Patch = StagePatch;
-const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
-const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => { const next = { ...map }; delete next[key]; return next; };
-// Phase P8 — the operations a patch carries (a combined save is both a score and a status write for the busy / double-submit
-// state of the row). The remembered switch lives in approveOnSave.ts (shared with the class matrix, Phase G1).
+const dropKeys = <T,>(map: Record<string, T>, keys: Iterable<string>): Record<string, T> => {
+  const next = { ...map }; let changed = false;
+  for (const k of keys) if (k in next) { delete next[k]; changed = true; }
+  return changed ? next : map;
+};
+// Phase P8 — the operations a single write carries (a note or a workflow status), for the busy / double-submit state of the row.
+// The remembered switch lives in approveOnSave.ts (shared with the class matrix, Phase G1).
 const patchKinds = (patch: Patch): string[] => [patch.score !== undefined ? "score" : "", patch.status !== undefined ? "status" : "", patch.note !== undefined ? "note" : ""].filter(Boolean);
+const CHUNK = 300;                                                              // the server's score.bulk / progress.bulk limit
+/** The statuses the row menu writes at once (approved and in_progress are the «منجز» toggle's, saved with the scores). */
+const MENU_STATUSES: StageStatus[] = STAGE_STATUS_ORDER.filter(st => st !== "approved" && st !== "in_progress");
+const errorText = (r: { error?: string; score?: number | null }) =>
+  r.error === "stale" ? "تغيّرت العلامة على الخادم إلى " + (typeof r.score === "number" ? fmtContribution(r.score) : "—") + ". راجعها ثم احفظ من جديد."
+    : r.error === "not_member" ? "الطالب لم يعد في الصف."
+      : r.error === "stage_inactive" ? "المرحلة غير مفعّلة."
+        : r.error === "conflict" ? "تعارض مؤقت، أعد الحفظ."
+          : r.error === "invalid" ? "قيمة غير صحيحة." : "تعذر الحفظ.";
 
 /**
- * Non-modal student profile for one project. Same single `student` read and the same `progress.update`
- * POST (status, note or score) as before; focus moves to the heading on open and the workspace returns it to the
- * opener on back. Archived classes expose no mutation controls at all.
+ * Non-modal student profile for one project. Same single `student` read as before; focus moves to the heading on open and
+ * the workspace returns it to the opener on back. Archived classes expose no mutation controls at all.
  *
- * Phase 8C — inline grading. Every stage row IS the grading workspace: score input (0–100) + save, the primary
- * «اعتماد المرحلة» and the other statuses in an ActionMenu are on the row itself, with the stage value from the
- * server's performance model. Only the description, the score details / clear action and the teacher note live
- * under an optional per-row «تفاصيل» disclosure — grading never depends on it.
- *   • Drafts are PER STAGE (scoreDrafts[stageId] / noteDrafts[stageId], holding only what the teacher typed): the
- *     input shows the draft if any, else the canonical saved score; a successful save drops that stage's draft so
- *     the canonical server value shows; a failed save keeps it for a retry. Drafts are keyed by stageId, so a track
- *     or group switch can never apply one stage's draft to another, and they are cleared whenever the project,
- *     class or student changes.
- *   • Status / note writes stay the canonical `progress.update`; a score write is the narrow `score.set` / `score.clear`
- *     (Phase 9B). Every write is SERIALIZED through one queue (a later write starts only
- *     after the earlier one settled), so responses apply in order and an older response can never overwrite a
- *     newer canonical state. The same operation on the same stage cannot be queued twice (double-submit guard).
- *     Each job carries its (project, class, student) context; a job or response for a previous selection is dropped.
- *   • Phase P8 (owner decision) — the visible switch «اعتماد المرحلة عند حفظ العلامة» (ON by default, remembered on this
- *     device): saving a score on a stage not yet approved (or marked by the student, still unconfirmed) also approves it,
- *     in ONE `progress.update` carrying both. With the switch off, saving a score never changes the status (the 8C / 9B
- *     rule). Clearing a score never approves; approving alone never sends a score.
+ * Phase G2 (owner decisions of 2026-10-23: the compact table replaces the collapsible sections, one save bar for the
+ * student's edits, the same approve-on-save switch as the class matrix). The stages of the selected track are ONE table
+ * — الموضوع | منجز؟ | العلامة من 100 | الموزونة | الحالة | إجراءات — with each group as a section row:
+ *   • Every row is a score AND a «منجز» decision, exactly as a matrix cell (Phase G1): the toggle (or Space in the field)
+ *     marks the stage done or reopens it; with «اعتماد المرحلة عند حفظ العلامة» on, a typed score approves the stage too
+ *     (a student's unconfirmed mark is confirmed), never a cleared one; off, a score never changes a status.
+ *   • Enter moves to the next stage's field (Shift+Enter back), Escape restores the row; nothing is written until
+ *     «حفظ التغييرات»: `score.bulk` (each score with the value the row showed as the stale guard), then `progress.bulk`
+ *     for the approvals and the reopenings — never for a stage whose score failed — then the profile is re-read, so the
+ *     weighted values, the grade and the evaluation are the server's.
+ *   • The row menu: the details and the teacher's note (a dialog; the note is its own `progress.update`), «مسح العلامة»
+ *     (an unsaved change the save bar carries), and the two workflow statuses the toggle does not cover, written at once.
+ *   • Drafts are keyed by stage, cleared whenever the project, class or student changes, and confirmed before moving to a
+ *     sibling. The field is disabled while a save is in flight; a failed row keeps its draft and shows the server's reason.
+ *   • Phase 9E / 9F / 9G (focus mode, the queue, the final panel) are unchanged: the focused stage's field is found by
+ *     `[data-stage-id] input[data-stage-score]`, and completion is read from the server's evaluation after each save.
  */
 /** The first ungraded ACTIVE stage in the server's canonical order (Phase 9B `evaluation.stages`); null when none. */
 function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation["stages"][number] | null {
@@ -101,21 +117,39 @@ const studentsWord = (n: number) => (n === 1 ? "طالب واحد" : n === 2 ? "
 const sessionDoneText = (completed: number, total: number) => "تم تقييم " + completed + " من " + total + " " + (total === 1 ? "طالب" : "طلاب") + " في هذه الجلسة.";
 const sessionRemainingText = (remaining: number) => (remaining === 0 ? "اكتمل تقييم جميع الطلاب في قائمة هذه الجلسة." : "بقي " + studentsWord(remaining) + " في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
 
+/** The matrix's one-student view of this profile: the change helpers of Phase G1 decide what a save writes. */
+function boardOf(detail: StudentDetail, studentId: string, name: string): Board {
+  const cells: Board["students"][number]["cells"] = {};
+  for (const [stageId, e] of Object.entries(detail.progress)) {
+    const status = normalizeStageStatus(e.status);
+    cells[stageId] = { status, score: typeof e.score === "number" ? e.score : null, selfReported: status === "approved" && !!e.selfReportedAt };
+  }
+  return {
+    readOnly: detail.readOnly,
+    groups: detail.groups || [],
+    stages: detail.stages.filter(s => s.active !== false).map(s => ({ stageId: s.stageId, track: s.track, groupId: s.groupId, title: s.title, order: s.order, required: s.required !== false })),
+    students: [{ studentId, displayName: name, code: detail.student.code, cells }]
+  };
+}
+
 export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal, siblings = null, onOpenSibling }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
-  const [openStageId, setOpenStageId] = useState("");                           // the optional details / note disclosure
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
-  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
-  const [pending, setPending] = useState<Record<string, true>>({});           // "stageId:kind" queued or in flight
-  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [detailsFor, setDetailsFor] = useState("");                            // the stage whose details / note dialog is open
+  const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});  // keyed studentId|stageId (the matrix's keys)
+  const [doneDrafts, setDoneDrafts] = useState<Record<string, boolean>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});   // keyed by stageId
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});     // keyed by stageId
+  const [pending, setPending] = useState<Record<string, true>>({});           // "stageId:kind" queued or in flight (single writes)
+  const [saving, setSaving] = useState(false);                                // the save bar's bulk write
+  const savingRef = useRef(false);                                            // the same, readable within one tick (a double activation)
   const [approveOnSave, setApproveOnSave] = useState(readApproveOnSave);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
   // The selection every queued write belongs to; a write or response for another selection is dropped.
   const contextKey = projectCode + "|" + classId + "|" + studentId;
   const contextRef = useRef(contextKey);
@@ -144,11 +178,12 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     } catch (e) { if (seq === requestSeq.current) setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
     finally { if (seq === requestSeq.current) setLoading(false); }
   }
-  // A new (project, class, student) starts clean: no detail, no disclosure, no drafts, no row errors, no queued busy state.
+  // A new (project, class, student) starts clean: no detail, no dialog, no drafts, no row errors, no queued busy state.
   function resetSelection() {
-    setDetail(null); setLoadedContextKey(""); setOpenStageId(""); setScoreDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
+    setDetail(null); setLoadedContextKey(""); setDetailsFor(""); setScoreDrafts({}); setDoneDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
     setFocusStageId("");                                                       // a pending focus never carries over to another selection
     pendingRef.current = new Set();
+    setSaving(false); savingRef.current = false;                               // a bulk save of the previous selection no longer holds this one's fields
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { resetSelection(); void load(); }, [classId, studentId, projectCode]);
@@ -159,10 +194,9 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // previous student). The evaluation is exposed only then — an older evaluation is never treated as current.
   const detailIsCurrent = !!detail && loadedContextKey === contextKey;
   const evaluation = useMemo(() => (loadedContextKey === contextKey ? normalizeProjectEvaluation(detail?.evaluation) : null), [detail, loadedContextKey, contextKey]);
-  /** Select the stage's track, open its group and request the focus of its score input (rendered next). */
+  /** Select the stage's track and request the focus of its score input (rendered next). */
   function focusStage(stage: ProjectEvaluation["stages"][number]) {
     setTrack(stage.track);
-    setOpenGroups(prev => (prev[stage.groupId] === false ? { ...prev, [stage.groupId]: true } : prev));
     setFocusStageId(stage.stageId);
   }
   // Phase 9E — apply the drill seq ONCE, only after THIS selection's detail arrived (`detail` is set solely by the
@@ -185,7 +219,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     onEvaluationComplete?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusMode, evaluation, detail, detailIsCurrent, contextKey]);
-  // The requested input exists only after the track / group state above has rendered; focus + reveal it then, once.
+  // The requested input exists only after the track state above has rendered; focus + reveal it then, once.
   useEffect(() => {
     if (!focusStageId || !detail) return;
     const input = listRef.current?.querySelector<HTMLInputElement>('[data-stage-id="' + focusStageId + '"] input[data-stage-score]');
@@ -193,24 +227,127 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     input.focus();
     input.scrollIntoView?.({ block: "center" });
     setFocusStageId("");
-  }, [focusStageId, detail, track, openGroups]);
+  }, [focusStageId, detail, track]);
+  useEffect(() => { if (detailsFor) noteRef.current?.focus(); }, [detailsFor]);
 
+  const name = detail?.student.displayName || studentId;
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
+  const board = useMemo(() => (detail ? boardOf(detail, studentId, name) : null), [detail, studentId, name]);
+  const keyOf = (stageId: string) => studentId + "|" + stageId;
+  // ---- the save bar's decisions (the matrix's helpers over this one student) ----
+  const changes: GridChange[] = useMemo(() => (board ? scoreGridChanges(scoreDrafts, board) : []), [scoreDrafts, board]);
+  const statusChanges = useMemo(() => (board ? gridStatusChanges(doneDrafts, changes, board, approveOnSave) : []), [doneDrafts, changes, board, approveOnSave]);
+  const invalid = changes.filter(c => c.invalid).length;
+  const pendingScores = changes.filter(c => !c.invalid);
+  const changedKeys = useMemo(() => new Set([...pendingScores.map(c => c.key), ...statusChanges.map(c => c.key)]), [pendingScores, statusChanges]);
+  const pendingCount = changedKeys.size;
+  const unsavedNotes = !!detail && Object.entries(noteDrafts).some(([sid, v]) => v !== (detail.progress[sid]?.note || ""));
+  const dirty = changes.length > 0 || statusChanges.some(c => !c.implied);
+  const unsavedDrafts = dirty || unsavedNotes;
 
-  // status (workflow), note and score (quality, 0–100, teacher-only) all go through the SAME progress.update write;
-  // the server validates the score and returns the recomputed performance (grade / project Strength / stage values).
-  function updateStage(stage: ProjectStage, patch: Patch, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
+  function discardAll() { setScoreDrafts({}); setDoneDrafts({}); setRowErrors({}); }
+  function setDraft(stageId: string, value: string) {
+    setScoreDrafts(prev => ({ ...prev, [keyOf(stageId)]: value }));
+    setRowErrors(prev => dropKeys(prev, [stageId]));
+  }
+  const savedScore = (stageId: string): number | null => { const c = board?.students[0].cells[stageId]; return c && typeof c.score === "number" ? c.score : null; };
+  const approvedOf = (stageId: string) => board?.students[0].cells[stageId]?.status === "approved";
+  /** Flips the row's «منجز» as shown (`done` includes an approval the switch implies for a new score). Back at the saved
+   *  state the explicit decision is dropped, unless the switch would then imply the opposite. */
+  function toggleDone(stageId: string, done: boolean) {
+    const key = keyOf(stageId);
+    const saved = approvedOf(stageId);
+    const next = !done;
+    const implies = approveOnSave && !saved && pendingScores.some(c => c.key === key && c.score !== null);
+    setDoneDrafts(prev => (next === saved && !implies ? dropKeys(prev, [key]) : { ...prev, [key]: next }));
+    setRowErrors(prev => dropKeys(prev, [stageId]));
+  }
+  function moveFocus(from: HTMLInputElement, step: 1 | -1) {
+    const inputs = Array.from(listRef.current?.querySelectorAll<HTMLInputElement>("input[data-stage-score]") || []);
+    const next = inputs[inputs.indexOf(from) + step];
+    if (next) { next.focus(); next.select(); }
+  }
+  function onScoreKey(e: KeyboardEvent<HTMLInputElement>, stageId: string, done: boolean) {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Enter") { e.preventDefault(); moveFocus(e.currentTarget, e.shiftKey ? -1 : 1); }           // Enter: the next topic, never a write
+    else if (e.key === "ArrowDown") { e.preventDefault(); moveFocus(e.currentTarget, 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(e.currentTarget, -1); }
+    else if (e.key === " ") { e.preventDefault(); toggleDone(stageId, done); }                                // a score never holds a space
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      setScoreDrafts(prev => dropKeys(prev, [keyOf(stageId)]));
+      setDoneDrafts(prev => dropKeys(prev, [keyOf(stageId)]));
+      setRowErrors(prev => dropKeys(prev, [stageId]));
+    }
+  }
+  function clearScore(stageId: string) {
+    if (savedScore(stageId) === null) return;
+    setDraft(stageId, "");
+    setNotice("ستُمسح علامة المرحلة " + stageId + " عند الحفظ. «تجاهل التغييرات» يتراجع عن ذلك.");
+  }
+
+  // ---- the save bar: every changed score, then the approvals and the reopenings, then the profile is re-read ----
+  async function save() {
+    if (!detail || detail.readOnly || saving || savingRef.current || !pendingCount || invalid) return;
+    const context = contextRef.current;
+    savingRef.current = true; setSaving(true); setError(""); setNotice("");
+    const failed: Record<string, string> = {};
+    const savedScoreKeys: string[] = [], savedStatusKeys: string[] = [];
+    let changed = 0, unchanged = 0, approved = 0, reopened = 0, statusWritten = false;
+    try {
+      for (let i = 0; i < pendingScores.length; i += CHUNK) {
+        const items = pendingScores.slice(i, i + CHUNK).map(c => ({ studentId: c.studentId, stageId: c.stageId, score: c.score, expected: c.expected }));
+        const r = await trackerPost<ScoreBulkResponse>(token, projectCode, { action: "score.bulk", classId, items });
+        for (const x of r.results) { if (x.ok) savedScoreKeys.push(keyOf(x.stageId)); else failed[x.stageId] = errorText(x); }
+        changed += r.totals.changed; unchanged += r.totals.unchanged;
+      }
+      // Status decisions after the scores; a stage whose score failed keeps its whole change for the retry.
+      for (const to of ["approved", "in_progress"] as const) {
+        const list = statusChanges.filter(c => c.to === to && !(c.stageId in failed));
+        for (let i = 0; i < list.length; i += CHUNK) {
+          const items = list.slice(i, i + CHUNK).map(c => ({ studentId: c.studentId, stageId: c.stageId }));
+          const r = await trackerPost<StatusBulkResponse>(token, projectCode, { action: "progress.bulk", classId, items, status: to });
+          for (const x of r.results) {
+            if (x.ok) { savedStatusKeys.push(keyOf(x.stageId)); if (to === "approved") approved++; else reopened++; statusWritten = true; }
+            else failed[x.stageId] = errorText(x);
+          }
+        }
+      }
+    } catch (e) {
+      if (context === contextRef.current) setError(e instanceof Error ? e.message : "تعذر حفظ التغييرات.");
+    } finally {
+      if (context === contextRef.current) {
+        setScoreDrafts(prev => dropKeys(prev, savedScoreKeys));
+        setDoneDrafts(prev => dropKeys(prev, savedStatusKeys));
+        setRowErrors(failed);
+        const failedCount = Object.keys(failed).length;
+        if (savedScoreKeys.length || savedStatusKeys.length || failedCount) {
+          const parts = [savedScoreKeys.length || !savedStatusKeys.length ? "حُفظت " + changed + " علامة" + (unchanged ? "، ودون تغيير " + unchanged : "") : ""];
+          if (approved) parts.push("اعتُمدت " + approved + " مرحلة");
+          if (reopened) parts.push("أُعيدت " + reopened + " مرحلة إلى قيد التنفيذ");
+          setNotice(parts.filter(Boolean).join("، ") + (failedCount ? "، وتعذر حفظ " + failedCount + " (مُعلَّمة في الجدول)." : "."));
+        }
+        if (savedScoreKeys.length || savedStatusKeys.length) {
+          await load();                                                        // the weighted values, grade, evaluation and history are the server's
+          onChanged?.();
+          if (statusWritten) onReadyChanged?.();
+        }
+        savingRef.current = false; setSaving(false);
+      }
+    }
+  }
+
+  // ---- single writes: a note, or a workflow status the toggle does not cover — the canonical progress.update ----
+  function writeSingle(stage: ProjectStage, patch: Patch) {
     if (!detail || detail.readOnly) return;
     const keys = patchKinds(patch).map(k => stage.stageId + ":" + k);
     if (keys.some(k => pendingRef.current.has(k))) return;                      // double-submit guard (same operation)
     const context = contextRef.current;
-    // The exact values this mutation submits (compared against the live drafts when the response arrives).
-    const submittedScore = patch.score === null ? "" : patch.score === undefined ? undefined : String(patch.score).trim();
     const submittedNote = patch.note;
     for (const k of keys) pendingRef.current.add(k);
     setPending(prev => ({ ...prev, ...Object.fromEntries(keys.map(k => [k, true as const])) }));
-    setRowErrors(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
+    setRowErrors(prev => dropKeys(prev, [stage.stageId]));
     const run = async () => {
       if (context !== contextRef.current) return;                              // selection changed while queued
       setNotice("");
@@ -223,23 +360,9 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
           onChanged?.();
           if (patch.status !== undefined) onReadyChanged?.();
         }
-        // The inputs stay editable while a write is in flight, so a draft is dropped ONLY if it still equals the value this
-        // request submitted; an edit the teacher made after clicking save is newer, unsaved work and is preserved (its
-        // save button re-enables once this write settles). The same rule applies to a noChange response.
-        if (patch.score !== undefined) setScoreDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId].trim() !== submittedScore ? prev : dropKey(prev, stage.stageId)));
-        if (patch.note !== undefined) setNoteDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId] !== submittedNote ? prev : dropKey(prev, stage.stageId)));
-        setNotice(patch.score !== undefined && patch.status === "approved" ? "تم حفظ العلامة واعتماد المرحلة." : patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
-        // Keyboard flow: Enter-save moves on to the next stage's score field — only if focus did not move meanwhile.
-        const from = opts.advanceFrom;
-        if (from && document.activeElement === from) {
-          const inputs = Array.from(listRef.current?.querySelectorAll<HTMLInputElement>("input[data-stage-score]") || []);
-          const next = inputs[inputs.indexOf(from) + 1];
-          next?.focus();
-        }
-        // Button-save: the save button becomes disabled once the draft equals the saved score — keep focus on this
-        // stage's score field instead of losing it (only if the teacher did not move focus elsewhere meanwhile).
-        const back = opts.refocus;
-        if (back && (document.activeElement === back.trigger || document.activeElement === document.body)) back.input?.focus();
+        // A note draft is dropped ONLY if it still equals the value this request submitted; a newer edit stays unsaved work.
+        if (patch.note !== undefined) setNoteDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId] !== submittedNote ? prev : dropKeys(prev, [stage.stageId])));
+        setNotice(patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
       } catch (e) {
         if (context !== contextRef.current) return;
         // The typed draft is kept (never erased on failure) and the error stays attached to this stage's row.
@@ -254,31 +377,17 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     // Serialized: each write starts after the previous one settled (responses therefore apply in order).
     queue.current = queue.current.then(run, run);
   }
-
-  // Phase P8 — with the switch on, a save on a stage not yet approved (or still the student's unconfirmed mark) approves it too.
-  function approvesOnSave(stage: ProjectStage): boolean {
-    const entry = detail?.progress[stage.stageId];
-    const status = normalizeStageStatus(entry?.status);
-    return approveOnSave && (status !== "approved" || !!entry?.selfReportedAt);
-  }
-  function saveScore(stage: ProjectStage, draft: string, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
-    if (draft.trim() === "") return;
-    updateStage(stage, approvesOnSave(stage) ? { score: draft.trim(), status: "approved" } : { score: draft.trim() }, opts);
-  }
   function toggleApproveOnSave(on: boolean) {
     setApproveOnSave(on);
     writeApproveOnSave(on);
   }
 
-  // Phase P4 — moving to another student drops this profile's drafts, so unsaved scores / notes are confirmed first.
+  // Phase P4 — moving to another student (or another track's view is unaffected) drops this profile's drafts, so unsaved
+  // scores, decisions or notes are confirmed first.
   const { confirm, confirmDialog } = useConfirm();
-  const unsavedDrafts = !!detail && (
-    Object.entries(scoreDrafts).some(([sid, v]) => v.trim() !== canonicalScore(detail.progress[sid])) ||
-    Object.entries(noteDrafts).some(([sid, v]) => v !== (detail.progress[sid]?.note || ""))
-  );
   function goToSibling(target: SiblingRef) {
     if (!unsavedDrafts) { onOpenSibling?.(target.studentId); return; }
-    void confirm({ title: "علامات أو ملاحظات لم تُحفظ", message: "في ملف هذا الطالب علامات أو ملاحظات لم تُحفظ. هل تريد تجاهلها والانتقال إلى " + target.displayName + "؟", confirmLabel: "تجاهل والانتقال", cancelLabel: "البقاء هنا", tone: "danger" })
+    void confirm({ title: "تغييرات لم تُحفظ", message: "في ملف هذا الطالب " + (pendingCount || "") + (pendingCount ? " تغيير" : "ملاحظة") + " لم يُحفظ بعد. هل تريد تجاهله والانتقال إلى " + target.displayName + "؟", confirmLabel: "تجاهل والانتقال", cancelLabel: "البقاء هنا", tone: "danger" })
       .then(ok => { if (ok) onOpenSibling?.(target.studentId); });
   }
   const siblingNav = siblings && onOpenSibling && (siblings.previous || siblings.next) ? (
@@ -288,7 +397,6 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       <button type="button" className="eb-button is-small" disabled={!siblings.next} onClick={() => siblings.next && goToSibling(siblings.next)} aria-label={siblings.next ? "الطالب التالي: " + siblings.next.displayName : "لا يوجد طالب تالٍ"}>الطالب التالي</button>
     </nav>
   ) : null;
-  const name = detail?.student.displayName || studentId;
   const backButton = <IconButton label="عودة إلى تقدّم الطلاب" icon={<IconChevronBack size={18} className="eb-flip-rtl" />} onClick={onBack} />;
   // ONE stable head (back + h2) across loading / error / loaded states so the focused heading never remounts.
   const head = (
@@ -304,7 +412,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     </div>
   );
 
-  if (!detail) {
+  if (!detail || !board) {
     return <section className="eb-student-profile" aria-labelledby="eb-student-profile-title">
       {head}
       {loading && <p className="eb-muted" role="status">جارٍ تحميل ملف الطالب...</p>}
@@ -316,6 +424,11 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const perf = normalizeProjectPerformance(detail.performance);
   const timeline = [...detail.history].reverse().slice(0, 20);
   const readOnly = detail.readOnly;
+  const detailsStage = detailsFor ? detail.stages.find(st => st.stageId === detailsFor) ?? null : null;
+  const detailsEntry = detailsStage ? detail.progress[detailsStage.stageId] : undefined;
+  const detailsValue = detailsStage && perf ? stageValueOf(perf, detailsStage.stageId) : null;
+  const detailsNote = detailsStage ? (noteDrafts[detailsStage.stageId] ?? (detailsEntry?.note || "")) : "";
+  const detailsNoteBusy = !!detailsStage && !!pending[detailsStage.stageId + ":note"];
 
   return (
     <section className="eb-student-profile" aria-labelledby="eb-student-profile-title">
@@ -347,8 +460,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       {evaluation && <ProjectEvaluationCard id="eb-student-profile-eval" variant="teacher" evaluation={evaluation} />}
 
       {focusMode && evaluation && (
-        // Phase 9E — Evaluation Focus Mode banner: the LATEST evaluation (updated by every score response), never the
-        // one from the moment the profile opened. The next-stage action re-aims at the first stage still ungraded now.
+        // Phase 9E — Evaluation Focus Mode banner: the LATEST evaluation (updated by every save), never the one from the
+        // moment the profile opened. The next-stage action re-aims at the first stage still ungraded now.
         <div className={"eb-eval-focus" + (evaluation.ungradedStages === 0 ? " is-complete" : "")} role="status" data-ungraded={evaluation.ungradedStages} data-queue-position={evaluationQueue ? evaluationQueue.position : undefined}>
           {evaluation.ungradedStages === 0
             ? <span className="eb-eval-focus-text">{evaluationQueue ? (evaluationQueue.next ? "اكتمل تقييم هذا الطالب — انتقل إلى الطالب التالي." : "اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم.") : "اكتمل تقييم جميع مراحل المشروع لهذا الطالب."}</span>
@@ -385,144 +498,159 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       )}
 
       <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">
-        {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}
+        {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => setTrack(t.trackId)}>{t.title}</button>)}
       </div>
 
       {!readOnly && (
         <div className="eb-stage-grade-bar">
           <label className="eb-stage-approve-toggle">
-            <input type="checkbox" role="switch" checked={approveOnSave} onChange={e => toggleApproveOnSave(e.target.checked)} />
+            <input type="checkbox" role="switch" checked={approveOnSave} disabled={saving} onChange={e => toggleApproveOnSave(e.target.checked)} />
             اعتماد المرحلة عند حفظ العلامة
           </label>
           <p className="eb-muted eb-stage-grade-hint">{approveOnSave
-            ? "أدخل العلامة واضغط Enter أو «حفظ واعتماد»: تُحفظ العلامة وتُعتمد المرحلة معًا. تُحفظ التغييرات بالتتابع."
-            : "أدخل العلامة واضغط Enter أو «حفظ»، ثم «اعتماد» لاعتماد المرحلة. تُحفظ التغييرات بالتتابع."}</p>
+            ? "اكتب العلامة واضغط Enter للموضوع التالي، والمسافة لتحديد الموضوع منجزًا؛ ثم «حفظ التغييرات» مرة واحدة: تُحفظ العلامات وتُعتمد مراحلها معًا."
+            : "اكتب العلامة واضغط Enter للموضوع التالي، والمسافة لتحديد الموضوع منجزًا؛ ثم «حفظ التغييرات» مرة واحدة. العلامة وحدها لا تغيّر الحالة."}</p>
         </div>
       )}
-      <div className="eb-stage-groups" ref={listRef}>
-        {!groups.length && <EmptyState compact title="لا توجد مراحل في هذا المسار." />}
-        {groups.map(g => {
-          const stages = (byGroup.get(g.groupId) || []) as ProjectStage[];
-          const groupOpen = openGroups[g.groupId] !== false;
-          const panelId = "eb-group-" + g.groupId;
-          const approvedInGroup = stages.filter(st => normalizeStageStatus(detail.progress[st.stageId]?.status) === "approved").length;
-          return (
-            <div key={g.groupId} className="eb-stage-group">
-              <button type="button" className="eb-stage-group-head" aria-expanded={groupOpen} aria-controls={panelId} onClick={() => setOpenGroups(prev => ({ ...prev, [g.groupId]: !groupOpen }))}>
-                <IconChevronDown size={16} className={"eb-disclosure-chevron" + (groupOpen ? " is-open" : "")} aria-hidden="true" />
-                <span className="eb-stage-group-title">{g.title}</span>
-                <small className="eb-muted">{approvedInGroup}/{stages.length} معتمدة</small>
-              </button>
-              {groupOpen && (
-                <ul id={panelId} className="eb-stage-list">
+      {!readOnly && (
+        <div className="eb-bulk-bar eb-bulk-review-bar eb-stage-save-bar" role="region" aria-label="حفظ تغييرات الطالب">
+          <span className="eb-bulk-summary" role="status">{pendingCount || invalid ? pendingCount + " تغيير جاهز للحفظ" + (invalid ? " · " + invalid + " غير صحيحة" : "") : "لا توجد تغييرات"}</span>
+          <div className="eb-bulk-group">
+            <button type="button" className="eb-button is-primary is-small" disabled={saving || !pendingCount || invalid > 0} onClick={() => void save()}>{saving ? SAVE_LABELS.saving : SAVE_LABELS.saveChanges + (pendingCount ? " (" + pendingCount + ")" : "")}</button>
+            <button type="button" className="eb-button is-quiet is-small" disabled={saving || !dirty} onClick={() => { discardAll(); setNotice(""); }}>تجاهل التغييرات</button>
+          </div>
+          {invalid > 0 && <p className="eb-stage-row-error" role="alert">صحّح {invalid === 1 ? "علامة واحدة" : invalid + " علامات"}: العلامة رقم من 0 إلى 100.</p>}
+        </div>
+      )}
+
+      <div className="eb-stage-table-wrap" ref={listRef}>
+        {!groups.length ? <EmptyState compact title="لا توجد مراحل في هذا المسار." /> : (
+          <table className="eb-stage-table">
+            <caption className="eb-visually-hidden">مراحل المسار لهذا الطالب: الإنجاز، والعلامة من 100، والقيمة الموزونة كما يحسبها الخادم، والحالة</caption>
+            <thead>
+              <tr>
+                <th scope="col" className="eb-stage-col-stage">الموضوع</th>
+                <th scope="col" className="eb-stage-col-done">منجز؟</th>
+                <th scope="col" className="eb-stage-col-score">العلامة من 100</th>
+                <th scope="col" className="eb-stage-col-value">الموزونة</th>
+                <th scope="col" className="eb-stage-col-status">الحالة</th>
+                <th scope="col" className="eb-stage-col-actions"><span className="eb-visually-hidden">إجراءات</span></th>
+              </tr>
+            </thead>
+            {groups.map(g => {
+              const stages = (byGroup.get(g.groupId) || []) as ProjectStage[];
+              const approvedInGroup = stages.filter(st => approvedOf(st.stageId)).length;
+              return (
+                <tbody key={g.groupId} className="eb-stage-group" data-group-id={g.groupId}>
+                  <tr className="eb-stage-group-row">
+                    <th scope="rowgroup" colSpan={6}><span className="eb-stage-group-title">{g.title}</span> <small className="eb-muted">{approvedInGroup}/{stages.length} منجزة</small></th>
+                  </tr>
                   {stages.map(stage => {
+                    const key = keyOf(stage.stageId);
                     const entry = detail.progress[stage.stageId];
+                    const cell = board.students[0].cells[stage.stageId];
                     const status = normalizeStageStatus(entry?.status);
-                    const selfReported = status === "approved" && !!entry?.selfReportedAt;   // P2: marked by the student, not confirmed yet
-                    const isOpen = openStageId === stage.stageId;
-                    const stagePanelId = "eb-stage-" + stage.stageId;
-                    const saved = canonicalScore(entry);
-                    const draft = scoreDrafts[stage.stageId] ?? saved;
-                    const noteDraft = noteDrafts[stage.stageId] ?? (entry?.note || "");
-                    const scoreBusy = !!pending[stage.stageId + ":score"];
-                    const statusBusy = !!pending[stage.stageId + ":status"];
-                    const noteBusy = !!pending[stage.stageId + ":note"];
-                    const rowBusy = scoreBusy || statusBusy || noteBusy;
-                    const scoreChanged = draft.trim() !== "" && (saved === "" || Number(draft) !== entry?.score);
-                    const value = perf ? stageValueOf(perf, stage.stageId) : null;
-                    const label = stage.stageId + " — " + stage.title;
+                    const selfReported = !!cell?.selfReported;                   // P2: marked by the student, not confirmed yet
+                    const saved = savedScore(stage.stageId);
+                    const draft = scoreDrafts[key];
+                    const value = draft ?? (saved === null ? "" : String(saved));
+                    const parsed = draft === undefined ? null : parseGridScore(draft);
+                    const isInvalid = !!parsed && parsed.kind === "invalid";
+                    const isChanged = changedKeys.has(key);
                     const rowError = rowErrors[stage.stageId];
+                    const statusChange = statusChanges.find(x => x.key === key);
+                    const done = statusChange ? statusChange.to === "approved" : status === "approved";
+                    const statusBusy = !!pending[stage.stageId + ":status"];
+                    const stageValue = perf ? stageValueOf(perf, stage.stageId) : null;
+                    const label = stage.stageId + " — " + stage.title;
                     const evaluationPending = focusMode && !!evaluation && evaluation.stages.some(es => es.stageId === stage.stageId && !es.graded);
-                    const onScoreKey = (e: KeyboardEvent<HTMLInputElement>) => {
-                      if (e.key !== "Enter") return;
-                      e.preventDefault();
-                      if (scoreChanged && !scoreBusy) saveScore(stage, draft, { advanceFrom: e.currentTarget });
-                    };
                     return (
-                      <li key={stage.stageId} className={"eb-stage-row eb-stage-grade-row " + STAGE_STATUS_CLASS[status] + (rowBusy ? " is-busy" : "") + (evaluationPending ? " is-evaluation-pending" : "")} data-stage-id={stage.stageId} aria-busy={rowBusy || undefined}>
-                        <div className="eb-stage-grade-grid">
-                          <div className="eb-stage-cell-stage">
-                            <span className="eb-stage-code">{stage.stageId}</span>
-                            <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
-                            {entry?.note ? <small className="eb-stage-note-flag">ملاحظة</small> : null}
-                            <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
-                          </div>
-                          <div className="eb-stage-cell-status"><StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>{selfReported && <StatusBadge tone="warn">حدّدها الطالب</StatusBadge>}</div>
-                          <div className="eb-stage-cell-score">
-                            {readOnly ? (
-                              <span className="eb-stage-score-text" dir="ltr">{saved === "" ? "—" : fmtContribution(entry!.score as number)} / 100</span>
-                            ) : (
-                              <>
-                                <input type="number" inputMode="decimal" min={0} max={100} step={0.5} dir="ltr" className="eb-stage-score-input" data-stage-score=""
-                                  value={draft} onChange={e => { const v = e.target.value; setScoreDrafts(prev => ({ ...prev, [stage.stageId]: v })); }} onKeyDown={onScoreKey}
-                                  aria-label={"علامة المرحلة " + label + " من 100"} placeholder="0–100" aria-invalid={rowError ? true : undefined} />
-                                <span className="eb-stage-score-max" aria-hidden="true">/100</span>
-                                <button type="button" className="eb-button is-small" disabled={scoreBusy || !scoreChanged} onClick={e => { const trigger = e.currentTarget; saveScore(stage, draft, { refocus: { trigger, input: trigger.closest("li")?.querySelector<HTMLInputElement>("input[data-stage-score]") ?? null } }); }} aria-label={(approvesOnSave(stage) ? "حفظ واعتماد علامة المرحلة " : "حفظ علامة المرحلة ") + stage.stageId}>{scoreBusy ? "جارٍ الحفظ…" : approvesOnSave(stage) ? "حفظ واعتماد" : "حفظ"}</button>
-                              </>
-                            )}
-                          </div>
-                          <div className="eb-stage-cell-value">
-                            {value
-                              ? <span dir="ltr" title="القيمة في المشروع">{fmtContribution(value.contribution)}/{fmtContribution(value.maxContribution)}</span>
-                              : <span className="eb-muted">—</span>}
-                            {value && !value.counted && saved !== "" && <small className="eb-muted">عند الاعتماد</small>}
-                          </div>
-                          <div className="eb-stage-cell-actions">
-                            {!readOnly && (
-                              <>
-                                <button type="button" className="eb-button is-primary is-small" disabled={statusBusy || (status === "approved" && !selfReported)} onClick={() => updateStage(stage, { status: "approved" })} aria-label={(selfReported ? "تأكيد المرحلة " : "اعتماد المرحلة ") + stage.stageId}><IconCheck size={16} />{selfReported ? "تأكيد" : "اعتماد"}</button>
-                                <ActionMenu label={"تغيير حالة المرحلة " + stage.stageId} text="الحالة" disabled={statusBusy}>
-                                  {STAGE_STATUS_ORDER.filter(st => st !== "approved").map(st => (
-                                    <button key={st} type="button" className="eb-menu-item" disabled={statusBusy || status === st} onClick={() => updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
-                                  ))}
-                                </ActionMenu>
-                              </>
-                            )}
-                            <button type="button" className="eb-button is-quiet is-small eb-stage-details-toggle" aria-expanded={isOpen} aria-controls={stagePanelId}
-                              aria-label={"تفاصيل وملاحظة المرحلة " + stage.stageId} onClick={() => setOpenStageId(isOpen ? "" : stage.stageId)}>
-                              <IconChevronDown size={16} className={"eb-disclosure-chevron" + (isOpen ? " is-open" : "")} aria-hidden="true" />تفاصيل
-                            </button>
-                          </div>
-                        </div>
-                        {rowError && <p className="eb-stage-row-error" role="alert">{stage.stageId}: {rowError}</p>}
-                        {isOpen && (
-                          <div id={stagePanelId} className="eb-stage-detail">
-                            {stage.description ? <p className="eb-muted">{stage.description}</p> : null}
-                            {perf && (
-                              <p className="eb-stage-score">
-                                <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>
-                                {value && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>}
-                                {value && !value.counted && typeof entry?.score === "number" && <small className="eb-muted">تُحتسب عند اعتماد المرحلة</small>}
-                              </p>
-                            )}
-                            {readOnly ? (
-                              entry?.note ? <p className="eb-stage-note-view">ملاحظة المعلم: {entry.note}</p> : <small className="eb-muted">لا توجد ملاحظة.</small>
-                            ) : (
-                              <>
-                                {typeof entry?.score === "number" && (
-                                  <div className="eb-stage-actions">
-                                    <button type="button" className="eb-button is-quiet is-small" disabled={scoreBusy} onClick={() => { setScoreDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; }); updateStage(stage, { score: null }); }}>مسح العلامة</button>
-                                  </div>
-                                )}
-                                <label className="eb-field eb-stage-note-edit">ملاحظة المعلم
-                                  <textarea value={noteDraft} onChange={e => { const v = e.target.value; setNoteDrafts(prev => ({ ...prev, [stage.stageId]: v })); }} placeholder="اكتب ملاحظة للطالب..." rows={3} />
-                                </label>
-                                <div className="eb-stage-note-actions">
-                                  <button type="button" className="eb-button is-small" disabled={noteBusy || noteDraft === (entry?.note || "")} onClick={() => updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </li>
+                      <tr key={stage.stageId} className={"eb-stage-row " + STAGE_STATUS_CLASS[status] + (selfReported ? " is-self" : "") + (isChanged ? " is-changed" : "") + (isInvalid || rowError ? " is-invalid" : "") + (statusBusy ? " is-busy" : "") + (evaluationPending ? " is-evaluation-pending" : "")} data-stage-id={stage.stageId} aria-busy={statusBusy || undefined}>
+                        <th scope="row" className="eb-stage-cell-stage">
+                          <span className="eb-stage-code">{stage.stageId}</span>
+                          <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
+                          {entry?.note ? <small className="eb-stage-note-flag">ملاحظة</small> : null}
+                          <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
+                          {rowError && <p className="eb-stage-row-error" role="alert">{stage.stageId}: {rowError}</p>}
+                        </th>
+                        <td className="eb-stage-cell-done">
+                          {readOnly
+                            ? (status === "approved" ? <IconCheck size={16} aria-label="منجز" /> : <span className="eb-muted" aria-label="غير منجز">—</span>)
+                            : <button type="button" className={"eb-score-done" + (done ? " is-on" : "")} aria-pressed={done} disabled={saving}
+                              aria-label={stage.stageId + ": منجز"} title={done ? "منجز (اضغط لإعادتها إلى قيد التنفيذ)" : "تحديد المرحلة منجزة"}
+                              onClick={() => toggleDone(stage.stageId, done)}><IconCheck size={14} aria-hidden="true" /></button>}
+                        </td>
+                        <td className="eb-stage-cell-score">
+                          {readOnly ? (
+                            <span className="eb-stage-score-text" dir="ltr">{saved === null ? "—" : fmtContribution(saved)} / 100</span>
+                          ) : (
+                            <input type="text" inputMode="decimal" dir="ltr" autoComplete="off" className="eb-stage-score-input" data-stage-score=""
+                              value={value} disabled={saving}
+                              aria-label={"علامة المرحلة " + label + " من 100"} placeholder="0–100" aria-invalid={isInvalid || !!rowError || undefined}
+                              onFocus={e => e.currentTarget.select()}
+                              onChange={e => setDraft(stage.stageId, e.target.value)}
+                              onKeyDown={e => onScoreKey(e, stage.stageId, done)} />
+                          )}
+                        </td>
+                        <td className="eb-stage-cell-value">
+                          {stageValue
+                            ? <span dir="ltr" title="القيمة في المشروع">{fmtContribution(stageValue.contribution)}/{fmtContribution(stageValue.maxContribution)}</span>
+                            : <span className="eb-muted">—</span>}
+                          {stageValue && !stageValue.counted && saved !== null && <small className="eb-muted">عند الاعتماد</small>}
+                        </td>
+                        <td className="eb-stage-cell-status"><StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>{selfReported && <StatusBadge tone="warn">حدّدها الطالب</StatusBadge>}</td>
+                        <td className="eb-stage-cell-actions">
+                          <ActionMenu label={"إجراءات المرحلة " + stage.stageId} disabled={saving || statusBusy}>
+                            <button type="button" className="eb-menu-item" onClick={() => setDetailsFor(stage.stageId)}>{readOnly ? "التفاصيل" : "التفاصيل والملاحظة"}</button>
+                            {!readOnly && <button type="button" className="eb-menu-item" disabled={saved === null} onClick={() => clearScore(stage.stageId)}>مسح العلامة</button>}
+                            {!readOnly && MENU_STATUSES.map(st => (
+                              <button key={st} type="button" className="eb-menu-item" disabled={statusBusy || status === st} onClick={() => writeSingle(stage, { status: st })}>{stageStatusLabel(st)}</button>
+                            ))}
+                          </ActionMenu>
+                        </td>
+                      </tr>
                     );
                   })}
-                </ul>
-              )}
-            </div>
-          );
-        })}
+                </tbody>
+              );
+            })}
+          </table>
+        )}
       </div>
+      <p className="eb-score-grid-legend eb-muted" aria-hidden="true">
+        <span className="eb-score-legend is-approved">منجزة (معتمدة)</span>
+        <span className="eb-score-legend is-ready">بانتظار الاعتماد</span>
+        <span className="eb-score-legend is-self">حدّدها الطالب</span>
+        <span className="eb-score-legend is-changed">تغيير غير محفوظ</span>
+        <span className="eb-score-legend is-invalid">غير صحيحة</span>
+      </p>
+
+      <Dialog open={!!detailsStage} title={detailsStage ? "المرحلة " + detailsStage.stageId + " — " + detailsStage.title : ""} onClose={() => setDetailsFor("")} size="md" initialFocusRef={readOnly ? undefined : noteRef}>
+        {detailsStage && (
+          <div id={"eb-stage-" + detailsStage.stageId} className="eb-stage-detail">
+            {detailsStage.description ? <p className="eb-muted">{detailsStage.description}</p> : null}
+            {perf && (
+              <p className="eb-stage-score">
+                <span>العلامة: <strong dir="ltr">{fmtStageScore(detailsEntry)}</strong></span>
+                {detailsValue && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(detailsValue.contribution)} / {fmtContribution(detailsValue.maxContribution)}</strong></span>}
+                {detailsValue && !detailsValue.counted && typeof detailsEntry?.score === "number" && <small className="eb-muted">تُحتسب عند اعتماد المرحلة</small>}
+              </p>
+            )}
+            {readOnly ? (
+              detailsEntry?.note ? <p className="eb-stage-note-view">ملاحظة المعلم: {detailsEntry.note}</p> : <small className="eb-muted">لا توجد ملاحظة.</small>
+            ) : (
+              <>
+                <label className="eb-field eb-stage-note-edit">ملاحظة المعلم
+                  <textarea ref={noteRef} value={detailsNote} onChange={e => { const v = e.target.value; setNoteDrafts(prev => ({ ...prev, [detailsStage.stageId]: v })); }} placeholder="اكتب ملاحظة للطالب..." rows={3} />
+                </label>
+                <div className="eb-stage-note-actions">
+                  <button type="button" className="eb-button is-small" disabled={detailsNoteBusy || detailsNote === (detailsEntry?.note || "")} onClick={() => writeSingle(detailsStage, { note: detailsNote })}>{detailsNoteBusy ? SAVE_LABELS.saving : "حفظ الملاحظة"}</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </Dialog>
 
       <section className="eb-stage-timeline" aria-labelledby="eb-stage-timeline-title">
         <h3 id="eb-stage-timeline-title" className="eb-subheading">أحدث الأحداث</h3>

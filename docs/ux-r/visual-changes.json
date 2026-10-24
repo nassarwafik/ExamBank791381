@@ -185,6 +185,11 @@
       "page": "project-matrix",
       "viewport": "all",
       "reason": "Phase G1 — «جدول العلامات» becomes the class matrix: the whole track with group bands, a «منجز» toggle beside each score, the approve-on-save switch, filters, column menus and the server progress · grade at the end of each row (owner decision of 2026-10-23)."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "all",
+      "reason": "Phase G2 — the student profile’s collapsible stage sections become one compact table: الموضوع | منجز؟ | العلامة من 100 | الموزونة | الحالة | إجراءات, with one save bar above it (owner decisions D2 and D4 of 2026-10-23)."
     }
   ]
 }

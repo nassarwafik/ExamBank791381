@@ -16,7 +16,7 @@ import { configure } from "@testing-library/react";
 configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];
@@ -48,6 +48,11 @@ function installFetch() {
     if (url.includes("/api/student-")) return res(200, { ok: true, enrolled: false, materials: [], items: [], messages: { totalUnread: 0, totalCapped: false, directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false } }, events: { unread: 0, capped: false }, bell: { unread: 0, capped: false } });
     if (url.includes("/api/project-tracker")) {
       if (method === "POST") {
+        if (body?.action === "score.bulk" || body?.action === "progress.bulk") {                       // Phase G2: the table's save bar
+          const items = (body.items as { studentId: string; stageId: string }[]) || [];
+          if (body.action === "progress.bulk") { ready -= items.length; return res(200, { ok: true, readyChanged: true, results: items.map(it => ({ ...it, ok: true, changed: true })) }); }
+          return res(200, { ok: true, results: items.map(it => ({ ...it, ok: true, changed: true })), totals: { requested: items.length, changed: items.length, unchanged: 0, failed: 0 } });
+        }
         if (body?.action === "progress.update" || body?.action === "score.set" || body?.action === "score.clear") {   // Phase 9B: a score is the narrow score action
           if (body.status !== undefined) ready -= 1;                                           // server-side truth after the approval
           return res(200, { ok: true, summary: { ...CARD, readyForReviewCount: 0 }, stage: { stageId: "B01", status: body.status ?? "ready_for_review", score: body.score !== undefined ? Number(body.score) : undefined, note: body.note ?? "", updatedAt: "2026-03-05T10:00:00.000Z" }, nextStages: { book: null }, performance: null, balance: null, history: [] });
@@ -162,15 +167,17 @@ describe("8E-1 D/E — mutations: a status change refreshes once, a score-only s
     const row = await openProjectStudents();
     const base = summaryReads();
     expect(base).toBe(2);                                                                            // login + entering Projects
-    fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "88" } });
-    fireEvent.click(within(row).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
-    await screen.findByText("تم حفظ العلامة.");
-    expect(posts()).toEqual([{ projectCode: "794589", action: "score.set", classId: "c1", studentId: "s1", stageId: "B01", score: "88" }]);
+    fireEvent.change(within(row).getByRole("textbox"), { target: { value: "88" } });
+    fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
+    await screen.findByText("حُفظت 1 علامة.");
+    expect(posts()).toEqual([{ projectCode: "794589", action: "score.bulk", classId: "c1", items: [{ studentId: "s1", stageId: "B01", score: 88, expected: null }] }]);
     await settle();
     expect(summaryReads()).toBe(base);                                                               // score-only: no refresh
-    fireEvent.click(within(row).getByRole("button", { name: "اعتماد المرحلة B01" }));
+    const fresh = document.querySelector('[data-stage-id="B01"]') as HTMLElement;                    // the row after the re-read
+    fireEvent.click(within(fresh).getByRole("button", { name: "B01: منجز" }));
+    fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
     await waitFor(() => expect(posts()).toHaveLength(2));
-    expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "approved" });
+    expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.bulk", classId: "c1", items: [{ studentId: "s1", stageId: "B01" }], status: "approved" });
     await waitFor(() => expect(summaryReads()).toBe(base + 1));                                      // exactly one refresh
     await waitFor(() => expect(projectsNav().textContent).toMatch(/1\s*مراحل بانتظار الفحص/));
     await settle();

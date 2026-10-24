@@ -59,7 +59,7 @@ describe("UX-R10 — the hub and the workspace", () => {
 
   it("the toolbar and the workspace panels are flat 8 px panels without a resting shadow", () => {
     expect(rule(".eb-project-workspace .eb-project-toolbar")).toBe(" border-radius:var(--eb-r); box-shadow:none; ");
-    const panels = rule(".eb-project-workspace :is(.eb-project-progress-card, .eb-student-card, .eb-student-profile-summary, .eb-stage-groups, .eb-stage-timeline, .eb-heatmap-card, .eb-stage-settings-bar, .eb-stage-settings-group)");
+    const panels = rule(".eb-project-workspace :is(.eb-project-progress-card, .eb-student-card, .eb-student-profile-summary, .eb-stage-table-wrap, .eb-stage-timeline, .eb-heatmap-card, .eb-stage-settings-bar, .eb-stage-settings-group)");
     expect(panels).toBe(" border-radius:var(--eb-r); box-shadow:none; ");
   });
 

@@ -10,7 +10,7 @@ import { render, cleanup, screen, fireEvent, waitFor, within, act, configure } f
 configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];
@@ -59,9 +59,10 @@ function installFetch() {
     if (url.includes("/api/project-tracker")) {
       const u = new URL(url, "http://x"), resource = u.searchParams.get("resource"), code = u.searchParams.get("projectCode") || "";
       if (method === "POST") {
-        if (body?.action === "score.set") {
-          const sid = String(body.studentId); fullyGraded.add(sid);
-          return res(200, { ok: true, action: "score.set", summary: card(sid), stage: { stageId: String(body.stageId), status: "in_progress", score: Number(body.score), updatedAt: "2026-03-05T10:00:00.000Z" }, evaluation: evaluation(sid), performance: null, history: [] });
+        if (body?.action === "score.bulk") {                                                            // Phase G2: the table's save bar
+          const items = (body.items as { studentId: string; stageId: string }[]) || [];
+          for (const it of items) fullyGraded.add(String(it.studentId));
+          return res(200, { ok: true, results: items.map(it => ({ ...it, ok: true, changed: true })), totals: { requested: items.length, changed: items.length, unchanged: 0, failed: 0 } });
         }
         return res(400, { ok: false, error: "x" });
       }
@@ -94,7 +95,8 @@ const sidebar = () => screen.getByRole("complementary", { name: "التنقل ا
 const navButton = (label: string) => within(sidebar()).getByRole("button", { name: new RegExp("^" + label) });
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
 const profileOf = (sid: string) => screen.findByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES[sid] });
-const scoreInput = (stageId: string) => within(document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement).getByRole("spinbutton") as HTMLInputElement;
+const scoreInput = (stageId: string) => within(document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement).getByRole("textbox") as HTMLInputElement;
+const saveScores = () => fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
 const nextBtn = () => within(banner()!).getByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ });
 const prevBtn = () => within(banner()!).getByRole("button", { name: /^الطالب السابق في قائمة التقييم/ });
 async function login() {
@@ -182,13 +184,13 @@ describe("9F App — the evaluation queue session", () => {
     await startAt("s4");
     await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
     fireEvent.change(scoreInput("B01"), { target: { value: "90" } });
-    fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
-    await screen.findByText("تم حفظ العلامة.");
+    saveScores();
+    await screen.findByText("حُفظت 1 علامة.");
     await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم."));
     expect(within(banner()!).queryByRole("button", { name: /التالي في قائمة التقييم|الطالب التالي:/ })).toBeNull();
     expect(prevBtn()).toBeTruthy();
     await settle();
-    expect(studentReads()).toEqual(["883589/c9/s4"]);                                                   // no automatic navigation
+    expect(studentReads()).toEqual(["883589/c9/s4", "883589/c9/s4"]);                                   // no automatic navigation (G2: the save re-reads s4 itself)
     expect(screen.getByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES.s4 })).toBeTruthy();
   });
   it("Q12 (review fix) B completed → CTA → C with a DEFERRED student response: C is never marked completed from B's detail, C's focus runs on C's own detail, and C stays in the queue (previous from s4 returns to C, not skipping it)", async () => {

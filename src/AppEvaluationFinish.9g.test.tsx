@@ -10,7 +10,7 @@ import { render, cleanup, screen, fireEvent, waitFor, within, act, configure } f
 configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];
@@ -59,9 +59,10 @@ function installFetch() {
     if (url.includes("/api/project-tracker")) {
       const u = new URL(url, "http://x"), resource = u.searchParams.get("resource"), code = u.searchParams.get("projectCode") || "";
       if (method === "POST") {
-        if (body?.action === "score.set") {
-          const sid = String(body.studentId); fullyGraded.add(sid);
-          return res(200, { ok: true, action: "score.set", summary: card(sid), stage: { stageId: String(body.stageId), status: "in_progress", score: Number(body.score), updatedAt: "2026-03-05T10:00:00.000Z" }, evaluation: evaluation(sid), performance: null, history: [] });
+        if (body?.action === "score.bulk") {                                                            // Phase G2: the table's save bar
+          const items = (body.items as { studentId: string; stageId: string }[]) || [];
+          for (const it of items) fullyGraded.add(String(it.studentId));
+          return res(200, { ok: true, results: items.map(it => ({ ...it, ok: true, changed: true })), totals: { requested: items.length, changed: items.length, unchanged: 0, failed: 0 } });
         }
         return res(400, { ok: false, error: "x" });
       }
@@ -92,7 +93,8 @@ const sidebar = () => screen.getByRole("complementary", { name: "التنقل ا
 const navButton = (label: string) => within(sidebar()).getByRole("button", { name: new RegExp("^" + label) });
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
 const profileOf = (sid: string) => screen.findByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES[sid] });
-const scoreInput = (stageId: string) => within(document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement).getByRole("spinbutton") as HTMLInputElement;
+const scoreInput = (stageId: string) => within(document.querySelector('[data-stage-id="' + stageId + '"]') as HTMLElement).getByRole("textbox") as HTMLInputElement;
+const saveScores = () => fireEvent.click(within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }));
 const nextBtn = () => within(banner()!).getByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ });
 const prevBtn = () => within(banner()!).getByRole("button", { name: /^الطالب السابق في قائمة التقييم/ });
 async function login() {
@@ -134,10 +136,10 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
     await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
     expect(finish()).toBeNull();                                                                         // last item but still ungraded → no finish
     fireEvent.change(scoreInput("B01"), { target: { value: "90" } });
-    fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+    saveScores();
     const seen: string[] = []; const mo = new MutationObserver(() => { const f = finish(); if (f && !seen.includes(f.textContent!)) seen.push(f.textContent!); });
     mo.observe(document.body, { subtree: true, childList: true, characterData: true });
-    await screen.findByText("تم حفظ العلامة.");
+    await screen.findByText("حُفظت 1 علامة.");
     await waitFor(() => expect(finish()).toBeTruthy());
     mo.disconnect();
     expect(seen.every(t => t.includes("تم تقييم 2 من 4 طلاب"))).toBe(true);                             // never rendered with the pre-record «1 من 4»
@@ -145,7 +147,7 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
     expect(finish()!.textContent).toContain("بقي طالبان في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
     await settle();
     expect(screen.getByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES.s4 })).toBeTruthy();  // still here: nothing navigated
-    expect(studentReads()).toEqual(["899373/c1/s2", "883589/c2/s3", "883589/c9/s4"]);
+    expect(studentReads()).toEqual(["899373/c1/s2", "883589/c2/s3", "883589/c9/s4", "883589/c9/s4"]);   // G2: the save re-reads s4 itself — no move
   });
   it("G6 (review) queue s1→s2→s3→s4, s4 complete: open s4 → panel; previous → s3 → panel gone; complete s3 → STILL no panel (s3 is not terminal); «العودة إلى آخر طالب في الجلسة» → s4 reopens → panel only there, counts 2 من 4 with no stale flash", async () => {
     fullyGraded.add("s4");
@@ -165,8 +167,8 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
       expect(within(banner()!).queryByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ })).toBeNull();   // s4 completed → skipped (9F)
       expect(within(banner()!).queryByRole("button", { name: /^العودة إلى آخر طالب في الجلسة/ })).toBeTruthy();   // …but reachable
       fireEvent.change(scoreInput("B01"), { target: { value: "85" } });
-      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
-      await screen.findByText("تم حفظ العلامة.");
+      saveScores();
+      await screen.findByText("حُفظت 1 علامة.");
       await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم."));
       await settle();
       expect(finish()).toBeNull();                                                                       // s3 complete, next === null, but NOT the terminal item → no panel
@@ -186,7 +188,7 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
       expect(seen.filter(t => t.includes("1 من 4")).length).toBe(1);                                     // the first visit's honest count…
       expect(seen.filter(t => t.includes("2 من 4")).length).toBe(1);                                     // …then the updated one, nothing else
       expect(seen.some(t => t.includes("0 من 4") || t.includes("3 من 4"))).toBe(false);                  // never a stale or predicted count
-      expect(studentReads()).toEqual(["883589/c9/s4", "883589/c2/s3", "883589/c9/s4"]);                // s4 was opened again through the drill path
+      expect(studentReads()).toEqual(["883589/c9/s4", "883589/c2/s3", "883589/c2/s3", "883589/c9/s4"]);   // G2: s3 re-read by its save; s4 opened again through the drill path
     } finally { mo.disconnect(); }
   });
   it("G7 «العودة إلى لوحة اليوم» ends the session and shows the Today Hub through the existing dashboard navigation (its normal mount read, no extra fetch); a manual project/student open afterwards shows no queue UI", async () => {
@@ -252,7 +254,7 @@ describe("9G App — a queue move right after the CTA keeps the completion the p
       fireEvent.click(nextBtn()); await profileOf("s4");
       await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
       fireEvent.change(scoreInput("B01"), { target: { value: "90" } });
-      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+      saveScores();
       await waitFor(() => expect(finish()).toBeTruthy());
       expect(finish()!.getAttribute("data-completed")).toBe("2");
       expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");
@@ -268,7 +270,7 @@ describe("9G App — a queue move right after the CTA keeps the completion the p
     const stop = pressAfterCta("لا يوجد طالب آخر في قائمة التقييم", () => within(banner()!).getByRole("button", { name: "العودة إلى آخر طالب في الجلسة: " + NAMES.s4 }), TIMINGS["one scheduler task later"]);
     try {
       fireEvent.change(scoreInput("B01"), { target: { value: "85" } });
-      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+      saveScores();
       await profileOf("s4");
     } finally { stop(); }
     await waitFor(() => expect(finish()).toBeTruthy());

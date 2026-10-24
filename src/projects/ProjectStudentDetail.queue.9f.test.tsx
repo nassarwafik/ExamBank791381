@@ -11,7 +11,7 @@ import ProjectStudentDetail from "./ProjectStudentDetail";
 import { queueNeighbour, queueView, type ProjectEvaluationQueue, type ProjectEvaluationQueueView } from "./drillTarget";
 import type { TrackMeta } from "./types";
 // Phase P8 — these tests pin the switch-OFF contract of «اعتماد المرحلة عند حفظ العلامة» (a score save never changes the
-// status: score.set only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
+// status: score.bulk only); the default-ON behaviour is pinned by src/projects/ProjectApproveOnSave.p8.test.tsx.
 beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 
 const nodeRequire = createRequire(import.meta.url);
@@ -54,6 +54,7 @@ const SUM = (total: number, completed = 0) => ({ total, completed, remaining: to
 const END = (isTerminalItem = false, over: Partial<Pick<ProjectEvaluationQueueView, "terminal" | "currentCompleted" | "terminalCompleted">> = {}) => ({ isTerminalItem, terminal: item("s9", "آخر"), currentCompleted: false, terminalCompleted: false, ...over });
 const Q: ProjectEvaluationQueueView = { position: 2, total: 5, previous: item("s0", "أحمد"), next: item("s2", "ليان"), summary: SUM(5), ...END() };
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
+const saveBtn = () => within(screen.getByRole("region", { name: "حفظ تغييرات الطالب" })).getByRole("button", { name: /^حفظ التغييرات/ }) as HTMLButtonElement;
 const heading = (sid = "s1") => screen.findByRole("heading", { level: 2, name: "ملف المشروع: طالب " + sid });
 const flush = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
 const el = (seq: number, queue: ProjectEvaluationQueueView | null, over: Partial<{ onMove: (d: -1 | 1) => void; onComplete: () => void; sid: string; cid: string }> = {}) =>
@@ -88,7 +89,7 @@ describe("9F review fix — a previous student's detail can never act as the cur
     const queueAt = (pos: number, prev: string | null, next: string | null): ProjectEvaluationQueueView => ({ position: pos, total: 3, previous: prev ? item(prev, "طالب " + prev) : null, next: next ? item(next, "طالب " + next) : null, summary: SUM(3), ...END(pos === 3) });
     const view = render(el(1, queueAt(1, null, "s2"), { sid: "s1", onComplete, onMove }));
     await heading("s1");
-    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[1] + '"]') as HTMLElement).getByRole("spinbutton")));
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[1] + '"]') as HTMLElement).getByRole("textbox")));
     expect(onComplete).not.toHaveBeenCalled();
     // → B (a fresh seq, as App does): completion is reported exactly once, for B
     view.rerender(el(2, queueAt(2, "s1", "s3"), { sid: "s2", onComplete, onMove }));
@@ -110,7 +111,7 @@ describe("9F review fix — a previous student's detail can never act as the cur
     // release C: its own detail arrives → its own first ungraded stage (active[2]) is focused, C is not completed
     await act(async () => { hold.release(); });
     await heading("s3");
-    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[2] + '"]') as HTMLElement).getByRole("spinbutton")));
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[2] + '"]') as HTMLElement).getByRole("textbox")));
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(banner()!.textContent).toContain("الطالب 3 من 3 — بقيت");
@@ -171,11 +172,11 @@ describe("9F ProjectStudentDetail — queue context in the focus banner", () => 
     render(el(1, Q, { onComplete, onMove }));
     await heading();
     const last = active[active.length - 1];
-    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("spinbutton")));
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("textbox")));
     expect(onComplete).not.toHaveBeenCalled();
     fireEvent.change(document.activeElement as HTMLInputElement, { target: { value: "75" } });
-    fireEvent.click(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة " + last }));
-    await screen.findByText("تم حفظ العلامة.");
+    fireEvent.click(saveBtn());
+    await screen.findByText("حُفظت 1 علامة.");
     await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — انتقل إلى الطالب التالي."));
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onMove).not.toHaveBeenCalled();
@@ -189,8 +190,8 @@ describe("9F ProjectStudentDetail — queue context in the focus banner", () => 
     server({ [NS.progressName("c9", "s9")]: progress("c9", "s9", { [active[0]]: 40 }) });
     render(el(1, Q, { sid: "s9", cid: "c9" }));
     await heading("s9"); await waitFor(() => expect(banner()).toBeTruthy());
-    expect(screen.queryByRole("spinbutton")).toBeNull();
-    expect(screen.queryByRole("button", { name: /حفظ علامة|اعتماد المرحلة|مسح العلامة|المرحلة التالية غير المقيّمة/ })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^حفظ التغييرات|: منجز$|مسح العلامة|المرحلة التالية غير المقيّمة/ })).toBeNull();
     expect(within(banner()!).getByRole("button", { name: /التالي في قائمة التقييم/ })).toBeTruthy();
     expect(within(banner()!).getByRole("button", { name: /السابق في قائمة التقييم/ })).toBeTruthy();
   });
