@@ -1,0 +1,238 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 31 «الأساسيات».
+//
+// Verbatim conversion of booklet PDF pages 93–96 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// runs are `code`, printed box labels are the callout titles. The part of page 93 above the header box belongs to
+// section 30 and is not part of this module.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m31: ContentModule = {
+  id: "791381s-m31",
+  title: "الأساسيات",
+  order: 31,
+  lessons: [
+    {
+      id: "791381s-m31-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m31-l00-p01",
+          title: "الأساسيات",
+          order: 1,
+          layout: "opener",
+          source: src(93),
+          blocks: [
+            {
+              id: "m31-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الملخص الشامل ① · كتاب ص 230–236", unitNumber: "31", title: "الأساسيات",
+              subtitle: "IP وMAC · فئات العناوين · أنظمة العدّ · الأجهزة · الكوابل · أنواع الشبكات",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m31-l01",
+      title: "الأساسيات",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m31-l01-p01",
+          title: "المفاهيم الأولى: IP و MAC",
+          order: 1,
+          source: src(93),
+          blocks: [
+            {
+              id: "m31-l01-p01-intro", type: "text", origin: "book",
+              spans: [{ text: "في آخر الكتاب ملخّص شامل يجمع أهم المفاهيم والأوامر في سبعة أقسام. هنا نرتّبه في جداول قصيرة للحفظ والمراجعة.", style: "strong" }],
+            },
+            {
+              id: "m31-l01-p01-table", type: "table", origin: "book",
+              headers: ["الخاصية", "القيمة"],
+              rows: [
+                ["IP · عنوان الجهاز", "عنوان منطقي بطول 32 bit يحدّد الجهاز."],
+                ["IP خاص Private", "10.0.0.0/8 · 172.16.0.0/12 · 192.168.0.0/16 (داخل الشبكة فقط)"],
+                ["MAC · عنوان البطاقة", "عنوان فيزيائي ثابت بطول 48 bit = 6 أزواج Hex."],
+                ["Subnet Mask · القناع", "يقسّم العنوان إلى جزء شبكة وجزء أجهزة."],
+                ["Gateway · البوابة", "مخرج الشبكة إلى الإنترنت = عنوان الراوتر."],
+              ],
+            },
+            {
+              id: "m31-l01-p01-assign", type: "callout", origin: "book", kind: "summary", title: "التعيين",
+              spans: [
+                { text: "Static", style: "strong" },
+                { text: " = يُدخَل يدويًا ولا يتغيّر. " },
+                { text: "DHCP", style: "strong" },
+                { text: " = يُعطى تلقائيًا (IP · Gateway · Subnet · DNS)." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m31-l01-p02",
+          title: "فئات عناوين IPv4",
+          order: 2,
+          source: src(94),
+          blocks: [
+            {
+              id: "m31-l01-p02-table", type: "table", origin: "book",
+              headers: ["الفئة", "النطاق", "Subnet Mask", "عدد الأجهزة"],
+              rows: [
+                ["Class A", "1.0.0.0 – 126.255.255.255", "255.0.0.0 /8", "16,777,214"],
+                ["Class B", "128.0.0.0 – 191.255.255.255", "255.255.0.0 /16", "65,534"],
+                ["Class C", "192.0.0.0 – 223.255.255.255", "255.255.255.0 /24", "254"],
+              ],
+              columnDirs: ["rtl", "ltr", "ltr", "ltr"],
+            },
+            { id: "m31-l01-p02-notes-h", type: "heading", origin: "book", level: 4, text: "ملاحظتان" },
+            {
+              id: "m31-l01-p02-note1", type: "text", origin: "book",
+              spans: [
+                { text: "العناوين " },
+                { text: "127.x", style: "strong" },
+                { text: " محجوزة لـ Loopback (لذلك تنتهي الفئة A عند 126)." },
+              ],
+            },
+            {
+              id: "m31-l01-p02-note2", type: "text", origin: "book",
+              spans: [
+                { text: "عدد الأجهزة = " },
+                { text: "2^(host) − 2", style: "code" },
+                { text: " بعد طرح عنوان الشبكة وعنوان البث." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m31-l01-p03",
+          title: "أنظمة العدّ والتحويل",
+          order: 3,
+          source: src(94),
+          blocks: [
+            {
+              id: "m31-l01-p03-table", type: "table", origin: "book",
+              headers: ["النظام", "الأساس", "الأرقام", "الاستخدام"],
+              rows: [
+                ["العشري Decimal", "10", "0 – 9", "الاستخدام اليومي"],
+                ["الثنائي Binary", "2", "0 , 1", "لغة الحاسوب"],
+                ["السادس عشر Hex", "16", "0–9 , A–F", "عناوين MAC · IPv6"],
+              ],
+              columnDirs: ["rtl", "rtl", "ltr", "rtl"],
+            },
+            {
+              id: "m31-l01-p03-boxes-intro", type: "text", origin: "book",
+              spans: [
+                { text: "طريقة الصناديق", style: "strong" },
+                { text: " (العشري ⇄ الثنائي): نضع 1 تحت الصناديق التي مجموعها يساوي الرقم." },
+              ],
+            },
+            {
+              id: "m31-l01-p03-boxes", type: "table", origin: "book",
+              headers: ["1", "2", "4", "8", "16", "32", "64", "128"],
+              rows: [["0", "0", "0", "0", "0", "0", "1", "1"]],
+            },
+            {
+              id: "m31-l01-p03-example", type: "text", origin: "book",
+              spans: [
+                { text: "مثال: ", style: "strong" },
+                { text: "192 = 64 + 128 = 11000000", style: "code", dir: "rtl" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m31-l01-p04",
+          title: "أجهزة الشبكة",
+          order: 4,
+          source: src(94, 95),
+          blocks: [
+            {
+              id: "m31-l01-p04-table", type: "table", origin: "book",
+              headers: ["الجهاز", "الوظيفة", "الطبقة"],
+              rows: [
+                ["Hub", "يرسل للجميع (قديم).", "Physical"],
+                ["Switch", "يرسل للمطلوب فقط ويحفظ MAC.", "Data Link"],
+                ["Router", "يربط شبكات مختلفة (يفهم IP).", "Network"],
+                ["Access Point", "نقطة وصول WiFi لاسلكية.", "Data Link"],
+                ["Modem", "يحوّل الإشارة (رقمي ⇄ تناظري).", "Physical"],
+              ],
+            },
+            {
+              id: "m31-l01-p04-rule", type: "text", origin: "book",
+              spans: [{ text: "Hub يرسل للكل · Switch للمقصود · Router بين الشبكات", style: "strong" }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m31-l01-p05",
+          title: "الكوابل ووسائط الاتصال",
+          order: 5,
+          source: src(95),
+          blocks: [
+            {
+              id: "m31-l01-p05-cables", type: "table", origin: "book",
+              headers: ["الكابل", "الوصف"],
+              rows: [
+                ["UTP", "نحاسي بدون حماية. الأشيع (حتى 100م بسرعة 1 Gbps)."],
+                ["STP", "نحاسي مع حماية ضد التشويش."],
+                ["Fiber", "ألياف ضوئية. مسافات طويلة وسرعة عالية."],
+              ],
+            },
+            {
+              id: "m31-l01-p05-wiring", type: "table", origin: "book",
+              headers: ["طريقة التوصيل", "تربط بين"],
+              rows: [
+                ["Straight · مستقيم", "جهازين مختلفين، مثل: حاسوب ← سويتش."],
+                ["Cross · متقاطع", "جهازين من نفس النوع، مثل: حاسوب ← حاسوب."],
+                ["Roll-over · كونسول", "الحاسوب بمنفذ Console في الراوتر أو السويتش لبرمجته."],
+              ],
+            },
+            {
+              id: "m31-l01-p05-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "الألياف " },
+                { text: "Fiber", style: "strong" },
+                { text: " هي الأسرع والأبعد والأكثر مقاومة للتشويش." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m31-l01-p06",
+          title: "أنواع الشبكات حسب النطاق",
+          order: 6,
+          source: src(95, 96),
+          blocks: [
+            {
+              id: "m31-l01-p06-table", type: "table", origin: "book",
+              headers: ["الرمز", "الاسم الكامل", "المدى"],
+              rows: [
+                ["PAN", "Personal Area Network", "بلوتوث (أمتار)"],
+                ["LAN", "Local Area Network", "مكتب / بيت (محلية)"],
+                ["MAN", "Metropolitan Area Network", "مدينة"],
+                ["WAN", "Wide Area Network", "إنترنت (دول)"],
+                ["WLAN", "Wireless LAN", "محلية لاسلكية (WiFi)"],
+              ],
+            },
+            {
+              id: "m31-l01-p06-idea", type: "callout", origin: "book", kind: "summary", title: "الفكرة",
+              spans: [
+                { text: "التصنيف حسب " },
+                { text: "المسافة", style: "strong" },
+                { text: ": من أمتار في PAN إلى العالم كله في WAN." },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m31;

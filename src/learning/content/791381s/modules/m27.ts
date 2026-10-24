@@ -1,0 +1,241 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 27 «مفاهيم التوجيه Routing».
+//
+// Verbatim conversion of booklet PDF pages 82–84 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m27: ContentModule = {
+  id: "791381s-m27",
+  title: "مفاهيم التوجيه Routing",
+  order: 27,
+  lessons: [
+    {
+      id: "791381s-m27-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m27-l00-p01",
+          title: "مفاهيم التوجيه Routing",
+          order: 1,
+          layout: "opener",
+          source: src(82),
+          blocks: [
+            {
+              id: "m27-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الدفعة السادسة · كتاب ص 210–213", unitNumber: "27", title: "مفاهيم التوجيه Routing",
+              subtitle: "كيف يختار الراوتر الطريق؟ وما الفرق بين Static وOSPF وEIGRP؟",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m27-l01",
+      title: "مفاهيم التوجيه Routing",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m27-l01-p01",
+          title: "ما هو التوجيه؟",
+          order: 1,
+          source: src(82),
+          blocks: [
+            {
+              id: "m27-l01-p01-def", type: "text", origin: "book",
+              spans: [{ text: "التوجيه = اختيار الطريق الذي تسلكه البيانات للوصول إلى الشبكة المطلوبة.", style: "strong" }],
+            },
+            {
+              id: "m27-l01-p01-intro", type: "text", origin: "book",
+              spans: [
+                { text: "الراوتر يشبه " },
+                { text: "شرطي المرور", style: "strong" },
+                { text: ": يقرأ عنوان IP الوجهة في الحزمة، ثم يرسلها في أفضل طريق. يعرف الراوتر الطرق من " },
+                { text: "جدول التوجيه", style: "strong" },
+                { text: " (Routing Table)." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m27-l01-p02",
+          title: "ثلاث طرق للتوجيه",
+          order: 2,
+          source: src(82),
+          blocks: [
+            {
+              id: "m27-l01-p02-cards", type: "list", origin: "book", variant: "cards",
+              items: [
+                {
+                  id: "m27-l01-p02-c1", term: "Static Route",
+                  text: [{ text: "مسار يدوي يكتبه مدير الشبكة بنفسه. " }, { text: "يدوي · بسيط", style: "strong" }],
+                },
+                {
+                  id: "m27-l01-p02-c2", term: "OSPF",
+                  text: [{ text: "بروتوكول ذكي يختار الطريق حسب السرعة Bandwidth. " }, { text: "Link-State", style: "strong" }],
+                },
+                {
+                  id: "m27-l01-p02-c3", term: "EIGRP",
+                  text: [{ text: "بروتوكول من Cisco يعتمد على Bandwidth + Delay. " }, { text: "Cisco · متطوّر", style: "strong" }],
+                },
+              ],
+            },
+            {
+              id: "m27-l01-p02-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "Static", style: "strong" },
+                { text: " = يدوي. أما " },
+                { text: "OSPF", style: "strong" },
+                { text: " و" },
+                { text: "EIGRP", style: "strong" },
+                { text: " فهما توجيه تلقائي (Dynamic): الراوترات تتبادل معلومات الشبكات وحدها." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m27-l01-p03",
+          title: "التوجيه الثابت Static Route",
+          order: 3,
+          source: src(82, 83),
+          blocks: [
+            {
+              id: "m27-l01-p03-table", type: "table", origin: "book",
+              headers: ["المزايا ✓", "العيوب ✗"],
+              rows: [
+                ["يتم تحديد المسار يدويًا بوضوح.", "غير مناسب للشبكات الكبيرة."],
+                ["مناسب للشبكات الصغيرة والبسيطة.", "أي تغيير يحتاج تعديلًا يدويًا."],
+                ["لا يستهلك موارد كثيرة من الراوتر.", "إذا نسي المدير تحديثه قد يحدث انقطاع."],
+              ],
+            },
+            { id: "m27-l01-p03-cli-h", type: "heading", origin: "book", level: 4, text: "Router CLI", dir: "ltr" },
+            {
+              id: "m27-l01-p03-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: "① Router(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2",
+            },
+            {
+              id: "m27-l01-p03-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m27-l01-p03-s1", text: [{ text: "ip route", style: "strong" }, { text: ": أمر كتابة مسار ثابت." }] },
+                {
+                  id: "m27-l01-p03-s2",
+                  text: [{ text: "192.168.2.0 255.255.255.0", style: "strong" }, { text: ": الشبكة البعيدة التي نريد الوصول إليها، وقناعها." }],
+                },
+                {
+                  id: "m27-l01-p03-s3",
+                  text: [{ text: "10.0.0.2", style: "strong" }, { text: ": عنوان الراوتر التالي (Next Hop) الذي نرسل له الحزم." }],
+                },
+              ],
+            },
+            {
+              id: "m27-l01-p03-when", type: "callout", origin: "book", kind: "summary", title: "متى نستعمل Static؟",
+              spans: [{ text: "في " }, { text: "الشبكات الصغيرة الثابتة", style: "strong" }, { text: " التي لا تتغيّر كثيرًا." }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m27-l01-p04",
+          title: "Distance Vector و Link-State",
+          order: 4,
+          source: src(83),
+          blocks: [
+            {
+              id: "m27-l01-p04-intro", type: "text", origin: "book",
+              spans: [{ text: "البروتوكولات التلقائية نوعان، حسب الطريقة التي تعرف بها الطرق:" }],
+            },
+            {
+              id: "m27-l01-p04-table", type: "table", origin: "book",
+              headers: ["النوع", "كيف يعمل؟", "مثال"],
+              rows: [
+                ["Distance Vector", "يعتمد على Metric ويرسل تحديثات دورية (كل فترة).", "EIGRP"],
+                ["Link-State", "يجمع معلومات عن الشبكة كلها ويرسل تحديثات عند التغيير فقط.", "OSPF"],
+              ],
+            },
+            {
+              id: "m27-l01-p04-student", type: "callout", origin: "book", kind: "summary", title: "للطالب",
+              spans: [
+                { text: "ميّز فقط: " },
+                { text: "OSPF = Link-State", style: "strong" },
+                { text: "، و" },
+                { text: "EIGRP = Distance Vector متطوّر", style: "strong" },
+                { text: " — ويسمّى أحيانًا " },
+                { text: "هجينًا (Hybrid)", style: "strong" },
+                { text: " لأنه يجمع صفات النوعين." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m27-l01-p05",
+          title: "المقياس Metric",
+          order: 5,
+          source: src(83, 84),
+          blocks: [
+            {
+              id: "m27-l01-p05-def", type: "text", origin: "book",
+              spans: [{ text: "Metric = قيمة تساعد الراوتر على اختيار أفضل طريق للوصول. الأصغر أفضل.", style: "strong" }],
+            },
+            {
+              id: "m27-l01-p05-table", type: "table", origin: "book",
+              headers: ["البروتوكول", "على ماذا يعتمد Metric؟"],
+              rows: [
+                ["OSPF", "على Bandwidth (سرعة الخط) فقط — ويسمّى Cost."],
+                ["EIGRP", "على Bandwidth + Delay (السرعة + التأخير)."],
+                ["RIP", "على عدد القفزات Hops (عدد الراوترات في الطريق)."],
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m27-l01-p06",
+          title: "المسافة الإدارية AD",
+          order: 6,
+          source: src(84),
+          blocks: [
+            {
+              id: "m27-l01-p06-def", type: "text", origin: "book",
+              spans: [{ text: "AD (Administrative Distance) = درجة «الثقة» في مصدر المسار. كلما قلّ الرقم زادت الأولوية.", style: "strong" }],
+            },
+            {
+              id: "m27-l01-p06-intro", type: "text", origin: "book",
+              spans: [
+                { text: "إذا عرف الراوتر " },
+                { text: "نفس الشبكة", style: "strong" },
+                { text: " من مصدرين مختلفين (مثلًا من OSPF ومن EIGRP)، يختار المصدر صاحب " },
+                { text: "AD الأصغر", style: "strong" },
+                { text: "." },
+              ],
+            },
+            {
+              id: "m27-l01-p06-table", type: "table", origin: "book",
+              headers: ["المصدر", "Connected", "Static", "EIGRP", "OSPF", "RIP"],
+              rows: [["AD", "0", "1", "90", "110", "120"]],
+            },
+            {
+              id: "m27-l01-p06-order", type: "text", origin: "book",
+              spans: [{ text: "الأولوية: Connected 0 \u200F←\u200F Static 1 \u200F←\u200F EIGRP 90 \u200F←\u200F OSPF 110 \u200F←\u200F RIP 120", style: "strong" }],
+            },
+            {
+              id: "m27-l01-p06-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "Metric", style: "strong" },
+                { text: " يقارن بين طرق داخل نفس البروتوكول، و" },
+                { text: "AD", style: "strong" },
+                { text: " يقارن بين بروتوكولات مختلفة. وفي الاثنين: " },
+                { text: "الأصغر أفضل", style: "strong" },
+                { text: "." },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m27;

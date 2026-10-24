@@ -1,0 +1,216 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 17 «Native و Tagged و Untagged».
+//
+// Verbatim conversion of booklet PDF pages 48–51 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// runs are `code`, printed box labels are the callout titles. The tagged-packet drawing is a crop of the booklet itself.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m17: ContentModule = {
+  id: "791381s-m17",
+  title: "Native و Tagged و Untagged",
+  order: 17,
+  lessons: [
+    {
+      id: "791381s-m17-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m17-l00-p01",
+          title: "Native و Tagged و Untagged",
+          order: 1,
+          layout: "opener",
+          source: src(48),
+          blocks: [
+            {
+              id: "m17-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الدفعة الرابعة · كتاب ص 135–138", unitNumber: "17", title: "Native و Tagged و Untagged",
+              subtitle: "كيف يعرف السويتش لأي VLAN تنتمي كل رسالة تمرّ في كابل Trunk؟",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m17-l01",
+      title: "Native و Tagged و Untagged",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m17-l01-p01",
+          title: "ما هو الـ Tag؟",
+          order: 1,
+          source: src(48, 49),
+          blocks: [
+            {
+              id: "m17-l01-p01-def", type: "text", origin: "book",
+              spans: [{ text: "الـ Tag = علامة داخل الحزمة تخبر السويتش: هذه الحزمة تابعة لـ VLAN رقم كذا.", style: "strong" }],
+            },
+            {
+              id: "m17-l01-p01-intro", type: "text", origin: "book",
+              spans: [{ text: "في كابل Trunk تمرّ رسائل من عدة VLAN معًا. حتى لا تختلط، نلصق على كل رسالة «ملصقًا» عليه رقم VLAN — مثل ملصق اسم الصف على دفتر الطالب." }],
+            },
+            {
+              id: "m17-l01-p01-drawing", type: "diagram", origin: "book",
+              src: "/learning-assets/791381s/0cf86d4a49977049.png",
+              alt: "شريط حزمة مقسوم إلى أجزاء: «فحص»، «البيانات»، جزء مؤطّر بخط عريض مكتوب فيه «Tag» و«VLAN 10»، ثم «MAC».",
+              caption: "الحزمة مع Tag (علامة) فيها رقم VLAN",
+            },
+          ],
+        },
+        {
+          id: "791381s-m17-l01-p02",
+          title: "الأنواع الثلاثة",
+          order: 2,
+          source: src(49),
+          blocks: [
+            {
+              id: "m17-l01-p02-cards", type: "list", origin: "book", variant: "cards",
+              items: [
+                {
+                  id: "m17-l01-p02-c1", term: "Tagged · مع علامة",
+                  text: [
+                    { text: "الحزمة تحمل رقم VLAN. تُستخدم عبر وصلات " },
+                    { text: "Trunk", style: "strong" },
+                    { text: ". " },
+                    { text: "مثال:", style: "strong" },
+                    { text: " VLAN 10 و 20" },
+                  ],
+                },
+                {
+                  id: "m17-l01-p02-c2", term: "Untagged · بدون علامة",
+                  text: [
+                    { text: "الحزمة بدون Tag. تظهر في منافذ " },
+                    { text: "Access", style: "strong" },
+                    { text: " للأجهزة العادية. " },
+                    { text: "مثال:", style: "strong" },
+                    { text: " حاسوب، طابعة" },
+                  ],
+                },
+                {
+                  id: "m17-l01-p02-c3", term: "Native · الأصلية",
+                  text: [
+                    { text: "VLAN تمرّ عبر " },
+                    { text: "Trunk بدون Tag", style: "strong" },
+                    { text: "، للتوافق مع أجهزة قديمة. " },
+                    { text: "يُفضّل", style: "strong" },
+                    { text: " تغييرها من VLAN 1" },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "m17-l01-p02-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "Access", style: "strong" },
+                { text: " = لجهاز عادي (بدون Tag).   " },
+                { text: "Trunk", style: "strong" },
+                { text: " = وصلة بين أجهزة الشبكة (مع Tag)." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m17-l01-p03",
+          title: "إعداد Native VLAN",
+          order: 3,
+          source: src(49, 50),
+          blocks: [
+            {
+              id: "m17-l01-p03-intro", type: "text", origin: "book",
+              spans: [{ text: "بشكل تلقائي تكون Native VLAN هي VLAN 1. لأسباب أمنية نغيّرها إلى رقم آخر لا نستعمله للأجهزة، مثل 99." }],
+            },
+            { id: "m17-l01-p03-cli-h", type: "heading", origin: "book", level: 4, text: "Switch CLI", dir: "ltr" },
+            {
+              id: "m17-l01-p03-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: "① Switch(config)# interface f0/24\n② Switch(config-if)# switchport mode trunk\n③ Switch(config-if)# switchport trunk native vlan 99",
+            },
+            {
+              id: "m17-l01-p03-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m17-l01-p03-s1", text: [{ text: "نختار المنفذ الذي يربط بين السويتشات (F0/24)." }] },
+                { id: "m17-l01-p03-s2", text: [{ text: "نجعله Trunk حتى يمرّر عدة VLAN." }] },
+                { id: "m17-l01-p03-s3", text: [{ text: "نجعل VLAN 99 هي الـ Native بدل VLAN 1." }] },
+              ],
+            },
+            {
+              id: "m17-l01-p03-why", type: "callout", origin: "book", kind: "summary", title: "لماذا؟",
+              spans: [
+                { text: "الـ Native VLAN لا تحمل Tag على وصلة Trunk، لذلك يُفضّل " },
+                { text: "عدم تركها على VLAN 1", style: "strong" },
+                { text: " لأسباب أمنية." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m17-l01-p04",
+          title: "إعداد Tagged VLAN عبر Trunk",
+          order: 4,
+          source: src(50),
+          blocks: [
+            {
+              id: "m17-l01-p04-intro", type: "text", origin: "book",
+              spans: [{ text: "نستطيع أن نحدّد أي VLAN مسموح لها أن تمرّ في كابل Trunk، فلا يمرّ إلا ما نحتاجه." }],
+            },
+            { id: "m17-l01-p04-cli-h", type: "heading", origin: "book", level: 4, text: "Switch CLI", dir: "ltr" },
+            {
+              id: "m17-l01-p04-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: "① Switch(config)# interface f0/24\n② Switch(config-if)# switchport mode trunk\n③ Switch(config-if)# switchport trunk allowed vlan 10,20",
+            },
+            {
+              id: "m17-l01-p04-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m17-l01-p04-s1", text: [{ text: "نختار منفذ الوصلة." }] },
+                { id: "m17-l01-p04-s2", text: [{ text: "نجعله Trunk ليسمح بمرور عدة VLAN." }] },
+                { id: "m17-l01-p04-s3", text: [{ text: "allowed vlan 10,20", style: "strong" }, { text: ": نسمح فقط لـ VLAN 10 و 20 بالمرور." }] },
+              ],
+            },
+            {
+              id: "m17-l01-p04-benefit", type: "callout", origin: "book", kind: "summary", title: "الفائدة",
+              spans: [{ text: "كل حزمة تحمل Tag برقم VLAN، فيعرف السويتش في الطرف الآخر مصدر كل حزمة ويرسلها للقسم الصحيح." }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m17-l01-p05",
+          title: "إعداد Untagged / Access (تذكير)",
+          order: 5,
+          source: src(50, 51),
+          blocks: [
+            { id: "m17-l01-p05-cli-h", type: "heading", origin: "book", level: 4, text: "Switch CLI", dir: "ltr" },
+            {
+              id: "m17-l01-p05-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: "① Switch(config)# interface f0/1\n② Switch(config-if)# switchport mode access\n③ Switch(config-if)# switchport access vlan 10",
+            },
+            {
+              id: "m17-l01-p05-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m17-l01-p05-s1", text: [{ text: "منفذ لجهاز نهائي مثل حاسوب." }] },
+                { id: "m17-l01-p05-s2", text: [{ text: "المنفذ ينتمي إلى VLAN واحدة." }] },
+                { id: "m17-l01-p05-s3", text: [{ text: "الجهاز يرسل ويستقبل " }, { text: "بدون Tag", style: "strong" }, { text: "." }] },
+              ],
+            },
+            {
+              id: "m17-l01-p05-table", type: "table", origin: "book",
+              headers: ["النوع", "Access Port", "Trunk Port"],
+              rows: [
+                ["متصل بـ", "جهاز عادي (حاسوب، طابعة)", "سويتش آخر أو راوتر"],
+                ["كم VLAN؟", "VLAN واحدة", "عدة VLAN"],
+                ["Tag؟", "بدون Tag", "مع Tag (ما عدا Native)"],
+                ["الأمر", "switchport mode access", "switchport mode trunk"],
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m17;
