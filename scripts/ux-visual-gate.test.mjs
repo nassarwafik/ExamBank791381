@@ -159,6 +159,13 @@ describe("UX-R19b — the wiring", () => {
     expect(read("scripts", "capture-visual-baseline-ux-r.mjs")).toContain("same = h === last ? same + 1 : 0; last = h;");
   });
 
+  it("each page's capture is kept only once two full-page shots in a row are identical (a late-painted fixed / sticky layer)", () => {
+    const harness = read("scripts", "capture-visual-baseline-ux-r.mjs");
+    expect(harness).toContain("const next = await page.screenshot({ fullPage: true });\n      if (next.equals(shot)) break;\n      shot = next;");
+    expect(harness).toContain("fs.writeFileSync(file, shot);");
+    expect(harness).not.toContain("await page.screenshot({ path: file, fullPage: true });");
+  });
+
   it("the manifest exists and starts valid", () => {
     expect(validateManifest(JSON.parse(read("docs", "ux-r", "visual-changes.json"))).errors).toEqual([]);
   });

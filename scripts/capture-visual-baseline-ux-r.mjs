@@ -19,7 +19,8 @@
 // (state-* scenes): keyboard focus, hover, a pressed control and an open menu, the classic builder, the builder's governance panel
 // and AI composer, and the function-study widget. Two runs of the same build are pixel-identical on every page and scene.
 // UX-R19b — scripts/ux-visual-gate.mjs runs this harness on a pull request's build and its base's build and compares them; each
-// page waits for a stable document height before its full-page screenshot.
+// page waits for a stable document height before its full-page screenshot. UX-R19b-fix — and keeps the capture only once two
+// full-page shots in a row are identical, so a late-painted fixed / sticky layer is never compared.
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -708,7 +709,16 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       }
     } catch (e) { reached = false; errors.push("navigation: " + String(e).split("\n")[0]); }
     const file = path.join(out, vpName, pg.id + ".png");
-    await page.screenshot({ path: file, fullPage: true });
+    // UX-R19b-fix — Chromium sometimes paints a fixed / sticky layer late in a full-page capture (a blank sidebar rail, a sticky bar
+    // a few pixels off). Capture until two full-page shots in a row are byte-identical (at most four), as a screenshot assertion does.
+    let shot = await page.screenshot({ fullPage: true });
+    for (let i = 0; i < 3; i++) {
+      await page.waitForTimeout(150);
+      const next = await page.screenshot({ fullPage: true });
+      if (next.equals(shot)) break;
+      shot = next;
+    }
+    fs.writeFileSync(file, shot);
     const m = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, height: document.documentElement.scrollHeight, h1: document.querySelector("h1")?.textContent?.trim() || "" }));
     const overflow = m.scrollWidth > m.clientWidth;
     if (pg.chartSel) {
