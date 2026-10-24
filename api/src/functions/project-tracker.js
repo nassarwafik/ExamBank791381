@@ -138,7 +138,10 @@ function scoreBulkInput(body) {
 // Phase P1 — the class board: every member × every ACTIVE stage of the class snapshot, carrying only the non-default cells
 // ({status, score[, selfReported]}) so the payload stays small. `selfReported`: the student marked it done (Phase P2)
 // and the teacher has not confirmed it yet. Read-only projection of the same documents the other resources read.
-function boardBody(projectCode, config, readOnly, entries) {
+// Phase G1 — each student also carries `summary` {overallProgress, grade}: the SAME calculators as the `students` cards
+// (core.buildStudentSummary → performance.buildProjectPerformanceSummary), so the class matrix shows the server's figures
+// at the end of every row and never computes a grade itself.
+function boardBody(projectCode, config, readOnly, entries, workDef, now) {
   const stages = (config.stages || []).filter(s => s && s.active === true)
     .map(s => ({ stageId: s.stageId, track: s.track, groupId: s.groupId, title: s.title || "", order: Number(s.order) || 0, required: s.required !== false }));
   const students = entries.map(e => {
@@ -149,7 +152,9 @@ function boardBody(projectCode, config, readOnly, entries) {
       const score = normalizeScore(entry && entry.score);
       if (status !== "not_started" || score !== null) cells[s.stageId] = isSelfReported(entry) ? { status, score, selfReported: true } : { status, score };
     }
-    return { studentId: e.studentId, displayName: e.displayName, code: e.code, cells };
+    const summary = core.buildStudentSummary(workDef, e.progress, now);
+    const perf = performance.buildProjectPerformanceSummary(workDef, e.progress, now, summary);
+    return { studentId: e.studentId, displayName: e.displayName, code: e.code, cells, summary: { overallProgress: perf.overallProgress, grade: perf.grade } };
   });
   return { ok: true, projectCode, readOnly, stages, groups: config.groups || [], students };
 }
@@ -293,7 +298,7 @@ async function handler(request, deps = {}, obs = null) {
         }
         if (resource === "board") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
-          return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries) };
+          return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries, workDef, now) };
         }
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
       }

@@ -9,7 +9,7 @@
 //     unsaved drafts confirmed first.
 // Fail-first: run against a4061e6f (neither existed).
 import { createRequire } from "node:module";
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import ProjectBulkReview from "./ProjectBulkReview";
 import ProjectTracker from "./ProjectTracker";
@@ -69,6 +69,9 @@ async function openGrid(readOnly = false) {
   return view;
 }
 
+// Phase G1 — the grid follows «اعتماد المرحلة عند حفظ العلامة» (shared with the student profile, default ON). These tests pin
+// the switch OFF, where a score never changes a status; projectGradebookMatrix.g1.test.tsx pins the switch ON.
+beforeEach(() => { try { window.localStorage.setItem("eb.projects.approveOnSave", "0"); } catch { /* no storage: tests below fail loudly */ } });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("P4 — grid values", () => {
