@@ -161,9 +161,28 @@ describe("UX-R19b — the wiring", () => {
 
   it("each page's capture is kept only once two full-page shots in a row are identical (a late-painted fixed / sticky layer)", () => {
     const harness = read("scripts", "capture-visual-baseline-ux-r.mjs");
-    expect(harness).toContain("const next = await page.screenshot({ fullPage: true });\n      if (next.equals(shot)) break;\n      shot = next;");
+    expect(harness).toContain("const next = await page.screenshot({ fullPage: false });\n      if (next.equals(shot)) break;\n      shot = next;");
     expect(harness).toContain("fs.writeFileSync(file, shot);");
     expect(harness).not.toContain("await page.screenshot({ path: file, fullPage: true });");
+  });
+
+  it("every page shot starts from the top of the document, except a state-* scene (its open menu closes on a scroll event)", () => {
+    const harness = read("scripts", "capture-visual-baseline-ux-r.mjs");
+    const reset = harness.indexOf('if (!pg.id.startsWith("state-")) {\n      await page.evaluate(() => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });');
+    const settle = harness.indexOf("let shot = await page.screenshot({ fullPage: false });");
+    expect(reset).toBeGreaterThan(-1);
+    expect(settle).toBeGreaterThan(reset);                       // the reset comes before the settled capture
+  });
+
+  it("a page is captured with the viewport grown to the document's height and a plain shot, never beyond the viewport", () => {
+    const harness = read("scripts", "capture-visual-baseline-ux-r.mjs");
+    const grow = harness.indexOf("await page.setViewportSize({ width: vp.width, height: Math.max(vp.height, Math.min(fullHeight, 16384)) });");
+    const settle = harness.indexOf("let shot = await page.screenshot({ fullPage: false });");
+    const restore = harness.indexOf("await page.setViewportSize(vp);");
+    expect(grow).toBeGreaterThan(-1);
+    expect(settle).toBeGreaterThan(grow);                        // grown before the shot
+    expect(restore).toBeGreaterThan(settle);                     // restored after it
+    expect(harness).not.toMatch(/path: file, fullPage: true/);
   });
 
   it("the manifest exists and starts valid", () => {
