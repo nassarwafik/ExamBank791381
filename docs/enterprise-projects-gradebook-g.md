@@ -1,4 +1,4 @@
-# Projects — professional grade entry (Phases G1–G3, G4b)
+# Projects — professional grade entry (Phases G1–G3, G4b, G4)
 
 **Owner direction (2026-10-23).**
 - **The request:** in Projects → the students' progress, let the teacher enter each student's data as rows: the topics done, whether
@@ -784,3 +784,132 @@ the phase's own changes afterwards.
 - **No right-click menu on a cell.** It would replace the browser's own copy and paste menu in the score field. The keyboard
   shortcut and the controls button cover the same need.
 - **The history still names teachers only as «أنت» or «معلم آخر»** (as in G3).
+
+# Phase G4 — Import scores from Excel
+
+G4 branches from `main` `c0ffcfc6` (#437) as `feature/g4-project-score-import`. It brings scores back from the file
+«تصدير إلى Excel» writes (G3), edited by the teacher in Excel.
+
+G4b (#438) merged into `main` during G4, as `bf0c365f`. G4 took it in with a normal merge commit. Both phases add to the matrix's
+controls, its state and its dialogs, and the merge keeps both: «سجلّ الخلية» and «استيراد من Excel» sit side by side, and both
+browser checks are steps of the projects gate. Every check below was re-run on the merged tree.
+
+## G4.1 Owner decisions (2026-10-24)
+
+| Id | Question | Decision |
+|---|---|---|
+| D-G4a | An empty score cell in the file | The saved score stays as it is. A score is cleared in the matrix, never by an import. |
+| D-G4b | A value that is not a score from 0 to 100 | That cell only is left out and named in the preview; the rest imports. |
+| D-G4c | How a row finds its student | The name AND the last four characters of the student code, both as the export writes them. |
+| D-G4d | Approval of an imported score | As the matrix's «اعتماد المرحلة عند حفظ العلامة» switch says, like a typed score. |
+
+## G4.2 What the teacher gets
+
+«التقييم الجماعي» → «جدول العلامات» → **«استيراد من Excel»** (beside «تصدير إلى Excel»; not in an archived class).
+1. **Pick a file.** It is read in the browser; nothing is sent while reading.
+2. **The preview** («استيراد العلامات من Excel») names:
+   - how many scores will be filled, per track;
+   - how many student rows and score columns were read;
+   - the values equal to the saved scores (no change), and the empty cells that keep their saved score;
+   - what approve-on-save will do;
+   - any unsaved changes already in the matrix: they stay, and the file replaces only the cells it overlaps;
+   - every row or cell left out, with its row number and why: no matching student, more than one matching student, the same
+     student in two rows, or not a score from 0 to 100;
+   - columns whose stage this project does not have (ignored).
+3. **«تعبئة الجدول (n)»** puts the scores into the matrix as **unsaved drafts**, marked like typed ones, and nothing is written yet.
+   «حفظ العلامات» saves them exactly as typed scores are saved:
+   - `score.bulk` with each cell's expected value, so a score changed on the server since the import is refused as stale and
+     named;
+   - then `progress.bulk` for the approvals the switch implies.
+
+## G4.3 Safety rules kept
+
+- **No new write path, no API change, no stored-document change.** The import only fills drafts. The server validates every
+  score again, and the stale guard and the approve-on-save rules are the G1 ones.
+- **No guessing:**
+  - a row that matches no student, or more than one, is never imported;
+  - when two rows name one student, neither is imported;
+  - an empty cell never clears a score (D-G4a);
+  - an invalid value never becomes a score (D-G4b).
+- **The reader (`src/reports/xlsxRead.ts`) is bounded and inert:**
+  - a 5 MB file limit, a 20 MB limit for each part once inflated (checked on the declared size and while inflating), and a cap on
+    the rows and columns read;
+  - an encrypted entry, an unknown compression method or a missing part is an error with a message, never an empty sheet;
+  - formulas are never evaluated: only cached values are read, and a value starting with «=» is text;
+  - no external reference or entity is resolved: the XML is scanned as text;
+  - no dependency is added. DEFLATE parts use the platform's `DecompressionStream`.
+
+## G4.4 Edit set
+
+- **`src/reports/xlsxRead.ts`** (new): `readXlsxRows`. It reads the first worksheet by its relationship, shared and inline strings
+  (phonetic runs left out) and numbers, in STORED (this repository's writer) and DEFLATE (Excel, LibreOffice, Google Sheets) parts.
+- **`src/projects/scoreImport.ts`** (new): `planScoreImport`, a pure function from the file's rows and the server's board to the
+  changes and the problems.
+- **`src/projects/ProjectScoreGrid.tsx`:** the button, the file input, the preview dialog, and applying the plan as drafts.
+- **`src/projects-pro.css`:** the preview lists (tokens only).
+- **`src/projects/projectScoreImport.g4.test.tsx`** (new): 12 tests, over the real tracker handler for the matrix ones.
+- **`scripts/check-project-score-import-browser-g4.mjs`** (new) and its step in `projects-browser-g.yml`.
+- **`docs/ux-r/visual-changes.json`:** `project-matrix` declared. **`.gitignore`:** `.harness-g4/`.
+
+## G4.5 Evidence
+
+- **The new suite: 12 / 12.**
+  - **The reader:**
+    - the export's own file reads back cell for cell;
+    - Excel's way of saving reads too: DEFLATE parts, shared strings, prefixed namespaces, a phonetic run, an entity, and the first
+      sheet found by its relationship;
+    - a file that is not a workbook, an encrypted one, an unknown method, an over-large declared part and an over-large file each
+      fail with their message.
+  - **The plan:**
+    - it matches on the name and the code's last four, padding a number code;
+    - an empty cell, an unchanged value and invalid values behave as decided;
+    - a wrong code, an ambiguous name and a duplicated row import nothing;
+    - a file that is not the export is refused.
+  - **The matrix:**
+    1. it previews, fills the drafts and saves them (`score.bulk` → `progress.bulk`, approved), and nothing is written by
+       reading or filling;
+    2. with the switch off, only scores are saved, and the invalid value and the unknown row are named;
+    3. a score changed on the server after the import is refused as stale at save;
+    4. cancelling changes nothing, a non-workbook file says so, and an existing draft stays;
+    5. an archived class has no import.
+- **Fail-first:** against `main`'s app code, with only the two new modules copied in, the 4 matrix tests fail (there is no import
+  input). The 8 that pass are the copied modules' own tests and the archived-class test, which pins existing behaviour.
+- **Real Chromium** (`check-project-score-import-browser-g4.mjs`, 390 px touch and 1440 px): **19 / 19**. The check:
+  - downloads the export and edits it like a teacher: a new score, «١٢٠», and a row for a student who is not in the class;
+  - saves it back with DEFLATE parts and shared strings, as Excel does;
+  - imports it through the matrix's own file chooser and previews it (one score; the two problems named; nothing written);
+  - fills the drafts, saves (`score.bulk` → `progress.bulk`) and checks the stored score and status;
+  - checks axe on the preview, no sideways scroll, and the 44 px touch target.
+
+  P4 (37), P8 (36), G1 (34) and G3 (36) still pass.
+
+## G4.6 Mutation proof
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| M1 | an empty cell clears the saved score (D-G4a) | KILLED | g4 › matches by name AND the code's last four … |
+| M2 | a row matches by name only (D-G4c) | KILLED | g4 › a name with a wrong code … import nothing |
+| M3 | a number above 100 is accepted (D-G4b) | KILLED | g4 › an empty cell leaves the saved score … |
+| M4 | two rows for one student are both imported | KILLED | g4 › a name with a wrong code … |
+| M5 | a row matching two students imports the first | KILLED | g4 › a name with a wrong code … |
+| M6 | a number code is not padded back to four digits | KILLED | g4 › matches by name AND the code's last four … |
+| M7 | the reader does not inflate DEFLATE parts | KILLED | g4 › reads what Excel writes back … |
+| M8 | the reader trusts a part's declared size (no bomb limit) | KILLED | g4 › anything else fails with a message … |
+| M9 | the reader ignores the encryption flag | KILLED | g4 › anything else fails with a message … |
+| M10 | the reader keeps phonetic runs in shared strings | KILLED | g4 › reads what Excel writes back … |
+| M11 | the file is applied without a preview | KILLED | g4 › previews, fills the matrix as unsaved drafts … |
+| M12 | applying drops the drafts already in the matrix | KILLED | g4 › cancel changes nothing … an existing draft stays … |
+| M13 | an archived class can import | KILLED | g4 › an archived class has no import |
+
+13 / 13 killed, with no timeouts. Files were restored byte-for-byte (SHA-256 checked in a `finally`), and `git status` showed only
+the phase's own changes afterwards.
+
+## G4.7 Known limitations
+
+- **Only `.xlsx`.** A CSV or an old `.xls` file is refused with a message. The export is `.xlsx`, and Excel keeps that format when
+  it saves.
+- **The first worksheet only,** where the export writes.
+- **Scores only.** The status columns of the export are not read: a stage is approved by the approve-on-save switch, or by
+  «منجز» in the matrix.
+- **The code is matched on its last four characters,** as the export writes it. Two students with the same name and the same last
+  four are not told apart, and are reported, never guessed.
