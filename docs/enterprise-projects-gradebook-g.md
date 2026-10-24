@@ -449,4 +449,169 @@ is the declared `project-profile`.
 - **A note is its own write.** The teacher's note is saved from the details dialog, not by the bar, so the bar's count never
   includes it; moving to a sibling still asks when a note is unsaved.
 - **Coming next — G3:** the export of scores to Excel (without the teacher's notes, D5) and the per-cell history from the row
-  menu («سجلّ التغييرات»).
+  menu («سجلّ التغييرات») — delivered below.
+
+# Phase G3 — The export and the history
+
+G3 branches from `main` `19754ab9` (#433) as `feature/g3-project-export-history`.
+
+## G3.1 What the teacher gets
+
+**«تصدير إلى Excel»** sits in the class matrix's controls («التقييم الجماعي» → «جدول العلامات»). It downloads one `.xlsx` file of
+the class's saved project scores. The file opens directly in Excel and reads right to left.
+- **Heading rows:** the project, the class (with its year) and the export date, then one empty row.
+- **One bold column row:** the student, the last four characters of the student code (as every teacher export), then two
+  columns per active stage of **every track** — its score from 100 and its status — then the progress % and the weighted grade.
+- **One row per student,** in Arabic order.
+- **What a cell holds:**
+  - A stage with no score is an **empty cell, never «0»**; a saved 0 stays 0.
+  - A stage the student marked carries «(حدّدها الطالب)».
+  - The progress and the grade are the server's (`summary`); nothing is computed in the browser.
+- **What the file never holds:** a teacher note (D5), a full student code, an unsaved draft, a formula.
+  - An unsaved change in the matrix is named in the notice: «الملف يحمل العلامات المحفوظة فقط؛ لديك N تغيير لم يُحفظ بعد.»
+- **An archived class can still export** (a read).
+
+**«سجلّ التغييرات»** joins the student table's row menu (Phase G2), for active and archived classes. It opens a dialog with every
+stored change of that stage, newest first. Each entry is one line in words («وُضعت العلامة 91 / 100», «تغيّرت العلامة من 91 /
+100 إلى 93 / 100», «مُسحت العلامة (كانت 40 / 100)», «الحالة: من «لم يبدأ» إلى «تم الاعتماد»», «تأكيد المعلم لما حدّده الطالب»,
+«حدّدها الطالب كمنفّذة», «عُدّلت ملاحظة المعلم»). Under it are the date and time, and who made the change: «أنت», «معلم آخر» or
+«الطالب». The dialog reads the server each time it opens, so a save since the last opening shows. An empty history says so; a
+failed read offers «إعادة المحاولة».
+
+## G3.2 The API (additive)
+
+- **`GET resource=board`** gains `title` (the project), `className` and `schoolYear`, to head the exported file. Nothing else in the
+  board changes; it never carried a note.
+- **`GET resource=stage-history&classId&studentId&stageId`** (new, a read):
+  - **Same gates as `resource=student`:** the teacher's own class enrolled in the project, the student a member of that class
+    (404 otherwise). An unknown stage or a missing parameter is a 400.
+  - **It works on an archived class** (`readOnly: true` in the body).
+  - **It reads the whole document.** It returns that stage's events (at most 200, newest first), so an event older than the
+    profile's newest 50 (`STUDENT_HISTORY_LIMIT`) is still listed.
+  - **Each event carries only** its type, its time, the status or score it moved from and to, `verified` for a confirmed mark,
+    and `by` ("you" | "teacher" | "student"). Another account's id never leaves the server. The history never stored a note's
+    text, so none can be returned.
+- **The audit of the single-save path.** `progress.update` now records `details.via: "progress.update"` on its
+  `project.stage.approve` / `status_change`, `project.stage.note` and `project.stage.score` events. The score actions and both
+  bulk actions already named their path, so every change's origin is now known.
+
+**The reviewed golden change (R33).** `api/tests/fixtures/r33-golden.json` pins the route audits of six `progress.update`
+scenarios: `G794589.update.approve`, `.status`, `.noteOnly`, `.lazyCreateEmptyClass`, `G899373.update.approve` and
+`G883589.update.status`. Their only change is the added `via` (`REFRESHED_BY_G3`). The new invariant B10 asserts that exactly
+these entries carry a stage audit, and that each carries `via: "progress.update"`. The status, body and storage of every scenario
+are unchanged.
+
+## G3.3 Safety rules kept
+
+- **The server alone computes** progress and the grade; the export copies the board's figures.
+- **An empty cell is never a zero.** The export leaves a missing score empty.
+- **No private text leaves the tracker.** There are no notes in the board, the export or the history, and no other account's id
+  in the history.
+- **No write.** Both features are reads; the archived class keeps them.
+- **No formula injection.** The shared writer emits text as inline strings and has no formula element (pinned by the G3 suite).
+
+## G3.4 Found in the browser
+
+- **Arabic download names need a UTF-8 locale on the machine.** In this container (`LANG` empty), headless Chromium stored the
+  file as «download». With `LANG=C.UTF-8` it keeps «TadrisPlus-علامات-المشروع-….xlsx». The shared assignments exports behave the
+  same way, so this is a property of the browser process, not of the page. The G3 browser check launches Chromium with a UTF-8
+  locale.
+- **A menu opened during a scroll closes.** `ActionMenu` closes on a page scroll (A-F2). Playwright's own scroll-into-view could
+  still be moving the page when it clicked the row's ⋮ at 390 px. The check brings the row into view and lets the page settle
+  first, as a teacher's tap on a visible row would.
+- **One line per change.** In the first capture the history's date, text and author wrapped together on a phone. Each entry is now
+  the change on one line, with the date · who under it.
+
+## G3.5 Edit set
+
+- **`api/src/functions/project-tracker.js`:** `via` on the `progress.update` audits, the board's names and `resource=stage-history`
+  (`stageHistoryEvents`).
+- **`src/projects/scoreExport.ts`** (new): `projectScoresRows`, the export's rows.
+- **`src/projects/stageHistory.ts`** (new): the history's types and words.
+- **`src/projects/ProjectScoreGrid.tsx`:** «تصدير إلى Excel».
+- **`src/projects/ProjectBulkReview.tsx`:** the board type's additive names.
+- **`src/projects/ProjectStudentDetail.tsx`:** «سجلّ التغييرات» in the row menu and its dialog.
+- **`src/projects-pro.css`:** the history list (tokens only, inside the G2 block).
+- **`src/projects/projectExportHistory.g3.test.tsx`** (new): 13 tests.
+- **The menu lists pinned by earlier suites** now include «سجلّ التغييرات» (`ProjectStudentDetail.8c`, `ProjectWorkspace.ux6`,
+  `projectStudentTable.g2`, `actionMenu.globalFirstClick`); each assertion is otherwise unchanged.
+- **`api/tests/legacy-794589-convergence-r33.test.js` and `api/tests/fixtures/r33-golden.json`:** the reviewed golden change
+  (G3.2).
+- **`scripts/check-project-export-browser-g3.mjs`** (new): the export and the history in real Chromium.
+- **`docs/ux-r/visual-changes.json`:** `project-matrix` declared (the new button).
+- **`.gitignore`:** `.harness-g3/`.
+- **This document.**
+
+## G3.6 Evidence
+
+This is a feature, not a defect fix, so fail-first is not required. The new tests were still run against the baseline.
+- **On `main` `19754ab9`:** the suite cannot import its new modules. With only `scoreExport.ts` and `stageHistory.ts` copied in,
+  **9 of 13 fail**, for example:
+  - `expected [ undefined, undefined, undefined ] to deeply equal [ 'مشروع 899373', 'العاشر أ', '2026' ]`;
+  - `expected 400 to be 404` (no `stage-history` resource);
+  - `Unable to find … role "button" and name "تصدير إلى Excel"`;
+  - `Unable to find … name "سجلّ التغييرات"`.
+  The 4 that pass are the pure tests of the two copied modules.
+- **On the head:** 13 / 13 pass.
+- **In real Chromium** (production build, the real handler in process, 390 px touch and 1440 px):
+  `scripts/check-project-export-browser-g3.mjs`, **36 / 36**. It covers the downloaded file's name, ZIP parts, RTL sheet, title,
+  class, every student once, the scores as numbers, and the absence of notes, full codes and formulas. It also covers the history
+  dialog's order, words and author, no horizontal overflow, and axe on the matrix and the open dialog.
+
+## G3.7 Mutation proof
+
+`$S/mutate-g3.mjs` (scratch, not committed) plants each defect, runs `projectExportHistory.g3`, the R33 convergence suite,
+`projectGradebookMatrix.g1`, `projectStudentTable.g2` and `project-bulk-review-p1`, and restores the file byte-for-byte (SHA-256
+checked) in a `finally`.
+
+| Id | Planted defect | Outcome | Killed by |
+|---|---|---|---|
+| M1 | an empty score is exported as 0 | KILLED | g3 › one row per student … never 0 |
+| M2 | the student's own mark is not named in the export | KILLED | g3 › one row per student … |
+| M3 | the export carries only the track on screen | KILLED | g3 › writes the saved scores of the whole class (every track) |
+| M4 | an archived class cannot export | KILLED | g3 › an archived class can still export |
+| M5 | unsaved changes are not named when exporting | KILLED | g3 › an unsaved change is not exported and is named |
+| M6 | the board carries a teacher note | KILLED | g3 › the board carries … never a teacher note |
+| M7 | the board carries no class / project names | KILLED | g3 › the board carries the project title and the class name |
+| M8 | stage-history mixes in other stages' events | KILLED | g3 › stage-history: every event of THAT stage … |
+| M9 | stage-history keeps only the newest 50 events of the document | KILLED | g3 › … even beyond the profile's newest 50 |
+| M10 | stage-history is oldest first | KILLED | g3 › … newest first |
+| M11 | stage-history exposes the actor's id | KILLED | g3 › … no id, no note text |
+| M12 | every change is reported as the viewer's | KILLED | g3 › … who as you / teacher / student |
+| M13 | stage-history skips the membership gate | KILLED | g3 › stage-history is membership-gated … |
+| M14 | progress.update's approval audit does not name its path | KILLED | r33 › golden parity (G794589.update.approve, …) and B10 |
+| M15 | the history dialog is not re-read when opened again | KILLED | g3 › … a save since shows on the next opening |
+
+15 / 15 killed, with no timeouts. `git status` was clean of mutants afterwards.
+
+## G3.8 Local validation
+
+These were run on the final tree of the branch.
+
+**The root suite** (`npx vitest run`): 1213 files, **14461 / 14470** tests pass. The 9 failures are in two files, both unrelated
+to this phase:
+- **`src/AppEvaluationFinish.9g.test.tsx`** (3): container timeouts at 5000 ms. The same file fails the same way on `main`
+  `19754ab9` in this container (run twice on each side), and it passes on `main` in CI. Per `AGENTS.md` §12 it is not patched
+  here.
+- **`src/interactive3d/engine.21d.test.tsx`** (6): the 3D viewer, which this phase does not touch. It timed out under the full
+  run's load. Alone, it passes **31 / 31** on the head and on `main`.
+
+**Static checks:** `npm run lint` (0 errors, no warning in a file this phase adds), `npx tsc -b` (clean), `npm run build` (bundle
+guard passed), `git diff --check` (clean).
+
+**Theme checks:** `node scripts/ux-dark-audit.mjs` (0 unanswered in 102 sheets), `node scripts/ux-color-inventory.mjs` (719,
+unchanged).
+
+**Real Chromium:** `check-project-export-browser-g3.mjs`, 36 / 36.
+
+**The visual gate** (210 captures per theme, base `main` vs head): light **PASS** and dark **PASS**. The only change is the
+declared `project-matrix`. A one-off flake on `phone/studio-setup` was identical on its re-capture.
+
+**Not run:** the Runner suites, because nothing under `runner/` and nothing in official grading changed.
+
+## G3.9 Known limitations
+
+- **The browser checks still do not run in CI** (see G1.9).
+- **The matrix has no per-cell history.** A cell's history is reached from the student's profile (the row menu); the matrix
+  cells carry no menu.
+- **The history names the teacher only as «أنت» or «معلم آخر».** It never resolves another account's name.

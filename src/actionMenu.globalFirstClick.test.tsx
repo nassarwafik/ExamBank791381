@@ -358,12 +358,12 @@ describe("Projects — stage status ⋯ and toolbar ⋯ open on the first click;
     const menu = panelOf("إجراءات المرحلة B01") as HTMLElement;
     expect(menu).not.toBeNull();
     const items = within(menu).getAllByRole("button") as HTMLButtonElement[];
-    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
-    expect(items[1].disabled).toBe(true);                                                               // no saved score
-    expect(items[3].disabled).toBe(true);                                                               // the current status
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "سجلّ التغييرات", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
+    expect(items[2].disabled).toBe(true);                                                               // no saved score
+    expect(items[4].disabled).toBe(true);                                                               // the current status
     expect(document.activeElement).toBe(items[0]);
     expect(simulatedScrolls).toBe(0);
-    fireEvent.click(items[2]);
+    fireEvent.click(items[3]);
     await waitFor(() => expect(posts).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "not_started" }]));
     await waitFor(() => expect(panelOf("إجراءات المرحلة B01")).toBeNull());
     fireEvent.click(within(toolbar).getByRole("button", { name: "المزيد من إجراءات المشروع" })); await settle();

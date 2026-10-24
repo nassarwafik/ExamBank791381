@@ -24,7 +24,8 @@ export type BoardStage = { stageId: string; track: string; groupId: string; titl
 export type BoardCell = { status: StageStatus; score: number | null; selfReported?: boolean };
 /** Phase G1 — `summary`: the server's progress and weighted grade for the student (the same calculators as the cards). */
 export type BoardStudent = { studentId: string; displayName: string; code: string; cells: Record<string, BoardCell>; summary?: { overallProgress: number; grade: number } };
-export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[] };
+/** Phase G3 — `title` / `className` / `schoolYear` (additive) head the exported file. */
+export type Board = { readOnly: boolean; stages: BoardStage[]; groups: ProjectGroup[]; students: BoardStudent[]; title?: string; className?: string; schoolYear?: string };
 type BulkResult = { studentId: string; stageId: string; ok: boolean; changed?: boolean; error?: string };
 type BulkResponse = { readyChanged: boolean; results: BulkResult[]; totals: BulkTotals };
 type Mode = "ready" | "self" | "stage" | "grid";

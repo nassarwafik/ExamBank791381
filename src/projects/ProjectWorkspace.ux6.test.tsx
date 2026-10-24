@@ -304,16 +304,16 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     expect(within(profile.querySelector('[data-stage-id="B02"]') as HTMLElement).getByText("(اختياري)")).toBeTruthy();
     const openMenu = async () => { fireEvent.click(within(panel).getByRole("button", { name: "إجراءات المرحلة B01" })); return within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getAllByRole("button") as HTMLButtonElement[]; };
     let items = await openMenu();
-    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
-    expect(items[1].disabled).toBe(true);                                                               // no saved score to clear
-    expect(items[3].disabled).toBe(true);                                                               // current status
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "سجلّ التغييرات", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
+    expect(items[2].disabled).toBe(true);                                                               // no saved score to clear
+    expect(items[4].disabled).toBe(true);                                                               // current status
     fireEvent.click(items[0]);
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("اقرأ الفصل الأول");
     fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     items = await openMenu();
-    fireEvent.click(items[2]);
+    fireEvent.click(items[3]);
     await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "not_started" }]));
     await screen.findByText("تم تحديث حالة المرحلة.");
     await waitFor(() => expect(within(profile).getByRole("progressbar", { name: "التقدم العام" }).getAttribute("aria-valuenow")).toBe("50"));
@@ -370,7 +370,7 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     expect(within(profile).getByText("مؤرشف — للقراءة فقط")).toBeTruthy();
     fireEvent.click(within(profile).getByRole("button", { name: "إجراءات المرحلة B01" }));
     const items = within(await screen.findByRole("group", { name: "إجراءات المرحلة B01" })).getAllByRole("button");
-    expect(items.map(b => b.textContent)).toEqual(["التفاصيل"]);
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل", "سجلّ التغييرات"]);
     fireEvent.click(items[0]);
     const dialog = await screen.findByRole("dialog");
     expect(within(profile).queryByRole("button", { name: /: منجز$/ })).toBeNull();

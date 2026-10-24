@@ -141,7 +141,20 @@ function scoreBulkInput(body) {
 // Phase G1 — each student also carries `summary` {overallProgress, grade}: the SAME calculators as the `students` cards
 // (core.buildStudentSummary → performance.buildProjectPerformanceSummary), so the class matrix shows the server's figures
 // at the end of every row and never computes a grade itself.
-function boardBody(projectCode, config, readOnly, entries, workDef, now) {
+const STAGE_HISTORY_LIMIT = 200;
+/** Phase G3 — one stage's events, newest first: what changed and when, and who as `by` ("you" | "teacher" | "student"). */
+function stageHistoryEvents(progress, stageId, viewer) {
+  const all = progress && Array.isArray(progress.history) ? progress.history : [];
+  return all.filter(e => e && e.stageId === stageId).slice(-STAGE_HISTORY_LIMIT).reverse().map(e => {
+    const by = e.source === "student" ? "student" : (viewer && e.actor === viewer ? "you" : "teacher");
+    const out = { eventId: e.eventId, type: e.type, createdAt: e.createdAt || "", by };
+    if (e.type === "status") { out.fromStatus = e.fromStatus; out.toStatus = e.toStatus; if (e.verified) out.verified = true; }
+    if (e.type === "score") { out.fromScore = normalizeScore(e.fromScore); out.toScore = normalizeScore(e.toScore); }
+    return out;
+  });
+}
+
+function boardBody(projectCode, config, readOnly, entries, workDef, now, names = {}) {
   const stages = (config.stages || []).filter(s => s && s.active === true)
     .map(s => ({ stageId: s.stageId, track: s.track, groupId: s.groupId, title: s.title || "", order: Number(s.order) || 0, required: s.required !== false }));
   const students = entries.map(e => {
@@ -156,7 +169,8 @@ function boardBody(projectCode, config, readOnly, entries, workDef, now) {
     const perf = performance.buildProjectPerformanceSummary(workDef, e.progress, now, summary);
     return { studentId: e.studentId, displayName: e.displayName, code: e.code, cells, summary: { overallProgress: perf.overallProgress, grade: perf.grade } };
   });
-  return { ok: true, projectCode, readOnly, stages, groups: config.groups || [], students };
+  // Phase G3 — additive: the project's title and the class's name / year head the exported file («تصدير إلى Excel»).
+  return { ok: true, projectCode, readOnly, stages, groups: config.groups || [], students, title: names.title || "", className: names.className || "", schoolYear: names.schoolYear || "" };
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
@@ -266,6 +280,20 @@ async function handler(request, deps = {}, obs = null) {
           const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId, view);
           return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, membership.student, progress, now) };
         }
+        // Phase G3 — the change history of ONE stage of ONE student («سجلّ التغييرات»): every stored event of that stage, newest
+        // first, from the whole document (the profile's `history` is only the newest STUDENT_HISTORY_LIMIT). Same membership
+        // gate as `student`; works on an archived class (a read). Who made a change is reported as the teacher who asks, another
+        // teacher or the student — never another account's id.
+        if (resource === "stage-history") {
+          const studentId = String(url.searchParams.get("studentId") || "").trim();
+          const stageId = String(url.searchParams.get("stageId") || "").trim();
+          if (!studentId || !stageId) return { status: 400, jsonBody: { ok: false, error: "studentId وstageId مطلوبان." } };
+          if (!(config.stages || []).some(s => s && s.stageId === stageId)) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة." } };
+          const membership = await svc.requireStudentInClass(container, studentId, classId);
+          if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
+          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId, view);
+          return { status: 200, jsonBody: { ok: true, projectCode, classId, studentId, stageId, readOnly, events: stageHistoryEvents(progress, stageId, auth.user?.sub) } };
+        }
         // Phase 9B — the evaluation of ONE student in ONE project (narrow read; same membership gate as `student`).
         if (resource === "evaluation") {
           const studentId = String(url.searchParams.get("studentId") || "").trim();
@@ -298,7 +326,7 @@ async function handler(request, deps = {}, obs = null) {
         }
         if (resource === "board") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students, view);
-          return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries, workDef, now) };
+          return { status: 200, jsonBody: boardBody(projectCode, config, readOnly, entries, workDef, now, { title: definition.title, className: classroom.name, schoolYear: classroom.schoolYear }) };
         }
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
       }
@@ -354,20 +382,20 @@ async function handler(request, deps = {}, obs = null) {
               actor: auth.user?.sub,
               action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change",
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId,
-              targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, ...(outcome.verified ? { verifiedSelfReport: true } : {}) }
+              targetLabel: stage.title, details: { projectCode, fromStatus: outcome.fromStatus, toStatus: outcome.toStatus, via: "progress.update", ...(outcome.verified ? { verifiedSelfReport: true } : {}) }
             });
           }
           if (outcome.noteChanged) {
             await rec(container, {
               actor: auth.user?.sub, action: "project.stage.note",
-              targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title, details: { projectCode }
+              targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title, details: { projectCode, via: "progress.update" }
             });
           }
           if (outcome.scoreChanged) {
             await rec(container, {
               actor: auth.user?.sub, action: "project.stage.score",
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title,
-              details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore }
+              details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore, via: "progress.update" }
             });
           }
           return {

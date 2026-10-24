@@ -151,6 +151,10 @@
 .eb-stage-score-text{ font-variant-numeric:tabular-nums; }
 .eb-stage-note-flag{ padding-inline:var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); }
 .eb-stage-row-error{ margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+/* Phase G3 — «سجلّ التغييرات»: each change on its own line, the date and who made it under it. */
+.eb-timeline.eb-stage-history-list li{ display:grid; gap:var(--eb-space-1); }
+.eb-stage-history-list .eb-timeline-text{ color:var(--eb-text-heading); }
+.eb-stage-history-meta{ font-size:var(--eb-fs-12); }
 @media (pointer: coarse){ .eb-stage-score-input{ min-height:44px; } }
 @media (max-width:767px){
   .eb-stage-table thead{ position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }

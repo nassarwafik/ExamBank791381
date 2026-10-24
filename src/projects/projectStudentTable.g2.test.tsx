@@ -343,7 +343,7 @@ describe("G2 — the student's stage table", () => {
     expect(within(row(B1)).getByText("40 / 100")).toBeTruthy();
     expect(within(row(B1)).getByLabelText("منجز")).toBeTruthy();
     openMenu(B1);
-    expect(within(screen.getByRole("group", { name: "إجراءات المرحلة " + B1 })).getAllByRole("button").map(m => m.textContent)).toEqual(["التفاصيل"]);
+    expect(within(screen.getByRole("group", { name: "إجراءات المرحلة " + B1 })).getAllByRole("button").map(m => m.textContent)).toEqual(["التفاصيل", "سجلّ التغييرات"]);
     fireEvent.click(screen.getByRole("button", { name: "التفاصيل" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("ملاحظة المعلم: ممتاز")).toBeTruthy();
