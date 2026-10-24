@@ -205,6 +205,16 @@
       "page": "project-matrix",
       "viewport": "all",
       "reason": "Phase G4 — «استيراد من Excel» joins the class matrix's controls (owner decisions D-G4a…d: the file's scores become unsaved drafts after a preview); nothing else on the page moves."
+    },
+    {
+      "page": "learning",
+      "viewport": "all",
+      "reason": "Summary booklet 791381s — the library lists a second available course, «أوراق تلخيص شبكات الاتصال» (كتاب 791381s), as its own card after «شبكات الاتصال» (the owner's request: a new, separate learning material); nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "Summary booklet 791381s — the library search covers every course, so the «VLAN» results now also list the booklet's matching sections under «أوراق تلخيص 791381 — شبكات الاتصال»; the page grows taller, the book's own results are unchanged."
     }
   ]
 }
