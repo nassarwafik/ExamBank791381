@@ -224,6 +224,14 @@ function applyGrade(grade, score, fullMarks) { grade.score = score; grade.manual
  *  by the canonical rebuild as marks still awaiting the teacher, never as an awarded zero); the teacher's override resolves it. */
 function holdForReview(grade) { grade.score = 0; grade.manualReview = true; grade.correct = false; }
 
+/** QA-1 — whether the target's question (a composite child: its composite) is held for a render failure (Phase 21E.3): the student's
+ *  device could not show it, so its missing answer is a technical outcome for the teacher, never the student's "no answer". */
+function renderFailureHeld(attempt, targetKey) {
+  const c = parseCompositeChildKey(targetKey), id = c ? c.questionId : targetKey;
+  const r = isObj(attempt.renderFailures) && Object.prototype.hasOwnProperty.call(attempt.renderFailures, id) ? attempt.renderFailures[id] : null;
+  return isObj(r) && r.held === true;
+}
+
 /** (Re)builds one target for `revision` from the authority. Mutates the attempt's grade for a "no-answer". Returns the target. */
 function buildTarget(exam, attempt, targetKey, ids, revision, at, previous) {
   const auth = targetAuthority(exam, attempt, targetKey, { ...ids, revision });
@@ -232,7 +240,8 @@ function buildTarget(exam, attempt, targetKey, ids, revision, at, previous) {
   if (!auth.ok) { t.state = "retryable"; t.technicalCode = auth.code; return { target: t, changed: false }; }
   if (!auth.answer) {
     t.state = "complete"; t.result = noAnswerResult(auth, revision, at);
-    applyGrade(auth.grade, 0, false);
+    // QA-1: a render-failure hold keeps the grade with the teacher (nothing to run); only an unheld blank is the automatic 0.
+    if (renderFailureHeld(attempt, targetKey)) holdForReview(auth.grade); else applyGrade(auth.grade, 0, false);
     return { target: t, changed: true };
   }
   return { target: t, changed: false };
