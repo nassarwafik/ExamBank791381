@@ -49,4 +49,5 @@ jobs:
         with:
           name: learning-reader-l8-browser
           path: .harness-l8/
+          include-hidden-files: true
           retention-days: 7
