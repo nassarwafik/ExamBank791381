@@ -4654,3 +4654,63 @@ On the head's tree:
 - `npm run lint`: 0 errors. `npx tsc -b`: clean. `git diff --check`: clean.
 - `npm run build` is unaffected (no change under `src/` or `public/`) and runs in CI.
 - **Not run:** the Runner suites (nothing under `runner/` changed).
+
+---
+
+# Phase UX-R19b-fix2 — The page capture leaves Chromium's beyond-viewport mode
+
+Branched from `main` `b00b3701` (#431) as `hotfix/visual-gate-scroll-reset`. The second harness hotfix; the capture only. Two
+commits: the first reset the scroll before the shot; the second, after this hotfix's own gate failed, changed the capture mode.
+
+## R19b-fix2.1 What R19b-fix did and did not cure
+
+With the settled capture of #431 on `main`, #430 took `main` and ran its gate again (`b9b58158`). The tablet job failed on
+`sim-chemistryStructure`, 16241 px, confirmed on the re-capture: the exam's sticky title bar and fixed footer a few pixels lower
+over identical content, stable within the session. The first commit of this hotfix reset the scroll to the top before the shot,
+on the reading that the exam's `scrollIntoView` left a session-dependent offset.
+
+This hotfix's own tablet job then failed on `review-pending` (4706 px, confirmed), with `bank-questions` and `state-menu-open`
+changed once each: all three diffs inside x 952–1014 / y 58–766, the sidebar rail. The head capture had the rail's box with
+**nothing drawn in it**: no icons, no active pill, no dividers; content identical. On #430 the base capture had lost the rail the
+same way (`report-assignments`). Nothing in the app hides the nav while keeping its box, and it never happens outside the CI
+runner.
+
+**Cause.** `.eb-sidebar` is `position: sticky` at `calc(100vh − topbar)` with its nav as a scrolling layer. Chromium's `fullPage`
+screenshot captures *beyond* the viewport without resizing it (`captureBeyondViewport`), and a fixed / sticky layer is
+unreliable in that mode: a child compositing layer can be dropped for a whole visit (the blank rail), and a sticky bar can land a
+few pixels off (the exam pages). The settle loop cannot see a dropped layer that stays dropped, and a scroll reset does not
+touch the capture mode.
+
+## R19b-fix2.2 The fix
+
+The page is captured the classic way. After the stable-height wait and the scroll reset, the viewport grows to the document's
+height (at most 16384 px), two frames settle, a **plain** shot is taken (`fullPage: false`), kept only once two in a row are
+byte-identical (R19b-fix), and the viewport is restored. The scroll reset of the first commit stays: every page shot starts from
+the top, except a `state-*` scene, whose open menu closes on a scroll event.
+
+The gate captures both builds with the head's harness, so the comparison stays like with like. A page whose `100vh` chrome
+now spans the grown viewport changes on both sides alike.
+
+## R19b-fix2.3 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the scroll reset; the grown-viewport plain capture; the restore.
+- **`scripts/ux-visual-gate.test.mjs`:** guards for the reset (and its `state-*` exception), the grow → shot → restore order, and
+  no `fullPage: true` page capture.
+- **This record.**
+
+## R19b-fix2.4 Evidence
+
+- **Guard:** `ux-visual-gate.test.mjs` 20 / 20 on the head. Mutants: the scroll reset removed, the reset moved after the capture:
+  both **KILLED** by the reset guard (1 failed / 18 passed each, first commit); the viewport not grown, the beyond-viewport capture restored, the viewport restored before the shot: all three **KILLED** by the capture-mode guard (the second also by the two earlier guards), the file restored byte-for-byte (SHA-256) each time.
+- **Same build on both sides** with the new capture (the gate must report nothing): tablet, light: 69 / 69 compared, 0 changed, **PASS**; tablet, dark: 69 / 69, 0 changed, **PASS**.
+- **A planted change** (`h1 { color: #ff0000 }` in a copy of the base build; tablet, light): 59 of 69 pages reported as undeclared, **GATE FAIL**, as it must.
+- The proof against the flake is CI: this hotfix's own gate, then #430 after `main` carries it.
+
+## R19b-fix2.5 Local validation
+
+On the head's tree:
+- **Root suite** (`npx vitest run`): 1210 files, **14429 / 14430**. The one failure, `src/AppEvaluationFinish.9g.test.tsx` › «the last
+  student (s4) becomes complete …», is the 5000 ms timeout this container shows on `main` too (see the G1 record); it passes
+  **3 / 3** alone on this tree. Not patched here.
+- `npm run lint`: 0 errors. `git diff --check`: clean. `npm run build` is unaffected and runs in CI.
+- **Not run:** the Runner suites (nothing under `runner/` changed).
