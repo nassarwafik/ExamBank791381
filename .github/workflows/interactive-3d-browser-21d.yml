@@ -44,4 +44,5 @@ jobs:
         with:
           name: interactive-3d-21d-browser
           path: .harness-21d/
+          include-hidden-files: true
           retention-days: 7
