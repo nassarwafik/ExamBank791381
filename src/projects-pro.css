@@ -337,6 +337,10 @@
 .eb-score-done.is-on{ border-color:var(--eb-success); background:var(--eb-success); color:var(--eb-surface); }
 .eb-score-cell-read{ display:inline-flex; align-items:center; gap:4px; color:var(--eb-text); }
 .eb-score-cell-read svg{ color:var(--eb-success-tx); }
+/* Phase G4 — the import preview: the summary, then what is left out (scrolls on its own when long). */
+.eb-score-import{ display:grid; gap:var(--eb-space-2); }
+.eb-score-import-summary,.eb-score-import-issues{ margin:0; padding:0; list-style-position:inside; display:grid; gap:var(--eb-space-1); }
+.eb-score-import-issues{ max-block-size:14rem; overflow-y:auto; font-size:var(--eb-fs-13); }
 .eb-score-cell.is-self{ background:var(--eb-warn-bg); }
 .eb-score-legend.is-self::before{ background:var(--eb-warn-bg); }
 .eb-score-grid-table .eb-score-grid-total{ position:sticky; inset-inline-end:0; z-index:1; background:var(--eb-surface-2); white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--eb-text-heading); min-width:7.5rem; }

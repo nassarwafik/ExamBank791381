@@ -15,6 +15,8 @@ import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
 import { projectScoresRows, SCORE_EXPORT_HEADER_ROW } from "./scoreExport";
 import { downloadXlsx } from "../reports/xlsx";
 import { exportFilename } from "../teacher/teacherExports";
+import { readXlsxRows, XlsxReadError } from "../reports/xlsxRead";
+import { IMPORT_ISSUE_TEXT, planScoreImport, ScoreImportError, type ImportPlan } from "./scoreImport";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -72,6 +74,11 @@ const dropKeys = <T,>(map: Record<string, T>, keys: Iterable<string>): Record<st
  *   • The end of every row shows the server's progress and weighted grade (re-read after each save); the matrix never
  *     computes a grade.
  * Drafts survive the board re-read after a save; switching track / group with unsaved changes asks first.
+ *
+ * Phase G4 — «استيراد من Excel» (owner decisions D-G4a…d): the teacher picks a file the export wrote (edited in Excel); it is
+ * read in the browser (`reports/xlsxRead`) and planned against the server's board (`scoreImport`). A preview names what will
+ * change, what stays and every row or cell left out; «تعبئة الجدول» turns the changes into ordinary unsaved drafts, saved by
+ * «حفظ العلامات» like typed scores (the stale guard, then the approve-on-save switch). An import has no write path of its own.
  */
 export default function ProjectScoreGrid({ token, projectCode, classId, tracks, board, locked, onSaved, onDirtyChange, onStatusChanged }: Props) {
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
@@ -86,6 +93,8 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const [error, setError] = useState("");
   const [fillFor, setFillFor] = useState<BoardStage | null>(null);
   const [fillValue, setFillValue] = useState("");
+  const [importing, setImporting] = useState<{ fileName: string; plan: ImportPlan | null; error: string; reading: boolean } | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const fillInputRef = useRef<HTMLInputElement | null>(null);
   const { confirm, confirmDialog } = useConfirm();
@@ -119,6 +128,26 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const pendingCount = changedKeys.size;
   const dirty = changes.length > 0 || statusChanges.some(c => !c.implied);
   /** Phase G3 — «تصدير إلى Excel»: the SAVED scores of the whole class, every track (the server's board; never a draft). */
+  /** Phase G4 — read the picked file and plan it against the board; nothing changes until «تعبئة الجدول». */
+  async function readImport(file: File) {
+    setImporting({ fileName: file.name, plan: null, error: "", reading: true });
+    try {
+      const rows = await readXlsxRows(new Uint8Array(await file.arrayBuffer()));
+      setImporting({ fileName: file.name, plan: planScoreImport(rows, board), error: "", reading: false });
+    } catch (e) {
+      const known = e instanceof XlsxReadError || e instanceof ScoreImportError;
+      setImporting({ fileName: file.name, plan: null, error: known ? (e as Error).message : "تعذّرت قراءة الملف.", reading: false });
+    }
+  }
+  function applyImport(plan: ImportPlan) {
+    const next: Record<string, string> = {};
+    for (const c of plan.changes) next[keyOf(c.studentId, c.stageId)] = String(c.score);
+    setDrafts(prev => ({ ...prev, ...next }));
+    setCellErrors(prev => dropKeys(prev, Object.keys(next)));
+    setImporting(null);
+    const otherTracks = new Set(plan.changes.map(c => board.stages.find(s => s.stageId === c.stageId)?.track).filter(t => t && t !== track));
+    setNotice("عُبّئت " + plan.changes.length + " علامة من الملف كتغييرات غير محفوظة" + (otherTracks.size ? "، بعضها في مسارات أخرى" : "") + ". راجعها ثم اضغط «حفظ العلامات».");
+  }
   function exportScores() {
     const rows = projectScoresRows(board, tracks, { title: board.title, className: board.className, schoolYear: board.schoolYear, exportedAt: new Date() });
     downloadXlsx(exportFilename("TadrisPlus-علامات-المشروع", [board.title, board.className].filter(Boolean).join(" ")).replace(/\.csv$/, ""), rows, { sheetName: "علامات المشروع", rtl: true, boldRows: [SCORE_EXPORT_HEADER_ROW] });
@@ -280,6 +309,11 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
           </label>
         )}
         <button type="button" className="eb-button is-quiet is-small eb-score-grid-export" disabled={busy || !board.students.length} onClick={exportScores}>تصدير إلى Excel</button>
+        {!locked && <>
+          <button type="button" className="eb-button is-quiet is-small eb-score-grid-import" disabled={busy || !board.students.length} onClick={() => importInputRef.current?.click()}>استيراد من Excel</button>
+          <input ref={importInputRef} type="file" hidden aria-hidden="true" tabIndex={-1} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void readImport(f); }} />
+        </>}
       </div>
 
       {!locked && (
@@ -406,6 +440,43 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
           </label>
           {fillValue !== "" && fillParsed.kind !== "value" && <p className="eb-stage-row-error" role="alert">العلامة رقم من 0 إلى 100.</p>}
         </form>
+      </Dialog>
+      <Dialog open={!!importing} title="استيراد العلامات من Excel" onClose={() => setImporting(null)} size="md"
+        footer={importing?.plan ? <>
+          <button type="button" className="eb-button is-primary" disabled={!importing.plan.changes.length} onClick={() => applyImport(importing.plan!)}>تعبئة الجدول ({importing.plan.changes.length})</button>
+          <button type="button" className="eb-button is-quiet" onClick={() => setImporting(null)}>إلغاء</button>
+        </> : undefined}>
+        {importing && (
+          <div className="eb-score-import">
+            <p className="eb-muted">الملف: <bdi>{importing.fileName}</bdi></p>
+            {importing.reading && <p className="eb-muted" role="status">جارٍ قراءة الملف...</p>}
+            {importing.error && <div className="platform-error assignment-inline-message" role="alert">{importing.error}</div>}
+            {importing.plan && (() => {
+              const plan = importing.plan;
+              const byTrack = tracks.map(t => ({ t, n: plan.changes.filter(c => board.stages.find(s => s.stageId === c.stageId)?.track === t.trackId).length })).filter(x => x.n > 0);
+              return <>
+                <ul className="eb-score-import-summary" aria-label="ملخّص الاستيراد">
+                  <li><strong>{plan.changes.length}</strong> علامة ستُعبّأ في الجدول كتغييرات غير محفوظة{byTrack.length ? " (" + byTrack.map(x => x.t.title + ": " + x.n).join("، ") + ")" : ""}.</li>
+                  <li>{plan.rows} صف طالب في الملف، {plan.stages.length} عمود علامات.</li>
+                  {plan.unchanged > 0 && <li>{plan.unchanged} علامة مطابقة للمحفوظة (لا تغيير).</li>}
+                  {plan.empty > 0 && <li>{plan.empty} خلية فارغة تبقى علامتها المحفوظة كما هي.</li>}
+                </ul>
+                <p className="eb-muted">{approveOnSave ? "عند «حفظ العلامات» تُعتمد كل مرحلة تأخذ علامة، لأن مفتاح «اعتماد المرحلة عند حفظ العلامة» مفعّل." : "عند «حفظ العلامات» تُحفظ العلامات فقط ولا تتغيّر حالة أي مرحلة."}</p>
+                {pendingCount > 0 && <p className="eb-muted">لديك {pendingCount} تغيير غير محفوظ في الجدول؛ يبقى كما هو، وتحلّ علامات الملف محلّ ما يتقاطع معه.</p>}
+                {plan.issues.length > 0 && (
+                  <div role="alert">
+                    <p><strong>{plan.issues.length}</strong> لن تُستورد:</p>
+                    <ul className="eb-score-import-issues" aria-label="ما لن يُستورد">
+                      {plan.issues.slice(0, 20).map((i, n) => <li key={n}>الصف {i.row} — {i.name || "بلا اسم"}{i.stageId ? <> — <bdi>{i.stageId}</bdi> «<bdi>{i.value || ""}</bdi>»</> : null}: {IMPORT_ISSUE_TEXT[i.kind]}</li>)}
+                      {plan.issues.length > 20 && <li>و{plan.issues.length - 20} أخرى.</li>}
+                    </ul>
+                  </div>
+                )}
+                {plan.unknownColumns.length > 0 && <p className="eb-muted">أعمدة لا تقابل مرحلة في هذا المشروع وتُتجاهل: {plan.unknownColumns.join("، ")}</p>}
+              </>;
+            })()}
+          </div>
+        )}
       </Dialog>
       {confirmDialog}
     </div>
