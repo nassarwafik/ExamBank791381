@@ -1,0 +1,92 @@
+name: Projects Real Chromium Gate
+# The project tracker's real-browser checks (phases P3, P4, P6, P7, P8, P10, G1, G3), until now run only locally: the
+# production build next to the REAL API in process (browser-harness/learning-l8-api.cjs), one teacher and seeded classes,
+# at phone (touch), tablet and desktop widths, with axe-core. Every check runs even when an earlier one failed (each step
+# is `if: ${{ !cancelled() }}`), so one red step never hides another; any red step fails the job. Nothing is deployed.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/projects/**"
+      - "src/projects-pro.css"
+      - "src/student/**"
+      - "src/teacher/**"
+      - "src/shell/**"
+      - "src/ui/**"
+      - "src/reports/xlsx.ts"
+      - "src/App.tsx"
+      - "src/TeacherPlatform.tsx"
+      - "src/StudentPortal.tsx"
+      - "src/design-tokens.css"
+      - "src/platform.css"
+      - "src/page-parts.css"
+      - "api/src/functions/project-tracker.js"
+      - "api/src/functions/student-project-tracker.js"
+      - "api/src/lib/project-tracker/**"
+      - "api/src/lib/project-794589-*.js"
+      - "browser-harness/learning-l8-api.cjs"
+      - "scripts/check-project-*-browser-*.mjs"
+      - ".github/workflows/projects-browser-g.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Projects — P3 · P4 · P6 · P7 · P8 · P10 · G1 · G3 in real Chromium
+    env:
+      PLAYWRIGHT_CORE_DIR: /tmp/pw
+      AXE_CORE_DIR: /tmp/pw
+      CHROMIUM_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets, the API and the measuring tools
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0 axe-core@4.10.2
+          command -v google-chrome
+      - name: P3 — the student marks a stage in one tap
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p3 }
+        run: node scripts/check-project-student-one-tap-browser-p3.mjs
+      - name: P4 — «جدول العلامات» and the student profile's neighbours
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p4 }
+        run: node scripts/check-project-score-grid-browser-p4.mjs
+      - name: P6 — the teacher sees and confirms the students' own marks
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p6 }
+        run: node scripts/check-project-attention-browser-p6.mjs
+      - name: P7 — condensed stages
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p7 }
+        run: node scripts/check-project-condensed-browser-p7.mjs
+      - name: P8 — approve on save in the student table
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p8 }
+        run: node scripts/check-project-approve-on-save-browser-p8.mjs
+      - name: P10 — the project card header never squeezes its title
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/p10 }
+        run: node scripts/check-project-hero-browser-p10.mjs
+      - name: G1 — the class matrix
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/g1 }
+        run: node scripts/check-project-matrix-browser-g1.mjs
+      - name: G3 — the Excel export and the stage history
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/g3 }
+        run: node scripts/check-project-export-browser-g3.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: projects-browser
+          path: .harness-projects/
+          include-hidden-files: true
+          retention-days: 7

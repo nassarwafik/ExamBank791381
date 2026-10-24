@@ -118,6 +118,9 @@ async function openWorkspace(vp) {
 }
 
 async function axe(page, where) {
+  // axe measures the settled screen: a dialog fades in (ebFadeIn), and a frame taken mid-fade reads its muted text at a partial
+  // opacity. Every finite animation is let finish first; an endless one (a skeleton) never blocks.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect && a.effect.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {}))));
   await page.addScriptTag({ content: axeSource });
   const result = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] });
