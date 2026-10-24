@@ -19,8 +19,10 @@
 // (state-* scenes): keyboard focus, hover, a pressed control and an open menu, the classic builder, the builder's governance panel
 // and AI composer, and the function-study widget. Two runs of the same build are pixel-identical on every page and scene.
 // UX-R19b — scripts/ux-visual-gate.mjs runs this harness on a pull request's build and its base's build and compares them; each
-// page waits for a stable document height before its full-page screenshot. UX-R19b-fix — and keeps the capture only once two
-// full-page shots in a row are identical, so a late-painted fixed / sticky layer is never compared.
+// page waits for a stable document height before its screenshot. UX-R19b-fix — and keeps the capture only once two shots in a
+// row are identical, so a late paint is never compared. UX-R19b-fix2 — the shot starts from the top of the document and is taken
+// with the viewport grown to the document's height (a plain shot, not Chromium's capture-beyond-viewport, which can drop or shift
+// a position: fixed layer).
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -696,16 +698,24 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       await page.evaluate(() => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
       await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     }
-    // UX-R19b-fix — Chromium sometimes paints a fixed / sticky layer late in a full-page capture (a blank sidebar rail, a sticky bar
-    // a few pixels off). Capture until two full-page shots in a row are byte-identical (at most four), as a screenshot assertion does.
-    let shot = await page.screenshot({ fullPage: true });
+    // UX-R19b-fix2 — a Chromium full-page shot captures beyond the viewport without resizing it, and a position: fixed layer can
+    // come out wrong in that mode: the sidebar rail's own compositing layer (its scrolling nav) dropped for a whole visit, the exam's
+    // sticky bars a few pixels off. So the page is captured the classic way: the viewport grows to the document's height, two frames
+    // settle, and a plain shot is taken; the viewport is restored afterwards. UX-R19b-fix — the shot is kept only once two in a row are
+    // byte-identical (at most four), as a screenshot assertion does, so a late paint is never compared.
+    const vp = page.viewportSize();
+    const fullHeight = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0));
+    await page.setViewportSize({ width: vp.width, height: Math.max(vp.height, Math.min(fullHeight, 16384)) });
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    let shot = await page.screenshot({ fullPage: false });
     for (let i = 0; i < 3; i++) {
       await page.waitForTimeout(150);
-      const next = await page.screenshot({ fullPage: true });
+      const next = await page.screenshot({ fullPage: false });
       if (next.equals(shot)) break;
       shot = next;
     }
     fs.writeFileSync(file, shot);
+    await page.setViewportSize(vp);
     const m = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, height: document.documentElement.scrollHeight, h1: document.querySelector("h1")?.textContent?.trim() || "" }));
     const overflow = m.scrollWidth > m.clientWidth;
     if (pg.chartSel) {
