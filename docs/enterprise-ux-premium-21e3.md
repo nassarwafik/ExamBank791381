@@ -1446,3 +1446,27 @@ Also updated: the `ux7b1` source pin of the timeout body (`{action:"finalizeTime
 body never carries answers). Focused validation: affected API suites + guards 17A/17B/17C and the StudentExamPage / student-exam suites
 (390 passed after the pin update); lint 0 errors / 125 warnings; `tsc` clean; build + bundle guard passed (110.5 KB gzip); Chromium
 integrity harness (desktop) 16 / 16. The P3 findings of the review are left open by the owner's closure directive.
+
+## 17. QA-1 follow-up — a render-failure hold on a hidden-test coding question
+
+Found by the post-merge QA of `main` `c244cbab`. Section 16's hold already held an unanswered coding question. Official coding
+grading then overwrote that hold.
+
+- **The defect.** `planCodingGrading` builds one target per counted hidden-test coding question. For a target with no answer it
+  applied the automatic "no answer" result: `applyGrade(grade, 0, false)`, which sets `manualReview: false`. It did this after
+  `applyRenderFailureHolds` had held the same question.
+  - The hold became a final academic 0, and the attempt was published as `gradingStatus: "final"`.
+  - Affected paths: submit, the timed-out finalize, the teacher's `endActiveAttempt`, a composite@1 coding part, and a teacher force
+    regrade.
+  - This violates AGENTS.md §10: no zero because of an infrastructure failure.
+- **The fix.** In `api/src/lib/coding/official-grading.js`, `buildTarget` checks the attempt's server-verified hold record
+  (`attempt.renderFailures[questionId].held === true`; for a composite child, its composite's record).
+  - When the question is held, the target still completes with the factual `no-answer` evidence, because there is nothing to run.
+  - The grade then stays with the teacher (`holdForReview`: score 0, `manualReview: true`), so the attempt stays `pendingReview`.
+  - Unchanged: an unheld blank is still the automatic 0. A report with `held: false` changes nothing. An answered question is
+    dispatched as before.
+- **Evidence.** `api/tests/render-failure-hold-coding-qa1.test.js`, 8 tests, run on the real handlers over the in-memory store:
+  - **Fail-first:** run against `c244cbab`, the 5 hold tests fail on `manualReview` (received `false`) and the 2 controls pass.
+  - **Pin:** the 8th test (a stored `held: false` report regrades to the automatic 0) passes on the baseline too.
+  - **Mutation:** 5 mutants of the new guard (never held, always held, composite key not mapped, `held: false` treated as held,
+    the held branch finalizing), all KILLED. The file was restored byte-for-byte (sha256).
