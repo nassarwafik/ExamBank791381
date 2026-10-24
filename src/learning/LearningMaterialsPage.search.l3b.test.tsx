@@ -61,7 +61,7 @@ describe("L3-B teacher library — search", () => {
   it("the teacher Reader opened from the library has in-book search (\"all\")", async () => {
     stubFetch();
     render(<LearningMaterialsPage token="t" />);
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
     expect(screen.getByRole("button", { name: "بحث" })).toBeTruthy();
@@ -70,7 +70,7 @@ describe("L3-B teacher library — search", () => {
   it("without a teacher session token there is no library search and no in-book search", async () => {
     render(<LearningMaterialsPage />);
     expect(screen.queryByRole("button", { name: "ابحث في عناوين الدروس والصفحات" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
     expect(screen.queryByRole("button", { name: "بحث" })).toBeNull();

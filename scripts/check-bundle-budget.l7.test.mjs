@@ -42,7 +42,9 @@ describe("L.7 — learning content budgets", () => {
       "body-cccccccc.js": 'const e={id:"m01-l01-p01-def"};',
       "plain-dddddddd.js": "const x=1;",
       "style-eeeeeeee.css": '.x{content:"791381-m01-l01-p01"}',
+      "summary-ffffffff.js": 'const s={pages:[{id:"791381s-m01-l01-p01"}]};',
+      "body-gggggggg.js": 'const e={id:"m01-l00-p01-opener"};',
     });
-    expect(findManifestChunks(d)).toEqual(["manifest-aaaaaaaa.js", "other-bbbbbbbb.js"]);
+    expect(findManifestChunks(d)).toEqual(["manifest-aaaaaaaa.js", "other-bbbbbbbb.js", "summary-ffffffff.js"]);
   });
 });

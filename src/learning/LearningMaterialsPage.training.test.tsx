@@ -3,7 +3,7 @@
 // teacher headers (teachers may preview/solve every training regardless of class publication); without a token the
 // Reader stays fully local (zero requests), exactly as before.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -11,7 +11,7 @@ const SLOW = { timeout: 8000 }, T = 20000;
 const P08 = "791381-m02-l01-p08";
 
 async function openReader() {
-  fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+  fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
   fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
   await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
 }

@@ -172,8 +172,9 @@ const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 // 12.2, largest visual group chunk 6.5, all 27 visual chunks 64.4 — each budget leaves room for normal growth, not for a design
 // change (a body bundled again, the visuals packed into one chunk, the table of contents carrying page bodies).
 export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 40, manifest: 15, visualGroup: 9, visualsTotal: 75 });
-// The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`).
-const MANIFEST_SIGNATURE = /[`"']\d{6}-m\d\d-l\d\d-p\d\d[`"']/;
+// The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`, and for the summary
+// booklet course `"791381s-m01-l01-p01"` — a course id is the 6-digit book number with an optional letter suffix).
+const MANIFEST_SIGNATURE = /[`"']\d{6}[a-z]?-m\d\d-l\d\d-p\d\d[`"']/;
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");

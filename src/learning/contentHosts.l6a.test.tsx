@@ -2,7 +2,7 @@
 // Phase L.6a — each host asks for module bodies with ITS OWN session: the student's Reader with the student's token, the teacher's
 // book page with the teacher's token. (The transport itself is moduleBodySource.server, tested on its own.)
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const seen = vi.hoisted(() => ({ calls: [] as Array<{ courseId: string; moduleId: string; headers: Record<string, string> }> }));
 vi.mock("./content/moduleBodySource", async () => {
@@ -34,7 +34,7 @@ describe("L.6a — module bodies are requested with the host's own session", () 
   it("the teacher's book page: the teacher's token", async () => {
     quietFetch();
     render(<LearningMaterialsPage token="tea" />);
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
     await waitFor(() => expect(seen.calls.length).toBeGreaterThan(0), SLOW);
     expect(seen.calls[0]).toMatchObject({ courseId: "791381", headers: { "x-builder-token": "tea", Authorization: "Bearer tea" } });

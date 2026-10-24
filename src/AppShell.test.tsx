@@ -90,7 +90,7 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     fireEvent.click(nav("استيراد من ملف"));
     expect(h1()).toBe("استيراد من ملف"); expect(await screen.findByText("استيراد أسئلة من ملف")).toBeTruthy();
     fireEvent.click(nav("المواد التعليمية"));
-    expect(h1()).toBe("المواد التعليمية"); expect(await screen.findByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
+    expect(h1()).toBe("المواد التعليمية"); expect(within(await screen.findByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
     fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان"); expect(document.querySelector(".builder-content")).toBeTruthy();
     // no teacher bottom bar and no emoji in the shell navigation

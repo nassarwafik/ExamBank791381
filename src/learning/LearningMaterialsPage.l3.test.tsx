@@ -2,7 +2,7 @@
 // Phase L.3 — the teacher preview reads the book as a student does: with a teacher session the Reader gets the SAME study
 // client (server-judged exercises, never stored for a teacher); without a session it stays fully local, as before.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 
 const seen = vi.hoisted(() => ({ study: undefined as unknown, actor: "" }));
@@ -13,7 +13,7 @@ afterEach(() => { cleanup(); history.replaceState(null, "", location.pathname); 
 
 async function openReader(token?: string) {
   render(<LearningMaterialsPage token={token} />);
-  fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+  fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
   fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
   await screen.findByTestId("reader");
 }

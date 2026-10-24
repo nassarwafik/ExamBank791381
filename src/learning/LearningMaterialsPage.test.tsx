@@ -33,7 +33,7 @@ const EXPECTED_TARGETS: Record<string, string> = {
   b6: "791381-m25-l01-p01",
   summary: "791381-m28-l01-p01",
 };
-const openOverview = () => fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+const openOverview = () => fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
 const POPULATED = course.overviewBatches.filter(b => b.id !== "intro");
 const detailsLoaded = () => waitFor(() => expect(screen.queryByText("جارٍ تحميل تفاصيل الأقسام…")).toBeNull());
 
@@ -85,13 +85,13 @@ describe("Learning Materials — Phase 1 library", () => {
     // back to the library
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى المواد التعليمية" }));
     expect(screen.getByRole("heading", { level: 2, name: "المواد التعليمية" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
+    expect(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();                                    // fully local across open + back
   });
 
   it("the open-book CTA is a real <button> (keyboard-accessible), not a clickable div", () => {
     render(<LearningMaterialsPage />);
-    const cta = screen.getByRole("button", { name: "فتح الكتاب" });
+    const cta = within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" });
     expect(cta.tagName).toBe("BUTTON");
     expect(cta.getAttribute("type")).toBe("button");
   });

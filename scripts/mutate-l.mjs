@@ -101,7 +101,9 @@ export const CAMPAIGNS = {
     { id: "L7-M16", what: "a build with no manifest chunk passes unmeasured", file: GUARD,
       find: "  if (!m.manifest.length) out.push(", replace: "  if (false) out.push(", tests: L7_GUARD },
     { id: "L7-M17", what: "the manifest signature is narrowed to double quotes", file: GUARD,
-      find: "const MANIFEST_SIGNATURE = /[`\"']\\d{6}-m\\d\\d-l\\d\\d-p\\d\\d[`\"']/;", replace: "const MANIFEST_SIGNATURE = /\"\\d{6}-m\\d\\d-l\\d\\d-p\\d\\d\"/;", tests: L7_GUARD },
+      find: "const MANIFEST_SIGNATURE = /[`\"']\\d{6}[a-z]?-m\\d\\d-l\\d\\d-p\\d\\d[`\"']/;", replace: "const MANIFEST_SIGNATURE = /\"\\d{6}[a-z]?-m\\d\\d-l\\d\\d-p\\d\\d\"/;", tests: L7_GUARD },
+    { id: "L7-M18", what: "the manifest signature no longer recognises a suffixed course id (791381s)", file: GUARD,
+      find: "const MANIFEST_SIGNATURE = /[`\"']\\d{6}[a-z]?-m", replace: "const MANIFEST_SIGNATURE = /[`\"']\\d{6}-m", tests: L7_GUARD },
   ],
   l6b: [
     { id: "L6B-M1", what: "a wrong answer is told the explanation", file: CHECK_LIB,

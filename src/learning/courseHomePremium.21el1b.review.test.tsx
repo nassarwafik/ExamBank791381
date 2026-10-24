@@ -7,7 +7,7 @@
 //   • The empty introductory section shows no details and no description (never a fabricated 0–0 range); since L.0 it is a
 //     static «قريبًا» row, not a button.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 
 vi.mock("./training/LearningReaderWithTraining", () => ({ default: () => <div data-testid="reader" /> }));
@@ -29,7 +29,7 @@ describe("21E L1-B review — section details", () => {
   it("shows grammatical lesson counts and exposes each section's details as the button's description", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<LearningMaterialsPage />);
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     await waitFor(() => expect(document.querySelectorAll(".eb-lm-batch-details")).toHaveLength(7));
     for (const [label, details] of EXPECTED) {
       if (details === null) {
