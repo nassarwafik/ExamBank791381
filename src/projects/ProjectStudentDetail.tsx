@@ -16,6 +16,7 @@ import ProjectRankHero from "./ProjectRankHero";
 import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
 import { mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
+import { BY_LABEL, fmtDateTime, stageHistoryText, type StageHistoryEvent, type StageHistoryState } from "./stageHistory";
 import { gridStatusChanges, parseGridScore, scoreGridChanges, type GridChange } from "./scoreGrid";
 import type { Board } from "./ProjectBulkReview";
 import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation, StageStatus } from "./types";
@@ -139,6 +140,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const [notice, setNotice] = useState("");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [detailsFor, setDetailsFor] = useState("");                            // the stage whose details / note dialog is open
+  const [history, setHistory] = useState<StageHistoryState | null>(null);      // Phase G3 — the open «سجلّ التغييرات» dialog
+  const historySeq = useRef(0);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});  // keyed studentId|stageId (the matrix's keys)
   const [doneDrafts, setDoneDrafts] = useState<Record<string, boolean>>({});
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});   // keyed by stageId
@@ -180,7 +183,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   }
   // A new (project, class, student) starts clean: no detail, no dialog, no drafts, no row errors, no queued busy state.
   function resetSelection() {
-    setDetail(null); setLoadedContextKey(""); setDetailsFor(""); setScoreDrafts({}); setDoneDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
+    setDetail(null); setLoadedContextKey(""); setDetailsFor(""); setHistory(null); historySeq.current++; setScoreDrafts({}); setDoneDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
     setFocusStageId("");                                                       // a pending focus never carries over to another selection
     pendingRef.current = new Set();
     setSaving(false); savingRef.current = false;                               // a bulk save of the previous selection no longer holds this one's fields
@@ -377,6 +380,21 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     // Serialized: each write starts after the previous one settled (responses therefore apply in order).
     queue.current = queue.current.then(run, run);
   }
+  /** Phase G3 — «سجلّ التغييرات»: every stored event of the stage, read from the server when the dialog opens (never cached:
+   *  a save since the last opening shows). A response for another stage or selection is dropped. */
+  async function openHistory(stageId: string) {
+    const seq = ++historySeq.current, context = contextRef.current;
+    setHistory({ stageId, loading: true, error: "", events: [] });
+    try {
+      const r = await trackerGet<{ events: StageHistoryEvent[] }>(token, projectCode, "stage-history", { classId, studentId, stageId });
+      if (seq !== historySeq.current || context !== contextRef.current) return;
+      setHistory({ stageId, loading: false, error: "", events: Array.isArray(r.events) ? r.events : [] });
+    } catch (e) {
+      if (seq !== historySeq.current || context !== contextRef.current) return;
+      setHistory({ stageId, loading: false, error: e instanceof Error ? e.message : "تعذر تحميل سجلّ التغييرات.", events: [] });
+    }
+  }
+  function closeHistory() { historySeq.current++; setHistory(null); }
   function toggleApproveOnSave(on: boolean) {
     setApproveOnSave(on);
     writeApproveOnSave(on);
@@ -429,6 +447,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const detailsValue = detailsStage && perf ? stageValueOf(perf, detailsStage.stageId) : null;
   const detailsNote = detailsStage ? (noteDrafts[detailsStage.stageId] ?? (detailsEntry?.note || "")) : "";
   const detailsNoteBusy = !!detailsStage && !!pending[detailsStage.stageId + ":note"];
+  const historyStage = history ? detail.stages.find(st => st.stageId === history.stageId) ?? null : null;
 
   return (
     <section className="eb-student-profile" aria-labelledby="eb-student-profile-title">
@@ -602,6 +621,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                         <td className="eb-stage-cell-actions">
                           <ActionMenu label={"إجراءات المرحلة " + stage.stageId} disabled={saving || statusBusy}>
                             <button type="button" className="eb-menu-item" onClick={() => setDetailsFor(stage.stageId)}>{readOnly ? "التفاصيل" : "التفاصيل والملاحظة"}</button>
+                            <button type="button" className="eb-menu-item" onClick={() => void openHistory(stage.stageId)}>سجلّ التغييرات</button>
                             {!readOnly && <button type="button" className="eb-menu-item" disabled={saved === null} onClick={() => clearScore(stage.stageId)}>مسح العلامة</button>}
                             {!readOnly && MENU_STATUSES.map(st => (
                               <button key={st} type="button" className="eb-menu-item" disabled={statusBusy || status === st} onClick={() => writeSingle(stage, { status: st })}>{stageStatusLabel(st)}</button>
@@ -648,6 +668,25 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                 </div>
               </>
             )}
+          </div>
+        )}
+      </Dialog>
+
+      <Dialog open={!!history} title={historyStage ? "سجلّ تغييرات المرحلة " + historyStage.stageId + " — " + historyStage.title : "سجلّ التغييرات"} onClose={closeHistory} size="md">
+        {history && (
+          <div className="eb-stage-history" data-stage-id={history.stageId}>
+            {history.loading && <p className="eb-muted" role="status">جارٍ تحميل سجلّ التغييرات...</p>}
+            {!history.loading && history.error && <div className="platform-error assignment-inline-message" role="alert">{history.error} <button type="button" className="eb-button is-small" onClick={() => void openHistory(history.stageId)}>إعادة المحاولة</button></div>}
+            {!history.loading && !history.error && (history.events.length ? (
+              <ol className="eb-timeline eb-stage-history-list" aria-label="التغييرات من الأحدث إلى الأقدم">
+                {history.events.map(ev => (
+                  <li key={ev.eventId}>
+                    <span className="eb-timeline-text">{stageHistoryText(ev)}</span>
+                    <small className="eb-muted eb-stage-history-meta"><span className="eb-timeline-date">{fmtDateTime(ev.createdAt)}</span> · <span className="eb-stage-history-by">{BY_LABEL[ev.by] || BY_LABEL.teacher}</span></small>
+                  </li>
+                ))}
+              </ol>
+            ) : <EmptyState compact title="لا توجد تغييرات مسجّلة لهذه المرحلة." />)}
           </div>
         )}
       </Dialog>

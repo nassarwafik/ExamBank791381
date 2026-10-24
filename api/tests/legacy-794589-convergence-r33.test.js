@@ -21,6 +21,9 @@ import { fileURLToPath } from "node:url";
 //    (only `notStarted: true` was added there).
 //    Phase P-5c (reviewed golden change): one entry refreshed — G794589.summary.c1 gained `notStartedCount: 1` (its only
 //    change); invariant B9 ties the count to the class's student cards.
+//    Phase G3 (reviewed golden change): the six `progress.update` scenarios' route audits gained `details.via:
+//    "progress.update"` (the single-save path now names itself, as score.set / score.bulk / progress.bulk already did) —
+//    their only change (REFRESHED_BY_G3; invariant B10).
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -42,6 +45,7 @@ const ids = F.SCENARIOS.map(s => s.id);
 const generic794589Ids = ids.filter(id => id.startsWith("G794589."));
 const GENERIC_SNAPSHOT_KEYS = ["schemaVersion", "projectCode", "classId", "templateVersion", "tracks", "trackWeights", "config", "groups", "stages", "createdAt", "updatedAt"];
 const REFRESHED_BY_P9 = ["G794589.template.c2.lazyCreate", "G794589.template.c3.v1NoProgress", "G794589.template.cL.legacyScalar", "G899373.template.cN.enrolled"];
+const REFRESHED_BY_G3 = ["G794589.update.approve", "G794589.update.status", "G794589.update.noteOnly", "G794589.update.lazyCreateEmptyClass", "G899373.update.approve", "G883589.update.status"];
 const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10", "G794589.student.c4.s7.v1", "SG.s7"];
 const inLegacyNamespace = n => n.startsWith(F.LEGACY_CONFIG) || (n.startsWith(F.LEGACY_PROGRESS) && !/^platform\/project-progress\/(899373|883589)\//.test(n));
 const inNamespace = (code, n) => n.startsWith("platform/project-trackers/" + code + "/") || n.startsWith("platform/project-progress/" + code + "/");
@@ -97,7 +101,7 @@ describe("B. explicit invariants", () => {
   it("B4 the generic contract: not enrolled → 400; a non-member student → 404; audits carry the project code", () => {
     for (const s of ["template.cN.notEnrolled", "update.notEnrolled", "reset.cN.notEnrolled"]) expect([R["G794589." + s].status, R["G794589." + s].body.error]).toEqual([400, "الصف غير مسجَّل في هذا المشروع."]);
     for (const s of ["student.c1.s3.archived", "student.c1.s4.foreign", "student.c1.ghost"]) expect(R["G794589." + s].status).toBe(404);
-    expect(R["G794589.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "794589/c1/s1/BK02", targetLabel: expect.any(String), details: { projectCode: "794589", fromStatus: "not_started", toStatus: "approved" } }]);
+    expect(R["G794589.update.approve"].audits).toEqual([{ actor: "teacher-1", action: "project.stage.approve", targetType: "project-stage", targetId: "794589/c1/s1/BK02", targetLabel: expect.any(String), details: { projectCode: "794589", fromStatus: "not_started", toStatus: "approved", via: "progress.update" } }]);
     expect(R["G794589.update.noteOnly"].audits[0]).toMatchObject({ targetId: "794589/c1/s1/BK02", details: { projectCode: "794589" } });
     expect(R["G794589.reset.c1"].audits).toEqual([{ actor: "teacher-1", action: "project.reset", targetType: "project-tracker", targetId: "794589/c1", targetLabel: "صف c1", details: { projectCode: "794589", deletedProgressCount: 2 } }]);
     expect(R["G794589.templateUpdate.c1"].audits).toEqual([{ actor: "teacher-1", action: "project.template.update", targetType: "project-template", targetId: "794589/c1", targetLabel: "صف c1", details: { projectCode: "794589" } }]);
@@ -178,6 +182,14 @@ describe("B8. Phase P-5b — «لم يبدأ» is never «بلا تحديث»", 
     const withNotStarted = [...new Set(summaries().filter(x => x.s.notStarted).map(x => x.id))];
     expect(withNotStarted.filter(id => !REFRESHED_BY_P5B.includes(id))).toEqual([]);
     expect(R["G794589.summary.c1"].body.summary.staleCount).toBe(1);
+  });
+});
+
+describe("B10. Phase G3 — the single-save path names itself in the audit", () => {
+  it("every project.stage.* route audit of a progress.update scenario carries via: progress.update, and only the refreshed entries have one", () => {
+    const withStageAudit = Object.keys(golden).filter(id => (golden[id].audits || []).some(a => String(a.action).startsWith("project.stage.")));
+    expect([...withStageAudit].sort()).toEqual([...REFRESHED_BY_G3].sort());
+    for (const id of REFRESHED_BY_G3) for (const a of R[id].audits.filter(x => String(x.action).startsWith("project.stage."))) expect(a.details.via, id).toBe("progress.update");
   });
 });
 

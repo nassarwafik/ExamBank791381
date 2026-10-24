@@ -8028,7 +8028,8 @@
         "details": {
           "projectCode": "794589",
           "fromStatus": "not_started",
-          "toStatus": "approved"
+          "toStatus": "approved",
+          "via": "progress.update"
         }
       }
     ],
@@ -9528,7 +9529,8 @@
         "details": {
           "projectCode": "794589",
           "fromStatus": "not_started",
-          "toStatus": "in_progress"
+          "toStatus": "in_progress",
+          "via": "progress.update"
         }
       }
     ],
@@ -11023,7 +11025,8 @@
         "targetId": "794589/c1/s1/BK02",
         "targetLabel": "الفرع الأول: الجداول والتخطيط",
         "details": {
-          "projectCode": "794589"
+          "projectCode": "794589",
+          "via": "progress.update"
         }
       }
     ],
@@ -14776,7 +14779,8 @@
         "details": {
           "projectCode": "794589",
           "fromStatus": "not_started",
-          "toStatus": "in_progress"
+          "toStatus": "in_progress",
+          "via": "progress.update"
         }
       }
     ],
@@ -19402,7 +19406,8 @@
         "details": {
           "projectCode": "899373",
           "fromStatus": "in_progress",
-          "toStatus": "approved"
+          "toStatus": "approved",
+          "via": "progress.update"
         }
       }
     ],
@@ -22080,7 +22085,8 @@
         "details": {
           "projectCode": "883589",
           "fromStatus": "in_progress",
-          "toStatus": "ready_for_review"
+          "toStatus": "ready_for_review",
+          "via": "progress.update"
         }
       }
     ],

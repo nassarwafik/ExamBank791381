@@ -102,6 +102,7 @@ artifacts/phase-21e2/
 .harness-p8/
 .harness-p10/
 .harness-g1/
+.harness-g3/
 
 # Phase UX-R0 — visual baseline captures (scripts/capture-visual-baseline-ux-r.mjs)
 .harness-ux-r/

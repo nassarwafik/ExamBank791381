@@ -12,6 +12,9 @@ import type { Board, BoardStage, BoardStudent } from "./ProjectBulkReview";
 import type { StageStatus, TrackMeta } from "./types";
 import { gridRowMatches, gridStatusChanges, parseGridScore, scoreGridChanges, type GridChange, type GridFilter } from "./scoreGrid";
 import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
+import { projectScoresRows, SCORE_EXPORT_HEADER_ROW } from "./scoreExport";
+import { downloadXlsx } from "../reports/xlsx";
+import { exportFilename } from "../teacher/teacherExports";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -115,6 +118,12 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const changedKeys = useMemo(() => new Set([...pending.map(c => c.key), ...statusChanges.map(c => c.key)]), [pending, statusChanges]);
   const pendingCount = changedKeys.size;
   const dirty = changes.length > 0 || statusChanges.some(c => !c.implied);
+  /** Phase G3 — «تصدير إلى Excel»: the SAVED scores of the whole class, every track (the server's board; never a draft). */
+  function exportScores() {
+    const rows = projectScoresRows(board, tracks, { title: board.title, className: board.className, schoolYear: board.schoolYear, exportedAt: new Date() });
+    downloadXlsx(exportFilename("TadrisPlus-علامات-المشروع", [board.title, board.className].filter(Boolean).join(" ")).replace(/\.csv$/, ""), rows, { sheetName: "علامات المشروع", rtl: true, boldRows: [SCORE_EXPORT_HEADER_ROW] });
+    setNotice("صُدّرت علامات " + board.students.length + " طالب في كل المسارات إلى ملف Excel." + (pendingCount ? " الملف يحمل العلامات المحفوظة فقط؛ لديك " + pendingCount + " تغيير لم يُحفظ بعد." : ""));
+  }
   const failedList = useMemo(() => Object.entries(cellErrors).map(([key, text]) => {
     const i = key.indexOf("|"), studentId = key.slice(0, i), stageId = key.slice(i + 1);
     return { key, stageId, text, name: board.students.find(s => s.studentId === studentId)?.displayName || studentId };
@@ -270,6 +279,7 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
             اعتماد المرحلة عند حفظ العلامة
           </label>
         )}
+        <button type="button" className="eb-button is-quiet is-small eb-score-grid-export" disabled={busy || !board.students.length} onClick={exportScores}>تصدير إلى Excel</button>
       </div>
 
       {!locked && (

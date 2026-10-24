@@ -196,10 +196,10 @@ describe("8C-1 the Access project (899373) — every row is gradeable without op
     const srv = server();
     const spies = await mount("899373");
     const items = await menuItems("BK03");
-    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
-    expect(items[1].disabled).toBe(true);                                                // nothing saved to clear
-    expect(items[2].disabled).toBe(true);                                                // the current status
-    fireEvent.click(items[3]);
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل والملاحظة", "سجلّ التغييرات", "مسح العلامة", "لم يبدأ", "جاهز للفحص"]);
+    expect(items[2].disabled).toBe(true);                                                // nothing saved to clear
+    expect(items[3].disabled).toBe(true);                                                // the current status
+    fireEvent.click(items[4]);
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(srv.posts).toEqual([{ projectCode: "899373", action: "progress.update", classId: "c1", studentId: "s1", stageId: "BK03", status: "ready_for_review" }]);
     expect(spies.onReadyChanged).toHaveBeenCalledTimes(1);
@@ -505,7 +505,7 @@ describe("8C-4 archived class — strictly read-only", () => {
     expect(row("BK01").querySelector(".eb-stage-cell-value")!.textContent).toMatch(/\d/);
     expect(within(row("BK01")).getByLabelText("غير منجز")).toBeTruthy();
     const items = await menuItems("BK01");
-    expect(items.map(b => b.textContent)).toEqual(["التفاصيل"]);
+    expect(items.map(b => b.textContent)).toEqual(["التفاصيل", "سجلّ التغييرات"]);
     fireEvent.click(items[0]);
     await screen.findByRole("dialog");
     expect(screen.queryByLabelText("ملاحظة المعلم")).toBeNull();
