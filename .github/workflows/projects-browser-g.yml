@@ -1,5 +1,5 @@
 name: Projects Real Chromium Gate
-# The project tracker's real-browser checks (phases P3, P4, P6, P7, P8, P10, G1, G3), until now run only locally: the
+# The project tracker's real-browser checks (phases P3, P4, P6, P7, P8, P10, G1, G3, G4b, G4), until now run only locally: the
 # production build next to the REAL API in process (browser-harness/learning-l8-api.cjs), one teacher and seeded classes,
 # at phone (touch), tablet and desktop widths, with axe-core. Every check runs even when an earlier one failed (each step
 # is `if: ${{ !cancelled() }}`), so one red step never hides another; any red step fails the job. Nothing is deployed.
@@ -33,7 +33,7 @@ jobs:
   chromium:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Projects — P3 · P4 · P6 · P7 · P8 · P10 · G1 · G3 in real Chromium
+    name: Projects — P3 · P4 · P6 · P7 · P8 · P10 · G1 · G3 · G4b · G4 in real Chromium
     env:
       PLAYWRIGHT_CORE_DIR: /tmp/pw
       AXE_CORE_DIR: /tmp/pw
@@ -83,6 +83,14 @@ jobs:
         if: ${{ !cancelled() }}
         env: { HARNESS_OUT: .harness-projects/g3 }
         run: node scripts/check-project-export-browser-g3.mjs
+      - name: G4b — a cell's change history from the class matrix
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/g4b }
+        run: node scripts/check-project-matrix-history-browser-g4b.mjs
+      - name: G4 — import scores from Excel into the class matrix
+        if: ${{ !cancelled() }}
+        env: { HARNESS_OUT: .harness-projects/g4 }
+        run: node scripts/check-project-score-import-browser-g4.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -15,6 +15,9 @@ import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
 import { projectScoresRows, SCORE_EXPORT_HEADER_ROW } from "./scoreExport";
 import { downloadXlsx } from "../reports/xlsx";
 import { exportFilename } from "../teacher/teacherExports";
+import StageHistoryDialog, { type StageHistoryTarget } from "./StageHistoryDialog";
+import { readXlsxRows, XlsxReadError } from "../reports/xlsxRead";
+import { IMPORT_ISSUE_TEXT, planScoreImport, ScoreImportError, type ImportPlan } from "./scoreImport";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -72,6 +75,14 @@ const dropKeys = <T,>(map: Record<string, T>, keys: Iterable<string>): Record<st
  *   • The end of every row shows the server's progress and weighted grade (re-read after each save); the matrix never
  *     computes a grade.
  * Drafts survive the board re-read after a save; switching track / group with unsaved changes asks first.
+ *
+ * Phase G4b — a cell's «سجلّ التغييرات»: the last focused cell is the matrix's active cell; «سجلّ الخلية» in the controls (or
+ * Shift+F10 / the context-menu key in the cell) opens that student's stage history, the same dialog as the student table. In an
+ * archived class every cell is a button that opens its history.
+ * Phase G4 — «استيراد من Excel» (owner decisions D-G4a…d): the teacher picks a file the export wrote (edited in Excel); it is
+ * read in the browser (`reports/xlsxRead`) and planned against the server's board (`scoreImport`). A preview names what will
+ * change, what stays and every row or cell left out; «تعبئة الجدول» turns the changes into ordinary unsaved drafts, saved by
+ * «حفظ العلامات» like typed scores (the stale guard, then the approve-on-save switch). An import has no write path of its own.
  */
 export default function ProjectScoreGrid({ token, projectCode, classId, tracks, board, locked, onSaved, onDirtyChange, onStatusChanged }: Props) {
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
@@ -86,6 +97,10 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const [error, setError] = useState("");
   const [fillFor, setFillFor] = useState<BoardStage | null>(null);
   const [fillValue, setFillValue] = useState("");
+  const [activeCell, setActiveCell] = useState<{ studentId: string; stageId: string } | null>(null);
+  const [history, setHistory] = useState<StageHistoryTarget | null>(null);
+  const [importing, setImporting] = useState<{ fileName: string; plan: ImportPlan | null; error: string; reading: boolean } | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const fillInputRef = useRef<HTMLInputElement | null>(null);
   const { confirm, confirmDialog } = useConfirm();
@@ -119,10 +134,37 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const pendingCount = changedKeys.size;
   const dirty = changes.length > 0 || statusChanges.some(c => !c.implied);
   /** Phase G3 — «تصدير إلى Excel»: the SAVED scores of the whole class, every track (the server's board; never a draft). */
+  /** Phase G4 — read the picked file and plan it against the board; nothing changes until «تعبئة الجدول». */
+  async function readImport(file: File) {
+    setImporting({ fileName: file.name, plan: null, error: "", reading: true });
+    try {
+      const rows = await readXlsxRows(new Uint8Array(await file.arrayBuffer()));
+      setImporting({ fileName: file.name, plan: planScoreImport(rows, board), error: "", reading: false });
+    } catch (e) {
+      const known = e instanceof XlsxReadError || e instanceof ScoreImportError;
+      setImporting({ fileName: file.name, plan: null, error: known ? (e as Error).message : "تعذّرت قراءة الملف.", reading: false });
+    }
+  }
+  function applyImport(plan: ImportPlan) {
+    const next: Record<string, string> = {};
+    for (const c of plan.changes) next[keyOf(c.studentId, c.stageId)] = String(c.score);
+    setDrafts(prev => ({ ...prev, ...next }));
+    setCellErrors(prev => dropKeys(prev, Object.keys(next)));
+    setImporting(null);
+    const otherTracks = new Set(plan.changes.map(c => board.stages.find(s => s.stageId === c.stageId)?.track).filter(t => t && t !== track));
+    setNotice("عُبّئت " + plan.changes.length + " علامة من الملف كتغييرات غير محفوظة" + (otherTracks.size ? "، بعضها في مسارات أخرى" : "") + ". راجعها ثم اضغط «حفظ العلامات».");
+  }
   function exportScores() {
     const rows = projectScoresRows(board, tracks, { title: board.title, className: board.className, schoolYear: board.schoolYear, exportedAt: new Date() });
     downloadXlsx(exportFilename("TadrisPlus-علامات-المشروع", [board.title, board.className].filter(Boolean).join(" ")).replace(/\.csv$/, ""), rows, { sheetName: "علامات المشروع", rtl: true, boldRows: [SCORE_EXPORT_HEADER_ROW] });
     setNotice("صُدّرت علامات " + board.students.length + " طالب في كل المسارات إلى ملف Excel." + (pendingCount ? " الملف يحمل العلامات المحفوظة فقط؛ لديك " + pendingCount + " تغيير لم يُحفظ بعد." : ""));
+  }
+  // The active cell while its student is shown and its stage is a column (a filter, track or group change can hide either).
+  const active = activeCell ? students.find(s => s.studentId === activeCell.studentId) ?? null : null;
+  const activeStage = activeCell ? columns.find(c => c.stageId === activeCell.stageId) ?? null : null;
+  function openHistory(student: BoardStudent, stage: BoardStage) {
+    setActiveCell({ studentId: student.studentId, stageId: stage.stageId });
+    setHistory({ studentId: student.studentId, stageId: stage.stageId, title: "سجلّ تغييرات المرحلة " + stage.stageId + " — " + stage.title + " · " + student.displayName });
   }
   const failedList = useMemo(() => Object.entries(cellErrors).map(([key, text]) => {
     const i = key.indexOf("|"), studentId = key.slice(0, i), stageId = key.slice(i + 1);
@@ -163,6 +205,11 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
     else if (e.key === "ArrowLeft") move(0, 1);                               // RTL: the next stage is to the left
     else if (e.key === "ArrowRight") move(0, -1);
     else if (e.key === " ") { e.preventDefault(); toggleDone(student, stageId, done); }  // a score never holds a space
+    else if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault();
+      const stage = columns.find(col => col.stageId === stageId);
+      if (stage) openHistory(student, stage);
+    }
     else if (e.key === "Escape") {
       e.preventDefault();
       setDrafts(prev => dropKeys(prev, [key]));
@@ -259,7 +306,7 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
 
   return (
     <div className="eb-score-grid" dir="rtl">
-      <p className="eb-muted">اكتب العلامات كما في جدول بيانات: Enter للطالب التالي، والأسهم للتنقل، والمسافة لتحديد المرحلة منجزة، ويمكن لصق عمود أو جدول من Excel. تظهر في آخر كل صف نسبة التقدّم والعلامة الموزونة كما يحسبها الخادم.</p>
+      <p className="eb-muted">اكتب العلامات كما في جدول بيانات: Enter للطالب التالي، والأسهم للتنقل، والمسافة لتحديد المرحلة منجزة، وShift+F10 لسجلّ تغييرات الخلية، ويمكن لصق عمود أو جدول من Excel. تظهر في آخر كل صف نسبة التقدّم والعلامة الموزونة كما يحسبها الخادم.</p>
       <div className="eb-bulk-stage-picker eb-score-grid-controls">
         <div className="eb-segmented" role="group" aria-label="المسار">
           {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} disabled={busy} onClick={() => { if (t.trackId !== track) void guard(() => setTrack(t.trackId)); }}>{t.title}</button>)}
@@ -279,7 +326,16 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
             اعتماد المرحلة عند حفظ العلامة
           </label>
         )}
+        <button type="button" className="eb-button is-quiet is-small eb-score-grid-history" disabled={!active || !activeStage}
+          aria-label={active && activeStage ? "سجلّ تغييرات الخلية: " + active.displayName + " — " + activeStage.stageId : "سجلّ الخلية (اختر خلية أولًا)"}
+          title={active && activeStage ? active.displayName + " — " + activeStage.stageId : "اختر خلية في الجدول أولًا"}
+          onClick={() => { if (active && activeStage) openHistory(active, activeStage); }}>سجلّ الخلية</button>
         <button type="button" className="eb-button is-quiet is-small eb-score-grid-export" disabled={busy || !board.students.length} onClick={exportScores}>تصدير إلى Excel</button>
+        {!locked && <>
+          <button type="button" className="eb-button is-quiet is-small eb-score-grid-import" disabled={busy || !board.students.length} onClick={() => importInputRef.current?.click()}>استيراد من Excel</button>
+          <input ref={importInputRef} type="file" hidden aria-hidden="true" tabIndex={-1} accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void readImport(f); }} />
+        </>}
       </div>
 
       {!locked && (
@@ -360,14 +416,17 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
                           return (
                             <td key={st.stageId} className={"eb-score-cell " + STATUS_CLASS[status] + (cell?.selfReported ? " is-self" : "") + (isChanged ? " is-changed" : "") + (isInvalid || cellError ? " is-invalid" : "")} title={cellError || statusText}>
                               {locked ? (
-                                <span className="eb-score-cell-read"><span dir="ltr">{saved === null ? "—" : fmtContribution(saved)}</span>{savedDone && <IconCheck size={14} aria-label="منجز" />}</span>
+                                <button type="button" className="eb-score-cell-read" onClick={() => openHistory(student, st)}
+                                  aria-label={student.displayName + " — " + st.stageId + " (" + statusText + "): " + (saved === null ? "بلا علامة" : fmtContribution(saved) + " من 100") + " — سجلّ التغييرات"}>
+                                  <span dir="ltr">{saved === null ? "—" : fmtContribution(saved)}</span>{savedDone && <IconCheck size={14} aria-label="منجز" />}
+                                </button>
                               ) : (
                                 <div className="eb-score-cell-edit">
                                   <input type="text" inputMode="decimal" dir="ltr" autoComplete="off" data-r={r} data-c={c}
                                     value={value} disabled={busy}
                                     aria-label={student.displayName + " — " + st.stageId + " (" + statusText + ") علامة من 100"}
                                     aria-invalid={isInvalid || !!cellError || undefined}
-                                    onFocus={e => e.currentTarget.select()}
+                                    onFocus={e => { e.currentTarget.select(); setActiveCell({ studentId: student.studentId, stageId: st.stageId }); }}
                                     onChange={e => setDraft(key, e.target.value)}
                                     onKeyDown={e => onKey(e, r, c, key, student, st.stageId, done)}
                                     onPaste={e => onPaste(e, r, c)} />
@@ -406,6 +465,44 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
           </label>
           {fillValue !== "" && fillParsed.kind !== "value" && <p className="eb-stage-row-error" role="alert">العلامة رقم من 0 إلى 100.</p>}
         </form>
+      </Dialog>
+      <StageHistoryDialog token={token} projectCode={projectCode} classId={classId} target={history} onClose={() => setHistory(null)} />
+      <Dialog open={!!importing} title="استيراد العلامات من Excel" onClose={() => setImporting(null)} size="md"
+        footer={importing?.plan ? <>
+          <button type="button" className="eb-button is-primary" disabled={!importing.plan.changes.length} onClick={() => applyImport(importing.plan!)}>تعبئة الجدول ({importing.plan.changes.length})</button>
+          <button type="button" className="eb-button is-quiet" onClick={() => setImporting(null)}>إلغاء</button>
+        </> : undefined}>
+        {importing && (
+          <div className="eb-score-import">
+            <p className="eb-muted">الملف: <bdi>{importing.fileName}</bdi></p>
+            {importing.reading && <p className="eb-muted" role="status">جارٍ قراءة الملف...</p>}
+            {importing.error && <div className="platform-error assignment-inline-message" role="alert">{importing.error}</div>}
+            {importing.plan && (() => {
+              const plan = importing.plan;
+              const byTrack = tracks.map(t => ({ t, n: plan.changes.filter(c => board.stages.find(s => s.stageId === c.stageId)?.track === t.trackId).length })).filter(x => x.n > 0);
+              return <>
+                <ul className="eb-score-import-summary" aria-label="ملخّص الاستيراد">
+                  <li><strong>{plan.changes.length}</strong> علامة ستُعبّأ في الجدول كتغييرات غير محفوظة{byTrack.length ? " (" + byTrack.map(x => x.t.title + ": " + x.n).join("، ") + ")" : ""}.</li>
+                  <li>{plan.rows} صف طالب في الملف، {plan.stages.length} عمود علامات.</li>
+                  {plan.unchanged > 0 && <li>{plan.unchanged} علامة مطابقة للمحفوظة (لا تغيير).</li>}
+                  {plan.empty > 0 && <li>{plan.empty} خلية فارغة تبقى علامتها المحفوظة كما هي.</li>}
+                </ul>
+                <p className="eb-muted">{approveOnSave ? "عند «حفظ العلامات» تُعتمد كل مرحلة تأخذ علامة، لأن مفتاح «اعتماد المرحلة عند حفظ العلامة» مفعّل." : "عند «حفظ العلامات» تُحفظ العلامات فقط ولا تتغيّر حالة أي مرحلة."}</p>
+                {pendingCount > 0 && <p className="eb-muted">لديك {pendingCount} تغيير غير محفوظ في الجدول؛ يبقى كما هو، وتحلّ علامات الملف محلّ ما يتقاطع معه.</p>}
+                {plan.issues.length > 0 && (
+                  <div role="alert">
+                    <p><strong>{plan.issues.length}</strong> لن تُستورد:</p>
+                    <ul className="eb-score-import-issues" aria-label="ما لن يُستورد">
+                      {plan.issues.slice(0, 20).map((i, n) => <li key={n}>الصف {i.row} — {i.name || "بلا اسم"}{i.stageId ? <> — <bdi>{i.stageId}</bdi> «<bdi>{i.value || ""}</bdi>»</> : null}: {IMPORT_ISSUE_TEXT[i.kind]}</li>)}
+                      {plan.issues.length > 20 && <li>و{plan.issues.length - 20} أخرى.</li>}
+                    </ul>
+                  </div>
+                )}
+                {plan.unknownColumns.length > 0 && <p className="eb-muted">أعمدة لا تقابل مرحلة في هذا المشروع وتُتجاهل: {plan.unknownColumns.join("، ")}</p>}
+              </>;
+            })()}
+          </div>
+        )}
       </Dialog>
       {confirmDialog}
     </div>
