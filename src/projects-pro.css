@@ -335,7 +335,9 @@
 .eb-score-done:hover:not(:disabled){ border-color:var(--eb-success); color:var(--eb-success-tx); }
 .eb-score-done:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
 .eb-score-done.is-on{ border-color:var(--eb-success); background:var(--eb-success); color:var(--eb-surface); }
-.eb-score-cell-read{ display:inline-flex; align-items:center; gap:4px; color:var(--eb-text); }
+.eb-score-cell-read{ display:inline-flex; align-items:center; justify-content:center; gap:4px; min-inline-size:3rem; min-block-size:36px; padding:0 var(--eb-space-1); font:inherit; font-variant-numeric:tabular-nums; color:var(--eb-text); background:transparent; border:1px solid transparent; border-radius:var(--eb-r-sm); cursor:pointer; }
+.eb-score-cell-read:hover{ border-color:var(--eb-line-2); }
+.eb-score-cell-read:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
 .eb-score-cell-read svg{ color:var(--eb-success-tx); }
 /* Phase G4 — the import preview: the summary, then what is left out (scrolls on its own when long). */
 .eb-score-import{ display:grid; gap:var(--eb-space-2); }
@@ -345,7 +347,7 @@
 .eb-score-legend.is-self::before{ background:var(--eb-warn-bg); }
 .eb-score-grid-table .eb-score-grid-total{ position:sticky; inset-inline-end:0; z-index:1; background:var(--eb-surface-2); white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--eb-text-heading); min-width:7.5rem; }
 .eb-score-grid-table thead .eb-score-grid-total{ z-index:3; }
-@media (pointer: coarse){ .eb-score-done{ inline-size:44px; block-size:44px; } .eb-score-cell input{ min-height:44px; } }
+@media (pointer: coarse){ .eb-score-done{ inline-size:44px; block-size:44px; } .eb-score-cell input{ min-height:44px; } .eb-score-cell-read{ min-block-size:44px; } }
 /* A cell the keyboard moves to (or a click scrolls to) stays clear of the sticky header and columns (the student name; the
    totals on wide screens): the scrolling region keeps that much room. On a phone the totals column scrolls with the grid. */
 .eb-score-grid-scroll{ scroll-padding-inline:10rem 8rem; scroll-padding-block-start:4.5rem; }

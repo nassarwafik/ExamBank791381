@@ -199,6 +199,11 @@
     {
       "page": "project-matrix",
       "viewport": "all",
+      "reason": "Phase G4b — «سجلّ الخلية» joins the class matrix's controls (a cell's change history, the same dialog as the student table) and the help line names Shift+F10; nothing else on the page moves."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "all",
       "reason": "Phase G4 — «استيراد من Excel» joins the class matrix's controls (owner decisions D-G4a…d: the file's scores become unsaved drafts after a preview); nothing else on the page moves."
     }
   ]
