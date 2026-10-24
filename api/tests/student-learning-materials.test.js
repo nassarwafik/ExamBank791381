@@ -165,8 +165,47 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381-m27", title: "بروتوكولات التوجيه", order: 26 },
       { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 },
       { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 }
+    ] }, { courseId: "791381s", title: "أوراق تلخيص شبكات الاتصال", subject: "أنظمة محوسبة", modules: [
+      // The summary booklet: an independent second course — listed = publishable, never auto-visible.
+      { moduleId: "791381s-m00", title: "أوراق تلخيص للمراجعة", order: 0 },
+      { moduleId: "791381s-m01", title: "أساسيات الشبكات", order: 1 },
+      { moduleId: "791381s-m02", title: "الأعداد والتحويل بينها", order: 2 },
+      { moduleId: "791381s-m03", title: "عناوين IP", order: 3 },
+      { moduleId: "791381s-m04", title: "الفئات وقناع الشبكة و CIDR", order: 4 },
+      { moduleId: "791381s-m05", title: "أجهزة الشبكات", order: 5 },
+      { moduleId: "791381s-m06", title: "أنواع شبكات الاتصال (أشكال التوصيل)", order: 6 },
+      { moduleId: "791381s-m07", title: "الكوابل وعنوان MAC", order: 7 },
+      { moduleId: "791381s-m08", title: "أنواع الرسائل", order: 8 },
+      { moduleId: "791381s-m09", title: "نموذج OSI ونموذج TCP/IP", order: 9 },
+      { moduleId: "791381s-m10", title: "البروتوكولات", order: 10 },
+      { moduleId: "791381s-m11", title: "أوامر فحص الشبكة", order: 11 },
+      { moduleId: "791381s-m12", title: "المجالات والمفاهيم", order: 12 },
+      { moduleId: "791381s-m13", title: "أمان الشبكات", order: 13 },
+      { moduleId: "791381s-m14", title: "تجزئة البيانات والمصافحة الثلاثية", order: 14 },
+      { moduleId: "791381s-m15", title: "برمجة السويتش من CLI", order: 15 },
+      { moduleId: "791381s-m16", title: "الشبكات الافتراضية VLAN", order: 16 },
+      { moduleId: "791381s-m17", title: "Native و Tagged و Untagged", order: 17 },
+      { moduleId: "791381s-m18", title: "إدارة VLAN مركزيًا: VTP", order: 18 },
+      { moduleId: "791381s-m19", title: "Trunk و Router on a Stick", order: 19 },
+      { moduleId: "791381s-m20", title: "المنطقة العازلة DMZ والشبكات اللاسلكية", order: 20 },
+      { moduleId: "791381s-m21", title: "IPv6 والمنافذ Ports", order: 21 },
+      { moduleId: "791381s-m22", title: "بروتوكول DHCP", order: 22 },
+      { moduleId: "791381s-m23", title: "حماية المنافذ Port Security", order: 23 },
+      { moduleId: "791381s-m24", title: "حماية أجهزة Cisco بكلمات المرور", order: 24 },
+      { moduleId: "791381s-m25", title: "مرجع أوامر Cisco", order: 25 },
+      { moduleId: "791381s-m26", title: "الشبكة الواسعة WAN", order: 26 },
+      { moduleId: "791381s-m27", title: "مفاهيم التوجيه Routing", order: 27 },
+      { moduleId: "791381s-m28", title: "بروتوكول OSPF", order: 28 },
+      { moduleId: "791381s-m29", title: "بروتوكول EIGRP وجدول التوجيه", order: 29 },
+      { moduleId: "791381s-m30", title: "قوائم التحكم بالوصول ACL", order: 30 },
+      { moduleId: "791381s-m31", title: "الأساسيات", order: 31 },
+      { moduleId: "791381s-m32", title: "النماذج والبروتوكولات", order: 32 },
+      { moduleId: "791381s-m33", title: "العنونة والتجزئة", order: 33 },
+      { moduleId: "791381s-m34", title: "التبديل و VLANs", order: 34 },
+      { moduleId: "791381s-m35", title: "التوجيه والأمان", order: 35 },
+      { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 }
     ] }] });
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m29|pages|lessons|blocks|answer|pdf/i);
+    expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m29|pages|lessons|blocks|answer|pdf/i);
   });
   it("unauthenticated → 401", async () => {
     const r = await catalog(breq(), { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) });

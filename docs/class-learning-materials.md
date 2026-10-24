@@ -6,7 +6,7 @@ teacher-controlled step is module publication.
 ```text
 Teacher (builder session)
   ↓  POST /api/classrooms  { action: "setLearningCourseModules" | "removeLearningCourse", classId, courseId, moduleIds }
-  ↓  ids validated against api/src/lib/learning-materials-registry.js (791381: m01, m02, m07 — content order)
+  ↓  ids validated against api/src/lib/learning-materials-registry.js (per course, content order: 791381 m01…m28, 791381s m00…m36)
   ↓  CAS write (mutateJsonWithRetry), archived class → 403, audit class.learningMaterials.*
 Class document   platform/classes/<classId>.json
   ↓  learningMaterials: [ { courseId, visibleModuleIds } ]        (metadata only; [] = attached, nothing released)

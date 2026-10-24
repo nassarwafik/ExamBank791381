@@ -72,6 +72,33 @@ export const LEARNING_COURSES: LearningCourse[] = [
       { id: "summary", label: "التلخيص" },
     ],
   },
+  /**
+   * The second course: the owner's summary booklet «أوراق تلخيص للمراجعة» for the same networking book (نموذج 791381).
+   * It is an independent course (its own id, manifest, modules and publication); the id `791381s` keeps the model
+   * number visible while never colliding with `791381-…` ids. Its eight overview sections are the booklet's own
+   * groups (the introduction, the six «دفعات» of its table of contents and «الملخص الشامل»).
+   */
+  {
+    id: "791381s",
+    title: "أوراق تلخيص شبكات الاتصال",
+    productTitle: "أوراق تلخيص 791381 — شبكات الاتصال",
+    subject: "أنظمة محوسبة",
+    grades: "الصف العاشر / الحادي عشر",
+    author: "الأستاذ وفيق نصار",
+    year: "2026–2027",
+    status: "available",
+    description: "أوراق تلخيص للمراجعة: تلخيص الكتاب كاملاً · الصفحات 1–264، مع الملخّص الشامل: مراجعة نهائية لكل الوحدات في جداول.",
+    overviewBatches: [
+      { id: "intro", label: "المقدمة" },
+      { id: "b1", label: "الأساسيات والأعداد وعناوين IP" },
+      { id: "b2", label: "الأجهزة والرسائل" },
+      { id: "b3", label: "النماذج والبروتوكولات والأمان" },
+      { id: "b4", label: "برمجة السويتش و VLAN" },
+      { id: "b5", label: "Wi-Fi و IPv6 و DHCP والأمان" },
+      { id: "b6", label: "WAN والتوجيه و ACL" },
+      { id: "summary", label: "الملخص الشامل" },
+    ],
+  },
 ];
 
 /** Find a course by its canonical id (used by the page when an overview is opened). */
