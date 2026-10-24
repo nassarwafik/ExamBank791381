@@ -688,6 +688,14 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       }
     } catch (e) { reached = false; errors.push("navigation: " + String(e).split("\n")[0]); }
     const file = path.join(out, vpName, pg.id + ".png");
+    // UX-R19b-fix2 — a full-page shot places a fixed / sticky layer where the page's scroll offset puts it. The student exam scrolls
+    // the chosen question to the top (scrollIntoView), and that offset can differ by a few pixels between two sessions once a late
+    // layout shifts the target, so the exam's sticky title bar and fixed footer moved while the content stayed identical. Every page
+    // shot starts from the top. A state-* scene keeps its scroll: it set up a focus, hover or open menu, and a scroll event closes it.
+    if (!pg.id.startsWith("state-")) {
+      await page.evaluate(() => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    }
     // UX-R19b-fix — Chromium sometimes paints a fixed / sticky layer late in a full-page capture (a blank sidebar rail, a sticky bar
     // a few pixels off). Capture until two full-page shots in a row are byte-identical (at most four), as a screenshot assertion does.
     let shot = await page.screenshot({ fullPage: true });

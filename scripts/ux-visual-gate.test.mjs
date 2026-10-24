@@ -166,6 +166,14 @@ describe("UX-R19b — the wiring", () => {
     expect(harness).not.toContain("await page.screenshot({ path: file, fullPage: true });");
   });
 
+  it("every page shot starts from the top of the document, except a state-* scene (its open menu closes on a scroll event)", () => {
+    const harness = read("scripts", "capture-visual-baseline-ux-r.mjs");
+    const reset = harness.indexOf('if (!pg.id.startsWith("state-")) {\n      await page.evaluate(() => { if (window.scrollY || window.scrollX) window.scrollTo(0, 0); });');
+    const settle = harness.indexOf("let shot = await page.screenshot({ fullPage: true });");
+    expect(reset).toBeGreaterThan(-1);
+    expect(settle).toBeGreaterThan(reset);                       // the reset comes before the settled capture
+  });
+
   it("the manifest exists and starts valid", () => {
     expect(validateManifest(JSON.parse(read("docs", "ux-r", "visual-changes.json"))).errors).toEqual([]);
   });

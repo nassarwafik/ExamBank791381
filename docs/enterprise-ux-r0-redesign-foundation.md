@@ -4654,3 +4654,53 @@ On the head's tree:
 - `npm run lint`: 0 errors. `npx tsc -b`: clean. `git diff --check`: clean.
 - `npm run build` is unaffected (no change under `src/` or `public/`) and runs in CI.
 - **Not run:** the Runner suites (nothing under `runner/` changed).
+
+---
+
+# Phase UX-R19b-fix2 — Every page shot starts from the top
+
+Branched from `main` `b00b3701` (#431) as `hotfix/visual-gate-scroll-reset`. The second harness hotfix; the capture only.
+
+## R19b-fix2.1 What R19b-fix did and did not cure
+
+With the settled capture of #431 on `main`, #430 took `main` and ran its gate again (`b9b58158`). The late-paint cases were gone: no
+blank sidebar rail, no 1 px select. The tablet job still failed, on `sim-chemistryStructure`, 16241 px, **confirmed on the
+re-capture** (the same count it had as a one-off in the earlier attempt). The artifact shows the student exam's sticky title bar
+and fixed footer («السابق · 4 / 6 · التالي») a few pixels lower on the head capture, over identical content, and stable within
+the session.
+
+**Cause.** A full-page screenshot places a `position: fixed` / `sticky` layer where the page's scroll offset puts it.
+`StudentExamPage` scrolls the chosen question to the top (`scrollIntoView({ block: "start" })`), and that offset can differ by a
+few pixels between two sessions once a late layout (the simulator mounting, a font) shifts the target after the scroll. The
+settled capture cannot help: both shots of a session agree, and the sessions differ.
+
+## R19b-fix2.2 The fix
+
+After the stable-height wait and before the settled capture, the harness scrolls the document to the top (only when it is not
+there already) and waits two frames. The harness already did this by hand on six pages (the reader, the messages thread, the
+studio, the builder); it is now the rule for every page. A `state-*` scene keeps its scroll: it set up a focus, hover or open menu,
+and `ActionMenu` closes on any scroll event.
+
+The gate captures both builds with the head's harness, so the comparison stays like with like.
+
+## R19b-fix2.3 Edit set
+
+- **`scripts/capture-visual-baseline-ux-r.mjs`:** the scroll reset before the settled capture.
+- **`scripts/ux-visual-gate.test.mjs`:** a guard that pins the reset, its `state-*` exception, and its place before the capture.
+- **This record.**
+
+## R19b-fix2.4 Evidence
+
+- **Guard:** `ux-visual-gate.test.mjs` 19 / 19 on the head. Two mutants, the reset removed and the reset moved after the capture:
+  both **KILLED** by the new guard (1 failed / 18 passed each), the file restored byte-for-byte (SHA-256).
+- **Same build on both sides** with the new harness (the gate must report nothing): tablet, light, 69 / 69 compared, 0 changed, **PASS** (run alone; a first run under a concurrent test suite lost its head capture and was repeated).
+- The proof against the flake is CI: this hotfix's own gate, then #430 after `main` carries it.
+
+## R19b-fix2.5 Local validation
+
+On the head's tree:
+- **Root suite** (`npx vitest run`): 1210 files, **14428 / 14429**. The one failure, `src/AppEvaluationFinish.9g.test.tsx` › «the last
+  student (s4) becomes complete …», is a 5000 ms timeout: it ran under a concurrent Chromium gate run, it passes **3 / 3** alone on
+  this tree, and it timed out the same way on `main` `26226fa7` in this container during G1 (see that record). Not patched here.
+- `npm run lint`: 0 errors. `git diff --check`: clean. `npm run build` is unaffected and runs in CI.
+- **Not run:** the Runner suites (nothing under `runner/` changed).
