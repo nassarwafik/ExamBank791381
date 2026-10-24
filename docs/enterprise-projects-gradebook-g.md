@@ -615,3 +615,60 @@ declared `project-matrix`. A one-off flake on `phone/studio-setup` was identical
 - **The matrix has no per-cell history.** A cell's history is reached from the student's profile (the row menu); the matrix
   cells carry no menu.
 - **The history names the teacher only as «أنت» or «معلم آخر».** It never resolves another account's name.
+
+# Phase G-CI — The project browser checks in CI
+
+G-CI branches from `main` `358610f9` (#434) as `feature/ci-project-browser-checks`. It closes the limitation G1.9 (and G2.9 /
+G3.9) left open: the project tracker's real-browser checks ran only locally.
+
+## What runs
+
+**`.github/workflows/projects-browser-g.yml`** («Projects Real Chromium Gate») runs on every pull request that touches the
+project code or API, the app shell, `src/ui/**`, the browser harness, a project check or the workflow itself. It has one job: one
+production build, then the eight existing checks, each as its own step.
+
+| Step | Script | Checks on `main` `358610f9` (local) |
+|---|---|---|
+| P3 — the student marks a stage in one tap | `check-project-student-one-tap-browser-p3.mjs` | 42 / 42 |
+| P4 — «جدول العلامات» and the profile's neighbours | `check-project-score-grid-browser-p4.mjs` | 37 / 37 |
+| P6 — the teacher sees and confirms the students' own marks | `check-project-attention-browser-p6.mjs` | 39 / 39 |
+| P7 — condensed stages | `check-project-condensed-browser-p7.mjs` | 31 / 31 |
+| P8 — approve on save in the student table | `check-project-approve-on-save-browser-p8.mjs` | 36 / 36 |
+| P10 — the project card header | `check-project-hero-browser-p10.mjs` | 24 / 24 |
+| G1 — the class matrix | `check-project-matrix-browser-g1.mjs` | 34 / 34 |
+| G3 — the Excel export and the stage history | `check-project-export-browser-g3.mjs` | 36 / 36 |
+
+The eight took about two minutes together, after the build.
+
+**How it is built.** It mirrors the existing browser gates (`learning-reader-browser-l8.yml`, `classes-students-browser-u1.yml`):
+the same tools (`playwright-core@1.55.0`, `axe-core@4.10.2` installed outside the project, the runner's Google Chrome), the
+same `contents: read` permission, and an artifact with every check's record and screenshots.
+- **Every step after the build runs** even when an earlier one failed (`if: ${{ !cancelled() }}`), so one red check never hides
+  another. Any red step fails the job.
+- **No step is softened.** No `continue-on-error`, and no check is skipped or loosened.
+
+## The guard
+
+**`scripts/projects-browser-ci.test.mjs`** (part of the root suite, C1) keeps the workflow honest:
+- every `scripts/check-project-*-browser-*.mjs` has its own step;
+- no `continue-on-error`;
+- every step runs after an earlier failure;
+- each step writes to its own output folder;
+- the path filter covers the checks, the project code and API, the harness and the workflow.
+
+A new project browser check that is not wired in fails the root suite.
+
+**Mutation proof.** Each planted weakening was caught, and the workflow was restored byte-for-byte (SHA-256 checked):
+
+| Id | Planted weakening | Outcome |
+|---|---|---|
+| M1 | a check is dropped from the workflow | KILLED |
+| M2 | a step is softened with `continue-on-error` | KILLED |
+| M3 | a step stops after an earlier failure | KILLED |
+| M4 | the checks leave the path filter | KILLED |
+
+## Governance
+
+This adds a gate and weakens none. No existing workflow, job, test or threshold changes. The validation matrix gains C16
+(`docs/development/validation-matrix.md`). No dependency is added to the project: the tools are installed in `/tmp/pw` on the
+runner, as the other browser gates do. Nothing is deployed.

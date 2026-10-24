@@ -23,6 +23,7 @@ proves readiness before pushing and how the reviewer re-verifies.
 | C13 | Route authorization inventory | part of C1 (`api/tests/route-auth-inventory-11a.test.js`) | Quality Gate | no new anonymous route |
 | C14 | Repository governance contract | part of C1 (`scripts/repo-governance-contract.test.mjs`) | Quality Gate | `AGENTS.md`, the development documents and the PR template exist and keep their non-negotiable rules |
 | C15 | UX visual regression | `node scripts/ux-visual-gate.mjs` with `BASE_DIST` / `HEAD_DIST` (UX-R19b; see the script's header) | UX-R19b visual regression gate (`ux-visual-regression-r19b.yml`, path-filtered: `src/**`, `public/**`, the capture harness, the manifest), one job per viewport and theme (light and dark, UX-R18c2) | no page or scene the UX-R harness captures changes by more than 12 levels per channel unless the PR declares it in `docs/ux-r/visual-changes.json`; no harness check fails on the head only |
+| C16 | Projects in real Chromium | each `node scripts/check-project-*-browser-*.mjs` with `PLAYWRIGHT_CORE_DIR` / `AXE_CORE_DIR` / `CHROMIUM_PATH` and `DIST` (see each script's header) | Projects Real Chromium Gate (`projects-browser-g.yml`, path-filtered: the project code and API, the app shell, `src/ui/**`, the browser harness, the checks), one job running every project check (each step runs even after an earlier one failed) | the project tracker's teacher and student journeys (P3, P4, P6, P7, P8, P10, G1, G3) in the production build over the real API: stored documents, keyboard and touch, no sideways scroll, axe without serious or critical violations; `scripts/projects-browser-ci.test.mjs` (part of C1) fails if a project check is not wired into the workflow |
 
 ## 2. Required set per change class
 
@@ -47,6 +48,8 @@ Notes:
 - **C15 (UX-R19b)** is required in CI (`P`) for any change that touches `src/**`, `public/**` or the capture harness. A PR whose
   pages change on purpose declares each change (page, viewport, reason) in `docs/ux-r/visual-changes.json`; the gate's artifact holds
   the before, after and diff images for the reviewer.
+- **C16 (projects in Chromium)** is required in CI (`P`) for any change that touches the project code, its API, the app shell
+  or `src/ui/**`. A new project browser check is added as its own step in `projects-browser-g.yml` (the C1 guard enforces it).
 - A **documentation-only PR does not run Docker manually.** The Runner workflow still builds the images and runs the real
   Docker suites in CI on every PR; its result is reported like any other exact-head result.
 - **Production Runner changes must satisfy the existing Runner CI.** A missing Docker daemon or a missing worker image fails
