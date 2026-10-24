@@ -745,6 +745,8 @@ history could only be reached from the student's profile.
   4. an archived cell is a button;
   5. a new opening never shows the previous cell's events while it reads;
   6. a late response for an earlier opening is dropped.
+- **Against the baseline's app code** (`src/` and `api/` identical to `38db902e`), the new suite fails 6 / 6: there is no
+  «سجلّ الخلية», Shift+F10 opens nothing, and an archived cell is not a button.
 - **Kept green:** the G3 suite (13 / 13) and the G1 matrix suite.
   - **Found by G1:** a G1 test pins the archived cell's ✓ as «منجز». The icon keeps that label inside the new button.
 - **Real Chromium** (`check-project-matrix-history-browser-g4b.mjs`, 390 px touch and 1440 px): **23 / 23**. It checks:
