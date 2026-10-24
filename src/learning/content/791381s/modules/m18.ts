@@ -126,7 +126,7 @@ const m18: ContentModule = {
               id: "m18-l01-p03-server-steps", type: "list", origin: "book", variant: "ordered",
               items: [
                 { id: "m18-l01-p03-ss1", text: [{ text: "هذا السويتش هو الـ Server: هو الذي يدير تعريفات VLAN." }] },
-                { id: "m18-l01-p03-ss2", text: [{ text: "اسم المجال المشترك (Domain): HFA." }] },
+                { id: "m18-l01-p03-ss2", text: [{ text: "اسم المجال المشترك " }, { text: "(Domain)", dir: "ltr" }, { text: ": HFA." }] },
                 { id: "m18-l01-p03-ss3", text: [{ text: "كلمة مرور المجال: 123." }] },
               ],
             },
