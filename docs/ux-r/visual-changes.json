@@ -195,6 +195,11 @@
       "page": "project-matrix",
       "viewport": "all",
       "reason": "Phase G3 — «تصدير إلى Excel» joins the class matrix's controls (the saved scores of the whole class, owner decision D5: no teacher notes); nothing else on the page moves."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "all",
+      "reason": "Phase G4b — «سجلّ الخلية» joins the class matrix's controls (a cell's change history, the same dialog as the student table) and the help line names Shift+F10; nothing else on the page moves."
     }
   ]
 }

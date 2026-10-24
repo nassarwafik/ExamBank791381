@@ -15,6 +15,7 @@ import { readApproveOnSave, writeApproveOnSave } from "./approveOnSave";
 import { projectScoresRows, SCORE_EXPORT_HEADER_ROW } from "./scoreExport";
 import { downloadXlsx } from "../reports/xlsx";
 import { exportFilename } from "../teacher/teacherExports";
+import StageHistoryDialog, { type StageHistoryTarget } from "./StageHistoryDialog";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -72,6 +73,10 @@ const dropKeys = <T,>(map: Record<string, T>, keys: Iterable<string>): Record<st
  *   • The end of every row shows the server's progress and weighted grade (re-read after each save); the matrix never
  *     computes a grade.
  * Drafts survive the board re-read after a save; switching track / group with unsaved changes asks first.
+ *
+ * Phase G4b — a cell's «سجلّ التغييرات»: the last focused cell is the matrix's active cell; «سجلّ الخلية» in the controls (or
+ * Shift+F10 / the context-menu key in the cell) opens that student's stage history, the same dialog as the student table. In an
+ * archived class every cell is a button that opens its history.
  */
 export default function ProjectScoreGrid({ token, projectCode, classId, tracks, board, locked, onSaved, onDirtyChange, onStatusChanged }: Props) {
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
@@ -86,6 +91,8 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
   const [error, setError] = useState("");
   const [fillFor, setFillFor] = useState<BoardStage | null>(null);
   const [fillValue, setFillValue] = useState("");
+  const [activeCell, setActiveCell] = useState<{ studentId: string; stageId: string } | null>(null);
+  const [history, setHistory] = useState<StageHistoryTarget | null>(null);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const fillInputRef = useRef<HTMLInputElement | null>(null);
   const { confirm, confirmDialog } = useConfirm();
@@ -123,6 +130,13 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
     const rows = projectScoresRows(board, tracks, { title: board.title, className: board.className, schoolYear: board.schoolYear, exportedAt: new Date() });
     downloadXlsx(exportFilename("TadrisPlus-علامات-المشروع", [board.title, board.className].filter(Boolean).join(" ")).replace(/\.csv$/, ""), rows, { sheetName: "علامات المشروع", rtl: true, boldRows: [SCORE_EXPORT_HEADER_ROW] });
     setNotice("صُدّرت علامات " + board.students.length + " طالب في كل المسارات إلى ملف Excel." + (pendingCount ? " الملف يحمل العلامات المحفوظة فقط؛ لديك " + pendingCount + " تغيير لم يُحفظ بعد." : ""));
+  }
+  // The active cell while its student is shown and its stage is a column (a filter, track or group change can hide either).
+  const active = activeCell ? students.find(s => s.studentId === activeCell.studentId) ?? null : null;
+  const activeStage = activeCell ? columns.find(c => c.stageId === activeCell.stageId) ?? null : null;
+  function openHistory(student: BoardStudent, stage: BoardStage) {
+    setActiveCell({ studentId: student.studentId, stageId: stage.stageId });
+    setHistory({ studentId: student.studentId, stageId: stage.stageId, title: "سجلّ تغييرات المرحلة " + stage.stageId + " — " + stage.title + " · " + student.displayName });
   }
   const failedList = useMemo(() => Object.entries(cellErrors).map(([key, text]) => {
     const i = key.indexOf("|"), studentId = key.slice(0, i), stageId = key.slice(i + 1);
@@ -163,6 +177,11 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
     else if (e.key === "ArrowLeft") move(0, 1);                               // RTL: the next stage is to the left
     else if (e.key === "ArrowRight") move(0, -1);
     else if (e.key === " ") { e.preventDefault(); toggleDone(student, stageId, done); }  // a score never holds a space
+    else if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+      e.preventDefault();
+      const stage = columns.find(col => col.stageId === stageId);
+      if (stage) openHistory(student, stage);
+    }
     else if (e.key === "Escape") {
       e.preventDefault();
       setDrafts(prev => dropKeys(prev, [key]));
@@ -259,7 +278,7 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
 
   return (
     <div className="eb-score-grid" dir="rtl">
-      <p className="eb-muted">اكتب العلامات كما في جدول بيانات: Enter للطالب التالي، والأسهم للتنقل، والمسافة لتحديد المرحلة منجزة، ويمكن لصق عمود أو جدول من Excel. تظهر في آخر كل صف نسبة التقدّم والعلامة الموزونة كما يحسبها الخادم.</p>
+      <p className="eb-muted">اكتب العلامات كما في جدول بيانات: Enter للطالب التالي، والأسهم للتنقل، والمسافة لتحديد المرحلة منجزة، وShift+F10 لسجلّ تغييرات الخلية، ويمكن لصق عمود أو جدول من Excel. تظهر في آخر كل صف نسبة التقدّم والعلامة الموزونة كما يحسبها الخادم.</p>
       <div className="eb-bulk-stage-picker eb-score-grid-controls">
         <div className="eb-segmented" role="group" aria-label="المسار">
           {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} disabled={busy} onClick={() => { if (t.trackId !== track) void guard(() => setTrack(t.trackId)); }}>{t.title}</button>)}
@@ -279,6 +298,10 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
             اعتماد المرحلة عند حفظ العلامة
           </label>
         )}
+        <button type="button" className="eb-button is-quiet is-small eb-score-grid-history" disabled={!active || !activeStage}
+          aria-label={active && activeStage ? "سجلّ تغييرات الخلية: " + active.displayName + " — " + activeStage.stageId : "سجلّ الخلية (اختر خلية أولًا)"}
+          title={active && activeStage ? active.displayName + " — " + activeStage.stageId : "اختر خلية في الجدول أولًا"}
+          onClick={() => { if (active && activeStage) openHistory(active, activeStage); }}>سجلّ الخلية</button>
         <button type="button" className="eb-button is-quiet is-small eb-score-grid-export" disabled={busy || !board.students.length} onClick={exportScores}>تصدير إلى Excel</button>
       </div>
 
@@ -360,14 +383,17 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
                           return (
                             <td key={st.stageId} className={"eb-score-cell " + STATUS_CLASS[status] + (cell?.selfReported ? " is-self" : "") + (isChanged ? " is-changed" : "") + (isInvalid || cellError ? " is-invalid" : "")} title={cellError || statusText}>
                               {locked ? (
-                                <span className="eb-score-cell-read"><span dir="ltr">{saved === null ? "—" : fmtContribution(saved)}</span>{savedDone && <IconCheck size={14} aria-label="منجز" />}</span>
+                                <button type="button" className="eb-score-cell-read" onClick={() => openHistory(student, st)}
+                                  aria-label={student.displayName + " — " + st.stageId + " (" + statusText + "): " + (saved === null ? "بلا علامة" : fmtContribution(saved) + " من 100") + " — سجلّ التغييرات"}>
+                                  <span dir="ltr">{saved === null ? "—" : fmtContribution(saved)}</span>{savedDone && <IconCheck size={14} aria-label="منجز" />}
+                                </button>
                               ) : (
                                 <div className="eb-score-cell-edit">
                                   <input type="text" inputMode="decimal" dir="ltr" autoComplete="off" data-r={r} data-c={c}
                                     value={value} disabled={busy}
                                     aria-label={student.displayName + " — " + st.stageId + " (" + statusText + ") علامة من 100"}
                                     aria-invalid={isInvalid || !!cellError || undefined}
-                                    onFocus={e => e.currentTarget.select()}
+                                    onFocus={e => { e.currentTarget.select(); setActiveCell({ studentId: student.studentId, stageId: st.stageId }); }}
                                     onChange={e => setDraft(key, e.target.value)}
                                     onKeyDown={e => onKey(e, r, c, key, student, st.stageId, done)}
                                     onPaste={e => onPaste(e, r, c)} />
@@ -407,6 +433,7 @@ export default function ProjectScoreGrid({ token, projectCode, classId, tracks, 
           {fillValue !== "" && fillParsed.kind !== "value" && <p className="eb-stage-row-error" role="alert">العلامة رقم من 0 إلى 100.</p>}
         </form>
       </Dialog>
+      <StageHistoryDialog token={token} projectCode={projectCode} classId={classId} target={history} onClose={() => setHistory(null)} />
       {confirmDialog}
     </div>
   );
