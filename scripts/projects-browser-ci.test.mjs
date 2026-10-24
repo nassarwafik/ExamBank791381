@@ -24,6 +24,8 @@ describe("the project browser checks run in CI", () => {
     const outs = steps.map(s => (s.match(/HARNESS_OUT: (\.harness-projects\/[a-z0-9]+)/) || [])[1]);
     expect(outs.every(Boolean)).toBe(true);
     expect(new Set(outs).size).toBe(outs.length);
+    // The output folder is hidden (a leading dot), so the artifact must include hidden files or it uploads nothing.
+    expect(workflow).toMatch(/path: \.harness-projects\/\n\s+include-hidden-files: true/);
   });
   it("it runs on pull requests that touch the checks, the project code or the workflow itself", () => {
     expect(workflow).toMatch(/on:\n  pull_request:/);

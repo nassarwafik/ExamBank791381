@@ -88,4 +88,5 @@ jobs:
         with:
           name: projects-browser
           path: .harness-projects/
+          include-hidden-files: true
           retention-days: 7

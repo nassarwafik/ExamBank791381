@@ -666,9 +666,24 @@ A new project browser check that is not wired in fails the root suite.
 | M2 | a step is softened with `continue-on-error` | KILLED |
 | M3 | a step stops after an earlier failure | KILLED |
 | M4 | the checks leave the path filter | KILLED |
+| M5 | the artifact drops `include-hidden-files` | KILLED |
 
 ## Governance
 
 This adds a gate and weakens none. No existing workflow, job, test or threshold changes. The validation matrix gains C16
 (`docs/development/validation-matrix.md`). No dependency is added to the project: the tools are installed in `/tmp/pw` on the
 runner, as the other browser gates do. Nothing is deployed.
+
+## Fix 1 — what the first CI run found
+
+The gate's first run on `ddd59375` (run `40094093364`) passed seven checks and every G3 check but one, and it showed two faults:
+- **G3 `history dialog @390`: axe `color-contrast` on a `.eb-timeline-date`.** The dialog fades in (`ebFadeIn`, `--eb-dur`
+  0.18 s), and the runner reached axe while the fade was still running, so the muted date was measured at a partial opacity.
+  The settled dialog passes (locally at both widths, and on CI at 1440 px).
+  - **Reproduced:** freezing the fade part-way gives the same finding. Slowing it so that it outlasts the check's own delay
+    fails `ddd59375` at both widths.
+  - **Fix:** the G3 `axe()` helper now lets every finite animation finish before it measures; an endless one never blocks. With
+    the same slowed fade, the fixed script passes. The full rule set still runs, only on the settled screen; no rule, impact
+    level or threshold changed.
+- **The artifact uploaded nothing.** `actions/upload-artifact@v4` skips hidden folders by default, and `.harness-projects/` starts
+  with a dot. The step now sets `include-hidden-files: true`, as the 21dd gates do, and the guard asserts it (M5).
