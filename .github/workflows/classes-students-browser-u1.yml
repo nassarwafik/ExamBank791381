@@ -47,4 +47,5 @@ jobs:
         with:
           name: classes-students-u1-browser
           path: .harness-u1/
+          include-hidden-files: true
           retention-days: 7

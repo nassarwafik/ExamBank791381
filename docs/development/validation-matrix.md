@@ -50,6 +50,9 @@ Notes:
   the before, after and diff images for the reviewer.
 - **C16 (projects in Chromium)** is required in CI (`P`) for any change that touches the project code, its API, the app shell
   or `src/ui/**`. A new project browser check is added as its own step in `projects-browser-g.yml` (the C1 guard enforces it).
+- **A browser gate's artifact keeps its harness folder (Phase G-CI2).** Every harness writes to a folder whose name starts with
+  a dot, and `actions/upload-artifact@v4` leaves hidden paths out unless the step sets `include-hidden-files: true`. Every upload
+  of a hidden path sets it; `scripts/workflow-artifacts.test.mjs` (part of C1) fails otherwise.
 - A **documentation-only PR does not run Docker manually.** The Runner workflow still builds the images and runs the real
   Docker suites in CI on every PR; its result is reported like any other exact-head result.
 - **Production Runner changes must satisfy the existing Runner CI.** A missing Docker daemon or a missing worker image fails
@@ -76,7 +79,24 @@ Policy (`AGENTS.md` §12): not patched inside unrelated PRs; one re-run (owner-t
 a second failure on the same head is real. Local isolated re-run of the file is acceptable evidence that the failure was
 load-related, and is reported together with the CI attempt numbers.
 
-## 5. What is intentionally not in this matrix
+## 5. Phase G-CI2 — browser-gate artifacts
+
+**The defect.** Six browser gates uploaded their harness folder without `include-hidden-files: true`: L8, U1, 21a2, 21b, 21c and
+21d. The upload step only warned «No files were found», and no artifact was created. The L8 gate's red run `39982297641`, for
+example, left no artifact, so there was no record or screenshot to look at. G-CI found the same fault in its own gate and fixed
+it there.
+
+**The fix.** Each of the six upload steps sets `include-hidden-files: true`. So does the UX-R19b visual gate, whose step names
+its files inside `.harness-visual/`. That gate's upload already worked; the setting keeps one rule for every gate and changes
+nothing it uploads. No step, job, trigger, threshold or test changed.
+
+**The guard.** `scripts/workflow-artifacts.test.mjs` reads every workflow and fails when an upload step names a hidden path
+without the setting.
+- **Fail-first:** on `main` `38db902e` it lists the 7 steps.
+- **Mutation:** dropping the setting from L8 or from the visual gate, setting it to `false` on U1, or dropping it from 21d is
+  killed in each case. The workflows were restored by SHA-256.
+
+## 6. What is intentionally not in this matrix
 
 - Browser-driven visual checks (`browser-harness/`, `scripts/check-code-editor-browser.mjs`) are phase-specific evidence
   requested by the owner, not a standing gate.

@@ -38,4 +38,5 @@ jobs:
         with:
           name: function-graphs-21a2-browser
           path: .harness-21a2/
+          include-hidden-files: true
           retention-days: 7

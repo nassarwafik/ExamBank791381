@@ -41,4 +41,5 @@ jobs:
         with:
           name: function-surfaces-21b-browser
           path: .harness-21b/
+          include-hidden-files: true
           retention-days: 7

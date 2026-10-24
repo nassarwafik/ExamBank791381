@@ -74,5 +74,6 @@ jobs:
             .harness-visual/report.json
             .harness-visual/summary.md
             .harness-visual/changes/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 14
