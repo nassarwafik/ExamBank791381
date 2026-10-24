@@ -25,6 +25,8 @@ type ManifestLoader = () => Promise<{ default: LearningCourseManifest }>;
 
 const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
   "791381": () => import("./791381/manifest"),
+  // The summary booklet «أوراق تلخيص للمراجعة» (نموذج 791381) — an independent second course.
+  "791381s": () => import("./791381s/manifest"),
 };
 
 // The module ids that HAVE a body (791381: every manifest module). Phase L.6a — only the ids live in the app; each body is served
@@ -60,6 +62,46 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "791381-m27",
     "791381-m06",
     "791381-m28",
+  ],
+  // 791381s: every booklet section m00–m36 has a body (book-only, verbatim).
+  "791381s": [
+    "791381s-m00",
+    "791381s-m01",
+    "791381s-m02",
+    "791381s-m03",
+    "791381s-m04",
+    "791381s-m05",
+    "791381s-m06",
+    "791381s-m07",
+    "791381s-m08",
+    "791381s-m09",
+    "791381s-m10",
+    "791381s-m11",
+    "791381s-m12",
+    "791381s-m13",
+    "791381s-m14",
+    "791381s-m15",
+    "791381s-m16",
+    "791381s-m17",
+    "791381s-m18",
+    "791381s-m19",
+    "791381s-m20",
+    "791381s-m21",
+    "791381s-m22",
+    "791381s-m23",
+    "791381s-m24",
+    "791381s-m25",
+    "791381s-m26",
+    "791381s-m27",
+    "791381s-m28",
+    "791381s-m29",
+    "791381s-m30",
+    "791381s-m31",
+    "791381s-m32",
+    "791381s-m33",
+    "791381s-m34",
+    "791381s-m35",
+    "791381s-m36",
   ],
 };
 

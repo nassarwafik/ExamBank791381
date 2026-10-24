@@ -7,10 +7,64 @@ import { listLearningCourses, findLearningCourse, listLearningModules, findLearn
 
 const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28"];
 
+describe("registry — the summary booklet course 791381s", () => {
+  it("lists the booklet's sections m00–m36 in its own order, after the book, with no id shared with 791381", () => {
+    const course = findLearningCourse("791381s");
+    expect(course).toMatchObject({ courseId: "791381s", title: "أوراق تلخيص شبكات الاتصال", subject: "أنظمة محوسبة" });
+    expect(course.modules).toEqual([
+      { moduleId: "791381s-m00", title: "أوراق تلخيص للمراجعة", order: 0 },
+      { moduleId: "791381s-m01", title: "أساسيات الشبكات", order: 1 },
+      { moduleId: "791381s-m02", title: "الأعداد والتحويل بينها", order: 2 },
+      { moduleId: "791381s-m03", title: "عناوين IP", order: 3 },
+      { moduleId: "791381s-m04", title: "الفئات وقناع الشبكة و CIDR", order: 4 },
+      { moduleId: "791381s-m05", title: "أجهزة الشبكات", order: 5 },
+      { moduleId: "791381s-m06", title: "أنواع شبكات الاتصال (أشكال التوصيل)", order: 6 },
+      { moduleId: "791381s-m07", title: "الكوابل وعنوان MAC", order: 7 },
+      { moduleId: "791381s-m08", title: "أنواع الرسائل", order: 8 },
+      { moduleId: "791381s-m09", title: "نموذج OSI ونموذج TCP/IP", order: 9 },
+      { moduleId: "791381s-m10", title: "البروتوكولات", order: 10 },
+      { moduleId: "791381s-m11", title: "أوامر فحص الشبكة", order: 11 },
+      { moduleId: "791381s-m12", title: "المجالات والمفاهيم", order: 12 },
+      { moduleId: "791381s-m13", title: "أمان الشبكات", order: 13 },
+      { moduleId: "791381s-m14", title: "تجزئة البيانات والمصافحة الثلاثية", order: 14 },
+      { moduleId: "791381s-m15", title: "برمجة السويتش من CLI", order: 15 },
+      { moduleId: "791381s-m16", title: "الشبكات الافتراضية VLAN", order: 16 },
+      { moduleId: "791381s-m17", title: "Native و Tagged و Untagged", order: 17 },
+      { moduleId: "791381s-m18", title: "إدارة VLAN مركزيًا: VTP", order: 18 },
+      { moduleId: "791381s-m19", title: "Trunk و Router on a Stick", order: 19 },
+      { moduleId: "791381s-m20", title: "المنطقة العازلة DMZ والشبكات اللاسلكية", order: 20 },
+      { moduleId: "791381s-m21", title: "IPv6 والمنافذ Ports", order: 21 },
+      { moduleId: "791381s-m22", title: "بروتوكول DHCP", order: 22 },
+      { moduleId: "791381s-m23", title: "حماية المنافذ Port Security", order: 23 },
+      { moduleId: "791381s-m24", title: "حماية أجهزة Cisco بكلمات المرور", order: 24 },
+      { moduleId: "791381s-m25", title: "مرجع أوامر Cisco", order: 25 },
+      { moduleId: "791381s-m26", title: "الشبكة الواسعة WAN", order: 26 },
+      { moduleId: "791381s-m27", title: "مفاهيم التوجيه Routing", order: 27 },
+      { moduleId: "791381s-m28", title: "بروتوكول OSPF", order: 28 },
+      { moduleId: "791381s-m29", title: "بروتوكول EIGRP وجدول التوجيه", order: 29 },
+      { moduleId: "791381s-m30", title: "قوائم التحكم بالوصول ACL", order: 30 },
+      { moduleId: "791381s-m31", title: "الأساسيات", order: 31 },
+      { moduleId: "791381s-m32", title: "النماذج والبروتوكولات", order: 32 },
+      { moduleId: "791381s-m33", title: "العنونة والتجزئة", order: 33 },
+      { moduleId: "791381s-m34", title: "التبديل و VLANs", order: 34 },
+      { moduleId: "791381s-m35", title: "التوجيه والأمان", order: 35 },
+      { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 }
+    ]);
+    const book = new Set(listLearningModules("791381").map(m => m.moduleId));
+    expect(course.modules.some(m => book.has(m.moduleId))).toBe(false);
+  });
+  it("validates request ids per course: a booklet id is not a book id and vice versa", () => {
+    expect(validateLearningModuleIds("791381s", ["791381s-m36", "791381s-m00"])).toEqual(["791381s-m00", "791381s-m36"]);
+    expect(() => validateLearningModuleIds("791381s", ["791381-m01"])).toThrow();
+    expect(() => validateLearningModuleIds("791381", ["791381s-m01"])).toThrow();
+    expect(canonicalizeLearningModuleIds("791381s", ["791381s-m37", "791381s-m05", "791381-m05"])).toEqual(["791381s-m05"]);
+  });
+});
+
 describe("registry — exact production catalog", () => {
   it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4; m17–m18 = Batch 5; m03 = Batch 6, the historical id completed in place, order 15; m19 = Batch 7 VTP, order 16; m04 = Batch 7, the historical id completed in place, order 17; m20–m22 = Batch 8 Wi-Fi / IPv6 والمنافذ / DHCP, orders 18–20; m23–m24 = Batch 9 Port Security / حماية أجهزة Cisco, orders 21–22; m05 = Batch 9, the historical id completed in place, order 23)", () => {
     const courses = listLearningCourses();
-    expect(courses.map(c => c.courseId)).toEqual(["791381"]);
+    expect(courses.map(c => c.courseId)).toEqual(["791381", "791381s"]);   // the book first, then the summary booklet
     expect(courses[0]).toMatchObject({ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة" });
     expect(courses[0].modules).toEqual([
       { moduleId: "791381-m01", title: "أساسيات الشبكات", order: 1 },

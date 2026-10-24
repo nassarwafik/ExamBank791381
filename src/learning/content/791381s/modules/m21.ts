@@ -1,0 +1,196 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 21 «IPv6 والمنافذ Ports».
+//
+// Verbatim conversion of booklet PDF pages 63–65 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m21: ContentModule = {
+  id: "791381s-m21",
+  title: "IPv6 والمنافذ Ports",
+  order: 21,
+  lessons: [
+    {
+      id: "791381s-m21-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m21-l00-p01",
+          title: "IPv6 والمنافذ Ports",
+          order: 1,
+          layout: "opener",
+          source: src(63),
+          blocks: [
+            {
+              id: "m21-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الدفعة الخامسة · كتاب ص 166–168", unitNumber: "21", title: "IPv6 والمنافذ Ports",
+              subtitle: "كيف نكتب عنوان IPv6 ونختصره؟ وما أرقام المنافذ المهمة؟",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m21-l01",
+      title: "IPv6 والمنافذ Ports",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m21-l01-p01",
+          title: "IPv6 — عنوان الجيل الجديد",
+          order: 1,
+          source: src(63, 64),
+          blocks: [
+            {
+              id: "m21-l01-p01-def", type: "text", origin: "book",
+              spans: [{ text: "IPv6 رقم مميّز لكل جهاز متصل بالشبكة، مثل IPv4 لكنه أطول بكثير.", style: "strong" }],
+            },
+            {
+              id: "m21-l01-p01-intro", type: "text", origin: "book",
+              spans: [{ text: "عدد الأجهزة في العالم أصبح كبيرًا جدًا، وعناوين IPv4 لم تعد تكفي. لذلك جاء IPv6 بعدد هائل من العناوين يكفي كل أجهزة العالم." }],
+            },
+            {
+              id: "m21-l01-p01-table", type: "table", origin: "book",
+              headers: ["", "IPv4", "IPv6"],
+              rows: [
+                ["الطول", "32 بت", "128 بت"],
+                ["طريقة الكتابة", "عشري، 4 أقسام بينها نقاط", "سادس عشري (Hex)، 8 أقسام بينها نقطتان (:)"],
+                ["مثال", "192.168.1.5", "2001:db8::1"],
+              ],
+              columnDirs: ["rtl", "rtl", "ltr"],
+            },
+            {
+              id: "m21-l01-p01-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "IPv4\u200F = " },
+                { text: "32", style: "strong" },
+                { text: " بت · IPv6\u200F = " },
+                { text: "128", style: "strong" },
+                { text: " بت. وكل قسم في IPv6 فيه 4 رموز Hex (مثل 0db8)." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m21-l01-p02",
+          title: "اختصار عنوان IPv6",
+          order: 2,
+          source: src(64),
+          blocks: [
+            {
+              id: "m21-l01-p02-intro", type: "text", origin: "book",
+              spans: [{ text: "عنوان IPv6 طويل جدًا، لذلك نختصره بقاعدتين بسيطتين:" }],
+            },
+            {
+              id: "m21-l01-p02-rules", type: "list", origin: "book", variant: "ordered",
+              items: [
+                {
+                  id: "m21-l01-p02-r1",
+                  text: [{ text: "نحذف الأصفار في بداية كل قسم:", style: "strong" }, { text: " db8 \u200F→\u200F 0db8 و 42 \u200F→\u200F 0042." }],
+                },
+                {
+                  id: "m21-l01-p02-r2",
+                  text: [
+                    { text: "نستبدل الأقسام المتتالية التي كلها أصفار بـ ::", style: "strong" },
+                    { text: " — مرة واحدة فقط في العنوان." },
+                  ],
+                },
+              ],
+            },
+            { id: "m21-l01-p02-h-solved", type: "heading", origin: "book", level: 4, text: "مثال محلول خطوة خطوة" },
+            {
+              id: "m21-l01-p02-solved", type: "table", origin: "book",
+              headers: ["الكامل", "2001:0db8:0000:0000:0000:ff00:0042:8329"],
+              rows: [
+                ["بعد القاعدة 1", "2001:db8:0:0:0:ff00:42:8329"],
+                ["بعد القاعدة 2", "2001:db8::ff00:42:8329"],
+              ],
+              columnDirs: ["rtl", "ltr"],
+            },
+            { id: "m21-l01-p02-h-more", type: "heading", origin: "book", level: 3, text: "أمثلة أخرى" },
+            {
+              id: "m21-l01-p02-more", type: "table", origin: "book",
+              headers: ["العنوان المختصر", "العنوان الكامل"],
+              rows: [
+                ["fe80::202:b3ff:fe1e:8329", "fe80:0000:0000:0000:0202:b3ff:fe1e:8329"],
+                ["2a00:8640::200:23ff:fe10:8329", "2a00:8640:0000:0000:0200:23ff:fe10:8329"],
+              ],
+              columnDirs: ["ltr", "ltr"],
+            },
+            {
+              id: "m21-l01-p02-warning", type: "callout", origin: "book", kind: "warning", title: "انتبه",
+              spans: [
+                { text: "نستعمل :: " },
+                { text: "مرة واحدة فقط", style: "strong" },
+                { text: " في العنوان، وإلا لن نعرف كم صفرًا حذفنا في كل مكان." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m21-l01-p03",
+          title: "المنافذ المهمة Ports",
+          order: 3,
+          source: src(64, 65),
+          blocks: [
+            {
+              id: "m21-l01-p03-def", type: "text", origin: "book",
+              spans: [{ text: "المنفذ (Port) رقم يساعد الجهاز أن يعرف لأي خدمة وصلت البيانات.", style: "strong" }],
+            },
+            {
+              id: "m21-l01-p03-intro", type: "text", origin: "book",
+              spans: [{ text: "عنوان IP يوصل البيانات إلى الجهاز الصحيح، ورقم المنفذ يوصلها إلى البرنامج الصحيح داخل الجهاز — مثل رقم البناية (IP) ورقم الشقة (Port)." }],
+            },
+            {
+              id: "m21-l01-p03-table", type: "table", origin: "book",
+              headers: ["Port", "الخدمة", "الاستخدام"],
+              rows: [
+                ["80", "HTTP", "تصفّح مواقع الويب"],
+                ["443", "HTTPS", "تصفّح آمن"],
+                ["25", "SMTP", "إرسال البريد"],
+                ["110", "POP3", "استقبال البريد"],
+                ["143", "IMAP", "استقبال البريد"],
+                ["22", "SSH", "اتصال آمن للتحكّم عن بُعد"],
+                ["23", "Telnet", "اتصال غير آمن للتحكّم عن بُعد"],
+                ["21", "FTP", "نقل الملفات"],
+                ["53", "DNS", "تحويل اسم الموقع إلى IP"],
+              ],
+              columnDirs: ["ltr", "rtl", "rtl"],
+            },
+            {
+              id: "m21-l01-p03-example", type: "callout", origin: "book", kind: "tip", title: "مثال",
+              spans: [
+                { text: "عندما تفتح موقعًا يبدأ بـ " },
+                { text: "https://", dir: "ltr" },
+                { text: " يتصل المتصفح بالخادم على المنفذ " },
+                { text: "443", style: "strong" },
+                { text: "." },
+              ],
+            },
+            {
+              id: "m21-l01-p03-memo", type: "callout", origin: "book", kind: "remember", title: "طريقة للحفظ",
+              spans: [
+                { text: "احفظ الأزواج المتقاربة: " },
+                { text: "SSH 22", style: "strong" },
+                { text: " و " },
+                { text: "Telnet 23", style: "strong" },
+                { text: " (الآمن قبل غير الآمن) · " },
+                { text: "HTTP 80", style: "strong" },
+                { text: " و " },
+                { text: "HTTPS 443", style: "strong" },
+                { text: "." },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m21;

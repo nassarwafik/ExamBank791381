@@ -3,7 +3,7 @@
 // <main id="eb-main">; the Reader's content column is a <div class="learning-reader-main"> — never a nested <main> —
 // through the normal Reader, page navigation, presentation mode (enter, navigate, exit) and close / reopen.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import TeacherAppShell from "../shell/TeacherAppShell";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 
@@ -32,7 +32,7 @@ describe("Teacher Reader inside the teacher shell — exactly one <main> (the sh
       </TeacherAppShell>,
     );
     expect(landmarks()).toEqual({ ...EMBEDDED, column: null, columnInsideShellMain: false });   // library: shell only
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
     expect(landmarks(), "normal").toEqual(EMBEDDED);

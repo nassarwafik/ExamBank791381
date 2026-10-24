@@ -5,7 +5,7 @@
 //   • a link opens the same place (the book, the reader at a page); an unknown book normalises to the library;
 //   • leaving the page removes the fragment.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 import { formatLearningRoute, isLearningLocation, parseLearningRoute } from "./learningRoute";
 
@@ -56,7 +56,7 @@ describe("L.2 — history and Back", () => {
     const view = render(<LearningMaterialsPage />);
     expect(location.hash).toBe("#/learning");                                        // normalised on entry, no push
     expect(pushes).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
     expect(location.hash).toBe("#/learning/791381");
     fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
     await screen.findByTestId("reader");
@@ -69,7 +69,7 @@ describe("L.2 — history and Back", () => {
     expect(screen.queryByTestId("reader")).toBeNull();
     expect(screen.getByRole("button", { name: "بدء القراءة" })).toBeTruthy();
     await popTo("#/learning");                                                      // Back again
-    expect(screen.getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
+    expect(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
     await popTo("#/learning/791381/read/791381-m09-l00-p01");                       // Forward to the reader page
     expect((await screen.findByTestId("reader")).getAttribute("data-initial")).toBe("791381-m09-l00-p01");
     view.unmount();
@@ -92,7 +92,7 @@ describe("L.2 — links open the same place", () => {
     for (const hash of ["#/learning/999999", "#/learning/999999/read/x", "#/learning/791381/oops"]) {
       go(hash);
       render(<LearningMaterialsPage />);
-      expect(screen.getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
+      expect(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
       await waitFor(() => expect(location.hash).toBe("#/learning"));
       cleanup();
     }

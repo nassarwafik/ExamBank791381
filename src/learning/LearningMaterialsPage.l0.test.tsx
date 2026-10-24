@@ -24,7 +24,7 @@ vi.mock("./training/LearningReaderWithTraining", () => ({
 afterEach(() => { cleanup(); control.failures = 0; });
 
 const course = LEARNING_COURSES[0];
-const openOverview = () => fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+const openOverview = () => fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
 const batchList = () => screen.getByRole("list", { name: "أقسام محتوى الكتاب" });
 const detailsLoaded = () => waitFor(() => expect(screen.queryByText("جارٍ تحميل تفاصيل الأقسام…")).toBeNull());
 

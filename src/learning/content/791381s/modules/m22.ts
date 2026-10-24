@@ -1,0 +1,287 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 22 «بروتوكول DHCP».
+//
+// Verbatim conversion of booklet PDF pages 66–70 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m22: ContentModule = {
+  id: "791381s-m22",
+  title: "بروتوكول DHCP",
+  order: 22,
+  lessons: [
+    {
+      id: "791381s-m22-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m22-l00-p01",
+          title: "بروتوكول DHCP",
+          order: 1,
+          layout: "opener",
+          source: src(66),
+          blocks: [
+            {
+              id: "m22-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الدفعة الخامسة · كتاب ص 169–179", unitNumber: "22", title: "بروتوكول DHCP",
+              subtitle: "كيف تحصل الأجهزة على عنوان IP تلقائيًا؟ وكيف نبرمج ذلك على الراوتر أو السيرفر؟",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m22-l01",
+      title: "بروتوكول DHCP",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m22-l01-p01",
+          title: "ما هو DHCP؟",
+          order: 1,
+          source: src(66),
+          blocks: [
+            {
+              id: "m22-l01-p01-def", type: "text", origin: "book",
+              spans: [{ text: "DHCP يوزّع إعدادات الشبكة تلقائيًا على الأجهزة.", style: "strong" }],
+            },
+            {
+              id: "m22-l01-p01-intro", type: "text", origin: "book",
+              spans: [{ text: "في مدرسة فيها 100 حاسوب، إدخال العنوان يدويًا في كل حاسوب يأخذ وقتًا طويلًا ويسبّب أخطاء. مع DHCP يكفي أن يتصل الحاسوب بالشبكة، فيحصل وحده على كل الإعدادات." }],
+            },
+            {
+              id: "m22-l01-p01-points", type: "list", origin: "book", variant: "plain",
+              items: [
+                {
+                  id: "m22-l01-p01-pt1",
+                  text: [{ text: "يعطي " }, { text: "عنوان IP", style: "strong" }, { text: " بدون إدخال يدوي." }],
+                },
+                {
+                  id: "m22-l01-p01-pt2",
+                  text: [
+                    { text: "يوزّع أيضًا " },
+                    { text: "Gateway", style: "strong" },
+                    { text: " و " },
+                    { text: "DNS", style: "strong" },
+                    { text: " وقناع الشبكة." },
+                  ],
+                },
+                { id: "m22-l01-p01-pt3", text: [{ text: "يوفّر الوقت ويقلّل أخطاء الإعدادات." }] },
+              ],
+            },
+            {
+              id: "m22-l01-p01-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [{ text: "بدون DHCP نحتاج إدخال IP يدويًا لكل جهاز على حدة." }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m22-l01-p02",
+          title: "مراحل عمل DHCP (DORA)",
+          order: 2,
+          source: src(66, 67),
+          blocks: [
+            {
+              id: "m22-l01-p02-intro", type: "text", origin: "book",
+              spans: [{ text: "عندما يتصل الجهاز بالشبكة، تحدث «محادثة» من 4 رسائل بينه وبين خادم DHCP:" }],
+            },
+            {
+              id: "m22-l01-p02-drawing", type: "diagram", origin: "book",
+              src: "/learning-assets/791381s/ec56acbe1158d77e.png",
+              alt: "رسمة: «الجهاز» (حاسوب) على اليسار و«خادم DHCP» على اليمين، وبينهما أربعة أسهم بالترتيب: «1 · Discover — «هل يوجد خادم DHCP؟»» من الجهاز إلى الخادم، «2 · Offer — «نعم، خذ هذا العنوان»» من الخادم إلى الجهاز، «3 · Request — «أريد هذا العنوان»» من الجهاز إلى الخادم، «4 · ACK — «تمّ، العنوان لك»» من الخادم إلى الجهاز؛ وتحتها: «الطلب يبدأ من الجهاز، والخادم يردّ في كل مرة».",
+            },
+            {
+              id: "m22-l01-p02-table", type: "table", origin: "book",
+              headers: ["#", "الرسالة", "بالعربية", "من؟ ← إلى؟"],
+              rows: [
+                ["D", "Discover", "اكتشاف", "الجهاز يبحث عن خادم DHCP (رسالة بث للجميع)."],
+                ["O", "Offer", "عرض", "الخادم يعرض عنوانًا على الجهاز."],
+                ["R", "Request", "طلب", "الجهاز يطلب العنوان المعروض."],
+                ["A", "ACK", "تأكيد", "الخادم يؤكّد: العنوان أصبح للجهاز."],
+              ],
+            },
+            {
+              id: "m22-l01-p02-memo", type: "text", origin: "book",
+              spans: [{ text: "احفظها بالترتيب: Discover \u200F←\u200F Offer \u200F←\u200F Request \u200F←\u200F ACK (اختصارها: DORA)", style: "strong" }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m22-l01-p03",
+          title: "مثال: DHCP على الراوتر",
+          order: 3,
+          source: src(67, 68),
+          blocks: [
+            {
+              id: "m22-l01-p03-intro", type: "text", origin: "book",
+              spans: [{ text: "نريد أن يكون الراوتر نفسه خادم DHCP يوزّع العناوين داخل الشبكة 192.168.1.0/24." }],
+            },
+            {
+              id: "m22-l01-p03-table", type: "table", origin: "book",
+              headers: ["المطلوب", "القيمة"],
+              rows: [
+                ["الشبكة", "192.168.1.0 /24"],
+                ["عنوان الراوتر (Gateway)", "192.168.1.254"],
+                ["عناوين لا نوزّعها (محجوزة)", "192.168.1.1 → 192.168.1.9"],
+                ["خادم DNS", "8.8.8.8"],
+              ],
+              columnDirs: ["rtl", "ltr"],
+            },
+            { id: "m22-l01-p03-h-part1", type: "heading", origin: "book", level: 3, text: "الجزء الأول: عنوان الراوتر ومجموعة التوزيع" },
+            { id: "m22-l01-p03-cli1-h", type: "heading", origin: "book", level: 4, text: "Router CLI", dir: "ltr" },
+            {
+              id: "m22-l01-p03-cli1", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: [
+                "① Router(config)# interface g0/0",
+                "② Router(config-if)# ip address 192.168.1.254 255.255.255.0",
+                "③ Router(config-if)# no shutdown",
+                "④ Router(config-if)# exit",
+                "⑤ Router(config)# ip dhcp pool LAN",
+                "⑥ Router(dhcp-config)# network 192.168.1.0 255.255.255.0",
+              ].join("\n"),
+            },
+            {
+              id: "m22-l01-p03-cli1-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m22-l01-p03-s1", text: [{ text: "نختار منفذ الراوتر المتصل بالشبكة." }] },
+                {
+                  id: "m22-l01-p03-s2",
+                  text: [{ text: "نعطيه عنوانًا — هذا العنوان سيكون " }, { text: "Gateway", style: "strong" }, { text: " للأجهزة." }],
+                },
+                { id: "m22-l01-p03-s3", text: [{ text: "نشغّل المنفذ." }] },
+                { id: "m22-l01-p03-s4", text: [{ text: "نرجع إلى وضع الإعدادات العامة." }] },
+                {
+                  id: "m22-l01-p03-s5",
+                  text: [{ text: "ip dhcp pool LAN", style: "strong" }, { text: ": نُنشئ «مجموعة توزيع» اسمها LAN." }],
+                },
+                {
+                  id: "m22-l01-p03-s6",
+                  text: [{ text: "network", style: "strong" }, { text: ": الشبكة التي سنوزّع منها العناوين." }],
+                },
+              ],
+            },
+            { id: "m22-l01-p03-h-part2", type: "heading", origin: "book", level: 3, text: "الجزء الثاني: البوابة و DNS والعناوين المستثناة" },
+            { id: "m22-l01-p03-cli2-h", type: "heading", origin: "book", level: 4, text: "Router CLI", dir: "ltr" },
+            {
+              id: "m22-l01-p03-cli2", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: [
+                "① Router(dhcp-config)# default-router 192.168.1.254",
+                "② Router(dhcp-config)# dns-server 8.8.8.8",
+                "③ Router(dhcp-config)# exit",
+                "④ Router(config)# ip dhcp excluded-address 192.168.1.1 192.168.1.9",
+              ].join("\n"),
+            },
+            {
+              id: "m22-l01-p03-cli2-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                {
+                  id: "m22-l01-p03-t1",
+                  text: [{ text: "default-router", style: "strong" }, { text: ": عنوان Gateway الذي سيُعطى للأجهزة." }],
+                },
+                {
+                  id: "m22-l01-p03-t2",
+                  text: [{ text: "dns-server", style: "strong" }, { text: ": عنوان خادم DNS الذي سيُعطى للأجهزة." }],
+                },
+                { id: "m22-l01-p03-t3", text: [{ text: "نخرج من مجموعة التوزيع." }] },
+                {
+                  id: "m22-l01-p03-t4",
+                  text: [
+                    { text: "excluded-address", style: "strong" },
+                    { text: ": نستثني العناوين من 1 إلى 9، فلا يوزّعها DHCP. تُكتب في وضع الإعدادات العامة." },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "m22-l01-p03-why", type: "callout", origin: "book", kind: "summary", title: "لماذا نستثني عناوين؟",
+              spans: [{ text: "نحجز عناوين للراوتر والسيرفرات والطابعات (عناوين ثابتة)، حتى لا يأخذها حاسوب عادي." }],
+            },
+            { id: "m22-l01-p03-h-extra", type: "heading", origin: "book", level: 4, text: "مثال إضافي" },
+            {
+              id: "m22-l01-p03-extra", type: "text", origin: "book",
+              spans: [{ text: "إذا أردنا أن يوزّع DHCP فقط العناوين من 10. حتى 50.، نستثني أيضًا الباقي:" }],
+            },
+            {
+              id: "m22-l01-p03-extra-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
+              code: "✓ Router(config)# ip dhcp excluded-address 192.168.1.51 192.168.1.254",
+            },
+          ],
+        },
+        {
+          id: "791381s-m22-l01-p04",
+          title: "ملاحظات مهمة عن DHCP",
+          order: 4,
+          source: src(69),
+          blocks: [
+            {
+              id: "m22-l01-p04-notes", type: "list", origin: "book", variant: "plain",
+              items: [
+                {
+                  id: "m22-l01-p04-n1",
+                  text: [{ text: "العناوين المستثناة " }, { text: "لا توزّع", style: "strong" }, { text: " على الأجهزة." }],
+                },
+                { id: "m22-l01-p04-n2", text: [{ text: "الراوتر يعيد استخدام العناوين غير المستعملة." }] },
+                { id: "m22-l01-p04-n3", text: [{ text: "لكل عنوان مدة. إذا انتهت المدة، الجهاز يجدّد العنوان." }] },
+                {
+                  id: "m22-l01-p04-n4",
+                  text: [
+                    { text: "إذا فشل DHCP، يأخذ الجهاز عنوان " },
+                    { text: "APIPA", style: "strong" },
+                    { text: " الذي يبدأ بـ 169.254.x.x." },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "m22-l01-p04-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
+              spans: [
+                { text: "إذا رأيت عنوانًا يبدأ بـ 169.254 فهذه " },
+                { text: "إشارة لمشكلة في DHCP", style: "strong" },
+                { text: "." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m22-l01-p05",
+          title: "DHCP عن طريق Server (في Packet Tracer)",
+          order: 5,
+          source: src(69, 70),
+          blocks: [
+            {
+              id: "m22-l01-p05-intro", type: "text", origin: "book",
+              spans: [{ text: "بدل الراوتر، يمكن أن يوزّع العناوين جهاز سيرفر. الفكرة نفسها: جهاز مركزي يوزّع إعدادات الشبكة على الأجهزة. في Packet Tracer نعمل ذلك بالفأرة، بدون أوامر." }],
+            },
+            {
+              id: "m22-l01-p05-drawing", type: "diagram", origin: "book",
+              src: "/learning-assets/791381s/38ddc5616c00e101.png",
+              alt: "رسمة: منطقة منقّطة عنوانها «أجهزة الشبكة» فيها ثلاثة حواسيب متصلة بـ «Switch»، و«Switch» متصل بمنطقة منقّطة عنوانها «جهاز Server» فيها خادم وتحته «DHCP Service».",
+            },
+            {
+              id: "m22-l01-p05-table", type: "table", origin: "book",
+              headers: ["الخطوة", "ماذا نفعل؟"],
+              rows: [
+                ["1. الدخول", "نفتح جهاز Server في Packet Tracer ← تبويب Services ← نختار خدمة DHCP."],
+                ["2. التشغيل", "نختار On لتفعيل الخدمة. (إذا بقيت Off لن يحصل الحاسوب على عنوان IP.)"],
+                ["3. التعريفات", "نكتب Default Gateway و DNS Server، ونحدّد Start IP (أول عنوان) وعدد العناوين."],
+                ["4. الحفظ", "نضغط Add أو Save حسب الواجهة."],
+                ["5. التجربة", "في الحاسوب: نختار DHCP بدل Static — فيحصل على العنوان تلقائيًا."],
+              ],
+            },
+            {
+              id: "m22-l01-p05-example", type: "callout", origin: "book", kind: "tip", title: "مثال",
+              spans: [{ text: "الشبكة 192.168.10.0/24: البوابة 192.168.10.1، و DNS\u200F 8.8.8.8، و Start IP\u200F 192.168.10.10." }],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m22;

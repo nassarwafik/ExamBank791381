@@ -2,7 +2,7 @@
 // Phase L.4 — the book page hosts «قراءة صفوفي» only inside a teacher session, and the book page stays request-free until the
 // teacher opens it; then the class-scoped teacher endpoints are called with the teacher headers.
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 import { createClassReadingClient } from "./classReading/classReadingClient";
 
@@ -10,7 +10,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); history.replaceState(null, ""
 const ok = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body } as Response);
 const openCourse = (token?: string) => {
   render(<LearningMaterialsPage token={token} />);
-  fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+  fireEvent.click(within(screen.getByRole("article", { name: "شبكات الاتصال" })).getByRole("button", { name: "فتح الكتاب" }));
 };
 
 describe("L.4 — «قراءة صفوفي» on the book page", () => {

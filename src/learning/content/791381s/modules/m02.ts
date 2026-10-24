@@ -1,0 +1,361 @@
+// Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 2 «الأعداد والتحويل بينها».
+//
+// Verbatim conversion of booklet PDF pages 6–10 (the section header box → an opener page; each numbered sub-topic → one
+// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// runs are `code`, printed box labels are the callout titles.
+
+import type { ContentModule, ContentSource } from "../../types";
+
+const CID = "791381s";
+const src = (pdf: number, end?: number): ContentSource =>
+  end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+
+const m02: ContentModule = {
+  id: "791381s-m02",
+  title: "الأعداد والتحويل بينها",
+  order: 2,
+  lessons: [
+    {
+      id: "791381s-m02-l00",
+      title: "افتتاحية الوحدة",
+      order: 0,
+      pages: [
+        {
+          id: "791381s-m02-l00-p01",
+          title: "الأعداد والتحويل بينها",
+          order: 1,
+          layout: "opener",
+          source: src(6),
+          blocks: [
+            {
+              id: "m02-l00-p01-opener", type: "unit-opener", origin: "book",
+              unitLabel: "الدفعة الأولى · الوحدة الثانية · كتاب ص 14–23", unitNumber: "02", title: "الأعداد والتحويل بينها",
+              subtitle: "العشري، الثنائي، السادس عشر — وكيف نحوّل من نظام إلى آخر.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m02-l01",
+      title: "الأعداد والتحويل بينها",
+      order: 1,
+      pages: [
+        {
+          id: "791381s-m02-l01-p01",
+          title: "العشري والثنائي",
+          order: 1,
+          source: src(6),
+          blocks: [
+            {
+              id: "m02-l01-p01-intro", type: "text", origin: "book",
+              spans: [{ text: "الإنسان يعدّ بالنظام العشري. أما الحاسوب فيعمل بالكهرباء، والكهرباء لها حالتان فقط: يوجد تيار أو لا يوجد، لذلك يستعمل رقمين فقط." }],
+            },
+            {
+              id: "m02-l01-p01-cards", type: "list", origin: "book", variant: "cards",
+              items: [
+                {
+                  id: "m02-l01-p01-c1", term: "العدد العشري",
+                  text: [{ text: "النظام الذي نستعمله يوميًا. الرموز: من 0 إلى 9 (عشرة رموز). " }, { text: "مثال:", style: "strong" }, { text: " 123" }],
+                },
+                {
+                  id: "m02-l01-p01-c2", term: "العدد الثنائي",
+                  text: [{ text: "النظام الذي يفهمه الحاسوب. الرموز: 0 و 1 فقط. " }, { text: "مثال:", style: "strong" }, { text: " 1010" }],
+                },
+              ],
+            },
+            {
+              id: "m02-l01-p01-bits", type: "text", origin: "book",
+              spans: [
+                { text: "في الحاسوب: " },
+                { text: "0 = إطفاء", style: "strong" },
+                { text: " و " },
+                { text: "1 = تشغيل", style: "strong" },
+                { text: ". كل البيانات في الحاسوب هي في النهاية أصفار وآحاد. كل رقم ثنائي اسمه " },
+                { text: "بت", style: "strong" },
+                { text: "." },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p02",
+          title: "طريقة الصناديق (أهم أداة في الوحدة)",
+          order: 2,
+          source: src(7),
+          blocks: [
+            {
+              id: "m02-l01-p02-intro", type: "text", origin: "book",
+              spans: [{ text: "كل صندوق له قيمة. عندما نكتب 1 تحت الصندوق نأخذ قيمته، وعندما نكتب 0 لا نأخذها." }],
+            },
+            {
+              id: "m02-l01-p02-eight", type: "text", origin: "book",
+              spans: [
+                { text: "نكتب 8 صناديق. نبدأ من اليمين بـ 1، وكل صندوق " },
+                { text: "ضعف", style: "strong" },
+                { text: " الذي قبله:" },
+              ],
+            },
+            {
+              id: "m02-l01-p02-boxes", type: "table", origin: "book",
+              headers: ["1", "2", "4", "8", "16", "32", "64", "128"],
+              rows: [],
+            },
+            {
+              id: "m02-l01-p02-memorize", type: "text", origin: "book",
+              spans: [{ text: "احفظها: 1 ← 2 ← 4 ← 8 ← 16 ← 32 ← 64 ← 128 (مجموعها كلها = 255)" }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p03",
+          title: "من الثنائي إلى العشري",
+          order: 3,
+          source: src(7),
+          blocks: [
+            {
+              id: "m02-l01-p03-def", type: "text", origin: "book",
+              spans: [{ text: "نضع كل رقم ثنائي تحت صندوقه، ثم نجمع فقط القيم التي تحتها 1.", style: "strong" }],
+            },
+            {
+              id: "m02-l01-p03-explain", type: "text", origin: "book",
+              spans: [{ text: "أي أننا ننظر إلى كل رقم 1 ونسأل: ما القيمة المكتوبة فوقه؟ ثم نجمع هذه القيم فقط." }],
+            },
+            { id: "m02-l01-p03-ex1-label", type: "heading", origin: "book", level: 4, text: "مثال 1" },
+            {
+              id: "m02-l01-p03-ex1-task", type: "text", origin: "book",
+              spans: [{ text: "حوّل " }, { text: "01111011", style: "code" }, { text: " إلى عشري:" }],
+            },
+            {
+              id: "m02-l01-p03-ex1-table", type: "table", origin: "book",
+              headers: ["1", "2", "4", "8", "16", "32", "64", "128"],
+              rows: [["1", "1", "0", "1", "1", "1", "1", "0"]],
+            },
+            {
+              id: "m02-l01-p03-ex1-sum", type: "text", origin: "book",
+              spans: [{ text: "64 + 32 + 16 + 8 + 2 + 1 = 123", style: "code", dir: "ltr" }],
+            },
+            {
+              id: "m02-l01-p03-ex1-result", type: "text", origin: "book",
+              spans: [
+                { text: "إذن " },
+                { text: "01111011", style: "code" },
+                { text: " في الثنائي = " },
+                { text: "123", style: "strong" },
+                { text: " في العشري." },
+              ],
+            },
+            {
+              id: "m02-l01-p03-ex2", type: "callout", origin: "book", kind: "tip", title: "مثال 2 (أسهل)",
+              spans: [
+                { text: "00001010", style: "code" },
+                { text: " ← تحت 8 يوجد 1، وتحت 2 يوجد 1 ← " },
+                { text: "8 + 2 = 10", style: "code", dir: "ltr" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p04",
+          title: "من العشري إلى الثنائي",
+          order: 4,
+          source: src(7, 8),
+          blocks: [
+            {
+              id: "m02-l01-p04-def", type: "text", origin: "book",
+              spans: [{ text: "نختار الصناديق التي مجموعها يساوي العدد: نكتب 1 تحت المستعمَل، و 0 تحت غير المستعمَل.", style: "strong" }],
+            },
+            {
+              id: "m02-l01-p04-reverse", type: "text", origin: "book",
+              spans: [{ text: "هذا عكس التحويل السابق: نبحث عن الصناديق التي إذا جمعناها نحصل على العدد المطلوب." }],
+            },
+            {
+              id: "m02-l01-p04-steps", type: "text", origin: "book",
+              spans: [
+                { text: "الخطوات:", style: "strong" },
+                { text: " نبدأ من أكبر صندوق (128). نسأل: هل يدخل في الباقي؟ " },
+                { text: "نعم", style: "strong" },
+                { text: " ← نكتب 1 ونطرحه. " },
+                { text: "لا", style: "strong" },
+                { text: " ← نكتب 0. ثم ننتقل للصندوق التالي." },
+              ],
+            },
+            { id: "m02-l01-p04-ex-label", type: "heading", origin: "book", level: 4, text: "مثال" },
+            {
+              id: "m02-l01-p04-ex-task", type: "text", origin: "book",
+              spans: [{ text: "حوّل " }, { text: "44", style: "strong" }, { text: " إلى ثنائي:" }],
+            },
+            {
+              id: "m02-l01-p04-ex-table", type: "table", origin: "book",
+              headers: ["الصندوق", "128", "64", "32", "16", "8", "4", "2", "1"],
+              rows: [
+                ["هل يدخل؟", "لا", "لا", "نعم \u200E44−32=12", "لا", "نعم \u200E12−8=4", "نعم \u200E4−4=0", "لا", "لا"],
+                ["الرقم", "0", "0", "1", "0", "1", "1", "0", "0"],
+              ],
+              columnDirs: ["rtl", "ltr", "ltr", "ltr", "ltr", "ltr", "ltr", "ltr", "ltr"],
+            },
+            {
+              id: "m02-l01-p04-ex-sum", type: "text", origin: "book",
+              spans: [{ text: "32 + 8 + 4 = 44   →   00101100", style: "code", dir: "ltr" }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p05",
+          title: "النظام السادس عشر (Hex)",
+          order: 5,
+          source: src(8, 9),
+          blocks: [
+            {
+              id: "m02-l01-p05-def", type: "text", origin: "book",
+              spans: [{ text: "نظام فيه 16 رمزًا: الأرقام من 0 إلى 9، ثم الأحرف A B C D E F.", style: "strong" }],
+            },
+            {
+              id: "m02-l01-p05-letters", type: "text", origin: "book",
+              spans: [{ text: "بعد الرقم 9 لا يوجد رمز واحد يمثّل 10، لذلك نستعمل الأحرف: A تعني 10، و B تعني 11، وهكذا حتى F التي تعني 15." }],
+            },
+            {
+              id: "m02-l01-p05-letters-table", type: "table", origin: "book",
+              headers: ["F", "E", "D", "C", "B", "A"],
+              rows: [["15", "14", "13", "12", "11", "10"]],
+            },
+            {
+              id: "m02-l01-p05-why", type: "text", origin: "book",
+              spans: [
+                { text: "لماذا نستعمله؟", style: "strong" },
+                { text: " لأنه يختصر الأعداد الثنائية الطويلة كثيرًا. نراه في عناوين MAC وفي IPv6." },
+              ],
+            },
+            { id: "m02-l01-p05-table-heading", type: "heading", origin: "book", level: 3, text: "جدول السادس عشر والثنائي (مهم جدًا للحفظ)" },
+            {
+              id: "m02-l01-p05-hex-table", type: "table", origin: "book",
+              headers: ["عشري", "ثنائي", "Hex", "عشري", "ثنائي", "Hex"],
+              rows: [
+                ["8", "1000", "8", "0", "0000", "0"],
+                ["9", "1001", "9", "1", "0001", "1"],
+                ["10", "1010", "A", "2", "0010", "2"],
+                ["11", "1011", "B", "3", "0011", "3"],
+                ["12", "1100", "C", "4", "0100", "4"],
+                ["13", "1101", "D", "5", "0101", "5"],
+                ["14", "1110", "E", "6", "0110", "6"],
+                ["15", "1111", "F", "7", "0111", "7"],
+              ],
+              columnDirs: ["rtl", "ltr", "ltr", "rtl", "ltr", "ltr"],
+            },
+            {
+              id: "m02-l01-p05-idea", type: "text", origin: "book",
+              spans: [{ text: "احفظ الفكرة:", style: "strong" }, { text: " كل رمز Hex واحد = 4 بتات (4 أرقام ثنائية) بالضبط." }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p06",
+          title: "من Hex إلى الثنائي",
+          order: 6,
+          source: src(9),
+          blocks: [
+            {
+              id: "m02-l01-p06-def", type: "text", origin: "book",
+              spans: [{ text: "نأخذ كل رمز Hex ونحوّله إلى 4 أرقام ثنائية حسب الجدول، بنفس الترتيب.", style: "strong" }],
+            },
+            {
+              id: "m02-l01-p06-why", type: "text", origin: "book",
+              spans: [{ text: "لأن كل رمز Hex يساوي 4 بتات، يكفي أن نعرف الجدول ونستبدل كل رمز بأربعة أرقام ثنائية." }],
+            },
+            { id: "m02-l01-p06-ex-label", type: "heading", origin: "book", level: 4, text: "مثال" },
+            {
+              id: "m02-l01-p06-ex-task", type: "text", origin: "book",
+              spans: [{ text: "حوّل " }, { text: "A23F", style: "code" }, { text: " إلى ثنائي:" }],
+            },
+            {
+              id: "m02-l01-p06-ex-table", type: "table", origin: "book",
+              headers: ["F", "3", "2", "A"],
+              rows: [["1111", "0011", "0010", "1010"]],
+              columnDirs: ["ltr", "ltr", "ltr", "ltr"],
+            },
+            {
+              id: "m02-l01-p06-ex-result", type: "text", origin: "book",
+              spans: [{ text: "A23F = 1010 0010 0011 1111", style: "code", dir: "ltr" }],
+            },
+            {
+              id: "m02-l01-p06-ex-other", type: "text", origin: "book",
+              spans: [{ text: "مثال آخر: " }, { text: "9A2C5 = 1001 1010 0010 1100 0101", style: "code", dir: "ltr" }],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p07",
+          title: "من الثنائي إلى Hex",
+          order: 7,
+          source: src(10),
+          blocks: [
+            {
+              id: "m02-l01-p07-intro", type: "text", origin: "book",
+              spans: [{ text: "هذا عكس التحويل السابق: نجمع كل 4 بتات معًا ونستبدلها برمز Hex واحد." }],
+            },
+            {
+              id: "m02-l01-p07-steps", type: "list", origin: "book", variant: "ordered",
+              items: [
+                { id: "m02-l01-p07-s1", text: [{ text: "نقسّم العدد الثنائي إلى مجموعات من 4 بتات، " }, { text: "نبدأ من اليمين", style: "strong" }, { text: "." }] },
+                { id: "m02-l01-p07-s2", text: [{ text: "إذا كانت المجموعة الأخيرة (في اليسار) ناقصة، نضيف أصفارًا من اليسار." }] },
+                { id: "m02-l01-p07-s3", text: [{ text: "نحوّل كل مجموعة إلى رمز Hex حسب الجدول." }] },
+              ],
+            },
+            { id: "m02-l01-p07-ex-label", type: "heading", origin: "book", level: 4, text: "مثال" },
+            {
+              id: "m02-l01-p07-ex-table", type: "table", origin: "book",
+              headers: ["1001", "1010", "0101", "0010"],
+              rows: [["9", "A", "5", "2"]],
+              columnDirs: ["ltr", "ltr", "ltr", "ltr"],
+            },
+            {
+              id: "m02-l01-p07-ex-result", type: "text", origin: "book",
+              spans: [{ text: "0010 0101 1010 1001 = 25A9", style: "code", dir: "ltr" }],
+            },
+            {
+              id: "m02-l01-p07-ex-zeros", type: "text", origin: "book",
+              spans: [
+                { text: "مثال مع إكمال أصفار: " },
+                { text: "110101", style: "code" },
+                { text: " ← " },
+                { text: "0011 0101", style: "code", dir: "ltr" },
+                { text: " ← " },
+                { text: "35", style: "code" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "791381s-m02-l01-p08",
+          title: "خلاصة التحويلات",
+          order: 8,
+          source: src(10),
+          blocks: [
+            {
+              id: "m02-l01-p08-table", type: "table", origin: "book",
+              headers: ["التحويل", "كيف؟"],
+              rows: [
+                ["ثنائي ← عشري", "نستعمل الصناديق ثم نجمع القيم التي تحتها 1."],
+                ["عشري ← ثنائي", "نبني العدد من قيم الصناديق ونكتب 1 أو 0."],
+                ["Hex ← ثنائي", "نقسّم إلى مجموعات من 4 (من اليمين) ثم نستعمل الجدول."],
+                ["ثنائي ← Hex", "كل رمز Hex يتحوّل إلى 4 بتات."],
+              ],
+            },
+            {
+              id: "m02-l01-p08-important", type: "callout", origin: "book", kind: "important", title: "مهم للامتحان",
+              spans: [
+                { text: "لا تحفظ الأجوبة فقط — احفظ " },
+                { text: "طريقة الصناديق", style: "strong" },
+                { text: " و" },
+                { text: "جدول التحويل", style: "strong" },
+                { text: ". هذه المهارات نحتاجها لاحقًا في عناوين IPv4 و IPv6 وقناع الشبكة." },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default m02;
