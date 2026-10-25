@@ -103,3 +103,22 @@ without the setting.
 - Production smoke checks are **read-only** and performed by the owner after a merge; an agent performs one only when the
   phase instruction asks and never with write operations.
 - The scheduled recovery sweep workflow is an operational job, not validation.
+
+## 7. QA round 2, phase 4c — four stale browser checks and the worktree exclude
+
+Baseline `5f4e6cb2`. The QA round 2 run of every browser check found four that no longer matched the product they certify. Each was
+brought back to what it certifies, never loosened:
+
+- `check-builder-overlay-browser.mjs`, `check-shared-confirm-browser-21e1.mjs`: their stylesheet-fidelity check requires the harness to
+  load every App stylesheet whose rules name the builder's menus or dialogs. Since UX-R6 `assignments-pro.css` does (touch targets
+  scoped to `.eb-assignments`, which never reach the builder), so both harnesses now load it after `shell.css`, in App's order. The
+  fidelity rule is unchanged.
+- `check-exam-focus-ring-browser-21e0-rf1.mjs`: the canonical platform ring outside the exam was a hard-coded `rgb(37, 99, 235)`, the
+  pre-UX-R17 blue. The check now resolves the colour from the production `--eb-primary` token on the page, asserts it is an opaque
+  colour different from every preset primary, and still requires the outside ring to be exactly `2px solid` that colour.
+- `check-review-fix1-browser-21e1s2.mjs`: the teacher now lands on the dashboard and the builder opens on the Exam Studio home (21F.7).
+  The check reaches the builder from the sidebar (the drawer on phone and zoomed layouts), switches to «الواجهة الكلاسيكية» (the classic
+  builder it certifies), and continues through «الامتحانات المحفوظة» as before; its measurements are unchanged.
+- Vitest (`vite.config.ts`): `test.exclude` = Vitest's defaults plus `**/.claude/worktrees/**`, so an agent's scratch git worktree is
+  never collected as a second, stale copy of the suite (it was, during QA round 2). Proof: a failing test planted in
+  `.claude/worktrees/qa-probe/` fails the run with the baseline config and is not collected with this one.

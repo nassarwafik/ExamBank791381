@@ -15,6 +15,9 @@ import "../src/platform.css";
 // above the builder overlay) and dialog parts. Since 21E.2 the builder's tools live in toolbar menus, so the harness loads it too.
 import "../src/page-parts.css";
 import "../src/shell.css";
+// App loads assignments-pro.css after shell.css (UX-R6): its menu-trigger / menu-item touch targets are scoped to the assignments page
+// (.eb-assignments) and never reach the builder, but the harness loads what App loads, in App's order.
+import "../src/assignments-pro.css";
 import "../src/ui/ui.css";
 import StructuredExamBuilder from "../src/StructuredExamBuilder";
 import { useStructuredExamHistory } from "../src/useStructuredExamHistory";
