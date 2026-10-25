@@ -92,11 +92,15 @@ describe("P2 student — mark completed stages", () => {
     expect(within(rowOf(B3)).queryByRole("button", { name: /تراجع/ })).toBeNull();
   });
 
-  it("shows the server's refusal on an archived class and writes nothing", async () => {
+  // QA-16, updated deliberately: the server now flags an archived class's project read-only, so the page shows it as a record
+  // and offers no control the server would refuse (the server still refuses a direct write: student-project-tracker tests).
+  it("an archived class's project is shown read-only: no «أنجزت» control, a read-only note, nothing written", async () => {
     const s = server({ "platform/classes/c1.json": room("c1", { status: "archived", active: false }) });
     await mountStudent();
-    fireEvent.click(within(rowOf(B1)).getByRole("button", { name: "أنجزت " + label(B1) }));
-    expect((await screen.findByRole("alert")).textContent).toBe("الصف مؤرشف — لا يمكن تعديل المشروع.");
+    expect(await screen.findByTestId("project-read-only")).toBeTruthy();
+    expect(within(rowOf(B1)).queryByRole("button", { name: "أنجزت " + label(B1) })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^أنجزت المجموعة/ })).toBeNull();
+    expect(s.posts).toEqual([]);
     expect(s.doc().stages[B1.stageId]).toBeUndefined();
   });
 });

@@ -28752,7 +28752,8 @@
             "diff": 50
           }
         }
-      ]
+      ],
+      "readOnly": true
     },
     "audits": [],
     "storage": {

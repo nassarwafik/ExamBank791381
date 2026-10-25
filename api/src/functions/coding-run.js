@@ -102,7 +102,7 @@ async function runHandler(request, deps = {}, obs = null) {
   const classroom = student.classId ? await dl(c, "platform/classes/" + student.classId + ".json") : null;
   if (classroom && normalizeClassStatus(classroom) === "archived") return refused(403, "CLASS_ARCHIVED");
   const a = await dl(c, AP + body.assignmentId + ".json");
-  if (!a || String(a.classId) !== String(student.classId)) return refused(404, "ASSIGNMENT_UNAVAILABLE");
+  if (!a || !a.classId || !student.classId || String(a.classId) !== String(student.classId)) return refused(404, "ASSIGNMENT_UNAVAILABLE");   // QA-18: a real class on both sides
   if (a.status !== "published") return refused(403, "ASSIGNMENT_UNAVAILABLE");
   const s = await dl(c, SP + body.assignmentId + "/" + student.userId + ".json");
   const nowMs = Date.now();

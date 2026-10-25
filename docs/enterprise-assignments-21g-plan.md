@@ -535,3 +535,31 @@ Finding #8 of the post-merge QA of `main` (`c244cbab`).
     All KILLED (A1 was first an invalid mutant and was re-planted). Files restored byte-for-byte (sha256).
 - **Limitation.** A device still running a bundle from before this change sends no revision and keeps the old behaviour until it
   reloads. Two devices editing the SAME question keep the value of the device that saves last.
+
+## 17. QA-14 … QA-18 — access and retry edges on the student side
+
+Findings #14–#18 of the post-merge QA of `main` (`c244cbab`).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 14 | `student-submission.js` `submit` + `StudentExamPage.tsx` | On a legacy untimed assignment (no attempt identity), a network retry of the same submit recorded a second attempt. | The page sends a `submitKey`: one per submit of one draft (attempt context + revision + generation), re-sent unchanged when the student retries. The server returns the result of the attempt that key was recorded with (200, `replay: true`) and writes nothing. The check runs before the write gate and again under the CAS, for two in-flight copies. A new draft revision is a new submit with a new key. A modern attempt's retry now replays too, instead of a 409. |
+| 15 | `achievement-feed.js` | An archived class's feed still took reactions. | The feed stays readable as a record (`readOnly: true`); a reaction is refused with 403. |
+| 16 | `student-project-tracker.js` + `StudentProjectPanel.tsx` | An archived class's project was shown with self-report controls that the server then refused. Keeping it readable is the intended behaviour: it is the student's record. | The reply flags `readOnly: true` for a non-active class. The page shows «الصف مؤرشف — المشروع للعرض فقط.» and offers no «أنجزت», «تراجع» or group control. The server still refuses a direct write. |
+| 17 | `student-submission.js` GET | An unpublished assignment's timing (due date, duration) reached any student of the class who knew its id. | A non-published assignment is readable only as the student's own history (an existing submission of an archived task); otherwise it is 404. |
+| 18 | `student-submission.js`, `student-assignment.js`, `coding-run.js` | A student and an assignment that both lacked a `classId` matched (`"undefined" === "undefined"`). | Membership needs a real `classId` on both sides. |
+
+**Existing tests updated deliberately.**
+- `StudentExamPage.ux7b1.test.tsx` and `ux7b2.test.tsx`: the submit body now also carries `submitKey` (32 hex).
+- `StudentSelfReport.p2.test.tsx`: the archived-class case now expects the read-only view (no control, the note, nothing
+  written). The server-side refusal of a direct write is pinned in `access-edges-qa14-18.test.js`.
+- `legacy-794589-convergence-r33.test.js` and `fixtures/r33-golden.json`: a reviewed golden change (REFRESHED_BY_QA16). Exactly
+  one entry was refreshed, `SG.s8` (the archived class's student), and its only change is `readOnly: true`, pinned by invariant B12.
+
+**Evidence.**
+- Tests:
+  - `api/tests/access-edges-qa14-18.test.js`: 11 tests on the real handlers;
+  - `src/StudentExamPage.submitKey.qa14.test.tsx`: 2 page tests;
+  - the updated P2 test.
+- **Fail-first on `46ba9297`:** 10 failed.
+- **Mutations E1–E12:** all KILLED. E2 (the CAS replay check removed) first SURVIVED and was killed by an added test: two submits
+  with the same key in flight at once. Files were restored byte-for-byte (sha256).

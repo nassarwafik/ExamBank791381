@@ -62,7 +62,7 @@ async function handler(request,deps={},obs=null){
   const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
-  const a=await dl(c,PREFIX+id+".json");if(!a||a.status!=="published"||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح لهذا الحساب."}};
+  const a=await dl(c,PREFIX+id+".json");if(!a||a.status!=="published"||!a.classId||!student.classId||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح لهذا الحساب."}};
   const s=await dl(c,SUB_PREFIX+id+"/"+student.userId+".json"),av=getAssignmentAvailability(a,s),ts=timerState(a,s);
   // Scheduled (before openAt) => 403 and NO exam payload. CLOSED is intentionally NOT blocked here: a
   // student must still be able to open a past-due assignment to view/review a submitted result (the

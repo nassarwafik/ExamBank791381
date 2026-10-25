@@ -93,9 +93,12 @@ async function handler(request,deps={},obs=null){
  try{const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
-  const a=await dl(c,AP+id+".json");if(!a||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};const name=SP+id+"/"+student.userId+".json";
+  // QA-18 — membership needs a REAL class on both sides: a student and an assignment that BOTH lack a classId never match.
+  const a=await dl(c,AP+id+".json");if(!a||!a.classId||!student.classId||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};const name=SP+id+"/"+student.userId+".json";
   const s=await dl(c,name);
-  if(request.method==="GET"){return {status:200,jsonBody:{ok:true,state:state(a,s||defaultSubmission(id,student))}}}
+  // QA-17 — an assignment that is not published is only readable as the student's OWN history (an existing submission of an
+  // archived task); otherwise its timing (due date, duration) never reaches a student who merely knows its id.
+  if(request.method==="GET"){if(a.status!=="published"&&!s)return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};return {status:200,jsonBody:{ok:true,state:state(a,s||defaultSubmission(id,student))}}}
   // Roadmap #7: ALL student write mutations (startAttempt/saveDraft/submit/finalizeTimedOutAttempt) require
   // a PUBLISHED assignment. A draft or archived assignment blocks every mutation BEFORE any grading/write.
   // The GET above stays readable so a student can still review a historical submission of an archived task.
@@ -207,17 +210,26 @@ async function handler(request,deps={},obs=null){
   }
 
   if(action==="submit"){
+   // QA-14 — a submit key (one per submit of one draft, re-sent unchanged when the student retries after a lost response): a
+   // submit whose key is the one the latest completed attempt was recorded with is the SAME submit — its result is returned and
+   // nothing is written. A legacy untimed assignment (no attempt identity) no longer turns a network retry into a second attempt.
+   const submitKey=typeof b.submitKey==="string"&&/^[A-Za-z0-9_-]{8,64}$/.test(b.submitKey)?b.submitKey:"";
+   const priorDone=s&&Array.isArray(s.attempts)&&s.attempts.length?s.attempts[s.attempts.length-1]:null;
+   if(submitKey&&priorDone&&priorDone.submitKey===submitKey)return {status:200,jsonBody:{ok:true,result:pub(priorDone,a),state:state(a,s),replay:true}};
    const rej=writeRejection(a,s,"submit",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
    const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{},a.examSnapshot||null).answers,now=new Date().toISOString(); // Phase 16B-A — bounded simulation states; 17A — code answers bound to the published coding question
    const submitFailures=b.renderFailures===undefined?null:normalizeRenderFailures(b.renderFailures,a.examSnapshot||null);   // 21E.3 — the submit's own report (the client's current knowledge) wins; absent ⇒ the draft record
-   let resultAttempt=null,finalState=null,codingPlan=null;
+   let resultAttempt=null,finalState=null,codingPlan=null,replayOf=null;   // replayOf: QA-14 — the same submit, decided under the CAS
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
+     replayOf=null;
+     const lastDone=Array.isArray(doc.attempts)&&doc.attempts.length?doc.attempts[doc.attempts.length-1]:null;
+     if(submitKey&&lastDone&&lastDone.submitKey===submitKey){replayOf=lastDone;finalState=state(a,doc,Date.now());return doc}   // QA-14: the same submit again
      if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
@@ -230,7 +242,7 @@ async function handler(request,deps={},obs=null){
      const holds=applyRenderFailureHolds(g,submitFailures||normalizeRenderFailures(doc.draftRenderFailures,a.examSnapshot||null),answers,a.examSnapshot,now);   // 21E.3 — verified technical holds, never a zero
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
-     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
+     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...(submitKey?{submitKey}:{})};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
@@ -245,6 +257,7 @@ async function handler(request,deps={},obs=null){
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
    }
+   if(replayOf){obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,replay:true});return {status:200,jsonBody:{ok:true,result:pub(replayOf,a),state:finalState,replay:true}}}
    if(resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }

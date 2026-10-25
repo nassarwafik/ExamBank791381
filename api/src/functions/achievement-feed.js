@@ -5,6 +5,7 @@ const { listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError 
 const { withheldAssignmentIds } = require("../lib/results-release");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost, isVisibleToStudent, reactionCounts } = require("../lib/achievement-feed");
 const { isSafeSegment } = require("../lib/blob-names");
+const { normalizeClassStatus } = require("../lib/class-lifecycle");
 
 const UP = "platform/users/", AP = "platform/assignments/";
 // Phase 21G.5 (D2) — an assessment medal reveals a mark band, so its post is shown (to anyone, its owner included) only once the
@@ -31,6 +32,10 @@ async function handler(request, deps = {}, obs = null) {
       const container = sess.container;
       const student = sess.student;
       const classId = String(student.classId || "");
+      // QA-15 — an archived class is read-only: its feed stays readable as a record (flagged readOnly) but takes no reaction.
+      const dlc = deps.downloadJsonOrNull || downloadJsonOrNull;
+      const classroom = classId ? await dlc(container, "platform/classes/" + classId + ".json") : null;
+      const archived = !!classroom && normalizeClassStatus(classroom) === "archived";
 
       if (request.method === "GET") {
         if (!classId) return { status: 200, jsonBody: { ok: true, posts: [] } };
@@ -47,7 +52,7 @@ async function handler(request, deps = {}, obs = null) {
             isOwnPost: String(post.studentId || "") === String(student.userId),
             myReaction: myReaction(post.reactions, String(student.userId))
           }));
-        return { status: 200, jsonBody: { ok: true, posts } };
+        return { status: 200, jsonBody: { ok: true, posts, ...(archived ? { readOnly: true } : {}) } };
       }
 
       let body = {};
@@ -58,6 +63,7 @@ async function handler(request, deps = {}, obs = null) {
       const postId = String(body?.postId || "").trim();
       const reaction = String(body?.reaction || "").trim();
       if (!postId || !REACTIONS.includes(reaction)) return { status: 400, jsonBody: { ok: false, error: "ردّ الفعل غير صالح." } };
+      if (archived) return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — لا يمكن التفاعل مع الإنجازات." } };   // QA-15
       // The post id becomes part of a blob name: one safe segment only (a "../" id would leave the class's feed folder).
       if (!isSafeSegment(postId)) return { status: 400, jsonBody: { ok: false, error: "معرّف المنشور غير صالح." } };
 

@@ -105,7 +105,9 @@ async function handler(request, deps = {}, obs = null) {
         balance: core.getBalanceInsight(summary.trackProgress, workDef)
       }));
 
-      return { status: 200, jsonBody: { ok: true, enrolled: true, className: classroom.name, projects } };
+      // QA-16 — an archived class's projects stay readable as the student's record (writes are refused above); the flag lets the
+      // page show them read-only instead of offering controls the server refuses.
+      return { status: 200, jsonBody: { ok: true, enrolled: true, className: classroom.name, projects, ...(normalizeClassStatus(classroom) !== "active" ? { readOnly: true } : {}) } };
     } catch (e) {
       obs?.logError("student.projectTracker.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." } };

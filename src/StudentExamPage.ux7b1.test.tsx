@@ -248,7 +248,9 @@ describe("UX-7b-1 — ConfirmDialog parity with the former window.confirm", () =
     await screen.findByText(/تم تسليم المحاولة 1/);
     const submit = posts().find(p => p.body.action === "submit");
     expect(submit).toBeTruthy();
-    expect(Object.keys(submit!.body).sort()).toEqual(["action", "answers"]);                             // legacy: no identity, same body
+    // QA-14, updated deliberately: the body also carries the submit key (a retry of the same submit re-sends it).
+    expect(Object.keys(submit!.body).sort()).toEqual(["action", "answers", "submitKey"]);                // legacy: no identity, same body
+    expect(submit!.body.submitKey).toMatch(/^[0-9a-f]{32}$/);
     expect(submit!.body.answers.q1).toEqual({ kind: "choice", index: 0 });
     expect(submit!.body.answers.q6).toEqual({ kind: "fields", values: { a1: "10.0.0.1", b1: "true" } });
     expect(posts().map(p => p.body.action).filter(a => a === "submit").length).toBe(1);
