@@ -4,8 +4,9 @@
 // question card for several code-owned presets. For every preset, every control reached with the Tab key (inline-cloze text input and
 // dropdown, hotspot overlay and placed marker, a legacy multiple-choice option) must show the EXAM ring: computed outline-style solid,
 // width exactly 3px, colour exactly the preset's primary (--xp-primary), offset 2px and ≥ 3:1 contrast on the preset's surface. The
-// high-contrast preset's ring must be pure black, never the platform-default blue. A reference button OUTSIDE the exam root keeps the
-// canonical 2px platform ring (the 21E.0 foundation is preserved). Computed styles only: this is what the student actually sees.
+// high-contrast preset's ring must be pure black, never the platform ring. A reference button OUTSIDE the exam root keeps the
+// canonical 2px platform ring (the 21E.0 foundation is preserved): `2px solid var(--eb-primary)`, its colour read from the production
+// token on the page (QA2 4c: the constant had kept the pre-UX-R17 blue after the palette moved to #2a0a4e). Computed styles only: this is what the student actually sees.
 // Fail-first: on the 21E.0 head before this fix, the migrated controls (cloze / hotspot / option) resolve to the 2px canonical ring
 // inside the themed exam; the fix (`--eb-focus-ring: 3px solid var(--xp-primary)` scoped to .exam-presentation) restores the 3px ring.
 import fs from "node:fs";
@@ -50,7 +51,6 @@ const PROBES = [
   { sel: ".vq-overlay[tabindex]", label: "hotspot overlay" }, { sel: ".vq-marker", label: "hotspot marker" },
   { sel: ".iex-option input[type=radio]", ring: ".iex-option", label: "multiple-choice option" },
 ];
-const PLATFORM_RING = "rgb(37, 99, 235)";
 const lum = ([r, g, b]) => { const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
 const rgb = s => { const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?/.exec(s || ""); return m ? { c: [+m[1], +m[2], +m[3]], a: m[4] === undefined ? 1 : +m[4] } : null; };
 const contrast = (a, b) => { const l1 = lum(a), l2 = lum(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
@@ -62,6 +62,9 @@ async function run(name, viewport, mobile) {
   page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
   await page.goto(PAGE, { waitUntil: "networkidle" });
   await page.waitForSelector('[data-preset="classicPaper"] .vq-marker', { timeout: 15000 });
+  // The canonical platform ring colour = the production --eb-primary token, resolved by the browser on this page.
+  const PLATFORM_RING = await page.evaluate(() => { const p = document.createElement("span"); p.style.color = "var(--eb-primary)"; document.body.appendChild(p); const c = getComputedStyle(p).color; p.remove(); return c; });
+  check(name + ": the platform ring colour resolves from the production --eb-primary token (" + PLATFORM_RING + ")", rgb(PLATFORM_RING)?.a === 1 && PRESETS.every(pr => pr.primary !== PLATFORM_RING));
   check(name + ": page is RTL and every preset mounted a real .exam-presentation root with its --xp-primary", await page.evaluate(ids => document.documentElement.dir === "rtl" && ids.every(id => { const r = document.querySelector('[data-preset="' + id + '"] .exam-presentation'); return r && r.getAttribute("data-xp-preset") === id && getComputedStyle(r).getPropertyValue("--xp-primary").trim().length > 0; }), PRESETS.map(p => p.id)));
   for (const preset of PRESETS) {
     const scope = '[data-preset="' + preset.id + '"] ';

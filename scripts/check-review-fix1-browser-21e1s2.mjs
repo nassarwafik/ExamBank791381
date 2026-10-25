@@ -92,6 +92,15 @@ async function run(name, viewport, touch, dsf) {
   const shot = n => page.screenshot({ path: path.join(out, name + "-" + n + ".png") });
   const rec = record.viewports[name] = {};
   await page.goto(origin + "/", { waitUntil: "networkidle" });
+  // QA2 4c — since the UX-R shell the teacher lands on the dashboard; the builder is reached from the sidebar's Exam Bank group (the
+  // phone and zoomed layouts open the «القائمة» drawer first). Since 21F.7 the builder opens on the Exam Studio home; this check certifies
+  // the CLASSIC builder, so it switches to «الواجهة الكلاسيكية», whose access bar holds «الامتحانات المحفوظة» as before.
+  const builderNav = page.getByRole("button", { name: "باني الامتحان", exact: true }).first();
+  await page.getByRole("button", { name: "القائمة", exact: true }).first().waitFor({ timeout: 15000 }).catch(() => {});
+  if (!(await builderNav.isVisible().catch(() => false))) await page.getByRole("button", { name: "القائمة", exact: true }).first().click().catch(() => {});
+  await builderNav.click({ timeout: 15000 });
+  const classic = page.locator("[data-studio-home]").getByRole("button", { name: "الواجهة الكلاسيكية", exact: true });
+  await classic.waitFor({ timeout: 20000 }); await classic.click();
   const saved = page.getByRole("button", { name: /الامتحانات المحفوظة/ }).first();
   await saved.waitFor({ timeout: 20000 }); await saved.click();
   const open = page.locator(".saved-exams-panel").getByRole("button", { name: /فتح وتعديل/ }).first();

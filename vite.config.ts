@@ -1,6 +1,8 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,6 +13,9 @@ export default defineConfig({
   resolve: process.env.VITEST
     ? { alias: [{ find: /^.*\/content\/moduleBodySource$/, replacement: fileURLToPath(new URL('./src/learning/content/moduleBodySource.bundled.ts', import.meta.url)) }] }
     : undefined,
+  // QA2 4c — agent sessions keep scratch git worktrees under .claude/worktrees (full copies of the repository); the root suite must
+  // never collect their tests as a second, stale copy of this one. Everything else keeps Vitest's defaults.
+  test: { exclude: [...configDefaults.exclude, '**/.claude/worktrees/**'] },
   build: {
     rollupOptions: {
       // Content hashes in emitted file names use base-36 (0-9a-z, 8 characters ≈ 41 bits) instead of base-64. The initial bundle's
