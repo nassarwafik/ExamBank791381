@@ -46,6 +46,16 @@ describe("R18 D: identity normalization (9 digits)", () => {
   });
 });
 
+// QA-2 — the API's own alias order: an explicit identity (incl. nationalId) wins over a generic `id`, which is a last resort.
+describe("QA-2: identityFromInput prefers an explicit identity over a generic id", () => {
+  it("a row id never shadows the identity", () => {
+    expect(identityFromInput({ id: 7, nationalId: "123456789" })).toBe("123456789");
+    expect(identityFromInput({ id: 7, code: "123456789" })).toBe("123456789");
+    expect(identityFromInput({ id: 7, studentCode: "123456789" })).toBe("123456789");
+    expect(identityFromInput({ id: "123456789" })).toBe("123456789");
+  });
+});
+
 describe("R18 E/F/G/H: invalid + duplicate-within-batch detection (preview)", () => {
   let ctx;
   beforeEach(() => { ctx = createMemoryContainer({ "platform/classes/c1.json": { classId: "c1", name: "صف", active: true } }); });

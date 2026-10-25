@@ -352,3 +352,29 @@ the items below. Nothing in the data, the API or the grading path changes.
   - The gate's details locator: `/^تفاصيل /`.
 
 **Not in S.4 (owner decisions).** The bulk-delete wording (locked by U2-d), hard vs recoverable delete, and whether graduation disables logins.
+
+## QA-2 — the identity column of an imported roster
+
+The post-merge QA of `main` (`c244cbab`) found that a roster's **serial column** was read as the students' identity.
+
+- **Defect.** Arabic school rosters usually open with a «رقم» (or `id`) column holding 1, 2, 3 … before «رقم الهوية». The CSV header loop took the
+  FIRST identity-like header, so every row was previewed as valid with the identity `000000001`, `000000002` …. The accounts were created
+  with those login codes, and the numbers then blocked the same identities everywhere on the platform. A JSON row `{ id: 7, nationalId }`
+  became `000000007` the same way.
+- **Fix.**
+  - `src/bulkStudentsParse.ts`: «رقم» and `id` are now *weak* identity headers. They are used only when the file has no explicit identity
+    header («رقم الهوية», `identityNumber`, `nationalId` …), so a file whose only identity column is «رقم» reads exactly as before.
+  - JSON rows read a generic `id` last, after `nationalId`, `code` and the other explicit aliases.
+  - The API's own alias order (`identityFromInput` in `manage-students.js`) follows the same rule for direct calls.
+- **Evidence.**
+  - **Fail-first on `5a65444a`** (the branch point; the parser and `identityFromInput` are unchanged since `c244cbab`). Run there, `src/bulkStudentsParse.test.ts` › QA-2 and `api/tests/bulk-import-r18.test.js` › QA-2 fail:
+    `expected '000000007' to be '123456789'`, and the CSV case gets `000000001`. All pass on the head.
+  - **Mutations.** Four mutants were planted, and all four were killed:
+    - «رقم» is explicit again;
+    - a lone weak header is no longer read;
+    - a JSON id is read before `nationalId`;
+    - an API id is read before the explicit aliases.
+
+  Both files were restored byte-for-byte (sha256).
+- **Not changed.** A file that has only a serial «رقم» column and no identity column is still read as identities. Nothing in the file tells
+  the two apart. The preview shows the padded numbers before anything is created.

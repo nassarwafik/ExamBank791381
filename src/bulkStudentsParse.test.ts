@@ -57,3 +57,32 @@ describe("normalizeImportedIdentity", () => {
     expect(normalizeImportedIdentity("")).toBe("");
   });
 });
+
+// QA-2 — a roster's serial column must never become the identity. Arabic school rosters usually open with a «رقم» (or `id`)
+// serial column before «رقم الهوية»; the header loop used to take the FIRST identity-like header, so every student became
+// 000000001, 000000002 … and those numbers then blocked the real identities platform-wide. An explicit identity header now
+// wins over the generic «رقم» / `id`, which is used only when the file has nothing more specific.
+describe("QA-2 — an explicit identity header wins over a serial «رقم» / id column", () => {
+  it("«رقم,الاسم,اسم العائلة,رقم الهوية» reads the identity from «رقم الهوية»", () => {
+    const { students } = parseBulkStudents("رقم,الاسم,اسم العائلة,رقم الهوية\r\n1,علي,حسن,123456789\r\n2,منى,خالد,222333444\r\n", "r.csv");
+    expect(students).toEqual([
+      { firstName: "علي", familyName: "حسن", identityNumber: "123456789" },
+      { firstName: "منى", familyName: "خالد", identityNumber: "222333444" }
+    ]);
+  });
+  it("«id,firstName,familyName,identityNumber» and «id,…,nationalId» — the same rule in English headers", () => {
+    expect(parseBulkStudents("id,firstName,familyName,identityNumber\n7,علي,حسن,123456789\n", "r.csv").students[0].identityNumber).toBe("123456789");
+    expect(parseBulkStudents("id,firstName,familyName,nationalId\n7,علي,حسن,123456789\n", "r.csv").students[0].identityNumber).toBe("123456789");
+  });
+  it("the explicit header wins even when it comes first", () => {
+    expect(parseBulkStudents("رقم الهوية,الاسم,اسم العائلة,رقم\n123456789,علي,حسن,1\n", "r.csv").students[0].identityNumber).toBe("123456789");
+  });
+  it("unchanged: a file whose only identity-like header is «رقم» still reads it (nothing more specific to prefer)", () => {
+    expect(parseBulkStudents("الاسم,اسم العائلة,رقم\nعلي,حسن,123456789\n", "r.csv").students[0].identityNumber).toBe("123456789");
+  });
+  it("JSON: { id: 7, nationalId } takes nationalId; a lone id is still read", () => {
+    expect(parseBulkStudents(JSON.stringify([{ id: 7, firstName: "علي", familyName: "حسن", nationalId: "123456789" }]), "x.json").students[0].identityNumber).toBe("123456789");
+    expect(parseBulkStudents(JSON.stringify([{ id: 7, firstName: "علي", familyName: "حسن", code: "123456789" }]), "x.json").students[0].identityNumber).toBe("123456789");
+    expect(parseBulkStudents(JSON.stringify([{ id: "123456789", firstName: "علي", familyName: "حسن" }]), "x.json").students[0].identityNumber).toBe("123456789");
+  });
+});
