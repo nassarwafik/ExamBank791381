@@ -27,6 +27,9 @@ import { fileURLToPath } from "node:url";
 //    QA-7 (reviewed golden change): every template.update now advances the template's `templateRevision` (the version the
 //    stage editor asserts, so a stale editor cannot revert a newer save). Exactly three entries were refreshed, and their only
 //    change is `templateRevision: 1` on the written template (body and stored document) (REFRESHED_BY_QA7; invariant B11).
+//    QA-16 (reviewed golden change): the student project route flags an archived class's projects `readOnly: true` (the page
+//    then offers no control the server refuses). Exactly one entry was refreshed, SG.s8 (the archived class's student), and its
+//    only change is that body field (REFRESHED_BY_QA16; invariant B12).
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -50,6 +53,7 @@ const GENERIC_SNAPSHOT_KEYS = ["schemaVersion", "projectCode", "classId", "templ
 const REFRESHED_BY_P9 = ["G794589.template.c2.lazyCreate", "G794589.template.c3.v1NoProgress", "G794589.template.cL.legacyScalar", "G899373.template.cN.enrolled"];
 const REFRESHED_BY_G3 = ["G794589.update.approve", "G794589.update.status", "G794589.update.noteOnly", "G794589.update.lazyCreateEmptyClass", "G899373.update.approve", "G883589.update.status"];
 const REFRESHED_BY_QA7 = ["G794589.templateUpdate.c1", "G794589.templateUpdate.c2.lazyCreate", "G899373.templateUpdate.g1"];
+const REFRESHED_BY_QA16 = ["SG.s8"];
 const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10", "G794589.student.c4.s7.v1", "SG.s7"];
 const inLegacyNamespace = n => n.startsWith(F.LEGACY_CONFIG) || (n.startsWith(F.LEGACY_PROGRESS) && !/^platform\/project-progress\/(899373|883589)\//.test(n));
 const inNamespace = (code, n) => n.startsWith("platform/project-trackers/" + code + "/") || n.startsWith("platform/project-progress/" + code + "/");
@@ -79,6 +83,10 @@ describe("B. explicit invariants", () => {
       expect(Object.values(R[id].storage.docs).filter(d => d && typeof d === "object" && "templateRevision" in d).length, id).toBe(1);
     }
     for (const id of ids.filter(i => !REFRESHED_BY_QA7.includes(i))) expect(JSON.stringify(golden[id]).includes("templateRevision"), id).toBe(false);
+  });
+  it("B12 QA-16: on the student route only the archived class's entry carries readOnly", () => {
+    for (const id of ids.filter(i => i.startsWith("SG."))) expect("readOnly" in (golden[id].body || {}), id).toBe(REFRESHED_BY_QA16.includes(id));   // the student route (teacher routes carry their own readOnly)
+    expect(golden["SG.s8"].body.readOnly).toBe(true);
   });
   it("B1 the first-create snapshot shape: projectCode + tracks; a read shows the very document the first write persists", () => {
     for (const id of ["G794589.activate.c2", "G794589.templateUpdate.c2.lazyCreate"]) {

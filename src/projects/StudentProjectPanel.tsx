@@ -30,7 +30,7 @@ type StudentProject = {
   progress: Record<string, StageProgressEntry>;
   nextStages: Record<string, ProjectStage | null>;
 };
-type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?: StudentProject[] };
+type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?: StudentProject[]; /** QA-16 — archived class: a read-only record */ readOnly?: boolean };
 
 /** The per-project ceiling of the GLOBAL Strength contribution (display only; the policy lives on the server). */
 const PROJECT_MAX_STRENGTH_POINTS = 400;
@@ -81,7 +81,7 @@ function openingFilter(project: StudentProject, trackId: string): StageFilter {
   return project.stages.some(st => st.active !== false && st.track === trackId && stageKind(project.progress ? project.progress[st.stageId] : undefined) === "remaining") ? "remaining" : "all";
 }
 
-function OneProject({ project, contribution, onBack, token, onChanged }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void }) {
+function OneProject({ project, contribution, onBack, token, onChanged, readOnly = false }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void; readOnly?: boolean }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
@@ -135,7 +135,8 @@ function OneProject({ project, contribution, onBack, token, onChanged }: { proje
     const ok = await confirm({ title: "تحديد المجموعة كمنفّذة", message: "سيُحدَّد " + countWord(ids.length) + " من «" + title + "» كمنفّذة، وتُحتسب الآن وتظهر لمعلمك. يمكنك التراجع عن أي مرحلة قبل أن يؤكدها المعلم.", confirmLabel: "تحديد " + countWord(ids.length) });
     if (ok) await send(ids, true, countWord(ids.length) + " من «" + title + "»");
   }
-  const doneButton = (stage: ProjectStage, extraClass = "") => (
+  // QA-16 — an archived class's project is a read-only record: no control that the server would refuse is offered.
+  const doneButton = (stage: ProjectStage, extraClass = "") => readOnly ? null : (
     <button type="button" className={"eb-button is-small eb-sp-done-btn" + extraClass} disabled={pending.has(stage.stageId)} onClick={() => void send([stage.stageId], true, stage.stageId)} aria-label={"أنجزت " + stage.stageId + " — " + stage.title}>
       <IconCheck size={16} aria-hidden="true" />{pending.has(stage.stageId) ? "جارٍ الحفظ…" : "أنجزتها"}
     </button>
@@ -171,6 +172,7 @@ function OneProject({ project, contribution, onBack, token, onChanged }: { proje
           <button key={key} type="button" className="eb-chip-button" aria-pressed={filter === key} onClick={() => setFilter(key)}>{text} ({counts[key]})</button>
         ))}
       </div>
+      {readOnly && <p className="eb-muted" data-testid="project-read-only">الصف مؤرشف — المشروع للعرض فقط.</p>}
       {message && <p className={message.tone === "ok" ? "platform-notice assignment-inline-message" : "platform-error assignment-inline-message"} role={message.tone === "ok" ? "status" : "alert"}>{message.text}</p>}
       {!trackStages.some(shown) && (
         <p className="eb-muted eb-sp-stage-empty">{filter === "remaining" ? "أحسنت! لا توجد مراحل متبقية في هذا المسار." : filter === "pending" ? "لا توجد مراحل بانتظار تأكيد المعلم." : "لا توجد مراحل في هذا العرض."}</p>
@@ -192,7 +194,7 @@ function OneProject({ project, contribution, onBack, token, onChanged }: { proje
                 <h3 id={gid} className="eb-subheading">{g.title}</h3>
                 <span className={"eb-sp-group-count" + (remaining ? "" : " is-done")}>{done} / {all.length} منجزة</span>
               </button>
-              {remaining > 1 && open && (
+              {!readOnly && remaining > 1 && open && (
                 <button type="button" className="eb-button is-quiet is-small eb-sp-group-mark" disabled={all.some(st => pending.has(st.stageId))} onClick={() => void markGroup(g.title, all)}>أنجزت المجموعة كلها ({remaining})</button>
               )}
             </div>
@@ -214,7 +216,7 @@ function OneProject({ project, contribution, onBack, token, onChanged }: { proje
                         <span className="eb-sp-stage-title">{stage.title}</span>
                         <span className="eb-sp-stage-action">
                           {kind === "remaining" && doneButton(stage)}
-                          {kind === "pending" && <button type="button" className="eb-button is-quiet is-small eb-sp-undo-btn" disabled={pending.has(stage.stageId)} onClick={() => void send([stage.stageId], false, stage.stageId)} aria-label={"تراجع عن تحديد " + label}>تراجع</button>}
+                          {kind === "pending" && !readOnly && <button type="button" className="eb-button is-quiet is-small eb-sp-undo-btn" disabled={pending.has(stage.stageId)} onClick={() => void send([stage.stageId], false, stage.stageId)} aria-label={"تراجع عن تحديد " + label}>تراجع</button>}
                         </span>
                       </div>
                       {stage.description ? <p className="eb-sp-stage-items">يشمل: {stage.description}</p> : null}
@@ -300,7 +302,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
     <section className="eb-sp-panel eb-sp-projects" aria-labelledby="eb-sp-projects-title">
       <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك وعلاماتك في مشاريع صفك. اضغط «أنجزتها» على كل مرحلة تنهيها لتظهر لمعلمك." />
       {open ? (
-        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} token={token} onChanged={() => setReloadNonce(n => n + 1)} />
+        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} token={token} onChanged={() => setReloadNonce(n => n + 1)} readOnly={!!load?.data?.readOnly} />
       ) : (
         <ul className="eb-sp-project-cards" aria-label="المشاريع">
           {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => { setListOnlyFor(null); setOpenCode(p.projectCode); }} /></li>)}

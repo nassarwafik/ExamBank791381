@@ -407,7 +407,8 @@ describe("UX-7b-2 — review screen and the unchanged submit path", () => {
     const actions = posts().map(p => p.body.action);
     expect(actions.filter(a => a === "submit").length).toBe(1);
     const submit = posts().find(p => p.body.action === "submit")!;
-    expect(Object.keys(submit.body).sort()).toEqual(["action", "answers"]);
+    // QA-14, updated deliberately: the body also carries the submit key.
+    expect(Object.keys(submit.body).sort()).toEqual(["action", "answers", "submitKey"]);
     expect(submit.body.answers).toEqual({ q1: { kind: "choice", index: 0 } });
   });
 

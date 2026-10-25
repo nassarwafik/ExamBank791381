@@ -158,6 +158,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // the server does not report one) and its answers (the base of a per-question merge after a 409 DRAFT_STALE).
  const draftRevisionRef=useRef<number|null>(null),draftBaseRef=useRef<Answers>({}),draftMergedRef=useRef(false);
  const draftBaseField=()=>draftRevisionRef.current===null?{}:{expectedDraftRevision:draftRevisionRef.current};
+ // QA-14 — one key per submit of one draft (attempt context + revision + generation): a retry of the SAME submit (a lost response)
+ // re-sends the same key, so the server returns that submit's result instead of recording a second attempt.
+ const submitKeyRef=useRef<{sig:string;key:string}|null>(null);
+ const submitKeyFor=(sig:string)=>{if(!submitKeyRef.current||submitKeyRef.current.sig!==sig){const bytes=new Uint8Array(16);globalThis.crypto.getRandomValues(bytes);submitKeyRef.current={sig,key:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("")}}return submitKeyRef.current.key};
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
  // Roadmap #10/#11 — a monotonically-increasing "save context" generation. Every AUTHORITATIVE server
  // hydration that resets attempt/save bookkeeping (applyServerAttemptState) bumps it. An in-flight save (or
@@ -795,7 +799,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
   if(draftMergedRef.current){await settleMergedDraft();return}   // QA-8: another device's answers were merged in — the student reviews before submitting
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField()})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(isDraftStale(e)){submittingRef.current=false;if(await mergeAfterStaleDraft()){await settleMergedDraft();return}}
