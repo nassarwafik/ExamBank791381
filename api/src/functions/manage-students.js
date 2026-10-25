@@ -139,6 +139,7 @@ function publicStudent(document) {
     // Photo METADATA only (version for cache-busting); the bytes are served by /api/student-profile-photo on demand.
     profilePhoto: document.profilePhoto && typeof document.profilePhoto === "object" && Number(document.profilePhoto.version) > 0 ? { version: Number(document.profilePhoto.version), updatedAt: String(document.profilePhoto.updatedAt || "") } : null,
     avatarId: String(document.avatarId || ""),
+    profileRevision: profileRevisionOf(document),
     createdAt: String(document.createdAt || ""),
     updatedAt: String(document.updatedAt || ""),
     lastLoginAt: String(document.lastLoginAt || "")
@@ -245,6 +246,13 @@ const PASSWORD_TOO_LONG = "كلمة المرور يجب ألا تتجاوز " + 
 // Credential-bearing and PII responses are never cached by a proxy or the browser.
 const NO_STORE = { "Cache-Control": "no-store" };
 const CONCURRENT_MOVE = "تم نقل الطالب إلى صف آخر في عملية أخرى. حدّث البيانات وأعد المحاولة.";
+// QA-7 — an edit form opened before another tab / teacher saved this student would write its older name / identity / class back.
+// Every teacher `update` advances the student's `profileRevision` (publicStudent carries it); an update that sends
+// `expectedProfileRevision` from an older version is refused (409 STUDENT_STALE, nothing written). Without the field (a bundle
+// cached from before QA-7) the update behaves as before. Login stamps (lastLoginAt) never advance it.
+const STUDENT_STALE = "عُدّلت بيانات هذا الطالب في نافذة أو جهاز آخر بعد فتحك لها. حدّث القائمة لرؤية آخر نسخة ثم أعد التعديل.";
+const profileRevisionOf = doc => { const n = Number(doc && doc.profileRevision); return Number.isInteger(n) && n >= 0 ? n : 0; };
+const profileStale = (doc, body) => { const n = body ? body.expectedProfileRevision : undefined; if (n === undefined || n === null) return false; return !(Number.isInteger(n) && n >= 0) || n !== profileRevisionOf(doc); };
 const DUPLICATE_RACE = "رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة.";
 // An auth document whose user document is missing is an ORPHAN left by an interrupted create (auth is written first).
 // It blocks the identity forever (preview says "valid", create says "duplicate"). It is reclaimed only once it is older
@@ -1063,6 +1071,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (!student || student.role !== "student" || !(await studentOk(student))) {
           return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         }
+        if (profileStale(student, body)) return { status: 409, jsonBody: { ok: false, code: "STUDENT_STALE", error: STUDENT_STALE } };   // QA-7
 
         const currentNames = getStudentNames(student);
         const firstName = cleanText(body?.firstName ?? currentNames.firstName ?? "");
@@ -1139,6 +1148,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           // A concurrent MOVE (the bulk move takes no credential lock) changed the class this request was validated
           // against: refuse instead of silently writing the old class back over it.
           if (String(cur.classId || "") !== oldClassId) return { status: 409, jsonBody: { ok: false, error: CONCURRENT_MOVE } };
+          if (profileStale(cur, body)) return { status: 409, jsonBody: { ok: false, code: "STUDENT_STALE", error: STUDENT_STALE } };   // QA-7 (under the lock)
           const curAuthName = AUTH_PREFIX + studentCodeHash(curCode) + ".json";
           const curAuth = await downloadJsonOrNull(container, curAuthName);
           if (!curAuth) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
@@ -1176,6 +1186,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             await mutateJsonWithRetry(container, studentBlobName, c => {
               if (!c || c.role !== "student") throw new StudentActionError(404, "الطالب غير موجود.");
               if (String(c.classId || "") !== oldClassId) throw new StudentActionError(409, CONCURRENT_MOVE);
+              if (profileStale(c, body)) throw new StudentActionError(409, STUDENT_STALE, "STUDENT_STALE");   // QA-7 (the committing version)
+              c.profileRevision = profileRevisionOf(c) + 1;
               c.schemaVersion = 3;
               c.firstName = firstName;
               c.familyName = familyName;
@@ -1451,7 +1463,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       // message, logged as a warning with SAFE metadata only (never the message: it can name a student).
       if (e instanceof StudentActionError) {
         obs?.logWarn("student.manage.rejected", { action, httpStatus: e.httpStatus, errorCode: e.code || "validation" });
-        return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message, ...(e.code === "PENDING_GRADING" ? { code: e.code } : {}) } };
+        return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message, ...(e.code === "PENDING_GRADING" || e.code === "STUDENT_STALE" ? { code: e.code } : {}) } };
       }
       obs?.logError("student.manage.error", e);
       return {

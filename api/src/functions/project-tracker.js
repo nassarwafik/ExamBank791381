@@ -535,7 +535,7 @@ async function handler(request, deps = {}, obs = null) {
           // Phase P-9 — reads no longer persist a pending upgrade, so it is applied here first: the patch lands on the
           // upgraded snapshot and a later write can never upgrade over it.
           await svc.ensureClassConfig(container, projectCode, classroom);
-          const written = await svc.updateTemplate(container, projectCode, classId, patch, now, { validate: (current, p) => validateTemplatePatch(current, p, definition.tracks.map(t => t.trackId)) });
+          const written = await svc.updateTemplate(container, projectCode, classId, patch, now, { expectedRevision: body.expectedTemplateRevision, validate: (current, p) => validateTemplatePatch(current, p, definition.tracks.map(t => t.trackId)) });   // QA-7
           await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "", details: { projectCode }
@@ -544,6 +544,7 @@ async function handler(request, deps = {}, obs = null) {
         } catch (e) {
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
           if (e && e.httpStatus === 400) return { status: 400, jsonBody: { ok: false, error: e.message } };
+          if (e && e.httpStatus === 409 && e.code === "TEMPLATE_STALE") return { status: 409, jsonBody: { ok: false, code: e.code, error: e.message } };
           throw e;
         }
       }

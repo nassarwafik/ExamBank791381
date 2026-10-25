@@ -12,7 +12,7 @@ const { recordAuditEvent } = require("../lib/audit-log");
 // Phase 21G.0 — teacher tenancy: a teacher sees and changes only their own classes (shared pre-tenancy classes stay visible).
 const { tenantOf, canAccessDocument, ownerStamp } = require("../lib/teacher-tenancy");
 const { isSupportedProject } = require("../lib/project-tracker/registry");
-const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-tracker/class-programs");
+const { getClassProgramCodes, normalizeProgramCodes, validateProgramCodes } = require("../lib/project-tracker/class-programs");
 // Class Learning Materials — an INDEPENDENT domain from projects (programCodes): which book/course a class uses
 // and which of its modules are currently published to students. Normalization + validation live in the lib; the
 // handler only wires auth, lifecycle, CAS persistence and audit.
@@ -284,11 +284,18 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "setprograms" || action === "setprogram") {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
-      let nextCodes;
+      let nextCodes, baseCodes = null;
       try {
         nextCodes = action === "setprogram"
           ? validateProgramCodes([String(body?.programCode || "").trim()].filter(Boolean))
           : validateProgramCodes(body?.programCodes);
+        // QA-7 — `baseProgramCodes` = the list this page started from. With it the request is applied as a CHANGE (codes it
+        // added / removed) to the CURRENT stored list, so two teachers enrolling the class in different projects at the same
+        // time both keep their enrollment. Without it (a bundle cached from before QA-7) the list is set as before.
+        if (action !== "setprogram" && body?.baseProgramCodes !== undefined) {
+          if (!Array.isArray(body.baseProgramCodes)) { const bad = new Error("قائمة المشاريع الأساسية غير صالحة."); bad.httpStatus = 400; throw bad; }
+          baseCodes = normalizeProgramCodes(body.baseProgramCodes);
+        }
       } catch (e) {
         return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
       }
@@ -298,7 +305,11 @@ async function handler(request, deps = {}, obs = null) {
         const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
           if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
           if (!programChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مشاريعه."); blocked.httpStatus = 403; throw blocked; }
-          current.programCodes = nextCodes;   // canonical modern field
+          if (baseCodes) {
+            const added = nextCodes.filter(c => !baseCodes.includes(c)), removed = baseCodes.filter(c => !nextCodes.includes(c));
+            const stored = getClassProgramCodes(current);
+            current.programCodes = [...stored.filter(c => !removed.includes(c)), ...added.filter(c => !stored.includes(c))];
+          } else current.programCodes = nextCodes;   // canonical modern field
           delete current.programCode;         // stop relying on the legacy field once migrated
           current.updatedAt = new Date().toISOString();
           return current;

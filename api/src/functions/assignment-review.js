@@ -98,6 +98,13 @@ function reviewChange(before,after){
 }
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+// QA-7 — a review form opened before another tab / teacher saved this attempt's review would replace that newer decision with its
+// older values. Every saveReview advances the attempt's `reviewRevision` (the GET carries it); a save that sends
+// `expectedReviewRevision` from an older version is refused (409 REVIEW_STALE, nothing written) and the page reloads, keeping only
+// the fields the teacher actually changed. A save without the field (a bundle cached from before QA-7) behaves as before.
+const REVIEW_STALE_MESSAGE="حُفظ تصحيح أحدث لهذه المحاولة من نافذة أو جهاز آخر بعد فتحك لها. حُدّثت الصفحة بآخر نسخة مع إبقاء تعديلاتك غير المحفوظة؛ راجعها ثم احفظ مجددًا.";
+const reviewRevisionOf=a=>{const n=Number(a&&a.reviewRevision);return Number.isInteger(n)&&n>=0?n:0};
+const reviewStale=(attempt,b)=>{const n=b?b.expectedReviewRevision:undefined;if(n===undefined||n===null)return false;return !(Number.isInteger(n)&&n>=0)||n!==reviewRevisionOf(attempt)};
 // Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
 function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
 function round(n){return Number(Number(n||0).toFixed(2))}
@@ -133,7 +140,7 @@ async function handler(request,deps={},obs=null){
    const flat=flattenQuestions(assignment.examSnapshot),gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
    const scenarios=scenarioReviewContext(assignment.examSnapshot),scenarioIdOf=qid=>{const s=scenarios.find(x=>x.questionIds.includes(qid));return s?{scenarioId:s.id}:{}};
    const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,...scenarioIdOf(id),text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,...(q.networkCli!==undefined?{networkCli:q.networkCli}:{}),...(q.inlineCloze!==undefined?{inlineCloze:q.inlineCloze}:{}),...visualReviewFields(q),...chartReviewFields(q),...(q.openResponse!==undefined?{openResponse:q.openResponse}:{}),...(q.codeStimulus!==undefined?{codeStimulus:q.codeStimulus}:{}),...(q.smartSim!==undefined?{smartSim:q.smartSim}:{}),...(isSmartSimQuestion(q)?{smartSimReview:smartSimReviewOf(q,attempt.answers?.[id])}:{}),...(isOpenResponseQuestion(q)?{rubricReview:o?.rubric??null,questionTypeVersion:q.questionTypeVersion??null}:{}),...(isParametricQuestion(q)?{parametricInstance:parametricReviewInstance(q,{assignmentId,studentId,attemptNumber:Number(attempt.attemptNumber),questionKey:id})}:{}),studentAnswer:attempt.answers?.[id]??null,...templateReview(q,attempt.answers?.[id]),expectedAnswer:q.answer??null,autoGrade:grade,...renderFailureOf(attempt,id),manualScore:o?.score??null,teacherComment:String(o?.comment||""),...(()=>{const v=teacherCodingEvidence({questionId:id,node:q},attempt);return v?{codingEvidence:v}:{}})(),...(q&&q.presentationType==="composite"?{composite:q.composite,compositeReview:compositeReviewOf(q,id,attempt,{assignmentId,studentId})}:{})}});
-   return {status:200,jsonBody:{ok:true,scenarios,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:String(attempt.teacherFeedback||""),...attemptAudit(attempt),...technicalHoldsField(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),questions}};
+   return {status:200,jsonBody:{ok:true,scenarios,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:String(attempt.teacherFeedback||""),reviewRevision:reviewRevisionOf(attempt),...attemptAudit(attempt),...technicalHoldsField(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),questions}};
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
   const assignmentId=String(b.assignmentId||""),studentId=String(b.studentId||""),attemptNumber=attemptNumberOf(b.attemptNumber);if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
@@ -159,25 +166,26 @@ async function handler(request,deps={},obs=null){
     const attempts=Array.isArray(current.attempts)?current.attempts:[],index=attempts.findIndex(x=>Number(x.attemptNumber)===attemptNumber);
     if(index<0){const err=new Error("المحاولة غير موجودة.");err.httpStatus=404;throw err}
     const attempt=attempts[index];
+    if(reviewStale(attempt,b)){const err=new Error(REVIEW_STALE_MESSAGE);err.httpStatus=409;err.code="REVIEW_STALE";throw err}   // QA-7
     const factsBefore=reviewFacts(attempt);                     // of the attempt version this CAS attempt commits over
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;appliedIds=[];
     for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;const rg=rubric.grades.get(String(questionId));attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
     for(const [key,e] of partOverrides.entries){const cap=compositePartCap(attempt,key);if(!(cap>0))continue;const value=incoming[key];attempt.manualOverrides[key]={score:round(clamp(e.score,0,cap)),comment:String(value.comment||"").trim(),reviewedAt,...(e.rubric?{rubric:e.rubric}:{})};appliedCount++;appliedIds.push(key)}
-    attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttemptGrades(attempt);
+    attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;attempt.reviewRevision=reviewRevisionOf(attempt)+1;rebuildAttemptGrades(attempt);
     factsBeforeOut=factsBefore;factsAfterOut=reviewFacts(attempt);change=reviewChange(factsBefore,factsAfterOut);
     // FEATURE-004 RF1 — the student's RELEASE state of the mark: while official coding grading is still open, or a compile error awaits the
     // teacher (reviewRequired), the results page withholds the headline mark (student-submission `autoGradingPending`), so the
     // notification of this commit must not disclose it either. Decided on the attempt version this CAS attempt commits.
     markWithheld=legacyAutoGradingWithhold(attempt);
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
-    resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback};
+    resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback,reviewRevision:attempt.reviewRevision};
     return current;
    });
   }catch(e){
    obs?.logWarn("assignment.review.failed",{action:"saveReview",assignmentId:String(b.assignmentId||""),retryable:(e instanceof StorageConflictError),errorClass:(e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message,...(e.code?{code:e.code}:{})}};
    throw e;
   }
   if(appliedCount>0){

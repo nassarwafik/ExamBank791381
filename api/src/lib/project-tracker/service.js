@@ -10,7 +10,7 @@
 // shape. The generic route (project-tracker) calls these functions and keeps its own, unchanged contract on top
 // (Phase P-9 removed the legacy project-794589 route that shared them).
 const crypto = require("crypto");
-const { downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, mapConcurrent, StorageConflictError } = require("../platform-storage");
+const { downloadJsonOrNull, downloadJsonWithEtagOrNull, uploadJsonConditional, isConcurrencyConflict, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, mapConcurrent, StorageConflictError } = require("../platform-storage");
 const { getProjectDefinition, getStorageNamespace, getSnapshotUpgradePolicy } = require("./registry");
 const { classHasProject } = require("./class-programs");
 const { normalizeClassStatus } = require("../class-lifecycle");
@@ -115,10 +115,11 @@ async function listProjectClasses(container, projectCode) {
 async function resolveClassConfig(container, projectCode, classroom) {
   const ns = getStorageNamespace(projectCode);
   const now = new Date().toISOString();
-  const existing = await downloadJsonOrNull(container, ns.configName(classroom.classId));
+  // QA-6 — the ETag of the document the result was derived from: a lazy create / upgrade is persisted only over that exact version.
+  const { value: existing, etag } = await downloadJsonWithEtagOrNull(container, ns.configName(classroom.classId));
   const r = resolveStoredClass(projectCode, classroom, existing, now);
-  if (!r.needsProgressScan) return r;
-  return resolveStoredClass(projectCode, classroom, existing, now, classHasMeaningfulProgress(await listJson(container, ns.progressPrefix(classroom.classId))));
+  if (!r.needsProgressScan) return { ...r, etag };
+  return { ...resolveStoredClass(projectCode, classroom, existing, now, classHasMeaningfulProgress(await listJson(container, ns.progressPrefix(classroom.classId)))), etag };
 }
 
 // The pure part of resolveClassConfig (no I/O): `meaningful` = the class has meaningful progress. Only an active class
@@ -160,7 +161,7 @@ function resolveStoredClass(projectCode, classroom, existing, now, meaningful) {
 
 // Returns the class snapshot, lazily creating+persisting it on first access for an ACTIVE class, or persisting (and
 // auditing) its pending upgrade / Phase P7 conversion / P7b reset / P7c archive deletion. Only write paths call it.
-async function ensureClassConfig(container, projectCode, classroom, options = {}) {
+async function ensureClassConfig(container, projectCode, classroom, options = {}, attempt = 0) {
   const r = await resolveClassConfig(container, projectCode, classroom);
   if (r.write === "condense" || r.write === "reset") {
     // A conversion that fails (storage trouble) never fails the request on its own: the stored snapshot is returned (old
@@ -179,7 +180,18 @@ async function ensureClassConfig(container, projectCode, classroom, options = {}
       return r.snapshot;
     }
   }
-  if (r.write) await uploadJson(container, getStorageNamespace(projectCode).configName(classroom.classId), r.snapshot);
+  // QA-6 — the first create (and an upgrade) is written CONDITIONALLY over the version it was derived from (absent → create-only).
+  // A concurrent writer that got there first (e.g. the teacher's template.update) wins: resolve again from what is now stored, so
+  // the teacher's saved stage settings are never replaced by a fresh default snapshot.
+  if (r.write) {
+    const name = getStorageNamespace(projectCode).configName(classroom.classId);
+    try { await uploadJsonConditional(container, name, r.snapshot, r.etag); }
+    catch (e) {
+      if (!isConcurrencyConflict(e)) throw e;
+      if (attempt < 2) return ensureClassConfig(container, projectCode, classroom, options, attempt + 1);
+      return (await downloadJsonOrNull(container, name)) || r.snapshot;
+    }
+  }
   if (r.write === "upgrade") {
     await recordAuditEvent(container, {
       actor: "system", action: "project.template.upgrade",
@@ -448,12 +460,22 @@ async function resetProject(container, projectCode, classId) {
 // starts from the first-create factory (see snapshotFactory). StorageConflictError propagates.
 // Phase P-1 — `options.validate(current, patch)` (the generic route passes template-validation) runs against the snapshot
 // of THIS CAS round before anything changes; an error it throws propagates and nothing is written.
+// QA-7 — the template editor sends the WHOLE stage array, so a page opened before another teacher's save would write its older
+// titles back. Every template.update advances `templateRevision`; `options.expectedRevision` (the version the page loaded) that is
+// older is refused (409 TEMPLATE_STALE, nothing written). undefined = not asserted (a bundle cached from before QA-7).
+const templateRevisionOf = doc => { const n = Number(doc && doc.templateRevision); return Number.isInteger(n) && n >= 0 ? n : 0; };
 async function updateTemplate(container, projectCode, classId, patch, now, options = {}) {
   const ns = getStorageNamespace(projectCode);
   const create = snapshotFactory(projectCode);
   return mutateJsonWithRetry(container, ns.configName(classId), current => {
     const config = current || create(classId, now);
+    const exp = options.expectedRevision;
+    if (exp !== undefined && exp !== null && (!(Number.isInteger(exp) && exp >= 0) || exp !== templateRevisionOf(config))) {
+      const stale = new Error("عدّل معلم آخر (أو نافذة أخرى) إعداد المراحل بعد فتحك له. حُمّلت آخر نسخة؛ أعد تعديلاتك عليها ثم احفظ.");
+      stale.httpStatus = 409; stale.code = "TEMPLATE_STALE"; throw stale;
+    }
     if (typeof options.validate === "function") options.validate(config, patch);
+    config.templateRevision = templateRevisionOf(config) + 1;
     if (Array.isArray(patch.stages)) config.stages = patch.stages;
     if (Array.isArray(patch.groups)) config.groups = patch.groups;
     if (patch.trackWeights && typeof patch.trackWeights === "object") config.trackWeights = patch.trackWeights;

@@ -1,4 +1,5 @@
 import {lazy,Suspense,useEffect,useMemo,useRef,useState} from "react";
+import {TeacherHttpError,isStaleEdit} from "./teacherFetch";
 import {validIdentity} from "./students/identity";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
@@ -58,7 +59,7 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
  /** Phase S.3 — reports whether a generated credential batch is open and was never downloaded or printed: App asks before a
   * navigation that would unmount this workspace (its plaintext passwords live only here). */
  onCredentialsPendingChange?:(pending:boolean)=>void};
-type ApiError={ok?:boolean;error?:string};
+type ApiError={ok?:boolean;error?:string;code?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import"|"editClass";
 
 // Arabic-Indic digits typed on an Arabic keyboard are digits too (the server maps them the same way).
@@ -244,7 +245,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   let result:(T&ApiError)|null=null;
   try{result=await response.json() as T&ApiError}catch{result=null}
   if(response.status===401){props.onSessionExpired?.();throw new Error(result?.error||"انتهت الجلسة. سجّل الدخول من جديد.")}
-  if(!response.ok)throw new Error(result?.error||(response.status>=500?"الخادم غير متاح حاليًا. أعد المحاولة بعد قليل.":"حدث خطأ."));
+  if(!response.ok)throw new TeacherHttpError(result?.error||(response.status>=500?"الخادم غير متاح حاليًا. أعد المحاولة بعد قليل.":"حدث خطأ."),response.status,typeof result?.code==="string"?result.code:"");   // QA-7: the code travels (STUDENT_STALE)
   if(!result)throw new Error("استجابة غير متوقعة من الخادم. أعد المحاولة.");
   return result;
  }
@@ -442,7 +443,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   }
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setPrograms",classId:classroom.classId,programCodes:next})});
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setPrograms",classId:classroom.classId,programCodes:next,baseProgramCodes:current})});   // QA-7: applied as a change to the stored list
    await loadClasses();
    setNotice(enable?("✓ تمت إضافة "+projectTitle(code)+" للصف. افتحه من قسم المشاريع."):("✓ تمت إزالة "+projectTitle(code)+" من الصف (البيانات محفوظة)."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشاريع الصف.")}
@@ -654,7 +655,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
    const targetClassId=editClassId;
    const userId=editingStudent.userId;
    const result=await teacherApi<{ok:true;student?:Student;passwordChanged:boolean;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
-    action:"update",userId,firstName:editFirstName.trim(),familyName:editFamilyName.trim(),identityNumber:editIdentityNumber,classId:targetClassId,password:editPassword
+    action:"update",userId,firstName:editFirstName.trim(),familyName:editFamilyName.trim(),identityNumber:editIdentityNumber,classId:targetClassId,password:editPassword,
+    ...(typeof editingStudent.profileRevision==="number"?{expectedProfileRevision:editingStudent.profileRevision}:{})   // QA-7
    })});
    const moved=targetClassId!==sourceClassId;
    setEditingStudent(null);setEditPassword("");
@@ -674,7 +676,11 @@ function TeacherPlatform(props:TeacherPlatformProps){
     if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,updated));
    }
    setNotice(withRosterNote(result,moved?"✓ تم تعديل الطالب ونقله إلى الصف المختار.":"✓ تم حفظ تعديلات الطالب."));
-  }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ تعديلات الطالب.")}
+  }catch(e){
+   // QA-7 — the student was edited elsewhere since this form opened: close it on the authoritative roster, so the teacher re-opens
+   // the CURRENT data instead of writing the older values back.
+   if(isStaleEdit(e,"STUDENT_STALE")){setEditingStudent(null);setEditPassword("");await reloadAuthoritative(selectedClassId)}
+   setError(e instanceof Error?e.message:"تعذر حفظ تعديلات الطالب.")}
   finally{setActionBusy(false);keepRosterFocus()}
  }
 

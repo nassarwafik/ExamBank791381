@@ -378,3 +378,49 @@ The post-merge QA of `main` (`c244cbab`) found that a roster's **serial column**
   Both files were restored byte-for-byte (sha256).
 - **Not changed.** A file that has only a serial «رقم» column and no identity column is still read as identities. Nothing in the file tells
   the two apart. The preview shows the padded numbers before anything is created.
+
+## QA-5 / QA-6 / QA-7 — writes that silently replaced a newer state
+
+Findings #5, #6 and #7 of the post-merge QA of `main` (`c244cbab`).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 5 | `platform-login.js` | A student deleted (or archived) while their login was in flight was re-created by the lastLogin write, which fell back to the pre-read copy. The student got a 12-hour session. | The stamp lands only on the student document as it is now. A missing, archived or disabled document refuses the login (generic 401), and nothing is written. |
+| 6 | `project-tracker/service.js` `ensureClassConfig` | The lazily created first snapshot (and an upgrade) was uploaded unconditionally. A `template.update` landing between its read and its write was replaced by the default stages. | The write is conditional on the version it was derived from (create-only when absent). On a conflict it resolves again from what is stored, so the teacher's settings win. |
+| 7a | `assignment-review.js` + `AssignmentReview.tsx` | A review form opened before another tab or teacher saved wrote its older marks and feedback back with a 200. | The attempt's `reviewRevision` advances on every save, and the GET carries it. A save asserting an older `expectedReviewRevision` is refused (409 `REVIEW_STALE`). The page reloads (the existing RF1 merge keeps only the fields edited here) and says why. |
+| 7b | `manage-students.js` `update` + `TeacherPlatform.tsx` | A student edit form opened before another save reverted that save. | `profileRevision` advances on every teacher `update` (login never advances it), and `publicStudent` carries it. A stale `expectedProfileRevision` is refused (409 `STUDENT_STALE`), checked before the lock, under the lock and on the committing version. A stale rename never leaves a new auth path behind. The form closes on the reloaded roster. |
+| 7c | `manage-classrooms.js` `setPrograms` + `TeacherPlatform.tsx` | The project toggle set the whole list, so two teachers enrolling the class in different projects lost one enrollment. | The page also sends `baseProgramCodes` (the list it started from). The server applies the added and removed codes to the current stored list. |
+| 7d | `project-tracker` `template.update` + `ProjectStageSettings.tsx` | The stage editor wrote the whole stage array, reverting another teacher's titles. | `templateRevision` advances on every save. A stale `expectedTemplateRevision` is refused (409 `TEMPLATE_STALE`), and the editor loads the current template and says why. |
+
+**Compatibility.** Every new field is optional for the server. A request without it (a bundle cached from before this change)
+behaves exactly as before, while a malformed value fails closed. `TeacherHttpError` now also carries the server's `code`; the
+error text shown is unchanged.
+
+**Existing tests updated deliberately.**
+- `TeacherPlatform.ux4.test.tsx`: the setPrograms body now includes `baseProgramCodes`.
+- `ProjectWorkspace.ux6.test.tsx`: the template.update body now includes `expectedTemplateRevision: 0`.
+- `student-action-error-semantics-r29.test.js` F4: the source guard now reads `throw new TeacherHttpError(result?.error||` (the
+  server text still wins).
+- `finalAcceptance.interactions.test.tsx` E: the setPrograms body now includes `baseProgramCodes`.
+- `legacy-794589-convergence-r33.test.js` and `fixtures/r33-golden.json`: a reviewed golden change (REFRESHED_BY_QA7). Exactly the
+  three `template.update` entries were refreshed, and their only change is `templateRevision: 1`, verified by the new invariant B11.
+  Invariant B1 expects that key after the snapshot keys on the template.update scenario.
+
+**Evidence.**
+- Tests:
+  - `api/tests/stale-writes-qa5-6-7.test.js`: 16 tests on the real handlers. The races are reproduced by letting a concurrent
+    writer land after the request's read.
+  - `src/staleEdits.qa7.test.tsx`: 3 page tests. The stage editor test runs against the real project-tracker handler.
+- **Fail-first on `46ba9297`:** 14 of the 19 failed. The 5 pins passed: an ordinary login, the plain first create, a reloaded
+  review save, and an update or template save without the field.
+- **Mutations B1–B19:** all KILLED. These covered:
+  - the login stamping a deleted or archived document;
+  - an unconditional first snapshot;
+  - each server check removed, each revision not advanced, or a malformed version accepted;
+  - setPrograms ignoring the base or the removals;
+  - each page not sending its version or not reloading on the stale code.
+
+  B7 was first planted in an invalid form (ERROR) and re-planted. Files were restored byte-for-byte (sha256).
+
+**Limitation.** A device still running a bundle from before this change sends no version and keeps the old behaviour until it
+reloads.

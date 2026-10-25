@@ -15784,7 +15784,8 @@
         "createdAt": "2026-01-05T00:00:00.000Z",
         "updatedAt": "2026-09-20T10:00:00.000Z",
         "condensedAt": "2026-09-20T10:00:00.000Z",
-        "condensedFromVersion": 2
+        "condensedFromVersion": 2,
+        "templateRevision": 1
       }
     },
     "audits": [
@@ -16531,7 +16532,8 @@
           "createdAt": "2026-01-05T00:00:00.000Z",
           "updatedAt": "2026-09-20T10:00:00.000Z",
           "condensedAt": "2026-09-20T10:00:00.000Z",
-          "condensedFromVersion": 2
+          "condensedFromVersion": 2,
+          "templateRevision": 1
         }
       }
     },
@@ -16998,7 +17000,8 @@
           }
         ],
         "createdAt": "2026-09-20T10:00:00.000Z",
-        "updatedAt": "2026-09-20T10:00:00.000Z"
+        "updatedAt": "2026-09-20T10:00:00.000Z",
+        "templateRevision": 1
       }
     },
     "audits": [
@@ -17458,7 +17461,8 @@
             }
           ],
           "createdAt": "2026-09-20T10:00:00.000Z",
-          "updatedAt": "2026-09-20T10:00:00.000Z"
+          "updatedAt": "2026-09-20T10:00:00.000Z",
+          "templateRevision": 1
         }
       }
     },
@@ -20008,7 +20012,8 @@
         "createdAt": "2026-02-01T00:00:00.000Z",
         "updatedAt": "2026-09-20T10:00:00.000Z",
         "condensedAt": "2026-09-20T10:00:00.000Z",
-        "condensedFromVersion": 1
+        "condensedFromVersion": 1,
+        "templateRevision": 1
       }
     },
     "audits": [
@@ -20298,7 +20303,8 @@
           "createdAt": "2026-02-01T00:00:00.000Z",
           "updatedAt": "2026-09-20T10:00:00.000Z",
           "condensedAt": "2026-09-20T10:00:00.000Z",
-          "condensedFromVersion": 1
+          "condensedFromVersion": 1,
+          "templateRevision": 1
         }
       }
     },

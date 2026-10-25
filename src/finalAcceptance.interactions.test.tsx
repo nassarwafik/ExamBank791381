@@ -289,6 +289,7 @@ describe("Student roster ⋯ actions through the real TeacherPlatform (browser e
     expect(confirm.textContent).toContain("مشروع الكتاب");
     expect(screen.queryByRole("group", { name: "إجراءات الصف الحادي عشر 3" })).toBeNull();
     fireEvent.click(confirm.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLElement);
-    await waitFor(() => expect(posts().filter(p => p.url.includes("/api/classrooms")).map(p => p.body)).toEqual([{ action: "setPrograms", classId: "c1", programCodes: ["899373"] }]));
+    // QA-7, updated deliberately: the toggle also sends the list it started from (applied server-side as a change).
+    await waitFor(() => expect(posts().filter(p => p.url.includes("/api/classrooms")).map(p => p.body)).toEqual([{ action: "setPrograms", classId: "c1", programCodes: ["899373"], baseProgramCodes: [] }]));
   });
 });

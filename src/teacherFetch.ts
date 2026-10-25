@@ -15,12 +15,17 @@ export const SESSION_EXPIRED_TEXT = "انتهت صلاحية الجلسة. سج�
 
 export class TeacherHttpError extends Error {
   readonly status: number;
-  constructor(message: string, status: number) {
+  /** The server's machine-readable error code when it sends one (QA-7: "REVIEW_STALE", "STUDENT_STALE", …), else "". */
+  readonly code: string;
+  constructor(message: string, status: number, code = "") {
     super(message);
     this.name = "TeacherHttpError";
     this.status = status;
+    this.code = code;
   }
 }
+/** QA-7 — true for a 409 the server refused because the edited document changed since this page loaded it. */
+export const isStaleEdit = (e: unknown, code: string): boolean => e instanceof TeacherHttpError && e.status === 409 && e.code === code;
 
 /** Tells the app shell that the teacher's session ended (App signs the teacher out). Never throws. */
 export function announceTeacherSessionExpired(): void {
@@ -41,14 +46,14 @@ export async function teacherFetchJson<T>(token: string, url: string, options: R
     if (e instanceof Error && e.name === "AbortError") throw e;                 // a cancelled request is not a failure
     throw new TeacherHttpError(NETWORK_ERROR_TEXT, 0);
   }
-  let body: (T & { error?: unknown }) | null = null;
-  try { body = (await response.json()) as T & { error?: unknown }; } catch { body = null; }
+  let body: (T & { error?: unknown; code?: unknown }) | null = null;
+  try { body = (await response.json()) as T & { error?: unknown; code?: unknown }; } catch { body = null; }
   if (response.status === 401) {
     announceTeacherSessionExpired();
     throw new TeacherHttpError(SESSION_EXPIRED_TEXT, 401);
   }
   if (!response.ok) {
-    throw new TeacherHttpError(withTrackingCode(userFacingMessage(body?.error, response.status, fallback), response.status, response), response.status);
+    throw new TeacherHttpError(withTrackingCode(userFacingMessage(body?.error, response.status, fallback), response.status, response), response.status, typeof body?.code === "string" ? body.code : "");
   }
   if (body === null) throw new TeacherHttpError(UNEXPECTED_RESPONSE_TEXT, response.status);
   return body;
