@@ -582,3 +582,15 @@ Finding #2 of QA round 2 on `main` (`36dc60e9`).
   `src/StudentExamPage.untimedDue.qa2.test.tsx` (2 page tests). Fail-first on `36dc60e9`: 3 failed (finalize refused, teacher end not
   timed out, the page never finalized); the 3 pins passed (before the due date, without a due date, a non-expired page). Mutations
   P3–P6 (expiry removed, no end date, expiry ignoring the due date, the page testing `timed` again): all KILLED.
+
+## 19. QA round 2, phase 2 — a legacy timed attempt keeps its identity check (QA2-6)
+
+Finding #6 of QA round 2 on `main` (`36dc60e9`).
+
+- **Defect.** `isModernAttempt` read the assignment's CURRENT duration. On a legacy model-0 TIMED assignment set to untimed while an
+  attempt runs, the attempt is still timed (QA-3 keeps its own timing) but the identity check was skipped, so a stale tab's submit for
+  the previous attempt landed on the running one as a new attempt scored 0 that used up an attempt.
+- **Fix (`student-submission.js`).** The check also asks the running attempt's own duration (`attemptDurationMinutes`). A legacy untimed
+  assignment with no running timed attempt still submits without an identity, as before.
+- **Evidence.** `api/tests/qa2-phase2-grading.test.js` (QA2-6 block, 3 tests). Fail-first on `edffc7df`: the stale submit returned 200;
+  the 2 pins passed. Mutation Q14 (the attempt's own timing ignored): KILLED.

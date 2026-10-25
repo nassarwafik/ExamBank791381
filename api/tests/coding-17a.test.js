@@ -251,8 +251,11 @@ describe("RF — code answers are bound to the published coding question (langua
     expect(r.rejected.map(x => x.id + ":" + x.code).sort()).toEqual(["c3:CODE_LANGUAGE_NOT_ALLOWED", "cq.p1:CODE_QUESTION_MISMATCH", "ghost:CODE_QUESTION_MISMATCH", "t1:CODE_QUESTION_MISMATCH"]);
     const lang = normalizeDraftAnswers({ c1: code("x", { language: "java" }) }, boundExam());
     expect(lang.answers).toEqual({}); expect(lang.rejected).toEqual([{ id: "c1", code: "CODE_LANGUAGE_NOT_ALLOWED" }]);
+    // QA2-3 (QA round 2): a program over the QUESTION'S size limit is KEPT for the teacher (reported in keptForTeacher, never run —
+    // official grading holds it for review) instead of being dropped into an automatic 0; the forged language above stays refused.
     const size = normalizeDraftAnswers({ c1: code("x".repeat(3000)) }, boundExam());
-    expect(size.answers).toEqual({}); expect(size.rejected).toEqual([{ id: "c1", code: "CODE_SOURCE_TOO_LARGE" }]);
+    expect(size.answers).toEqual({ c1: code("x".repeat(3000)) }); expect(size.rejected).toEqual([]);
+    expect(size.keptForTeacher).toEqual([{ id: "c1", code: "CODE_SOURCE_TOO_LARGE" }]);
   });
   it("the REAL handler binds code answers on saveDraft, pauseAttempt AND submit to the assignment's exam snapshot", async () => {
     const S1 = "22222222-2222-2222-2222-222222222222", AID = "asg-17a-rf";
@@ -276,12 +279,12 @@ describe("RF — code answers are bound to the published coding question (langua
     expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { ...bad, other: { kind: "text", value: "z" } } })).status).toBe(200);
     expect(ctx.getJson(docPath).draftAnswers).toEqual({ other: { kind: "text", value: "z" } });
     expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { c1: code("x".repeat(3000)) } })).status).toBe(200);
-    expect(ctx.getJson(docPath).draftAnswers).toEqual({});
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({ c1: code("x".repeat(3000)) });   // QA2-3: over the question's limit → kept for the teacher
     expect((await h.post({ action: "saveDraft", ...h.ident(1), answers: { c1: code("print(1)", { language: "csharp" }) } })).status).toBe(200);
     expect(ctx.getJson(docPath).draftAnswers).toEqual({ c1: code("print(1)", { language: "csharp" }) });
     // pauseAttempt
     expect((await h.post({ action: "pauseAttempt", ...h.ident(1), answers: { ...bad, c1: code("x".repeat(3000)) } })).status).toBe(200);
-    expect(ctx.getJson(docPath).draftAnswers).toEqual({});
+    expect(ctx.getJson(docPath).draftAnswers).toEqual({ c1: code("x".repeat(3000)) });   // QA2-3: kept; t1 / the forged c3 still dropped
     // submit
     ctx = seed(); h = await run(ctx);
     expect((await h.post({ action: "submit", ...h.ident(1), answers: { ...bad, other: { kind: "text", value: "y" } } })).status).toBe(200);

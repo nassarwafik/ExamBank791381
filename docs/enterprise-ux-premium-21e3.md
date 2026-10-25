@@ -1497,3 +1497,23 @@ Findings #10, #12 and #13 of the post-merge QA of `main` (`c244cbab`), the remai
 
   D4 first SURVIVED and was killed by an added test: a teacher retry of a `retryable` target, where a new technical failure lands
   during the dispatch. Files were restored byte-for-byte (sha256).
+
+## 19. QA round 2, phase 2 — never a manufactured zero, never a technical hold averaged as 0% (QA2-3, 4, 5, 16, 17)
+
+Findings #3, #4, #5, #16 and #17 of QA round 2 on `main` (`36dc60e9`).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 3 | `draft-answers.js`, `official-grading.js`, teacher evidence | A program over the QUESTION'S size limit (a starter or restored draft already past it, a byte count measured differently) was dropped at intake with a 200 and graded as an automatic final 0 «لا إجابة». | Kept in its bounded canonical shape (the global bound still applies; reported in `keptForTeacher`), never run. Its coding target completes with the outcome `not-runnable` and the question is held for the teacher (`holdForReview`); the evidence says why. A language the question does not offer stays refused: the editor cannot produce it, so it is a forged answer (17A / 19F ingest security, pinned). A blank program is still "no answer". |
+| 4 | `assignment-review.js` (composite parts) | A note without a mark on a composite PART stored `score: 0` (clamp of undefined): it replaced the part's automatic score, and turned a part held for a render failure (QA-1) into a reviewed 0. | The QA-13 rule for parts: a note without a mark is a comment. The part's existing teacher mark stays recorded (so a later regrade never replaces it); otherwise its automatic grade, or its hold, stands. |
+| 16 | `assignment-review.js` `hasMark` | A whitespace score `" "` was a mark (`Number(" ") === 0`). | Blank text is not a mark; `"0"` still is. |
+| 5 | `manage-students.js` profile, `assignment-item-analysis.js` | The teacher's student profile «المعدل» and the item analysis (average, correct rate, difficulty) averaged a technical hold as 0%. | The QA-9 rule (`technicalGradingPending`) on the profile; per question, `questionAutoGradingPending` or an unmarked render-failure hold skips that grade. An essay awaiting ordinary review still counts. |
+| 17 | `teacher-today.js`, `student-dashboard.js` | The Today feed showed «· 0%» for a still-grading attempt; the dashboard's legacy `stats.average` counted it. | No percentage for a technical hold (the page already omits a null); the legacy average skips it (`averageFinalized` unchanged). |
+
+**Existing test updated deliberately.** `coding-17a.test.js`: a 3000-byte program on a 2048-byte question is now KEPT for the teacher
+(`keptForTeacher`), in `normalizeDraftAnswers` and through the real handler (saveDraft, pauseAttempt); the forged-language and other
+refusals in the same tests are unchanged.
+
+**Evidence.** `api/tests/qa2-phase2-grading.test.js` (QA2-3, 4, 16, 5, 17 blocks) and `src/coding/codingNotRunnable.qa2.test.tsx`.
+Fail-first on `edffc7df` and mutations Q1–Q13, Q15, Q16: see the phase-2 pull request (all KILLED; Q6 — a comment-only note dropping the
+earlier part mark — first SURVIVED and was killed by asserting the teacher's mark stays recorded). Files restored byte-for-byte (sha256).

@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ConfirmOptions } from "../ui/ConfirmDialog";
 import {
   normalizeEvidence, evidenceStatusLabel, evidenceTone, isOpenStatus, technicalLabel, comparatorLabel, languageLabel, fmtScore,
-  CASE_OUTCOME_LABEL, SCORING_POLICY_LABEL, RECOVERY_LABEL, SUPERSEDED_NOTE, TECHNICAL_MESSAGE, NOT_ZERO_NOTE, NO_ANSWER_LABEL, INCOMPLETE_LABEL,
+  CASE_OUTCOME_LABEL, SCORING_POLICY_LABEL, RECOVERY_LABEL, SUPERSEDED_NOTE, TECHNICAL_MESSAGE, NOT_ZERO_NOTE, NO_ANSWER_LABEL, NOT_RUNNABLE_LABEL, INCOMPLETE_LABEL,
   COMPILE_REVIEW_LABEL, COMPILE_REVIEW_NOTE, COMPILE_REVIEW_HINT,
   RETRY_LABEL, FORCE_LABEL, RETRY_HELP, FORCE_HELP, type TeacherCodingCase
 } from "./codingTeacherEvidence";
@@ -123,6 +123,7 @@ export default function CodingAutoGradeBlock({ evidence, questionNumber, student
       {historical && <p className="cx-ev-revision" data-testid="ev-revision">النتيجة المعروضة من الإصدار {e.resultRevision} · جارٍ التصحيح بالإصدار {e.revision}</p>}
 
       {!unsupported && e.outcome === "no-answer" && <p className="cx-ev-summary">{NO_ANSWER_LABEL}</p>}
+      {!unsupported && e.outcome === "not-runnable" && <p className="cx-ev-summary" data-testid="ev-not-runnable">{NOT_RUNNABLE_LABEL}</p>}
       {!unsupported && e.outcome === "graded" && e.passedCount !== null && <p className="cx-ev-summary">نجح {e.passedCount} من {e.testCount} اختبارات{e.scoringPolicy === "proportional" && e.passedWeight !== null && e.totalWeight !== null ? " · الأوزان الناجحة " + e.passedWeight + " / " + e.totalWeight : ""}</p>}
       {!unsupported && e.outcome === "compile-error" && e.reviewRequired && (
         <div className="cx-ev-review" data-testid="ev-review-required" role="status">

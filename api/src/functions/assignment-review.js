@@ -105,7 +105,7 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 const REVIEW_STALE_MESSAGE="حُفظ تصحيح أحدث لهذه المحاولة من نافذة أو جهاز آخر بعد فتحك لها. حُدّثت الصفحة بآخر نسخة مع إبقاء تعديلاتك غير المحفوظة؛ راجعها ثم احفظ مجددًا.";
 const reviewRevisionOf=a=>{const n=Number(a&&a.reviewRevision);return Number.isInteger(n)&&n>=0?n:0};
 const reviewStale=(attempt,b)=>{const n=b?b.expectedReviewRevision:undefined;if(n===undefined||n===null)return false;return !(Number.isInteger(n)&&n>=0)||n!==reviewRevisionOf(attempt)};
-const hasMark=v=>v!==undefined&&v!==null&&v!==""&&Number.isFinite(Number(v));   // QA-13: a mark is a finite number, never "absent"
+const hasMark=v=>v!==undefined&&v!==null&&!(typeof v==="string"&&v.trim()==="")&&Number.isFinite(Number(v));   // QA-13: a mark is a finite number, never "absent"; QA2-16: nor blank text (Number(" ") is 0)
 // Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
 function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
 function round(n){return Number(Number(n||0).toFixed(2))}
@@ -176,7 +176,12 @@ async function handler(request,deps={},obs=null){
      // beat the automatic score. The question's existing teacher mark (if any) is kept; otherwise the automatic grading stands.
      if(!rg&&!hasMark(value.score)){const prev=attempt.manualOverrides[String(questionId)];attempt.manualOverrides[String(questionId)]={...(prev&&hasMark(prev.score)?{score:prev.score,...(prev.rubric?{rubric:prev.rubric}:{})}:{}),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId));continue}
      attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
-    for(const [key,e] of partOverrides.entries){const cap=compositePartCap(attempt,key);if(!(cap>0))continue;const value=incoming[key];attempt.manualOverrides[key]={score:round(clamp(e.score,0,cap)),comment:String(value.comment||"").trim(),reviewedAt,...(e.rubric?{rubric:e.rubric}:{})};appliedCount++;appliedIds.push(key)}
+    for(const [key,e] of partOverrides.entries){const cap=compositePartCap(attempt,key);if(!(cap>0))continue;const value=incoming[key];
+     // QA2-4 — the QA-13 rule for a composite PART: a note without a mark (no score, no rubric) is a comment, never a mark. clamp(undefined)
+     // stored 0, which beat the part's automatic score and turned a part held for the teacher (QA-1) into a reviewed 0. The part's existing
+     // teacher mark (if any) is kept; otherwise its automatic grade, or its hold, stands.
+     if(!e.rubric&&!hasMark(e.score)){const prev=attempt.manualOverrides[key];attempt.manualOverrides[key]={...(prev&&hasMark(prev.score)?{score:prev.score,...(prev.rubric?{rubric:prev.rubric}:{})}:{}),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(key);continue}
+     attempt.manualOverrides[key]={score:round(clamp(e.score,0,cap)),comment:String(value.comment||"").trim(),reviewedAt,...(e.rubric?{rubric:e.rubric}:{})};appliedCount++;appliedIds.push(key)}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;attempt.reviewRevision=reviewRevisionOf(attempt)+1;rebuildAttemptGrades(attempt);
     factsBeforeOut=factsBefore;factsAfterOut=reviewFacts(attempt);change=reviewChange(factsBefore,factsAfterOut);
     // FEATURE-004 RF1 — the student's RELEASE state of the mark: while official coding grading is still open, or a compile error awaits the

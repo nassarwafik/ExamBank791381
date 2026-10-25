@@ -7,6 +7,9 @@ const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {isStudentClassMember}=require("../lib/class-membership");
 const {questionAutoGradingPending}=require("../lib/coding/official-grading");
+// QA2-5 — the QA-9 rule per question: a grade still open for a TECHNICAL reason (coding execution open, a render-failure hold the teacher has
+// not marked) is not a provisional 0 in the question's average, correct rate or difficulty; the per-student grid already shows it as pending.
+const technicalHold=(attempt,questionId,g)=>questionAutoGradingPending(attempt,questionId)||(g.manualReview===true&&!!attempt&&!!attempt.renderFailures&&!!attempt.renderFailures[questionId]&&attempt.renderFailures[questionId].held===true);
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
 function round1(n){return Math.round(n*10)/10}
@@ -44,6 +47,7 @@ async function handler(request,deps={},obs=null){
     const grades=Array.isArray(attempt?.questionGrades)?attempt.questionGrades:[];
     const g=grades.find(x=>String(x?.questionId||"")===questionId);
     if(!g||typeof g.score!=="number"||!Number.isFinite(g.score))continue;
+    if(technicalHold(attempt,questionId,g))continue;   // QA2-5
     studentsAnalyzed++;
     sumScore+=g.score;
     // rebuildAttempt() in assignment-review.js updates score/manualReview/reviewed on manual

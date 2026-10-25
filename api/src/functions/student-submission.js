@@ -60,7 +60,10 @@ function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,s
 // (draftAnswers/attempt untouched, NO grading). Legacy untimed attempts lazily create the active attempt and
 // do not assert identity, so the guard is skipped for them (documented compatibility limit). startAttempt is
 // exempt (a new attempt has no prior identity to assert).
-function isModernAttempt(a){return normalizeDurationMinutes(a&&a.durationMinutes)>0||attemptModelVersion(a)>=2}
+// QA2-6 — a running attempt keeps its own timing (QA-3): a legacy model-0 TIMED attempt stays timed (and identity-checked) after the teacher
+// sets the assignment to untimed. Reading only the assignment's CURRENT duration skipped the identity check there, so a stale tab's submit
+// for the previous attempt landed on the running one as a new 0 that used up an attempt.
+function isModernAttempt(a,doc){return normalizeDurationMinutes(a&&a.durationMinutes)>0||attemptModelVersion(a)>=2||(!!doc&&attemptDurationMinutes(a,doc)>0)}
 function attemptIdentityOk(doc,b){
  const en=b&&b.expectedAttemptNumber,es=b&&b.expectedStartedAt;
  // STRICT (fail closed): expectedAttemptNumber must be a real integer >= 1 (reject boolean like true→1, the
@@ -178,7 +181,7 @@ async function handler(request,deps={},obs=null){
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
-     if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(isModernAttempt(a,doc)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
@@ -230,7 +233,7 @@ async function handler(request,deps={},obs=null){
      replayOf=null;
      const lastDone=Array.isArray(doc.attempts)&&doc.attempts.length?doc.attempts[doc.attempts.length-1]:null;
      if(submitKey&&lastDone&&lastDone.submitKey===submitKey){replayOf=lastDone;finalState=state(a,doc,Date.now());return doc}   // QA-14: the same submit again
-     if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(isModernAttempt(a,doc)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}

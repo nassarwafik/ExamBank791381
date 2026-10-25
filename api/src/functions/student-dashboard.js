@@ -7,6 +7,7 @@ const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {resultsReleased,releaseInfo,withholdResult}=require("../lib/results-release");
 const {deriveGradingStatus}=require("../lib/grading-status");
+const {technicalGradingPending}=require("../lib/technical-grading-hold");
 // Phase 17C — the student sees ONLY that automatic coding grading is still completing (a boolean; never tests / evidence).
 const {legacyAutoGradingWithhold,studentCodingGradingStatus}=require("../lib/coding/official-grading");
 // Unified Strength (نقاط القوة): finalized school exams (each result's rounded FINAL percentage, 0..100 — 100% → 100,
@@ -76,7 +77,7 @@ async function handler(request,deps={},obs=null){
    const gradingStatus=deriveGradingStatus(latest);                          // notSubmitted | pendingReview | final
    const dashboardState=deriveDashboardState(s,avail,gradingStatus);
    const released=resultsReleased(a,releaseNow);
-   if(latest){completed++;if(released){sum+=Number(latest.percentage||0);sumCount++}}
+   if(latest){completed++;if(released&&!technicalGradingPending(latest)){sum+=Number(latest.percentage||0);sumCount++}}   // QA2-17: the legacy average never counts a technical hold as 0%
    if(latest)submitted++;
    if(dashboardState==="inProgress")inProgress++;
    else if(dashboardState==="awaitingReview")pendingReview++;
