@@ -5,6 +5,10 @@ const { canAccessDocument } = require("./teacher-tenancy");
 // the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
 // treats `manualReviewMarks > 0` as pending and handles legacy results whose `finalized` field is absent.
 const { deriveGradingStatus } = require("./grading-status");
+// QA-9 — a mark still provisional for a TECHNICAL reason (official coding execution open: Runner busy / down / not back yet; a
+// render-failure hold the teacher has not marked) is a submission and pending review, but contributes NO score to any average,
+// extreme, distribution band, trend or follow-up reason until it is settled. One canonical rule, never re-derived here.
+const { technicalGradingPending } = require("./technical-grading-hold");
 // Roadmap #24 — the student POPULATION is class MEMBERSHIP (role student, not archived, in class) through the ONE
 // canonical helper; `active:false` is login eligibility only and must not drop a student from analytics.
 const { isStudentClassMember } = require("./class-membership");
@@ -165,7 +169,7 @@ function classAggregate(classId, assignments, students, submissionMap) {
       const attempt = latestAttempt(submission);
       if (!attempt) continue;
       submitted += 1;
-      percentages.push(number(attempt.percentage));
+      if (!technicalGradingPending(attempt)) percentages.push(number(attempt.percentage));
       if (deriveGradingStatus(attempt) === "pendingReview") pendingReview += 1;
     }
   }
@@ -382,7 +386,8 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   }
 
   const submittedRecords = records.filter(record => record.attempt);
-  const percentages = submittedRecords.map(record => number(record.attempt.percentage));
+  const scored = record => !technicalGradingPending(record.attempt);   // QA-9: only a settled (or ordinary-review) mark is a score
+  const percentages = submittedRecords.filter(scored).map(record => number(record.attempt.percentage));
   const expected = records.length;
   const submitted = submittedRecords.length;
   const missing = Math.max(0, expected - submitted);
@@ -416,13 +421,15 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     item.assigned += 1;
     if (record.attempt) {
       item.completed += 1;
-      item.scores.push(number(record.attempt.percentage));
-      item.points.push({
-        assignmentId: String(record.assignment.assignmentId),
-        title: String(record.assignment.title || ""),
-        date: assignmentDate(record.assignment),
-        percentage: number(record.attempt.percentage)
-      });
+      if (scored(record)) {
+        item.scores.push(number(record.attempt.percentage));
+        item.points.push({
+          assignmentId: String(record.assignment.assignmentId),
+          title: String(record.assignment.title || ""),
+          date: assignmentDate(record.assignment),
+          percentage: number(record.attempt.percentage)
+        });
+      }
     } else {
       item.missing += 1;
     }
@@ -488,7 +495,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     .map(assignment => {
       const assignmentRecords = records.filter(record => String(record.assignment.assignmentId) === String(assignment.assignmentId));
       const assignmentSubmitted = assignmentRecords.filter(record => record.attempt);
-      const assignmentPercentages = assignmentSubmitted.map(record => number(record.attempt.percentage));
+      const assignmentPercentages = assignmentSubmitted.filter(scored).map(record => number(record.attempt.percentage));
       return {
         assignmentId: String(assignment.assignmentId),
         classId: String(assignment.classId || ""),
