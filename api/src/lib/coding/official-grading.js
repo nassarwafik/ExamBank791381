@@ -433,6 +433,10 @@ async function updateTarget(container, ids, targetKey, expect, patch, deps) {
       const attempt = current && Array.isArray(current.attempts) ? current.attempts.find(x => Number(x.attemptNumber) === Number(ids.attemptNumber)) : null;
       const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets[targetKey] : null;
       if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || isTerminalState(t.state)) throw STOP;
+      // QA-12 — "dispatched" only lands on the target exactly as this dispatcher read it. A callback that arrived DURING the
+      // dispatch HTTP call (e.g. a technical failure → retryable with its code) already moved it on; overwriting that with
+      // "dispatched" erased the code and parked the target until the stale-dispatch recovery window (~30 min).
+      if (patch.state === "dispatched" && expect.state !== undefined && (t.state !== expect.state || String(t.updatedAt || "") !== String(expect.updatedAt || ""))) throw STOP;
       Object.assign(t, patch);
       if (patch.state !== "retryable") delete t.technicalCode;
       applied = true;
@@ -515,7 +519,7 @@ async function releaseDelivery(container, jobId, owner, outcome, deps) {
 
 async function dispatchTarget(container, assignment, ids, attempt, targetKey, target, deps, obs) {
   const { audit } = io(deps);
-  const expect = { revision: target.revision, jobId: target.jobId };
+  const expect = { revision: target.revision, jobId: target.jobId, state: target.state, updatedAt: target.updatedAt };   // QA-12: the read version
   const auth = targetAuthority(assignment.examSnapshot, attempt, targetKey, { ...ids, revision: target.revision });
   let outcome;
   if (!auth.ok || auth.gradingKey !== target.gradingKey || auth.jobId !== target.jobId || !auth.answer) {

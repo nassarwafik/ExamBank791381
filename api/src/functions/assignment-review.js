@@ -105,6 +105,7 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 const REVIEW_STALE_MESSAGE="حُفظ تصحيح أحدث لهذه المحاولة من نافذة أو جهاز آخر بعد فتحك لها. حُدّثت الصفحة بآخر نسخة مع إبقاء تعديلاتك غير المحفوظة؛ راجعها ثم احفظ مجددًا.";
 const reviewRevisionOf=a=>{const n=Number(a&&a.reviewRevision);return Number.isInteger(n)&&n>=0?n:0};
 const reviewStale=(attempt,b)=>{const n=b?b.expectedReviewRevision:undefined;if(n===undefined||n===null)return false;return !(Number.isInteger(n)&&n>=0)||n!==reviewRevisionOf(attempt)};
+const hasMark=v=>v!==undefined&&v!==null&&v!==""&&Number.isFinite(Number(v));   // QA-13: a mark is a finite number, never "absent"
 // Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
 function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
 function round(n){return Number(Number(n||0).toFixed(2))}
@@ -170,7 +171,11 @@ async function handler(request,deps={},obs=null){
     const factsBefore=reviewFacts(attempt);                     // of the attempt version this CAS attempt commits over
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;appliedIds=[];
-    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;const rg=rubric.grades.get(String(questionId));attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
+    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;const rg=rubric.grades.get(String(questionId));
+     // QA-13 — a note without a mark (no score, no rubric) is a COMMENT, never a mark: clamp(undefined) used to store 0, which then
+     // beat the automatic score. The question's existing teacher mark (if any) is kept; otherwise the automatic grading stands.
+     if(!rg&&!hasMark(value.score)){const prev=attempt.manualOverrides[String(questionId)];attempt.manualOverrides[String(questionId)]={...(prev&&hasMark(prev.score)?{score:prev.score,...(prev.rubric?{rubric:prev.rubric}:{})}:{}),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId));continue}
+     attempt.manualOverrides[String(questionId)]=rg?{score:round(clamp(rg.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt,rubric:rg.rubric}:{score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++;appliedIds.push(String(grade.questionId))}
     for(const [key,e] of partOverrides.entries){const cap=compositePartCap(attempt,key);if(!(cap>0))continue;const value=incoming[key];attempt.manualOverrides[key]={score:round(clamp(e.score,0,cap)),comment:String(value.comment||"").trim(),reviewedAt,...(e.rubric?{rubric:e.rubric}:{})};appliedCount++;appliedIds.push(key)}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;attempt.reviewRevision=reviewRevisionOf(attempt)+1;rebuildAttemptGrades(attempt);
     factsBeforeOut=factsBefore;factsAfterOut=reviewFacts(attempt);change=reviewChange(factsBefore,factsAfterOut);

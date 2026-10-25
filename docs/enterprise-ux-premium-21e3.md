@@ -1470,3 +1470,30 @@ grading then overwrote that hold.
   - **Pin:** the 8th test (a stored `held: false` report regrades to the automatic 0) passes on the baseline too.
   - **Mutation:** 5 mutants of the new guard (never held, always held, composite key not mapped, `held: false` treated as held,
     the held branch finalizing), all KILLED. The file was restored byte-for-byte (sha256).
+
+## 18. QA follow-up — authority and grading edges (QA-10, QA-12, QA-13)
+
+Findings #10, #12 and #13 of the post-merge QA of `main` (`c244cbab`), the remaining grading-authority edges next to QA-1 (§17).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 10 | `bank-questions.js` write guard | A question the bank lists as official through its exam code (791381 / 791367), imported under a custom source id, could be updated or deleted by any teacher: the write guard checked the source id only. | The write guard uses the same classification as the listing: the source id or the question's exam code. Such a question is read-only (403, nothing written). |
+| 12 | `official-grading.js` `dispatchTarget` / `updateTarget` | A runner callback that arrived during the dispatch HTTP call (a technical failure: `retryable` with its code) was then overwritten by the dispatcher's `dispatched`. The code was erased and the target parked until the ~30-minute stale-dispatch recovery. | `dispatched` lands only on the target exactly as the dispatcher read it (same state and same `updatedAt`). A target a callback already moved keeps the callback's state and code. A completed callback was already protected (terminal). |
+| 13 | `assignment-review.js` `saveReview` | An override with a comment and no score stored `score: 0` (clamp of undefined), which beat the automatic score. The UI never sends that shape, but the API accepted it. | A note without a mark is a comment. The question's existing teacher mark, if any, is kept; otherwise the automatic grading stands. An explicit 0 is still a mark. |
+
+**Existing guard updated.** `ux2-shell-foundation.test.js` asserted the old write guard's text. It now asserts
+`isOfficialSource(sourceId, stored.examCode)`, which is stricter: the exam code must be passed.
+
+**Evidence.**
+- `api/tests/grading-authority-qa10-12-13.test.js`, 8 tests on the real handlers (the shared 17C coding fixtures; the bank through
+  its DI seam).
+- **Fail-first on `46ba9297`:** 5 failed. The 3 pins passed: an editable non-official question, a completed callback during dispatch
+  plus an ordinary dispatch, and an explicit 0.
+- **Mutations D1–D7:** all KILLED. These covered:
+  - the exam code ignored;
+  - the dispatch guard removed or not given the read version, or comparing the state only;
+  - a comment-only override storing 0 or dropping the earlier mark;
+  - an explicit 0 read as no mark.
+
+  D4 first SURVIVED and was killed by an added test: a teacher retry of a `retryable` target, where a new technical failure lands
+  during the dispatch. Files were restored byte-for-byte (sha256).

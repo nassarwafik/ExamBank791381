@@ -490,7 +490,7 @@ describe("UX-6c — Exam Bank Management", () => {
     expect(page).toMatch(/"\/api\/saved-exams", \{ method: "POST", body: JSON\.stringify\(\{ action: "delete", blobName: item\.blobName \}\)/);
     expect(page).not.toMatch(/save-exam-artifact|question-bank-action|bank-summary/);   // no second saved-exam / bank system
     const fn = readFileSync(join(ROOT, "api", "src", "functions", "bank-questions.js"), "utf8");
-    expect(fn).toMatch(/requireBuilderAuth/); expect(fn).toMatch(/mutateJsonWithRetry/); expect(fn).toMatch(/isOfficialSource\(sourceId\)\) return \{ error: bad\(403/);
+    expect(fn).toMatch(/requireBuilderAuth/); expect(fn).toMatch(/mutateJsonWithRetry/); expect(fn).toMatch(/isOfficialSource\(sourceId, stored\.examCode\)\) return \{ error: bad\(403/);   // QA-10: the write guard uses the listing's classification (source id OR exam code)
     expect(fn).toMatch(/INDEX_BLOB = "index\/questions-index\.json"/); expect(fn).toMatch(/SOURCES_PREFIX = "sources\/"/);
   });
   it("bank-questions classifies and the Builder converts through ONE shared helper (bank-question-exam.js); the page never sends a question with a stale structure and every create carries a requestKey", () => {
