@@ -994,7 +994,18 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             return { ...again, recovered: true };
           }
         };
+        // QA-4 — an identity that appears again in THIS request is a duplicate of the earlier row, never a create and never a
+        // Phase S.3 recovery: a recovery would match the account the earlier row created moments ago and reset its password
+        // (the printed credential stops working) while the later row's student is never created nor reported.
+        const seenInBatch = new Set();
         for (const item of students) {
+          const batchIdentity = identityFromInput(item);
+          if (batchIdentity && seenInBatch.has(batchIdentity)) {
+            duplicates += 1;
+            errors.push({ index: item.index, firstName: item.firstName, familyName: item.familyName, identityNumber: item.identityNumber, displayName: [item.firstName, item.familyName].filter(Boolean).join(" "), code: item.identityNumber || "", duplicate: true, error: "رقم الهوية مكرر داخل الملف." });
+            continue;
+          }
+          if (batchIdentity) seenInBatch.add(batchIdentity);
           try {
             const result = await importRow(item);
             credentials.push({

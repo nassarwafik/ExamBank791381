@@ -43,7 +43,10 @@ function isInvisible(code) {
 function cleanText(value) {
   // Tab / newline / CR (0x09–0x0D) are whitespace: collapsed to one space below rather than deleted.
   const visible = Array.from(String(value ?? "").normalize("NFC")).filter(ch => !isInvisible(ch.codePointAt(0))).join("");
-  return visible.replace(/\s+/g, " ").trim();
+  const text = visible.replace(/\s+/g, " ").trim();
+  // QA-20 — ZWNJ / ZWJ are kept INSIDE a word, but a value made only of them (and spaces) shows nothing: it is empty, so a
+  // "name" nobody can see is refused exactly like a blank one.
+  return text.replace(/[\u200C\u200D\s]/g, "") ? text : "";
 }
 
 const LIMITS = Object.freeze({ personName: 60, className: 80, grade: 40, schoolYear: 20, passwordMin: 6, passwordMax: 128 });
