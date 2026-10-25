@@ -615,3 +615,36 @@ Findings #7, #8 and #11 of QA round 2 on `main` (`36dc60e9`).
   draft's revision passed the QA-8 check and graded its older copy as a new attempt.
 - **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-7, QA2-8, QA2-11 blocks). Fail-first on `0a649737` and mutations R1–R6,
   R10, R11: see the phase-3 pull request (all KILLED).
+
+## 21. QA round 2, phase 4b — grading notices and access edges (QA2-14, QA2-15, QA2-21, QA2-22, QA2-23)
+
+Baseline `5b900efc`. No new storage, route or stored field.
+
+- **QA2-14 — a forced regrade that changes a final mark is announced (`coding/official-grading.js`, owner decision).** The automatic
+  «تمت مراجعة الواجب» notice was sent only when an attempt FIRST became final, so a forced regrade that changed an already-final mark
+  (10 → 1.67) changed what the student sees with no notice. A callback that changes the score of an attempt that was and stays final now
+  sends the same notice as a score change (`becameFinal: false`, `scoreChanged: true`), once per job; a regrade that lands on the same
+  mark sends nothing. A medal already earned is not withdrawn or re-tiered: medals are create-only for every grading path, including the
+  teacher's review (unchanged; see the limitation below).
+- **QA2-15 — a compound question owes only its pending parts (`attempt-grade-rebuild.js`).** The grader counts, for a compound question
+  (an automatic part + a part awaiting the teacher), only the marks of the parts that await review; the canonical rebuild (every review
+  save, every coding callback) counted the whole question, so the pending marks doubled (5 → 10). The rebuild now reads the same parts;
+  when the parts do not explain the hold it still counts the whole counted max (fail closed, never finalized early).
+- **QA2-21 — the job record follows the target (`coding/official-grading.js` `dispatchTarget`).** QA-12 kept a target that a callback
+  moved during the dispatch HTTP call, but the job record was still overwritten to «dispatched», erasing its technical code. The job
+  state is now written only when the target write applied.
+- **QA2-22 — «تشغيل الكود» follows the QA-17 existence rule (`coding-run.js`).** A never-published assignment answered 403 where a
+  missing id answers 404. It is 404 now, and an archived assignment is 404 unless the student already has a submission there (403, as the
+  student routes keep it readable as history). The existing test `coding-run-api-17b` A4, which pinned the old 403 for a draft, now pins
+  this rule.
+- **QA2-23 — a live room follows the student's CURRENT class (`game-live-session-student.js`).** The participant list is frozen when the
+  teacher opens the room, so a student moved to another class, or every student of a class archived during the game, kept reading and
+  answering. Every student action now also requires the student's current class to be the room's class (403 `not-in-class`) and that
+  class not to be archived (403 `class-archived`). The poll (`get`) checks the class membership only, from the student document the
+  session check already loaded, so polling costs no extra read; an archived class's room still reads, its actions are refused. No academic
+  mark is involved; a room from before `classId` was recorded keeps the participant-list rule alone.
+- **Evidence.** `api/tests/qa2-phase4b.test.js` (14 tests). Fail-first on `5b900efc`: 8 failed, 6 pins passed. Mutations B1–B16: 15 KILLED,
+  B3 equivalent (the per-job dedupe key of the regrade notice: a repeated callback for the same job returns «already applied» before any
+  side effect, so the key is never reached twice).
+- **Limitation.** A medal earned at a higher mark stays after a lower regrade or review mark (create-only medals); changing that is a
+  product decision.

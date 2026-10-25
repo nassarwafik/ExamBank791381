@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { gradeQuestion } = require("../lib/assignment-grading");
+const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const {
   sessionDocName, normalizeJoinCode, studentView, applyJoin, applyReady, applyAnswer, isParticipant, findParticipant, SessionError,
 } = require("../lib/live-challenge-session-store");
@@ -25,6 +26,8 @@ const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "لم يتم ال
 const FORBIDDEN = { status: 403, jsonBody: { ok: false, error: "لست ضمن هذه الغرفة." } };
 const NOT_JOINED = { status: 403, jsonBody: { ok: false, code: "not-joined", error: "عليك الانضمام إلى الغرفة أولاً." } };
 const CLOSED = { status: 409, jsonBody: { ok: false, error: "تم إغلاق هذه الغرفة." } };
+const NOT_IN_CLASS = { status: 403, jsonBody: { ok: false, code: "not-in-class", error: "لم تعد ضمن صف هذه الغرفة." } };
+const CLASS_ARCHIVED = { status: 403, jsonBody: { ok: false, code: "class-archived", error: "هذا الصف مؤرشف." } };
 
 // Structural (NOT academic) bounds on a submitted response — protect the session blob from unreasonable payloads
 // BEFORE any storage mutation. This never grades; it only accepts the canonical Answer shapes the student exam
@@ -129,12 +132,33 @@ async function handler(request, deps = {}, obs = null) {
     const joinCode = normalizeJoinCode(body && body.joinCode);
     if (!joinCode) return BAD_REQUEST;
     const name = sessionDocName(joinCode);
+    // QA2-23 — the participant list is frozen when the teacher opens the room; membership is CURRENT. A student moved to another
+    // class since, or a class archived during the game, no longer reads or answers in the room (no academic mark is involved).
+    // A room from before classId was recorded keeps the participant-list rule alone. The poll (get) checks membership only — the
+    // student document is already loaded — so polling costs no extra read; every write also reads the class (archived → refused).
+    const memberNow = session => {
+      const roomClassId = String(session && session.classId || "");
+      return !roomClassId || String(auth.student && auth.student.classId || "") === roomClassId;
+    };
+    const inClassNow = async session => {
+      const roomClassId = String(session && session.classId || "");
+      if (!roomClassId) return null;
+      if (!memberNow(session)) return NOT_IN_CLASS;
+      const classroom = await dl(container, "platform/classes/" + roomClassId + ".json");
+      return classroom && normalizeClassStatus(classroom) === "archived" ? CLASS_ARCHIVED : null;
+    };
+    // Writes check against the stored room; a non-participant still gets the generic 403 / 404 from the write itself.
+    const outsideClass = async docName => {
+      const session = await dl(container, docName);
+      return session && isParticipant(session, studentId) ? inClassNow(session) : null;
+    };
 
     if (action === "get") {
       const session = await dl(container, name);
       if (!session) return NOT_FOUND;
       const me = findParticipant(session, studentId);
       if (!me) return FORBIDDEN;                                    // never confirm room contents to a non-member
+      if (!memberNow(session)) return NOT_IN_CLASS;
       // Gameplay (active / finished) is for the PLAYING set only: a preselected-but-never-joined student must not
       // receive the live current question or any round content. Lobby / closed keep the Phase 4A behavior (a
       // preselected student may still see the lobby and its closed state).
@@ -150,6 +174,8 @@ async function handler(request, deps = {}, obs = null) {
         if (typeof (body && body.ready) !== "boolean") return BAD_REQUEST;
         ready = body.ready;
       }
+      const refusal = await outsideClass(name);
+      if (refusal) return refusal;
       try {
         const updated = await mutate(container, name, current => {
           if (!current) throw new SessionError("not-found");
@@ -175,6 +201,8 @@ async function handler(request, deps = {}, obs = null) {
       // (score/correct/studentId/questionIndex/…) are stripped, so it is what we BOTH grade and persist.
       const response = normalizeAcceptableResponse(body && body.response);
       if (!response) return BAD_REQUEST;
+      const refusal = await outsideClass(name);
+      if (refusal) return refusal;
       try {
         const updated = await mutate(container, name, current => {
           if (!current) throw new SessionError("not-found");

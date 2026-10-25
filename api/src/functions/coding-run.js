@@ -103,8 +103,10 @@ async function runHandler(request, deps = {}, obs = null) {
   if (classroom && normalizeClassStatus(classroom) === "archived") return refused(403, "CLASS_ARCHIVED");
   const a = await dl(c, AP + body.assignmentId + ".json");
   if (!a || !a.classId || !student.classId || String(a.classId) !== String(student.classId)) return refused(404, "ASSIGNMENT_UNAVAILABLE");   // QA-18: a real class on both sides
-  if (a.status !== "published") return refused(403, "ASSIGNMENT_UNAVAILABLE");
   const s = await dl(c, SP + body.assignmentId + "/" + student.userId + ".json");
+  // QA2-22 — the same existence rule as the student routes (QA-17): a never-published assignment is 404 like a missing id, and an
+  // archived one is 404 unless the student already has a submission there (they know it exists; it is still not writable).
+  if (a.status !== "published") return refused(a.status === "archived" && s ? 403 : 404, "ASSIGNMENT_UNAVAILABLE");
   const nowMs = Date.now();
   const rej = writeRejection(a, s, "saveDraft", nowMs);
   if (rej) return refused(rej.status, "ATTEMPT_NOT_WRITABLE");

@@ -550,7 +550,9 @@ async function dispatchTarget(container, assignment, ids, attempt, targetKey, ta
   }
   const patch = { state: outcome.state, updatedAt: nowIso(deps), ...(outcome.technicalCode ? { technicalCode: outcome.technicalCode } : {}) };
   const applied = await updateTarget(container, ids, targetKey, expect, patch, deps);
-  if (auth.ok && auth.answer) await setJobState(container, target.jobId, target.revision, outcome.state, outcome, deps);
+  // QA2-21 — the job record follows the target: when the target write did not apply (a callback landed during the HTTP call and
+  // already moved the target and the job), "dispatched" never overwrites the job's newer state or erases its technical code.
+  if (applied && auth.ok && auth.answer) await setJobState(container, target.jobId, target.revision, outcome.state, outcome, deps);
   const fields = { jobId: target.jobId, revision: target.revision, state: outcome.state, ...(outcome.technicalCode ? { technicalCode: outcome.technicalCode } : {}), ...(outcome.duplicate ? { duplicate: true } : {}) };
   if (outcome.state === "dispatched") obs?.logInfo?.("coding.autoGrade.dispatched", fields);
   else obs?.logWarn?.("coding.autoGrade.retryable", fields);
@@ -682,15 +684,17 @@ function validateCallbackBody(b) {
   return true;
 }
 
-async function finalSideEffects(container, assignment, ids, deps, obs) {
+async function finalSideEffects(container, assignment, ids, deps, obs, { regradeJobId = null } = {}) {
   const { dl } = io(deps);
   try {
     const sub = await dl(container, SP + ids.assignmentId + "/" + ids.studentId + ".json");
     const attempt = sub && Array.isArray(sub.attempts) ? sub.attempts.find(x => Number(x.attemptNumber) === Number(ids.attemptNumber)) : null;
     if (!attempt || !attempt.finalized) return;
     const student = await dl(container, UP + ids.studentId + ".json");
-    // Phase 6D event reused: ONE automatic "reviewed" notification per attempt (deterministic dedupe key).
-    await (deps.recordEventSafely || recordEventSafely)(container, { scope: "student", studentId: ids.studentId, type: "assignment_reviewed", dedupeKey: "coding-autograde-final:" + ids.assignmentId + ":" + ids.attemptNumber, data: { assignmentId: ids.assignmentId, assignmentTitle: assignment.title, attemptNumber: Number(ids.attemptNumber), becameFinal: true, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: attempt.percentage, score: attempt.score, totalMarks: attempt.totalMarks, automatic: true } }, deps, obs);
+    // Phase 6D event reused: ONE automatic "reviewed" notification per attempt (deterministic dedupe key). QA2-14: a later result that
+    // changes the final mark (a forced regrade) is announced once per job, as a score change.
+    const dedupeKey = regradeJobId ? "coding-autograde-regrade:" + ids.assignmentId + ":" + ids.attemptNumber + ":" + regradeJobId : "coding-autograde-final:" + ids.assignmentId + ":" + ids.attemptNumber;
+    await (deps.recordEventSafely || recordEventSafely)(container, { scope: "student", studentId: ids.studentId, type: "assignment_reviewed", dedupeKey, data: { assignmentId: ids.assignmentId, assignmentTitle: assignment.title, attemptNumber: Number(ids.attemptNumber), becameFinal: !regradeJobId, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: attempt.percentage, score: attempt.score, totalMarks: attempt.totalMarks, automatic: true } }, deps, obs);
     // Achievement records are create-only (idempotent per assignment + student).
     if (student) await (deps.recordAchievementIfEligible || recordAchievementIfEligible)(container, { classId: assignment.classId, studentId: ids.studentId, studentDisplayName: student.displayName, assignmentId: ids.assignmentId, assignmentTitle: assignment.title, percentage: attempt.percentage, shareAchievements: student.shareAchievements });
   } catch { obs?.logWarn?.("coding.autoGrade.sideEffects.failed", { attemptNumber: Number(ids.attemptNumber) }); }
@@ -720,7 +724,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
       if (isTerminalState(target.state) && target.result && target.result.jobId === body.jobId) { outcome = { kind: "already" }; throw STOP; }
       const auth = targetAuthority(assignment.examSnapshot, attempt, job.targetKey, { ...ids, revision: target.revision });
       if (!auth.ok || !auth.answer || auth.gradingKey !== target.gradingKey || job.gradingKey !== target.gradingKey) { outcome = { kind: "stale" }; throw STOP; }
-      const at = nowIso(deps), wasFinal = !!attempt.finalized;
+      const at = nowIso(deps), wasFinal = !!attempt.finalized, scoreBefore = Number(attempt.score);
       const ev = body.outcome === "failed"
         ? { kind: "technical", code: typeof body.technicalCode === "string" ? body.technicalCode : "RUNNER_FAILED" }
         : evaluateOfficialCodingRun({ tests: auth.tests, comparator: auth.comparator, run: { ...(body.compile ? { compile: body.compile } : {}), cases: body.cases } });
@@ -740,7 +744,9 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
         if (reviewRequired) holdForReview(auth.grade);
         else applyGrade(auth.grade, automaticScore, allOrNothing ? !ev.compileError && ev.passedCount === ev.testCount : !ev.compileError && ev.passedWeight >= ev.totalWeight);
         rebuildAttemptGrades(attempt);                                                      // the ONE canonical rebuild; an override still wins
-        outcome = { kind: "complete", targetState: target.state, becameFinal: !wasFinal && !!attempt.finalized, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
+        // QA2-14 (owner decision) — a result that changes a mark the student already sees as final (a forced regrade) is announced too
+        const finalScoreChanged = wasFinal && !!attempt.finalized && Number(attempt.score) !== scoreBefore;
+        outcome = { kind: "complete", targetState: target.state, becameFinal: !wasFinal && !!attempt.finalized, finalScoreChanged, outcome: target.result.outcome, ...(reviewRequired ? { reviewRequired: true } : {}), passedCount: ev.passedCount, testCount: ev.testCount };
       }
       current.updatedAt = at;
       return current;
@@ -753,6 +759,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
   await audit(container, { actor: SYSTEM_ACTOR, action: state === "complete" ? "coding.autoGrade.completed" : "coding.autoGrade.retryable", targetType: "student", targetId: ids.studentId, targetLabel: "", details: { assignmentId: ids.assignmentId, attemptNumber: ids.attemptNumber, questionId: job.targetKey, revision: job.revision, state: outcome.kind === "complete" ? outcome.targetState : state, ...(outcome.kind === "retryable" ? { technicalCode: outcome.code } : { outcome: outcome.outcome, ...(outcome.reviewRequired ? { reviewRequired: true } : {}), passedCount: outcome.passedCount, testCount: outcome.testCount }) } });
   obs?.logInfo?.("coding.autoGrade.callback.applied", { jobId: body.jobId, revision: job.revision, state, ...(outcome.kind === "retryable" ? { technicalCode: outcome.code } : { outcome: outcome.outcome, ...(outcome.reviewRequired ? { reviewRequired: true } : {}), becameFinal: outcome.becameFinal }) });
   if (outcome.kind === "complete" && outcome.becameFinal) await finalSideEffects(container, assignment, ids, deps, obs);
+  else if (outcome.kind === "complete" && outcome.finalScoreChanged) await finalSideEffects(container, assignment, ids, deps, obs, { regradeJobId: body.jobId });
   return { status: 200, body: { ok: true, applied: true, state } };
 }
 

@@ -88,10 +88,10 @@ describe("A2 / A3 / A4 / A5 — the AUTHORITATIVE assignment decides (identity f
     for (const id of ["../users/x", "a/b", "", "x".repeat(200)]) { const r = await h.run({ ...BODY, assignmentId: id }); expect([400, 404], id).toContain(r.status); }
     expect(h.provider.requests).toHaveLength(0);
   });
-  it("A4 a draft / archived assignment is 403", async () => {
-    for (const status of ["draft", "archived"]) {
+  it("A4 a draft assignment is 404 like a missing one; an archived one the student has a submission in is 403 (QA2-22)", async () => {
+    for (const [status, expected] of [["draft", 404], ["archived", 403]]) {
       const h = harness({ ctx: seed({ a: assignment({ status }) }) });
-      expect((await h.run(BODY)).status, status).toBe(403);
+      expect((await h.run(BODY)).status, status).toBe(expected);
       expect(h.provider.requests).toHaveLength(0);
     }
   });
