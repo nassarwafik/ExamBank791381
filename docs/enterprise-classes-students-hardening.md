@@ -367,7 +367,7 @@ The post-merge QA of `main` (`c244cbab`) found that a roster's **serial column**
   - JSON rows read a generic `id` last, after `nationalId`, `code` and the other explicit aliases.
   - The API's own alias order (`identityFromInput` in `manage-students.js`) follows the same rule for direct calls.
 - **Evidence.**
-  - **Fail-first on `c244cbab`.** Run there, `src/bulkStudentsParse.test.ts` › QA-2 and `api/tests/bulk-import-r18.test.js` › QA-2 fail:
+  - **Fail-first on `5a65444a`** (the branch point; the parser and `identityFromInput` are unchanged since `c244cbab`). Run there, `src/bulkStudentsParse.test.ts` › QA-2 and `api/tests/bulk-import-r18.test.js` › QA-2 fail:
     `expected '000000007' to be '123456789'`, and the CSV case gets `000000001`. All pass on the head.
   - **Mutations.** Four mutants were planted, and all four were killed:
     - «رقم» is explicit again;
