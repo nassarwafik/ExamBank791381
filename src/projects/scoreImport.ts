@@ -54,8 +54,11 @@ export function planScoreImport(rows: XlsxReadCell[][], board: Board): ImportPla
   header.forEach((h, col) => {
     const title = importName(h);
     if (col < 2 || !title.endsWith(SCORE_SUFFIX)) return;
-    const m = title.match(/· (\S+) /);
-    const stage = m ? byId.get(m[1]) : undefined;
+    // QA-22 — the header is «<track title> · <stage id> <stage title> — …», and a track or stage title may itself contain «·»: the
+    // FIRST «· X» is not necessarily the stage id. Every «· X» is a candidate; the column belongs to a stage only when exactly
+    // one candidate is a stage of this board (none, or more than one, is reported as an unknown column — never guessed).
+    const candidates = [...new Set([...title.matchAll(/· (\S+) /g)].map(x => x[1]).filter(id => byId.has(id)))];
+    const stage = candidates.length === 1 ? byId.get(candidates[0]) : undefined;
     if (!stage || columns.some(c => c.stage.stageId === stage.stageId)) { unknownColumns.push(title); return; }
     columns.push({ col, stage });
   });

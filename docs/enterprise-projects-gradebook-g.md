@@ -913,3 +913,25 @@ the phase's own changes afterwards.
   «منجز» in the matrix.
 - **The code is matched on its last four characters,** as the export writes it. Two students with the same name and the same last
   four are not told apart, and are reported, never guessed.
+
+## QA-21 / QA-22 — the score import never coerces or guesses silently
+
+Findings #21 and #22 of the post-merge QA of `main` (`c244cbab`).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 21 | `src/reports/xlsxRead.ts` | A cell shown as «85%» (stored 0.85) was imported as 0.85. A TRUE cell became the score 1. A formula with no saved value was read as an empty cell. Values past row 5000 (or column 500) were dropped, all without a word. | The reader reads `xl/styles.xml`: a cell whose number format is a percentage (built-in 9 / 10, or a custom code with an unquoted, unescaped «%») is read as the number it shows (85). TRUE / FALSE stay the text «TRUE» / «FALSE», so the plan reports them as «ليست علامة من 0 إلى 100». A formula without a saved value, and a value past the bounds, stop the read with an error naming the problem. An empty styled cell far away is still harmless. |
+| 22 | `src/projects/scoreImport.ts` | A score column was mapped to the first «· X» of its header, so a track title containing «·» sent the scores to the wrong stage. | Every «· X» in the header is a candidate. The column belongs to a stage only when exactly one candidate is a stage id of this board; none, or more than one, is reported as an unknown column. The exporter's own headers map as before. |
+
+**Evidence.**
+- `src/reports/xlsxRead.qa21.test.ts`, 10 tests (real workbooks built as Excel writes them, and the real planner).
+- **Fail-first on `46ba9297`:** 6 failed. The 4 pins passed: a quoted «%» format, a workbook without styles, a TRUE value through the
+  planner, and the exporter's own header.
+- **Mutations F1–F10:** all KILLED. These covered:
+  - percent handling removed (built-in, custom, or quoted «%»);
+  - booleans as 1 / 0;
+  - a silent formula skip;
+  - a silent drop past the bounds, or the bounds checked before the value;
+  - the first «· X» taken, or an ambiguous header guessed.
+
+  Files were restored byte-for-byte (sha256).
