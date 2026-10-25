@@ -46,6 +46,16 @@ function rebuildCompositeGrade(g, id, overrides, topIds) {
   const score = clamp(sum, 0, cap);
   return { grade: { ...g, parts, score: round(score), manualReview: pending > 0, reviewed: pending === 0, correct: cap > 0 && allCorrect && pending === 0 && score >= cap - 1e-9 }, score, pending };
 }
+// QA2-15 — a compound (multi-part, non-composite) grade still awaiting review owes only the marks of its parts that await review, as the
+// grader counted them; before, a rebuild (any review save, any coding callback) counted the WHOLE question and doubled the pending marks.
+// Anything else, or parts that do not explain the hold, counts the whole counted max (fail closed: never less pending than the hold).
+function pendingMarksOf(g, cap) {
+  const parts = Array.isArray(g.parts) ? g.parts.filter(isObj) : [];
+  if (!parts.length || !parts.every(p => typeof p.manualReview === "boolean")) return cap;
+  let pending = 0;
+  for (const p of parts) if (p.manualReview && p.counted !== false) pending += Number(p.maxMarks) || 0;
+  return pending > 0 ? Math.min(cap, pending) : cap;
+}
 
 /** Mutates and returns `attempt` with its questionGrades / score / manualReviewMarks / totalMarks / percentage / finalized rebuilt. */
 function rebuildAttemptGrades(attempt) {
@@ -60,7 +70,7 @@ function rebuildAttemptGrades(attempt) {
       scoreById.set(id, c.score); remaining += c.pending; return c.grade;
     }
     if (o && o.score !== undefined && o.score !== null) { const s = clamp(o.score, 0, cap); scoreById.set(id, s); return { ...g, score: round(s), manualScore: round(s), manualReview: false, reviewed: true, teacherComment: String(o.comment || "") }; }
-    const s = Number(g.score || 0); scoreById.set(id, s); if (g.manualReview) remaining += cap; return { ...g, reviewed: !g.manualReview };
+    const s = Number(g.score || 0); scoreById.set(id, s); if (g.manualReview) remaining += pendingMarksOf(g, cap); return { ...g, reviewed: !g.manualReview };
   });
   let score; const sections = Array.isArray(attempt.sections) ? attempt.sections : null;
   if (sections && sections.length) { score = sectionCappedScore(sections, id => scoreById.get(id) || 0); }
