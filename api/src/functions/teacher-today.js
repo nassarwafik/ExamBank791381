@@ -31,6 +31,7 @@ const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {isStudentClassMember}=require("../lib/class-membership");
 const {attemptState,activeAttemptOf,deriveAttemptStatus,normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
+const {technicalGradingPending}=require("../lib/technical-grading-hold");
 const {teacherDirectUnread}=require("../lib/message-read-state");
 // Phase 21H.3 — the results-release authority (21G.5): «results waiting to be published» is ITS rule, never re-derived here.
 const {releaseMode,resultsReleased}=require("../lib/results-release");
@@ -114,7 +115,7 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
    if(latest&&deriveGradingStatus(latest)==="pendingReview")pr++;
    if(attempts.length===0&&st.availability==="open")notSubmitted++;
    if(attempts.length>0)submitted++;
-   for(const at of attempts){if(!at||!at.submittedAt)continue;const reason=normalizeEndReason(at);recent.push({kind:reason==="submitted"?"submitted":reason,at:String(at.submittedAt),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),percentage:Number.isFinite(Number(at.percentage))?Number(at.percentage):null})}
+   for(const at of attempts){if(!at||!at.submittedAt)continue;const reason=normalizeEndReason(at);recent.push({kind:reason==="submitted"?"submitted":reason,at:String(at.submittedAt),assignmentId:aid,title,className,studentId:sid,studentName:studentName(u),percentage:!technicalGradingPending(at)&&Number.isFinite(Number(at.percentage))?Number(at.percentage):null   /* QA2-17: never a provisional 0% for a technical hold */})}
   }
   if(ns>0){notStartedCount+=ns;notStarted.push({assignmentId:aid,title,className,dueAt:nearestDue?new Date(nearestDue).toISOString():"",notStarted:ns,expected:members.length})}
   if(pr>0){pendingCount+=pr;pending.push({assignmentId:aid,title,className,pendingReview:pr})}

@@ -95,14 +95,26 @@ const isSmartSimQuestion = q => !!q && typeof q === "object" && String(q.present
 // Phase 20D — the per-answer binding chain, extracted VERBATIM (same branch order, same results, same refusal codes) from the original
 // loop so a composite@1 child answer is bound by EXACTLY the binder a standalone question of its type uses. `reject(id, code)` records the
 // nested refusals the compound branch reports; `q` is the published question (undefined when unbound or unknown).
+// QA2-3 — a program over the QUESTION'S OWN size limit (a starter or a restored draft already past it, a byte count the editor
+// measured differently) is still the student's work: dropping it turned real code into an automatic 0 «لا إجابة». It is kept in its
+// bounded canonical shape (the global size bound still applies; a malformed answer is still refused), never executed, and grading
+// routes the question to the teacher (official-grading `unrunnable`). A language the question does not offer stays refused: the
+// editor cannot produce it, so it is a forged answer (Phase 17A / 19F ingest security).
+const KEEP_FOR_TEACHER = new Set(["CODE_SOURCE_TOO_LARGE", "CODE_TEMPLATE_GAP_TOO_LARGE"]);
+const keepForTeacher = (bound, canonical) => {
+  if (bound.ok || !KEEP_FOR_TEACHER.has(bound.code)) return bound;
+  const c = canonical();
+  return c.ok ? { ...c, kept: bound.code } : c;
+};
+
 function bindAnswer(id, a, q, bound, reject, placement) {
   if (a && typeof a === "object" && a.kind === "simulation") {
     const r = normalizeSimulationState(a.state);
     return r.ok ? { ok: true, answer: { kind: "simulation", state: r.state } } : { ok: false, code: r.code };
   }
   if (bound && isUnsupportedCodingQuestion(q) && (isCode(a) || isCodeTemplate(a))) return isCode(a) ? normalizeCodeAnswer(a) : normalizeCodeTemplateAnswer(a);   // QA-11
-  if (isCode(a)) return bound ? bindCodeAnswerToQuestion(a, q) : normalizeCodeAnswer(a);
-  if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? bindCodingTemplateAnswerToQuestion(a, q) : normalizeCodeTemplateAnswer(a);
+  if (isCode(a)) return bound ? keepForTeacher(bindCodeAnswerToQuestion(a, q), () => normalizeCodeAnswer(a)) : normalizeCodeAnswer(a);
+  if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? (isCodeTemplate(a) ? keepForTeacher(bindCodingTemplateAnswerToQuestion(a, q), () => normalizeCodeTemplateAnswer(a)) : bindCodingTemplateAnswerToQuestion(a, q)) : normalizeCodeTemplateAnswer(a);
   if (isSmartSim(a) || (bound && isSmartSimQuestion(q))) return bound ? bindSmartSimAnswerToQuestion(a, q) : normalizeSmartSimAnswer(a);
   if (isNetworkCli(a)) return bound ? bindNetworkCliAnswerToQuestion(a, q) : normalizeNetworkCliAnswer(a);
   if (isHotspot(a) || (bound && isHotspotQuestion(q))) return bound ? (isHotspotQuestion(q) ? bindHotspotAnswerToQuestion(a, q) : { ok: false, code: "HOTSPOT_QUESTION_MISMATCH" }) : normalizeHotspotAnswer(a);
@@ -239,7 +251,7 @@ function bindCompositeAnswer(id, a, q, bound, reject) {
 
 /** normalizeDraftAnswers(answers, exam?) → { answers, rejected: [{ id, code }] } */
 function normalizeDraftAnswers(answers, exam) {
-  const out = {}, rejected = [];
+  const out = {}, rejected = [], keptForTeacher = [];   // QA2-3: keptForTeacher = stored, but refused by the question's own constraint
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) return { answers: out, rejected };
   const bound = exam !== undefined, index = bound ? questionIndex(exam) : null;
   const reject = (rid, code) => rejected.push({ id: rid, code });
@@ -255,8 +267,10 @@ function normalizeDraftAnswers(answers, exam) {
     // unknown id; this is the backstop for every kind they accept, e.g. a simulation state). A missing / malformed snapshot binds nothing.
     if (bound && !index.has(id)) { rejected.push({ id, code: "ANSWER_QUESTION_UNKNOWN" }); continue; }
     setOwn(out, id, r.answer);
+    if (r.kept) keptForTeacher.push({ id, code: r.kept });
   }
-  return { answers: out, rejected };
+  // The result keeps its historical shape { answers, rejected }; keptForTeacher appears only when an answer was kept that way.
+  return keptForTeacher.length ? { answers: out, rejected, keptForTeacher } : { answers: out, rejected };
 }
 
 module.exports = { normalizeDraftAnswers, LEGACY_ANSWER_LIMITS };

@@ -36,10 +36,10 @@ const crypto = require("crypto");
 const { readCodingRunnerConfig } = require("./runner-config");
 const { signRunnerRequest } = require("./runner-protocol");
 const { resolveCallbackKey } = require("./hmac-key-separation");
-const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy, codingQuestionVersion, codingTemplateOf, bindCodingTemplateAnswerToQuestion } = require("../shared-finalization/codingQuestion");
+const { codingGradingMode, codingScoringPolicy, bindCodeAnswerToQuestion, normalizeCodeAnswer, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS, codingCompileErrorPolicy, codingQuestionVersion, codingTemplateOf, bindCodingTemplateAnswerToQuestion } = require("../shared-finalization/codingQuestion");
 // Phase 19F — coding@3 (locked template): the official source is RECONSTRUCTED here, on the server, from the PUBLISHED template and the
 // bound gap values — the single seam below (boundAnswer) feeds dispatch, answerHash, gradingKey, callback, regrade and recovery alike.
-const { isCodeTemplateAnswered } = require("../shared-finalization/codingTemplate");
+const { isCodeTemplateAnswered, normalizeCodeTemplateAnswer } = require("../shared-finalization/codingTemplate");
 const { evaluateOfficialCodingRun, officialCodingScoreFor, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES, OFFICIAL_PREVIEW_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
 // Phase 20D — composite@1 coding children: the SAME lifecycle under a NEW server-owned target identity <questionId>::part::<partId> (the
@@ -194,6 +194,14 @@ function boundAnswer(q, raw) {
   if (!b.ok || !String(b.answer.source).trim()) return null;
   return b.answer;
 }
+/** QA2-3 — a non-blank program the question cannot run (kept at intake: over the question's own size limit): the student DID
+ *  answer, so this is never the automatic 0 of a missing answer; the question goes to the teacher. */
+function unrunnableAnswer(q, raw) {
+  if (!raw) return false;
+  if (codingQuestionVersion(q) === 3) { const n = normalizeCodeTemplateAnswer(raw); return n.ok && isCodeTemplateAnswered(n.answer); }
+  const n = normalizeCodeAnswer(raw);
+  return n.ok && !!String(n.answer.source).trim();
+}
 
 /**
  * The AUTHORITY of one target, recomputed from the attempt as stored and the assignment snapshot. Never reads a client value.
@@ -207,11 +215,11 @@ function targetAuthority(exam, attempt, targetKey, { assignmentId, studentId, re
   if (!entry || entry.ambiguous || !grade) return { ok: false, code: "QUESTION_INVALID", jobId };
   const q = entry.question, g = gradeableQuestion(q), maxMarks = effectiveMaxMarks(grade);
   if (!g.ok) return { ok: false, code: g.code, jobId };
-  const answer = boundAnswer(q, entry.rawAnswer);
+  const answer = boundAnswer(q, entry.rawAnswer), unrunnable = !answer && unrunnableAnswer(q, entry.rawAnswer);
   const questionFingerprint = sha256(stableStringify({ v: 1, questionId: targetKey, type: "coding", questionTypeVersion: g.version, mode: "hiddenTests", comparator: g.comparator, tests: g.tests.map(t => ({ id: t.id, input: t.input, expectedOutput: t.expectedOutput, weight: t.weight })), limits: g.limits, allowedLanguages: g.allowedLanguages, maxMarks, counted: maxMarks > 0, ...(g.scoringPolicy === "allOrNothing" ? { scoringPolicy: "allOrNothing" } : {}), ...(g.version >= 2 ? { compileErrorPolicy: g.compileErrorPolicy } : {}), ...(g.version >= 3 ? { template: g.template } : {}), ...(entry.composite ? { target: { kind: "compositePart", questionId: entry.composite.questionId, partId: entry.composite.partId } } : {}) }));   // 17F-C2 RF1: coding@1 adds NO material (byte-identical, in-flight keys unchanged); coding@2 binds its explicit policy · 20D: only a composite child adds its target material
   const answerHash = sha256(answer ? stableStringify({ language: answer.language, languageVersion: answer.languageVersion, source: answer.source }) : "no-answer");
   const gradingKey = sha256(stableStringify({ v: 1, ...ids, mode: "hiddenTests", questionFingerprint, answerHash }));
-  return { ok: true, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, compileErrorPolicy: g.compileErrorPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
+  return { ok: true, unrunnable, question: q, grade, tests: g.tests, comparator: g.comparator, limits: g.limits, scoringPolicy: g.scoringPolicy, compileErrorPolicy: g.compileErrorPolicy, answer, maxMarks, questionFingerprint, answerHash, gradingKey, jobId, targetRef, revision };
 }
 
 function noAnswerResult(auth, revision, at) {
@@ -240,6 +248,8 @@ function buildTarget(exam, attempt, targetKey, ids, revision, at, previous) {
   if (!auth.ok) { t.state = "retryable"; t.technicalCode = auth.code; return { target: t, changed: false }; }
   if (!auth.answer) {
     t.state = "complete"; t.result = noAnswerResult(auth, revision, at);
+    // QA2-3: the student's program could not be run under this question's constraints: the teacher decides, never an automatic 0.
+    if (auth.unrunnable) { t.result.outcome = "not-runnable"; holdForReview(auth.grade); return { target: t, changed: true }; }
     // QA-1: a render-failure hold keeps the grade with the teacher (nothing to run); only an unheld blank is the automatic 0.
     if (renderFailureHeld(attempt, targetKey)) holdForReview(auth.grade); else applyGrade(auth.grade, 0, false);
     return { target: t, changed: true };
@@ -758,7 +768,7 @@ async function applyOfficialCallback(container, body, deps = {}, obs = null) {
 const EVIDENCE_CONTRACT = 1;
 const TITLE_MAX_BYTES = 256;
 const CASE_OUTCOMES = new Set(["runtime-error", "timeout", "output-limit", "compile-error"]);
-const RESULT_OUTCOMES = new Set(["graded", "no-answer", "compile-error"]);
+const RESULT_OUTCOMES = new Set(["graded", "no-answer", "compile-error", "not-runnable"]);
 function prefixBytes(s, maxBytes) {
   if (Buffer.byteLength(s, "utf8") <= maxBytes) return s;
   let end = 0, used = 0;
@@ -874,7 +884,7 @@ function teacherCodingEvidence(question, attempt) {
   ev.recovery = { state: unsupported ? "none" : recoveryState(t, phase) };
   ev.technicalCode = isObj(t) && !isTerminalState(t.state) && typeof t.technicalCode === "string" && TECH_CODE.test(t.technicalCode) ? t.technicalCode : null;
   let cases = [];
-  if (r && outcome !== "no-answer") {
+  if (r && outcome !== "no-answer" && outcome !== "not-runnable") {
     if (!Array.isArray(r.cases)) incomplete = true;
     const byId = new Map();
     for (const c of Array.isArray(r.cases) ? r.cases.slice(0, CODING_TEST_LIMITS.hiddenTests * 2) : []) if (isObj(c) && typeof c.testId === "string" && !byId.has(c.testId)) byId.set(c.testId, c);

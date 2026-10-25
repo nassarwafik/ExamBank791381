@@ -25,6 +25,7 @@ const { requestStudentPurge, purgeAfterDelete, PURGE_STEP_BUDGET } = require("..
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
+const { technicalGradingPending } = require("../lib/technical-grading-hold");
 const { aggregateRecognition, medalTierFromPercentage } = require("../lib/achievement-feed");
 const { gameResultsDocName, eligibleGamePercentages } = require("../lib/game-results-store");
 const { buildStrengthSummary } = require("../lib/student-strength");
@@ -693,7 +694,7 @@ async function buildStudentProfile(container, userId) {
   const history = [];
   const submittedAssignments = [];
   let completed = 0;
-  let percentageSum = 0;
+  let percentageSum = 0, averaged = 0;   // QA2-5: averaged = completed attempts whose mark is not on a technical hold
 
   // Phase S.2: ONE listing of submission names selects this student's existing submissions (exact names), which are read
   // through the ETag-verified cache — instead of one download attempt per assignment of the platform, most of them a 404.
@@ -725,7 +726,9 @@ async function buildStudentProfile(container, userId) {
     if (String(assignment.classId || "") === currentClassId && isReportableAssessment(assignment)) {
       if (latest) {
         completed += 1;
-        percentageSum += Number(latest.percentage || 0);
+        // QA2-5 — the QA-9 rule: a mark still open for a TECHNICAL reason (Runner busy / grading open, a render-failure hold) is not a
+        // provisional 0% in «المعدل»; the attempt stays completed and pending review.
+        if (!technicalGradingPending(latest)) { percentageSum += Number(latest.percentage || 0); averaged += 1; }
       }
       history.push({
         assignmentId,
@@ -786,7 +789,7 @@ async function buildStudentProfile(container, userId) {
       assigned: history.length,
       completed,
       pending: Math.max(0, history.length - completed),
-      average: completed ? Number((percentageSum / completed).toFixed(1)) : null,
+      average: averaged ? Number((percentageSum / averaged).toFixed(1)) : null,
       lastLoginAt: String(student.lastLoginAt || "")
     },
     assignments: history,

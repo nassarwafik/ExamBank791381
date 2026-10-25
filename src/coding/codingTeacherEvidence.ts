@@ -13,7 +13,7 @@ export type TeacherCodingEvidence = {
   status: EvidenceStatus; automaticStatus: EvidenceStatus; revision: number | null; resultRevision: number | null; resultCurrent: boolean;
   language: string | null; scoringPolicy: "proportional" | "allOrNothing"; comparator: string | null; testCount: number; maxMarks: number | null;
   automaticScore: number | null; passedCount: number | null; passedWeight: number | null; totalWeight: number | null;
-  outcome: "graded" | "no-answer" | "compile-error" | null; completedAt: string | null; compilePreview?: string;
+  outcome: "graded" | "no-answer" | "compile-error" | "not-runnable" | null; completedAt: string | null; compilePreview?: string;
   override: { active: boolean; score: number | null }; effectiveScore: number | null; recovery: "none" | "automatic" | "manual" | "delayed";
   technicalCode: string | null; incomplete: boolean; cases: TeacherCodingCase[];
   /** 17F-C2 — a compile error held for the teacher under the "manualReview" policy: no automatic score exists by design. */
@@ -51,7 +51,7 @@ export function normalizeEvidence(raw: unknown): TeacherCodingEvidence | null {
     status, automaticStatus, revision: num(e.revision), resultRevision: num(e.resultRevision), resultCurrent: e.resultCurrent === true,
     language: str(e.language), scoringPolicy: e.scoringPolicy === "allOrNothing" ? "allOrNothing" : "proportional", comparator: str(e.comparator),
     testCount: num(e.testCount) ?? cases.length, maxMarks: num(e.maxMarks), automaticScore: num(e.automaticScore), passedCount: num(e.passedCount),
-    passedWeight: num(e.passedWeight), totalWeight: num(e.totalWeight), outcome: oneOf(e.outcome, ["graded", "no-answer", "compile-error"] as const),
+    passedWeight: num(e.passedWeight), totalWeight: num(e.totalWeight), outcome: oneOf(e.outcome, ["graded", "no-answer", "compile-error", "not-runnable"] as const),
     completedAt: str(e.completedAt), ...(typeof e.compilePreview === "string" ? { compilePreview: e.compilePreview } : {}),
     override, effectiveScore: num(e.effectiveScore), recovery, technicalCode: typeof e.technicalCode === "string" && /^[A-Z][A-Z0-9_]{0,47}$/.test(e.technicalCode) ? e.technicalCode : null,
     incomplete, cases, reviewRequired: e.reviewRequired === true
@@ -82,6 +82,8 @@ export const SUPERSEDED_NOTE = "توجد عملية تصحيح آلي أقدم �
 export const TECHNICAL_MESSAGE = "تعذر إكمال التصحيح الآلي لأسباب تقنية.";
 export const NOT_ZERO_NOTE = "العلامة الرسمية لم تُحتسب بعد ولا تُعدّ صفرًا؛ يمكنك إعادة المحاولة أو إدخال علامة يدوية.";
 export const NO_ANSWER_LABEL = "لم يرسل الطالب كودًا قابلًا للتصحيح.";
+// QA2-3 — the student sent a program over the question's size limit: it is kept for the teacher, never run.
+export const NOT_RUNNABLE_LABEL = "لم يُشغَّل كود الطالب لأنه أكبر من الحجم المسموح في السؤال. السؤال بانتظار تصحيحك، والكود محفوظ في إجابة الطالب.";
 export const INCOMPLETE_LABEL = "بيانات التصحيح غير مكتملة.";
 export const RETRY_LABEL = "إعادة محاولة التصحيح";
 export const FORCE_LABEL = "إعادة التصحيح بإصدار جديد";
