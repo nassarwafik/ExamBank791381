@@ -25,13 +25,14 @@ const { isReportableAssessment } = require("./assignment-lifecycle");
 const ASSIGNMENT_PREFIX = "platform/assignments/";
 const SUBMISSION_PREFIX = "platform/submissions/";
 
-/** True when this submission still needs the teacher: an open attempt, or a latest result that is not final. */
+/** True when this submission still needs the teacher: an open attempt, or ANY completed attempt that is not final.
+ *  QA2-24 (owner decision): an OLDER attempt still awaiting manual marks counts too — before, only the latest was read, so a move hid
+ *  that unfinished marking from the class gradebook. */
 function submissionNeedsTeacher(submission) {
   if (!submission || typeof submission !== "object") return false;
   if (activeAttemptOf(submission)) return true;
   const attempts = Array.isArray(submission.attempts) ? submission.attempts : [];
-  const latest = attempts.length ? attempts[attempts.length - 1] : null;
-  return latest ? deriveGradingStatus(latest) === "pendingReview" : false;
+  return attempts.some(attempt => !!attempt && deriveGradingStatus(attempt) === "pendingReview");
 }
 
 /** A per-request reader: assignment ids per class and the set of existing submission blob names, each read once. */

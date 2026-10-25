@@ -34,7 +34,8 @@ export class ScoreImportError extends Error {}
 const SCORE_SUFFIX = "— العلامة من 100";
 const text = (v: XlsxReadCell) => (v === null || v === undefined ? "" : String(v));
 /** A display name as compared: Unicode NFC, spaces collapsed. */
-export const importName = (v: XlsxReadCell) => text(v).normalize("NFC").replace(/\s+/g, " ").trim();
+// QA2-25 — invisible marks (zero-width space, bidi marks, BOM, soft hyphen) never decide whether a file name matches the roster.
+export const importName = (v: XlsxReadCell) => text(v).normalize("NFC").replace(/[\u200B\u200E\u200F\u202A-\u202E\u2060-\u2069\uFEFF\u00AD]/g, "").replace(/\s+/g, " ").trim();
 /** The last four characters of a student code as compared: the export's «•••••» mask and separators dropped, digits made ASCII,
  *  a number cell padded back to four digits (Excel drops a leading zero when a teacher retypes «0123»). */
 export function importCode(v: XlsxReadCell): string {
