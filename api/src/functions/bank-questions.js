@@ -323,7 +323,9 @@ async function handler(request, deps = {}, obs = null) {
         return { error: null, missing: true, entry, sourceId: "" };
       }
       if (!bankEntryVisible(ownershipOf(stored, entry, sourceId), tenant)) return { error: bad(404, "السؤال غير موجود في بنك الأسئلة.") };
-      if (isOfficialSource(sourceId)) return { error: bad(403, "أسئلة البنك الرسمي للقراءة فقط ولا يمكن تعديلها أو حذفها من هنا.") };
+      // QA-10 — the SAME classification the listing shows (source id OR the question's exam code): a question the bank presents
+      // as official is read-only for every write, also when it was imported under a custom source id.
+      if (isOfficialSource(sourceId, stored.examCode)) return { error: bad(403, "أسئلة البنك الرسمي للقراءة فقط ولا يمكن تعديلها أو حذفها من هنا.") };
       return { sourceId, entry, stored };
     };
 
