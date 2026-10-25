@@ -46,6 +46,7 @@ import {QuestionRecoveryContext,RECOVERY_LINE_ATTRIBUTE,type QuestionRecovery} f
 import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,saveAnnouncement} from "./student/exam/examAnnouncements";
 import {createExamAnnouncer} from "./student/exam/examAnnouncer";
 import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
+import {mergeStaleDraft} from "./student/exam/draftMerge";
 // Phase 21E.3 — assessment integrity: the record of questions whose renderer could not recover (see student/exam/renderFailures.ts).
 import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailureReport,unavailablePages,renderFailureSubmitWarning,type RenderFailureState,type RenderFailureEvent,type RenderFailureReport} from "./student/exam/renderFailures";
 import type {SaveStateKind} from "./studentSaveState";
@@ -60,7 +61,7 @@ type Result={resultsVisible?:boolean;resultsVisibility?:string;resultsVisibleAt?
 const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
 // Phase 7A (model 3): attemptEpoch advances on pause/resume; a paused attempt carries its stopped budget.
 type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;status?:string;lastSavedAt?:string;attemptEpoch?:number;pausedAt?:string;pausedRemainingMs?:number|null;pauseCount?:number};
-type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;attemptPolicy?:string;effectiveDueAt?:string;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
+type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;draftRevision?:number;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;attemptPolicy?:string;effectiveDueAt?:string;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
 type Props={token:string;assignment:Assignment;studentName:string;className:string;onBack:()=>void;onLogout:()=>void};
 // Roadmap #10/#11 — a stable identity for the attempt a local dirty snapshot was produced under, so a
 // reconnect/late write can never land on a DIFFERENT (newer) attempt.
@@ -76,8 +77,12 @@ const identityOf=(ctx:AttemptCtx)=>ctx?{expectedAttemptNumber:ctx.attemptNumber,
 class ApiError extends Error{
  status:number;
  requestId:string;
- constructor(status:number,message:string,requestId=""){super(message);this.status=status;this.requestId=requestId}
+ code:string;
+ constructor(status:number,message:string,requestId="",code=""){super(message);this.status=status;this.requestId=requestId;this.code=code}
 }
+// QA-8 — the server refused a whole-draft write composed from an older draft (another device / tab saved since).
+const isDraftStale=(e:unknown)=>e instanceof ApiError&&e.status===409&&e.code==="DRAFT_STALE";
+const DRAFT_MERGED_TEXT="حُفظت إجابات لهذه المحاولة من جهاز أو نافذة أخرى، ودُمجت مع إجاباتك هنا. راجع إجاباتك ثم أعد المحاولة.";
 // Roadmap #9: keep the Arabic message; append a subtle "(رمز التتبع: …)" ONLY for an unexpected server error
 // (5xx / network) that carries a correlation id — never for an expected 401/409 etc.
 function errText(e:unknown,fallback:string):string{
@@ -149,6 +154,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // current `answers` against it by REFERENCE, so a server hydration (load / new attempt / adoption / reconcile)
  // is never mistaken for a user edit (a user edit always produces a brand-new object).
  const hydrationRef=useRef<Answers|null>(null);
+ // QA-8 — the server draft this page's answers were composed from: its revision (asserted on every whole-draft write; null when
+ // the server does not report one) and its answers (the base of a per-question merge after a 409 DRAFT_STALE).
+ const draftRevisionRef=useRef<number|null>(null),draftBaseRef=useRef<Answers>({}),draftMergedRef=useRef(false);
+ const draftBaseField=()=>draftRevisionRef.current===null?{}:{expectedDraftRevision:draftRevisionRef.current};
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
  // Roadmap #10/#11 — a monotonically-increasing "save context" generation. Every AUTHORITATIVE server
  // hydration that resets attempt/save bookkeeping (applyServerAttemptState) bumps it. An in-flight save (or
@@ -191,7 +200,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
 
  // Batch 5 (F2): the status decides before the body is read (a non-JSON 401 still logs out); a dropped connection or a non-JSON
  // body is shown in Arabic. A network failure stays a plain Error (not ApiError), so it stays retryable exactly as before.
- async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);let r:Response;try{r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h})}catch(e){if(e instanceof Error&&e.name==="AbortError")throw e;throw new Error(NETWORK_ERROR_TEXT)}const j=await safeJson<T&{error?:string}>(r);if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,userFacingMessage(j?.error,r.status,"حدث خطأ."),r.headers?.get?.("x-request-id")||"");if(j===null)throw new Error(UNEXPECTED_RESPONSE_TEXT);return j}
+ async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);let r:Response;try{r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h})}catch(e){if(e instanceof Error&&e.name==="AbortError")throw e;throw new Error(NETWORK_ERROR_TEXT)}const j=await safeJson<T&{error?:string;code?:string}>(r);if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,userFacingMessage(j?.error,r.status,"حدث خطأ."),r.headers?.get?.("x-request-id")||"",typeof j?.code==="string"?j.code:"");if(j===null)throw new Error(UNEXPECTED_RESPONSE_TEXT);return j}
  const api=subApi;
  // Phase 17B — the generic attempt seam for registered renderers (coding practice runs): same-origin /api/ paths only; the
  // token is added HERE and never handed to the renderer, the Answer, storage or the builder.
@@ -232,12 +241,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
     if(mountedRef.current){setSaving(true);setRetrying(false)} // B1: SAVING = a request is actually in flight
     try{
      const sentKey=reportKey(failureReportRef.current);
-     const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...identity})});
+     const resp=await api<{savedAt?:string;draftRevision?:number}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...failureField(),...identity,...draftBaseField()})});
      // STALE-SUCCESS GUARD: if the context changed while this request was in flight (another tab started a new
      // attempt / this one closed), this 200 belongs to the OLD attempt — never advance savedRevision or claim
      // a saved time for the new context. The server-side guard already refused any real cross-attempt write.
      if(epoch!==saveEpoch.current)return;
      savedRevision.current=Math.max(savedRevision.current,myRevision);failureSyncRef.current=sentKey;
+     if(resp&&typeof resp.draftRevision==="number"){draftRevisionRef.current=resp.draftRevision;draftBaseRef.current=snapshot}   // QA-8: the new base
      // SERVER-authoritative saved time (#3): use response.savedAt, never Date.now().
      if(mountedRef.current){if(resp&&resp.savedAt)setLastSavedAt(String(resp.savedAt));setSaveFailed(false);setSaveError(false);setRetrying(false);setError("");setDirty(revision.current>savedRevision.current)}
      return;
@@ -250,6 +260,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
      // stale-attempt guard rejection) is NEVER blindly retried: reconcile against AUTHORITATIVE server state.
      if(e instanceof ApiError&&e.status===409){
       if(mountedRef.current){setSaving(false);setRetrying(false)}
+      if(isDraftStale(e)&&await mergeAfterStaleDraft())return;   // QA-8: merged per question; the merged draft is queued against the new base
       if(requiresStart){const res=await reconcileTimed409();if(res!=="other")return}
       else{void resync()}
       if(epoch!==saveEpoch.current)return; // reconcile adopted a new context → don't stamp the old 409 message on it
@@ -342,6 +353,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(timer.current){window.clearTimeout(timer.current);timer.current=null}
   stateRef.current=st;setState(st);
   answersRef.current=draft;hydrationRef.current=draft;setAnswers(draft);
+  draftRevisionRef.current=typeof st.draftRevision==="number"?st.draftRevision:null;draftBaseRef.current=draft;   // QA-8
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=attemptId(st);dirtyGenerationRef.current=Number(st.attemptsUsed||0);
   setLastSavedAt(String(st.draftSavedAt||""));setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);
@@ -463,6 +475,27 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // or the Arabic message). Works for TIMED and UNTIMED v2. Finalizes a genuinely-expired timed attempt;
  // RESUMES a still-live one (e.g. a freshly applied dueAtOverride revived it); STOPS and shows the latest
  // result when the attempt is gone on the server (another tab submitted / it timed out). Returns what it did.
+ // QA-8 — a whole-draft write was refused because another device / tab saved this attempt's draft since this page's base. Re-read
+ // AUTHORITATIVE state; while it is still the SAME writable attempt (the recoverAndSave rule), merge per question — the server's
+ // newer draft plus only the questions this page changed since its base — adopt the new base and queue ONE save of the merged
+ // draft. Returns false when the attempt changed or closed (the caller's ordinary 409 reconciliation then applies).
+ async function mergeAfterStaleDraft():Promise<boolean>{
+  let st:State;try{st=(await api<{state:State}>()).state}catch{return false}
+  if(!mountedRef.current||typeof st.draftRevision!=="number")return false;
+  const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
+  const live=rs?(st.canWrite&&!st.attemptExpired&&!!st.activeAttempt&&sameAttempt(attemptId(st),dirtyAttemptRef.current)):(st.canWrite&&Number(st.attemptsUsed||0)===dirtyGenerationRef.current);
+  if(!live)return false;
+  const server=st.draftAnswers||{},merged=mergeStaleDraft(draftBaseRef.current,answersRef.current,server);
+  stateRef.current=st;setState(st);anchorClock(st);
+  draftRevisionRef.current=st.draftRevision;draftBaseRef.current=server;draftMergedRef.current=true;
+  answersRef.current=merged;hydrationRef.current=merged;setAnswers(merged);   // shown now; saved below (not via the edit effect)
+  revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);
+  const myRevision=revision.current,ctx=attemptId(st),epoch=saveEpoch.current;
+  saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(merged,myRevision,ctx,epoch));
+  return true;
+ }
+ // After a merge that blocked a submit or a pause: let the merged draft's save finish, then say why the action did not go through.
+ async function settleMergedDraft(){await saveQueue.current.catch(()=>{});if(mountedRef.current)setError(DRAFT_MERGED_TEXT)}
  async function reconcileTimed409():Promise<"finalized"|"resumed"|"stopped"|"other">{
   try{
    const st=(await api<{state:State}>()).state;
@@ -600,11 +633,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
   try{
    await saveQueue.current.catch(()=>{});
    const snapshot=answersRef.current,ctx=attemptId(stateRef.current);
-   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...failureField(),...identityOf(ctx)})});
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...failureField(),...identityOf(ctx),...draftBaseField()})});
    applyServerAttemptState(r.state);                                // paused: bookkeeping reset → no unsaved-changes warning
    onBack();
   }catch(e){
    submittingRef.current=false;
+   if(isDraftStale(e)&&await mergeAfterStaleDraft()){await settleMergedDraft();return}   // QA-8
    if(e instanceof ApiError&&e.status===409){await reconcileTimed409()}
    setError(errText(e,"تعذر الحفظ المؤقت."));
   }finally{if(mountedRef.current)setPausing(false);submittingRef.current=false}
@@ -755,14 +789,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
  async function submit(){if(!writable||submitBusy)return;
   // Offline submit guard (#11): never send a final submit while offline — the latest answers may be unsaved.
   if(!onlineRef.current){setError("لا يمكن تسليم الامتحان قبل حفظ التغييرات. تحقق من الاتصال بالإنترنت.");return}
-  if(!(await confirmSubmit()))return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current),submitEpoch=saveEpoch.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx,submitEpoch))}try{await saveQueue.current;
+  if(!(await confirmSubmit()))return;submittingRef.current=true;setSubmitBusy(true);setError("");draftMergedRef.current=false;if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current),submitEpoch=saveEpoch.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx,submitEpoch))}try{await saveQueue.current;
   // If the pre-submit save hit a stale-attempt 409 and reconciliation adopted a DIFFERENT attempt / a closed
   // result, the epoch changed: leave that authoritative reconciled UI intact — do NOT submit attempt 1's
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(draftMergedRef.current){await settleMergedDraft();return}   // QA-8: another device's answers were merged in — the student reviews before submitting
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField()})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
+  if(isDraftStale(e)){submittingRef.current=false;if(await mergeAfterStaleDraft()){await settleMergedDraft();return}}
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
   else setError(errText(e,"تعذر تسليم الواجب."))
  }finally{setSubmitBusy(false);if(!finalizingRef.current)submittingRef.current=false}}

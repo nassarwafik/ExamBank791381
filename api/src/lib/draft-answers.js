@@ -75,6 +75,11 @@ const isHotspot = a => !!a && typeof a === "object" && a.kind === "hotspot";
 const isHotspotQuestion = q => !!q && typeof q === "object" && q.presentationType === "hotspot";
 const isCodeTemplate = a => !!a && typeof a === "object" && a.kind === "codeTemplate";
 const isCodingV3Question = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "coding" && codingQuestionVersion(q) === 3;
+// QA-11 — a coding question of a type version THIS server does not support (a rollback window after a newer version was
+// published). Its answer cannot be bound to a contract the server does not know, but it is the student's work: it is kept in
+// its bounded canonical shape (never executed — grading already routes such a question to the teacher) instead of being dropped,
+// which turned real code into a silent «لا إجابة».
+const isUnsupportedCodingQuestion = q => !!q && typeof q === "object" && String(q.presentationType ?? q.type ?? "") === "coding" && codingQuestionVersion(q) === undefined;
 const isLabelDiagramQuestion = q => !!q && typeof q === "object" && q.presentationType === "labelDiagram";
 const isChartSelection = a => !!a && typeof a === "object" && a.kind === "chartSelection";
 const isChartSelectionQuestion = q => !!q && typeof q === "object" && q.presentationType === "chartSelection";
@@ -95,6 +100,7 @@ function bindAnswer(id, a, q, bound, reject, placement) {
     const r = normalizeSimulationState(a.state);
     return r.ok ? { ok: true, answer: { kind: "simulation", state: r.state } } : { ok: false, code: r.code };
   }
+  if (bound && isUnsupportedCodingQuestion(q) && (isCode(a) || isCodeTemplate(a))) return isCode(a) ? normalizeCodeAnswer(a) : normalizeCodeTemplateAnswer(a);   // QA-11
   if (isCode(a)) return bound ? bindCodeAnswerToQuestion(a, q) : normalizeCodeAnswer(a);
   if (isCodeTemplate(a) || (bound && isCodingV3Question(q))) return bound ? bindCodingTemplateAnswerToQuestion(a, q) : normalizeCodeTemplateAnswer(a);
   if (isSmartSim(a) || (bound && isSmartSimQuestion(q))) return bound ? bindSmartSimAnswerToQuestion(a, q) : normalizeSmartSimAnswer(a);
