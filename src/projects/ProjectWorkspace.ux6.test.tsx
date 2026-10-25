@@ -469,7 +469,8 @@ describe("UX-6a stage settings — labelled controls, exact template.update, res
     expect(calls.length).toBe(n);
     fireEvent.click(within(bar).getByRole("button", { name: "حفظ التغييرات" }));
     await waitFor(() => expect(posts()).toHaveLength(1));
-    expect(posts()[0]).toEqual({ projectCode: "794589", action: "template.update", classId: "c1", template: { stages: [{ ...STAGES[0], title: "مقدمة الشبكات المحدثة" }, STAGES[1], STAGES[2]], trackWeights: TEMPLATE.trackWeights, config: TEMPLATE.config } });
+    // QA-7, updated deliberately: the save also asserts the version it loaded (a template never saved since QA-7 is version 0).
+    expect(posts()[0]).toEqual({ projectCode: "794589", action: "template.update", classId: "c1", expectedTemplateRevision: 0, template: { stages: [{ ...STAGES[0], title: "مقدمة الشبكات المحدثة" }, STAGES[1], STAGES[2]], trackWeights: TEMPLATE.trackWeights, config: TEMPLATE.config } });
     await screen.findByText("✓ تم حفظ إعداد المراحل.");
     await waitFor(() => expect(gets("template")).toHaveLength(2));                                     // re-read after save (as before)
     // add stage keeps track-specific numbering

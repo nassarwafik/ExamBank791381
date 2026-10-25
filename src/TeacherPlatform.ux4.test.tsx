@@ -120,14 +120,16 @@ describe("UX-4 request parity — classrooms", () => {
     fireEvent.click(within(menu).getByLabelText("مشروع الكتاب"));
     expect((await confirmEl()).textContent).toContain('إضافة مشروع الكتاب للصف "الحادي عشر 3"؟');
     await confirmDialog();
-    await waitFor(() => expect(posts("/api/classrooms")).toEqual([{ action: "setPrograms", classId: "c1", programCodes: ["899373"] }]));
+    // QA-7, updated deliberately: the toggle also sends the list it started from, so the server applies it as a change (a
+    // concurrent enrollment by another teacher is kept).
+    await waitFor(() => expect(posts("/api/classrooms")).toEqual([{ action: "setPrograms", classId: "c1", programCodes: ["899373"], baseProgramCodes: [] }]));
     calls = [];
     menu = await classMenu("الثاني عشر 8");
     expect((within(menu).getByLabelText("مشروع الكتاب") as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(menu).getByLabelText("مشروع الكتاب"));
     expect((await confirmEl()).textContent).toContain("سيتم إخفاء مشروع الكتاب عن هذا الصف.");
     await confirmDialog();
-    await waitFor(() => expect(posts("/api/classrooms")).toEqual([{ action: "setPrograms", classId: "c2", programCodes: [] }]));
+    await waitFor(() => expect(posts("/api/classrooms")).toEqual([{ action: "setPrograms", classId: "c2", programCodes: [], baseProgramCodes: ["899373"] }]));
   });
   it("archive / unarchive / graduateAndArchive keep their messages and bodies; graduation is offered only for grade-12 active classes", async () => {
     await mount();

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
+import { isStaleEdit } from "../teacherFetch";
 import { stagesByGroup } from "./helpers";
 import { useConfirm } from "../ui/useConfirm";
 import SectionHeader from "../ui/SectionHeader";
@@ -9,7 +10,7 @@ import { IconPlus } from "../icons";
 import type { ProjectStage, ProjectGroup, TrackMeta } from "./types";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 
-type Template = { stages: ProjectStage[]; groups: ProjectGroup[]; trackWeights: Record<string, number>; config: Record<string, number> };
+type Template = { stages: ProjectStage[]; groups: ProjectGroup[]; trackWeights: Record<string, number>; config: Record<string, number>; templateRevision?: number };
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[]; readOnly: boolean;
   /** Called after a successful template.update or project.reset (both can change which stages count as ready). */
@@ -102,11 +103,17 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
     if (bad) { setNotice(""); setError("وزن المرحلة " + bad.stageId + " يجب أن يكون رقمًا أكبر من 0."); return; }
     setBusy(true); setError(""); setNotice("");
     try {
-      await trackerPost(token, projectCode, { action: "template.update", classId, template: { stages: tpl.stages, trackWeights: tpl.trackWeights, config: tpl.config } });
+      // QA-7 — assert the version this editor loaded (a template never saved since QA-7 is version 0).
+      const expectedTemplateRevision = typeof saved?.templateRevision === "number" ? saved.templateRevision : 0;
+      await trackerPost(token, projectCode, { action: "template.update", classId, expectedTemplateRevision, template: { stages: tpl.stages, trackWeights: tpl.trackWeights, config: tpl.config } });
       setNotice("✓ تم حفظ إعداد المراحل.");
       onReadyChanged?.();
       await load();
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ الإعداد."); }
+    } catch (e) {
+      // QA-7 — another teacher saved the template since this editor loaded it: load the current version, then say why.
+      if (isStaleEdit(e, "TEMPLATE_STALE")) await load();
+      setError(e instanceof Error ? e.message : "تعذر حفظ الإعداد.");
+    }
     finally { setBusy(false); }
   }
 

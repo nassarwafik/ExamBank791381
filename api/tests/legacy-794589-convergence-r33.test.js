@@ -24,6 +24,9 @@ import { fileURLToPath } from "node:url";
 //    Phase G3 (reviewed golden change): the six `progress.update` scenarios' route audits gained `details.via:
 //    "progress.update"` (the single-save path now names itself, as score.set / score.bulk / progress.bulk already did) —
 //    their only change (REFRESHED_BY_G3; invariant B10).
+//    QA-7 (reviewed golden change): every template.update now advances the template's `templateRevision` (the version the
+//    stage editor asserts, so a stale editor cannot revert a newer save). Exactly three entries were refreshed, and their only
+//    change is `templateRevision: 1` on the written template (body and stored document) (REFRESHED_BY_QA7; invariant B11).
 // B. EXPLICIT INVARIANTS — the contracts the refactor must preserve are asserted directly (not only via golden
 //    equality): the first-create snapshot shape, namespace isolation, V1 preservation / upgrade, history truncation,
 //    conflict and NO_CHANGE behavior, student-route bodies; since P-9, a read never writes.
@@ -46,6 +49,7 @@ const generic794589Ids = ids.filter(id => id.startsWith("G794589."));
 const GENERIC_SNAPSHOT_KEYS = ["schemaVersion", "projectCode", "classId", "templateVersion", "tracks", "trackWeights", "config", "groups", "stages", "createdAt", "updatedAt"];
 const REFRESHED_BY_P9 = ["G794589.template.c2.lazyCreate", "G794589.template.c3.v1NoProgress", "G794589.template.cL.legacyScalar", "G899373.template.cN.enrolled"];
 const REFRESHED_BY_G3 = ["G794589.update.approve", "G794589.update.status", "G794589.update.noteOnly", "G794589.update.lazyCreateEmptyClass", "G899373.update.approve", "G883589.update.status"];
+const REFRESHED_BY_QA7 = ["G794589.templateUpdate.c1", "G794589.templateUpdate.c2.lazyCreate", "G899373.templateUpdate.g1"];
 const REFRESHED_BY_P5B = ["G794589.student.c1.s2.disabled", "G794589.summary.c1", "G794589.students.c1", "SG.s2", "SG.s5", "SG.s6", "SG.s9", "SG.s10", "G794589.student.c4.s7.v1", "SG.s7"];
 const inLegacyNamespace = n => n.startsWith(F.LEGACY_CONFIG) || (n.startsWith(F.LEGACY_PROGRESS) && !/^platform\/project-progress\/(899373|883589)\//.test(n));
 const inNamespace = (code, n) => n.startsWith("platform/project-trackers/" + code + "/") || n.startsWith("platform/project-progress/" + code + "/");
@@ -66,10 +70,21 @@ describe("A. golden parity with unpatched main (identical fixtures, fixed clock)
 });
 
 describe("B. explicit invariants", () => {
+  it("B11 QA-7: the three refreshed template.update entries differ from the pre-QA-7 record only by templateRevision 1", () => {
+    for (const id of REFRESHED_BY_QA7) {
+      const written = R[id].body.template;
+      expect(written.templateRevision, id).toBe(1);
+      const without = JSON.parse(JSON.stringify(R[id], (k, v) => k === "templateRevision" ? undefined : v));
+      expect(JSON.stringify(without).includes("templateRevision"), id).toBe(false);
+      expect(Object.values(R[id].storage.docs).filter(d => d && typeof d === "object" && "templateRevision" in d).length, id).toBe(1);
+    }
+    for (const id of ids.filter(i => !REFRESHED_BY_QA7.includes(i))) expect(JSON.stringify(golden[id]).includes("templateRevision"), id).toBe(false);
+  });
   it("B1 the first-create snapshot shape: projectCode + tracks; a read shows the very document the first write persists", () => {
     for (const id of ["G794589.activate.c2", "G794589.templateUpdate.c2.lazyCreate"]) {
       const doc = R[id].storage.docs[F.LEGACY_CONFIG + "c2.json"];
-      expect(Object.keys(doc)).toEqual(GENERIC_SNAPSHOT_KEYS);
+      // QA-7: a template.update also stamps the template's version (appended after the snapshot keys).
+      expect(Object.keys(doc)).toEqual(REFRESHED_BY_QA7.includes(id) ? [...GENERIC_SNAPSHOT_KEYS, "templateRevision"] : GENERIC_SNAPSHOT_KEYS);
       expect(doc.projectCode).toBe("794589"); expect("programCode" in doc).toBe(false); expect(doc.tracks.map(t => t.trackId)).toEqual(["book", "packetTracer"]);
       expect(doc.templateVersion).toBe(3); expect(doc.createdAt).toBe(F.FIXED_NOW);   // Phase P7: the condensed V3 set
     }

@@ -116,14 +116,25 @@ async function handler(request, deps = {}, obs = null) {
     // Optimistic read-modify-write of lastLogin (§11) that ALSO re-validates the credential version under
     // the lock (§3): if a concurrent reset bumped the student's authVersion since we verified the password,
     // do not stamp the login and fail closed — the old password must not yield a fresh post-reset session.
+    // QA-5 — the stamp is written only onto the student document as it is NOW. A student the teacher deleted (document gone),
+    // archived or disabled while this login was in flight is refused: writing the pre-read copy back would resurrect a deleted
+    // student in the roster and issue a 12-hour session.
     let stillValid = true;
-    const fresh = await mut(container, studentBlobName, current => {
-      const base = current || student;
-      if (normalizeAuthVersion(base.authVersion) !== boundVersion) { stillValid = false; return base; }
-      base.lastLoginAt = new Date().toISOString();
-      base.updatedAt = base.lastLoginAt;
-      return base;
-    }, storageObserver(obs, { operation: "login.lastLogin" }));
+    const REFUSED = Symbol("refused");
+    let fresh;
+    try {
+      fresh = await mut(container, studentBlobName, current => {
+        if (!current || current.active === false || current.archived === true) throw REFUSED;
+        const base = current;
+        if (normalizeAuthVersion(base.authVersion) !== boundVersion) { stillValid = false; return base; }
+        base.lastLoginAt = new Date().toISOString();
+        base.updatedAt = base.lastLoginAt;
+        return base;
+      }, storageObserver(obs, { operation: "login.lastLogin" }));
+    } catch (e) {
+      if (e !== REFUSED) throw e;
+      stillValid = false;
+    }
     if (!stillValid) {
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
     }
