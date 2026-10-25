@@ -424,3 +424,24 @@ error text shown is unchanged.
 
 **Limitation.** A device still running a bundle from before this change sends no version and keeps the old behaviour until it
 reloads.
+
+## QA-4 / QA-19 / QA-20 — roster identity and names
+
+Findings #4, #19 and #20 of the post-merge QA of `main` (`c244cbab`).
+
+| # | Where | Defect | Fix |
+|---|---|---|---|
+| 4 | `manage-students.js` `bulkImport` | With an import key, a second row carrying the same identity as an earlier row of the same request was "recovered" (Phase S.3) onto the account the first row had just created. That account's password was reset, so row 1's printed credential stopped working, and the second student was neither created nor reported. The preview already flagged in-file repeats, but the import itself (direct API, or a file never previewed) did not. | An identity seen earlier in the same request, compared in canonical form, is reported as «رقم الهوية مكرر داخل الملف.» and is never created or recovered. A retry of a whole import (S.3) still recovers its own rows. |
+| 19 | `platform-login.js` | Accounts store the canonical identity (ASCII digits, padded to 9), but login hashed the typed text as-is. «١٢٣٤٥٦٧٨٩», Persian digits, `123-456-789` or `12345678` (stored `012345678`) were refused. | When the exact code has no account and the code is made only of digits (any of the three scripts) and separators, the canonical identity is looked up. The exact code is still tried first, so a legacy code is unchanged; a code with letters is never reinterpreted. |
+| 20 | `roster-input.js` `cleanText` | A name made only of ZWJ / ZWNJ (invisible) was accepted. | A value with nothing but ZWJ / ZWNJ and spaces is empty, so it is refused like a blank name. ZWNJ / ZWJ inside a real word are kept. |
+
+**Evidence.**
+- `api/tests/roster-identity-qa4-19-20.test.js`, 9 tests on the real handlers.
+- **Fail-first on `46ba9297`:** 5 failed. The 4 pins passed: an S.3 retry still recovers, distinct identities, a different identity
+  never matching, and ZWNJ kept inside a word.
+- **Mutations:**
+  - KILLED: C1 (in-batch check removed), C3 (no canonical login lookup), C4 (invisible-only name accepted) and C5 (ZWNJ / ZWJ stripped
+    everywhere).
+  - EQUIVALENT: C2 (compare the raw identity text). `normalizeBulkStudents` already stores the canonical identity, so the two are
+    the same value.
+- Files were restored byte-for-byte (sha256).

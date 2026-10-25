@@ -28,6 +28,13 @@ const {
 // accepted, and a missing import turns every successful teacher login into a 500 (hotfix regression test:
 // api/tests/platform-login-teacher.test.js).
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
+const { normalizeIdentityNumber } = require("../lib/roster-input");
+// QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
+// login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
+// leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
+// separators is also looked up in that canonical form when the exact code has no account. It can only ever reach the account of
+// that very identity; the exact code is still tried first, so a legacy non-identity code keeps working unchanged.
+const IDENTITY_LIKE = /^[\s0-9\u0660-\u0669\u06F0-\u06F9\-./]+$/;
 
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
@@ -89,7 +96,11 @@ async function handler(request, deps = {}, obs = null) {
 
     // Student credentials — bind password verification to the credential version (§3).
     const normalizedCode = normalizeStudentCode(userCode);
-    const authDocument = await dl(container, "platform/auth/" + studentCodeHash(normalizedCode) + ".json");
+    let authDocument = await dl(container, "platform/auth/" + studentCodeHash(normalizedCode) + ".json");
+    if (!authDocument && IDENTITY_LIKE.test(userCode)) {
+      const canonical = normalizeIdentityNumber(userCode);
+      if (canonical && canonical !== normalizedCode) authDocument = await dl(container, "platform/auth/" + studentCodeHash(canonical) + ".json");
+    }
     const studentBlobName = authDocument ? "platform/users/" + authDocument.userId + ".json" : "";
     const student = studentBlobName ? await dl(container, studentBlobName) : null;
     const boundVersion = normalizeAuthVersion(authDocument && authDocument.authVersion);
