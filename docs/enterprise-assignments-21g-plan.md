@@ -499,3 +499,39 @@ The post-merge QA of `main` (`c244cbab`) found that the timing dialog's promise,
     The files were restored byte-for-byte (sha256).
 - **Limitation.** An untimed attempt that was already running when this deploys has no stamp and no `endsAt`, so it still follows the
   assignment's duration until it ends. Every attempt started afterwards is protected.
+
+## 16. QA-8 — the same attempt open on two devices never silently loses answers
+
+Finding #8 of the post-merge QA of `main` (`c244cbab`).
+
+- **Defect.** `saveDraft` replaced the whole server draft with whatever snapshot arrived. A student with the attempt open on two
+  devices (or two tabs) answered q1 on device A; device B, still holding the older copy, autosaved it and erased q1 with a 200.
+  The timed-out finalize then graded the reduced draft. The client already adopted a newer server draft when it was clean, but a
+  device with its own unsaved edits kept them and overwrote the other device's work on its next save.
+- **Fix — server (`student-submission.js`).**
+  - Every write of the server draft (`saveDraft`, and `pauseAttempt` with answers) advances `draftRevision`. The state and the
+    save reply carry it.
+  - A whole-draft write that sends `expectedDraftRevision` asserts the draft it was composed from. When another device has saved
+    since, the write is refused with `409 { code: "DRAFT_STALE" }` and nothing is written. `submit` asserts it too, so a stale
+    device never grades its older copy. A malformed value fails closed.
+  - A request without the field (a bundle cached from before this change) is accepted exactly as before.
+- **Fix — client (`StudentExamPage.tsx`, `student/exam/draftMerge.ts`).**
+  - The page keeps the revision and the answers of the server draft it is based on, sends the revision on every save, submit and
+    pause, and adopts the revision each save returns.
+  - On `DRAFT_STALE` it re-reads the authoritative state. While it is still the same writable attempt, it merges per question: the
+    server's newer draft, plus only the questions this page changed since its base (a cleared answer is removed). It then saves the
+    merged draft against the new base. An autosave merge is silent. A blocked submit or pause is not resent: the merged draft is
+    saved and the student sees «حُفظت إجابات لهذه المحاولة من جهاز أو نافذة أخرى، ودُمجت مع إجاباتك هنا. راجع إجاباتك ثم أعد
+    المحاولة.»
+  - When the attempt changed or closed, the ordinary 409 reconciliation applies, as before.
+- **Evidence.** `api/tests/draft-revision-two-devices-qa8.test.js` (8, real handler under a fake clock) and
+  `src/StudentExamPage.draftRevision.qa8.test.tsx` (7: 4 real-page flows and 3 merge unit tests).
+  - **Fail-first on `46ba9297`.** 11 of the 15 QA-8 tests failed, among them the QA probe: device B's stale save answered 200 and
+    the timeout graded `{}`. The 3 merge unit tests and the "server without a revision" page test passed (new module / unchanged
+    behaviour).
+  - **Mutations** (shared PR-A campaign, A1–A13): the server check removed; the revision not advanced; submit or pause not
+    checked; a malformed base accepted; a missing field treated as stale; the page not sending or not adopting its base; the merge
+    dropping local edits, re-applying untouched questions or not removing a cleared answer; a stale autosave or submit not merged.
+    All KILLED (A1 was first an invalid mutant and was re-planted). Files restored byte-for-byte (sha256).
+- **Limitation.** A device still running a bundle from before this change sends no revision and keeps the old behaviour until it
+  reloads. Two devices editing the SAME question keep the value of the device that saves last.

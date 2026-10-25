@@ -20,6 +20,17 @@ const {planCodingGrading,dispatchPlannedGrading,legacyAutoGradingWithhold,studen
 const {normalizeRenderFailures,draftRenderFailuresPatch,applyRenderFailureHolds,technicalHoldsField}=require("../lib/render-failures");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+// QA-8 — the same attempt open on two devices (or two tabs). Every write of the server draft (saveDraft, pause with answers)
+// advances `draftRevision`, and the state carries it. A client that sends `expectedDraftRevision` asserts the draft it composed
+// its whole-draft snapshot from: when another device has saved since, the write is refused (409 DRAFT_STALE, nothing written)
+// instead of silently replacing the newer answers, and the client merges per question and saves again. A submit asserts it
+// too, so a stale device never grades its older copy. A request WITHOUT the field (a bundle cached from before QA-8) is
+// accepted exactly as before; a malformed value fails closed.
+const DRAFT_STALE_MESSAGE="حُفظت إجابات أحدث لهذه المحاولة من جهاز أو نافذة أخرى. حدّث الصفحة لتحميلها قبل المتابعة.";
+const draftRevisionOf=doc=>{const n=Number(doc&&doc.draftRevision);return Number.isInteger(n)&&n>=0?n:0};
+const draftStale=(doc,b)=>{const n=b?b.expectedDraftRevision:undefined;if(n===undefined||n===null)return false;return !(Number.isInteger(n)&&n>=0)||n!==draftRevisionOf(doc)};
+const draftStaleError=()=>{const err=new Error(DRAFT_STALE_MESSAGE);err.httpStatus=409;err.code="DRAFT_STALE";return err};
+const failureBody=e=>({ok:false,error:e.message,...(e.code?{code:e.code}:{})});
 // A completed attempt's public shape. timedOut/startedAt/endsAt/endedAt/endReason are additive audit
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
@@ -40,7 +51,7 @@ function state(a,s,nowMs=Date.now()){
  const ts=timerState(a,s,nowMs),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
  return {attemptsUsed:ts.attemptsUsed,allowedAttempts:ts.allowedAttempts,canAttempt:ts.canAttempt,dueClosed:ts.isClosed,availability:ts.availability,openAt:ts.openAt,effectiveDueAt:ts.effectiveDueAt,
   durationMinutes:ts.durationMinutes,timed:ts.timed,attemptModelVersion:ts.attemptModelVersion,attemptPolicy:ts.attemptPolicy,requiresStart:ts.requiresStart,attemptStatus:ts.attemptStatus,serverNow:new Date(nowMs).toISOString(),activeAttempt:ts.activeAttempt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt,attemptExpired:ts.attemptExpired,canStartAttempt:ts.canStartAttempt,canWrite:ts.canWrite,
-  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",latestResult:latest?pub(latest,a,nowMs):null,attempts:attempts.map(x=>pub(x,a,nowMs))}}
+  draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",draftRevision:draftRevisionOf(s),latestResult:latest?pub(latest,a,nowMs):null,attempts:attempts.map(x=>pub(x,a,nowMs))}}
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Roadmap #10/#11 stale-attempt guard. For a MODERN attempt (timed OR attemptModelVersion>=2) a write MUST
 // carry the identity (attemptNumber + startedAt) of the attempt it was composed under — this FAILS CLOSED:
@@ -145,7 +156,7 @@ async function handler(request,deps={},obs=null){
     obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
    }
    obs?.logInfo("student.submission.completed",{action:"startAttempt",assignmentId:id});
@@ -157,7 +168,7 @@ async function handler(request,deps={},obs=null){
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
    const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{},a.examSnapshot||null).answers; // Phase 16B-A — bounded simulation states; 17A — code answers bound to the published coding question
    const renderFailures=b.renderFailures===undefined?undefined:normalizeRenderFailures(b.renderFailures,a.examSnapshot||null);   // 21E.3 — absent: the stored record is left alone
-   let savedAt="",finalState=null;
+   let savedAt="",finalState=null,savedRevision=0;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
@@ -168,8 +179,9 @@ async function handler(request,deps={},obs=null){
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
+     if(draftStale(doc,b))throw draftStaleError();                                   // QA-8: another device saved since this snapshot's base
      savedAt=new Date().toISOString();
-     doc.draftAnswers=answers;doc.draftSavedAt=savedAt;doc.updatedAt=savedAt;
+     doc.draftAnswers=answers;doc.draftSavedAt=savedAt;doc.updatedAt=savedAt;doc.draftRevision=draftRevisionOf(doc)+1;savedRevision=doc.draftRevision;
      if(renderFailures!==undefined)draftRenderFailuresPatch(doc,renderFailures);
      // Lifecycle (B2A #10): a timed or untimed-v2 active attempt is marked "draft" and stamped with a
      // server lastSavedAt; the attemptNumber is never changed by a save.
@@ -188,10 +200,10 @@ async function handler(request,deps={},obs=null){
     obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
    }
-   return {status:200,jsonBody:{ok:true,savedAt,serverNow:new Date().toISOString(),effectiveAttemptEndsAt:finalState?finalState.effectiveAttemptEndsAt:""}};
+   return {status:200,jsonBody:{ok:true,savedAt,draftRevision:savedRevision,serverNow:new Date().toISOString(),effectiveAttemptEndsAt:finalState?finalState.effectiveAttemptEndsAt:""}};
   }
 
   if(action==="submit"){
@@ -210,6 +222,7 @@ async function handler(request,deps={},obs=null){
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
+     if(draftStale(doc,b))throw draftStaleError();                                   // QA-8: never grade a device's older copy over a newer saved draft
      // Grade ONLY after the published/identity/canWrite guards pass, so a stale or missing-identity submit
      // (409 above) never calls gradeExam or mutates anything.
      const active=activeAttemptOf(doc),attemptNumber=active?active.attemptNumber:(doc.attempts?.length||0)+1;
@@ -229,7 +242,7 @@ async function handler(request,deps={},obs=null){
     obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
    }
    if(resultAttempt.finalized){
@@ -275,7 +288,7 @@ async function handler(request,deps={},obs=null){
     obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
    }
    if(!already&&resultAttempt&&resultAttempt.finalized){
@@ -292,7 +305,7 @@ async function handler(request,deps={},obs=null){
    const retryable=e instanceof AssignmentLockBusyError||e instanceof StorageConflictError;
    obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable,errorClass:retryable?"conflict":(e?.httpStatus?undefined:"internal_error")});
    if(retryable)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
    throw e;
   };
   const stale=()=>{const err=new Error("تغيّرت حالة المحاولة في نافذة أخرى. حدّث الصفحة.");err.httpStatus=409;return err};
@@ -320,7 +333,8 @@ async function handler(request,deps={},obs=null){
      const nowMs=Date.now(),rj=pauseRejection(a,doc,nowMs);
      if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
      const ts=timerState(a,doc,nowMs),nowIso=new Date(nowMs).toISOString();
-     if(answers){doc.draftAnswers=answers;doc.draftSavedAt=nowIso;act.lastSavedAt=nowIso;if(b.renderFailures!==undefined)draftRenderFailuresPatch(doc,normalizeRenderFailures(b.renderFailures,a.examSnapshot||null))}   // 21E.3 — the report travels with the saved answers
+     if(answers&&draftStale(doc,b))throw draftStaleError();                          // QA-8: the pause's answers replace the draft too
+     if(answers){doc.draftAnswers=answers;doc.draftSavedAt=nowIso;act.lastSavedAt=nowIso;doc.draftRevision=draftRevisionOf(doc)+1;if(b.renderFailures!==undefined)draftRenderFailuresPatch(doc,normalizeRenderFailures(b.renderFailures,a.examSnapshot||null))}   // 21E.3 — the report travels with the saved answers
      if(ts.timed)act.pausedRemainingMs=Math.max(0,toMs(ts.attemptDurationEndsAt)-nowMs);   // server budget, unclipped by due
      act.status="paused";act.pausedAt=nowIso;act.attemptEpoch=ep+1;act.pauseCount=Math.max(0,Number(act.pauseCount)||0)+1;
      doc.updatedAt=nowIso;

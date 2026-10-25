@@ -244,8 +244,11 @@ describe("RF — code answers are bound to the published coding question (langua
       cq: { kind: "compound", parts: { p1: code("hidden in a part"), p2: { kind: "text", value: "ب" } } },
       other: { kind: "text", value: "حر" }
     }, boundExam());
-    expect(r.answers).toEqual({ c1: code("print(1)"), cq: { kind: "compound", parts: { p2: { kind: "text", value: "ب" } } }, other: { kind: "text", value: "حر" } });
-    expect(r.rejected.map(x => x.id + ":" + x.code).sort()).toEqual(["c2:CODE_QUESTION_MISMATCH", "c3:CODE_LANGUAGE_NOT_ALLOWED", "cq.p1:CODE_QUESTION_MISMATCH", "ghost:CODE_QUESTION_MISMATCH", "t1:CODE_QUESTION_MISMATCH"]);
+    // QA-11 (owner-approved fix): c2 is a coding question of a version this server does not support (coding@4). Its code is the
+    // student's work and is KEPT in its bounded canonical shape for the teacher (never executed), instead of being dropped into a
+    // silent «لا إجابة». Every supported version keeps the full binding (c3 below is still refused).
+    expect(r.answers).toEqual({ c1: code("print(1)"), c2: code("print(2)"), cq: { kind: "compound", parts: { p2: { kind: "text", value: "ب" } } }, other: { kind: "text", value: "حر" } });
+    expect(r.rejected.map(x => x.id + ":" + x.code).sort()).toEqual(["c3:CODE_LANGUAGE_NOT_ALLOWED", "cq.p1:CODE_QUESTION_MISMATCH", "ghost:CODE_QUESTION_MISMATCH", "t1:CODE_QUESTION_MISMATCH"]);
     const lang = normalizeDraftAnswers({ c1: code("x", { language: "java" }) }, boundExam());
     expect(lang.answers).toEqual({}); expect(lang.rejected).toEqual([{ id: "c1", code: "CODE_LANGUAGE_NOT_ALLOWED" }]);
     const size = normalizeDraftAnswers({ c1: code("x".repeat(3000)) }, boundExam());

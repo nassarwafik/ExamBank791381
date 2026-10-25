@@ -559,3 +559,21 @@ Finding #9 of the post-merge QA of `main` (`c244cbab`); owner decision: such a m
     byte-for-byte (sha256).
 - **Limitation.** Other surfaces that average results (the reports centre, the assignment detail statistics) keep their own existing
   rules; they are outside this finding.
+
+## 23. QA-11 — code on an unsupported coding version is kept for the teacher
+
+Finding #11 of the post-merge QA of `main` (`c244cbab`).
+
+- **Defect.** During a rollback window (a newer coding type version published, then the API rolled back), `normalizeDraftAnswers`
+  could not bind a `code` / `codeTemplate` answer to a contract the server does not know, and dropped it — on every autosave (200)
+  and on submit. Grading already sent the question to the teacher, but the teacher saw «لا إجابة»: the student's code existed nowhere.
+- **Fix.** `draft-answers.js`: on a coding question whose type version this server does not support, the answer is kept in its
+  bounded canonical shape (`normalizeCodeAnswer` / `normalizeCodeTemplateAnswer`: registered language and version, size limits). It
+  is never executed — no Runner job is planned for an unsupported version — and the question stays under teacher review. Binding on
+  every supported version is unchanged.
+- **Existing pin updated.** `api/tests/coding-17a.test.js` pinned the defect itself (a coding@4 answer `c2` refused with
+  `CODE_QUESTION_MISMATCH`). It now expects `c2` kept; every other refusal in that test is unchanged.
+- **Evidence.** `api/tests/unsupported-coding-version-qa11.test.js`, 6 tests (real submission handler). Fail-first on `46ba9297`:
+  the 3 behavioural tests failed (the code missing from the attempt and from the draft, the template answer dropped); the 3 pins
+  passed. Mutations A14 (guard removed) and A15 (binding skipped for every coding question) KILLED; A15 first SURVIVED and was killed
+  after the pin used a registered language the question does not allow.
