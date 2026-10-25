@@ -52,7 +52,7 @@ const { rebuildAttemptGrades } = require("../attempt-grade-rebuild");
 const storage = require("../platform-storage");
 const { recordAuditEvent } = require("../audit-log");
 const { recordEventSafely } = require("../notification-events");
-const { recordAchievementIfEligible } = require("../achievement-feed");
+const { syncAssessmentMedal } = require("../achievement-feed");
 
 const AP = "platform/assignments/", SP = "platform/submissions/", UP = "platform/users/";
 const JOB_PREFIX = "platform/coding-grading-jobs/";
@@ -696,7 +696,7 @@ async function finalSideEffects(container, assignment, ids, deps, obs, { regrade
     const dedupeKey = regradeJobId ? "coding-autograde-regrade:" + ids.assignmentId + ":" + ids.attemptNumber + ":" + regradeJobId : "coding-autograde-final:" + ids.assignmentId + ":" + ids.attemptNumber;
     await (deps.recordEventSafely || recordEventSafely)(container, { scope: "student", studentId: ids.studentId, type: "assignment_reviewed", dedupeKey, data: { assignmentId: ids.assignmentId, assignmentTitle: assignment.title, attemptNumber: Number(ids.attemptNumber), becameFinal: !regradeJobId, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: attempt.percentage, score: attempt.score, totalMarks: attempt.totalMarks, automatic: true } }, deps, obs);
     // Achievement records are create-only (idempotent per assignment + student).
-    if (student) await (deps.recordAchievementIfEligible || recordAchievementIfEligible)(container, { classId: assignment.classId, studentId: ids.studentId, studentDisplayName: student.displayName, assignmentId: ids.assignmentId, assignmentTitle: assignment.title, percentage: attempt.percentage, shareAchievements: student.shareAchievements });
+    if (student) await (deps.recordAchievementIfEligible || syncAssessmentMedal)(container, { classId: assignment.classId, studentId: ids.studentId, studentDisplayName: student.displayName, assignmentId: ids.assignmentId, assignmentTitle: assignment.title, percentage: attempt.percentage, shareAchievements: student.shareAchievements });
   } catch { obs?.logWarn?.("coding.autoGrade.sideEffects.failed", { attemptNumber: Number(ids.attemptNumber) }); }
 }
 

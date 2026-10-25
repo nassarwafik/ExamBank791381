@@ -6,7 +6,7 @@ const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {recordAuditEvent}=require("../lib/audit-log");
-const {recordAchievementIfEligible}=require("../lib/achievement-feed");
+const {syncAssessmentMedal}=require("../lib/achievement-feed");
 const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
 // Phase 19D — a visual question's review needs its canonical image (bank assets get a fresh signed delivery URL, never persisted) and
 // its public config; the private targets / mapping arrive as expectedAnswer (teacher only), exactly like every other key.
@@ -125,7 +125,7 @@ function historicalSubmissionProvesOwnership(submission,assignmentId,studentId,a
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior or the grading logic.
 async function handler(request,deps={},obs=null){
- const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||recordAchievementIfEligible;
+ const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||syncAssessmentMedal;
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),assignmentId=String(u.searchParams.get("assignmentId")||""),studentId=String(u.searchParams.get("studentId")||""),attemptNumber=attemptNumberOf(u.searchParams.get("attemptNumber"));

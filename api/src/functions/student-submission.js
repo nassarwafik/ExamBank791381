@@ -5,7 +5,7 @@ const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading");
-const {recordAchievementIfEligible}=require("../lib/achievement-feed");
+const {syncAssessmentMedal}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,attemptDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
@@ -92,7 +92,7 @@ function modelThreeAudit(a,active){return attemptModelVersion(a)>=3?{pauseCount:
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
- const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible,wl=deps.withAssignmentLock||withAssignmentLock;
+ const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||syncAssessmentMedal,wl=deps.withAssignmentLock||withAssignmentLock;
  try{const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};

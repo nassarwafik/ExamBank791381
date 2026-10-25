@@ -646,5 +646,28 @@ Baseline `5b900efc`. No new storage, route or stored field.
 - **Evidence.** `api/tests/qa2-phase4b.test.js` (14 tests). Fail-first on `5b900efc`: 8 failed, 6 pins passed. Mutations B1–B16: 15 KILLED,
   B3 equivalent (the per-job dedupe key of the regrade notice: a repeated callback for the same job returns «already applied» before any
   side effect, so the key is never reached twice).
-- **Limitation.** A medal earned at a higher mark stays after a lower regrade or review mark (create-only medals); changing that is a
-  product decision.
+- **Limitation (resolved in §22).** A medal earned at a higher mark stayed after a lower regrade or review mark (create-only medals); the
+  owner decided the medal follows the mark.
+
+## 22. The assessment medal follows the current final mark (owner decision after QA round 2)
+
+Baseline `291280a2`. The class-feed medal post was create-only, so a forced regrade, a teacher review or a newer attempt that LOWERED a
+final mark left the old tier on the feed, while the dashboard and the profile, which count medals from the latest final result, already
+showed the lower mark. The owner decided the medal is lowered with the mark.
+
+- **`achievement-feed.js` `syncAssessmentMedal`.** After every write that can change a final result (submit / finalization, teacher
+  review, coding callback including a forced regrade), the post at `<assignmentId>_<studentId>` is brought to the tier of the LATEST
+  attempt's final percentage — the same authority the dashboard and the profile use: a lower mark lowers the tier, a mark under bronze
+  (70 %) withdraws the post, a higher mark raises it again (a later correction can restore it). A tier change keeps the post, its date
+  and its reactions (ETag compare-and-set, re-read on a concurrent reaction); a withdrawal deletes the post, so a restored medal is a new
+  post. The sync reads the committed submission itself, so the review or regrade of an OLDER attempt never decides, and a latest attempt
+  still awaiting the teacher changes nothing. A game medal (`medal.source: "game"`) and every other event type are never touched.
+  Failures are swallowed, as before: a medal never breaks grading.
+- **Call sites.** `student-submission.js`, `assignment-review.js` and `coding/official-grading.js` keep their injectable
+  `recordAchievementIfEligible` dependency (tests stub it); its default is now the sync. `recordAchievementIfEligible` (create-only)
+  stays for the first creation.
+- **Behaviour change to note.** A newer attempt with a lower final mark now lowers or withdraws the medal of an earlier attempt, matching
+  the dashboard, which already counted the latest result.
+- **Evidence.** `api/tests/medal-follows-final-mark.test.js` (9 tests). Fail-first on `291280a2`: the three handler tests (regrade,
+  review, newer attempt) fail on their assertions (the old medal stays); the five rule tests fail because the sync does not exist there
+  (rule pins); one pin passes. Mutations M1–M11: KILLED.
