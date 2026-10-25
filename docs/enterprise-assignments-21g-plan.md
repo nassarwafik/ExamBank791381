@@ -458,3 +458,44 @@ Fail-first applies to the reopened-wizard gap only; the new test failed before `
 
 Fail-first applies to the gate's findings: axe reported them on the 21G.6 build, and they are absent on this head. Deployment tier:
 1 (local) only.
+
+## 15. QA-3 — a duration change applies to new attempts only
+
+The post-merge QA of `main` (`c244cbab`) found that the timing dialog's promise, «تغيير مدة المحاولة يسري على المحاولات الجديدة فقط، ولا يعيد ضبط
+محاولة مؤقتة بدأت بالفعل» (`AssignmentList.tsx`), was not kept by the server.
+
+- **Defect.** `updateTiming` writes the new `durationMinutes` on the assignment, and `timerState` read that CURRENT value for the
+  running attempt.
+  - Changing 0 → 30 minutes ended a running untimed attempt. After 90 minutes of work, `saveDraft` answered 409 «انتهى وقت المحاولة»,
+    `finalizeTimedOutAttempt` closed the attempt as `timedOut`, and the answers since the last autosave were lost.
+  - Changing 60 → 0 removed the deadline of a running timed attempt: `saveDraft` still answered 200 five hours later.
+  - A paused untimed attempt resumed after 0 → 30 got a zero-length running deadline.
+- **Fix.** A running attempt keeps the timing it started with, through `attemptDurationMinutes` in `assignment-availability.js`.
+  - `startAttempt` stamps `activeAttempt.durationMinutes` (0 = untimed). The legacy untimed lazy start stamps 0.
+  - `timerState`, and the resume path in `student-submission.js`, read the duration in this order:
+    1. the stamp;
+    2. otherwise a valid server `endsAt`, which only a timed start writes (its own minutes);
+    3. otherwise the assignment's duration, exactly as before.
+
+    So a timed attempt whose `endsAt` was lost still derives its deadline from `startedAt` and fails closed (B2A, unchanged and still
+    pinned by `attempt-lifecycle-b2a.test.js` / `teacher-attempt-controls-b2b.test.js`).
+  - New attempts use the new duration.
+- **Evidence.** `api/tests/attempt-duration-change-qa3.test.js` has 8 tests on the real handlers under a fake clock.
+  - **Fail-first on `5a65444a`.** Run there, three tests failed:
+    - 0 → 30: `expected 409 to be 200`;
+    - 60 → 0: `expected 200 to be 409`;
+    - the paused attempt resumed after 0 → 30 got `runEndsAt` stamped (`expected '2026-10-24T10:00:00.000Z' to be undefined`).
+
+    The three controls passed on the baseline: 60 → 30 not shortened, the next attempt uses the new duration, and the lost-`endsAt`
+    fail-closed case.
+  - **Pins.** The legacy no-stamp timed attempt and the stamp written at start were added with the fix.
+  - **Mutations.** 6 mutants, all KILLED:
+    - the stamp ignored;
+    - `endsAt` ignored;
+    - `timerState` or resume reading the current setting;
+    - the stamp not written;
+    - a 0 stamp read by truthiness.
+
+    The files were restored byte-for-byte (sha256).
+- **Limitation.** An untimed attempt that was already running when this deploys has no stamp and no `endsAt`, so it still follows the
+  assignment's duration until it ends. Every attempt started afterwards is protected.
