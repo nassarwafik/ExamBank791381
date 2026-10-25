@@ -7,7 +7,7 @@ const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}
 const {gradeExam,parametricGenerationContext}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
-const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
+const {timerState,startRejection,writeRejection,normalizeDurationMinutes,attemptDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {releaseInfo,withholdResult}=require("../lib/results-release");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
@@ -132,7 +132,8 @@ async function handler(request,deps={},obs=null){
      if(existing){resultState=state(a,doc,Date.now());return doc} // idempotent — never restart
      const startMs=Date.now(),attemptNumber=(Array.isArray(doc.attempts)?doc.attempts.length:0)+1;
      // UNTIMED v2: endsAt "" (no deadline). TIMED: endsAt = startedAt + durationMinutes (server time only).
-     doc.activeAttempt={attemptNumber,startedAt:new Date(startMs).toISOString(),endsAt:timed?new Date(startMs+durationMs).toISOString():"",status:"started"};
+     // QA-3: the attempt keeps the duration it started with (durationMinutes, 0 = untimed) — a later setting change is for new attempts.
+     doc.activeAttempt={attemptNumber,startedAt:new Date(startMs).toISOString(),endsAt:timed?new Date(startMs+durationMs).toISOString():"",durationMinutes:durMinutes,status:"started"};
      // Phase 7A: a model-3 attempt starts at epoch 1 (pause/resume advance it) with no pauses yet.
      if(attemptModelVersion(a)>=3){doc.activeAttempt.attemptEpoch=1;doc.activeAttempt.pauseCount=0}
      doc.updatedAt=new Date(startMs).toISOString();
@@ -177,7 +178,7 @@ async function handler(request,deps={},obs=null){
       // Legacy untimed first meaningful write (#11): lazily establish a server startedAt for audit. This
       // never consumes an attempt and never blocks legacy writes (untimed-legacy canWrite ignores it).
       const attemptNumber=(Array.isArray(doc.attempts)?doc.attempts.length:0)+1;
-      doc.activeAttempt={attemptNumber,startedAt:savedAt,endsAt:"",status:"draft",lastSavedAt:savedAt};
+      doc.activeAttempt={attemptNumber,startedAt:savedAt,endsAt:"",durationMinutes:0,status:"draft",lastSavedAt:savedAt};
      }
      finalState=state(a,doc,Date.now());
      return doc;
@@ -350,7 +351,7 @@ async function handler(request,deps={},obs=null){
      if(act.status!=="paused"||ep!==exp)throw stale();
      const nowMs=Date.now(),rj=resumeRejection(a,doc,nowMs);
      if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
-     if(normalizeDurationMinutes(a.durationMinutes)>0){
+     if(attemptDurationMinutes(a,doc)>0){                                            // QA-3: the attempt's own timing, not the current setting
       const remaining=Math.max(0,Number(act.pausedRemainingMs)||0);                    // corrupt/missing → 0 (fails closed)
       act.runEndsAt=new Date(nowMs+remaining).toISOString();
      }

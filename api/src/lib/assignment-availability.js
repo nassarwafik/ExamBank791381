@@ -97,6 +97,20 @@ function normalizeDurationMinutes(value) {
 function isTimedAssignment(assignment) {
   return normalizeDurationMinutes(assignment && assignment.durationMinutes) > 0;
 }
+// QA-3 — a duration change applies to NEW attempts only (the timing dialog's promise), so a running attempt keeps the timing it was
+// STARTED with:
+//   1. its own stamp `durationMinutes` (written at start since QA-3; 0 = untimed);
+//   2. else a valid server endsAt — only a timed start writes one — gives its own minutes (endsAt − startedAt, at least 1);
+//   3. else (an attempt started before QA-3 with endsAt "", or a corrupt one) the assignment's current duration, exactly as before —
+//      so a timed attempt whose endsAt was lost still derives its deadline from startedAt and fails closed (B2A).
+// No active attempt → the assignment's duration.
+function attemptDurationMinutes(assignment, submission) {
+  const active = activeAttemptOf(submission);
+  if (active && typeof active.durationMinutes === "number" && Number.isFinite(active.durationMinutes)) return normalizeDurationMinutes(active.durationMinutes);
+  const startMs = active ? toMs(active.startedAt) : 0, endMs = active ? toMs(active.endsAt) : 0;
+  if (startMs && endMs && endMs > startMs) return Math.max(1, Math.round((endMs - startMs) / 60000));
+  return normalizeDurationMinutes(assignment && assignment.durationMinutes);
+}
 // ── B2A: unified attempt lifecycle ───────────────────────────────────────────
 // New assignments carry attemptModelVersion:2 (see manage-assignments). Version >= 2 means the server
 // requires an EXPLICIT startAttempt even for UNTIMED assignments (opening != starting). Assignments
@@ -177,7 +191,7 @@ function deriveAttemptStatus(submission) {
 // ambiguous boolean.
 function timerState(assignment, submission, nowMs = Date.now()) {
   const base = attemptState(assignment, submission, nowMs);
-  const durationMinutes = normalizeDurationMinutes(assignment && assignment.durationMinutes);
+  const durationMinutes = attemptDurationMinutes(assignment, submission);   // QA-3: the running attempt's own timing
   const timed = durationMinutes > 0;
   const modelVersion = attemptModelVersion(assignment);
   const requiresStart = timed || modelVersion >= 2;   // UNTIMED v2 also needs an explicit start
@@ -377,6 +391,6 @@ function resumeRejection(assignment, submission, nowMs = Date.now()) {
 module.exports = {
   ATTEMPT_POLICIES, normalizeAttemptPolicy, attemptPolicyOf, attemptEpochOf, isPausedAttempt, pauseRejection, resumeRejection,
   toMs, effectiveDueAt, getAssignmentAvailability, attemptState, actionRejection,
-  normalizeDurationMinutes, isTimedAssignment, activeAttemptOf, timerState, startRejection, writeRejection,
+  normalizeDurationMinutes, isTimedAssignment, attemptDurationMinutes, activeAttemptOf, timerState, startRejection, writeRejection,
   attemptModelVersion, requiresServerStart, normalizeEndReason, deriveAttemptStatus, extendRejection
 };
