@@ -311,7 +311,7 @@ async function handler(request,deps={},obs=null){
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{}),...(holds?{renderFailures:holds}:{})};
      codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;{const r=Number(doc.draftRevision);doc.draftRevision=(Number.isInteger(r)&&r>=0?r:0)+1}   // QA2-11: a device still holding the cleared draft's revision is stale
      snap={...lifecycle(fa,doc),...resultFields(doc)};
      // Audit: identity + timing + policy only — NEVER answers, grades of questions, tokens or exam content.
      auditDetails={assignmentId:a.assignmentId,attemptNumber:attempt.attemptNumber,startedAt:String(attempt.startedAt),endedAt,endReason,attemptPolicy:attemptPolicyOf(fa),pauseCount:Math.max(0,Number(active.pauseCount)||0),previousStatus,timed:!!ts.timed};

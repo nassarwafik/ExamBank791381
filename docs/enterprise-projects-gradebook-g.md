@@ -946,3 +946,13 @@ Finding #13 of QA round 2 on `main` (`36dc60e9`), a regression of QA-21.
   before QA-21. A formula with no `<v>` at all, or a number formula with an empty value, still stops the read and names the cell.
 - **Evidence.** One test added to `src/reports/xlsxRead.qa21.test.ts`. Fail-first on `36dc60e9`: failed. Mutations P7 (no exception)
   and P8 (any formula with a `<v>` accepted): KILLED.
+
+## QA round 2, phase 3 — a project reset never sends the template revision back (QA2-20)
+
+Finding #20 of QA round 2 on `main` (`36dc60e9`), a QA-7 gap.
+
+- **Defect.** `resetProject` deleted the class snapshot, so `templateRevision` restarted at 0 and a stage editor opened before the reset
+  (revision 0) could overwrite the fresh template.
+- **Fix (`project-tracker/service.js`).** An EDITED snapshot (revision > 0) is replaced by the first-create snapshot one revision later;
+  a never-edited one is deleted as before.
+- **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-20 block). Mutations R12–R14: KILLED.

@@ -1,7 +1,8 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
 const { isSafeExamId } = require("../lib/exam-governance-model");
 const { resolveGovernanceCapabilities, describeCapabilitySource, isCapabilityConfigurationBroken, governanceWorkflowMode, governanceIdentityStatus, governanceDirectorySnapshot } = require("../lib/exam-governance-capabilities");
 const { listGovernanceActors } = require("../lib/governance-directory");
@@ -83,6 +84,11 @@ async function handler(request, deps = {}, obs = null) {
     const expectedStateVersion = Number.isInteger(body.expectedStateVersion) ? body.expectedStateVersion : undefined;
     const note = typeof body.note === "string" ? body.note : undefined;
     if (action === "enable") {
+      // QA2-7 — governance is shared between teachers by design (21G plan §3), but a SAVED exam belongs to the teacher who saved it.
+      // Enabling governance on another teacher's saved exam id took it over: that teacher's next assignment silently used this
+      // teacher's published content and key (or was refused with NO_PUBLISHED_REVISION). Refused like a missing exam (tenancy rule).
+      const saved = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, "exams/" + examId + ".json");
+      if (saved && !canAccessSavedExam(saved, examOwnerOf(auth.user))) return { status: 404, jsonBody: { ok: false, code: "NOT_FOUND", error: "الامتحان غير موجود." } };
       const r = await GOV.enableGovernance(container, { examId, exam: body.exam, actor, requestId }, libDeps);
       return { status: 200, jsonBody: { ok: true, manifest: GOV.publicManifest(r.manifest), revision: r.meta || null, replayed: r.replayed, ...common } };
     }

@@ -594,3 +594,24 @@ Finding #6 of QA round 2 on `main` (`36dc60e9`).
   assignment with no running timed attempt still submits without an identity, as before.
 - **Evidence.** `api/tests/qa2-phase2-grading.test.js` (QA2-6 block, 3 tests). Fail-first on `edffc7df`: the stale submit returned 200;
   the 2 pins passed. Mutation Q14 (the attempt's own timing ignored): KILLED.
+
+## 20. QA round 2, phase 3 — governance ownership, archive vs start, draft revision on clear (QA2-7, QA2-8, QA2-11)
+
+Findings #7, #8 and #11 of QA round 2 on `main` (`36dc60e9`).
+
+- **QA2-7 — governance never takes over another teacher's saved exam (`exam-governance.js`).** Governance stays shared between teachers
+  by design (§3), but a SAVED exam belongs to the teacher who saved it. Teacher B enabling governance on teacher A's saved exam id took
+  it over: A's next assignment silently used B's published content and key, or was refused `NO_PUBLISHED_REVISION`. `enable` now loads
+  `exams/<examId>.json` and refuses another teacher's saved exam like a missing one (404, tenancy rule). An exam id nobody saved, and
+  every action on an exam its owner put under governance, are unchanged. A governance record created before this change is not rewritten.
+- **QA2-8 — an archived class never holds a member's open attempt (`student-submission.js` startAttempt, `manage-classrooms.js`).** The
+  archive and a start write DIFFERENT documents, so the archive's pending-work check could pass just before the attempt was written. Each
+  side now writes, then reads the other's state: a start re-reads the class inside its write and again after it commits (withdrawing the
+  attempt it just created, untouched, if the class was archived meanwhile: 403); the archive re-checks pending work after it commits and
+  withdraws itself (its own lifecycle fields restored, only if nothing changed them since: 409 PENDING_GRADING). At least one side always
+  sees the other.
+- **QA2-11 — clearing the draft advances `draftRevision`.** Submit, timeout finalization, integrity exit and the teacher's end cleared the
+  draft without advancing the revision, so on a legacy untimed assignment (no attempt identity) a second device holding the submitted
+  draft's revision passed the QA-8 check and graded its older copy as a new attempt.
+- **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-7, QA2-8, QA2-11 blocks). Fail-first on `0a649737` and mutations R1–R6,
+  R10, R11: see the phase-3 pull request (all KILLED).

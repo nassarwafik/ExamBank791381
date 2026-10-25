@@ -24,6 +24,16 @@ function myReaction(reactions, studentId) {
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used); `obs` is the request context withObservability passes as the third argument.
 // Neither changes runtime behavior.
+// QA2-9 — «شارك إنجازاتي مع الصف» is the student's CURRENT choice: turning it off withdraws their earlier events from classmates too (a
+// post's own shareWithClass flag only records the choice at the time it was made). The author always keeps seeing their own events;
+// teachers are unaffected. Reads one user document per distinct classmate author (bounded by the class size).
+async function authorsNotSharing(container, dl, posts, viewerId) {
+  const ids = [...new Set(posts.map(p => String(p && p.studentId || "")).filter(id => id && id !== String(viewerId)))];
+  const off = new Set();
+  for (const id of ids) { const u = await dl(container, "platform/users/" + id + ".json"); if (u && u.shareAchievements === false) off.add(id); }
+  return off;
+}
+
 async function handler(request, deps = {}, obs = null) {
     try {
       // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
@@ -40,8 +50,10 @@ async function handler(request, deps = {}, obs = null) {
       if (request.method === "GET") {
         if (!classId) return { status: 200, jsonBody: { ok: true, posts: [] } };
         // Privacy: a classmate's event is listed only when shared with the class; the student's own events always.
-        const listed = (await listJson(container, FEED_PREFIX + classId + "/")).filter(post => isVisibleToStudent(post, student.userId));
         const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+        const visible = (await listJson(container, FEED_PREFIX + classId + "/")).filter(post => isVisibleToStudent(post, student.userId));
+        const notSharing = await authorsNotSharing(container, dl, visible, student.userId);   // QA2-9
+        const listed = visible.filter(post => !notSharing.has(String(post.studentId || "")));
         const withheld = await withheldAssignmentIds(listed.map(assessmentMedalOf), id => dl(container, AP + id + ".json"));
         const posts = listed
           .filter(post => !withheld.has(assessmentMedalOf(post)))
@@ -71,13 +83,14 @@ async function handler(request, deps = {}, obs = null) {
       // A medal post that is not shown (its assignment's results are not released) cannot be reacted to either.
       const target = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, feedBlobName(classId, postId));
       const unreleasedMedal = !!target && (await withheldAssignmentIds([assessmentMedalOf(target)], id => (deps.downloadJsonOrNull || downloadJsonOrNull)(container, AP + id + ".json"))).size > 0;
+      const authorNotSharing = !!target && (await authorsNotSharing(container, deps.downloadJsonOrNull || downloadJsonOrNull, [target], studentId)).size > 0;   // QA2-9
       let updatedReactions = null;
       try {
         await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
           if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           // A student reacts to a VISIBLE classmate's event only — never their own, never an unshared one.
           if (String(current.studentId || "") === studentId) { const err = new Error("لا يمكنك التفاعل مع إنجازك."); err.httpStatus = 403; throw err; }
-          if (unreleasedMedal) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+          if (unreleasedMedal || authorNotSharing) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           if (!isVisibleToStudent(current, studentId)) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           const hadThisReaction = Array.isArray(current.reactions?.[reaction]) && current.reactions[reaction].includes(studentId);
           current.reactions = current.reactions && typeof current.reactions === "object" ? current.reactions : {};

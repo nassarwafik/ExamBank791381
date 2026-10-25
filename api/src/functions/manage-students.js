@@ -572,6 +572,7 @@ async function moveStudent(container, student, targetClassId, obs = null) {
       // old-class index removal below are only valid for the class this request read.
       if (String(current.classId || "") !== oldClassId) throw new StudentActionError(409, CONCURRENT_MOVE);
       current.classId = targetClassId;
+      current.profileRevision = profileRevisionOf(current) + 1;   // QA2-10: an edit form opened before the move is stale (409), never moves the student back
       current.updatedAt = new Date().toISOString();
       return current;
     });

@@ -461,3 +461,15 @@ Finding #1 of QA round 2 on `main` (`36dc60e9`), a regression of QA-19.
   (variants after the lockout, the correct password through a variant, guesses spread over spellings); the 2 pins passed (the QA-19
   login still works and clears the budget, a letters code keys on itself). Mutations P1 (typed key) and P2 (the success clear on the
   typed key): KILLED.
+
+## QA round 2, phase 3 — sharing off withdraws earlier posts; a move advances the profile revision (QA2-9, QA2-10)
+
+Findings #9 and #10 of QA round 2 on `main` (`36dc60e9`).
+
+- **QA2-9 (`achievement-feed.js`).** «شارك إنجازاتي مع الصف» is the student's CURRENT choice: turning it off now withdraws their earlier
+  events from classmates too (listing and reactions; the post's own `shareWithClass` only records the choice when it was made). The author
+  always sees their own events; teachers are unaffected; turning sharing on again shows them again. Owner decision proposed in the QA
+  round 2 report and applied here.
+- **QA2-10 (`manage-students.js` `moveStudent`).** A move (single or bulk) advances `profileRevision`, so an edit form opened before the
+  move gets 409 `STUDENT_STALE` instead of moving the student back (QA-7 gap).
+- **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-9, QA2-10 blocks). Mutations R7–R9: KILLED.

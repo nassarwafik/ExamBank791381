@@ -434,16 +434,36 @@ async function handler(request, deps = {}, obs = null) {
         if (pending > 0) return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pending, error: pendingClassMessage(action, pending) } };
       }
 
-      let updatedClassroom = null;
+      let updatedClassroom = null, beforeLifecycle = null;
+      const lifecycleNow = new Date().toISOString();
       try {
         updatedClassroom = await mut(container, blobName, current => {
           if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
-          return applyClassLifecycleAction(current, action, { actor: auth.user?.sub, now: new Date().toISOString() });
+          beforeLifecycle = current;
+          return applyClassLifecycleAction(current, action, { actor: auth.user?.sub, now: lifecycleNow });
         });
       } catch (mutateError) {
         if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
         if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
         throw mutateError;
+      }
+      // QA2-8 — the archive and a student's startAttempt write different documents: re-check pending work AFTER the archive committed.
+      // An attempt started in the meantime is now visible here: the archive is withdrawn (its own lifecycle fields restored, only if
+      // nothing changed them since) and refused like the pre-check. The start side re-reads the class after it commits, so at least one
+      // side sees the other.
+      if (action !== "unarchive" && isSafeId(classId) && beforeLifecycle) {
+        const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
+        const pendingAfter = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
+        if (pendingAfter > 0) {
+          const LIFECYCLE = ["status", "active", "archivedAt", "archivedBy", "archiveReason", "graduationYear", "updatedAt"];
+          await mut(container, blobName, cur => {
+            if (!cur || cur.archivedAt !== lifecycleNow) return cur;
+            const next = { ...cur };
+            for (const k of LIFECYCLE) { if (Object.prototype.hasOwnProperty.call(beforeLifecycle, k)) next[k] = beforeLifecycle[k]; else delete next[k]; }
+            return next;
+          });
+          return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pendingAfter, error: pendingClassMessage(action, pendingAfter) } };
+        }
       }
 
       await rec(container, {
