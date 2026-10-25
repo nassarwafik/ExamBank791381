@@ -956,3 +956,11 @@ Finding #20 of QA round 2 on `main` (`36dc60e9`), a QA-7 gap.
 - **Fix (`project-tracker/service.js`).** An EDITED snapshot (revision > 0) is replaced by the first-create snapshot one revision later;
   a never-edited one is deleted as before.
 - **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-20 block). Mutations R12–R14: KILLED.
+
+## QA round 2, phase 4a — invisible marks never decide a score-file name match (QA2-25)
+
+- **QA2-25 (`src/projects/scoreImport.ts` `importName`).** A name typed in Excel with an invisible mark (zero-width space, LRM / RLM,
+  bidi embedding, BOM, soft hyphen) did not match the same roster name, so the row was reported unmatched. These marks are removed
+  before the comparison, alongside the existing NFC normalisation and space collapsing; different names stay different.
+- **Evidence.** `src/qa2-phase4a-import.test.ts` (QA2-25 block). Fail-first on `52164efd`: the invisible-mark test failed; mutation S9:
+  KILLED.

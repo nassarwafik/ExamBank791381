@@ -473,3 +473,26 @@ Findings #9 and #10 of QA round 2 on `main` (`36dc60e9`).
 - **QA2-10 (`manage-students.js` `moveStudent`).** A move (single or bulk) advances `profileRevision`, so an edit form opened before the
   move gets 409 `STUDENT_STALE` instead of moving the student back (QA-7 gap).
 - **Evidence.** `api/tests/qa2-phase3-authority.test.js` (QA2-9, QA2-10 blocks). Mutations R7–R9: KILLED.
+
+## QA round 2, phase 4a — roster import and the pending-grading guard (QA2-12, QA2-18, QA2-19, QA2-24)
+
+Baseline `52164efd`. Every change keeps the existing authority; no new storage, route or field.
+
+- **QA2-12 (`src/bulkStudentsParse.ts`).** A roster with BOTH a student-number column («رقم الطالب», `studentId`, `code`,
+  `studentCode`) and an explicit identity column (`identityNumber`, «رقم الهوية», `תעודת זהות` …) used the FIRST of them, so a running
+  student number became the identity (accounts `000000001`, `000000002` …), the gap QA-2 closed for «رقم» / `id`. The explicit identity
+  column now wins; a student-number column is the identity only when there is none, and still before the weak «رقم» / `id`. Among
+  several student-number columns the first one is used, as before.
+- **QA2-18 (`manage-students.js` `bulkImport`).** A row refused for its own reason (no family name) claimed its identity in the batch, so
+  the VALID row with the same identity was reported «رقم الهوية مكرر داخل الملف» and nobody was created. Only a row that was actually
+  imported claims its identity now; two valid rows with one identity stay a QA-4 in-file duplicate (never a Phase S.3 recovery).
+- **QA2-19 (`api/src/lib/roster-input.js` `cleanText`).** QA-20 refused names made only of zero-width characters; a name made only of
+  other characters that draw nothing (Hangul fillers U+115F / U+1160 / U+3164 / U+FFA0, Braille blank U+2800) was still accepted. Those
+  now count as blank, like ZWNJ / ZWJ: kept inside a real word, refused on their own. The soft hyphen, combining grapheme joiner and
+  Mongolian vowel separator are removed like the other invisible marks.
+- **QA2-24 (`api/src/lib/pending-grading.js`, owner decision).** The roster guard read only the LATEST attempt, so a move or class archive
+  was allowed while an older attempt still awaited manual marks, and that marking left the class gradebook. Any completed attempt
+  whose grading status is `pendingReview` now blocks the removal (409 `PENDING_GRADING`), like an open attempt.
+- **Evidence.** `api/tests/qa2-phase4a-roster.test.js` (QA2-18, QA2-19, QA2-24) and `src/qa2-phase4a-import.test.ts` (QA2-12).
+  Fail-first on `52164efd`: 13 failed, 5 pins passed (18 tests across the two files, QA2-25 included); all pass on the head.
+  Mutations S1–S8, S10, S11: KILLED.

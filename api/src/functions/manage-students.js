@@ -1009,9 +1009,11 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             errors.push({ index: item.index, firstName: item.firstName, familyName: item.familyName, identityNumber: item.identityNumber, displayName: [item.firstName, item.familyName].filter(Boolean).join(" "), code: item.identityNumber || "", duplicate: true, error: "رقم الهوية مكرر داخل الملف." });
             continue;
           }
-          if (batchIdentity) seenInBatch.add(batchIdentity);
           try {
             const result = await importRow(item);
+            // QA2-18 — only a row that was actually imported claims its identity: an earlier row refused for its own reason (a missing
+            // family name) used to make the valid row with the same identity a «duplicate», so nobody was created.
+            if (batchIdentity) seenInBatch.add(batchIdentity);
             credentials.push({
               userId: result.student.userId,
               firstName: result.student.firstName,

@@ -38,15 +38,18 @@ function normalizeIdentityNumber(value) {
 function isInvisible(code) {
   return code <= 0x08 || (code >= 0x0E && code <= 0x1F) || (code >= 0x7F && code <= 0x9F) ||
     code === 0x200B || code === 0x200E || code === 0x200F || (code >= 0x202A && code <= 0x202E) ||
-    (code >= 0x2060 && code <= 0x2069) || code === 0xFEFF;
+    (code >= 0x2060 && code <= 0x2069) || code === 0xFEFF ||
+    code === 0x00AD || code === 0x034F || code === 0x180E;   // QA2-19: soft hyphen, combining grapheme joiner, Mongolian vowel separator
 }
+// QA2-19 — characters that are letters (kept inside a word) but draw nothing on their own: a value made only of them shows nothing.
+const BLANK_GLYPHS = /[\u200C\u200D\u115F\u1160\u3164\uFFA0\u2800\s]/g;
 function cleanText(value) {
   // Tab / newline / CR (0x09–0x0D) are whitespace: collapsed to one space below rather than deleted.
   const visible = Array.from(String(value ?? "").normalize("NFC")).filter(ch => !isInvisible(ch.codePointAt(0))).join("");
   const text = visible.replace(/\s+/g, " ").trim();
   // QA-20 — ZWNJ / ZWJ are kept INSIDE a word, but a value made only of them (and spaces) shows nothing: it is empty, so a
   // "name" nobody can see is refused exactly like a blank one.
-  return text.replace(/[\u200C\u200D\s]/g, "") ? text : "";
+  return text.replace(BLANK_GLYPHS, "") ? text : "";
 }
 
 const LIMITS = Object.freeze({ personName: 60, className: 80, grade: 40, schoolYear: 20, passwordMin: 6, passwordMax: 128 });
