@@ -518,3 +518,44 @@ Two supplementary mutations were also killed:
 
 **Validation.** See the PR body "Independent Reliability Review Fix 2" section for the exact counts on the pushed head.
 
+
+## 22. QA-9 — teacher analytics never average a mark that is open for a technical reason
+
+Finding #9 of the post-merge QA of `main` (`c244cbab`); owner decision: such a mark is **not** counted as 0.
+
+- **Defect.** `teacher-analytics-core.js` averaged the latest attempt's stored `percentage` for every submission, pending or not.
+  A hidden-test coding answer whose official grading was still open (the Runner busy or down → `retryable`, or simply not back
+  yet → `pending` / `dispatched`) carries a provisional mark in which that question counts 0. One such submission:
+  - pulled the class, assignment and KPI averages down, set the lowest mark and filled the «أقل من 60» band;
+  - put the student in «متابعة» with «معدل منخفض», and could add «تراجع ملحوظ في الأداء».
+
+  The gradebook and the student never saw a zero (17C/17D-A hold the mark under review), but the teacher's analytics did. The
+  same held for a question held for a render failure (Phase 21E.3, QA-1) that the teacher had not marked yet.
+- **Fix.** One canonical rule, `technicalGradingPending(attempt)` in `api/src/lib/technical-grading-hold.js`. It is true only while
+  `deriveGradingStatus` is `pendingReview` AND either:
+  1. official coding execution that can still change the mark is open (`autoGradingPending`; a corrupt target fails safe, a
+     well-formed compile-error review or a teacher-marked question does not count); or
+  2. a held render failure's question is not marked yet (its grade is still `manualReview`, or the attempt has no grade for it —
+     fail safe).
+
+  Analytics keep such an attempt as a **submission** and in **pendingReview**, but leave it out of every score: the KPI average,
+  highest and lowest; the grade distribution; class, assignment and student averages; the student's score trend and trend delta;
+  and therefore the «معدل منخفض» / «تراجع ملحوظ في الأداء» follow-up reasons. Once the Runner calls back, or the teacher marks the
+  question, the settled mark counts like any other. `teacher-analytics.js` and `teacher-analytics-ai.js` only consume the core, so
+  both endpoints follow.
+- **Unchanged.** An attempt pending only for an ordinary manual review (an essay the teacher has not marked) keeps counting with its
+  partial score, as Roadmap #23 pins (`canonical-grading-analytics-r23.test.js`, untouched). The topic breakdown already skipped every
+  unmarked question grade. No stored data changes.
+- **Evidence.** `api/tests/analytics-technical-pending-qa9.test.js`, 15 tests. The coding cases drive the real submission and callback
+  handlers (Runner busy, Runner down, dispatched, callback settles, teacher mark settles); the stored-shape cases cover the class /
+  student / render-hold variants and the unchanged ones.
+  - **Fail-first on `add00f92`.** 9 tests failed: 8 behavioural (for example the class of two: `average` 40 instead of 80, `lowest` 0;
+    the student with 90 then a Runner-pending attempt: `average` 45, `needsFollowUp` true) and the structural "one home" check. The 6
+    controls passed on the baseline.
+  - **Mutations.** 12 mutants (QA9-M1…M12), all KILLED: the rule never firing; the `pendingReview` gate dropped; the coding clause or
+    the render clause dropped; a marked hold still excluding; a hold with no grade not failing safe; `held:false` counted; every
+    pending attempt excluded; and each of the four analytics sites (class, KPI/distribution, student, assignment) keeping the
+    provisional mark. M5 first SURVIVED and was killed by an added test (a marked hold beside an unmarked essay). Files restored
+    byte-for-byte (sha256).
+- **Limitation.** Other surfaces that average results (the reports centre, the assignment detail statistics) keep their own existing
+  rules; they are outside this finding.
