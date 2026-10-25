@@ -9,6 +9,9 @@
 //     reference, entity or URL is ever resolved (the XML is scanned as text, never handed to a parser that could fetch);
 //   • an encrypted / password-protected entry, an unknown compression method or a part that is not there is an error, never a
 //     silent empty sheet.
+// QA-21 — nothing is coerced silently: a cell shown as a percentage («85%», stored 0.85) is read as the number shown (85); a
+// TRUE / FALSE cell stays the text «TRUE» / «FALSE» (never the number 1 / 0); a formula with no saved value, and a value beyond
+// the row / column bounds, stop the read with an error naming the problem instead of being dropped.
 
 export type XlsxReadCell = string | number | null;
 export class XlsxReadError extends Error {}
@@ -121,6 +124,26 @@ function firstSheetPath(workbook: string | null, rels: string | null): string {
   return "xl/worksheets/sheet1.xml";
 }
 
+/** QA-21 — which cell styles display a number as a percentage: styles.xml's cellXfs (by index) whose number format is a percent
+ *  (built-in 9 «0%» / 10 «0.00%», or a custom format code with a % that is not quoted or escaped). */
+function percentStyles(styles: string | null): Set<number> {
+  const out = new Set<number>();
+  if (!styles) return out;
+  const custom = new Map<number, string>();
+  for (const m of styles.matchAll(/<(?:\w+:)?numFmt\b([^>]*)\/?>/g)) custom.set(Number(attr(m[1], "numFmtId")), attr(m[1], "formatCode") || "");
+  const isPercentCode = (code: string) => /%/.test(code.replace(/"[^"]*"/g, "").replace(/\\./g, ""));
+  const xfs = styles.match(/<(?:\w+:)?cellXfs\b[^>]*>([\s\S]*?)<\/(?:\w+:)?cellXfs>/);
+  if (!xfs) return out;
+  let i = 0;
+  for (const m of xfs[1].matchAll(/<(?:\w+:)?xf\b([^>]*?)(?:\/>|>[\s\S]*?<\/(?:\w+:)?xf>)/g)) {
+    const id = Number(attr(m[1], "numFmtId") || 0);
+    if (id === 9 || id === 10 || (custom.has(id) && isPercentCode(custom.get(id) || ""))) out.add(i);
+    i++;
+  }
+  return out;
+}
+const OUT_OF_BOUNDS = "الملف أكبر من الحد المسموح للاستيراد (" + MAX_ROWS + " صف و" + MAX_COLS + " عمود). قسّمه إلى ملفات أصغر ثم أعد المحاولة.";
+
 /** The first worksheet of an .xlsx file as rows of cells (row / column positions kept; a missing cell is null). */
 export async function readXlsxRows(input: ArrayBuffer | Uint8Array): Promise<XlsxReadCell[][]> {
   const b = input instanceof Uint8Array ? input : new Uint8Array(input);
@@ -131,6 +154,7 @@ export async function readXlsxRows(input: ArrayBuffer | Uint8Array): Promise<Xls
   const sheet = await readPart(b, entries, path);
   if (sheet === null) throw new XlsxReadError(NOT_XLSX);
   const sharedXml = await readPart(b, entries, "xl/sharedStrings.xml");
+  const percent = percentStyles(await readPart(b, entries, "xl/styles.xml"));   // QA-21
   const shared: string[] = [];
   if (sharedXml) for (const m of sharedXml.matchAll(/<(?:\w+:)?si\b[^>]*>([\s\S]*?)<\/(?:\w+:)?si>/g)) shared.push(textOf(m[1]));
 
@@ -139,16 +163,23 @@ export async function readXlsxRows(input: ArrayBuffer | Uint8Array): Promise<Xls
     const at = refIndex(attr(m[1], "r") || "");
     if (!at) continue;
     const [r, c] = at;
-    if (r >= MAX_ROWS || c >= MAX_COLS) continue;
     const type = attr(m[1], "t") || "n", inner = m[2] || "";
     const v = inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/);
     const raw = v ? decodeXml(v[1]) : null;
+    // QA-21 — a formula whose value was never saved (written by a tool that does not calculate) has nothing to import: say so.
+    if (/<(?:\w+:)?f\b/.test(inner) && (raw === null || raw === "")) throw new XlsxReadError("الخلية " + (attr(m[1], "r") || "") + " تحتوي معادلة بلا قيمة محفوظة. افتح الملف في Excel واحفظه ثم أعد الاستيراد.");
     let value: XlsxReadCell = null;
     if (type === "s") value = raw !== null && shared[Number(raw)] !== undefined ? shared[Number(raw)] : null;
     else if (type === "inlineStr") value = textOf(inner.replace(/^[\s\S]*?<(?:\w+:)?is\b[^>]*>/, "").replace(/<\/(?:\w+:)?is>[\s\S]*$/, ""));
-    else if (type === "str" || type === "e" || type === "b") value = raw;
-    else if (raw !== null && raw.trim() !== "") { const n = Number(raw); value = Number.isFinite(n) ? n : raw; }
+    else if (type === "b") value = raw === null || raw === "" ? null : raw === "1" ? "TRUE" : "FALSE";   // QA-21: never the number 1 / 0
+    else if (type === "str" || type === "e") value = raw;
+    else if (raw !== null && raw.trim() !== "") {
+      const n = Number(raw);
+      // QA-21 — a percent-formatted cell is read as the number it SHOWS (0.85 shown «85%» → 85), rounded off float noise.
+      value = Number.isFinite(n) ? (percent.has(Number(attr(m[1], "s") || -1)) ? Math.round(n * 100 * 1e6) / 1e6 : n) : raw;
+    }
     if (value === null || value === "") continue;
+    if (r >= MAX_ROWS || c >= MAX_COLS) throw new XlsxReadError(OUT_OF_BOUNDS);   // QA-21: a value past the bounds is never dropped
     while (rows.length <= r) rows.push([]);
     const row = rows[r];
     while (row.length < c) row.push(null);
