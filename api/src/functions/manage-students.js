@@ -269,11 +269,12 @@ function identityFromInput(input) {
   return normalizeIdentityNumber(
     input?.identityNumber ??
     input?.idNumber ??
+    input?.nationalId ??
     input?.studentId ??
     input?.identity ??
-    input?.id ??
     input?.code ??
     input?.studentCode ??
+    input?.id ??          // QA-2: a generic row id is the last resort, never ahead of an explicit identity
     ""
   );
 }

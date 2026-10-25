@@ -44,10 +44,13 @@ const FAMILY_NAME_HEADERS = new Set([
   "שממשפחה", "משפחה"
 ].map(normalizeHeader));
 const IDENTITY_HEADERS = new Set([
-  "identitynumber", "idnumber", "studentid", "code", "id", "identity", "studentcode", "nationalid",
-  "رقمالهوية", "الهوية", "هوية", "رقم", "رقمالطالب",
+  "identitynumber", "idnumber", "studentid", "code", "identity", "studentcode", "nationalid",
+  "رقمالهوية", "الهوية", "هوية", "رقمالطالب",
   "תעודתזהות", "זהות", "מספרזהות", "תז"
 ].map(normalizeHeader));
+// QA-2 — generic headers that rosters also use for a running SERIAL column («رقم» 1, 2, 3 …). They are the identity only when
+// the file has no explicit identity header; otherwise every student would become 000000001, 000000002 ….
+const WEAK_IDENTITY_HEADERS = new Set(["id", "رقم"].map(normalizeHeader));
 const FULLNAME_HEADERS = new Set([
   "displayname", "name", "fullname", "studentname",
   "الاسمالكامل", "الاسمواللقب", "اسمالطالب",
@@ -111,7 +114,7 @@ function rowsFromJson(json: unknown): ParsedBulkStudent[] {
       ? { firstName: directFirst, familyName: directFamily }
       : splitName(x.displayName ?? x.name ?? x.studentName ?? "");
     const identityNumber = normalizeImportedIdentity(
-      x.identityNumber ?? x.idNumber ?? x.studentId ?? x.identity ?? x.id ?? x.code ?? x.studentCode ?? ""
+      x.identityNumber ?? x.idNumber ?? x.nationalId ?? x.studentId ?? x.identity ?? x.code ?? x.studentCode ?? x.id ?? ""   // QA-2: a row id last
     );
     return { firstName: names.firstName, familyName: names.familyName, identityNumber };
   });
@@ -121,13 +124,15 @@ function rowsFromCsv(text: string): ParsedBulkStudent[] {
   const rows = parseCsvRows(text);
   if (!rows.length) return [];
   const header = rows[0].map(normalizeHeader);
-  let iFirst = -1, iFamily = -1, iIdentity = -1, iFull = -1;
+  let iFirst = -1, iFamily = -1, iIdentity = -1, iWeakIdentity = -1, iFull = -1;
   header.forEach((h, idx) => {
     if (iFirst < 0 && FIRST_NAME_HEADERS.has(h)) iFirst = idx;
     else if (iFamily < 0 && FAMILY_NAME_HEADERS.has(h)) iFamily = idx;
     else if (iIdentity < 0 && IDENTITY_HEADERS.has(h)) iIdentity = idx;
+    else if (iWeakIdentity < 0 && WEAK_IDENTITY_HEADERS.has(h)) iWeakIdentity = idx;
     else if (iFull < 0 && FULLNAME_HEADERS.has(h)) iFull = idx;
   });
+  if (iIdentity < 0) iIdentity = iWeakIdentity;
   // A header row is required (canonical fields). If nothing recognizable matched, refuse rather than guess.
   if (iFirst < 0 && iFamily < 0 && iIdentity < 0 && iFull < 0) {
     throw new Error("لم أتعرف على أعمدة الملف. استخدم عناوين: firstName, familyName, identityNumber.");
