@@ -448,11 +448,16 @@ async function selfReportStages(container, projectCode, classroom, { studentId, 
 // Roadmap #33 — wipes ONLY this project's data for this class (every student progress blob under the project's
 // namespace, then the class snapshot). The classroom, the student accounts, assignments, exams and OTHER projects
 // are never touched (namespace isolation). Returns the count the handlers report and audit.
-async function resetProject(container, projectCode, classId) {
+// QA2-20 — the template revision must never go back: deleting an edited snapshot restarted it at 0, so a stage editor opened before the
+// reset (revision 0) could overwrite the fresh template. An EDITED snapshot (revision > 0) is replaced by the first-create snapshot one
+// revision later; a never-edited one is deleted as before (nothing an editor could have loaded differs from the factory).
+async function resetProject(container, projectCode, classId, now = new Date().toISOString()) {
   const ns = getStorageNamespace(projectCode);
+  const previousRevision = templateRevisionOf(await downloadJsonOrNull(container, ns.configName(classId)));
   const progressBlobs = await listBlobNames(container, ns.progressPrefix(classId));
   for (const name of progressBlobs) await deleteBlob(container, name);
-  await deleteBlob(container, ns.configName(classId));
+  if (previousRevision > 0) await mutateJsonWithRetry(container, ns.configName(classId), () => ({ ...snapshotFactory(projectCode)(classId, now), templateRevision: previousRevision + 1 }));
+  else await deleteBlob(container, ns.configName(classId));
   return { deletedProgressCount: progressBlobs.length };
 }
 

@@ -136,12 +136,20 @@ async function handler(request,deps={},obs=null){
    const rej=startRejection(a,s,Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
    const durMinutes=normalizeDurationMinutes(a.durationMinutes),timed=durMinutes>0,durationMs=durMinutes*60000;
-   let resultState=null;
+   let resultState=null,created=null;
+   // QA2-8 — the class archive and this start write DIFFERENT documents, so neither CAS sees the other: the archive's pending-work check
+   // could pass just before this attempt was written, leaving an open attempt in an archived class (the student locked out of it, the
+   // teacher's day blind to it). Each side now writes, then reads the other's state: the archive re-checks pending work after it commits
+   // (manage-classrooms), and a start re-reads the class after it commits and withdraws the attempt it just created if the class was
+   // archived meanwhile. At least one side always sees the other.
+   const classArchivedNow=async()=>{if(!student.classId)return false;const cls=await dl(c,"platform/classes/"+student.classId+".json");return !!cls&&normalizeClassStatus(cls)==="archived"};
+   const archivedError=()=>{const err=new Error("هذا الصف مؤرشف وانتهت السنة الدراسية.");err.httpStatus=403;return err};
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
+     if(await classArchivedNow())throw archivedError();   // QA2-8: an archive that landed after this request loaded the class
      const doc=current||defaultSubmission(id,student);
      const rj=startRejection(a,doc,Date.now()); // re-check under the lock (race backstop)
      if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
@@ -151,6 +159,7 @@ async function handler(request,deps={},obs=null){
      // UNTIMED v2: endsAt "" (no deadline). TIMED: endsAt = startedAt + durationMinutes (server time only).
      // QA-3: the attempt keeps the duration it started with (durationMinutes, 0 = untimed) — a later setting change is for new attempts.
      doc.activeAttempt={attemptNumber,startedAt:new Date(startMs).toISOString(),endsAt:timed?new Date(startMs+durationMs).toISOString():"",durationMinutes:durMinutes,status:"started"};
+     created={attemptNumber,startedAt:doc.activeAttempt.startedAt};
      // Phase 7A: a model-3 attempt starts at epoch 1 (pause/resume advance it) with no pauses yet.
      if(attemptModelVersion(a)>=3){doc.activeAttempt.attemptEpoch=1;doc.activeAttempt.pauseCount=0}
      doc.updatedAt=new Date(startMs).toISOString();
@@ -164,6 +173,11 @@ async function handler(request,deps={},obs=null){
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:failureBody(e)};
     throw e;
+   }
+   if(created&&await classArchivedNow()){
+    // QA2-8: withdraw ONLY the attempt this request created, untouched (nothing saved into it yet); anything else stays as it is.
+    await mut(c,name,async current=>{const act=current&&activeAttemptOf(current);if(act&&act.attemptNumber===created.attemptNumber&&String(act.startedAt)===created.startedAt&&!act.lastSavedAt){current.activeAttempt=null;current.updatedAt=new Date().toISOString()}return current});
+    return {status:403,jsonBody:{ok:false,error:archivedError().message}};
    }
    obs?.logInfo("student.submission.completed",{action:"startAttempt",assignmentId:id});
    return {status:200,jsonBody:{ok:true,state:resultState}};
@@ -248,7 +262,7 @@ async function handler(request,deps={},obs=null){
      const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{}),...(submitKey?{submitKey}:{})};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
     }));
@@ -295,7 +309,7 @@ async function handler(request,deps={},obs=null){
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
     }));
@@ -419,7 +433,7 @@ async function handler(request,deps={},obs=null){
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active),...(holds?{renderFailures:holds}:{})};
      codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
-     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;doc.draftRevision=draftRevisionOf(doc)+1;   // QA2-11
      resultAttempt=attempt;finalState=state(a,doc,nowMs);
      return doc;
     }));
