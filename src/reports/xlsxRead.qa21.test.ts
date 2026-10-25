@@ -61,6 +61,15 @@ describe("QA-21 the reader returns what the cell shows, or says why it cannot", 
     expect(await fail(book('<row r="1"><c r="A1"><f>SUM(B1:C1)</f></c></row>'))).toContain("A1");
     expect((await readXlsxRows(book('<row r="1"><c r="A1"><f>SUM(B1:C1)</f><v>90</v></c></row>')))[0]).toEqual([90]);
   });
+  // QA2-13 (QA round 2 on main 36dc60e9; a regression of the line above): a text formula that saved an EMPTY result is an empty
+  // cell, not "a formula without a value" — templates use =IF(x="","",x) and the whole import used to stop.
+  it("a text formula that saved an empty result (<v></v> or <v/>) is an empty cell; a text formula with NO saved value still stops", async () => {
+    expect(await readXlsxRows(book('<row r="1"><c r="A1"><v>5</v></c><c r="B1" t="str"><f>IF(C1="","",C1)</f><v></v></c></row>'))).toEqual([[5]]);
+    expect(await readXlsxRows(book('<row r="1"><c r="A1"><v>5</v></c><c r="B1" t="str"><f>IF(C1="","",C1)</f><v/></c></row>'))).toEqual([[5]]);
+    expect((await readXlsxRows(book('<row r="1"><c r="A1" t="str"><f>IF(C1="","",C1)</f><v>نص</v></c></row>')))[0]).toEqual(["نص"]);
+    expect(await fail(book('<row r="1"><c r="B1" t="str"><f>IF(C1="","",C1)</f></c></row>'))).toContain("B1");
+    expect(await fail(book('<row r="1"><c r="B1"><f>SUM(C1:D1)</f><v></v></c></row>'))).toContain("B1");   // a NUMBER formula with an empty value saved nothing
+  });
   it("a value past row 5000 stops the read (never dropped); an empty styled cell out there is harmless", async () => {
     expect(await fail(book('<row r="1"><c r="A1"><v>1</v></c></row><row r="5001"><c r="A5001"><v>7</v></c></row>'))).toContain("5000");
     expect(await readXlsxRows(book('<row r="1"><c r="A1"><v>1</v></c></row><row r="9000"><c r="A9000" s="1"/></row>'))).toEqual([[1]]);

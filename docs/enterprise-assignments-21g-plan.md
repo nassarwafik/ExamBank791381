@@ -563,3 +563,22 @@ Findings #14–#18 of the post-merge QA of `main` (`c244cbab`).
 - **Fail-first on `46ba9297`:** 10 failed.
 - **Mutations E1–E12:** all KILLED. E2 (the CAS replay check removed) first SURVIVED and was killed by an added test: two submits
   with the same key in flight at once. Files were restored byte-for-byte (sha256).
+
+## 18. QA round 2, phase 1 — the due date closes an untimed attempt (QA2-2)
+
+Finding #2 of QA round 2 on `main` (`36dc60e9`).
+
+- **Defect.** An untimed attempt (the default continuous policy) left open past the assignment's due date was neither writable
+  (the assignment is closed) nor finalizable: `finalizeTimedOutAttempt` answered «لم تنتهِ مدة المحاولة بعد» because an untimed
+  attempt never expired. The answers the student saved before the due date were graded only if the teacher ended the attempt by
+  hand; until then the student stayed «قيد التنفيذ» and the teacher saw «لم يسلّم».
+- **Fix — server (`assignment-availability.js` `timerState`).** A running untimed attempt is expired once the due date has passed,
+  and its effective end is then the due date — the rule a paused attempt already followed. Before the due date nothing changes (no
+  end, nothing to count down, writable); without a due date it never expires. The existing timeout finalization then grades the
+  server draft (`endReason: "timedOut"`, `endedAt` = the due date), and a teacher ending it records it as timed out.
+- **Fix — client (`StudentExamPage.tsx`).** The page finalizes an expired attempt whatever its kind (it used to test `timed` or
+  `paused` first). Against a server without this change nothing differs: such a server never reports an untimed attempt expired.
+- **Evidence.** `api/tests/qa2-phase1-login-untimed.test.js` (QA2-2 block, 4 tests on the real handlers) and
+  `src/StudentExamPage.untimedDue.qa2.test.tsx` (2 page tests). Fail-first on `36dc60e9`: 3 failed (finalize refused, teacher end not
+  timed out, the page never finalized); the 3 pins passed (before the due date, without a due date, a non-expired page). Mutations
+  P3–P6 (expiry removed, no end date, expiry ignoring the due date, the page testing `timed` again): all KILLED.

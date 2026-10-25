@@ -445,3 +445,19 @@ Findings #4, #19 and #20 of the post-merge QA of `main` (`c244cbab`).
   - EQUIVALENT: C2 (compare the raw identity text). `normalizeBulkStudents` already stores the canonical identity, so the two are
     the same value.
 - Files were restored byte-for-byte (sha256).
+
+## QA round 2, phase 1 — the login guess budget belongs to the identity (QA2-1)
+
+Finding #1 of QA round 2 on `main` (`36dc60e9`), a regression of QA-19.
+
+- **Defect.** The login throttle counts guesses per identifier (a tight identifier+client bucket and a looser identifier-only global
+  bucket) keyed on the code as typed. QA-19 made the account lookup fall back to the canonical identity, so every other spelling of one
+  identity («١٢٣٤٥٦٧٨٩», Persian digits, «123-456-789», «12345 6789», the identity without its leading zero) opened a fresh budget and
+  reached the same account's password check — after the lockout too; the correct password through a new spelling opened a session.
+- **Fix (`platform-login.js`).** The throttle key is the canonical identity whenever the code is identity-like (the same test and the
+  same `normalizeIdentityNumber` the lookup uses), for the reservation and both clears. A code with letters keys on itself, as before.
+  A legacy 8-digit code and the padded identity of the same digits now share one budget: more conservative, never looser.
+- **Evidence.** `api/tests/qa2-phase1-login-untimed.test.js` (QA2-1 block, 5 tests, real throttle). Fail-first on `36dc60e9`: 3 failed
+  (variants after the lockout, the correct password through a variant, guesses spread over spellings); the 2 pins passed (the QA-19
+  login still works and clears the budget, a letters code keys on itself). Mutations P1 (typed key) and P2 (the success clear on the
+  typed key): KILLED.

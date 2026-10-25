@@ -167,7 +167,10 @@ export async function readXlsxRows(input: ArrayBuffer | Uint8Array): Promise<Xls
     const v = inner.match(/<(?:\w+:)?v\b[^>]*>([\s\S]*?)<\/(?:\w+:)?v>/);
     const raw = v ? decodeXml(v[1]) : null;
     // QA-21 — a formula whose value was never saved (written by a tool that does not calculate) has nothing to import: say so.
-    if (/<(?:\w+:)?f\b/.test(inner) && (raw === null || raw === "")) throw new XlsxReadError("الخلية " + (attr(m[1], "r") || "") + " تحتوي معادلة بلا قيمة محفوظة. افتح الملف في Excel واحفظه ثم أعد الاستيراد.");
+    // QA2-13 — but a text formula that saved an EMPTY result (=IF(x="","",x): t="str" with <v></v> or <v/>) did save its value,
+    // the empty string: that is an empty cell, as it was before QA-21. Only a formula with no saved value at all is an error.
+    const savedEmptyText = type === "str" && /<(?:\w+:)?v\b/.test(inner);
+    if (/<(?:\w+:)?f\b/.test(inner) && !savedEmptyText && (raw === null || raw === "")) throw new XlsxReadError("الخلية " + (attr(m[1], "r") || "") + " تحتوي معادلة بلا قيمة محفوظة. افتح الملف في Excel واحفظه ثم أعد الاستيراد.");
     let value: XlsxReadCell = null;
     if (type === "s") value = raw !== null && shared[Number(raw)] !== undefined ? shared[Number(raw)] : null;
     else if (type === "inlineStr") value = textOf(inner.replace(/^[\s\S]*?<(?:\w+:)?is\b[^>]*>/, "").replace(/<\/(?:\w+:)?is>[\s\S]*$/, ""));

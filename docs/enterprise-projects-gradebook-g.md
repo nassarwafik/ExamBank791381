@@ -935,3 +935,14 @@ Findings #21 and #22 of the post-merge QA of `main` (`c244cbab`).
   - the first «· X» taken, or an ambiguous header guessed.
 
   Files were restored byte-for-byte (sha256).
+
+## QA round 2, phase 1 — a text formula that saved an empty result (QA2-13)
+
+Finding #13 of QA round 2 on `main` (`36dc60e9`), a regression of QA-21.
+
+- **Defect.** QA-21 stops the read on a formula with no saved value, but it also treated a text formula that saved an EMPTY result
+  (`=IF(x="","",x)`: `t="str"` with `<v></v>` or `<v/>`) as unsaved, so any template using such a formula could not be imported.
+- **Fix (`src/reports/xlsxRead.ts`).** A text formula that has a `<v>` element saved its value, the empty string: an empty cell, as
+  before QA-21. A formula with no `<v>` at all, or a number formula with an empty value, still stops the read and names the cell.
+- **Evidence.** One test added to `src/reports/xlsxRead.qa21.test.ts`. Fail-first on `36dc60e9`: failed. Mutations P7 (no exception)
+  and P8 (any formula with a `<v>` accepted): KILLED.
