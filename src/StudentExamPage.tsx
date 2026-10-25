@@ -305,7 +305,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     // attempt 2 active while attempt 1 already has a result). Otherwise the stale result would silently
     // suppress the countdown, timeout firing and resync during the active attempt.
     setResult(null);setStarted(true);
-    if((st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){void triggerTimeout()}
+    if(st.attemptExpired){void triggerTimeout()}   // timed, paused, or (QA2-2) untimed past the due date
     else{
      setExpired(false);
      // Phase 7A strict: an exit that was sent while this page went away (possibly lost) is completed now, before any
@@ -467,7 +467,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    if(e instanceof ApiError&&e.status===409){
     try{
      const st=await api<{state:State}>();
-     if(st.state.timed&&st.state.activeAttempt&&st.state.attemptExpired){setStarting(false);startingRef.current=false;await triggerTimeout();return}
+     if(st.state.activeAttempt&&st.state.attemptExpired){setStarting(false);startingRef.current=false;await triggerTimeout();return}
     }catch{/* fall through to plain error display */}
    }
    // Gate/result stays (we did NOT setStarted/setCoverStarted, did NOT replace exam, did NOT clear
@@ -510,7 +510,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // attempt (another tab submitted / it timed out) → full authoritative closed-state adoption via
    // applyServerAttemptState: obsolete local answers discarded, revision/savedRevision/dirtyAttempt reset,
    // lastSavedAt from server, no delayed save, beforeunload no longer warns. Then show the latest result.
-   if(rs&&st.activeAttempt&&(st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
+   if(rs&&st.activeAttempt&&st.attemptExpired){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
    if(rs&&st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return "resumed"}
    if(rs&&!st.activeAttempt){applyServerAttemptState(st);setResult(st.latestResult);setStarted(false);setExpired(false);setError("");return "stopped"}
   }catch{/* ignore */}

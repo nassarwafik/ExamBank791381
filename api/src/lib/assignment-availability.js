@@ -226,17 +226,23 @@ function timerState(assignment, submission, nowMs = Date.now()) {
   // Effective attempt end = min(teacher duration deadline, current effective due date). If the due date
   // is absent (0), the duration deadline stands alone. Only a TIMED attempt has a duration deadline.
   // A paused attempt has no running deadline; once the due date has passed, the due date is its end.
+  // QA2-2 — so does a running UNTIMED attempt: before the due date it has no end (nothing to count down); once the due date has
+  // passed, the due date is its end.
   const effEndsMs = paused
     ? (dueMs && dueMs < nowMs ? dueMs : 0)
-    : (timed && active && durationEndMs ? (dueMs ? Math.min(durationEndMs, dueMs) : durationEndMs) : 0);
+    : (timed && active && durationEndMs ? (dueMs ? Math.min(durationEndMs, dueMs) : durationEndMs)
+      : (!timed && active && dueMs && dueMs < nowMs ? dueMs : 0));
   // Boundary: now === effEndsMs is STILL valid; strictly after is expired (mirrors dueAt semantics).
   // A TIMED attempt with an unresolvable deadline is expired (fail closed). UNTIMED attempts (timed
-  // false) NEVER expire by time.
+  // false) never expire by DURATION. QA2-2 — but the due date closes them like any other attempt: an untimed attempt left open
+  // past the due date used to be neither writable (the assignment is closed) nor finalizable («لم تنتهِ مدة المحاولة بعد»), so
+  // the answers the student saved were never graded unless the teacher ended it by hand. It is now expired, and the timeout
+  // finalization grades the server draft exactly as for a timed or paused attempt.
   const attemptExpired = paused
     ? (!!dueMs && dueMs < nowMs)                              // paused: the stopped clock never runs out; the due date does
     : timed && !!active
       ? (timedDeadlineUnresolvable || (!!effEndsMs && effEndsMs < nowMs))
-      : false;
+      : (!!active && !!dueMs && dueMs < nowMs);
   // May begin a NEW attempt: requiresStart AND open AND attempts remain AND none currently active.
   // The attempt-limit check belongs HERE (admitting a new attempt), not on an already-started one.
   const canStartAttempt = requiresStart && base.published && base.availability === "open"

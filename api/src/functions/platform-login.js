@@ -67,6 +67,11 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     const container = getC();
+    // QA2-1 — the throttle counts guesses per IDENTITY, so it must key on the same canonical identity the account lookup below
+    // falls back to (QA-19). Keyed on the text as typed, every other spelling of one identity («١٢٣٤٥٦٧٨٩», «123-456-789»,
+    // «12345678», Persian digits…) opened a fresh budget and reached the same account's password check: the per-identity limit,
+    // and the lockout once it trips, no longer bound anything. A non-identity code (letters) keys on itself, as before.
+    const throttleKey = IDENTITY_LIKE.test(userCode) ? (normalizeIdentityNumber(userCode) || userCode) : userCode;
 
     // Reserve-before-verify (§2): COUNT this attempt atomically BEFORE any password work. A burst of
     // simultaneous guesses is serialized by optimistic concurrency; once the free band is exhausted (or the
@@ -74,7 +79,7 @@ async function handler(request, deps = {}, obs = null) {
     // conflict under heavy contention is treated as fail-closed (throttled), never as a free pass.
     let gate;
     try {
-      gate = await reserve(container, userCode, clientId, deps);
+      gate = await reserve(container, throttleKey, clientId, deps);
     } catch {
       obs?.logWarn("auth.login.throttled", { reason: "reserve_conflict", retryable: true });
       return { status: 429, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
@@ -88,7 +93,7 @@ async function handler(request, deps = {}, obs = null) {
     let isTeacher = false;
     try { isTeacher = validateBuilder(userCode, password); } catch { isTeacher = false; }
     if (isTeacher) {
-      await throttleClear(container, userCode, clientId, deps);
+      await throttleClear(container, throttleKey, clientId, deps);
       const token = mkBuilderToken(userCode);
       obs?.logInfo("auth.login.succeeded", { role: "teacher" });
       return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: await resolveTeacherDisplayName(container, userCode, deps), expiresInSeconds: TOKEN_TTL_SECONDS } };
@@ -150,7 +155,7 @@ async function handler(request, deps = {}, obs = null) {
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
     }
 
-    await throttleClear(container, userCode, clientId, deps);
+    await throttleClear(container, throttleKey, clientId, deps);
     const token = mkStudentToken(fresh);            // sv = fresh.authVersion === boundVersion (verified)
     obs?.logInfo("auth.login.succeeded", { role: "student" });
     return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS } };
