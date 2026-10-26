@@ -1,4 +1,5 @@
-const { uploadJsonConditional, listBlobNames, downloadManyJson } = require("./platform-storage");
+const { uploadJsonConditional, listBlobNames, downloadManyJson, downloadJsonWithEtagOrNull, deleteBlobConditional, isConcurrencyConflict } = require("./platform-storage");
+const { deriveGradingStatus } = require("./grading-status");
 
 const FEED_PREFIX = "platform/feed/";
 // Mirrors src/medals.ts's thresholds/ids exactly — kept in sync manually since the frontend
@@ -134,6 +135,37 @@ async function recordAchievementIfEligible(container, { classId, studentId, stud
   });
 }
 
+// Owner decision (QA round 2) — the assessment medal post FOLLOWS the student's current final result for the assignment: the LATEST
+// attempt's percentage, exactly what the dashboard and the profile count medals from. A lower final mark lowers its tier, a mark under
+// bronze withdraws the post, a higher one raises it again (a regrade or review can go both ways). It reads the committed submission
+// itself, so the review of an older attempt or a stale percentage never decides, and a latest attempt still awaiting the teacher changes
+// nothing. A game medal (medal.source "game") and any other event type are never touched. Any failure is swallowed (never breaks grading).
+async function syncAssessmentMedal(container, { classId, studentId, studentDisplayName, assignmentId, assignmentTitle, shareAchievements }) {
+  try {
+    if (!classId || !studentId || !assignmentId) return false;
+    const { value: sub } = await downloadJsonWithEtagOrNull(container, "platform/submissions/" + String(assignmentId) + "/" + String(studentId) + ".json");
+    const attempts = sub && Array.isArray(sub.attempts) ? sub.attempts.filter(a => a && typeof a === "object") : [];
+    const latest = attempts.length ? attempts[attempts.length - 1] : null;
+    if (!latest || deriveGradingStatus(latest) !== "final") return false;
+    const tier = medalTierFromPercentage(Number(latest.percentage));
+    const name = feedBlobName(classId, String(assignmentId) + "_" + String(studentId));
+    for (let i = 0; i < 5; i++) {
+      const { value: post, etag } = await downloadJsonWithEtagOrNull(container, name);
+      if (!post) return tier ? recordAchievementIfEligible(container, { classId, studentId, studentDisplayName, assignmentId, assignmentTitle, percentage: Number(latest.percentage), shareAchievements }) : false;
+      if (eventTypeOf(post) !== "medal" || (post.medal && post.medal.source === "game")) return false;
+      if ((post.medal && post.medal.tier) === tier) return false;
+      try {
+        if (!tier) await deleteBlobConditional(container, name, etag);
+        else await uploadJsonConditional(container, name, { ...post, tier, medal: { ...post.medal, tier } }, etag);
+        return true;
+      } catch (e) { if (!isConcurrencyConflict(e)) throw e; }                                  // a reaction landed meanwhile: re-read
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Lifetime recognition per student across EVERY class's feed (a student's history counts after a class move):
  * reactions RECEIVED (classmates + teacher, by type and total), non-medal achievement events, medal posts. One
@@ -183,5 +215,5 @@ function emptyRecognition() {
 module.exports = {
   FEED_PREFIX, REACTIONS, EVENT_TYPES, feedBlobName, medalTierFromPercentage,
   eventTypeOf, isVisibleToStudent, reactionCounts, receivedReactionsOf, publicPost,
-  recordAchievementEvent, recordAchievementIfEligible, aggregateRecognition, emptyRecognition
+  recordAchievementEvent, recordAchievementIfEligible, syncAssessmentMedal, aggregateRecognition, emptyRecognition
 };
