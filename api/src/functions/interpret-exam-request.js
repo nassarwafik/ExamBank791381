@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const fs = require("fs");
 const path = require("path");
 const {
@@ -499,7 +500,7 @@ app.http("interpretExamRequest", {
   authLevel: "anonymous",
   route: "interpret-exam-request",
 
-  handler: async request => {
+  handler: withAiRateLimit("interpret-exam-request", "ai-general", async request => {
     try {
       const auth = requireBuilderAuth(request);
 
@@ -733,7 +734,7 @@ app.http("interpretExamRequest", {
         }
       };
     }
-  }
+  })
 });
 
 // Exported only for unit testing the question-count clamping rule (clampInteger/normalizePlan

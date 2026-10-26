@@ -159,6 +159,10 @@ The frontend reads no runtime environment variables.
   needs is added there with its reason (`docs/enterprise-security-headers-d2.md`).
 - **Dependencies.** Dependabot opens weekly update PRs; `dependency-audit.yml` fails on high / critical advisories in shipped
   dependencies.
+- **AI rate limits.** Every AI route has a per-teacher budget (`api/src/lib/ai-rate-limit.js`; 429 with `Retry-After` when it
+  runs out); a new AI route registered without one fails `api/tests/ai-rate-limit-d3.test.js`.
+- **Monitoring.** Browser errors and CSP violations of signed-in sessions reach the API logs (content-free); `production-health.yml`
+  probes the live site every 30 minutes; alert rules to turn on are in `docs/operations-monitoring.md`.
 - **Backups.** Blob soft delete, versioning and point-in-time restore are settings the owner turns on in Azure; the
   procedure, the restore steps and a drill are in `docs/operations-backup-restore.md`.
 
