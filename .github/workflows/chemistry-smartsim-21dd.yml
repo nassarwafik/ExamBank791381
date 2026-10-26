@@ -46,8 +46,8 @@ jobs:
     timeout-minutes: 20
     name: 21D-D.1 chemistry exam in real Chromium (keyboard, pointer, touch, mobile RTL, reload, review, authoring, no WebGL)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -62,7 +62,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21dd1
         run: node --experimental-strip-types scripts/check-chemistry-browser-21dd1.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: chemistry-21dd1-browser
@@ -74,8 +74,8 @@ jobs:
     timeout-minutes: 40
     name: Chemistry mutation campaign — 43 isolated mutants (science, authority, grading, presentation)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -86,7 +86,7 @@ jobs:
       - run: npm ci --prefix api
       - name: Run the baseline and 43 source mutations with byte-for-byte restoration
         run: node scripts/mutate-chemistry-21dd1.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: phase-21dd1-mutations
@@ -97,8 +97,8 @@ jobs:
     timeout-minutes: 20
     name: 21D-D.2 reactions exam in real Chromium (keyboard, pointer, touch, mobile RTL, conservation, reload, review, authoring)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -113,7 +113,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21dd2
         run: node --experimental-strip-types scripts/check-chemistry-browser-21dd2.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: chemistry-21dd2-browser
@@ -125,8 +125,8 @@ jobs:
     timeout-minutes: 45
     name: Reactions mutation campaign (conservation, solver, authority, replay, grading, hidden answers, presentation)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -137,7 +137,7 @@ jobs:
       - run: npm ci --prefix api
       - name: Run the baseline and every source mutation with byte-for-byte restoration
         run: node scripts/mutate-chemistry-21dd2.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: phase-21dd2-mutations
@@ -148,8 +148,8 @@ jobs:
     timeout-minutes: 20
     name: 21D-D.3 virtual-lab exam in real Chromium (four labs, keyboard, pointer, touch, mobile RTL, reload, review, authoring)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -164,7 +164,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21dd3
         run: node --experimental-strip-types scripts/check-chemistry-browser-21dd3.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: chemistry-21dd3-browser
@@ -176,8 +176,8 @@ jobs:
     timeout-minutes: 75
     name: Virtual-lab mutation campaign (exact decimals, precision policy, units, lab models, authority, replay, grading, presentation)
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -188,7 +188,7 @@ jobs:
       - run: npm ci --prefix api
       - name: Run the baseline and every source mutation with byte-for-byte restoration
         run: node scripts/mutate-chemistry-21dd3.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: phase-21dd3-mutations

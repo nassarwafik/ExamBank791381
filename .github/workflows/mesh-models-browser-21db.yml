@@ -25,8 +25,8 @@ jobs:
     timeout-minutes: 20
     name: 21D-B WebGL depth picking context-loss mobile RTL
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -53,7 +53,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21db
         run: node --experimental-strip-types scripts/check-mesh-exam-browser-21db3.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mesh-models-21db-browser

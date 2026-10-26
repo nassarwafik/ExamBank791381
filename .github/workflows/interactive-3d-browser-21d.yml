@@ -19,8 +19,8 @@ jobs:
     timeout-minutes: 25
     name: 21D rotation zoom touch reset lifecycle exam views motion print
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -39,7 +39,7 @@ jobs:
           # and gated on the certification machine (docs/phase21d-3d-performance.md); every behavioural and visual check is gated here
           PERF_GATE: "0"
         run: node scripts/check-interactive-3d-browser-21d.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: interactive-3d-21d-browser

@@ -23,8 +23,8 @@ jobs:
     timeout-minutes: 20
     name: U.1 class bar, roster, student sheet and axe
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -42,7 +42,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-u1
         run: node scripts/check-classes-students-browser-u1.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: classes-students-u1-browser
