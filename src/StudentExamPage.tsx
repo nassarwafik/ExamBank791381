@@ -47,6 +47,7 @@ import {timerAnnouncement,timerNoticeKey,readTimerNotices,writeTimerNotices,save
 import {createExamAnnouncer} from "./student/exam/examAnnouncer";
 import {installKeyboardReveal,revealDelta} from "./student/exam/keyboardReveal";
 import {mergeStaleDraft} from "./student/exam/draftMerge";
+import {studentIdFromToken,readJournal,writeJournal,clearJournal,pruneExpiredJournals,type AnswerJournal} from "./student/exam/answerJournal";
 // Phase 21E.3 — assessment integrity: the record of questions whose renderer could not recover (see student/exam/renderFailures.ts).
 import {EMPTY_RENDER_FAILURES,reduceRenderFailure,failedQuestionIds,renderFailureReport,unavailablePages,renderFailureSubmitWarning,type RenderFailureState,type RenderFailureEvent,type RenderFailureReport} from "./student/exam/renderFailures";
 import type {SaveStateKind} from "./studentSaveState";
@@ -83,6 +84,7 @@ class ApiError extends Error{
 // QA-8 — the server refused a whole-draft write composed from an older draft (another device / tab saved since).
 const isDraftStale=(e:unknown)=>e instanceof ApiError&&e.status===409&&e.code==="DRAFT_STALE";
 const DRAFT_MERGED_TEXT="حُفظت إجابات لهذه المحاولة من جهاز أو نافذة أخرى، ودُمجت مع إجاباتك هنا. راجع إجاباتك ثم أعد المحاولة.";
+const JOURNAL_RESTORED_TEXT="أعدنا إجابات محفوظة على هذا الجهاز لم تكن قد وصلت إلى الخادم بسبب انقطاع الاتصال، ونحفظها الآن. راجع إجاباتك قبل التسليم.";
 // Roadmap #9: keep the Arabic message; append a subtle "(رمز التتبع: …)" ONLY for an unexpected server error
 // (5xx / network) that carries a correlation id — never for an expected 401/409 etc.
 function errText(e:unknown,fallback:string):string{
@@ -158,6 +160,18 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // the server does not report one) and its answers (the base of a per-question merge after a 409 DRAFT_STALE).
  const draftRevisionRef=useRef<number|null>(null),draftBaseRef=useRef<Answers>({}),draftMergedRef=useRef(false);
  const draftBaseField=()=>draftRevisionRef.current===null?{}:{expectedDraftRevision:draftRevisionRef.current};
+ // D1 — the device copy of answers the server has not confirmed (see answerJournal): written on every edit, rebased after a
+ // confirmed save that left newer edits, removed when nothing is unsent or when the page adopts the server draft.
+ const journalKeyRef=useRef({studentId:studentIdFromToken(token),assignmentId:assignment.assignmentId});
+ useEffect(()=>{journalKeyRef.current={studentId:studentIdFromToken(token),assignmentId:assignment.assignmentId}},[token,assignment.assignmentId]);
+ const [journalRestored,setJournalRestored]=useState(false);
+ const dropJournal=()=>clearJournal(journalKeyRef.current.studentId,journalKeyRef.current.assignmentId);
+ // A device copy may be restored only into the live writable attempt it was typed in (the recoverAndSave rule): modern = the same
+ // attempt identity, not expired; legacy untimed = the same generation.
+ const journalLive=(st:State,j:AnswerJournal<Answer>|null):j is AnswerJournal<Answer>=>{if(!j||!st.canWrite)return false;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
+  return rs?(!st.attemptExpired&&!!st.activeAttempt&&sameAttempt(attemptId(st),j.attempt)):Number(st.attemptsUsed||0)===j.generation};
+ const syncJournal=(unsent:boolean)=>{if(!unsent){dropJournal();return}
+  writeJournal<Answer>({...journalKeyRef.current,attempt:dirtyAttemptRef.current,generation:dirtyGenerationRef.current,base:draftBaseRef.current,answers:answersRef.current})};
  // QA-14 — one key per submit of one draft (attempt context + revision + generation): a retry of the SAME submit (a lost response)
  // re-sends the same key, so the server returns that submit's result instead of recording a second attempt.
  const submitKeyRef=useRef<{sig:string;key:string}|null>(null);
@@ -252,6 +266,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
      if(epoch!==saveEpoch.current)return;
      savedRevision.current=Math.max(savedRevision.current,myRevision);failureSyncRef.current=sentKey;
      if(resp&&typeof resp.draftRevision==="number"){draftRevisionRef.current=resp.draftRevision;draftBaseRef.current=snapshot}   // QA-8: the new base
+     syncJournal(revision.current>savedRevision.current);   // D1: nothing unsent → removed; newer edits → rebased on the confirmed draft
      // SERVER-authoritative saved time (#3): use response.savedAt, never Date.now().
      if(mountedRef.current){if(resp&&resp.savedAt)setLastSavedAt(String(resp.savedAt));setSaveFailed(false);setSaveError(false);setRetrying(false);setError("");setDirty(revision.current>savedRevision.current)}
      return;
@@ -292,12 +307,25 @@ export default function StudentExamPage({token,assignment,studentName,className,
    if(mountedRef.current&&epoch===saveEpoch.current){setSaving(false);setRetrying(false)}
   }
  }
- useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[]);
+ useEffect(()=>{mountedRef.current=true;pruneExpiredJournals();return()=>{mountedRef.current=false}},[]);
+ // D1 — the initial load found a device copy of unsent answers for THIS live writable attempt (the caller checked the identity /
+ // legacy generation against authoritative state). Merge it per question onto the server draft exactly like a stale-draft merge
+ // (questions changed on this device since the copy's base win; everything else is the server's), show it, and queue ONE ordinary
+ // save. Nothing unsent (the server already has it all) → nothing to do. Returns whether answers were restored.
+ function restoreJournal(st:State,journal:AnswerJournal<Answer>):boolean{
+  const server=st.draftAnswers||{},merged=mergeStaleDraft(journal.base,journal.answers,server);
+  if(JSON.stringify(merged)===JSON.stringify(server))return false;
+  answersRef.current=merged;hydrationRef.current=merged;setAnswers(merged);   // shown now; saved below (not via the edit effect)
+  revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);syncJournal(true);setJournalRestored(true);
+  const myRevision=revision.current,ctx=attemptId(st),epoch=saveEpoch.current;
+  saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(merged,myRevision,ctx,epoch));
+  return true;
+ }
  // Keep refs current for use inside window event handlers / async loops without re-subscribing.
  useEffect(()=>{onlineRef.current=online},[online]);
  useEffect(()=>{stateRef.current=state},[state]);
  useEffect(()=>{answersRef.current=answers},[answers]);
- useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;const st=r.state;applyServerAttemptState(st);anchorClock(st);
+ useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;const st=r.state;const journal=readJournal<Answer>(journalKeyRef.current.studentId,journalKeyRef.current.assignmentId);applyServerAttemptState(st);anchorClock(st);
   const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
   if(rs){
    if(st.activeAttempt){
@@ -312,12 +340,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
      // question is shown again — the same attempt is never continued. Only for the SAME attempt identity.
      const pending=pendingStrictExit(assignment.assignmentId);
      if(normalizeAttemptPolicy(st.attemptPolicy)==="strict"&&pending&&sameAttempt(pending,attemptId(st))){pendingExitRef.current=pending;exitSentRef.current=true;setStrictEnded(true)}
-     else if(pending)clearStrictExit(assignment.assignmentId);
+     else{if(pending)clearStrictExit(assignment.assignmentId);if(journalLive(st,journal))restoreJournal(st,journal)}
     }
    }else{setResult(st.latestResult);setStarted(false);clearStrictExit(assignment.assignmentId)}
-  }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
+  }else{setResult(st.latestResult);const restored=journalLive(st,journal)&&restoreJournal(st,journal);setStarted(restored||st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
- useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current),epoch=saveEpoch.current;dirtyAttemptRef.current=ctx;dirtyGenerationRef.current=Number(stateRef.current?.attemptsUsed||0);if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;if(epoch!==saveEpoch.current)return;/* context replaced before debounce fired */saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
+ useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current),epoch=saveEpoch.current;dirtyAttemptRef.current=ctx;dirtyGenerationRef.current=Number(stateRef.current?.attemptsUsed||0);syncJournal(true);if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;if(epoch!==saveEpoch.current)return;/* context replaced before debounce fired */saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
  // Phase 21E.3 — when the set of unavailable questions changes (a card failed, recovered, or the student moved on), the server's draft
  // record follows shortly: one ordinary saveDraft of the CURRENT snapshot (the same revision — never a new edit), so a time-out, a
  // strict exit or a teacher end grades the saved draft WITH the report. A pending edit's save carries it anyway (the body reads the ref).
@@ -361,6 +389,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=attemptId(st);dirtyGenerationRef.current=Number(st.attemptsUsed||0);
   setLastSavedAt(String(st.draftSavedAt||""));setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);
+  clearJournal(journalKeyRef.current.studentId,journalKeyRef.current.assignmentId);   // D1: the server draft replaces the local answers (an unsent copy is restored only on the initial load, read before this)
  },[]);
  // For an authoritative resync/reconcile that returns a LIVE active attempt, decide clean-vs-dirty. The SERVER
  // wins whenever this tab has no unsaved work: a DIFFERENT attempt, OR the SAME attempt while this tab is clean
@@ -454,7 +483,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // attempt generation — including a visibility resync sent WHILE the start request was in flight and answered with pre-start
    // state — is stale from here on and can never replace this attempt. Reads issued after this point are accepted as usual.
    invalidateReads();
-   setExam(body);resetRenderFailures();applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
+   const journal=readJournal<Answer>(journalKeyRef.current.studentId,journalKeyRef.current.assignmentId);   // D1: read before the hydration removes it
+   setExam(body);resetRenderFailures();applyServerAttemptState(r.state);anchorClock(r.state);if(journalLive(r.state,journal))restoreJournal(r.state,journal);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
    exitSentRef.current=false;setStrictEnded(false); // Phase 7A: a NEW strict attempt starts un-exited
    resetPager(); // new attempt → first question (presentation only)
    scrollTop();
@@ -493,7 +523,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   stateRef.current=st;setState(st);anchorClock(st);
   draftRevisionRef.current=st.draftRevision;draftBaseRef.current=server;draftMergedRef.current=true;
   answersRef.current=merged;hydrationRef.current=merged;setAnswers(merged);   // shown now; saved below (not via the edit effect)
-  revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);
+  revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);syncJournal(true);
   const myRevision=revision.current,ctx=attemptId(st),epoch=saveEpoch.current;
   saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(merged,myRevision,ctx,epoch));
   return true;
@@ -799,7 +829,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
   if(draftMergedRef.current){await settleMergedDraft();return}   // QA-8: another device's answers were merged in — the student reviews before submitting
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const submitKey=submitKeyFor(JSON.stringify(submitCtx)+"|"+submitRevision+"|"+Number(stateRef.current?.attemptsUsed||0));const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...failureField(),...identity,...draftBaseField(),submitKey})});invalidateReads();setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;dropJournal();scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(isDraftStale(e)){submittingRef.current=false;if(await mergeAfterStaleDraft()){await settleMergedDraft();return}}
@@ -817,7 +847,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   saveEpoch.current+=1;invalidateReads();if(timer.current){window.clearTimeout(timer.current);timer.current=null}
   const empty:Answers={};answersRef.current=empty;hydrationRef.current=empty;setAnswers(empty);resetRenderFailures();
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
-  dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
+  dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);dropJournal();
   setLastSavedAt("");setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);setError("");
   setResult(state.latestResult);setStarted(true);setCoverStarted(false);resetPager();scrollTop()}
  async function backWithoutSubmit(){
@@ -939,6 +969,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
   {policy==="strict"&&hasActive&&<div className="iex-strict-badge" role="note"><strong>وضع صارم</strong><span>مغادرة هذه الصفحة أو التبديل إلى تطبيق أو تبويب آخر تنهي المحاولة.</span></div>}
+  {journalRestored&&writable&&<div className="platform-notice" role="status" data-testid="journal-restored">{JOURNAL_RESTORED_TEXT}</div>}
   {expired&&!result&&<div className="platform-notice iex-error" role="status">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
   <div className="iex-progress">
    <div className="iex-position">

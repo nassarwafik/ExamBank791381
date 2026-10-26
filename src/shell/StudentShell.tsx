@@ -7,6 +7,7 @@ import NotificationBell, { type NotificationCenterProps } from "../notifications
 import InstallAppEntry from "../pwa/InstallAppEntry";
 import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
+import { clearAllJournals } from "../student/exam/answerJournal";
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
@@ -61,7 +62,8 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
             </button>
           )}
           <InstallAppEntry />
-          <button type="button" className="student-logout" onClick={onLogout}><IconLogout size={16} />تسجيل الخروج</button>
+          {/* D1 — the explicit logout removes every device copy of unsent exam answers (a 401 keeps them for the next sign-in). */}
+          <button type="button" className="student-logout" onClick={() => { clearAllJournals(); onLogout(); }}><IconLogout size={16} />تسجيل الخروج</button>
         </div>
       </header>
       <section className="student-shell">{children}</section>
