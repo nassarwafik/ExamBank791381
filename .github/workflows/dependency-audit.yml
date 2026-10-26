@@ -1,0 +1,47 @@
+name: Dependency audit
+# D2 (docs/enterprise-security-headers-d2.md §2) — known vulnerabilities in the dependencies that SHIP: the web app bundle (root
+# "dependencies") and the API (api/ "dependencies"). A HIGH or CRITICAL advisory fails the job. Development-only packages (test
+# runner, DOM emulation, build tools) are reported in the job summary but do not fail it: they never reach a student or the server.
+# Runs when a dependency manifest changes in a pull request, on every push to main, and weekly (new advisories appear without any
+# code change). The Coding Runner has no npm dependencies.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "api/package.json"
+      - "api/package-lock.json"
+      - ".github/workflows/dependency-audit.yml"
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: npm audit — shipped dependencies (high / critical fail)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Web app — shipped dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: API — shipped dependencies
+        run: npm audit --omit=dev --audit-level=high --prefix api
+      - name: Report — every dependency, development included (informational)
+        if: always()
+        run: |
+          {
+            echo "### npm audit — all dependencies (informational)"
+            echo '```'
+            npm audit || true
+            echo '--- api ---'
+            npm audit --prefix api || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

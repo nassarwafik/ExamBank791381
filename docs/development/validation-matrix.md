@@ -11,7 +11,7 @@ proves readiness before pushing and how the reviewer re-verifies.
 | C1 | Root unit / API / UI tests | `npm test` (Vitest: `src/**`, `api/tests/**`, `scripts/**`) | Quality Gate, every push / PR | app, API handlers in-process against an in-memory blob container, script guards, the repository governance contract |
 | C2 | Lint | `npm run lint` (oxlint; fails on error-level findings only) | Quality Gate | no rules-of-hooks or other error-level findings; warning baseline reported, not fatal |
 | C3 | TypeScript build / typecheck | `npx tsc -b` | Quality Gate (inside `npm run build`) | the app and tooling type-check with the project references |
-| C4 | Application build | `npm run build` (= `tsc -b` + `vite build` + bundle guard) | Quality Gate | the production bundle builds |
+| C4 | Application build | `npm run build` (= `tsc -b` + `vite build` + bundle guard + CSP check) | Quality Gate | the production bundle builds |
 | C5 | Bundle guard | `npm run check:bundle` (after a build) | Quality Gate (inside `npm run build`) | initial JavaScript graph within its gzip budget; heavy modules and learning visuals stay lazy |
 | C6 | Runner unit suite | `npm --prefix runner test` | Runner security & smoke, every push / PR | gateway, auth, registry, queue, journal, target authority, admission; no Docker |
 | C7 | Docker security / smoke tests | `npm --prefix runner run test:docker:security` | Runner security & smoke (after building the images) | real sandboxes: isolation, limits, cleanup, practice end-to-end |
@@ -24,6 +24,8 @@ proves readiness before pushing and how the reviewer re-verifies.
 | C14 | Repository governance contract | part of C1 (`scripts/repo-governance-contract.test.mjs`) | Quality Gate | `AGENTS.md`, the development documents and the PR template exist and keep their non-negotiable rules |
 | C15 | UX visual regression | `node scripts/ux-visual-gate.mjs` with `BASE_DIST` / `HEAD_DIST` (UX-R19b; see the script's header) | UX-R19b visual regression gate (`ux-visual-regression-r19b.yml`, path-filtered: `src/**`, `public/**`, the capture harness, the manifest), one job per viewport and theme (light and dark, UX-R18c2) | no page or scene the UX-R harness captures changes by more than 12 levels per channel unless the PR declares it in `docs/ux-r/visual-changes.json`; no harness check fails on the head only |
 | C16 | Projects in real Chromium | each `node scripts/check-project-*-browser-*.mjs` with `PLAYWRIGHT_CORE_DIR` / `AXE_CORE_DIR` / `CHROMIUM_PATH` and `DIST` (see each script's header) | Projects Real Chromium Gate (`projects-browser-g.yml`, path-filtered: the project code and API, the app shell, `src/ui/**`, the browser harness, the checks), one job running every project check (each step runs even after an earlier one failed) | the project tracker's teacher and student journeys (P3, P4, P6, P7, P8, P10, G1, G3) in the production build over the real API: stored documents, keyboard and touch, no sideways scroll, axe without serious or critical violations; `scripts/projects-browser-ci.test.mjs` (part of C1) fails if a project check is not wired into the workflow |
+| C17 | Content-Security-Policy of the built page | `npm run check:csp` (after a build; D2) | Quality Gate (inside `npm run build`) | the built `dist/index.html` carries exactly one policy meta, before every script and stylesheet, with no `'unsafe-eval'`, `script-src` limited to `'self'` + the exact hash of every inline script, `object-src 'none'` |
+| C18 | Dependency audit | `npm audit --omit=dev --audit-level=high` and the same with `--prefix api` | Dependency audit (`dependency-audit.yml`: PRs that change a dependency manifest, every push to `main`, weekly) | no high or critical advisory in a dependency that ships (web bundle, API); development-only advisories are listed in the job summary |
 
 ## 2. Required set per change class
 
@@ -61,6 +63,11 @@ Notes:
   authority). Pure refactors with unchanged tests do not need a new campaign but must keep the existing ones green.
 - Any new dependency (root, `api/`, `runner/`) is itself a governance change: name it, justify it, and show the lockfile
   diff. Documentation and governance phases add none.
+- **Dependabot pull requests (D2)** are ordinary PRs: C1–C5 and C18 must be green on their head and the owner merges them by
+  hand. GitHub gives Dependabot runs no repository secrets, so their `Build and Deploy Job` (PR preview) fails unless the owner
+  stores the Static Web Apps token as a Dependabot secret; report it as "no preview — job failed (no secret for Dependabot)", not
+  as a code failure. A new policy source the app needs (another origin, a worker type) is added in
+  `scripts/content-security-policy.ts` with its reason, never by loosening `script-src`.
 
 ## 3. Order of operations before the handoff
 

@@ -133,9 +133,13 @@ describe("RF2 — cross-origin sub-resource policy compatible with the deliberat
 });
 
 describe("RF invariants that must NOT change", () => {
-  it("the main application's headers / CSP are untouched: staticwebapp.config.json is byte-identical in meaning to the baseline and index.html carries no CSP / sandbox meta", () => {
+  // D2 changed the application's headers ON PURPOSE (security headers, docs/enterprise-security-headers-d2.md). What this guard protects
+  // stays: the runtime's isolation never relies on the application's headers — no global CSP / CORP / sandbox reaches the runtime
+  // responses (the app's CSP is a build-time meta in index.html only), and the source index.html declares none.
+  it("the main application's headers never carry a CSP / CORP / sandbox that could reach the runtime: staticwebapp.config.json is exactly the D2 set and index.html declares no CSP / sandbox meta", () => {
     const swa = JSON.parse(fs.readFileSync(path.join(repo, "public/staticwebapp.config.json"), "utf8"));
-    expect(swa).toEqual({ platform: { apiRuntime: "node:22" }, routes: [{ route: "/sw.js", headers: { "Cache-Control": "no-cache" } }, { route: "/manifest.webmanifest", headers: { "Cache-Control": "no-cache" } }], mimeTypes: { ".webmanifest": "application/manifest+json" } });
+    expect(swa).toEqual({ platform: { apiRuntime: "node:22" }, globalHeaders: { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "SAMEORIGIN", "Referrer-Policy": "strict-origin-when-cross-origin", "Strict-Transport-Security": "max-age=31536000", "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), midi=(), fullscreen=(self)", "Cross-Origin-Opener-Policy": "same-origin" }, routes: [{ route: "/sw.js", headers: { "Cache-Control": "no-cache" } }, { route: "/manifest.webmanifest", headers: { "Cache-Control": "no-cache" } }], mimeTypes: { ".webmanifest": "application/manifest+json" } });
+    expect(JSON.stringify(swa)).not.toMatch(/Content-Security-Policy|Cross-Origin-Resource-Policy|Cross-Origin-Embedder-Policy|sandbox/i);
     const html = fs.readFileSync(path.join(repo, "index.html"), "utf8");
     expect(html).not.toMatch(/Content-Security-Policy|Cross-Origin-Resource-Policy|sandbox/i);
     expect(fs.readFileSync(path.join(repo, "public/sw.js"), "utf8")).toMatch(/\/api\//);            // the service worker still never serves /api/

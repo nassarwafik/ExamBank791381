@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && npm run check:bundle",
+    "build": "tsc -b && vite build && npm run check:bundle && npm run check:csp",
     "lint": "oxlint",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
+    "check:csp": "node scripts/check-csp-meta.mjs dist/index.html",
     "preview": "vite preview",
     "test": "vitest run",
     "build:exam-library": "node scripts/build-791381-library.cjs",
@@ -36,7 +37,10 @@
     "happy-dom": "^20.14.5",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "dompurify": "3.4.17"
   }
 }

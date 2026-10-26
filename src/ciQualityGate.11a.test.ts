@@ -33,7 +33,7 @@ describe("CI quality gate (Phase 11A)", () => {
   });
   it("the build script keeps typecheck + bundle guard; lint is oxlint with rules-of-hooks at error", () => {
     const pkg = JSON.parse(read("../package.json")) as { scripts: Record<string, string> };
-    expect(pkg.scripts.build).toBe("tsc -b && vite build && npm run check:bundle");
+    expect(pkg.scripts.build).toBe("tsc -b && vite build && npm run check:bundle && npm run check:csp");   // D2 appended the CSP gate (C17)
     expect(pkg.scripts.lint).toBe("oxlint");
     const oxlint = JSON.parse(read("../.oxlintrc.json")) as { rules: Record<string, unknown> };
     expect(oxlint.rules["react/rules-of-hooks"]).toBe("error");
