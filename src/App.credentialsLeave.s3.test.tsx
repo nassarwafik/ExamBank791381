@@ -7,6 +7,14 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 
+// The App's own confirmations use useDeferredConfirm: the dialog is a lazy chunk prefetched when the browser is idle after sign-in, and
+// a confirm asked before that renders the lazy dialog on demand, which suspends once and is revealed only after React's Suspense
+// throttle (~300 ms). Under a fully loaded parallel run that reveal outlived the default 1 s wait once (QA round 2). This test is about
+// the leave guard, not the chunk: the App gets the eager useConfirm, whose contract and return shape are identical (useDeferredConfirm.tsx),
+// so the guard's dialog renders in the same commit. The lazy path keeps its own tests (App.sharedConfirm.21e1, App.confirmPrefetch.21e1s2,
+// deferredConfirmPrefetched.21e1s2).
+vi.mock("./ui/useDeferredConfirm", async () => ({ useDeferredConfirm: (await import("./ui/useConfirm")).useConfirm }));
+
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const CLASSES = [{ classId: "c1", name: "الحادي عشر", grade: "11", active: true, status: "active", studentCount: 2 }];
 const S = (userId: string, firstName: string, identity: string) => ({ userId, code: identity, identityNumber: identity, firstName, familyName: "حسن", displayName: firstName + " حسن", classId: "c1", active: true, archived: false, createdAt: "", updatedAt: "", lastLoginAt: "", submittedAssignmentsCount: 0, likesCount: 0 });

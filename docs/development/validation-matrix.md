@@ -122,3 +122,17 @@ brought back to what it certifies, never loosened:
 - Vitest (`vite.config.ts`): `test.exclude` = Vitest's defaults plus `**/.claude/worktrees/**`, so an agent's scratch git worktree is
   never collected as a second, stale copy of the suite (it was, during QA round 2). Proof: a failing test planted in
   `.claude/worktrees/qa-probe/` fails the run with the baseline config and is not collected with this one.
+
+## 8. `App.credentialsLeave.s3` — a lazy-dialog reveal raced the default wait (fixed at the root)
+
+During QA round 2 phase 4c, one full local run failed `src/App.credentialsLeave.s3.test.tsx` («another page or the logout asks…»)
+with `no leave confirm`; it passed in isolation and on the re-run. Root cause: the App's confirmations use `useDeferredConfirm`,
+whose dialog is a lazy chunk prefetched only when the browser is idle after sign-in. The test navigates right after sign-in, so the
+leave guard's confirm rendered the lazy dialog on demand; it suspends once and React reveals it only after its Suspense throttle
+(~300 ms), which under a fully loaded parallel run outlived the default 1 s `waitFor`. Proof: delaying only that lazy loader
+(`lazyWithRetry` key `shared-confirm-dialog`) by 3 s makes the old test fail at the same step every time.
+
+Fix: the test gives the App the eager `useConfirm` (identical contract and return shape, see `src/ui/useDeferredConfirm.tsx`), so
+the guard's dialog renders in the same commit. No assertion and no timeout changed; the lazy path keeps its own tests
+(`App.sharedConfirm.21e1`, `App.confirmPrefetch.21e1s2`, `deferredConfirmPrefetched.21e1s2`). The test still fails when the guard
+never asks, or when «البقاء في الصفحة» leaves anyway (both planted and caught). It is not added to §4: it is no longer timing-sensitive.
