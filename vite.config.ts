@@ -3,10 +3,12 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
+import { contentSecurityPolicyPlugin } from './scripts/content-security-policy.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // D2 — the built index.html carries the application's Content-Security-Policy (scripts/content-security-policy.ts).
+  plugins: [react(), contentSecurityPolicyPlugin()],
   // Phase L.6a — in the deployed app a learning module body comes ONLY from the API (src/learning/content/moduleBodySource.ts →
   // moduleBodySource.server.ts). Under Vitest that one module resolves to the authored-content loader instead, so suites that read
   // the real book need no server; the API transport is tested on its own. Never applies to `vite build`.

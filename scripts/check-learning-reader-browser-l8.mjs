@@ -200,7 +200,7 @@ const TARGETS = () => {
   return out;
 };
 async function audit(page, screen, vp) {
-  await page.addScriptTag({ content: axeSource });
+  await page.evaluate(axeSource + "\n;0");   // D2: evaluated, not an inline <script> — the production CSP stays in force
   const result = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] });
     return r.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, targets: v.nodes.slice(0, 3).map(n => n.target.join(" ")) }));

@@ -154,6 +154,11 @@ The frontend reads no runtime environment variables.
   requires a short-lived signed URL. `api/tests/route-auth-inventory-11a.test.js` fails CI if any other route
   answers an anonymous request.
 - **Storage growth.** Some dashboards list every assignment document; keep an eye on latency as history grows.
+- **Content-Security-Policy.** The built `index.html` carries a strict policy (`scripts/content-security-policy.ts`, checked
+  by `npm run check:csp`); static security headers are in `public/staticwebapp.config.json`. A new external origin the app
+  needs is added there with its reason (`docs/enterprise-security-headers-d2.md`).
+- **Dependencies.** Dependabot opens weekly update PRs; `dependency-audit.yml` fails on high / critical advisories in shipped
+  dependencies.
 - **Backups.** Blob soft delete, versioning and point-in-time restore are settings the owner turns on in Azure; the
   procedure, the restore steps and a drill are in `docs/operations-backup-restore.md`.
 

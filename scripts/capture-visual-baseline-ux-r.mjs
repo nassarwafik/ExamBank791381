@@ -751,7 +751,7 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       if (!(chart.box >= 160 && chart.canvas >= 160)) errors.push("report chart has no usable height: " + JSON.stringify(chart));
     }
     if (audit && reached) {
-      await page.addScriptTag({ content: axeSource });
+      await page.evaluate(axeSource + "\n;0");   // D2: evaluated, not an inline <script> — the production CSP stays in force
       m.axe = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] }))
         .violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, targets: v.nodes.slice(0, 6).map(n => n.target.join(" ")), detail: v.nodes.slice(0, 3).map(n => (n.any[0] || n.all[0] || n.none[0] || {}).message || "") })));
       // Keyboard: Tab from the top of the document. A stop "shows focus" when focusing it visibly changes it or one of its three

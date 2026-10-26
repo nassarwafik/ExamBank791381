@@ -90,7 +90,7 @@ const check = (where, ok, what) => (ok ? pass(where, what) : fail(where, what));
 const entry = (sid, stageId) => { const d = api.mem.getJson(NS.progressName("c1", sid)); return d && d.stages ? d.stages[stageId] : undefined; };
 
 async function axe(page, where) {
-  await page.addScriptTag({ content: axeSource });
+  await page.evaluate(axeSource + "\n;0");   // D2: evaluated, not an inline <script> — the production CSP stays in force
   const result = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] });
     return r.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, targets: v.nodes.slice(0, 3).map(n => n.target.join(" ")) }));
