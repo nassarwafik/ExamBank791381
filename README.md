@@ -154,6 +154,8 @@ The frontend reads no runtime environment variables.
   requires a short-lived signed URL. `api/tests/route-auth-inventory-11a.test.js` fails CI if any other route
   answers an anonymous request.
 - **Storage growth.** Some dashboards list every assignment document; keep an eye on latency as history grows.
+- **Backups.** Blob soft delete, versioning and point-in-time restore are settings the owner turns on in Azure; the
+  procedure, the restore steps and a drill are in `docs/operations-backup-restore.md`.
 
 ## Change workflow
 
