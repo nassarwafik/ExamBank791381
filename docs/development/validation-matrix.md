@@ -79,6 +79,32 @@ Policy (`AGENTS.md` §12): not patched inside unrelated PRs; one re-run (owner-t
 a second failure on the same head is real. Local isolated re-run of the file is acceptable evidence that the failure was
 load-related, and is reported together with the CI attempt numbers.
 
+### 4.1 Known capture flake — `studio-home`, the «الموديل» select (visual gate)
+
+The visual gate (`ux-visual-regression-r19b.yml`, `scripts/ux-visual-gate.mjs`) occasionally reports an **undeclared**
+`studio-home` change of about 850 pixels on one viewport / theme job. Seen twice in 19 runs after UX-R19b-fix2:
+G2 (phone, light, run 40075521642) and the `App.credentialsLeave.s3` fix (tablet, dark, run 40271501859). Both passed on the
+job's one re-run.
+
+- **What moves:** only the text «GLM-5.3-Flash — افتراضي» inside the native `<select>` of the builder's AI request card
+  (`.model-picker select` in `src/App.css`), drawn exactly 1 px higher or lower. Every other pixel is identical, and shifting the
+  image by that 1 px leaves no difference. The direction differed between the two runs.
+- **What it is not** (checked when it was investigated):
+  - not a code change: the production build is byte-identical across rebuilds and across a second checkout, as CI builds the base;
+  - not web-font timing: delaying either font subset or both does not move the text, and the Arabic and Latin subsets have
+    identical vertical metrics;
+  - not Chrome field trials: Playwright disables them.
+- **Likely cause:** the select sits on a fractional page offset and centres its text with fractional metrics, so the glyph
+  baseline is rounded either way by Google Chrome stable on some CI runners. It never reproduced with Playwright's Chromium
+  (14 local captures, identical).
+- **Policy (same as above):**
+  - not patched inside unrelated PRs;
+  - when the report shows only this text moving by 1 px, one re-run of that job;
+  - a second failure on the same head is real, as is any other `studio-home` change.
+  - The PR names the job, the run attempt and this section.
+- **Not done:** the gate's threshold and rules are unchanged (no tolerance for 1 px text shifts). A CSS change to the select
+  was not made either, because it cannot be shown to help while the shift does not reproduce outside CI.
+
 ## 5. Phase G-CI2 — browser-gate artifacts
 
 **The defect.** Six browser gates uploaded their harness folder without `include-hidden-files: true`: L8, U1, 21a2, 21b, 21c and
