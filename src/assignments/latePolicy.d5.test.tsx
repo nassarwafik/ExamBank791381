@@ -127,6 +127,9 @@ describe("the student", () => {
     expect(container.textContent).toBe("سُلّمت المحاولة متأخرة 2 ساعة، فخُصم 10٪ (0.8 علامة). العلامة قبل الخصم: 8.");
     rerender(<LateResultNote result={{ late: { minutesLate: 90, deductionPercent: 10, waived: false } }} showMarks={false} />);
     expect(container.textContent).toBe("سُلّمت المحاولة متأخرة 2 ساعة، ويُخصم 10٪ من علامتها.");
+    // the marks reached the client but the score is withheld there (coding grading still open): they stay hidden too
+    rerender(<LateResultNote result={{ late: { minutesLate: 90, deductionPercent: 10, waived: false }, rawScore: 8, latePenalty: 0.8 }} showMarks={false} />);
+    expect(container.textContent).toBe("سُلّمت المحاولة متأخرة 2 ساعة، ويُخصم 10٪ من علامتها.");
     rerender(<LateResultNote result={{ late: { minutesLate: 90, deductionPercent: 10, waived: true }, rawScore: 8, latePenalty: 0 }} showMarks />);
     expect(container.textContent).toBe("سُلّمت المحاولة متأخرة 2 ساعة، وألغى المعلم خصم التأخير.");
     rerender(<LateResultNote result={{}} showMarks />);
