@@ -27,10 +27,10 @@ jobs:
     timeout-minutes: 5
     name: Automatic assignment reminders — one signed sweep
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Trigger one signed reminder sweep

@@ -19,8 +19,8 @@ jobs:
     timeout-minutes: 20
     name: 21B RTL mobile keyboard pointer print
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -36,7 +36,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21b
         run: node scripts/check-function-surface-browser-21b.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: function-surfaces-21b-browser
