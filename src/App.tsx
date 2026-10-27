@@ -44,7 +44,8 @@ import type { AiAuthorResponse, AiAuthorService, AiScenarioResponse } from "./ai
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
-import { legacyToStructured, newSection, newQuestion, newExamId, type StructuredExamUpdater } from "./examBuilderState";
+import type { StructuredExamUpdater } from "./examBuilderState";
+import { newExamId } from "./examIds";
 import type { EditMeta } from "./examHistory";
 const SaveConflictDialog = lazy(lazyWithRetry(() => import("./studio/SaveConflictDialog"), "save-conflict-dialog"));
 // Phase 21F.7 — «امتحاناتي» (the Studio home) and its «من قالب أكاديمي» library load on demand, with the same stale-chunk recovery.
@@ -4042,13 +4043,16 @@ function App() {
   // ── Structured Exam Builder entry points + persistence ──────────────────
   // Non-destructive: converts the currently open legacy exam into a single structured section,
   // preserving every question id / answer / mark / image / theme. Never auto-triggered.
-  function openStructuredFromLegacy() {
+  // The conversion / preset helpers (examBuilderState) ship with the builder, outside the initial bundle: loaded on these actions.
+  async function openStructuredFromLegacy() {
     if (!exam) return;
+    const { legacyToStructured } = await import("./examBuilderState");
     studio.openExam(legacyToStructured(exam as unknown as Record<string, unknown>), "unsaved");
     setStructuredBuilderOpen(true);
   }
-  function openNewStructuredExam(): string {
+  async function openNewStructuredExam(): Promise<string> {
     const examId = newExamId();
+    const { newSection, newQuestion } = await import("./examBuilderState");
     studio.openExam({
       examId,
       title: "امتحان منظّم جديد",
@@ -4060,8 +4064,8 @@ function App() {
   }
   // Phase 21F.7 — «امتحاناتي» → «المؤلف الذكي»: a new exam opens with the builder's own composer (its menu item, run once).
   const [builderStartTool, setBuilderStartTool] = useState<{ examId: string; key: string } | null>(null);
-  function composeNewStructuredExam() {
-    const examId = openNewStructuredExam();
+  async function composeNewStructuredExam() {
+    const examId = await openNewStructuredExam();
     setBuilderStartTool({ examId, key: "ai-composer" });
   }
   const [homePresetsOpen, setHomePresetsOpen] = useState(false);
@@ -4094,6 +4098,7 @@ function App() {
       const result = await apiRequest<{ ok: true; exam: ExamDraft }>("/api/saved-exams", { method: "POST", body: JSON.stringify({ action: "load", blobName: item.blobName }) });
       const loaded = result.exam as unknown as Record<string, unknown>;
       if (isStructuredExam(loaded)) { await openSavedExam(item); return; }
+      const { legacyToStructured } = await import("./examBuilderState");
       const converted = legacyToStructured(loaded);
       studio.openExam({ ...converted, examId: newExamId(), title: (converted.title?.trim() || "امتحان") + " (منظّم)", status: "draft" }, "unsaved", null,
         "✓ حُوّل الامتحان القديم إلى امتحان منظّم جديد — النسخة القديمة باقية كما هي. احفظه ليُحفظ على الخادم.");
@@ -6237,10 +6242,10 @@ function App() {
               onRefresh={() => { void loadSavedExams(); }}
               onOpen={item => { void openSavedExam(item); }}
               onDelete={item => { void deleteSavedExam(item); }}
-              onCreateBlank={() => { openNewStructuredExam(); }}
+              onCreateBlank={() => { void openNewStructuredExam(); }}
               onCreateFromPreset={() => setHomePresetsOpen(true)}
               onImport={() => setStructuredImportOpen(true)}
-              onCompose={composeNewStructuredExam}
+              onCompose={() => { void composeNewStructuredExam(); }}
               onContinue={structuredExam && !structuredBuilderOpen ? () => setStructuredBuilderOpen(true) : undefined}
               continueTitle={structuredExam?.title}
               onConvertLegacy={item => { void convertSavedLegacyExam(item); }}
@@ -6284,7 +6289,7 @@ function App() {
                 : "🗂 القوالب"}
           </button>
 
-          <button onClick={openNewStructuredExam}>
+          <button onClick={() => { void openNewStructuredExam(); }}>
             🧱 امتحان منظّم جديد
           </button>
 
@@ -6660,7 +6665,7 @@ function App() {
 
               <button
                 className="convert-structured-btn"
-                onClick={openStructuredFromLegacy}
+                onClick={() => { void openStructuredFromLegacy(); }}
                 title="حوّل هذا الامتحان إلى امتحان منظّم بأقسام دون فقدان الأسئلة"
               >
                 🧱 تحويل إلى امتحان منظّم

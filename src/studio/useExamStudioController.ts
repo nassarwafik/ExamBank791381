@@ -4,7 +4,7 @@
 // structured exam lives here, so later Studio phases change this module instead of App.tsx. Behaviour is unchanged by the move.
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { StructuredExam } from "../examTypes";
-import { newExamId } from "../examBuilderState";
+import { newExamId } from "../examIds";
 import { useStructuredExamHistory } from "../useStructuredExamHistory";
 import { isExamDirty } from "../examHistory";
 import type { SaveConflict } from "../structuredSavePolicy";
