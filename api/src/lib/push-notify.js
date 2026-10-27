@@ -29,6 +29,16 @@ const PUSH_REQUEST_TIMEOUT_MS = 5000;
 const NOTIFY_TIME_BUDGET_MS = 8000;
 
 const MESSAGE_NOTIFICATION = Object.freeze({ type: "message", title: "رسالة جديدة", body: "لديك رسالة جديدة من المعلم.", url: "./", tag: "eb-message" });
+// D4 (item 8) — assignment notifications. Same rule as messages: FIXED, generic Arabic text (a lock screen is shared/visible), never
+// an assignment title, a mark, a teacher note or a name. The student opens the app to see which assignment (the bell has it).
+const ASSIGNMENT_NOTIFICATIONS = Object.freeze({
+  assignment_published: Object.freeze({ type: "assignment_published", title: "واجب جديد", body: "نشر معلمك واجبًا جديدًا لصفّك.", url: "./", tag: "eb-assignment" }),
+  assignment_deadline_extended: Object.freeze({ type: "assignment_deadline_extended", title: "تمديد موعد واجب", body: "مدّد معلمك موعد تسليم أحد الواجبات.", url: "./", tag: "eb-assignment" }),
+  assignment_reopened: Object.freeze({ type: "assignment_reopened", title: "إعادة فتح واجب", body: "أعاد معلمك فتح أحد الواجبات.", url: "./", tag: "eb-assignment" }),
+  assignment_retry_granted: Object.freeze({ type: "assignment_retry_granted", title: "محاولة إضافية", body: "منحك معلمك محاولة إضافية في أحد الواجبات.", url: "./", tag: "eb-assignment" }),
+  assignment_reminder: Object.freeze({ type: "assignment_reminder", title: "تذكير بواجب", body: "لديك واجب لم تسلّمه بعد. افتح المنصة لمعرفة الموعد.", url: "./", tag: "eb-reminder" }),
+  assignment_reviewed: Object.freeze({ type: "assignment_reviewed", title: "نتيجة جديدة", body: "صدرت نتيجة أحد واجباتك.", url: "./", tag: "eb-result" })
+});
 
 function b64urlBytes(value) {
   try { return Buffer.from(String(value).replace(/-/g, "+").replace(/_/g, "/"), "base64").length; } catch { return 0; }
@@ -51,10 +61,10 @@ function endpointHost(endpoint) {
 }
 
 /**
- * Notify `studentId` that a new teacher message is waiting. Never throws. Returns a summary:
+ * Send one fixed notification to every eligible device of `studentId`. Never throws. Returns a summary:
  * { status: "unconfigured" | "no-subscriptions" | "sent", attempted, delivered, expired, failed }.
  */
-async function notifyStudentOfNewMessage(container, studentId, deps = {}, log = null) {
+async function notifyStudent(container, studentId, notification, deps = {}, log = null) {
   const summary = { status: "sent", attempted: 0, delivered: 0, expired: 0, failed: 0 };
   const warn = (event, fields) => { try { if (log && log.logWarn) log.logWarn(event, { student: pseudonym(studentId), ...fields }); } catch { /* logging is best-effort */ } };
   try {
@@ -70,10 +80,10 @@ async function notifyStudentOfNewMessage(container, studentId, deps = {}, log = 
     if (!deliver.length && !stale.length) return { ...summary, status: "no-subscriptions" };
 
     const send = deps.sendNotification || ((sub, payload, options) => webpush.sendNotification(sub, payload, options));
-    const payload = JSON.stringify(MESSAGE_NOTIFICATION);
+    const payload = JSON.stringify(notification);
     const options = {
       vapidDetails: { subject: config.subject, publicKey: config.publicKey, privateKey: config.privateKey },
-      TTL: PUSH_TTL_SECONDS, urgency: "normal", timeout: PUSH_REQUEST_TIMEOUT_MS, topic: "eb-message"
+      TTL: PUSH_TTL_SECONDS, urgency: "normal", timeout: PUSH_REQUEST_TIMEOUT_MS, topic: notification.tag
     };
     summary.attempted = deliver.length;
     // `s.endpoint` is the canonical endpoint (checked in `eligible`): exactly the URL that was validated.
@@ -97,6 +107,18 @@ async function notifyStudentOfNewMessage(container, studentId, deps = {}, log = 
   }
 }
 
+/** Notify `studentId` that a new teacher message is waiting (Phase 6B). */
+function notifyStudentOfNewMessage(container, studentId, deps = {}, log = null) {
+  return notifyStudent(container, studentId, MESSAGE_NOTIFICATION, deps, log);
+}
+
+/** D4 — notify `studentId` of an assignment event of `type` (a key of ASSIGNMENT_NOTIFICATIONS); an unknown type sends nothing. */
+async function notifyStudentOfAssignmentEvent(container, studentId, type, deps = {}, log = null) {
+  const notification = Object.prototype.hasOwnProperty.call(ASSIGNMENT_NOTIFICATIONS, type) ? ASSIGNMENT_NOTIFICATIONS[type] : null;
+  if (!notification) return { status: "unsupported", attempted: 0, delivered: 0, expired: 0, failed: 0 };
+  return notifyStudent(container, studentId, notification, deps, log);
+}
+
 /** Await the notification with a hard time budget, so a slow push service can never hold up the send response. */
 async function notifyWithTimeout(promise, ms = NOTIFY_TIME_BUDGET_MS) {
   let timer;
@@ -106,6 +128,6 @@ async function notifyWithTimeout(promise, ms = NOTIFY_TIME_BUDGET_MS) {
 }
 
 module.exports = {
-  ENV_PUBLIC, ENV_PRIVATE, ENV_SUBJECT, MESSAGE_NOTIFICATION, NOTIFY_TIME_BUDGET_MS, PUSH_REQUEST_TIMEOUT_MS,
-  pushConfig, notifyStudentOfNewMessage, notifyWithTimeout
+  ENV_PUBLIC, ENV_PRIVATE, ENV_SUBJECT, MESSAGE_NOTIFICATION, ASSIGNMENT_NOTIFICATIONS, NOTIFY_TIME_BUDGET_MS, PUSH_REQUEST_TIMEOUT_MS,
+  pushConfig, notifyStudentOfNewMessage, notifyStudentOfAssignmentEvent, notifyWithTimeout
 };

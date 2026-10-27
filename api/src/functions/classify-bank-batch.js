@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { BlobServiceClient } = require("@azure/storage-blob");
 const fs = require("fs");
 const path = require("path");
@@ -1759,7 +1760,7 @@ app.http(
 
 
     handler:
-      async request => {
+      withAiRateLimit("classify-bank-batch", "ai-bulk", async request => {
 
         try {
 
@@ -3181,6 +3182,6 @@ app.http(
             }
           };
         }
-      }
+      })
   }
 );

@@ -42,7 +42,7 @@ const leaveConfirm = () => document.querySelector('.eb-confirm[role="dialog"]') 
 const batch = () => screen.queryByRole("region", { name: "بيانات الدخول الجديدة" });
 const onStudents = () => !!screen.queryByRole("heading", { level: 2, name: "الحادي عشر" });
 
-async function openUnsavedBatch() {
+async function openUnsavedBatch(beforeCreate?: () => void) {
   vi.resetModules();
   const { default: App } = await import("./App");
   render(<App />);
@@ -53,6 +53,7 @@ async function openUnsavedBatch() {
   fireEvent.click(screen.getByLabelText("تحديد زيد حسن"));
   fireEvent.click(within(await screen.findByRole("region", { name: "إجراءات جماعية" })).getByRole("button", { name: "كلمات مرور جديدة" }));
   const c = await waitFor(() => { const el = leaveConfirm(); if (!el) throw new Error("no confirm"); return el; });
+  beforeCreate?.();
   fireEvent.click(c.querySelector(".eb-dialog-foot .is-primary") as HTMLElement);
   await waitFor(() => expect(batch()).not.toBeNull(), SLOW);
 }
@@ -96,6 +97,28 @@ describe("S.3 App — leaving the platform with an unsaved credential batch", ()
     fireEvent.click(within(await waitFor(() => { const el = leaveConfirm(); if (!el) throw new Error("no confirm"); return el; })).getByRole("button", { name: "مغادرة دون حفظ" }));
     await waitFor(() => expect(onStudents()).toBe(false), SLOW);
     expect(batch()).toBeNull();
+  }, 20000);
+
+  // Root cause of a Quality Gate failure ("no leave confirm"): the workspace reported the unsaved batch from a PASSIVE effect, which
+  // React runs in a later task than the commit that shows the batch. A navigation handled in between read a stale "nothing pending"
+  // and left without asking. Deterministic form: «التقارير» is clicked from a MutationObserver callback, i.e. as soon as the batch is
+  // in the DOM and before any later task can run. The report must already be in place by then.
+  it("a navigation right after the batch appears (before any later task) still asks", async () => {
+    let clicked = false;
+    const reports = () => within(screen.getByRole("complementary", { name: "التنقل الرئيسي" })).getByRole("button", { name: /^التقارير/ });
+    await openUnsavedBatch(() => {
+      const mo = new MutationObserver(() => {
+        if (clicked || !batch()) return;
+        clicked = true; mo.disconnect();
+        reports().click();                                                                       // native click: no act(), no effect flush
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    });
+    expect(clicked).toBe(true);
+    const ask = await waitFor(() => { const el = leaveConfirm(); if (!el) throw new Error("no leave confirm"); return el; });
+    expect(within(ask).getByRole("heading", { name: "كلمات مرور لم تُحفظ" })).toBeTruthy();
+    expect(onStudents()).toBe(true);
+    expect(batch()).not.toBeNull();
   }, 20000);
 
   it("a batch that was downloaded asks nothing", async () => {

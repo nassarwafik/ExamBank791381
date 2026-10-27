@@ -22,6 +22,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Su
         <li>{item.totalMarks} علامة</li>
         {!!item.durationMinutes && <li>{item.durationMinutes} دقيقة</li>}
         <li>التسليم: {formatWhen(due)}</li>
+        {item.inLateWindow && item.lateUntil && <li className="eb-sp-task-late" data-testid="card-late-window">تسليم متأخر حتى {formatWhen(item.lateUntil)}{item.lateDeductionPercent ? " · خصم " + item.lateDeductionPercent + "٪" : ""}</li>}
         <li>المحاولات: {item.attemptsUsed}/{item.allowedAttempts}</li>
       </ul>
       {lr && lrGs && (
