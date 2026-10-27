@@ -497,3 +497,6 @@
   .eb-assign-detail .eb-gradebook-table-wrap { border: 0; border-radius: 0; }
   .eb-assign-detail .eb-gradebook-table tbody tr.is-selected td, .eb-assign-detail .eb-gradebook-table tbody tr.is-drill-focus td { background: transparent; }
 }
+/* D5 (item 10) — late attempts in the gradebook and the late-policy fieldset. */
+.late-penalty-note{ display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-late-policy .eb-form-grid{ margin-block-start:var(--eb-space-2); }

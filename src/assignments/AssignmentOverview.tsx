@@ -3,6 +3,8 @@ import { IconEdit, IconHistory, IconEye, IconEyeOff } from "../icons";
 import { attemptPolicyLabel } from "./attemptPolicy";
 import { scoreDistribution, statusBreakdown, studentsCount } from "./assignmentPage";
 import { RESULTS_RELEASE_OPTIONS, normalizeResultsRelease, resultsReleaseLabel, resultsReleaseState, type ResultsRelease } from "./resultsRelease";
+import { latePolicyLabel, lateUntilIso, normalizeLatePolicy, type LatePolicy } from "./latePolicy";
+import LatePolicyFields from "./LatePolicyFields";
 import type { Item, StudentResult } from "./types";
 
 /**
@@ -10,7 +12,7 @@ import type { Item, StudentResult } from "./types";
  * apart), where the students stand, and the assignment's settings with their edit entry points. Every figure comes from the
  * gradebook rows the page already holds — no extra request. Charts are plain HTML bars inside ChartCard (a named figure + a table).
  */
-export default function AssignmentOverview({ item, results, fmt, onEditDetails, onEditTiming, onEditAttempts, now, onResultsRelease, onReleaseResults, busy }: {
+export default function AssignmentOverview({ item, results, fmt, onEditDetails, onEditTiming, onEditAttempts, now, onResultsRelease, onReleaseResults, onLatePolicy, busy }: {
   item: Item;
   results: readonly StudentResult[];
   fmt: (value: string) => string;
@@ -21,6 +23,8 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
   now?: number;
   onResultsRelease?: (item: Item, mode: ResultsRelease) => void;
   onReleaseResults?: (item: Item, released: boolean) => void;
+  /** D5 (item 10) — the late policy editor (null = no late submissions). */
+  onLatePolicy?: (item: Item, value: LatePolicy | null) => void;
   busy?: boolean;
 }) {
   const dist = scoreDistribution(results);
@@ -74,6 +78,7 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
           <div><dt>مدة المحاولة</dt><dd>{item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}</dd></div>
           <div><dt>طريقة المحاولة</dt><dd>{attemptPolicyLabel(item.attemptPolicy)}</dd></div>
           <div><dt>الأسئلة</dt><dd>{item.questionCount} سؤال · {item.totalMarks} علامة</dd></div>
+          <div><dt>التسليم المتأخر</dt><dd>{latePolicyLabel(item.latePolicy)}{lateUntilIso(item.dueAt, item.latePolicy) && <small className="eb-release-state">حتى {fmt(lateUntilIso(item.dueAt, item.latePolicy))}</small>}</dd></div>
           <div><dt>إظهار النتائج</dt><dd>{resultsReleaseLabel(releaseMode)}<small className={"eb-release-state" + (release.visible ? " is-visible" : " is-hidden")}>{release.text}</small></dd></div>
         </dl>
         {!archived && onResultsRelease && (
@@ -88,6 +93,7 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
               : <button type="button" className="eb-button is-small is-primary" onClick={() => onReleaseResults(item, true)} disabled={busy}><IconEye size={16} />نشر النتائج للطلاب</button>)}
           </div>
         )}
+        {!archived && onLatePolicy && <LatePolicyFields value={normalizeLatePolicy(item.latePolicy)} onChange={v => onLatePolicy(item, v)} disabled={busy || !item.dueAt} hint={item.dueAt ? "يسري على المحاولات التي تنتهي من الآن؛ المحاولات المتأخرة السابقة تحتفظ بخصمها." : "يحتاج التسليم المتأخر إلى موعد تسليم للواجب."} />}
         <div className="eb-assign-instructions">
           <h4 className="eb-assign-instructions-title">التعليمات</h4>
           <p>{item.instructions?.trim() || "لا توجد تعليمات."}</p>

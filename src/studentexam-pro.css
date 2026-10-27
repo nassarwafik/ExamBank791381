@@ -442,3 +442,7 @@
   .interactive-exam-page.exam-theme-default .iex-topbar, .interactive-exam-page.exam-theme-default .iex-bottom-nav,
   .interactive-exam-page.exam-theme-default .iex-foot{ border-radius:var(--eb-r); }
 }
+/* D5 (item 10) — the teacher's late policy on the student's exam page. */
+.iex-late-window{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); text-align:start; }
+.iex-late-window.is-active{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-weight:600; }
+.iex-late-result{ margin:var(--eb-space-2) 0 0; color:var(--eb-warn-tx); text-align:start; }

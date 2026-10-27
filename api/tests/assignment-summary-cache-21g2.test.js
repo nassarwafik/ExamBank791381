@@ -77,7 +77,7 @@ describe("21G.2 light assignment list", () => {
     for (const bad of [{ schemaVersion: 1, summaryVersion: 999, entries: {} }, { nonsense: true }, "garbage"]) {
       s.mem.setJson(CACHE_NAME, bad);
       expect(titles(await s.list())).toEqual(["واجب 1"]);
-      expect(s.mem.getJson(CACHE_NAME)).toMatchObject({ schemaVersion: 1, summaryVersion: 2 });   // the handler's SUMMARY_VERSION (2 since 21G.5)
+      expect(s.mem.getJson(CACHE_NAME)).toMatchObject({ schemaVersion: 1, summaryVersion: 3 });   // the handler's SUMMARY_VERSION (2 since 21G.5, 3 since D5: + latePolicy)
     }
   });
 

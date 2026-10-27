@@ -13,6 +13,8 @@ const { sectionCappedScore, effectiveMaxMarks } = require("./exam-structure");
 // max, pending = the exact counted marks of parts still awaiting review. A whole-question override (manualOverrides[questionId]) still wins
 // over everything. Every non-composite grade takes the original path below, byte-for-byte.
 const { compositeChildKey } = require("./shared-finalization/compositeModel");
+// D5 (item 10) — a late attempt's stamped deduction is re-applied to every recomputed total (never stacked: the raw total is rebuilt first).
+const { applyLateDeduction } = require("./late-policy");
 
 function round(n) { return Number(Number(n || 0).toFixed(2)); }
 function clamp(v, min, max) { return Math.min(max, Math.max(min, Number(v) || 0)); }
@@ -76,7 +78,7 @@ function rebuildAttemptGrades(attempt) {
   if (sections && sections.length) { score = sectionCappedScore(sections, id => scoreById.get(id) || 0); }
   else { score = 0; for (const s of scoreById.values()) score += s; }
   attempt.score = round(score); attempt.manualReviewMarks = round(remaining); attempt.totalMarks = round(attempt.totalMarks); attempt.percentage = attempt.totalMarks ? round(attempt.score / attempt.totalMarks * 100) : 0; attempt.finalized = remaining === 0;
-  return attempt;
+  return applyLateDeduction(attempt);
 }
 
 module.exports = { rebuildAttemptGrades, round, clamp };

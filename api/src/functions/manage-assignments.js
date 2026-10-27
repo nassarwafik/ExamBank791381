@@ -20,6 +20,7 @@ const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=requ
 // Phase 21G.0 — teacher tenancy: an assignment belongs to the teacher of its class (shared pre-tenancy classes stay shared).
 const {tenantOf,canAccessDocument,accessibleClassIds,classIdAllowed,classAccessible}=require("../lib/teacher-tenancy");
 const {releaseMode,normalizeReleaseMode}=require("../lib/results-release");
+const {latePolicyOf,parseLatePolicyInput}=require("../lib/late-policy");   // D5 (item 10)
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
@@ -31,7 +32,7 @@ const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_TITLE=200,MAX_INSTRUCTIONS=5000;
 // Phase 21G.2 — bump SUMMARY_VERSION whenever summary() changes shape: every cached summary is then recomputed once.
-const SUMMARY_VERSION=2;   // 2: + resultsRelease / resultsReleasedAt (21G.5)
+const SUMMARY_VERSION=3;   // 2: + resultsRelease / resultsReleasedAt (21G.5); 3: + latePolicy (D5)
 const {loadAssignmentSummaries}=require("../lib/assignment-summary-cache");
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
 // stored submission blobs (authoritative for purge-blocking); the rest are derived from the parsed docs.
@@ -60,7 +61,7 @@ function parseDurationMinutes(v){
  if(n<1||n>1440)return {ok:false};
  return {ok:true,value:n};
 }
-function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),resultsRelease:releaseMode(a),resultsReleasedAt:String(a.resultsReleasedAt||""),...(a.source&&typeof a.source==="object"?{source:a.source}:{}),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
+function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),resultsRelease:releaseMode(a),resultsReleasedAt:String(a.resultsReleasedAt||""),latePolicy:latePolicyOf(a),...(a.source&&typeof a.source==="object"?{source:a.source}:{}),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
@@ -112,6 +113,11 @@ async function handler(request,deps={},obs=null){
    // of the three modes is REJECTED (never silently coerced).
    const resultsRelease=normalizeReleaseMode(b.resultsRelease);
    if(resultsRelease===null)return {status:400,jsonBody:{ok:false,error:"طريقة إظهار النتائج غير صالحة."}};
+   // D5 (item 10) — the optional late policy. Omitted / null → none (the assignment closes at its due date, as before); anything
+   // malformed is REJECTED (never coerced). A late window needs a due date to start from.
+   const late=parseLatePolicyInput(b.latePolicy);
+   if(!late.ok)return {status:400,jsonBody:{ok:false,error:late.error}};
+   if(late.value&&!String(b.dueAt||"").trim())return {status:400,jsonBody:{ok:false,error:"التسليم المتأخر يحتاج إلى موعد تسليم."}};
    const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||!canAccessDocument(classroom,tenant)||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
@@ -122,7 +128,7 @@ async function handler(request,deps={},obs=null){
    // Phase 7A: strict / pausable attempts need the per-attempt epoch → attemptModelVersion 3. A continuous assignment
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
-   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,resultsRelease,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,resultsRelease,...(late.value?{latePolicy:late.value}:{}),assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
    // Phase 12E-B — STRICT: the published pointer exists BEFORE the published document does. If the index cannot be
    // updated the assignment is NOT created (retryable); a later failure of the upload below only leaves a harmless
    // stale pointer (readers ignore a missing document). A draft is never indexed.
@@ -257,6 +263,32 @@ async function handler(request,deps={},obs=null){
    await rec(c,{actor:auth.user?.sub,action:action==="setresultsrelease"?"assignment.setResultsRelease":"assignment.releaseResults",targetType:"assignment",targetId:id,targetLabel:String(updated.title||""),details:{assignmentId:id,from:previous.mode,to:releaseMode(updated),released:!!updated.resultsReleasedAt}});
    // D4 (item 8) — results NEWLY released by hand: one «نتيجة جديدة» push to each student who submitted (bounded, never thrown).
    if(action==="releaseresults"&&b.released&&!previous.releasedAt)await notifyWithTimeout((deps.pushResultsReleased||pushResultsReleased)(c,updated,deps,obs));
+   return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
+  }
+  // D5 (item 10) — setlatepolicy {latePolicy | null}: enable, change or remove the late window / deduction. It governs attempts that
+  // END from now on; an attempt already stamped late keeps the policy it was stamped with (no result is rewritten). Removing the
+  // policy closes the assignment at its due date again (a student inside the window can no longer start or submit).
+  if(action==="setlatepolicy"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   if(b.latePolicy===undefined)return {status:400,jsonBody:{ok:false,error:"latePolicy is required (null to remove it)."}};
+   const late=parseLatePolicyInput(b.latePolicy);if(!late.ok)return {status:400,jsonBody:{ok:false,error:late.error}};
+   let previous=null,updated=null;
+   try{
+    updated=await mut(c,PREFIX+id+".json",current=>{
+     if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     if(normalizeAssignmentStatus(current)==="archived"){const err=new Error("الواجب مؤرشف. استعده أولًا قبل تعديل إعداداته.");err.httpStatus=409;throw err}
+     if(late.value&&!current.dueAt){const err=new Error("التسليم المتأخر يحتاج إلى موعد تسليم.");err.httpStatus=409;throw err}
+     previous=latePolicyOf(current);
+     if(late.value)current.latePolicy=late.value;else delete current.latePolicy;
+     current.updatedAt=new Date().toISOString();
+     return current;   // grades, attempts, submissions untouched
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   await rec(c,{actor:auth.user?.sub,action:"assignment.setLatePolicy",targetType:"assignment",targetId:id,targetLabel:String(updated.title||""),details:{assignmentId:id,from:previous,to:latePolicyOf(updated)}});
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
   if(action==="updatetiming"){

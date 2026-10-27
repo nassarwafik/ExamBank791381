@@ -14,12 +14,16 @@ function releaseMode(a) {
   return MODES.includes(m) ? m : "invalid";
 }
 const validIso = v => typeof v === "string" && v !== "" && Number.isFinite(Date.parse(v));
+// D5 (item 10) — under a late policy "afterDue" means after the late window: results (and the per-question breakdown) never reach the
+// class while classmates may still submit late. Without a policy this is exactly dueAt, as before.
+const { lateWindowMs } = require("./late-policy");
+const releaseAtMs = a => Date.parse(a.dueAt) + lateWindowMs(a);
 
 /** Whether the assignment's results are visible to students now. */
 function resultsReleased(a, nowMs = Date.now()) {
   const mode = releaseMode(a);
   if (mode === "immediate") return true;
-  if (mode === "afterDue") return validIso(a.dueAt) && nowMs >= Date.parse(a.dueAt);
+  if (mode === "afterDue") return validIso(a.dueAt) && nowMs >= releaseAtMs(a);
   if (mode === "manual") return validIso(a.resultsReleasedAt);
   return false;
 }
@@ -28,10 +32,11 @@ function resultsReleased(a, nowMs = Date.now()) {
  *  field names are resultsVisible / resultsVisibility / resultsVisibleAt. */
 function releaseInfo(a, nowMs = Date.now()) {
   const mode = releaseMode(a), released = resultsReleased(a, nowMs);
-  return released ? { resultsVisible: true } : { resultsVisible: false, resultsVisibility: mode === "invalid" ? "manual" : mode, ...(mode === "afterDue" && validIso(a.dueAt) ? { resultsVisibleAt: a.dueAt } : {}) };
+  return released ? { resultsVisible: true } : { resultsVisible: false, resultsVisibility: mode === "invalid" ? "manual" : mode, ...(mode === "afterDue" && validIso(a.dueAt) ? { resultsVisibleAt: new Date(releaseAtMs(a)).toISOString() } : {}) };
 }
 
-const WITHHELD = ["score", "percentage", "manualReviewMarks", "teacherFeedback", "latestScore", "latestPercentage"];
+// D5 (item 10): rawScore / latePenalty (a late attempt's mark before the deduction, and the marks deducted) are marks too.
+const WITHHELD = ["score", "percentage", "manualReviewMarks", "teacherFeedback", "latestScore", "latestPercentage", "rawScore", "latePenalty"];
 /** A copy of a student projection of a result with every mark-bearing field removed (structure and timing kept). */
 function withholdResult(x) {
   if (!x || typeof x !== "object") return x;
