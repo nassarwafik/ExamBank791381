@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
@@ -184,7 +185,7 @@ app.http("examQualityFix", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "exam-quality-fix",
-  handler: async request => {
+  handler: withAiRateLimit("exam-quality-fix", "ai-general", async request => {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
@@ -226,7 +227,7 @@ app.http("examQualityFix", {
     catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر إصلاح هذا السؤال تلقائيًا حاليًا." } };
     }
-  }
+  })
 });
 
 module.exports = { buildQualityFixPatch, buildPrompt, buildSchema };

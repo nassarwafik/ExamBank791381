@@ -1,5 +1,6 @@
 import { Component, createRef, type ContextType, type ReactNode, type RefObject } from "react";
 import { isChunkLoadError } from "../../lazyWithRetry";
+import { reportRenderError } from "../../observability/clientErrorReporter";
 import { retryFailedLoads, recoveryHandleOf, type RecoveryHandle } from "../../recoverableLazy";
 import { IconRefresh, IconWarning } from "../../icons";
 import { QuestionRecoveryContext, RECOVERY_LINE_ATTRIBUTE } from "./questionRecovery";
@@ -151,6 +152,7 @@ export default class QuestionErrorBoundary extends Component<Props, State> {
     // Sanitized: the fixed classification only (the root ErrorBoundary's rule) — never the message, stack or component tree.
     // eslint-disable-next-line no-console
     console.error("[QuestionErrorBoundary]", { code: chunk ? "chunk-load" : "runtime" });
+    reportRenderError(error, "exam-question", chunk);                     // D3: content-free report to the API logs
     this.reportFailed(chunk ? "chunk-load" : "runtime");
     if (!this.titleAnnounced) { this.titleAnnounced = true; this.context.announce?.(this.title()); }
   }

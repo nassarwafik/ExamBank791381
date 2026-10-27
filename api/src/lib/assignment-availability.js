@@ -12,6 +12,12 @@
 // Effective due date = submission.dueAtOverride (per-student override) || assignment.dueAt.
 //
 // Pure: never reads storage, never calls Date.now() unless the caller omits nowMs. Fully testable.
+//
+// D5 (item 10) — an OPTIONAL late policy (lib/late-policy.js) keeps the assignment open for a late window after each student's
+// effective due date: closeMs = dueMs + window. Inside it availability stays "open" and inLateWindow is true; the window's end is
+// the hard close everywhere the due date used to be (timerState caps attempts at closeMs). Without a policy closeMs === dueMs, so
+// every assignment stored before D5 behaves exactly as before.
+const { lateWindowMs } = require("./late-policy");
 
 // Parse an ISO date to epoch ms; empty/invalid → 0 (treated as "no constraint", so a missing or
 // malformed openAt/dueAt never falsely schedules or closes an assignment, and never throws).
@@ -47,10 +53,13 @@ function getAssignmentAvailability(assignment, submission, nowMs = Date.now()) {
   const due = effectiveDueAt(a, submission);
   const openMs = toMs(openAt);
   const dueMs = toMs(due);
+  const windowMs = dueMs ? lateWindowMs(a) : 0;
+  const closeMs = dueMs ? dueMs + windowMs : 0;                     // D5: the hard close (the late cutoff, or the due date)
   const isBeforeOpen = !!openMs && openMs > nowMs;                 // now === openAt is OPEN
-  const isClosed = !isBeforeOpen && !!dueMs && dueMs < nowMs;      // now === dueAt is still OPEN
+  const isClosed = !isBeforeOpen && !!closeMs && closeMs < nowMs;  // now === closeAt is still OPEN
+  const inLateWindow = !isBeforeOpen && !isClosed && !!windowMs && dueMs < nowMs;
   const availability = isBeforeOpen ? "scheduled" : (isClosed ? "closed" : "open");
-  return { availability, openAt: String(openAt || ""), effectiveDueAt: String(due || ""), openMs, dueMs, isBeforeOpen, isClosed };
+  return { availability, openAt: String(openAt || ""), effectiveDueAt: String(due || ""), openMs, dueMs, closeMs, isBeforeOpen, isClosed, inLateWindow, lateUntil: windowMs ? new Date(closeMs).toISOString() : "" };
 }
 
 // Attempt/limit state combined with availability. canAttempt requires: published AND currently open AND
@@ -196,7 +205,7 @@ function timerState(assignment, submission, nowMs = Date.now()) {
   const modelVersion = attemptModelVersion(assignment);
   const requiresStart = timed || modelVersion >= 2;   // UNTIMED v2 also needs an explicit start
   const active = activeAttemptOf(submission);
-  const dueMs = base.dueMs;
+  const dueMs = base.closeMs;   // D5: the hard cap — the late cutoff under a late policy, else the effective due date (unchanged)
   // Phase 7A — a PAUSED model-3 attempt: its duration clock is stopped (the remaining budget is stored in
   // pausedRemainingMs), it can never be written, and only the assignment due date can expire it.
   const paused = isPausedAttempt(active);

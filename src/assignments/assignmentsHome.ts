@@ -2,6 +2,7 @@
 // own opening time and deadline — a per-student extension does not change the class-wide status), the time filter, and the KPI
 // strip over the assignments in scope and their server progress (GET /api/assignment-progress). No React, no requests.
 import type { AssignmentProgress, Item } from "./types";
+import { lateUntilIso } from "./latePolicy";
 
 export const CLOSING_SOON_MS = 48 * 3600 * 1000;
 export type TimeStatus = "draft" | "archived" | "scheduled" | "open" | "closingSoon" | "closed";
@@ -36,7 +37,12 @@ export function durationArabic(deltaMs: number): string {
 export function timeLabel(x: Item, now: number): { status: TimeStatus; label: string; tone: "info" | "attention" | "neutral" | "success" } | null {
   const status = timeStatusOf(x, now), open = ms(x.openAt), due = ms(x.dueAt);
   if (status === "scheduled") return { status, label: "يفتح بعد " + durationArabic((open as number) - now), tone: "info" };
-  if (status === "closed") return { status, label: "أُغلق منذ " + durationArabic(now - (due as number)), tone: "neutral" };
+  if (status === "closed") {
+    // D5 (item 10) — past the due date but inside the teacher's late window: still accepting (late) submissions.
+    const lateEnd = ms(lateUntilIso(x.dueAt, x.latePolicy));
+    if (lateEnd !== null && lateEnd >= now) return { status, label: "انتهى الموعد · تسليم متأخر خلال " + durationArabic(lateEnd - now), tone: "attention" };
+    return { status, label: "أُغلق منذ " + durationArabic(now - (lateEnd ?? due as number)), tone: "neutral" };
+  }
   if (status === "closingSoon") return { status, label: "يُغلق خلال " + durationArabic((due as number) - now), tone: "attention" };
   if (status === "open") return { status, label: due === null ? "مفتوح بلا موعد نهائي" : "مفتوح · يُغلق خلال " + durationArabic(due - now), tone: "success" };
   return null;

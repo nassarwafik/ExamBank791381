@@ -34,7 +34,9 @@ const REGISTRY = {
   operator: ["assignment-index-control.js", "build-bank-2025.js", "classify-bank-batch.js", "classify-question-preview.js", "import-html-exam.js", "inspect-html.js", "storage-status.js"],
   noData: ["ai-exam-composer.js", "ai-question-author.js", "ai-scenario-author.js", "analyze-global-exam-instruction.js", "exam-quality-fix.js",
     "game-number-conversion-preview.js", "generate-question-image.js", "interpret-exam-request.js", "question-ai-action.js",
-    "structured-exam-ai-fix.js"]
+    "structured-exam-ai-fix.js",
+    // D3 — client error / CSP reports: a teacher or student session sends a content-free report that becomes one log line; nothing stored is read.
+    "client-error-report.js"]
 };
 const classified = () => [...Object.keys(REGISTRY.classScoped), ...Object.keys(REGISTRY.teacherOwned), ...REGISTRY.sharedByDesign, ...REGISTRY.operator, ...REGISTRY.noData];
 const source = file => readFileSync(join(FUNCTIONS, file), "utf8");

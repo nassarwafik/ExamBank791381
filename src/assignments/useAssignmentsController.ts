@@ -17,6 +17,7 @@ import { copiesCount } from "./assignmentWizard";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import { reviewNav, type ReviewTarget } from "./reviewNav";
 import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
+import { normalizeLatePolicy, type LatePolicy } from "./latePolicy";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
 
@@ -126,7 +127,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     const f = composer.fields, sourceExam = composer.source.sourceExam, ids = [...f.classIds];
     if (busy || !ids.length || !f.title.trim() || !sourceExam || !examHasQuestions(sourceExam) || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;
     const nameOf = (id: string) => active.find(c => c.classId === id)?.name || id;
-    const body = (classId: string) => JSON.stringify({ action: "create", classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, publish: f.publish, examSnapshot: sourceExam });
+    const body = (classId: string) => JSON.stringify({ action: "create", classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, ...(f.latePolicy && f.dueAt ? { latePolicy: f.latePolicy } : {}), publish: f.publish, examSnapshot: sourceExam });
     setBusy(true); setError(""); setNotice("");
     const created: Item[] = [], failed: { id: string; error: string }[] = [];
     try {
@@ -151,6 +152,13 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   async function setResultsRelease(item: Item, mode: ResultsRelease) {
     if (normalizeResultsRelease(item.resultsRelease) === mode) return;
     await action(item, { action: "setResultsRelease", resultsRelease: mode });
+  }
+  // D5 (item 10) — the late policy (any time; it governs attempts that end from now on). Removing it while it may be in use closes the
+  // assignment at its due date for everyone, so that is confirmed.
+  async function setLatePolicy(item: Item, value: LatePolicy | null) {
+    if (!value && normalizeLatePolicy(item.latePolicy) && !(await confirm({ title: "إيقاف التسليم المتأخر", message: "سيُغلق الواجب عند موعده لكل الطلاب، ولن يتمكن من تأخر من التسليم بعد الآن. لا تتغير علامات المحاولات المتأخرة السابقة.", confirmLabel: "إيقاف", tone: "danger" }))) return;
+    setError(""); setNotice("");
+    if (await action(item, { action: "setLatePolicy", latePolicy: value })) setNotice(value ? "✓ حُفظ إعداد التسليم المتأخر." : "✓ أوقف التسليم المتأخر.");
   }
   async function releaseResults(item: Item, released: boolean) {
     if (!(await confirm(released
@@ -367,6 +375,18 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
       mergeSnap(s.studentId, r); setExtendFor(x => (x === s.studentId ? null : x)); setNotice("✓ تم إنهاء محاولة الطالب " + s.studentName);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر إنهاء المحاولة."); } finally { setBusy(false); }
   }
+  // D5 (item 10) — waive / restore the late deduction of the student's LATEST attempt (the row shows that one). The answer is the
+  // authoritative row (the rebuilt score included) and is merged in place.
+  async function lateWaiver(s: StudentResult, waived: boolean) {
+    const at = s.latestResult;
+    if (!resultsFor || !at) return;
+    if (!(await confirm(waived
+      ? { title: "إلغاء خصم التأخير", message: "ستُحتسب علامة المحاولة كاملة دون خصم التأخير. يبقى وسم «متأخر» ظاهرًا لك.", confirmLabel: "إلغاء الخصم" }
+      : { title: "إعادة خصم التأخير", message: "سيُطبَّق خصم التأخير من جديد على علامة هذه المحاولة.", confirmLabel: "إعادة الخصم" }))) return;
+    setBusy(true); setError("");
+    try { const r = await api<LifecycleSnap>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setLateWaiver", assignmentId: resultsFor.assignmentId, studentId: s.studentId, attemptNumber: at.attemptNumber, waived }) }); mergeSnap(s.studentId, r); setNotice(waived ? "✓ أُلغي خصم التأخير للطالب " + s.studentName : "✓ أُعيد خصم التأخير للطالب " + s.studentName); }
+    catch (e) { setError(e instanceof Error ? e.message : "تعذر تعديل خصم التأخير."); } finally { setBusy(false); }
+  }
   function openDeadline(s: StudentResult) { setError(""); setReopenFor(null); setExtendFor(null); setDeadlineFor(s.studentId); setDeadlineValue(s.dueAtOverride ? toLocalInput(s.dueAtOverride) : ""); }
   async function saveDeadline(s: StudentResult) { if (!resultsFor || !deadlineValue) return; setBusy(true); setError(""); try { const r = await api<LifecycleSnap & { dueAtOverride: string | null }>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setDueAtOverride", assignmentId: resultsFor.assignmentId, studentId: s.studentId, dueAtOverride: new Date(deadlineValue).toISOString() }) }); mergeSnap(s.studentId, r); setDeadlineFor(null); setNotice("✓ تم تمديد الموعد للطالب " + s.studentName); } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التمديد."); } finally { setBusy(false); } }
   async function clearDeadline(s: StudentResult) { if (!resultsFor) return; setBusy(true); setError(""); try { const r = await api<LifecycleSnap & { dueAtOverride: string | null }>("/api/assignment-results", { method: "POST", body: JSON.stringify({ action: "setDueAtOverride", assignmentId: resultsFor.assignmentId, studentId: s.studentId, dueAtOverride: null }) }); mergeSnap(s.studentId, r); setDeadlineFor(null); setNotice("✓ تم إلغاء تمديد الطالب " + s.studentName); } catch (e) { setError(e instanceof Error ? e.message : "تعذر إلغاء التمديد."); } finally { setBusy(false); } }
@@ -446,10 +466,10 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     token, busy, loading, error, notice, mode, reportError: (message: string) => { setNotice(""); setError(message); },
     toolbar: { active, effectiveFilter, showArchived, search, archivedCount, changeScope, openComposer, refresh, timeFilter, timeCounts: timeFilterCounts(scoped, now) },
     home: { kpis: homeKpis(scoped, progress, now), progress, now },
-    list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
+    list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setLatePolicy: (item: Item, value: LatePolicy | null) => void setLatePolicy(item, value), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
-    gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s),
+    gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s), lateWaiver: (s: StudentResult, waived: boolean) => void lateWaiver(s, waived),
       selected, toggleSelected: (id: string) => setSelected(x => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
       toggleAllSelected: (ids: string[], on: boolean) => setSelected(x => { const n = new Set(x); for (const id of ids) { if (on) n.add(id); else n.delete(id); } return n; }),
       clearSelection, bulkGrant: () => void bulkGrant(), openBulkDeadline,

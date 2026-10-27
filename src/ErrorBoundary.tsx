@@ -1,6 +1,7 @@
 import { Component } from "react";
 import type { ReactNode } from "react";
 import { isChunkLoadError } from "./lazyWithRetry";
+import { reportRenderError } from "./observability/clientErrorReporter";
 
 type Props = { children: ReactNode };
 type ErrorKind = "chunk" | "runtime";
@@ -46,6 +47,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     const code = kind === "chunk" ? "chunk-load" : "runtime";
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary]", { code, name: safeErrorName(error) });
+    reportRenderError(error, "app", kind === "chunk");                       // D3: the same content-free summary, to the API logs
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.error("[ErrorBoundary] (dev) full error:", error, "\ncomponentStack:", info?.componentStack);

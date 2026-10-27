@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ATTEMPT_POLICY_OPTIONS, type AttemptPolicy } from "./attemptPolicy";
 import { RESULTS_RELEASE_OPTIONS, type ResultsRelease } from "./resultsRelease";
+import LatePolicyFields from "./LatePolicyFields";
+import type { LatePolicy } from "./latePolicy";
 import type { WindowField, WindowIssue } from "./assignmentWindow";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
@@ -42,6 +44,8 @@ export type AssignmentComposerProps = {
   durationMinutes: number; onDurationMinutes: (v: number) => void;
   attemptPolicy: AttemptPolicy; onAttemptPolicy: (v: AttemptPolicy) => void;
   resultsRelease?: ResultsRelease; onResultsRelease?: (v: ResultsRelease) => void;
+  /** D5 (item 10) — the optional late policy (null = no late submissions). */
+  latePolicy?: LatePolicy | null; onLatePolicy?: (v: LatePolicy | null) => void;
   publish: boolean; onPublish: (v: boolean) => void;
   /** Phase 21G.0 — the opening time / deadline issues, shown at their field. */
   windowIssues?: readonly WindowIssue[];
@@ -209,6 +213,7 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
             ))}
           </div>
         </fieldset>}
+        {p.onLatePolicy && <LatePolicyFields value={p.latePolicy ?? null} onChange={p.onLatePolicy} hint={p.dueAt ? undefined : "يحتاج التسليم المتأخر إلى «آخر موعد» في خطوة المواعيد."} disabled={!p.dueAt} />}
           <div className="eb-publish-choice">
             <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} aria-describedby="eb-composer-publish-hint" /><span>نشر مباشرة</span></label>
             <small id="eb-composer-publish-hint" className="eb-muted">{p.publish ? "يظهر الواجب للطلاب فور إنشائه." : "يبقى مسودة لا يراها الطلاب حتى تنشره."}</small>
@@ -220,7 +225,7 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
         <div className="eb-composer-section">
           <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>مراجعة قبل الإنشاء</h3>
           <dl className="eb-dl eb-wizard-review">
-            {reviewRows({ ...wizardInput, contentTitle: p.sourceExam?.title || "", questionCount: p.sourceCount, classNames: p.activeClasses.filter(c => p.classIds.includes(c.classId)).map(c => c.name), openAt: p.openAt, dueAt: p.dueAt, maxAttempts: p.maxAttempts, durationMinutes: p.durationMinutes, attemptPolicy: p.attemptPolicy, resultsRelease: p.resultsRelease || "immediate", publish: p.publish, fmt: v => new Date(v).toLocaleString("ar") }).map(r => <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>)}
+            {reviewRows({ ...wizardInput, contentTitle: p.sourceExam?.title || "", questionCount: p.sourceCount, classNames: p.activeClasses.filter(c => p.classIds.includes(c.classId)).map(c => c.name), openAt: p.openAt, dueAt: p.dueAt, maxAttempts: p.maxAttempts, durationMinutes: p.durationMinutes, attemptPolicy: p.attemptPolicy, resultsRelease: p.resultsRelease || "immediate", ...(p.onLatePolicy ? { latePolicy: p.dueAt ? p.latePolicy ?? null : null } : {}), publish: p.publish, fmt: v => new Date(v).toLocaleString("ar") }).map(r => <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>)}
           </dl>
           {p.onPreviewContent && p.sourceExam && <button type="button" className="eb-button is-small" onClick={p.onPreviewContent}><IconEye size={16} />معاينة المحتوى</button>}
           {stepIssues("review", wizardInput).length === 0 && !p.canCreate && <p className="eb-muted" role="status">لا يمكن الإنشاء الآن؛ راجع الخطوات السابقة.</p>}
