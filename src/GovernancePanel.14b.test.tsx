@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { useEffect, useRef, useState } from "react";
-import { render, cleanup, fireEvent, screen, act, within } from "@testing-library/react";
+import { render, cleanup, fireEvent, screen, act, within, waitFor } from "@testing-library/react";
 import StructuredExamBuilder from "./StructuredExamBuilder";
 import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
@@ -59,6 +59,10 @@ function Host({ svc }: { svc: GovernanceService }) {
 const tick = (ms = 5) => act(async () => { await new Promise(r => setTimeout(r, ms)); });
 const openPanel = async () => { fireEvent.click(toolbarItem(/إدارة النشر والإصدارات/)); const d = await screen.findByRole("dialog", { name: "إدارة النشر والإصدارات" }); await tick(30); return d; };
 const btn = (scope: HTMLElement, name: string | RegExp) => within(scope).getByRole("button", { name });
+// A dialog opened through the panel's guard() first renders while `busy` is still true; its buttons are enabled by a re-render
+// that React schedules with setImmediate, while findBy* returns after a setTimeout(0) drain — under load either runs first, and
+// a click on the still-disabled button is dropped (the readiness «متابعة» and decision-confirm failures). Click once enabled.
+const clickEnabled = async (el: HTMLElement) => { await waitFor(() => expect((el as HTMLButtonElement).disabled).toBe(false)); fireEvent.click(el); };
 
 beforeEach(() => { vi.spyOn(console, "error").mockImplementation(() => {}); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -71,7 +75,7 @@ describe("14B — assignment dialog before submission (author, Assigned mode)", 
     expect(calls.some(c => c.method === "directory")).toBe(true);
     fireEvent.click(btn(d, "إرسال للمراجعة"));
     const readiness = await screen.findByRole("button", { name: /متابعة إرسال للمراجعة/ });
-    fireEvent.click(readiness);
+    await clickEnabled(readiness);
     const dlg = await screen.findByRole("dialog", { name: "تعيين دورة المراجعة" });
     const reviewer = within(dlg).getByLabelText(/المراجع/) as HTMLSelectElement;
     const approver = within(dlg).getByLabelText(/المعتمد/) as HTMLSelectElement;
@@ -127,12 +131,12 @@ describe("14B — workflow card and assigned-actor decisions", () => {
     expect(confirm.disabled).toBe(true);
     fireEvent.change(within(dlg).getByLabelText(/الملاحظة \(مطلوبة\)/), { target: { value: "   " } });
     expect(confirm.disabled).toBe(true);
-    fireEvent.click(within(dlg).getByRole("button", { name: "إلغاء" }));
+    await clickEnabled(within(dlg).getByRole("button", { name: "إلغاء" }));
     await tick();
     fireEvent.click(btn(d, "إتمام المراجعة"));
     const dlg2 = await screen.findByRole("dialog", { name: "إتمام المراجعة" });
     fireEvent.change(within(dlg2).getByLabelText(/ملاحظة \(اختيارية\)/), { target: { value: "لا ملاحظات" } });
-    fireEvent.click(within(dlg2).getByTestId("decision-confirm"));
+    await clickEnabled(within(dlg2).getByTestId("decision-confirm"));
     await tick(20);
     const c = calls.find(x => x.method === "decide")!;
     expect(c.args[1]).toBe("complete-review");
@@ -186,7 +190,7 @@ describe("14B — workflow card and assigned-actor decisions", () => {
     const statusCalls = calls.filter(c => c.method === "status").length;
     fireEvent.click(btn(d, "إتمام المراجعة"));
     const dlg = await screen.findByRole("dialog", { name: "إتمام المراجعة" });
-    fireEvent.click(within(dlg).getByTestId("decision-confirm"));
+    await clickEnabled(within(dlg).getByTestId("decision-confirm"));
     await tick(30);
     expect(within(d).getByRole("alert").textContent).toContain("تغيرت حالة الامتحان في الخادم");
     expect(calls.filter(c => c.method === "decide")).toHaveLength(1);
