@@ -45,8 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Fail-first + local scenario suites (no Docker, loopback only)
@@ -57,7 +57,7 @@ jobs:
         run: npm --prefix runner run load
       - name: Bounded local qualification (CERT-L, fake sandbox) → report artifact
         run: npm --prefix runner run load:qualify:local
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coding-load-harness-local-report
           path: runner/tests/load/results/
@@ -68,8 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Build worker images (python@1, java@1, csharp@1)
