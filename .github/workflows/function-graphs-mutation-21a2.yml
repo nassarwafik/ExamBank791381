@@ -20,11 +20,11 @@ jobs:
     timeout-minutes: 55
     name: Graph mutation campaign — 47 isolated mutants
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: true
           lfs: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -36,7 +36,7 @@ jobs:
       - name: Run sequential baseline and 47 source mutations with SHA-256 restoration
         run: node scripts/mutate-function-graphs-21a2.mjs
       - name: Upload per-mutant ledger
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: phase-21a2-mutations

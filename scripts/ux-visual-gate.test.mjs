@@ -138,7 +138,7 @@ describe("UX-R19b — the wiring", () => {
     expect(workflow).toContain("THEME: ${{ matrix.theme }}");
     expect(workflow).toContain("fail-fast: false");
     expect(workflow).toContain("node scripts/ux-visual-gate.mjs");
-    expect(workflow).toContain("actions/upload-artifact@v4");
+    expect(workflow).toContain("actions/upload-artifact@v7");
   });
 
   it("the base is the merge commit's first parent, built in its own worktree and captured by the head's harness", () => {

@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     name: 21A2 RTL mobile keyboard print
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -33,7 +33,7 @@ jobs:
           CHROMIUM_PATH: /usr/bin/google-chrome
           HARNESS_OUT: .harness-21a2
         run: node scripts/check-function-graph-browser.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: function-graphs-21a2-browser

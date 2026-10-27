@@ -17,11 +17,11 @@ jobs:
     timeout-minutes: 35
     name: Surface mutation campaign — 23 isolated mutants
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: true
           lfs: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -33,7 +33,7 @@ jobs:
       - name: Run sequential baseline and 23 source mutations with SHA-256 restoration
         run: node scripts/mutate-function-surfaces-21b.mjs
       - name: Upload per-mutant ledger
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: phase-21b-mutations
