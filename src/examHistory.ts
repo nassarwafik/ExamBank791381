@@ -20,7 +20,8 @@
 //     becomes the saved payload; otherwise newer edits are kept (reconcileSavedStructuredExam semantics) and the exam
 //     stays dirty — a late save response never labels newer edits as saved and never erases them.
 import type { StructuredExam } from "./examTypes";
-import { reconcileSavedStructuredExam, type StructuredExamUpdater } from "./examBuilderState";
+import type { StructuredExamUpdater } from "./examBuilderState";
+import { reconcileSavedStructuredExam } from "./structuredExamReconcile";
 
 export const HISTORY_LIMIT = 100;
 

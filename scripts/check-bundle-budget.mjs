@@ -43,6 +43,8 @@
 //      (Phase 21D-D.3) the same for the virtual laboratory (benches / editor / review) and its lab models (solutions, pH, titration, rate);
 //  18. (Phase L.7) the learning CONTENT chunks exceed their gzip budgets (LEARNING_BUDGETS_KB): the Reader's first-load graph, the
 //      course manifest chunk(s) (the table of contents: course page ids), each learning visual group chunk and all visuals together;
+//  19. (React 19.3) the Structured Exam Builder's conversion / preset helpers (examBuilderState) reach the initial graph (signatures,
+//      each required to exist): they load with the builder; the shell keeps only examIds / structuredExamReconcile.
 //   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
 //      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
@@ -110,6 +112,8 @@ const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "f
 // (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
 // Phase 21A.2 advances ONLY the additive function-graph catalog marker to V4; the UI stays lazy.
 const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V4", "ai-composer-diff"];
+// React 19.3 — examBuilderState's section presets (ids / titles survive minification); moving it out made room for React 19.3.
+const BUILDER_STATE_SIGNATURES = ["core-2026", "أنظمة حوسبة — أساس"];
 // Phase 21A.1 — the data-chart platform: ExamBank's chart surface (the selection list and data table class names of the lazy DataChart,
 // the teacher's chart editor and key picker, the chartSelection authority's refusal code) and the ECharts runtime (the markers of our two
 // engine modules and ECharts' own DOM instance attribute). ANY one in an initial file — or in the Student Portal's static closure (a student whose exam has no
@@ -384,9 +388,12 @@ function main() {
     if (dynamic.length) failures.push(`${f} (initial) contains the dynamic SmartSim runtime payload (${dynamic.join(", ")}) — it must stay lazy`);
     const composer = COMPOSER_SIGNATURES.filter(s => src.includes(s));
     if (composer.length) failures.push(`${f} (initial) contains the AI Full Exam Composer payload (${composer.join(", ")}) — it must stay lazy`);
+    const builderState = BUILDER_STATE_SIGNATURES.filter(s => src.includes(s));
+    if (builderState.length) failures.push(`${f} (initial) contains the builder's conversion / preset helpers (examBuilderState: ${builderState.join(", ")}) — they must load with the builder`);
     const dataChart = DATA_CHART_SIGNATURES.filter(s => src.includes(s));
     if (dataChart.length) failures.push(`${f} (initial) contains the data-chart platform / ECharts payload (${dataChart.join(", ")}) — it must stay lazy`);
   }
+  for (const sig of BUILDER_STATE_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the examBuilderState signature "${sig}" was not found in any chunk — the signature list is stale`);
   // Phase 21A.1 — the data-chart platform and the ECharts runtime: lazy, out of the student's no-chart path, behind DataChart's dynamic edges, budgeted.
   for (const sig of DATA_CHART_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the data-chart signature "${sig}" was not found in any chunk — the signature list is stale`);
   const portalClosure = portalChunks.length ? staticClosure(dist, portalChunks) : [];
