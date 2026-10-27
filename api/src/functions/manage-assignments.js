@@ -10,6 +10,7 @@ const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const {recordEventSafely}=require("../lib/notification-events");
+const {pushResultsReleased}=require("../lib/event-push");const {notifyWithTimeout}=require("../lib/push-notify");   // D4
 // Phase 12E-B — the per-class PUBLISHED-assignment index (hot-path discovery). Invariant: a pointer is STRICTLY ensured
 // BEFORE any transition to "published" commits (create-as-published, draft→published, restore-to-published) and removed
 // only AFTER a published assignment stopped being published (best-effort; a stale pointer is filtered by readers). The
@@ -254,6 +255,8 @@ async function handler(request,deps={},obs=null){
     throw e;
    }
    await rec(c,{actor:auth.user?.sub,action:action==="setresultsrelease"?"assignment.setResultsRelease":"assignment.releaseResults",targetType:"assignment",targetId:id,targetLabel:String(updated.title||""),details:{assignmentId:id,from:previous.mode,to:releaseMode(updated),released:!!updated.resultsReleasedAt}});
+   // D4 (item 8) — results NEWLY released by hand: one «نتيجة جديدة» push to each student who submitted (bounded, never thrown).
+   if(action==="releaseresults"&&b.released&&!previous.releasedAt)await notifyWithTimeout((deps.pushResultsReleased||pushResultsReleased)(c,updated,deps,obs));
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
   if(action==="updatetiming"){
