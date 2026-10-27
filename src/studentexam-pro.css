@@ -278,6 +278,19 @@
 .iex-finalized{ display:inline-flex; align-items:center; gap:var(--eb-space-1); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
 .iex-timeout-note{ color:var(--eb-warn-tx); font-weight:var(--eb-fw-semibold); }
 .iex-teacher-feedback{ display:flex; flex-direction:column; gap:var(--eb-space-1); width:100%; padding:var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); color:var(--eb-info-tx); text-align:start; }
+/* D4 (item 7) — per-question breakdown under a released result: collapsed by default, one row per question. */
+.iex-breakdown{ width:100%; text-align:start; border:1px solid var(--eb-border); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); }
+.iex-breakdown > summary{ cursor:pointer; font-weight:700; min-height:44px; display:flex; align-items:center; }
+.iex-breakdown-group h3{ font-size:0.95rem; margin:var(--eb-space-2) 0 var(--eb-space-1); }
+.iex-breakdown-group h3 small{ font-weight:400; color:var(--eb-muted); }
+.iex-breakdown-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.iex-breakdown-item{ display:grid; grid-template-columns:1fr auto auto; gap:var(--eb-space-2); align-items:center; padding:var(--eb-space-1) 0; border-top:1px solid var(--eb-border); }
+.iex-breakdown-item:first-child{ border-top:0; }
+.iex-breakdown-mark{ font-variant-numeric:tabular-nums; font-weight:700; }
+.iex-breakdown-status{ font-size:0.85rem; color:var(--eb-muted); }
+.iex-breakdown-item.is-full .iex-breakdown-status{ color:var(--eb-success-tx); }
+.iex-breakdown-item.is-pending .iex-breakdown-status{ color:var(--eb-warn-tx); }
+.iex-breakdown-comment{ grid-column:1 / -1; margin:0; padding:var(--eb-space-1) var(--eb-space-2); border-radius:var(--eb-r); background:var(--eb-info-bg); color:var(--eb-info-tx); overflow-wrap:anywhere; }
 .iex-no-retry{ width:100%; padding:var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-13); }
 
 /* ---------- Tablet and up ---------- */
