@@ -1256,12 +1256,13 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(hasPolicy ? [{ key: "readiness", label: "فحص الجاهزية للاعتماد", icon: <IconInfo size={16} />, onSelect: () => setReadinessOpen(true), dialog: true, badge: gateBlockers || gateWarnings ? gatesText : undefined }] : []),
           ...(governance ? [{ key: "governance", label: "إدارة النشر والإصدارات", icon: <IconHistory size={16} />, onSelect: () => setGovernanceOpen(true), dialog: true }] : []),
           ...(presets ? [{ key: "presets", label: "القوالب الأكاديمية", icon: <IconCopy size={16} />, onSelect: () => setPresetsOpen(true), dialog: true }] : []),
-          // D5 (item 9) — a paper copy of the exam as it stands in the builder: the student paper, or the teacher's answer key.
-          { key: "print-paper", label: "طباعة ورقة الامتحان (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("student") },
-          { key: "print-key", label: "طباعة مفتاح الإجابات (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("key") },
           { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
           { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
           ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
+          // D5 (item 9) — a paper copy of the exam as it stands in the builder: the student paper, or the teacher's answer key. Last in the menu, so every
+          // existing item keeps its place.
+          { key: "print-paper", label: "طباعة ورقة الامتحان (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("student") },
+          { key: "print-key", label: "طباعة مفتاح الإجابات (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("key") },
         ];
 
   // Phase 21F.9 — the Studio's «أدوات» menu: the question explorer is the outline there, and experimental tools (the 3D function lab)
