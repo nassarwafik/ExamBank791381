@@ -60,7 +60,8 @@ const StudioSetup = lazy(() => import("./studio/StudioSetup"));
 const StudioPublish = lazy(() => import("./studio/StudioPublish"));
 import useModalSurface from "./ui/useModalSurface";
 import { SAVE_LABELS, SAVE_STATE_LABELS } from "./teacher/saveLabels";
-import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers } from "./icons";
+import { IconBank, IconSparkles, IconCompass, IconBuilder, IconReports, IconCheck, IconInfo, IconHistory, IconCopy, IconImage, IconMaximize, IconSave, IconChevronDown, IconLayers, IconPrint } from "./icons";
+import { printExam, type ExamPrintMode } from "./print/examPrint";   // D5 (item 9) — student paper / answer key
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
 import "./builder/builder-premium.css";                              // 21E.2 premium redesign, slice 1 (presentation only; loaded last)
@@ -1246,6 +1247,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           ...(aiAuthor?.authorScenario ? [{ key: "ai-scenario", label: "سيناريو بالذكاء الاصطناعي", icon: <IconSparkles size={16} />, onSelect: () => setAiScenarioOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
           ...(aiAuthor?.composeExam ? [{ key: "ai-composer", label: "المؤلف الذكي للامتحان", icon: <IconSparkles size={16} />, onSelect: () => setComposerOpenFor(exam.examId), disabled: saving, dialog: true }] : []),
         ];
+  const printFor = (mode: ExamPrintMode) => { if (!printExam(exam, mode)) showToast({ tone: "warn", message: "تعذّر فتح نافذة الطباعة في هذا المتصفح." }); };
   const toolMenuItems: ToolbarItem[] = [
           { key: "explorer", label: "مستكشف الأسئلة", icon: <IconCompass size={16} />, onSelect: () => setNavOpen(v => !v), pressed: navOpen },
           { key: "blueprint", label: "مخطط الامتحان", icon: <IconBuilder size={16} />, onSelect: () => setBlueprintOpen(true), dialog: true, badge: blueprintIssueCount > 0 ? <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span> : undefined },
@@ -1257,6 +1259,10 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
           { key: "studio", label: "العرض والتصميم", icon: <IconImage size={16} />, onSelect: () => setStudioOpen(true), disabled: saving, dialog: true },
           { key: "surface-lab", label: "مختبر الدوال 3D (تجريبي)", icon: <IconMaximize size={16} />, onSelect: () => setSurfaceLabOpen(true), dialog: true },
           ...(onLayoutChange ? [{ key: "layout", label: studio ? "العودة إلى الواجهة الكلاسيكية" : "تجربة استوديو الامتحان (جديد)", icon: <IconLayers size={16} />, onSelect: () => onLayoutChange(studio ? "classic" : "studio") }] : []),
+          // D5 (item 9) — a paper copy of the exam as it stands in the builder: the student paper, or the teacher's answer key. Last in the menu, so every
+          // existing item keeps its place.
+          { key: "print-paper", label: "طباعة ورقة الامتحان (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("student") },
+          { key: "print-key", label: "طباعة مفتاح الإجابات (PDF)", icon: <IconPrint size={16} />, onSelect: () => printFor("key") },
         ];
 
   // Phase 21F.9 — the Studio's «أدوات» menu: the question explorer is the outline there, and experimental tools (the 3D function lab)

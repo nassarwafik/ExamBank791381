@@ -11,6 +11,7 @@ import { studentStatus } from "./gradebookStatus";
 import type { CodingEvidenceTotals, CodingGradingStatus, GradebookFilter, GradebookSort, Item, StudentResult } from "./types";
 import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
 import { codingSummaryBadge } from "../coding/codingTeacherEvidence";
+import { lateDurationLabel, lateStampOf } from "./latePolicy";
 
 export type GradebookProps = {
   assignment: Item;
@@ -27,6 +28,8 @@ export type GradebookProps = {
   onExtend: (s: StudentResult) => void;
   onDeadline: (s: StudentResult) => void;
   onEndAttempt: (s: StudentResult) => void;    // Phase 7B — end the student's CURRENT attempt (server-graded draft)
+  /** D5 (item 10) — waive (true) or restore (false) the late deduction of the student's latest attempt. */
+  onLateWaiver?: (s: StudentResult, waived: boolean) => void;
   fmt: (value: string) => string;
   /** Phase 12B — the student a Today Hub drill asked for (present in the authoritative rows): that row is marked
    *  (aria-current + highlight) and scrolled into view once. Presentation only; filtering stays the panel's. */
@@ -127,6 +130,7 @@ export default function Gradebook(p: GradebookProps) {
             const gs = p.gradingOf(s), st = studentStatus(s, gs);
             const pending = gs === "pendingReview";
             const focused = s.studentId === p.focusStudentId;
+            const late = lateStampOf(s.latestResult?.late);
             const coding = s.latestResult?.codingEvidenceSummary ? codingSummaryBadge(s.latestResult.codingEvidenceSummary) : codingStatusBadge(s.latestResult?.codingGrading);
             return (
               <tr key={s.studentId} className={[focused ? "is-drill-focus" : "", sel?.selected.has(s.studentId) ? "is-selected" : ""].filter(Boolean).join(" ") || undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
@@ -146,11 +150,12 @@ export default function Gradebook(p: GradebookProps) {
                     {s.activeAttempt?.status === "paused" && <small className="lifecycle-paused">محفوظة مؤقتًا{s.activeAttempt.pausedAt ? " منذ " + p.fmt(s.activeAttempt.pausedAt) : ""}{typeof s.activeAttempt.pausedRemainingMs === "number" ? " · المتبقي " + formatRemaining(s.activeAttempt.pausedRemainingMs) : ""}</small>}
                     {s.activeAttempt && (s.activeAttempt.pauseCount || 0) > 0 && <small className="lifecycle-pause-count">مرات الحفظ المؤقت: {s.activeAttempt.pauseCount}</small>}
                     {s.activeAttempt?.extendedEndsAt && <small className="lifecycle-extended-badge">تم تمديد وقت المحاولة</small>}
+                    {late && <StatusBadge tone="warn" className="late-badge">متأخر {lateDurationLabel(late.minutesLate)}{late.waived ? " · أُلغي الخصم" : late.deductionPercent ? " · خصم " + late.deductionPercent + "٪" : ""}</StatusBadge>}
                     {s.dueAtOverride && <small className="deadline-extended-badge">تمديد حتى: {p.fmt(s.dueAtOverride)}</small>}
                   </div>
                 </td>
                 <td data-label="المحاولات">{s.attemptsUsed}/{s.allowedAttempts}</td>
-                <td data-label="العلامة">{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}</td>
+                <td data-label="العلامة">{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}{late && !late.waived && (s.latestResult?.latePenalty || 0) > 0 && <small className="late-penalty-note">قبل الخصم: {s.latestResult!.rawScore}</small>}</td>
                 <td className="eb-col-actions"><div className="eb-row-actions">
                   {s.latestResult && <button type="button" className={"eb-button is-small review-button" + (pending ? " is-primary" : "")} onClick={() => p.onReview(s)}>{pending ? "تصحيح الآن" : "عرض التصحيح"}</button>}
                   {!archived && (
@@ -159,6 +164,7 @@ export default function Gradebook(p: GradebookProps) {
                       <button type="button" className="eb-menu-item" onClick={() => p.onReopen(s)} disabled={p.busy || !!s.activeAttempt}><IconRestore size={16} />إعادة فتح للطالب</button>
                       {s.timed && s.activeAttempt && s.activeAttempt.status !== "paused" && <button type="button" className="eb-menu-item" onClick={() => p.onExtend(s)} disabled={p.busy}><IconEdit size={16} />تمديد وقت المحاولة</button>}
                       <button type="button" className="eb-menu-item" onClick={() => p.onDeadline(s)} disabled={p.busy}><IconEdit size={16} />تمديد الموعد</button>
+                      {late && p.onLateWaiver && late.deductionPercent > 0 && <button type="button" className="eb-menu-item late-waiver-button" onClick={() => p.onLateWaiver!(s, !late.waived)} disabled={p.busy}><IconRestore size={16} />{late.waived ? "إعادة خصم التأخير" : "إلغاء خصم التأخير"}</button>}
                       {s.activeAttempt && <button type="button" className="eb-menu-item is-danger end-attempt-button" onClick={() => p.onEndAttempt(s)} disabled={p.busy}><IconClose size={16} />إنهاء المحاولة الحالية</button>}
                     </ActionMenu>
                   )}

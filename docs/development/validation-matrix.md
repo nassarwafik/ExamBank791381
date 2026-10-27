@@ -63,6 +63,9 @@ Notes:
   authority). Pure refactors with unchanged tests do not need a new campaign but must keep the existing ones green.
 - Any new dependency (root, `api/`, `runner/`) is itself a governance change: name it, justify it, and show the lockfile
   diff. Documentation and governance phases add none.
+- **Production health probe (D3)** — `production-health.yml` is not a PR check: it runs on a schedule against the live site
+  (two read-only GETs, no secret) and its failures notify the owner. A PR that changes the home page shell, the CSP meta or the
+  security headers keeps `scripts/production-health-check.mjs` in step (its unit tests are part of C1).
 - **Dependabot pull requests (D2)** are ordinary PRs: C1–C5 and C18 must be green on their head and the owner merges them by
   hand. GitHub gives Dependabot runs no repository secrets, so their `Build and Deploy Job` (PR preview) fails unless the owner
   stores the Static Web Apps token as a Dependabot secret; report it as "no preview — job failed (no secret for Dependabot)", not

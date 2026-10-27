@@ -5,6 +5,7 @@
 import { windowBlocks, type WindowIssue } from "./assignmentWindow";
 import { attemptPolicyLabel } from "./attemptPolicy";
 import { resultsReleaseLabel } from "./resultsRelease";
+import { latePolicyLabel, type LatePolicy } from "./latePolicy";
 
 export type WizardStep = "content" | "classes" | "timing" | "rules" | "review";
 export const WIZARD_STEPS: ReadonlyArray<{ key: WizardStep; label: string; hint: string }> = [
@@ -60,6 +61,8 @@ export type ReviewRow = { label: string; value: string };
 export type ReviewInput = WizardInput & {
   contentTitle: string; questionCount: number; classNames: readonly string[];
   openAt: string; dueAt: string; maxAttempts: number; durationMinutes: number; attemptPolicy: string; resultsRelease: string; publish: boolean;
+  /** D5 (item 10) — the late policy (null = none); omitted by callers that predate it, and then not listed. */
+  latePolicy?: LatePolicy | null;
   fmt: (v: string) => string;
 };
 /** The review step's rows: exactly what the create request will carry, per copy. */
@@ -74,6 +77,7 @@ export function reviewRows(r: ReviewInput): ReviewRow[] {
     { label: "مدة المحاولة", value: r.durationMinutes ? r.durationMinutes + " دقيقة" : "بدون مؤقت" },
     { label: "طريقة المحاولة", value: attemptPolicyLabel(r.attemptPolicy) },
     { label: "إظهار النتائج", value: resultsReleaseLabel(r.resultsRelease) },
+    ...(r.latePolicy !== undefined ? [{ label: "التسليم المتأخر", value: latePolicyLabel(r.latePolicy) }] : []),
     { label: "الحالة بعد الإنشاء", value: r.publish ? "منشور: يراه الطلاب فورًا" : "مسودة: لا يراها الطلاب حتى تنشرها" }
   ];
 }

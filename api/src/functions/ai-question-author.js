@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 const { withObservability } = require("../lib/observability");
@@ -54,6 +55,6 @@ async function handler(request, deps = {}) {
   }
 }
 
-app.http("aiQuestionAuthor", { methods: ["POST"], authLevel: "anonymous", route: "ai-question-author", handler: withObservability("ai-question-author", (request, deps) => handler(request, deps && deps.callTextJson ? deps : {})) });
+app.http("aiQuestionAuthor", { methods: ["POST"], authLevel: "anonymous", route: "ai-question-author", handler: withObservability("ai-question-author", withAiRateLimit("ai-question-author", "ai-general", (request, deps) => handler(request, deps && deps.callTextJson ? deps : {}))) });
 
 module.exports = { handler, MAX_REQUEST_CHARS };

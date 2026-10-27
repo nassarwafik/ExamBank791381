@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AttemptPolicy } from "./attemptPolicy";
 import type { ResultsRelease } from "./resultsRelease";
+import type { LatePolicy } from "./latePolicy";
 import { assignmentWindowIssues } from "./assignmentWindow";
 import { filterLibraryCatalog, catalogCategories, type LibraryCatalogItem } from "../examLibrary";
 import { examHasQuestions, examQuestionCount } from "../examTypes";
@@ -30,6 +31,7 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
   const [openAt, setOpenAt] = useState(localDate(0)), [dueAt, setDueAt] = useState(localDate(72));
   const [maxAttempts, setMaxAttempts] = useState(1), [durationMinutes, setDurationMinutes] = useState(0), [attemptPolicy, setAttemptPolicy] = useState<AttemptPolicy>("continuous"), [resultsRelease, setResultsRelease] = useState<ResultsRelease>("immediate");
   const [publish, setPublish] = useState(false);
+  const [latePolicy, setLatePolicy] = useState<LatePolicy | null>(null);   // D5 (item 10) — off by default
   const [savedExams, setSavedExams] = useState<SavedExam[]>([]), [examSource, setExamSource] = useState(current ? "current" : ""), [savedExam, setSavedExam] = useState<Exam | null>(null), [examLoading, setExamLoading] = useState(false);
   const [sourceMode, setSourceMode] = useState<SourceMode>("mine");
   const [libraryCatalog, setLibraryCatalog] = useState<LibraryCatalogItem[]>([]), [libraryLoading, setLibraryLoading] = useState(false), [librarySearch, setLibrarySearch] = useState(""), [libraryCategory, setLibraryCategory] = useState(""), [librarySelectedId, setLibrarySelectedId] = useState(""), [libraryExam, setLibraryExam] = useState<Exam | null>(null);
@@ -101,7 +103,7 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
   const windowIssues = assignmentWindowIssues(openAt, dueAt);
 
   return {
-    fields: { classIds, setClassIds, toggleClass, setAllClasses, title, setTitle, instructions, setInstructions, openAt, setOpenAt, dueAt, setDueAt, maxAttempts, setMaxAttempts, durationMinutes, setDurationMinutes, attemptPolicy, setAttemptPolicy, resultsRelease, setResultsRelease, publish, setPublish },
+    fields: { classIds, setClassIds, toggleClass, setAllClasses, title, setTitle, instructions, setInstructions, openAt, setOpenAt, dueAt, setDueAt, maxAttempts, setMaxAttempts, durationMinutes, setDurationMinutes, attemptPolicy, setAttemptPolicy, resultsRelease, setResultsRelease, latePolicy, setLatePolicy, publish, setPublish },
     source: { sourceMode, switchSourceMode, sourceExam, sourceCount, current, hasCurrent: !!(current && examHasQuestions(current)), savedExams, examSource, chooseExam, examLoading, loadSavedExams },
     library: { libraryLoading, libraryFiltered, libraryCats, librarySearch, setLibrarySearch, libraryCategory, setLibraryCategory, librarySelectedId, chooseLibraryItem, openPreview, previewBusyId, copyLibraryItem: onCopyLibraryExamToBuilder ? copyLibraryItem : undefined, copyBusyId },
     preview, closePreview: () => setPreview(null),

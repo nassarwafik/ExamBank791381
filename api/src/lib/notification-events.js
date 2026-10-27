@@ -31,6 +31,8 @@
 // READ STATE — per student, per stream: { through, read[] } of stream POSITIONS. position <= through → read; a
 // position listed in read[] → read; everything else → unread. Acknowledging event p adds exactly p (never a newer or an
 // older unread event); contiguous read positions directly above `through` are compacted into it. A GET never writes.
+const { PUSH_EVENT_TYPES, pushForEvent } = require("./event-push");
+const { notifyWithTimeout } = require("./push-notify");
 const crypto = require("crypto");
 const { downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
 const { isSafeId, createMessage, messagePosition } = require("./message-store");
@@ -180,7 +182,14 @@ async function recordEvent(container, { scope, classId, studentId, type, dedupeK
 async function recordEventSafely(container, event, deps = {}, obs = null) {
   const rec = deps.recordNotificationEvent || recordEvent;
   try {
-    return await rec(container, event, deps);
+    const result = await rec(container, event, deps);
+    // D4 (item 8) — a NEWLY recorded assignment event also reaches the student's device (generic text, visibility re-checked,
+    // bounded in time, never thrown; push off → no I/O). A duplicate (already recorded) never pushes twice.
+    if (result && result.recorded && PUSH_EVENT_TYPES.includes(event && event.type)) {
+      const push = deps.pushForEvent || pushForEvent;
+      await notifyWithTimeout(push(container, event, deps, obs));
+    }
+    return result;
   } catch (e) {
     try { obs?.logWarn?.("notification.event.failed", { type: String(event && event.type || ""), scope: String(event && event.scope || ""), errorClass: e && e.name ? String(e.name) : "Error" }); } catch { /* logging is best-effort */ }
     return { recorded: false, failed: true };

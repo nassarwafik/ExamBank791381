@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const {
   BlobServiceClient
 } = require("@azure/storage-blob");
@@ -744,7 +745,7 @@ app.http("classifyQuestionPreview", {
     "classify-question-preview",
 
 
-  handler: async request => {
+  handler: withAiRateLimit("classify-question-preview", "ai-general", async request => {
     try {
       // ----------------------------------------------------
       // AUTH (teacher/builder session required)
@@ -1157,5 +1158,5 @@ app.http("classifyQuestionPreview", {
         }
       };
     }
-  }
+  })
 });

@@ -159,6 +159,17 @@ The frontend reads no runtime environment variables.
   needs is added there with its reason (`docs/enterprise-security-headers-d2.md`).
 - **Dependencies.** Dependabot opens weekly update PRs; `dependency-audit.yml` fails on high / critical advisories in shipped
   dependencies.
+- **AI rate limits.** Every AI route has a per-teacher budget (`api/src/lib/ai-rate-limit.js`; 429 with `Retry-After` when it
+  runs out); a new AI route registered without one fails `api/tests/ai-rate-limit-d3.test.js`.
+- **Monitoring.** Browser errors and CSP violations of signed-in sessions reach the API logs (content-free); `production-health.yml`
+  probes the live site every 30 minutes; alert rules to turn on are in `docs/operations-monitoring.md`.
+- **Assignment notifications.** New assignments, extensions, reminders and released results are pushed to students' devices
+  (generic text); an hourly signed sweep reminds students 24 hours before their deadline once its key is configured
+  (`docs/enterprise-breakdown-push-d4.md` §4).
+- **Exam printing.** The builder's tools menu prints the exam as a student paper or as a separate answer key (save as PDF);
+  interactive questions print their prompt with a note (`docs/enterprise-print-late-d5.md` §1).
+- **Late submissions.** Optional per assignment: a late window after each student's due date with a fixed percentage deduction,
+  waivable per attempt by the teacher; off by default (`docs/enterprise-print-late-d5.md` §2).
 - **Backups.** Blob soft delete, versioning and point-in-time restore are settings the owner turns on in Azure; the
   procedure, the restore steps and a drill are in `docs/operations-backup-restore.md`.
 

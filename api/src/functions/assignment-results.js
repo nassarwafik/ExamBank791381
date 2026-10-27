@@ -14,6 +14,9 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 // Phase 21E.3 — a verified render-failure hold (an unanswered question the student's device could not display) on the teacher-ended path, and
 // the per-attempt count of such holds for the gradebook row (information only; the review screen carries the question-level reason).
 const {normalizeRenderFailures,applyRenderFailureHolds,technicalHoldsField}=require("../lib/render-failures");
+const {stampLateAttempt,lateInfo,lateMarks,latePolicyOf}=require("../lib/late-policy");   // D5 (item 10)
+const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
+const {syncAssessmentMedal}=require("../lib/achievement-feed");
 const {isStudentClassMember}=require("../lib/class-membership");
 // Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
 const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,codingGradingStatus,teacherCodingSummary}=require("../lib/coding/official-grading");
@@ -40,8 +43,10 @@ function lifecycle(a,s){
 // row and by endActiveAttempt, so the row a teacher action returns is byte-for-byte the row a reload would show.
 function resultFields(s,nowMs=Date.now()){
  const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,latestGrading=deriveGradingStatus(latest);
- return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingFields(x,nowMs),...technicalHoldsField(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{}),...codingFields(latest,nowMs),...technicalHoldsField(latest)}:null};
+ return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...lateFields(x),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingFields(x,nowMs),...technicalHoldsField(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...lateFields(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{}),...codingFields(latest,nowMs),...technicalHoldsField(latest)}:null};
 }
+// D5 (item 10) — a late attempt's stamp and marks for the teacher ({} when on time).
+function lateFields(x){const li=lateInfo(x);return li?{late:li,...lateMarks(x)}:{}}
 // Phase 7B — the identity a teacher's endActiveAttempt was composed under. STRICT, fail closed (same rules as the student
 // write guard): attemptNumber a real integer >= 1, startedAt a non-empty string, and for model 3 an attemptEpoch integer
 // >= 1. Returns null when anything is missing or malformed — a generic "end this student's attempt" is never accepted.
@@ -101,7 +106,7 @@ async function handler(request,deps={},obs=null){
     else notSubmitted++;
     if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
     out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),...rf})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:finalizedCount?Number((sum/finalizedCount).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a),latePolicy:latePolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:finalizedCount?Number((sum/finalizedCount).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
   {const tenant=tenantOf(auth.user);if(tenant){const target=await dl(c,AP+String(b.assignmentId||"")+".json");if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}}}}
@@ -129,6 +134,34 @@ async function handler(request,deps={},obs=null){
    }
    await rec(c,{actor:auth.user?.sub,action:"assignment.remindStudents",targetType:"assignment",targetId:id,targetLabel:String(a.title||""),details:{assignmentId:id,reminded,alreadyToday,notNeeded,failed}});
    return {status:200,jsonBody:{ok:true,reminded,alreadyToday,notNeeded,failed}};
+  }
+  // ── D5 (item 10) — setLateWaiver: the teacher waives (or restores) the late deduction of ONE late attempt. The attempt keeps its
+  // late stamp (it was late); only the deduction is switched, through the canonical rebuild, so every reader sees the new score.
+  // Idempotent: the same value again writes nothing. An attempt that is not late is refused. ──
+  if(resultAction==="setLateWaiver"){
+   const t=await loadTarget(dl,c,String(b.assignmentId||""),String(b.studentId||""));if(t.error)return {status:t.error.status,jsonBody:{ok:false,error:t.error.error}};
+   const n=b.attemptNumber;if(typeof n!=="number"||!Number.isInteger(n)||n<1)return {status:400,jsonBody:{ok:false,error:"attemptNumber غير صالح."}};
+   if(typeof b.waived!=="boolean")return {status:400,jsonBody:{ok:false,error:"waived يجب أن تكون true أو false."}};
+   const {a,student,name}=t;let row=null,changed=false,finalized=false;
+   try{
+    await mut(c,name,current=>{
+     const attempts=Array.isArray(current?.attempts)?current.attempts:[],i=attempts.findIndex(x=>Number(x&&x.attemptNumber)===n);
+     if(i<0)throw httpError(404,"المحاولة غير موجودة.");
+     const at=attempts[i];
+     if(!lateInfo(at))throw httpError(409,"هذه المحاولة لم تُسلَّم متأخرة.");
+     changed=at.late.waived===true!==b.waived;
+     if(!changed){row={...lifecycle(a,current),...resultFields(current)};return current}
+     at.late={...at.late,waived:b.waived};rebuildAttemptGrades(at);finalized=!!at.finalized;
+     current.updatedAt=new Date().toISOString();row={...lifecycle(a,current),...resultFields(current)};
+     return current;
+    });
+   }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};throw e}
+   if(changed){
+    if(finalized)await (deps.syncAssessmentMedal||syncAssessmentMedal)(c,{classId:a.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:a.assignmentId,assignmentTitle:a.title,shareAchievements:student.shareAchievements});
+    await rec(c,{actor:auth.user?.sub,action:"assignment.setLateWaiver",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,attemptNumber:n,waived:b.waived}});
+   }
+   obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
+   return {status:200,jsonBody:{ok:true,changed,...row}};
   }
   // ── allowRetry — ensure the student has at least one unused NEXT attempt. Never deletes/resets a
   // completed attempt, never overwrites grades, never touches an active attempt (B2B #1/#2). ──
@@ -309,6 +342,7 @@ async function handler(request,deps={},obs=null){
      const g=gradeFn(fa.examSnapshot,serverAnswers,parametricGenerationContext(a.assignmentId,student.userId,active.attemptNumber)),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
      const holds=applyRenderFailureHolds(g,normalizeRenderFailures(doc.draftRenderFailures,fa.examSnapshot||null),serverAnswers,fa.examSnapshot,now);   // 21E.3 — the record saved with the draft
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{}),...(holds?{renderFailures:holds}:{})};
+     stampLateAttempt(attempt,fa,ts.dueMs,Date.parse(endedAt));                  // D5 (item 10) — a late attempt keeps its deduction
      codingPlan=planCodingGrading(fa.examSnapshot,attempt,{assignmentId:a.assignmentId,studentId:student.userId,now});endedAttemptNumber=attempt.attemptNumber;   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;delete doc.draftRenderFailures;{const r=Number(doc.draftRevision);doc.draftRevision=(Number.isInteger(r)&&r>=0?r:0)+1}   // QA2-11: a device still holding the cleared draft's revision is stale
