@@ -39,8 +39,8 @@ jobs:
       AXE_CORE_DIR: /tmp/pw
       CHROMIUM_PATH: /usr/bin/google-chrome
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -91,7 +91,7 @@ jobs:
         if: ${{ !cancelled() }}
         env: { HARNESS_OUT: .harness-projects/g4 }
         run: node scripts/check-project-score-import-browser-g4.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: projects-browser

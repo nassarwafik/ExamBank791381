@@ -17,7 +17,12 @@ export default defineConfig({
     : undefined,
   // QA2 4c — agent sessions keep scratch git worktrees under .claude/worktrees (full copies of the repository); the root suite must
   // never collect their tests as a second, stale copy of this one. Everything else keeps Vitest's defaults.
-  test: { exclude: [...configDefaults.exclude, '**/.claude/worktrees/**'] },
+  test: {
+    exclude: [...configDefaults.exclude, '**/.claude/worktrees/**'],
+    // happy-dom 21 stopped loading iframe documents by default ("Iframe page loading is disabled"); the print reports / login cards
+    // (a same-origin about:blank iframe) and the SmartSim bridge tests (an iframe's contentWindow) rely on the version 20 behaviour.
+    environmentOptions: { happyDOM: { settings: { enableIframePageLoading: true } } },
+  },
   build: {
     rollupOptions: {
       // Content hashes in emitted file names use base-36 (0-9a-z, 8 characters ≈ 41 bits) instead of base-64. The initial bundle's
