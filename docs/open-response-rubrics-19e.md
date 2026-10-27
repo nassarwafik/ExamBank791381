@@ -115,7 +115,9 @@ API:
 - **Never delivered.** `answer` is blanked. `modelAnswer`, `rubric` and `rubricAwards` are also stripped if they ever appear at
   the top level (defense in depth). Criterion guidance, ids and flags never leave `answer`.
 - **Proven through the real handlers.** The student GET for the assignment and the submission state never contain the model
-  answer, guidance, awards, level ids or per-question teacher comments, both before and after grading.
+  answer, guidance, awards or level ids, both before and after grading. Since D4 (item 7, owner decision) the teacher's
+  per-question comment — the review screen's «ملاحظة للطالب» — reaches the student inside the released per-question breakdown
+  only (`docs/enterprise-breakdown-push-d4.md`); it appears nowhere else.
 - **Ingest.** An answer on an `openResponse` question is rebuilt to exactly `{ kind: "text", value }`: the text is kept verbatim,
   and any client score, rubric, model answer or comment is dropped. The answer is bounded by the question's `maxChars`. Longer text
   is **refused, never truncated**; the browser's `maxLength` stops input before that point. No HTML is ever interpreted.

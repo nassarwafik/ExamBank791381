@@ -1,0 +1,40 @@
+# D4 (item 8) — scheduler of the AUTOMATIC assignment reminder (docs/enterprise-breakdown-push-d4.md).
+# The managed API Functions host is HTTP-only (no timer triggers), so the schedule lives here: every hour this job sends ONE signed
+# POST {"version":1} to /api/assignment-reminder-sweep (SA-REMINDER-SWEEP-1). The server does the work: a personal «تذكير» (bell +
+# device push) to each student who has not submitted, 24 hours before their deadline, exactly once per deadline.
+# Configuration (both needed; until then the job succeeds with a notice and reminders stay inactive):
+#   repository variable  ASSIGNMENT_REMINDER_SWEEP_URL        https://<host>/api/assignment-reminder-sweep
+#   repository secret    ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY   a FOURTH key (never the runner, callback or recovery-sweep key);
+#                        the same value is set as the Static Web App application setting of the same name
+# No cloud credentials and no other secrets are available to this job; the key and the signature are never printed.
+name: Assignment Reminders
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assignment-reminders
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: Automatic assignment reminders — one signed sweep
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Trigger one signed reminder sweep
+        env:
+          ASSIGNMENT_REMINDER_SWEEP_URL: ${{ vars.ASSIGNMENT_REMINDER_SWEEP_URL }}
+          ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY: ${{ secrets.ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY }}
+        run: node scripts/assignment-reminder-sweep.mjs
