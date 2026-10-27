@@ -1,0 +1,36 @@
+# D3 (item 3) — production health probe (docs/operations-monitoring.md). Every 30 minutes, two READ-ONLY GET requests to the live
+# site: the public liveness route /api/health and the home page (app shell, the D2 Content-Security-Policy meta, the D2 security
+# headers). No login, no write, no load: it never runs a load or certification scenario. A failed run is GitHub's own alert —
+# the repository owner is notified of failed scheduled runs (Settings → Notifications → Actions).
+# Configuration: optional repository variable PRODUCTION_BASE_URL (https origin); the default is the production Static Web App.
+# No secret and no cloud credential is available to this job.
+name: Production health
+
+on:
+  schedule:
+    - cron: "13,43 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-health
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: Production health — /api/health and the home page
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Probe the live site (read-only)
+        env:
+          PRODUCTION_BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+        run: node scripts/production-health-check.mjs

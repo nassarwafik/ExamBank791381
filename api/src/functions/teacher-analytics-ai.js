@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
@@ -142,5 +143,5 @@ async function handler(request, deps = {}, obs = null) {
     }
 }
 
-app.http("teacherAnalyticsAi", { methods: ["POST"], authLevel: "anonymous", route: "teacher-analytics-ai", handler: withObservability("teacher-analytics-ai", handler) });
+app.http("teacherAnalyticsAi", { methods: ["POST"], authLevel: "anonymous", route: "teacher-analytics-ai", handler: withAiRateLimit("teacher-analytics-ai", "ai-general", withObservability("teacher-analytics-ai", handler)) });
 module.exports = { handler };

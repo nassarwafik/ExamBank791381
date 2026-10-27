@@ -10,6 +10,7 @@ import { initInstallPrompt } from './pwa/installPrompt'
 import { registerServiceWorker } from './pwa/registerServiceWorker'
 import { installPullToRefreshGuard } from './pwa/pullToRefreshGuard'
 import { initThemePreference } from './ui/themePreference'
+import { installClientErrorReporting } from './observability/clientErrorReporter'
 
 // Phase 6A — optional installation: capture the browser's install prompt early, register the (non-caching)
 // service worker in production builds. Neither affects sign-in or the app when unsupported.
@@ -20,6 +21,8 @@ registerServiceWorker()
 installPullToRefreshGuard()
 // UX-R18a — the device's «المظهر» choice (system / light / dark) on <html data-theme>; inert until dark mode is released (R18c).
 initThemePreference()
+// D3 — uncaught errors, unhandled rejections and CSP violations of a signed-in session are reported (content-free) to the API logs.
+installClientErrorReporting()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
