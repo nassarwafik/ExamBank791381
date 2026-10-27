@@ -12,6 +12,22 @@ updates:
     groups:
       web-minor-and-patch:
         update-types: ["minor", "patch"]
+    # Owner decisions (2026-10-27, on the first Dependabot round):
+    #  - TypeScript 7 is a native rewrite without the JavaScript compiler API that scripts/build-shared-finalization.mjs uses
+    #    (Dependabot #466): stay on 6 until a planned migration phase.
+    #  - React 19.3 grows the initial JS graph by ~8 KB gzip, over the 125 KB budget (Dependabot #465): React minors wait until the
+    #    initial bundle has room. Patches of 19.2 still come.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-minor"]
 
   - package-ecosystem: npm
     directory: "/api"
@@ -21,6 +37,11 @@ updates:
     groups:
       api-minor-and-patch:
         update-types: ["minor", "patch"]
+    # Owner decision (2026-10-27): pdf-parse stays on v1. v2 is a different API (require() returns an object, not a function), so
+    # the bump (Dependabot #464) would break PDF import at runtime; api/tests/pdf-extract-real.test.js now parses a real PDF.
+    ignore:
+      - dependency-name: "pdf-parse"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"

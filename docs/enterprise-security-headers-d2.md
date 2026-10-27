@@ -114,6 +114,13 @@ the simulator runtime's isolation never relies on the application's headers.
 - weekly version updates for the web app and the API, plus monthly updates for the workflows' actions;
 - minor and patch updates are grouped into one pull request per directory; major updates come one by one;
 - every update is an ordinary PR, which never auto-merges.
+- **deferrals decided by the owner on the first round (2026-10-27)**, kept as `ignore` rules and pinned by a test:
+  - **TypeScript 7** (#466): a native rewrite without the JavaScript compiler API that `scripts/build-shared-finalization.mjs` uses.
+    The repository stays on 6 until a planned migration phase.
+  - **React / react-dom minor versions** (#465): React 19.3 grows the initial JS graph by about 8 KB gzip, over the 125 KB budget.
+    They wait until the initial bundle has room; 19.2 patches still come. The rest of that group was merged without React.
+  - **pdf-parse v2** (#464): a different API (`require()` returns an object, not a function), so the bump would break PDF import at
+    runtime while CI stayed green. `api/tests/pdf-extract-real.test.js` now parses a real PDF through the installed library.
 
 ## 4. Owner steps (GitHub settings; nothing here is applied by an agent)
 
