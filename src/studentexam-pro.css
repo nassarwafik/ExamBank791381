@@ -279,6 +279,10 @@
 .iex-timeout-note{ color:var(--eb-warn-tx); font-weight:var(--eb-fw-semibold); }
 .iex-teacher-feedback{ display:flex; flex-direction:column; gap:var(--eb-space-1); width:100%; padding:var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); color:var(--eb-info-tx); text-align:start; }
 /* D4 (item 7) — per-question breakdown under a released result: collapsed by default, one row per question. */
+/* D5 (item 10) — the teacher's late policy on the student's exam page. */
+.iex-late-window{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); text-align:start; }
+.iex-late-window.is-active{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-weight:600; }
+.iex-late-result{ margin:var(--eb-space-2) 0 0; color:var(--eb-warn-tx); text-align:start; }
 .iex-breakdown{ width:100%; text-align:start; border:1px solid var(--eb-border); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); }
 .iex-breakdown > summary{ cursor:pointer; font-weight:700; min-height:44px; display:flex; align-items:center; }
 .iex-breakdown-group h3{ font-size:0.95rem; margin:var(--eb-space-2) 0 var(--eb-space-1); }
@@ -442,7 +446,3 @@
   .interactive-exam-page.exam-theme-default .iex-topbar, .interactive-exam-page.exam-theme-default .iex-bottom-nav,
   .interactive-exam-page.exam-theme-default .iex-foot{ border-radius:var(--eb-r); }
 }
-/* D5 (item 10) — the teacher's late policy on the student's exam page. */
-.iex-late-window{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); text-align:start; }
-.iex-late-window.is-active{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-weight:600; }
-.iex-late-result{ margin:var(--eb-space-2) 0 0; color:var(--eb-warn-tx); text-align:start; }
