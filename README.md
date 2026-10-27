@@ -166,6 +166,10 @@ The frontend reads no runtime environment variables.
 - **Assignment notifications.** New assignments, extensions, reminders and released results are pushed to students' devices
   (generic text); an hourly signed sweep reminds students 24 hours before their deadline once its key is configured
   (`docs/enterprise-breakdown-push-d4.md` §4).
+- **Exam printing.** The builder's tools menu prints the exam as a student paper or as a separate answer key (save as PDF);
+  interactive questions print their prompt with a note (`docs/enterprise-print-late-d5.md` §1).
+- **Late submissions.** Optional per assignment: a late window after each student's due date with a fixed percentage deduction,
+  waivable per attempt by the teacher; off by default (`docs/enterprise-print-late-d5.md` §2).
 - **Backups.** Blob soft delete, versioning and point-in-time restore are settings the owner turns on in Azure; the
   procedure, the restore steps and a drill are in `docs/operations-backup-restore.md`.
 
