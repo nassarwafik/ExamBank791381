@@ -208,10 +208,12 @@ See `docs/development/validation-matrix.md` for the required set per change clas
 `npm test`, `npm run lint`, `npx tsc -b`, `npm run build` (includes the bundle guard), `git diff --check`.
 
 - Tests are evidence, not decoration: every new behaviour has a focused test; every fixed defect has a fail-first test.
-- Known flaky test policy: the repository has one documented timing-sensitive UI test (`src/GovernancePanel.14b.test.tsx`,
-  the 409 conflict alert). If it fails in CI on an unrelated PR, **do not patch it inside that PR**; record the failure,
-  re-run the job once (or ask the owner to, when re-run permission is missing), and treat a second failure on the same
-  head as real. Any other failure is real until root-caused.
+- Known flaky test policy: the repository has **no** documented timing-sensitive UI test. The former one,
+  `src/GovernancePanel.14b.test.tsx`, was root-caused and fixed (a click on a button still disabled by the panel's `busy`
+  render; `docs/development/validation-matrix.md` §4), so a failure there is real. If a test that fails in CI on an
+  unrelated PR is not caused by that PR, **do not patch it inside that PR**; record the failure, re-run the job once (or ask
+  the owner to, when re-run permission is missing), and treat a second failure on the same head as real. Any failure is
+  real until root-caused.
 - Never change a test's expectation to match a defect. Never add `skip`, `only`, `todo` or a widened timeout to make CI
   pass.
 - Documentation-only PRs still run the root suite and CI; they do not need manual Docker runs. Any change under
