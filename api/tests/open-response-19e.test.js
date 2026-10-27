@@ -285,13 +285,19 @@ describe("19E — end to end through the REAL handlers", () => {
     expect((await save(ctx, { o1: { rubricAwards: AW } }, { studentId: "someone-else" })).status).toBe(404);
     expect(ctx.getJson(F.SUB)).toEqual(before);
   });
-  it("after grading, the student's own result view carries no rubric awards, guidance, model answer or per-question teacher data", async () => {
+  // D4 (item 7, owner decision): the teacher's per-question comment — the review screen's «ملاحظة للطالب» — now reaches the student,
+  // ONLY inside the released per-question breakdown (student-question-breakdown.js). Rubric awards, level ids, guidance and the model
+  // answer still never leave the server, anywhere.
+  it("after grading, the student's own result view carries no rubric awards, guidance or model answer; the per-question comment appears only in the released breakdown", async () => {
     const ctx = await submitted();
     expect((await save(ctx, { o1: { rubricAwards: AW, comment: "TEACHER-COMMENT-19E" } })).status).toBe(200);
     const st = await submission().handler(F.studentRequest(undefined, "GET"), deps(ctx));
     expect(st.status).toBe(200);
     expect(JSON.stringify(st.jsonBody)).not.toMatch(SECRETS);
-    expect(JSON.stringify(st.jsonBody)).not.toMatch(/TEACHER-COMMENT-19E|"awards"|"levelId"/);
+    expect(JSON.stringify(st.jsonBody)).not.toMatch(/"awards"|"levelId"/);
+    expect(JSON.stringify(st.jsonBody.state.latestResult.questionBreakdown)).toContain("TEACHER-COMMENT-19E");
+    const withoutBreakdown = JSON.stringify(st.jsonBody, (key, value) => (key === "questionBreakdown" ? undefined : value));
+    expect(withoutBreakdown).not.toMatch(/TEACHER-COMMENT-19E/);
     const ga = await studentAssignment().handler(F.studentRequest(undefined, "GET"), deps(ctx));
     expect(JSON.stringify(ga.jsonBody)).not.toMatch(SECRETS);
     expect(JSON.stringify(ga.jsonBody)).not.toMatch(/TEACHER-COMMENT-19E|"awards"|"levelId"/);

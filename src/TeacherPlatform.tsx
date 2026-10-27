@@ -1,4 +1,4 @@
-import {lazy,Suspense,useEffect,useMemo,useRef,useState} from "react";
+import {lazy,Suspense,useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
 import {TeacherHttpError,isStaleEdit} from "./teacherFetch";
 import {validIdentity} from "./students/identity";
 import AssignmentsPanel from "./AssignmentsPanel";
@@ -346,10 +346,12 @@ function TeacherPlatform(props:TeacherPlatformProps){
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
  // Phase S.3 — an open batch that was never downloaded or printed exists only in this tab: closing or reloading the page asks
- // first (the browser's own prompt), and App asks before a navigation that unmounts this workspace.
+ // first (the browser's own prompt), and App asks before a navigation that unmounts this workspace. A LAYOUT effect: it runs in the
+ // commit that shows the batch, so a navigation handled right after that commit already sees it (a passive effect ran a task later,
+ // and a click in between left without asking).
  const credentialsPending=credentialBatchUnsaved(credentialBatch);
  const onCredentialsPendingChange=props.onCredentialsPendingChange;
- useEffect(()=>{
+ useLayoutEffect(()=>{
   onCredentialsPendingChange?.(credentialsPending);
   if(!credentialsPending)return;
   const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue=""};

@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { requireBuilderAuth } = require("../lib/builder-auth");
 
 async function loadOpenAI() {
@@ -78,7 +79,7 @@ app.http("generateQuestionImage", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "generate-question-image",
-  handler: request => handler(request)
+  handler: withAiRateLimit("generate-question-image", "ai-image", request => handler(request))
 });
 
 module.exports = { handler, buildImagePrompt };

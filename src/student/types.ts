@@ -8,7 +8,9 @@ export type LatestResult = { attemptNumber: number; score: number; totalMarks: n
   resultsVisible?: boolean; resultsVisibility?: string; resultsVisibleAt?: string };
 export type Summary = {
   assignmentId: string; title: string; instructions: string; openAt: string; dueAt: string; effectiveDueAt?: string; questionCount: number; totalMarks: number; durationMinutes?: number;
-  availability: "scheduled" | "open" | "closed"; dashboardState?: DashboardState; gradingStatus?: GradingStatus; attemptsUsed: number; allowedAttempts: number; canAttempt: boolean;
+  availability: "scheduled" | "open" | "closed"; dashboardState?: DashboardState;
+  /** D5 (item 10) — the assignment's due date has passed but the teacher's late window is still open (until lateUntil). */
+  inLateWindow?: boolean; lateUntil?: string; lateDeductionPercent?: number; gradingStatus?: GradingStatus; attemptsUsed: number; allowedAttempts: number; canAttempt: boolean;
   attemptStatus?: string; hasActiveAttempt?: boolean; latestScore: number | null; latestPercentage: number | null; latestResult?: LatestResult | null; createdAt: string;
 };
 export type Stats = { assigned: number; completed: number; average: number | null; submitted?: number; inProgress?: number; pendingReview?: number; finalized?: number; scheduled?: number; available?: number; closedUnsubmitted?: number; averageFinalized?: number | null };
