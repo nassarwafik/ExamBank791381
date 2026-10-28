@@ -15,19 +15,10 @@ updates:
     # Owner decisions (2026-10-27, on the first Dependabot round):
     #  - TypeScript 7 is a native rewrite without the JavaScript compiler API that scripts/build-shared-finalization.mjs uses
     #    (Dependabot #466): stay on 6 until a planned migration phase.
-    #  - React 19.3 grows the initial JS graph by ~8 KB gzip, over the 125 KB budget (Dependabot #465): React minors wait until the
-    #    initial bundle has room. Patches of 19.2 still come.
+    #  (The React-minor deferral of #465 was lifted when React 19.3 shipped with room made in the initial bundle.)
     ignore:
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "react"
-        update-types: ["version-update:semver-minor"]
-      - dependency-name: "react-dom"
-        update-types: ["version-update:semver-minor"]
-      - dependency-name: "@types/react"
-        update-types: ["version-update:semver-minor"]
-      - dependency-name: "@types/react-dom"
-        update-types: ["version-update:semver-minor"]
 
   - package-ecosystem: npm
     directory: "/api"

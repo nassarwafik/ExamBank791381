@@ -82,12 +82,18 @@ Notes:
 6. Commit (normal), push, open or update the PR, wait for every workflow on the exact head.
 7. Fetch; if `origin/main` advanced, normal merge and repeat 2–6 on the reconciled head.
 
-## 4. Known timing-sensitive test
+## 4. Known timing-sensitive test — none (GovernancePanel.14b root-caused and fixed)
 
-`src/GovernancePanel.14b.test.tsx` ("a 409 on a decision shows the conflict message…") occasionally fails under CI load.
-Policy (`AGENTS.md` §12): not patched inside unrelated PRs; one re-run (owner-triggered when the agent lacks permission);
-a second failure on the same head is real. Local isolated re-run of the file is acceptable evidence that the failure was
-load-related, and is reported together with the CI attempt numbers.
+`src/GovernancePanel.14b.test.tsx` used to fail occasionally under CI load: the 409 case ("Unable to find … role alert") and
+the assignment-dialog case ("Unable to find role=dialog … تعيين دورة المراجعة", ≈1.7 s). Root cause: a dialog opened through
+the panel's `guard()` first renders while `busy` is still true, so its «متابعة» / decision-confirm button is disabled; React
+re-enables it with a render scheduled by `setImmediate`, while Testing Library's `findBy*` returns after a `setTimeout(0)`
+drain. When the timer ran first, the test clicked the disabled button, the click was dropped and the dialog / alert never
+came. Delaying `setImmediate` by 5 ms in a scratch setup file reproduces exactly those two failures every run. The test now
+waits until the button is enabled before clicking (`clickEnabled`); no assertion and no timeout changed. The file is no longer
+timing-sensitive: a failure there is real (`AGENTS.md` §12). The general policy for a failure an unrelated PR did not cause
+is unchanged: not patched inside that PR; one re-run (owner-triggered when the agent lacks permission); a second failure on
+the same head is real.
 
 ### 4.1 Known capture flake — `studio-home`, the «الموديل» select (visual gate)
 

@@ -126,9 +126,10 @@ The owner may run several implementation windows at once from the same baseline 
   `coding-runner-security.yml` (Runner unit + real Docker on every PR), `coding-load-harness.yml` (path-filtered harness
   suites + mutation + bounded local qualification; manual real-Docker load), `coding-grading-recovery.yml` (a scheduled
   operational job calling the production recovery sweep; it is not CI evidence and agents do not edit it).
-- "Flake" is never a root cause. The only documented timing-sensitive test is `src/GovernancePanel.14b.test.tsx`
-  (409 conflict alert). On an unrelated PR it is not patched; the job is re-run once (by the owner when the agent lacks
-  permission, which is the normal case) and a second failure on the same head is treated as real.
+- "Flake" is never a root cause. No test is documented as timing-sensitive any more (`src/GovernancePanel.14b.test.tsx` was
+  root-caused and fixed; `validation-matrix.md` §4). A failure an unrelated PR did not cause is not patched in that PR; the
+  job is re-run once (by the owner when the agent lacks permission, which is the normal case) and a second failure on the
+  same head is treated as real.
 - A failure that is also red on `main` is reported as such with the evidence; it is still never silent.
 - Re-running a job never changes the exact-head rule: the report cites the attempt that produced the conclusion.
 

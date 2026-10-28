@@ -106,11 +106,11 @@ describe("dependency hygiene (item 6)", () => {
     expect(yml.match(/package-ecosystem: npm/g)).toHaveLength(2);
     expect(yml).toContain("package-ecosystem: github-actions");
   });
-  it("the owner's deferrals stay in force: TypeScript majors, React minors (initial bundle budget) and pdf-parse majors (v1 API) are not proposed", () => {
+  it("the owner's deferrals stay in force: TypeScript majors and pdf-parse majors (v1 API) are not proposed; React minors are proposed again (deferral lifted with React 19.3)", () => {
     const yml = read(".github/dependabot.yml");
     const ignored = (name: string, type: string) => new RegExp('- dependency-name: "' + name.replace(/[/@]/g, m => "\\" + m) + '"\\n\\s+update-types: \\["version-update:semver-' + type + '"\\]').test(yml);
     expect(ignored("typescript", "major")).toBe(true);
-    for (const name of ["react", "react-dom", "@types/react", "@types/react-dom"]) expect(ignored(name, "minor"), name).toBe(true);
+    for (const name of ["react", "react-dom", "@types/react", "@types/react-dom"]) expect(ignored(name, "minor"), name).toBe(false);
     expect(ignored("pdf-parse", "major")).toBe(true);
     expect(yml.indexOf('dependency-name: "pdf-parse"')).toBeGreaterThan(yml.indexOf('directory: "/api"'));      // under the API's entry
     expect(yml.indexOf('dependency-name: "typescript"')).toBeLessThan(yml.indexOf('directory: "/api"'));        // under the web app's entry
