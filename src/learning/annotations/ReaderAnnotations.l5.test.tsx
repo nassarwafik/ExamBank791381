@@ -227,19 +227,18 @@ describe("L.5 — locating and painting a quote (pure DOM)", () => {
     const root = build("<p>الشبكة مجموعة أجهزة</p>");
     const registry = new Map<string, unknown>();
     class FakeHighlight { ranges: Range[]; constructor(...r: Range[]) { this.ranges = r; } }
-    const g = globalThis as unknown as { CSS?: unknown; Highlight?: unknown };
-    const saved = { CSS: g.CSS, Highlight: g.Highlight };
-    g.CSS = { highlights: { set: (k: string, v: unknown) => registry.set(k, v), delete: (k: string) => registry.delete(k) } };
-    g.Highlight = FakeHighlight;
+    // vi.stubGlobal, not assignment: the DOM environment may expose CSS as a getter-only window property (vitest 5 / happy-dom).
+    vi.stubGlobal("CSS", { highlights: { set: (k: string, v: unknown) => registry.set(k, v), delete: (k: string) => registry.delete(k) } });
+    vi.stubGlobal("Highlight", FakeHighlight);
     try {
       const painted = paintHighlights(root, ["مجموعة", "غائب"]);
       expect(painted.found).toBe(1);
       expect((registry.get(HIGHLIGHT_NAME) as FakeHighlight).ranges.map(r => r.toString())).toEqual(["مجموعة"]);
       painted.clear();
       expect(registry.has(HIGHLIGHT_NAME)).toBe(false);
-      g.Highlight = undefined;
+      vi.stubGlobal("Highlight", undefined);
       expect(() => paintHighlights(root, ["مجموعة"])).not.toThrow();
       expect(registry.size).toBe(0);
-    } finally { g.CSS = saved.CSS; g.Highlight = saved.Highlight; root.remove(); }
+    } finally { vi.unstubAllGlobals(); root.remove(); }
   });
 });
