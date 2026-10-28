@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "module";
+import { execFileSync } from "child_process";
 
 // The PDF import extracts text through the REAL pdf-parse (no mock): a small, valid two-page PDF built here — one page with a text
 // layer, one blank page. Before this test nothing exercised the library itself, so a dependency update that changed its API (pdf-parse
@@ -40,6 +41,18 @@ describe("PDF import through the real pdf-parse", () => {
     expect(pages[0].text).toBe(line);
     expect(pages[1].text).toBe("");
     expect(warnings).toEqual(["1 page(s) had no extractable text and were marked for manual review."]);
+  });
+  it("a small PDF (under Node's 4 KB buffer-pool threshold) imports in plain Node, the production runtime", () => {
+    // pdf-parse v1's bundled pdf.js copies its input with `new value.constructor(value)`: for a Node Buffer under 4 KB that copy comes from
+    // the shared buffer pool at a non-zero byteOffset, and pdf.js then reads `.buffer` from offset 0 — other bytes ("bad XRef entry"). The test
+    // runner's realm happens to hand the copy offset 0, so the extraction runs in a child `node` process exactly as the Function host does.
+    const line = "Question 1: Explain how a router forwards packets.";
+    const pdf = twoPagePdf(line);
+    expect(pdf.length).toBeLessThan(4096);
+    const script = "const { extractPages } = require(process.argv[1]);" +
+      "extractPages(Buffer.from(process.argv[2], 'base64')).then(r => process.stdout.write(JSON.stringify(r.pages.map(p => [p.kind, p.text]))), e => process.stdout.write('ERROR ' + e.message));";
+    const out = execFileSync(process.execPath, ["-e", script, require_.resolve("../src/lib/pdf-extract.js"), pdf.toString("base64")], { encoding: "utf8" });
+    expect(out).toBe(JSON.stringify([["text", line], ["scanned", ""]]));
   });
   it("a corrupt file is rejected (the caller reports it), never returned as empty pages", async () => {
     await expect(extractPages(Buffer.from("%PDF-1.4\nnot really a pdf"))).rejects.toBeTruthy();

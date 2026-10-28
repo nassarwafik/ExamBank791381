@@ -18,7 +18,10 @@ async function extractPages(buffer) {
   const pages = [];
   const warnings = [];
 
-  await pdfParse(buffer, {
+  // A plain Uint8Array copy, never the Buffer itself: pdf-parse v1's bundled pdf.js clones its input with `new value.constructor(value)`,
+  // which for a Node Buffer under 4 KB allocates from the shared pool at a non-zero byteOffset, and then reads `.buffer` from offset 0 —
+  // a small PDF failed with "bad XRef entry". A Uint8Array clone always owns its memory from offset 0.
+  await pdfParse(new Uint8Array(buffer), {
     pagerender(pageData) {
       return pageData.getTextContent({ normalizeWhitespace: true }).then(textContent => {
         let lastY = null;
