@@ -425,7 +425,7 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
           if (!result) { await quarantineRecord(jobId, "result-hash"); return false; }
           attemptNo = rec.callback.attempts + 1;
           // durable reservation BEFORE sending: never reset, never under-counted, the next try waits for the backoff
-          await commit(jobId, r => { r.callback.attempts = attemptNo; r.callback.lastAt = iso(now()); r.callback.nextAt = iso(now() + backoffAfter(r)); });
+          await commit(jobId, r => { const t = now(); r.callback.attempts = attemptNo; r.callback.lastAt = iso(t); r.callback.nextAt = iso(t + backoffAfter(r)); });
           return true;
         });
         if (!reserved || stopped) return;
