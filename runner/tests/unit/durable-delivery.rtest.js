@@ -111,26 +111,31 @@ test("J2 HTTP: journaled official endpoint — 202 / duplicate, 409 JOB_ID_CONFL
   } finally { server.close(); await crash(h); }
 });
 
-test("CB1 retryable callback failures (network, timeout, 5xx, 408, 429) are retried with growing, capped backoff until confirmed", async () => {
+// CB1 / CB1c: the schedule is checked on the DURABLE record — each attempt's reservation stores lastAt and nextAt = lastAt + backoff —
+// not on wall-clock gaps between sends: a gap also contains two journal fsyncs and timer latency, which a busy CI disk stretches
+// (a 400 ms upper bound failed with [183,458,70,117] while the schedule was right). Exact scheduled backoffs also check the cap.
+async function retriedWithCappedBackoff({ slowWriteMs = 0 } = {}) {
   const dir = tmpJournalDir(), a = job(6);
   const script = [{ delivered: false, retryable: true, errorClass: "network" }, { delivered: false, retryable: true, errorClass: "timeout" }, { delivered: false, retryable: true, status: 503, errorClass: "http" }, { delivered: false, retryable: true, status: 429, errorClass: "http" }];
-  const at = [];
-  // the backoff runs from each attempt's DURABLE reservation (callback.lastAt, committed before the send), not from the moment the
-  // send happens: a slow reservation fsync delays one send without shifting the schedule (CI: send gaps [111, 3, 71, 71])
-  const api = fakeApi(async n => { at.push(Date.parse(recordOf(dir, a.jobId).callback.lastAt)); return script[n - 1] || null; });
+  const sends = [];
+  const api = fakeApi(async n => { const cb = recordOf(dir, a.jobId).callback; sends.push({ lastAt: Date.parse(cb.lastAt), nextAt: Date.parse(cb.nextAt) }); return script[n - 1] || null; });
   const h = await boot(dir, { api, callbackPolicy: { ...FAST, baseMs: 20, capMs: 70, maxAttemptsPerWindow: 8 } });
+  if (slowWriteMs) { const write = h.journal.writeRecord.bind(h.journal); h.journal.writeRecord = async rec => { await sleep(slowWriteMs); return write(rec); }; }
   await h.q.submit(a);
-  await waitFor(() => (recordOf(dir, a.jobId) || {}).state === "confirmed", { timeoutMs: 4000 });
+  await waitFor(() => (recordOf(dir, a.jobId) || {}).state === "confirmed", { timeoutMs: 4000 + 30 * slowWriteMs });
   assert.equal(api.attempts(a.jobId), 5);
   const rec = recordOf(dir, a.jobId);
   assert.equal(rec.callback.attempts, 5);
   assert.equal(rec.callback.confirmedAs, "complete");
-  const gaps = at.slice(1).map((t, i) => t - at[i]);
-  assert.ok(gaps[0] >= 20 && gaps[1] >= 40 && gaps[2] >= 70 && gaps[3] >= 70, JSON.stringify(gaps));   // 20 ms, 40 ms, then capped at 70 ms
-  assert.ok(gaps.every(g => g < 400), JSON.stringify(gaps));
+  assert.deepEqual(sends.map(s => s.nextAt - s.lastAt), [20, 40, 70, 70, 70]);           // 20 ms, 40 ms, then capped at 70 ms (80 → 70)
+  for (let i = 1; i < sends.length; i++) assert.ok(sends[i].lastAt >= sends[i - 1].nextAt, JSON.stringify(sends));   // never before its time
   assert.equal(h.sandbox.count(a.jobId), 1);
   await crash(h);
-});
+}
+
+test("CB1 retryable callback failures (network, timeout, 5xx, 408, 429) are retried with growing, capped backoff until confirmed", () => retriedWithCappedBackoff());
+
+test("CB1c the same schedule holds when every journal write is slow (a busy CI disk): backoff runs from the durable reservation", () => retriedWithCappedBackoff({ slowWriteMs: 220 }));
 
 test("CB1b the deliverer makes ONE signed attempt per call and classifies the SmartAssess answer (no internal loop)", async () => {
   const { createCallbackDeliverer } = callbackMod();
