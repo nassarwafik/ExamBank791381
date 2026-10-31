@@ -1,9 +1,13 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 1 «أساسيات الشبكات».
 //
 // Verbatim conversion of booklet PDF pages 4–6 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The drawing above the PAN/LAN/WAN cards is a crop of the
 // booklet itself.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–4): teacher-enrichment blocks (visuals / activities reused from
+// course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
+// book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -51,6 +55,15 @@ const m01: ContentModule = {
             {
               id: "m01-l01-p01-def", type: "text", origin: "book",
               spans: [{ text: "الشبكة = مجموعة أجهزة متصلة مع بعضها، حتى تتبادل المعلومات والملفات وتصل إلى الإنترنت.", style: "strong" }],
+            },
+            {
+              // ENRICHMENT: SVG — a network IS connected devices exchanging information (the definition above).
+              id: "m01-l01-p01-v-devices", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-connected-devices", motion: true,
+              source: src(4),
+              title: "رسم توضيحي: الشبكة أجهزة متصلة",
+              alt: "رسم يبيّن أربعة أجهزة (حاسوب، هاتف، طابعة، لوحي) متصلة بشبكة واحدة في الوسط، وتتنقّل البيانات بينها.",
+              caption: "الأجهزة المتصلة بنفس الشبكة تتبادل المعلومات والملفات.",
             },
             {
               id: "m01-l01-p01-eg", type: "text", origin: "book",
@@ -101,6 +114,15 @@ const m01: ContentModule = {
                 { text: ". كل الحواسيب تطبع عليها عن طريق الشبكة، بدل أن نشتري طابعة لكل حاسوب." },
               ],
             },
+            {
+              // ENRICHMENT: SVG for the booklet's own example — one printer shared by all the computers over the network.
+              id: "m01-l01-p02-v-printer", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/shared-printer", motion: true,
+              source: src(4, 5),
+              title: "رسم توضيحي: طابعة واحدة لعدة حواسيب",
+              alt: "رسم يبيّن ثلاثة حواسيب متصلة بطابعة واحدة، وتنتقل أوامر الطباعة من الحواسيب إلى الطابعة عبر الشبكة.",
+              caption: "كل الحواسيب تطبع على طابعة واحدة عن طريق الشبكة، بدل طابعة لكل حاسوب.",
+            },
           ],
         },
         {
@@ -125,6 +147,24 @@ const m01: ContentModule = {
                 { id: "m01-l01-p03-c2", term: "LAN · شبكة محلية", text: [{ text: "داخل بيت أو مدرسة أو بناية. مثال: غرفة الحاسوب." }] },
                 { id: "m01-l01-p03-c3", term: "WAN · شبكة واسعة", text: [{ text: "بين مدن أو دول. أكبر مثال: " }, { text: "الإنترنت", style: "strong" }, { text: "." }] },
               ],
+            },
+            {
+              // ENRICHMENT: interactive scope explorer PAN → LAN → WAN; every text in config is the booklet's own wording
+              // (the drawing's labels and the three cards above). The booklet drawing above stays unchanged.
+              id: "m01-l01-p03-scope", type: "interactive-diagram", origin: "teacher-enrichment",
+              interactionType: "network-scope", version: 1,
+              title: "استكشف أنواع الشبكات حسب الحجم", description: "اختر نوع الشبكة لترى كيف يكبر الحجم والمسافة.",
+              source: src(5),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "PAN · شبكة شخصية: أمتار قليلة، مثل هاتف + سماعة بلوتوث. LAN · شبكة محلية: بيت أو مدرسة، مثل غرفة الحاسوب. WAN · شبكة واسعة: بين مدن أو دول، وأكبر مثال الإنترنت." },
+              config: {
+                scopes: [
+                  { id: "pan", name: "PAN", title: "شبكة شخصية", distance: "أمتار قليلة", example: "أجهزة قريبة جدًا. مثال: هاتف + سماعة بلوتوث." },
+                  { id: "lan", name: "LAN", title: "شبكة محلية", distance: "بيت أو مدرسة", example: "داخل بيت أو مدرسة أو بناية. مثال: غرفة الحاسوب." },
+                  { id: "wan", name: "WAN", title: "شبكة واسعة", distance: "بين مدن أو دول", example: "بين مدن أو دول. أكبر مثال: الإنترنت." },
+                ],
+                note: "الفرق بين الأنواع هو الحجم والمسافة: PAN الأصغر ثم LAN ثم WAN الأكبر (العالم كله).",
+              },
             },
             {
               id: "m01-l01-p03-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
@@ -155,6 +195,15 @@ const m01: ContentModule = {
                 ["3. بروتوكول اتصال", "لغة متّفق عليها لتبادل البيانات، مثل TCP/IP."],
               ],
             },
+            {
+              // ENRICHMENT: SVG — the three things a network needs, as three pillars carrying a working network.
+              id: "m01-l01-p04-v-blocks", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-building-blocks", motion: true,
+              source: src(5),
+              title: "مخطط: ثلاثة أشياء لبناء شبكة",
+              alt: "مخطط فيه ثلاثة أعمدة تحمل «شبكة تعمل»: بنية تحتية، عناوين IP، وبروتوكول TCP/IP.",
+              caption: "حتى تعمل أي شبكة نحتاج: بنية تحتية، عناوين IP، وبروتوكول اتصال.",
+            },
           ],
         },
         {
@@ -175,6 +224,15 @@ const m01: ContentModule = {
                 { id: "m01-l01-p05-a3", text: [{ text: "خدمات الشبكة:", style: "strong" }, { text: " ملفات وطابعات وبريد إلكتروني." }] },
                 { id: "m01-l01-p05-a4", text: [{ text: "الفحص والصيانة:", style: "strong" }, { text: " فحص الاتصال وحلّ الأعطال." }] },
               ],
+            },
+            {
+              // ENRICHMENT: SVG — the four management areas as an ongoing cycle («بناء الشبكة ليس النهاية»).
+              id: "m01-l01-p05-v-cycle", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-management-cycle", motion: true,
+              source: src(6),
+              title: "مخطط: إدارة الشبكة عمل مستمر",
+              alt: "مخطط دائري حول عبارة «إدارة الشبكة» فيه أربعة مجالات: التكوين، الأمان، الخدمات، الصيانة.",
+              caption: "نضبط الشبكة ونحميها ونفحصها دائمًا حتى تبقى تعمل بشكل صحيح.",
             },
             {
               id: "m01-l01-p05-example", type: "callout", origin: "book", kind: "tip", title: "مثال",

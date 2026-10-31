@@ -1,9 +1,13 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 8 «أنواع الرسائل».
 //
 // Verbatim conversion of booklet PDF pages 25–27 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The drawing above the Unicast/Multicast/Broadcast cards is
 // a crop of the booklet itself.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–4): teacher-enrichment blocks (visuals / activities reused from
+// course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
+// book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -79,6 +83,25 @@ const m08: ContentModule = {
               spans: [{ text: "الفرق هو عدد الأجهزة التي تستقبل الرسالة: واحد · مجموعة · الجميع", style: "strong" }],
             },
             {
+              // ENRICHMENT — simulation / message-delivery / v1 (reused from 791381-m12): the booklet drawing's three
+              // cases (Switch over three computers: the middle one only · the two outer ones · all three) plus the
+              // page's own point that the router does not pass the broadcast to another network.
+              id: "m08-l01-p01-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "message-delivery", version: 1,
+              title: "جرّب: من يستقبل الرسالة؟",
+              description: "اختر نوع الرسالة ثم اضغط «أرسل الرسالة» وعدّ الأجهزة التي تستقبلها.",
+              source: src(25, 26),
+              capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+              fallback: { text: "Unicast: من جهاز واحد إلى جهاز واحد محدّد. Multicast: من جهاز واحد إلى مجموعة محدّدة. Broadcast: من جهاز واحد إلى جميع الأجهزة في الشبكة، والراوتر لا يمرّر البث بين الشبكات فيبقى داخل الشبكة نفسها. الفرق هو عدد الأجهزة التي تستقبل الرسالة: واحد · مجموعة · الجميع." },
+              config: {
+                sender: "PC1", receivers: ["PC2", "PC3", "PC4"], switchLabel: "Switch",
+                unicast: { target: "PC3", caption: "Unicast: من جهاز واحد إلى جهاز واحد محدّد." },
+                multicast: { group: ["PC2", "PC4"], caption: "Multicast: من جهاز واحد إلى مجموعة محدّدة فقط." },
+                broadcast: { caption: "Broadcast: إلى جميع الأجهزة في الشبكة، والراوتر لا يمرّر البث بين الشبكات.", router: { label: "Router", stopLabel: "يتوقّف هنا", outside: "شبكة أخرى" } },
+                receivesLabel: "يستقبل", notLabel: "لا يستقبل", localLabel: "الشبكة نفسها",
+              },
+            },
+            {
               id: "m08-l01-p01-intro", type: "text", origin: "book",
               spans: [{ text: "البث مثل إعلان في مكبّر الصوت في المدرسة: كل الطلاب في المدرسة يسمعونه، لكنه لا يصل إلى مدرسة أخرى." }],
             },
@@ -117,6 +140,34 @@ const m08: ContentModule = {
                 { text: "القاعدة:", style: "strong" },
                 { text: " في 24/ آخر رقم 255 · في 16/ آخر رقمين 255.255 · في 8/ آخر ثلاثة أرقام 255.255.255" },
               ],
+            },
+            {
+              // ENRICHMENT — interactive-diagram / broadcast-address / v1 (reused from 791381-m12): the examples are the
+              // booklet's five table rows; the practice items are three of those same rows (no invented network).
+              id: "m08-l01-p01-builder", type: "interactive-diagram", origin: "teacher-enrichment",
+              interactionType: "broadcast-address", version: 1,
+              title: "ابنِ عنوان البث (Broadcast)",
+              description: "اختر شبكة من أمثلة الجدول لترى أقسام الشبكة وأقسام الجهاز، ثم في التدريب اجعل أقسام الجهاز 255 واضغط «تحقّق».",
+              source: src(25, 26),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "لإيجاد عنوان البث في IP نكتب 255 في كل أقسام جزء الجهاز. أمثلة الجدول: 192.168.10.0 /24 يصبح 192.168.10.255؛ 172.18.20.0 /24 يصبح 172.18.20.255؛ 192.168.0.0 /16 يصبح 192.168.255.255؛ 172.30.0.0 /16 يصبح 172.30.255.255؛ 10.0.0.0 /8 يصبح 10.255.255.255." },
+              config: {
+                examples: [
+                  { network: "192.168.10.0", prefix: 24 },
+                  { network: "172.18.20.0", prefix: 24 },
+                  { network: "192.168.0.0", prefix: 16 },
+                  { network: "172.30.0.0", prefix: 16 },
+                  { network: "10.0.0.0", prefix: 8 },
+                ],
+                // Practice uses the booklet's own table rows (no invented network): build each broadcast address yourself.
+                practice: [
+                  { network: "172.18.20.0", prefix: 24 },
+                  { network: "172.30.0.0", prefix: 16 },
+                  { network: "10.0.0.0", prefix: 8 },
+                ],
+                networkLabel: "شبكة", hostLabel: "جهاز",
+                rule: "نكتب 255 في كل أقسام جزء الجهاز.",
+              },
             },
             { id: "m08-l01-p01-protocols-h", type: "heading", origin: "book", level: 3, text: "بروتوكولات تستعمل البث" },
             {
@@ -199,6 +250,14 @@ const m08: ContentModule = {
                 { text: " (ما عدا البايت = 8 بت)." },
               ],
             },
+            {
+              id: "m08-l01-p03-v-ladder", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/storage-units", motion: true,
+              source: src(27),
+              title: "سلّم وحدات التخزين",
+              alt: "ست درجات تصعد من الأصغر إلى الأكبر: bit أصغر وحدة، Byte = 8 بت، KB = 1024 بايت، MB = 1024 KB، GB = 1024 MB، TB = 1024 GB.",
+              caption: "كلما صعدنا تكبر الوحدة 1024 ضعفًا، ما عدا البايت = 8 بت.",
+            },
             { id: "m08-l01-p03-example-h", type: "heading", origin: "book", level: 4, text: "مثال" },
             {
               id: "m08-l01-p03-example-1", type: "text", origin: "book", dir: "ltr",
@@ -207,6 +266,132 @@ const m08: ContentModule = {
             {
               id: "m08-l01-p03-example-2", type: "text", origin: "book", dir: "ltr",
               spans: [{ text: "بت", dir: "rtl" }, { text: " " }, { text: "24", style: "strong" }, { text: " = 8 × 3 = 3 Byte" }],
+            },
+            {
+              id: "m08-l01-p03-ex1", type: "example", origin: "teacher-enrichment", mode: "solved",
+              title: "مثال محلول: كم KB في 2048 بايت؟",
+              prompt: "2048 بايت = كم KB؟",
+              steps: [
+                { text: "من الجدول: KB = 1024 بايت." },
+                { text: "2048 = 1024 × 2، أي مرّتان 1024 بايت." },
+                { text: "كل 1024 بايت = 1 KB، إذن 2048 بايت = 2 KB." },
+              ],
+              result: "2048 بايت = 2 KB",
+              explanation: "بين البايت والكيلوبايت نستعمل 1024؛ أما بين البت والبايت فنستعمل 8: 24 بت = 8 × 3 = 3 Byte.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by the section's printed text above (the explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m08-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m08-l02-p01",
+          title: "تدريبات الوحدة: أنواع الرسائل",
+          order: 1,
+          layout: "practice",
+          source: src(25, 27),
+          blocks: [
+            {
+              id: "m08-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "«تصفّح موقع» مثال على أي نوع من الرسائل؟",
+                options: [{ id: "a", text: "Multicast · رسالة لمجموعة" }, { id: "b", text: "Broadcast · رسالة للجميع (بث)" }, { id: "c", text: "Unicast · رسالة فردية", correct: true }],
+                feedback: { explanation: "Unicast · رسالة فردية: من جهاز واحد ← إلى جهاز واحد محدّد. مثال: تصفّح موقع." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما عنوان البث (Broadcast) للشبكة 172.30.0.0 مع القناع ‎/16‎؟",
+                options: [{ id: "a", text: "172.30.0.255" }, { id: "b", text: "172.30.255.255", correct: true }, { id: "c", text: "172.255.255.255" }, { id: "d", text: "255.255.255.255" }],
+                feedback: { explanation: "نكتب 255 في كل أقسام جزء الجهاز: في ‎/16‎ آخر رقمين 255.255، فيصبح 172.30.0.0 ← 172.30.255.255." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "لماذا يُستخدم البث (Broadcast) بشكل محدود؟",
+                options: [{ id: "a", text: "لأنه يزيد حركة المرور داخل الشبكة.", correct: true }, { id: "b", text: "لأن الراوتر يمرّره إلى كل الشبكات الأخرى." }, { id: "c", text: "لأنه يصل إلى جهاز واحد فقط." }],
+                feedback: { explanation: "البث يزيد حركة المرور داخل الشبكة، لذلك يُستخدم بشكل محدود." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في رسالة Broadcast، ما قيمة MAC الهدف؟",
+                options: [{ id: "a", text: "MAC كرت شبكة المرسِل" }, { id: "b", text: "192.168.10.255" }, { id: "c", text: "MAC كرت شبكة الراوتر" }, { id: "d", text: "FF:FF:FF:FF:FF:FF", correct: true }],
+                feedback: { explanation: "في رسالة Broadcast لا يوجد هدف واحد، فيكون MAC الهدف FF:FF:FF:FF:FF:FF ومعناه: «أرسل الرسالة لكل الأجهزة في الشبكة المحلية»." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "كم بايت يساوي 1 KB؟",
+                options: [{ id: "a", text: "8" }, { id: "b", text: "1000" }, { id: "c", text: "1024", correct: true }, { id: "d", text: "2048" }],
+                feedback: { explanation: "KB = 1024 بايت (كما في جدول وحدات التخزين)." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "24 بت = ؟",
+                options: [{ id: "a", text: "3 Byte", correct: true }, { id: "b", text: "24 Byte" }, { id: "c", text: "3 KB" }],
+                feedback: { explanation: "البايت = 8 بت، إذن 24 بت = 8 × 3 = 3 Byte." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "الراوتر يمرّر رسالة البث (Broadcast) إلى الشبكات الأخرى.", answer: false, feedback: { explanation: "الراوتر لا يمرّر البث بين الشبكات، فيبقى داخل الشبكة نفسها؛ والراوتر يفصل بين مجالات البث (Broadcast Domain)." } },
+            },
+            {
+              id: "m08-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في رسالة Unicast مصدر واحد وهدف واحد محدّد، فتُملأ الحقول الأربعة بعناوين معروفة.", answer: true, feedback: { explanation: "في رسالة Unicast: مصدر واحد وهدف واحد محدّد، فتُملأ الحقول الأربعة (IP و MAC للمرسِل والمستقبِل) بعناوين معروفة." } },
+            },
+            {
+              id: "m08-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في جدول وحدات التخزين، كل وحدة أكبر من التي قبلها 1024 ضعفًا بلا أي استثناء.", answer: false, feedback: { explanation: "كلما صعدنا في الجدول، تكبر الوحدة 1024 ضعفًا (ما عدا البايت = 8 بت)." } },
+            },
+            {
+              id: "m08-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل بروتوكول بالحالة التي يستعمل فيها البث:",
+                left: [{ id: "arp", text: "ARP" }, { id: "dhcp", text: "DHCP" }, { id: "rip", text: "RIP" }],
+                right: [{ id: "r1", text: "لإعلان جداول التوجيه" }, { id: "r2", text: "عندما يبحث الجهاز عن عنوان MAC لجهاز داخل نفس الشبكة" }, { id: "r3", text: "عندما يبحث الجهاز عن خادم ليحصل على عنوان IP" }],
+                pairs: { arp: "r2", dhcp: "r3", rip: "r1" },
+                feedback: { explanation: "ARP: عندما يبحث الجهاز عن عنوان MAC لجهاز داخل نفس الشبكة. DHCP: عندما يبحث الجهاز عن خادم DHCP ليحصل على عنوان IP. RIP: لإعلان جداول التوجيه (الإصدار الأول Broadcast، والثاني Multicast)." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل مثال حسب نوع الرسالة:",
+                groups: [{ id: "uni", text: "Unicast" }, { id: "multi", text: "Multicast" }, { id: "broad", text: "Broadcast" }],
+                items: [
+                  { id: "i1", text: "تصفّح موقع" },
+                  { id: "i2", text: "بث فيديو لمجموعة مشتركين" },
+                  { id: "i3", text: "البحث عن جهاز أو خدمة في الشبكة" },
+                  { id: "i4", text: "جهاز يبحث عن خادم DHCP ليحصل على عنوان IP" },
+                  { id: "i5", text: "RIP الإصدار الثاني يعلن جداول التوجيه" },
+                  { id: "i6", text: "RIP الإصدار الأول يعلن جداول التوجيه" },
+                ],
+                assign: { i1: "uni", i2: "multi", i3: "broad", i4: "broad", i5: "multi", i6: "broad" },
+                feedback: { explanation: "Unicast: تصفّح موقع. Multicast: بث فيديو لمجموعة مشتركين، و RIP الإصدار الثاني. Broadcast: البحث عن جهاز أو خدمة، و DHCP عند البحث عن خادم، و RIP الإصدار الأول." },
+              },
+            },
+            {
+              id: "m08-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب وحدات التخزين من الأصغر إلى الأكبر:",
+                items: [{ id: "gb", text: "GB" }, { id: "bit", text: "Bit (بت)" }, { id: "kb", text: "KB" }, { id: "tb", text: "TB" }, { id: "byte", text: "Byte (بايت)" }, { id: "mb", text: "MB" }],
+                order: ["bit", "byte", "kb", "mb", "gb", "tb"],
+                feedback: { explanation: "Bit أصغر وحدة، ثم Byte = 8 بت، ثم KB = 1024 بايت، ثم MB = 1024 كيلوبايت، ثم GB = 1024 ميجابايت، ثم TB = 1024 جيجابايت." },
+              },
             },
           ],
         },

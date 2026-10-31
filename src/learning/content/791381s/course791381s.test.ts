@@ -15,10 +15,12 @@ import { fileURLToPath } from "url";
 import manifest from "./manifest";
 import { COURSE_CONTENT_MODULE_IDS, registeredCourseIds } from "../registry";
 import { loadBundledModuleContent } from "../bundledModules";
-import { deriveManifest, LEARNING_CONTENT_SCHEMA_VERSION, type ContentBlock, type ContentModule, type LearningCourseContent } from "../types";
+import { activityKey, deriveManifest, isActivityBlock, LEARNING_CONTENT_SCHEMA_VERSION, type ContentBlock, type ContentModule, type LearningCourseContent } from "../types";
 import { validateLearningCourseContent } from "../validation";
 import { findLearningCourse, LEARNING_COURSES } from "../../catalog";
 import { buildPageIndex } from "../../progress/buildPageIndex";
+import { REGISTERED_VISUAL_IDS } from "../../visuals/registry";
+import { productionActivityRegistry } from "../../activities/engine";
 // @ts-expect-error — the server registry is an untyped CommonJS module; it is imported here on purpose to cross-check it.
 import * as apiRegistry from "../../../../api/src/lib/learning-materials-registry.js";
 
@@ -125,6 +127,30 @@ describe("791381s — the bodies", () => {
     for (const p of practicePages) {
       expect(p.blocks.length, p.id).toBeGreaterThan(0);
       for (const b of p.blocks) expect(b.origin, p.id + " / " + b.id).toBe("teacher-enrichment");
+    }
+  }, 30000);
+
+  it("every enrichment visual and activity resolves to a trusted registered renderer (no «قيد الإعداد» fallback in the booklet)", async () => {
+    const all = blocksOf(await loadAll()).filter(x => x.b.origin === "teacher-enrichment");
+    const entries = productionActivityRegistry.list();
+    for (const { page, b } of all) {
+      if (b.type === "visual") expect(REGISTERED_VISUAL_IDS, page + " / " + b.id).toContain(b.visualId);
+      if (isActivityBlock(b)) expect(entries.some(e => e.kind === b.type && e.key === activityKey(b) && e.versions.includes(b.version)), page + " / " + b.id).toBe(true);
+    }
+  }, 30000);
+
+  it("Phase 4: units 1–8 each close with a «تدريبات الوحدة» page of 8+ reveal questions mixing kinds", async () => {
+    const mods = await loadAll();
+    for (const n of ["01", "02", "03", "04", "05", "06", "07", "08"]) {
+      const mod = mods.find(m => m.id === CID + "-m" + n)!;
+      const last = [...mod.lessons].sort((a, b) => a.order - b.order).at(-1)!;
+      expect(last.title, mod.id).toBe("تدريبات الوحدة");
+      const page = last.pages[0];
+      expect(page.layout, mod.id).toBe("practice");
+      const qs = page.blocks.filter(b => b.type === "practice") as Extract<ContentBlock, { type: "practice" }>[];
+      expect(qs.length, mod.id).toBeGreaterThanOrEqual(8);
+      for (const q of qs) expect(q.reveal, q.id).toBe(true);
+      expect(new Set(qs.map(q => q.question.kind)).size, mod.id + " kinds").toBeGreaterThanOrEqual(3);
     }
   }, 30000);
 

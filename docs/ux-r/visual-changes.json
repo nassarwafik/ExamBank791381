@@ -220,6 +220,11 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "791381s Phase 2 — the booklet gains its first added page («تدريبات الوحدة: أساسيات الشبكات» after unit 1), so every booklet search hit's «الصفحة X من Y» reads one more page (Y 202 → 203, and X + 1 after unit 1); no hit, title or layout changes."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "791381s Phase 4 — units 2–8 gain their «تدريبات الوحدة» page, so every booklet search hit's «الصفحة X من Y» reads Y = 210 (was 203) and X shifts after each added page; no hit, title or layout changes."
     }
   ]
 }
