@@ -5,7 +5,7 @@
 // runs are `code`, printed box labels are the callout titles. The Trunk and Router-on-a-Stick drawings are crops of the
 // booklet itself.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 5): teacher-enrichment blocks (visuals and CLI terminal
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 5; the network lab: Phase 8B-2): teacher-enrichment blocks (visuals and CLI terminal
 // simulations reused from course 791381 after checking their labels / commands against this section, and the end-of-unit
 // «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by the book
 // lock (bookLock.test.ts).
@@ -578,6 +578,32 @@ const m19: ContentModule = {
             {
               id: "m19-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "إذا كان المنفذ الأصلي g0/0 في الراوتر غير مشغّل، تعمل المنافذ الفرعية رغم ذلك.", answer: false, feedback: { explanation: "المنفذ الأصلي في الراوتر يجب أن يكون مشغّلًا (interface g0/0 ثم no shutdown)، وإلا لن تعمل المنافذ الفرعية." } },
+            },
+            {
+              // Phase 8B-2 — the FIRST network lab (pilot): the curriculum network simulator (networkTopology@2) on this section's
+              // Router-on-a-Stick task, with the booklet's own values (VLAN 10 / 20, g0/0.10 / g0/0.20, dot1Q, 192.168.10.254 /
+              // 192.168.20.254 /24, the trunk on g0/1, «no shutdown» on g0/0). The SERVER replays and judges it; checks, feedback and
+              // the solution never reach the browser. Checked only — not counted in Study Strength until the owner decides (§11.3).
+              id: "m19-l02-p01-lab-roas", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: Router on a Stick",
+              description: "مختبر على محاكي الشبكات: أكمل إعداد السويتش والراوتر حتى يتواصل جهازان في VLAN مختلفتين، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "على SW1: interface g0/1 ثم switchport mode trunk. على R1: interface g0/0.10 ثم encapsulation dot1Q 10 ثم ip address 192.168.10.254 255.255.255.0، ثم interface g0/0.20 ثم encapsulation dot1Q 20 ثم ip address 192.168.20.254 255.255.255.0، ثم interface g0/0 ثم no shutdown." },
+              config: {
+                topology: {"v": 2, "devices": [{"id": "r1", "kind": "router", "label": "R1", "x": 0.5, "y": 0.12}, {"id": "sw1", "kind": "switch", "label": "SW1", "x": 0.5, "y": 0.45, "initial": {"v": 2, "device": "switch", "hostname": "SW1", "vlans": {"10": {"name": "VLAN0010"}, "20": {"name": "VLAN0020"}}, "interfaces": {"f0/1": {"mode": "access", "accessVlan": 10}, "f0/2": {"mode": "access", "accessVlan": 20}}, "vtp": {"mode": "server", "domain": "", "password": "", "version": 1, "revision": 0}, "security": {}}}, {"id": "pc1", "kind": "pc", "label": "PC1", "x": 0.25, "y": 0.85, "initial": {"v": 2, "device": "host", "adapters": {"eth0": {"mode": "static", "address": "192.168.10.11", "mask": "255.255.255.0", "gateway": "192.168.10.254"}}}}, {"id": "pc2", "kind": "pc", "label": "PC2", "x": 0.75, "y": 0.85, "initial": {"v": 2, "device": "host", "adapters": {"eth0": {"mode": "static", "address": "192.168.20.11", "mask": "255.255.255.0", "gateway": "192.168.20.254"}}}}], "links": [{"id": "u", "a": {"deviceId": "r1", "port": "g0/0"}, "b": {"deviceId": "sw1", "port": "g0/1"}}, {"id": "a", "a": {"deviceId": "sw1", "port": "f0/1"}, "b": {"deviceId": "pc1", "port": "eth0"}}, {"id": "b", "a": {"deviceId": "sw1", "port": "f0/2"}, "b": {"deviceId": "pc2", "port": "eth0"}}]},
+                task: {
+                  intro: "السويتش SW1 جاهز: VLAN 10 على المنفذ f0/1 (PC1) و VLAN 20 على المنفذ f0/2 (PC2)، وبوابة كل جهاز هي عنوان المنفذ الفرعي على الراوتر. أكمل الإعداد كما في هذه الوحدة: اجعل منفذ السويتش المتصل بالراوتر Trunk، وأنشئ على R1 منفذًا فرعيًا لكل VLAN بـ encapsulation dot1Q وعنوان Gateway، ثم شغّل المنفذ الأصلي g0/0.",
+                  goals: [{"id": "trunk", "label": "SW1: المنفذ g0/1 في وضع Trunk"}, {"id": "g0-up", "label": "R1: المنفذ الأصلي g0/0 مشغّل (no shutdown)"}, {"id": "s10-vlan", "label": "R1: g0/0.10 مربوط بـ VLAN 10 (encapsulation dot1Q 10)"}, {"id": "s10-ip", "label": "R1: g0/0.10 يحمل عنوان Gateway لـ VLAN 10: ‏192.168.10.254"}, {"id": "s20-vlan", "label": "R1: g0/0.20 مربوط بـ VLAN 20 (encapsulation dot1Q 20)"}, {"id": "s20-ip", "label": "R1: g0/0.20 يحمل عنوان Gateway لـ VLAN 20: ‏192.168.20.254"}, {"id": "ping", "label": "PC1 في VLAN 10 يصل إلى PC2 في VLAN 20 عبر الراوتر"}],
+                },
+                checks: [{"id": "trunk", "label": "SW1: المنفذ g0/1 في وضع Trunk", "weight": 1, "kind": "switch.portMode", "deviceId": "sw1", "interface": "g0/1", "value": "trunk"}, {"id": "g0-up", "label": "R1: المنفذ الأصلي g0/0 مشغّل (no shutdown)", "weight": 1, "kind": "router.interfaceEnabled", "deviceId": "r1", "interface": "g0/0", "value": true}, {"id": "s10-vlan", "label": "R1: g0/0.10 مربوط بـ VLAN 10 (encapsulation dot1Q 10)", "weight": 1, "kind": "router.subinterfaceVlan", "deviceId": "r1", "interface": "g0/0.10", "value": 10}, {"id": "s10-ip", "label": "R1: g0/0.10 يحمل عنوان Gateway لـ VLAN 10: ‏192.168.10.254", "weight": 1, "kind": "router.ipAddress", "deviceId": "r1", "interface": "g0/0.10", "value": "192.168.10.254"}, {"id": "s20-vlan", "label": "R1: g0/0.20 مربوط بـ VLAN 20 (encapsulation dot1Q 20)", "weight": 1, "kind": "router.subinterfaceVlan", "deviceId": "r1", "interface": "g0/0.20", "value": 20}, {"id": "s20-ip", "label": "R1: g0/0.20 يحمل عنوان Gateway لـ VLAN 20: ‏192.168.20.254", "weight": 1, "kind": "router.ipAddress", "deviceId": "r1", "interface": "g0/0.20", "value": "192.168.20.254"}, {"id": "ping", "label": "PC1 في VLAN 10 يصل إلى PC2 في VLAN 20 عبر الراوتر", "weight": 1, "kind": "reachability", "source": "pc1", "destination": "pc2", "value": true}],
+                feedback: {
+                  correctFeedback: "أحسنت! الحزم تمر بين VLAN 10 و VLAN 20 عبر الراوتر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["على SW1: interface g0/1 ثم switchport mode trunk.", "لكل VLAN 3 أوامر على R1: interface g0/0.10 ثم encapsulation dot1Q 10 ثم ip address 192.168.10.254 255.255.255.0 — وكذلك لـ 20.", "في النهاية: interface g0/0 ثم no shutdown، وإلا لن تعمل المنافذ الفرعية."],
+                  explanation: "Router on a Stick: منفذ واحد على الراوتر (g0/0) متصل بمنفذ Trunk على السويتش، وعليه منفذ فرعي لكل VLAN. encapsulation dot1Q يربط المنفذ الفرعي برقم VLAN، وعنوانه هو Gateway أجهزة تلك الـ VLAN.",
+                },
+                solution: [{"type": "switch.command", "deviceId": "sw1", "command": "enable"}, {"type": "switch.command", "deviceId": "sw1", "command": "configure terminal"}, {"type": "switch.command", "deviceId": "sw1", "command": "interface g0/1"}, {"type": "switch.command", "deviceId": "sw1", "command": "switchport mode trunk"}, {"type": "switch.command", "deviceId": "sw1", "command": "end"}, {"type": "router.command", "deviceId": "r1", "command": "enable"}, {"type": "router.command", "deviceId": "r1", "command": "configure terminal"}, {"type": "router.command", "deviceId": "r1", "command": "interface g0/0.10"}, {"type": "router.command", "deviceId": "r1", "command": "encapsulation dot1Q 10"}, {"type": "router.command", "deviceId": "r1", "command": "ip address 192.168.10.254 255.255.255.0"}, {"type": "router.command", "deviceId": "r1", "command": "interface g0/0.20"}, {"type": "router.command", "deviceId": "r1", "command": "encapsulation dot1Q 20"}, {"type": "router.command", "deviceId": "r1", "command": "ip address 192.168.20.254 255.255.255.0"}, {"type": "router.command", "deviceId": "r1", "command": "interface g0/0"}, {"type": "router.command", "deviceId": "r1", "command": "no shutdown"}, {"type": "router.command", "deviceId": "r1", "command": "end"}],
+              },
             },
             { id: "m19-l02-p01-lib-t17", type: "library-training", origin: "teacher-enrichment", trainingId: "T17", label: "تدريب 17", requiredModuleId: "791381s-m19" },
           ],

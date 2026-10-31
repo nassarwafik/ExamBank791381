@@ -12,7 +12,9 @@
 //     renders its faithful static fallback, and an activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
 //     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
-//     grades, no rank, no /api). Progress is a separate later domain.
+//     grades, no rank, no /api). Progress is a separate later domain. The ONE exception is not the engine's: a
+//     server-judged NETWORK LAB (791381s Phase 8B) receives the HOST's optional `check` seam (the Reader's study host
+//     → the practice route); the engine and the renderer never fetch anything themselves.
 //
 // Registry indexing uses NESTED MAPS (kind -> key -> entries): there is NO delimiter/separator character at all,
 // so a free-form registry key can never collide with an index separator (and the source carries no control bytes).
@@ -65,7 +67,23 @@ export interface LearningActivityProps {
   commands: ActivityCommandSignals;
   /** Emit a no-op-safe event (the default sink discards it). */
   emit: LearningActivityEventSink;
+  /** 791381s Phase 8B — ONLY for a served network lab (`serverCheck`) inside a study host: send the learner's answer to the
+   *  server and get its verdict. Absent → the activity offers no check (explore only). The renderer never fetches itself. */
+  check?: ActivityCheck;
 }
+
+/** The server's verdict on a lab answer, as the host relays it (booleans per goal; feedback by verdict). */
+export type ActivityCheckResult = {
+  correct: boolean;
+  parts?: Record<string, boolean>;
+  feedback?: { message?: string; hints?: string[]; explanation?: string };
+  /** False for a checked-only lab (never recorded). */
+  study?: boolean;
+  persisted?: boolean;
+  alreadyCompleted?: boolean;
+};
+/** Rejects on a transport failure or a retryable server error (a judge that could not run): never a "wrong". */
+export type ActivityCheck = (response: { kind: "network-lab"; actions: unknown[] }) => Promise<ActivityCheckResult>;
 
 export type ActivityComponent = ComponentType<LearningActivityProps>;
 /** A statically-analyzable code-split loader for a trusted repo component. NEVER a path taken from content. */
@@ -156,7 +174,8 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  * interactive-diagram network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and
  * network-topologies/v1 (Units 4–6), cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8),
  * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4), tcp-handshake/v1 (Batch 5); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6),
- * message-delivery/v1 (Units 7–8) and cli-terminal/v1 (Batch 8, the CLI teaching simulator) — each behind a
+ * message-delivery/v1 (Units 7–8), cli-terminal/v1 (Batch 8, the CLI teaching simulator), ipv6-compress/v1 and network-lab/v1
+ * (791381s Phase 8B, the curriculum network simulator judged by the server) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
  * guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered here;
@@ -301,6 +320,17 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "ipv6-compress",
     versions: [1],
     load: () => import("./Ipv6CompressSimulator"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // 791381s Phase 8B — the NETWORK LAB: the platform's curriculum network simulator (networkTopology@2 — router / switch
+    // CLI, PC Command Prompt, access points) on a booklet task. The learner configures real devices; «تحقّق من الإعداد» sends
+    // the action list through the host's `check` seam and the SERVER replays and judges it (no key in the browser). Its own
+    // lazy chunk, which imports the simulator workspace directly (never the whole trusted-sim plugin set).
+    kind: "simulation",
+    key: "network-lab",
+    versions: [1],
+    load: () => import("../lab/NetworkLabActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);
