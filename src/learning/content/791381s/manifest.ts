@@ -708,6 +708,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m20-l01-p06", title: "نقطة الوصول Access Point", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 62, pdfPageEnd: 63 } },
           ],
         },
+        {
+          id: "791381s-m20-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m20-l02-p01", title: "تدريبات الوحدة: المنطقة العازلة DMZ والشبكات اللاسلكية", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 59, pdfPageEnd: 63 } },
+          ],
+        },
       ],
     },
     {
@@ -731,6 +739,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m21-l01-p01", title: "IPv6 — عنوان الجيل الجديد", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 63, pdfPageEnd: 64 } },
             { id: "791381s-m21-l01-p02", title: "اختصار عنوان IPv6", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 64 } },
             { id: "791381s-m21-l01-p03", title: "المنافذ المهمة Ports", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 64, pdfPageEnd: 65 } },
+          ],
+        },
+        {
+          id: "791381s-m21-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m21-l02-p01", title: "تدريبات الوحدة: IPv6 والمنافذ Ports", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 63, pdfPageEnd: 65 } },
           ],
         },
       ],
@@ -760,6 +776,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m22-l01-p05", title: "DHCP عن طريق Server (في Packet Tracer)", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 69, pdfPageEnd: 70 } },
           ],
         },
+        {
+          id: "791381s-m22-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m22-l02-p01", title: "تدريبات الوحدة: بروتوكول DHCP", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 66, pdfPageEnd: 70 } },
+          ],
+        },
       ],
     },
     {
@@ -784,6 +808,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m23-l01-p02", title: "الطريقة الأولى: MAC ثابت", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 71 } },
             { id: "791381s-m23-l01-p03", title: "الطريقة الثانية: Sticky MAC", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 71, pdfPageEnd: 72 } },
             { id: "791381s-m23-l01-p04", title: "تحديد عدد الأجهزة", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 72 } },
+          ],
+        },
+        {
+          id: "791381s-m23-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m23-l02-p01", title: "تدريبات الوحدة: حماية المنافذ Port Security", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 70, pdfPageEnd: 72 } },
           ],
         },
       ],
@@ -814,6 +846,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m24-l01-p06", title: "عرض الإعدادات وحفظها", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 75, pdfPageEnd: 76 } },
           ],
         },
+        {
+          id: "791381s-m24-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m24-l02-p01", title: "تدريبات الوحدة: حماية أجهزة Cisco بكلمات المرور", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 73, pdfPageEnd: 76 } },
+          ],
+        },
       ],
     },
     {
@@ -840,6 +880,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m25-l01-p04", title: "لمحة عن الوحدة القادمة: OSPF و EIGRP و ACL", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 79 } },
           ],
         },
+        {
+          id: "791381s-m25-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m25-l02-p01", title: "تدريبات الوحدة: مرجع أوامر Cisco", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 76, pdfPageEnd: 79 } },
+          ],
+        },
       ],
     },
     {
@@ -863,6 +911,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m26-l01-p01", title: "ما هي WAN؟", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 80 } },
             { id: "791381s-m26-l01-p02", title: "تقنيات WAN القديمة", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 81 } },
             { id: "791381s-m26-l01-p03", title: "تقنيات WAN الأحدث", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 81 } },
+          ],
+        },
+        {
+          id: "791381s-m26-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m26-l02-p01", title: "تدريبات الوحدة: الشبكة الواسعة WAN", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 80, pdfPageEnd: 81 } },
           ],
         },
       ],
@@ -893,6 +949,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m27-l01-p06", title: "المسافة الإدارية AD", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 84 } },
           ],
         },
+        {
+          id: "791381s-m27-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m27-l02-p01", title: "تدريبات الوحدة: مفاهيم التوجيه Routing", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 82, pdfPageEnd: 84 } },
+          ],
+        },
       ],
     },
     {
@@ -917,6 +981,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m28-l01-p02", title: "مثال: شبكتان متصلتان عبر راوترين", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 85 } },
             { id: "791381s-m28-l01-p03", title: "أوامر R1", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 85, pdfPageEnd: 86 } },
             { id: "791381s-m28-l01-p04", title: "أوامر R2", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 86 } },
+          ],
+        },
+        {
+          id: "791381s-m28-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m28-l02-p01", title: "تدريبات الوحدة: بروتوكول OSPF", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 84, pdfPageEnd: 86 } },
           ],
         },
       ],
@@ -946,6 +1018,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m29-l01-p05", title: "جدول التوجيه show ip route", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 89, pdfPageEnd: 90 } },
           ],
         },
+        {
+          id: "791381s-m29-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m29-l02-p01", title: "تدريبات الوحدة: بروتوكول EIGRP وجدول التوجيه", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 87, pdfPageEnd: 90 } },
+          ],
+        },
       ],
     },
     {
@@ -971,6 +1051,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m30-l01-p03", title: "Standard ACL خطوة خطوة", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 91 } },
             { id: "791381s-m30-l01-p04", title: "أمثلة Standard ACL", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 91, pdfPageEnd: 92 } },
             { id: "791381s-m30-l01-p05", title: "Extended ACL", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 92, pdfPageEnd: 93 } },
+          ],
+        },
+        {
+          id: "791381s-m30-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m30-l02-p01", title: "تدريبات الوحدة: قوائم التحكم بالوصول ACL", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 90, pdfPageEnd: 93 } },
           ],
         },
       ],

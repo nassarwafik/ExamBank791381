@@ -1,7 +1,12 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 21 «IPv6 والمنافذ Ports».
 //
 // Verbatim conversion of booklet PDF pages 63–65 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded.
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6): teacher-enrichment blocks (visuals and the IPv6
+// compression practice reused from course 791381 after checking their labels / addresses against this section, and the
+// end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by
+// the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -63,6 +68,15 @@ const m21: ContentModule = {
                 ["مثال", "192.168.1.5", "2001:db8::1"],
               ],
               columnDirs: ["rtl", "rtl", "ltr"],
+            },
+            {
+              // ENRICHMENT: SVG of the table's «الطول» row — a 32-bit bar against a 128-bit bar, written in Hex.
+              id: "m21-l01-p01-v-length", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/ipv6-anatomy", motion: false,
+              source: src(63, 64),
+              title: "مخطط: طول IPv4 مقابل طول IPv6",
+              alt: "شريطان: شريط قصير لـ IPv4 مكتوب فيه «32 بت»، وشريط أطول بأربع مرات لـ IPv6 مكتوب فيه «128 بت»؛ وتحتهما أن IPv6 يُكتب بالسادس عشري Hexadecimal.",
+              caption: "IPv4 = 32 بت · IPv6 = 128 بت، ويُكتب IPv6 بالسادس عشري (Hex) — لذلك هو أطول بكثير.",
             },
             {
               id: "m21-l01-p01-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
@@ -130,6 +144,24 @@ const m21: ContentModule = {
                 { text: " في العنوان، وإلا لن نعرف كم صفرًا حذفنا في كل مكان." },
               ],
             },
+            {
+              // ENRICHMENT: practice — the student shortens the page's own three full addresses (the solved example and the two
+              // «أمثلة أخرى» rows), checked offline against the booklet's exact short form.
+              id: "m21-l01-p02-sim-compress", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "ipv6-compress", version: 1,
+              title: "تدرّب: اختصر العنوان الكامل",
+              description: "يظهر لك العنوان الكامل؛ اكتب شكله المختصر كما في الصفحة ثم اضغط «تحقّق». التحقق يتم محليًا وبدون تصحيح أو حفظ، ويُتجاهل اختلاف حجم الأحرف والمسافات المحيطة. الأمثلة الثلاثة هي نفسها أمثلة الصفحة. تلميحان يذكّرانك بالقاعدتين دون كشف الإجابة.",
+              source: src(64),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "تدريب اختصار IPv6: نحذف الأصفار في بداية كل قسم، ثم نستبدل الأقسام المتتالية التي كلها أصفار بـ :: مرة واحدة فقط." },
+              config: {
+                examples: [
+                  { long: "2001:0db8:0000:0000:0000:ff00:0042:8329", short: "2001:db8::ff00:42:8329" },
+                  { long: "fe80:0000:0000:0000:0202:b3ff:fe1e:8329", short: "fe80::202:b3ff:fe1e:8329" },
+                  { long: "2a00:8640:0000:0000:0200:23ff:fe10:8329", short: "2a00:8640::200:23ff:fe10:8329" },
+                ],
+              },
+            },
           ],
         },
         {
@@ -163,6 +195,15 @@ const m21: ContentModule = {
               columnDirs: ["ltr", "rtl", "rtl"],
             },
             {
+              // ENRICHMENT: SVG of the table — the same nine services and port numbers as cards.
+              id: "m21-l01-p03-v-ports", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/well-known-ports", motion: false,
+              source: src(64, 65),
+              title: "مخطط: المنافذ المهمة وأرقامها",
+              alt: "تسع بطاقات، في كل بطاقة اسم خدمة ورقم منفذها: HTTP 80، HTTPS 443، DNS 53، SSH 22، Telnet 23، FTP 21، SMTP 25، POP3 110، IMAP 143.",
+              caption: "رقم المنفذ يوصل البيانات إلى البرنامج الصحيح داخل الجهاز: HTTP 80 · HTTPS 443 · SSH 22 · Telnet 23 · DNS 53.",
+            },
+            {
               id: "m21-l01-p03-example", type: "callout", origin: "book", kind: "tip", title: "مثال",
               spans: [
                 { text: "عندما تفتح موقعًا يبدأ بـ " },
@@ -185,6 +226,141 @@ const m21: ContentModule = {
                 { text: "HTTPS 443", style: "strong" },
                 { text: "." },
               ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by the section's printed text above (the explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m21-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m21-l02-p01",
+          title: "تدريبات الوحدة: IPv6 والمنافذ Ports",
+          order: 1,
+          layout: "practice",
+          source: src(63, 65),
+          blocks: [
+            {
+              id: "m21-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "كم بتًا طول عنوان IPv6؟",
+                options: [{ id: "a", text: "32 بت" }, { id: "b", text: "64 بت" }, { id: "c", text: "128 بت", correct: true }, { id: "d", text: "256 بت" }],
+                feedback: { explanation: "من الجدول: طول IPv4 هو 32 بت، وطول IPv6 هو 128 بت. تذكّر: IPv4 = 32 بت · IPv6 = 128 بت." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "كم قسمًا في عنوان IPv6 الكامل؟",
+                options: [{ id: "a", text: "8 أقسام بينها نقطتان (:)", correct: true }, { id: "b", text: "4 أقسام بينها نقاط" }, { id: "c", text: "6 أقسام بينها نقطتان (:)" }, { id: "d", text: "16 قسمًا بينها نقاط" }],
+                feedback: { explanation: "من الجدول: IPv6 يُكتب بالسادس عشري (Hex) في 8 أقسام بينها نقطتان (:)، وكل قسم فيه 4 رموز Hex (مثل 0db8)." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "IPv4 يُكتب بالنظام العشري في 4 أقسام بينها نقاط، مثل 192.168.1.5.", answer: true, feedback: { explanation: "من الجدول: طريقة كتابة IPv4 «عشري، 4 أقسام بينها نقاط»، ومثاله 192.168.1.5." } },
+            },
+            {
+              id: "m21-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا يصبح العنوان 2001:0db8:0000:0000:0000:ff00:0042:8329 بعد القاعدة 1 فقط (حذف الأصفار في بداية كل قسم)؟",
+                options: [{ id: "a", text: "2001:db8::ff00:42:8329" }, { id: "b", text: "2001:db8:0:0:0:ff00:42:8329", correct: true }, { id: "c", text: "2001:0db8::ff00:0042:8329" }, { id: "d", text: "2001:db8:ff00:42:8329" }],
+                feedback: { explanation: "المثال المحلول: بعد القاعدة 1 يصبح 2001:db8:0:0:0:ff00:42:8329، وبعد القاعدة 2 يصبح 2001:db8::ff00:42:8329." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما الشكل المختصر للعنوان fe80:0000:0000:0000:0202:b3ff:fe1e:8329؟",
+                options: [{ id: "a", text: "fe80::0202:b3ff::8329" }, { id: "b", text: "fe80:202:b3ff:fe1e:8329" }, { id: "c", text: "fe80::202:b3ff:fe1e::8329" }, { id: "d", text: "fe80::202:b3ff:fe1e:8329", correct: true }],
+                feedback: { explanation: "من جدول «أمثلة أخرى»: fe80:0000:0000:0000:0202:b3ff:fe1e:8329 يُختصر إلى fe80::202:b3ff:fe1e:8329 — الأقسام الصفرية المتتالية تصبح :: مرة واحدة، و 0202 يصبح 202." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "يمكن استعمال :: أكثر من مرة في العنوان الواحد.", answer: false, feedback: { explanation: "انتبه: نستعمل :: مرة واحدة فقط في العنوان، وإلا لن نعرف كم صفرًا حذفنا في كل مكان." } },
+            },
+            {
+              id: "m21-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب مراحل اختصار العنوان في المثال المحلول، من العنوان الكامل إلى المختصر:",
+                items: [
+                  { id: "r2", text: "2001:db8::ff00:42:8329" },
+                  { id: "full", text: "2001:0db8:0000:0000:0000:ff00:0042:8329" },
+                  { id: "r1", text: "2001:db8:0:0:0:ff00:42:8329" },
+                ],
+                order: ["full", "r1", "r2"],
+                feedback: { explanation: "المثال المحلول خطوة خطوة: الكامل 2001:0db8:0000:0000:0000:ff00:0042:8329، ثم بعد القاعدة 1: 2001:db8:0:0:0:ff00:42:8329، ثم بعد القاعدة 2: 2001:db8::ff00:42:8329." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل تشبيه الكتاب من مخزن الكلمات:",
+                segments: ["عنوان IP يوصل البيانات إلى ", { blank: "b1" }, " الصحيح، ورقم المنفذ يوصلها إلى ", { blank: "b2" }, " الصحيح داخل الجهاز — مثل رقم ", { blank: "b3" }, " (IP) ورقم ", { blank: "b4" }, " (Port)."],
+                bank: ["الشقة", "الجهاز", "الشارع", "البناية", "البرنامج"],
+                answers: { b1: "الجهاز", b2: "البرنامج", b3: "البناية", b4: "الشقة" },
+                feedback: { explanation: "عنوان IP يوصل البيانات إلى الجهاز الصحيح، ورقم المنفذ يوصلها إلى البرنامج الصحيح داخل الجهاز — مثل رقم البناية (IP) ورقم الشقة (Port)." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل رقم منفذ بخدمته:",
+                left: [
+                  { id: "p80", text: "80" },
+                  { id: "p443", text: "443" },
+                  { id: "p22", text: "22" },
+                  { id: "p23", text: "23" },
+                  { id: "p21", text: "21" },
+                  { id: "p53", text: "53" },
+                ],
+                right: [
+                  { id: "r1", text: "SSH" },
+                  { id: "r2", text: "DNS" },
+                  { id: "r3", text: "HTTP" },
+                  { id: "r4", text: "FTP" },
+                  { id: "r5", text: "Telnet" },
+                  { id: "r6", text: "HTTPS" },
+                ],
+                pairs: { p80: "r3", p443: "r6", p22: "r1", p23: "r5", p21: "r4", p53: "r2" },
+                feedback: { explanation: "من جدول المنافذ: 80 HTTP · 443 HTTPS · 22 SSH · 23 Telnet · 21 FTP · 53 DNS." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف خدمات البريد حسب عمود «الاستخدام» في الجدول:",
+                groups: [{ id: "send", text: "إرسال البريد" }, { id: "recv", text: "استقبال البريد" }],
+                items: [
+                  { id: "pop3", text: "POP3 (110)" },
+                  { id: "smtp", text: "SMTP (25)" },
+                  { id: "imap", text: "IMAP (143)" },
+                ],
+                assign: { pop3: "recv", smtp: "send", imap: "recv" },
+                feedback: { explanation: "من الجدول: 25 SMTP لإرسال البريد، و 110 POP3 و 143 IMAP لاستقبال البريد." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "عندما تفتح موقعًا يبدأ بـ https://، على أي منفذ يتصل المتصفح بالخادم؟",
+                options: [{ id: "a", text: "443", correct: true }, { id: "b", text: "80" }, { id: "c", text: "22" }, { id: "d", text: "53" }],
+                feedback: { explanation: "مثال الصفحة: عندما تفتح موقعًا يبدأ بـ https:// يتصل المتصفح بالخادم على المنفذ 443 (HTTPS — تصفّح آمن)." },
+              },
+            },
+            {
+              id: "m21-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أي منفذ يستعمله الاتصال غير الآمن للتحكّم عن بُعد؟",
+                options: [{ id: "a", text: "22" }, { id: "b", text: "23", correct: true }, { id: "c", text: "443" }, { id: "d", text: "21" }],
+                feedback: { explanation: "من الجدول: 23 Telnet اتصال غير آمن للتحكّم عن بُعد، و 22 SSH اتصال آمن. طريقة للحفظ: SSH 22 و Telnet 23 (الآمن قبل غير الآمن)." },
+              },
             },
           ],
         },

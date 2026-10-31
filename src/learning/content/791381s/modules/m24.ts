@@ -1,13 +1,20 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 24 «حماية أجهزة Cisco بكلمات المرور».
 //
 // Verbatim conversion of booklet PDF pages 73–76 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded.
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6): teacher-enrichment blocks (visuals and CLI terminal
+// simulations reused from course 791381 after checking their labels / commands against this section — each simulation types
+// exactly the page's own command box — and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they
+// explain. The book blocks stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
+import type { CliExerciseConfig } from "../../../cli/types";
 
 const CID = "791381s";
 const src = (pdf: number, end?: number): ContentSource =>
   end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+const EX = (exercise: CliExerciseConfig): Record<string, unknown> => ({ ...exercise });
 
 const m24: ContentModule = {
   id: "791381s-m24",
@@ -65,6 +72,14 @@ const m24: ContentModule = {
                 { text: " عن حماية الشبكة." },
               ],
             },
+            {
+              id: "m24-l01-p01-v-layers", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m24/device-security-layers", motion: false,
+              source: src(73),
+              title: "مخطط: نحمي الجهاز نفسه بكلمات المرور",
+              alt: "مخطط: جهاز Cisco في الأسفل تتصل به ثلاثة مربعات Console و VTY و Enable، على كل منها قفل وعبارة «كلمة مرور»؛ وتحتها عبارة «الهدف: يعدّل الإعدادات التقنيّ فقط — تُمنع كل محاولة دخول غير مصرّح بها».",
+              caption: "كلمات المرور تمنع الدخول غير المصرّح به، حتى يدخل التقني المسؤول فقط.",
+            },
           ],
         },
         {
@@ -86,6 +101,14 @@ const m24: ContentModule = {
             {
               id: "m24-l01-p02-memo", type: "text", origin: "book",
               spans: [{ text: "Console = قريب من الجهاز (بكابل) · VTY = دخول عن بُعد", style: "strong" }],
+            },
+            {
+              id: "m24-l01-p02-v-paths", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m24/device-access-paths", motion: false,
+              source: src(73),
+              title: "مخطط: طرق الدخول إلى جهاز Cisco",
+              alt: "مخطط: جهاز Cisco في الوسط؛ إلى اليسار خط متصل إلى «Console (كابل مباشر)» وتحته line console 0، وإلى اليمين خط متقطّع إلى «VTY (Telnet / SSH)» وتحته line vty 0 4، وفي الأسفل «Enable (وضع متقدّم)» وتحته enable secret.",
+              caption: "Console = قريب من الجهاز (بكابل) · VTY = دخول عن بُعد · Enable = الوضع المتقدّم (#).",
             },
           ],
         },
@@ -114,6 +137,27 @@ const m24: ContentModule = {
                   text: [{ text: "login", style: "strong" }, { text: ": يجعل الجهاز يطلب كلمة المرور عند الدخول (بدونه لا يسأل عنها)." }],
                 },
               ],
+            },
+            {
+              id: "m24-l01-p03-sim-console", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: كلمة مرور Console",
+              description: "أنت في وضع الإعداد العام. نفّذ الأسطر الثلاثة في صندوق الكتاب بالترتيب، ولاحظ تغيّر الموجّه إلى (config-line)#. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(74),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "line console 0 ثم password cisco123 ثم login." },
+              config: EX({
+                kind: "guided",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام. نفّذ أسطر صندوق الكتاب بالترتيب.",
+                steps: [
+                  { id: "s1", instruction: "ادخل إلى إعدادات منفذ الدخول المباشر للجهاز", expect: { command: "line", args: { line: "console" } }, success: "✓ أحسنت، أنت الآن في (config-line)#", hints: ["السطر ① في صندوق الكتاب؛ يبدأ بـ line.", "اسم الخط console ورقمه 0."] },
+                  { id: "s2", instruction: "حدّد كلمة المرور cisco123", expect: { command: "password", args: { password: "cisco123" } }, hints: ["السطر ② في صندوق الكتاب.", "الأمر يبدأ بـ password ويليه كلمة المرور."] },
+                  { id: "s3", instruction: "اجعل الجهاز يطلب كلمة المرور عند الدخول", expect: { command: "login" }, hints: ["السطر ③ في صندوق الكتاب: بدونه لا يسأل الجهاز عن كلمة المرور.", "كلمة واحدة تعني «تسجيل الدخول»."] },
+                ],
+                completion: "✓ أحسنت — الدخول المباشر بكابل Console يطلب الآن كلمة المرور.",
+              }),
             },
             {
               id: "m24-l01-p03-note", type: "text", origin: "book",
@@ -146,6 +190,28 @@ const m24: ContentModule = {
                 { id: "m24-l01-p04-s2", text: [{ text: "كلمة مرور تمنع الدخول العشوائي." }] },
                 { id: "m24-l01-p04-s3", text: [{ text: "يجعل الجهاز يطلب كلمة المرور." }] },
               ],
+            },
+            {
+              id: "m24-l01-p04-sim-vty", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "تحدّي الأمر: كلمة مرور للدخول عن بُعد",
+              description: "أنت في وضع الإعداد العام. اكتب الأمر المطلوب في كل سؤال؛ المحاكي لا يكشف الإجابة. محاكاة تعليمية مبسّطة.",
+              source: src(74),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "التحدّي: line vty 0 4 ثم password cisco123 ثم login." },
+              config: EX({
+                kind: "challenge",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام.",
+                steps: [
+                  { id: "c1", instruction: "اختر خطوط الدخول عن بُعد الخمسة (من 0 إلى 4)", expect: { command: "line", args: { line: "vty" } }, hints: ["السطر ① في صندوق الكتاب؛ يبدأ بـ line.", "vty ثم رقم أول خط ورقم آخر خط."] },
+                  { id: "c2", instruction: "ضع كلمة المرور cisco123", expect: { command: "password", args: { password: "cisco123" } }, hints: ["يُكتب داخل الخط، تحت (config-line)#.", "يبدأ بـ password."] },
+                  { id: "c3", instruction: "اجعل الجهاز يطلب كلمة المرور", expect: { command: "login" }, hints: ["كلمة واحدة، في السطر ③ من صندوق الكتاب.", "نفس الكلمة في صندوق Console."] },
+                ],
+                allowed: ["password", "login"],
+                completion: "✓ صحيح في كل الأوامر — خطوط VTY الخمسة تطلب الآن كلمة المرور.",
+              }),
             },
             {
               id: "m24-l01-p04-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
@@ -191,6 +257,27 @@ const m24: ContentModule = {
                   ],
                 },
               ],
+            },
+            {
+              id: "m24-l01-p05-sim-encrypt", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "تحدّي الأمر: enable secret والتشفير",
+              description: "أنت في وضع الإعداد العام. اكتب الأمر المطلوب في كل سؤال؛ المحاكي لا يكشف الإجابة. محاكاة تعليمية مبسّطة.",
+              source: src(75),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "التحدّي: enable secret cisco123 ثم service password-encryption." },
+              config: EX({
+                kind: "challenge",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام.",
+                steps: [
+                  { id: "c1", instruction: "ضع كلمة المرور cisco123 لوضع الأوامر المتقدّم، محفوظة بشكل مشفّر", expect: { command: "enable-secret", args: { secret: "cisco123" } }, hints: ["السطر ① في صندوق الكتاب.", "أقوى من enable password."] },
+                  { id: "c2", instruction: "أخفِ كلمات المرور العادية (مثل كلمة Console و VTY) في ملف الإعدادات", expect: { command: "service-password-encryption" }, hints: ["السطر ② في صندوق الكتاب.", "يبدأ بـ service، والكلمة encryption تعني التشفير."] },
+                ],
+                allowed: ["enable-secret", "service-password-encryption"],
+                completion: "✓ صحيح — الوضع المتقدّم محمي بـ enable secret، وكلمات المرور العادية مخفية في ملف الإعدادات.",
+              }),
             },
             {
               id: "m24-l01-p05-why", type: "callout", origin: "book", kind: "summary", title: "لماذا نشفّر؟",
@@ -247,6 +334,134 @@ const m24: ContentModule = {
             {
               id: "m24-l01-p06-save", type: "callout", origin: "book", kind: "summary", title: "لا تنسَ الحفظ",
               spans: [{ text: "الإعدادات الحالية (running) تضيع إذا أُطفئ الجهاز. بعد البرمجة احفظها دائمًا بالأمر copy running-config startup-config." }],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by the section's printed text above (the explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m24-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m24-l02-p01",
+          title: "تدريبات الوحدة: حماية أجهزة Cisco بكلمات المرور",
+          order: 1,
+          layout: "practice",
+          source: src(73, 76),
+          blocks: [
+            {
+              id: "m24-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما الهدف من وضع كلمات مرور على السويتشات والراوترات؟",
+                options: [{ id: "a", text: "تسريع الشبكة" }, { id: "b", text: "السماح للتقني فقط بتعديل الإعدادات", correct: true }, { id: "c", text: "توزيع عناوين IP على الأجهزة" }, { id: "d", text: "إنشاء VLAN جديدة" }],
+                feedback: { explanation: "إذا استطاع أي شخص الدخول إلى الراوتر، يستطيع تغيير الإعدادات وتعطيل الشبكة كلها. لذلك نضع كلمات مرور حتى يدخل التقني المسؤول فقط. الهدف: السماح للتقني فقط بتعديل الإعدادات." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "حماية الجهاز نفسه أقل أهمية من حماية الشبكة.", answer: false, feedback: { explanation: "تذكّر: حماية الجهاز نفسه لا تقل أهمية عن حماية الشبكة." } },
+            },
+            {
+              id: "m24-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل طريقة دخول بأمرها:",
+                left: [
+                  { id: "console", text: "Console" },
+                  { id: "vty", text: "VTY" },
+                  { id: "enable", text: "Enable" },
+                ],
+                right: [
+                  { id: "r1", text: "enable secret" },
+                  { id: "r2", text: "line vty 0 4" },
+                  { id: "r3", text: "line console 0" },
+                ],
+                pairs: { console: "r3", vty: "r2", enable: "r1" },
+                feedback: { explanation: "Console: دخول مباشر بكابل Console (line console 0). VTY: دخول عن بُعد عبر الشبكة باستخدام Telnet أو SSH (line vty 0 4). Enable: الدخول إلى وضع الأوامر المتقدّم (#) (enable secret)." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل عبارة: دخول قريب من الجهاز (بكابل) أم دخول عن بُعد؟",
+                groups: [{ id: "near", text: "قريب من الجهاز (بكابل)" }, { id: "remote", text: "دخول عن بُعد" }],
+                items: [
+                  { id: "i1", text: "line console 0" },
+                  { id: "i2", text: "line vty 0 4" },
+                  { id: "i3", text: "Telnet أو SSH عبر الشبكة" },
+                  { id: "i4", text: "البرمجة الأولى للجهاز" },
+                ],
+                assign: { i1: "near", i2: "remote", i3: "remote", i4: "near" },
+                feedback: { explanation: "Console = قريب من الجهاز (بكابل): نستخدمه عند البرمجة الأولى، ونحن قريبون من الجهاز (line console 0). VTY = دخول عن بُعد عبر الشبكة باستخدام Telnet أو SSH (line vty 0 4)." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في صندوق Console كتبنا password cisco123 ونسينا login. ماذا يحدث؟",
+                options: [{ id: "a", text: "يطلب الجهاز كلمة المرور مرتين" }, { id: "b", text: "تُشفَّر كلمة المرور" }, { id: "c", text: "يُغلق منفذ Console" }, { id: "d", text: "لا يسأل الجهاز عن كلمة المرور عند الدخول", correct: true }],
+                feedback: { explanation: "login: يجعل الجهاز يطلب كلمة المرور عند الدخول (بدونه لا يسأل عنها)." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "مع الأمر line vty 0 4، كم شخصًا يستطيع الدخول عن بُعد معًا؟",
+                options: [{ id: "a", text: "4" }, { id: "b", text: "5", correct: true }, { id: "c", text: "1" }, { id: "d", text: "0" }],
+                feedback: { explanation: "vty 0 4: خطوط الدخول عن بُعد — 5 خطوط (من 0 إلى 4)، أي 5 أشخاص معًا." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "يُفضّل Telnet بدل SSH، لأنه أكثر أمانًا ويشفّر البيانات.", answer: false, feedback: { explanation: "تذكّر: يُفضّل SSH بدل Telnet، لأنه أكثر أمانًا ويشفّر البيانات." } },
+            },
+            {
+              id: "m24-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "enable secret أقوى من enable password، لأن كلمة المرور محفوظة بشكل مشفّر.", answer: true, feedback: { explanation: "enable secret: كلمة مرور لوضع الأوامر المتقدّم، محفوظة بشكل مشفّر. أقوى من enable password." } },
+            },
+            {
+              id: "m24-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا يفعل الأمر service password-encryption؟",
+                options: [{ id: "a", text: "يخفي كلمات المرور العادية (مثل كلمة Console و VTY) في ملف الإعدادات", correct: true }, { id: "b", text: "يحذف كل كلمات المرور" }, { id: "c", text: "يحفظ الإعدادات الحالية" }, { id: "d", text: "يسمح بالدخول عن بُعد" }],
+                feedback: { explanation: "service password-encryption: يخفي كلمات المرور العادية (مثل كلمة Console و VTY) في ملف الإعدادات." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "لماذا نشفّر كلمات المرور؟",
+                options: [{ id: "a", text: "حتى يعمل الجهاز أسرع" }, { id: "b", text: "حتى لا نحتاج إلى الأمر login" }, { id: "c", text: "لأن من يعرض الإعدادات بدون تشفير يرى password cisco123 مكتوبة بوضوح", correct: true }, { id: "d", text: "حتى تُحفظ الإعدادات عند إطفاء الجهاز" }],
+                feedback: { explanation: "بدون تشفير، من يعرض الإعدادات يرى password cisco123 مكتوبة بوضوح. بعد التشفير يرى رموزًا غير مفهومة بدلها." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل عبارة: هل تصف running-config أم startup-config؟",
+                groups: [{ id: "running", text: "running-config" }, { id: "startup", text: "startup-config" }],
+                items: [
+                  { id: "i1", text: "الإعدادات الحالية التي تعمل الآن" },
+                  { id: "i2", text: "الإعدادات المحفوظة" },
+                  { id: "i3", text: "تُحمّل عند تشغيل الجهاز" },
+                  { id: "i4", text: "تضيع إذا أُطفئ الجهاز" },
+                ],
+                assign: { i1: "running", i2: "startup", i3: "startup", i4: "running" },
+                feedback: { explanation: "running-config: يعرض الإعدادات الحالية التي تعمل الآن، وهي تضيع إذا أُطفئ الجهاز. startup-config: يعرض الإعدادات المحفوظة التي تُحمّل عند تشغيل الجهاز." },
+              },
+            },
+            {
+              id: "m24-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل الفراغات من مخزن الكلمات:",
+                segments: ["أوامر ", { blank: "b1" }, " نستعملها للفحص والتأكّد من الأوامر، وتُكتب في الوضع المتقدّم (#). وبعد البرمجة نحفظ الإعدادات دائمًا بالأمر copy running-config ", { blank: "b2" }, "."],
+                bank: ["show", "login", "startup-config", "password"],
+                answers: { b1: "show", b2: "startup-config" },
+                feedback: { explanation: "أوامر show نستعملها للفحص والتأكّد من الأوامر. تُكتب في الوضع المتقدّم (#). الإعدادات الحالية (running) تضيع إذا أُطفئ الجهاز، لذلك بعد البرمجة احفظها دائمًا بالأمر copy running-config startup-config." },
+              },
             },
           ],
         },
