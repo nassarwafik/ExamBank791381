@@ -17,7 +17,11 @@ export type LearningResponse =
   | { kind: "multipleChoice"; optionId: string }
   | { kind: "trueFalse"; value: boolean }
   | { kind: "shortInput"; text: string }
-  | { kind: "fillBlank"; texts: string[] };
+  | { kind: "fillBlank"; texts: string[] }
+  | { kind: "wordBank"; choices: Record<string, string> }
+  | { kind: "matching"; choices: Record<string, string> }
+  | { kind: "ordering"; order: string[] }
+  | { kind: "classify"; choices: Record<string, string> };
 
 // ── Evaluation result (evaluator -> feedback) ────────────────────────────────────────────────────────────────
 export type EvaluationStatus = "correct" | "incorrect" | "partial" | "unknown";
@@ -83,7 +87,7 @@ const norm = (s: string) => s.trim().toLocaleLowerCase("ar").replace(/\s+/g, " "
 /** Judges against the answer key carried on the question. Pure; no I/O. Returns "unknown" when no key exists. */
 export const localEvaluator: LearningQuestionEvaluator = {
   id: "local",
-  kinds: ["multipleChoice", "trueFalse", "shortInput", "fillBlank"],
+  kinds: ["multipleChoice", "trueFalse", "shortInput", "fillBlank", "wordBank", "matching", "ordering", "classify"],
   evaluate(question, response) {
     if (question.kind !== response.kind) return { status: "unknown" };
     const fb = question.feedback;
@@ -108,9 +112,28 @@ export const localEvaluator: LearningQuestionEvaluator = {
         if (hits === 0) return verdict(false);
         return { status: "partial", score: hits / keys.length, message: fb?.incorrectFeedback };
       }
+      case "wordBank":
+      case "matching":
+      case "classify": {
+        const key = question.kind === "wordBank" ? question.answers : question.kind === "matching" ? question.pairs : question.assign;
+        if (!key || Object.keys(key).length === 0) return { status: "unknown" };
+        return verdict(allPartsRight(key, (response as { choices: Record<string, string> }).choices));
+      }
+      case "ordering": {
+        if (!question.order || question.order.length === 0) return { status: "unknown" };
+        const given = (response as { order: string[] }).order;
+        return verdict(Array.isArray(given) && given.length === question.order.length && question.order.every((id, i) => given[i] === id));
+      }
     }
   },
 };
+
+/** True when every keyed part has exactly its expected choice (a missing or extra-wrong part → false). Pure. */
+export function allPartsRight(key: Record<string, string>, choices: Record<string, string> | undefined): boolean {
+  if (!choices || typeof choices !== "object") return false;
+  const parts = Object.entries(key);
+  return parts.length > 0 && parts.every(([part, expected]) => choices[part] === expected);
+}
 
 /** The "no evaluator" registry — the Phase-3 production posture: questions are presented statically, never judged. */
 export const noEvaluatorRegistry: LearningEvaluatorRegistry = createEvaluatorRegistry([]);

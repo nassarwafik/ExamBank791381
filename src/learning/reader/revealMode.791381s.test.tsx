@@ -135,12 +135,13 @@ describe("«تدريبات الوحدة» — the practice page", () => {
     expect(container.querySelector(".is-answer, .is-picked")).toBeNull();
   });
 
-  it("the real 791381s m01 page: ten reveal questions under the booklet skin, every one answerable", async () => {
+  it("the real 791381s m01 page: fourteen reveal questions (six kinds), every one answerable", async () => {
     const mod = await loadBundledModuleContent("791381s", "791381s-m01");
     const real = mod.lessons.flatMap(l => l.pages).find(p => p.id === "791381s-m01-l02-p01")!;
     expect(real.layout).toBe("practice");
     const { container } = render(<LearningPageRenderer header={{ ...header, courseId: "791381s", pageTitle: real.title, source: real.source }} body={{ kind: "ready", page: real }} />);
-    expect(container.querySelectorAll(".learning-reader-practice.is-interactive")).toHaveLength(10);
-    expect(container.querySelector(".learning-unit-practice-score")!.textContent).toContain("أجبت عن 0 من 10");
+    expect(container.querySelectorAll(".learning-reader-practice.is-interactive")).toHaveLength(14);
+    expect(container.querySelectorAll(".learning-practice-structured")).toHaveLength(4);
+    expect(container.querySelector(".learning-unit-practice-score")!.textContent).toContain("أجبت عن 0 من 14");
   }, 30000);
 });

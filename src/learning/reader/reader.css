@@ -411,6 +411,42 @@
 .learning-reader-practice-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 @media (prefers-reduced-motion: reduce){ .learning-reader-practice.is-interactive .learning-reader-practice-option{ transition:none; } }
 
+/* ── 791381s Phase 3 — STRUCTURED exercises (StructuredPracticeInput): مخزن كلمات · وصل · ترتيب · تصنيف. Per-part verdicts carry
+   an icon and screen-reader words (never colour only); «الصحيح: …» appears beside a wrong part in reveal mode. Tokens only. ──── */
+.learning-practice-sr{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.learning-practice-structured{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-practice-passage{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:2.2; }
+.learning-practice-blankwrap{ display:inline-flex; align-items:center; gap:4px; margin-inline:2px; vertical-align:baseline; }
+.learning-practice-blank{ min-inline-size:5.5em; min-block-size:36px; padding:2px var(--eb-space-2); border:0; border-block-end:2px dashed var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-heading); font:inherit; font-weight:var(--eb-fw-bold); cursor:pointer; }
+.learning-practice-blank.is-active{ border-block-end-color:var(--eb-primary); background:var(--eb-primary-050); }
+.learning-practice-blank.is-filled{ border-block-end-style:solid; border-block-end-color:var(--eb-primary-300); }
+.learning-practice-blank.is-right{ border-block-end-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-practice-blank.is-wrong{ border-block-end-color:var(--eb-danger); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-practice-blank:focus-visible, .learning-practice-chip:focus-visible, .learning-practice-group:focus-visible, .learning-practice-select:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-practice-bank{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-practice-banklabel{ color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); }
+.learning-practice-chip{ min-block-size:40px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-primary-300); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font:inherit; font-weight:var(--eb-fw-semibold); cursor:pointer; }
+.learning-practice-chip.is-used, .learning-practice-chip:disabled{ opacity:.45; cursor:default; text-decoration:line-through; }
+.learning-practice-rows{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.learning-practice-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); min-block-size:48px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.learning-practice-row.is-right{ border-color:var(--eb-success); background:var(--eb-success-bg); }
+.learning-practice-row.is-wrong{ border-color:var(--eb-danger); background:var(--eb-danger-bg); }
+.learning-practice-rowlabel{ flex:1 1 12rem; min-width:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-card); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
+.learning-practice-select{ flex:1 1 12rem; min-width:0; min-block-size:40px; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; }
+.learning-practice-pos{ flex:0 0 auto; display:inline-grid; place-items:center; inline-size:30px; block-size:30px; border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.learning-practice-move{ display:inline-flex; gap:4px; }
+.learning-practice-groups{ display:inline-flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+.learning-practice-group{ min-block-size:40px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-text); font:inherit; cursor:pointer; }
+.learning-practice-group.is-picked{ border-color:var(--eb-primary); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); }
+.learning-practice-group[aria-disabled="true"]{ cursor:default; }
+.learning-practice-partmark{ display:inline-grid; place-items:center; inline-size:22px; block-size:22px; border-radius:var(--eb-pill); color:var(--eb-surface); }
+.learning-practice-partmark.is-right{ background:var(--eb-success); }
+.learning-practice-partmark.is-wrong{ background:var(--eb-danger); }
+.learning-practice-fix{ margin:0; padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); }
+.learning-practice-fixlist{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-success); border-radius:var(--eb-r); background:var(--eb-success-bg); }
+.learning-practice-fixlist ol{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
+.learning-practice-check{ align-self:flex-start; }
+
 /* ── 791381s Phase 2 — REVEAL mode (PracticeBlockView `reveal`): after an answer the question locks; the right option is green
    (✓ الإجابة الصحيحة), the chosen wrong option red (✕ إجابتك), the explanation sits under the verdict. Never colour-only: every
    state also carries an icon and words. Tokens only (the dark theme re-maps them). ─────────────────────────────────────────── */

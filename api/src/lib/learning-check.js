@@ -14,7 +14,7 @@
 // A REVEAL block answers every well-formed response with the right answer (`reveal`) and the explanation, right or wrong — the
 // owner's «الخطأ بالأحمر والصحيح بالأخضر مع شرح بسيط». Nothing is revealed for a malformed response or one of another kind, so the
 // key never leaves without an answer of that question.
-const { evaluateStudyResponse } = require("./learning-study");
+const { evaluateStudyResponse, structuredKeyMap } = require("./learning-study");
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const cleanId = v => (typeof v === "string" ? v.trim() : "");
@@ -70,13 +70,39 @@ function checkResponse(activity, response) {
     }
     out.cells = cells;
   }
+  const parts = partsOf(activity.key, response);
+  if (parts) out.parts = parts;
+  return out;
+}
+
+/**
+ * 791381s Phase 3 — the per-part verdict of a structured answer (for learning; the whole answer is still right only when every
+ * part is): wordBank / matching / classify → { part: choice === expected } for each answered part the key knows; ordering →
+ * { itemId: in its right position }. Null for other kinds or a response of another kind. Says right/wrong only, never the key.
+ */
+function partsOf(key, response) {
+  if (!key || !response || typeof response !== "object" || response.kind !== key.kind) return null;
+  if (key.kind === "ordering") {
+    if (!Array.isArray(response.order) || !Array.isArray(key.order)) return null;
+    const out = {};
+    response.order.forEach((id, i) => { if (typeof id === "string" && key.order.includes(id)) out[id] = key.order[i] === id; });
+    return out;
+  }
+  const expected = structuredKeyMap(key);
+  const choices = response.choices && typeof response.choices === "object" && !Array.isArray(response.choices) ? response.choices : null;
+  if (!expected || !choices) return null;
+  const out = {};
+  for (const [part, value] of Object.entries(choices)) {
+    if (Object.prototype.hasOwnProperty.call(expected, part) && typeof value === "string" && value !== "") out[part] = value === expected[part];
+  }
   return out;
 }
 
 /**
  * The right answer of a REVEAL block, returned only for a well-formed response OF THE SAME KIND (an answer to this question):
- * multipleChoice → { kind, optionIds }, trueFalse → { kind, answer }. Anything else → null. Pure. (shortInput is not a reveal kind:
- * its key is stored normalised, which is not the text to show.)
+ * multipleChoice → { kind, optionIds }, trueFalse → { kind, answer }; the structured kinds (Phase 3) → wordBank { answers },
+ * matching { pairs }, ordering { order }, classify { assign } — for a response of the same kind that answers every part. Anything
+ * else → null. Pure. (shortInput is not a reveal kind: its key is stored normalised, which is not the text to show.)
  */
 function revealOf(key, response) {
   if (!key || !response || typeof response !== "object" || response.kind !== key.kind) return null;
@@ -85,6 +111,18 @@ function revealOf(key, response) {
       return typeof response.optionId === "string" && response.optionId !== "" && Array.isArray(key.correct) ? { kind: "multipleChoice", optionIds: [...key.correct] } : null;
     case "trueFalse":
       return typeof response.value === "boolean" && typeof key.answer === "boolean" ? { kind: "trueFalse", answer: key.answer } : null;
+    case "wordBank":
+    case "matching":
+    case "classify": {
+      const expected = structuredKeyMap(key);
+      const choices = response.choices && typeof response.choices === "object" && !Array.isArray(response.choices) ? response.choices : null;
+      if (!expected || !choices || !Object.keys(expected).every(part => typeof choices[part] === "string" && choices[part] !== "")) return null;
+      const field = key.kind === "wordBank" ? "answers" : key.kind === "matching" ? "pairs" : "assign";
+      return { kind: key.kind, [field]: { ...expected } };
+    }
+    case "ordering":
+      return Array.isArray(response.order) && Array.isArray(key.order) && response.order.length === key.order.length
+        && key.order.every(id => response.order.includes(id)) ? { kind: "ordering", order: [...key.order] } : null;
     default:
       return null;
   }

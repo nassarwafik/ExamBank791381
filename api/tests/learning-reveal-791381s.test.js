@@ -5,7 +5,8 @@ import { loadCheckIndex, findCheckActivity, checkResponse, revealOf } from "../s
 import { studyDocName, loadStudyIndex, normalizeStudyDoc, applyStudyReveal, applyStudyCompletion, wasRevealed, studyStateOf } from "../src/lib/learning-study.js";
 
 // 791381s Phase 2 — REVEAL mode on the server (docs/enterprise-791381s-enrichment-plan.md D3/D6), over the REAL generated indexes
-// of the summary booklet (the «تدريبات الوحدة» page of m01: 10 reveal questions, all study activities) and the in-memory container:
+// of the summary booklet (the «تدريبات الوحدة» page of m01: 14 reveal questions — 8 multipleChoice, 2 trueFalse and, since Phase 3,
+// one wordBank, matching, ordering and classify — all study activities) and the in-memory container:
 //   • every well-formed answer to a reveal block gets the verdict, the explanation AND the right answer (`reveal`), right or wrong;
 //   • a malformed answer, or one of another kind, never gets the key;
 //   • a student's WRONG answer records `revealed` once (CAS); a later RIGHT answer is judged but never completed (`revealedBefore`,
@@ -30,17 +31,39 @@ const get = deps => handler({ method: "GET", url: "https://x", headers: { get: (
 const acts = Object.entries(CHECKS.pages[PAGE].activities).map(([activityId, a]) => ({ activityId, ...a }));
 const mc = acts.find(a => a.key.kind === "multipleChoice");
 const tf = acts.find(a => a.key.kind === "trueFalse");
-const right = key => (key.kind === "multipleChoice" ? { kind: "multipleChoice", optionId: key.correct[0] } : { kind: "trueFalse", value: key.answer });
-const wrong = key => (key.kind === "multipleChoice" ? { kind: "multipleChoice", optionId: ["a", "b", "c", "d"].find(id => !key.correct.includes(id)) } : { kind: "trueFalse", value: !key.answer });
-const expectedReveal = key => (key.kind === "multipleChoice" ? { kind: "multipleChoice", optionIds: key.correct } : { kind: "trueFalse", answer: key.answer });
+const MAP_FIELD = { wordBank: "answers", matching: "pairs", classify: "assign" };
+const right = key => {
+  switch (key.kind) {
+    case "multipleChoice": return { kind: "multipleChoice", optionId: key.correct[0] };
+    case "trueFalse": return { kind: "trueFalse", value: key.answer };
+    case "ordering": return { kind: "ordering", order: [...key.order] };
+    default: return { kind: key.kind, choices: { ...key[MAP_FIELD[key.kind]] } };
+  }
+};
+const wrong = key => {
+  switch (key.kind) {
+    case "multipleChoice": return { kind: "multipleChoice", optionId: ["a", "b", "c", "d"].find(id => !key.correct.includes(id)) };
+    case "trueFalse": return { kind: "trueFalse", value: !key.answer };
+    case "ordering": return { kind: "ordering", order: [...key.order].reverse() };
+    default: { const m = { ...key[MAP_FIELD[key.kind]] }; const [a, b] = Object.keys(m); [m[a], m[b]] = [m[b], m[a]]; return { kind: key.kind, choices: m }; }
+  }
+};
+const expectedReveal = key => {
+  switch (key.kind) {
+    case "multipleChoice": return { kind: "multipleChoice", optionIds: key.correct };
+    case "trueFalse": return { kind: "trueFalse", answer: key.answer };
+    case "ordering": return { kind: "ordering", order: key.order };
+    default: return { kind: key.kind, [MAP_FIELD[key.kind]]: key[MAP_FIELD[key.kind]] };
+  }
+};
 
 describe("791381s reveal — the generated indexes", () => {
-  it("the m01 «تدريبات الوحدة» page carries 10 reveal questions (multipleChoice + trueFalse), each a study activity with an explanation", () => {
-    expect(acts).toHaveLength(10);
+  it("the m01 «تدريبات الوحدة» page carries 14 reveal questions of six kinds, each a study activity with an explanation", () => {
+    expect(acts).toHaveLength(14);
+    expect(acts.map(a => a.key.kind).sort()).toEqual(["classify", "matching", "multipleChoice", "multipleChoice", "multipleChoice", "multipleChoice", "multipleChoice", "multipleChoice", "multipleChoice", "multipleChoice", "ordering", "trueFalse", "trueFalse", "wordBank"]);
     for (const a of acts) {
       expect(a.reveal, a.activityId).toBe(true);
       expect(a.study, a.activityId).toBe(true);
-      expect(["multipleChoice", "trueFalse"]).toContain(a.key.kind);
       expect(a.feedback.explanation, a.activityId).toBeTruthy();
       expect(INDEX.pages[PAGE].activities[a.activityId], a.activityId).toEqual(a.key);
     }
@@ -120,8 +143,8 @@ describe("791381s reveal — the real handler", () => {
     expect(res.jsonBody).toMatchObject({ correct: true, persisted: true, study: true, reveal: expectedReveal(mc.key) });
     expect(res.jsonBody.revealedBefore).toBeUndefined();
     expect(res.jsonBody.feedback.explanation).toBe(mc.feedback.explanation);
-    expect(res.jsonBody.module).toMatchObject({ completed: 1, eligible: 10, points: 2, max: 20 });
-    expect(res.jsonBody.gained).toBe(2);
+    expect(res.jsonBody.module).toMatchObject({ completed: 1, eligible: 14, points: 1, max: 20 });   // round(1 / 14 × 20) = 1
+    expect(res.jsonBody.gained).toBe(1);
     expect(Object.keys(ctx.getJson(studyDocName("u1")).pages[PAGE].completed)).toEqual([mc.activityId]);
   });
 
@@ -164,12 +187,12 @@ describe("791381s reveal — the real handler", () => {
     expect(again.jsonBody).toMatchObject({ correct: true, alreadyCompleted: true, gained: 0 });
   });
 
-  it("all 10 questions right at the first answer → the module reads 20 / 20", async () => {
+  it("all 14 questions right at the first answer → the module reads 20 / 20", async () => {
     const ctx = seed();
     const deps = studentDeps(ctx);
     let last = null;
     for (const a of acts) last = await attempt(deps, { pageId: PAGE, activityId: a.activityId, response: right(a.key) });
-    expect(last.jsonBody.module).toEqual({ completed: 10, eligible: 10, points: 20, max: 20 });
+    expect(last.jsonBody.module).toEqual({ completed: 14, eligible: 14, points: 20, max: 20 });
   });
 
   it("a malformed answer gets no key and writes nothing; a hidden module → 403", async () => {

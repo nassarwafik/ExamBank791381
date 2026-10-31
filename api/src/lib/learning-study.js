@@ -88,9 +88,28 @@ function evaluateStudyResponse(key, response) {
       const entries = Object.entries(cells);
       return entries.length > 0 && entries.every(([cell, expected]) => typeof response.choices[cell] === "string" && response.choices[cell] === expected);
     }
+    // 791381s Phase 3 — structured kinds: every part must carry exactly its expected choice (no partial credit).
+    case "wordBank":
+    case "matching":
+    case "classify": {
+      if (response.kind !== key.kind || !isPlainObject(response.choices)) return false;
+      const expected = structuredKeyMap(key);
+      const entries = expected ? Object.entries(expected) : [];
+      return entries.length > 0 && entries.every(([part, value]) => typeof response.choices[part] === "string" && response.choices[part] === value);
+    }
+    case "ordering":
+      return response.kind === "ordering" && Array.isArray(response.order) && Array.isArray(key.order) && key.order.length > 0
+        && response.order.length === key.order.length && key.order.every((id, i) => response.order[i] === id);
     default:
       return false;
   }
+}
+
+const isPlainObject = v => !!v && typeof v === "object" && !Array.isArray(v);
+/** The part → expected-choice map of a wordBank / matching / classify key, or null. Pure. */
+function structuredKeyMap(key) {
+  const map = key && (key.kind === "wordBank" ? key.answers : key.kind === "matching" ? key.pairs : key.kind === "classify" ? key.assign : null);
+  return isPlainObject(map) ? map : null;
 }
 
 // ── the per-student document ────────────────────────────────────────────────────────────────────────────────
@@ -240,6 +259,6 @@ function studyAllowedForClass(classroom, courseId, moduleId) {
 
 module.exports = {
   STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, pageEligibleCount, moduleEligibleCounts, findStudyActivity, evaluateStudyResponse,
-  normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
+  structuredKeyMap, normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
   latestStudyActivity,
 };

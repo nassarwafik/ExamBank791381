@@ -170,13 +170,34 @@ export type PracticeOption = { id: string; text: string; correct?: boolean };
  * this union (their interactive forms may also be expressed as `simulation` blocks); nothing here needs to change
  * and the ExamBank exam schema is never duplicated.
  */
+/** A labelled item of a structured question (matching sides, ordering items, classify items / groups). */
+export type PracticeItem = { id: string; text: string };
+/** One piece of a word-bank passage: running text, or a blank (its id) the learner fills from the bank. */
+export type WordBankSegment = string | { blank: string };
+/**
+ * Phase 791381s-3 — STRUCTURED kinds (owner request: مخزن كلمات، وصل، ترتيب، تصنيف). Each carries its presentation and,
+ * in authored content only, its key (a served body keeps the presentation; the server holds the key):
+ *   • wordBank — `segments` (text + blanks) and a `bank` of words (distractors allowed); key `answers` {blankId: word};
+ *   • matching — `left` items, each matched to one of the `right` items; key `pairs` {leftId: rightId} (one-to-one);
+ *   • ordering — `items` shown in the AUTHORED (scrambled) order; key `order` — the item ids in the right order;
+ *   • classify — `items` sorted into `groups`; key `assign` {itemId: groupId}.
+ * A response is right only when EVERY part is right (no partial credit); a per-part verdict is shown for learning.
+ */
 export type PracticeQuestion =
   | { kind: "multipleChoice"; prompt: string; options: PracticeOption[]; feedback?: PracticeFeedback }
   | { kind: "trueFalse"; prompt: string; answer?: boolean; feedback?: PracticeFeedback }
   | { kind: "shortInput"; prompt: string; answer?: string; feedback?: PracticeFeedback }
-  | { kind: "fillBlank"; prompt: string; answers?: string[]; feedback?: PracticeFeedback };
+  | { kind: "fillBlank"; prompt: string; answers?: string[]; feedback?: PracticeFeedback }
+  | { kind: "wordBank"; prompt: string; segments: WordBankSegment[]; bank: string[]; answers?: Record<string, string>; feedback?: PracticeFeedback }
+  | { kind: "matching"; prompt: string; left: PracticeItem[]; right: PracticeItem[]; pairs?: Record<string, string>; feedback?: PracticeFeedback }
+  | { kind: "ordering"; prompt: string; items: PracticeItem[]; order?: string[]; feedback?: PracticeFeedback }
+  | { kind: "classify"; prompt: string; groups: PracticeItem[]; items: PracticeItem[]; assign?: Record<string, string>; feedback?: PracticeFeedback };
 export type PracticeQuestionKind = PracticeQuestion["kind"];
-export const PRACTICE_QUESTION_KINDS: readonly PracticeQuestionKind[] = ["multipleChoice", "trueFalse", "shortInput", "fillBlank"];
+export const PRACTICE_QUESTION_KINDS: readonly PracticeQuestionKind[] = ["multipleChoice", "trueFalse", "shortInput", "fillBlank", "wordBank", "matching", "ordering", "classify"];
+/** The structured kinds (Phase 791381s-3): answered with a «تحقّق» button, judged part by part. */
+export const STRUCTURED_QUESTION_KINDS = ["wordBank", "matching", "ordering", "classify"] as const;
+export type StructuredQuestionKind = (typeof STRUCTURED_QUESTION_KINDS)[number];
+export const isStructuredKind = (kind: string): kind is StructuredQuestionKind => (STRUCTURED_QUESTION_KINDS as readonly string[]).includes(kind);
 /**
  * Opt-OUT for Study Practice Strength, shared by the practice-capable blocks. A locally-checked exercise stays fully
  * interactive in the Reader (immediate feedback, retry, reset) but is kept OUT of Study Strength — it never enters the
@@ -202,7 +223,8 @@ export interface ServerCheckMarker {
  * block keeps only this flag, and the server sends the right answer back in the reply to that answer. A study activity in reveal
  * mode earns its Strength only when the learner's answers before it were not wrong: once the right answer has been shown after a
  * wrong one, a later right answer is judged but never recorded (server authority, learning-study.js `revealed`).
- * Allowed on multipleChoice / trueFalse questions that carry an answer key and an explanation.
+ * Allowed on multipleChoice / trueFalse and the structured kinds (wordBank / matching / ordering / classify) when the question
+ * carries an answer key and an explanation.
  */
 export interface RevealMarker {
   reveal?: true;
