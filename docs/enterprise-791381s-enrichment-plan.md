@@ -104,3 +104,36 @@ Text uses each group's *ink* (≥ 4.5:1 on white); bars, dots and icon chips use
 
 **What does not change** — no content file of `791381s` or `791381` is edited; the existing 791381s course test still
 asserts book-only content (relaxed only in Phase 2, when the first enrichment block arrives, with the lock already in place).
+
+## 5. Phase 2 record — reveal-mode questions + «تدريبات الوحدة»
+
+**Reveal mode** (`reveal: true` on a `practice` block — `RevealMarker` in `src/learning/content/types.ts`):
+
+- *Reader* (`PracticeBlockView`): before an answer nothing of the key is in the DOM. After an answer the question locks: the
+  chosen wrong option is red with «✕ إجابتك», the right option green with «✓ الإجابة الصحيحة», the verdict line names the
+  right answer, and the explanation («الشرح: …») shows for a right **and** a wrong answer. No hint ladder; «أعد السؤال» clears.
+  Never colour-only (icon + words); tokens only (dark theme re-maps them).
+- *Server* (`api/src/lib/learning-check.js`): the check index carries `reveal: true`; `checkResponse` returns the right answer
+  (`reveal: { kind, optionIds | answer }`) and the explanation with every **well-formed answer of that question** — a malformed
+  response or one of another kind gets neither, so the key never leaves without an answer. Kinds: multipleChoice, trueFalse
+  (shortInput is excluded: its stored key is normalised, not the text to show).
+- *Strength* (D6, `api/src/lib/learning-study.js`): reveal questions are ordinary study activities (round(completed / eligible ×
+  20) per unit). Anti-farming: a student's wrong answer to a reveal study activity is recorded once as `revealed` (CAS); a later
+  right answer is judged and answered but **never completed** (`revealedBefore`, gained 0) — also when the reveal lands between
+  the read and the write of an overlapping request. A first right answer completes as usual; a completion is never undone or
+  marked revealed. The local (authored-key) path never reports a right answer after a shown one either.
+- *Validator*: `reveal` exactly `true`, multipleChoice / trueFalse only, with an answer key and an explanation in authored
+  content (a served body carries neither).
+- `GET /api/learning-study/{course}` advertises `policy.moduleCount` per course (791381: 28; 791381s: 37).
+
+**«تدريبات الوحدة» page** (`layout: "practice"`): only teacher-enrichment blocks, at least one exercise (validator). The Reader
+shows «تدريبات تفاعلية» instead of «من الكتاب», a how-to line, the questions, a running score «أجبت عن a من n · الصحيحة: r»,
+then «نتيجتك: r / n» and «أعد كل الأسئلة» (screen state only; each answer still goes to the server, which decides points).
+
+**Pilot**: `791381s-m01-l02-p01` «تدريبات الوحدة: أساسيات الشبكات» — 10 reveal questions (8 multipleChoice, 2 trueFalse), each
+answered and explained by the section's printed text. The book pages are untouched (book lock green); the served bodies, check
+index, study index and page index are regenerated. The 791381s course test now allows added enrichment (enrichment types,
+origin teacher-enrichment, enrichment-only added pages) while the book lock pins the book.
+
+Not in this phase: reveal for `practice-table` dropdowns and shortInput (Phase 3 with the new kinds); content for the other units
+(Phases 4–7).

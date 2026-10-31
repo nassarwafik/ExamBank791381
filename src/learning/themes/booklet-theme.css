@@ -141,3 +141,6 @@
 @media print {
   .learning-reader-page[data-course-theme="booklet"] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* The «تدريبات تفاعلية» badge of an added exercise page keeps its own (enrichment) colour inside the booklet skin. */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-frombook.is-enrichment { background: var(--eb-success-bg); color: var(--eb-success-tx); }

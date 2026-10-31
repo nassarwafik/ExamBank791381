@@ -195,7 +195,19 @@ export interface StudyEligibilityOptOut {
 export interface ServerCheckMarker {
   serverCheck?: true;
 }
-export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker { type: "practice"; question: PracticeQuestion; }
+/**
+ * Phase 791381s-2 — REVEAL mode (owner decision D3, docs/enterprise-791381s-enrichment-plan.md): once the learner has answered,
+ * the exercise shows the verdict on the answer AND the right answer (the chosen wrong option red, the right one green) with the
+ * explanation underneath, for a right or a wrong answer alike. Nothing of the key reaches the browser before an answer: a served
+ * block keeps only this flag, and the server sends the right answer back in the reply to that answer. A study activity in reveal
+ * mode earns its Strength only when the learner's answers before it were not wrong: once the right answer has been shown after a
+ * wrong one, a later right answer is judged but never recorded (server authority, learning-study.js `revealed`).
+ * Allowed on multipleChoice / trueFalse questions that carry an answer key and an explanation.
+ */
+export interface RevealMarker {
+  reveal?: true;
+}
+export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker, RevealMarker { type: "practice"; question: PracticeQuestion; }
 
 // ────────────────────────────────────────────────────────────────────────────
 // Interactive Learning Engine (Phase 3A) — activity descriptor contract.
@@ -503,12 +515,13 @@ export interface ContentPage {
   keywords?: string[];
   /**
    * Presentation layout for the Reader. "standard" (default) is a normal lesson page; "opener" renders a unit-opener
-   * hero (used with a `unit-opener` block). Generic + course-agnostic — a hint, never behavior.
+   * hero (used with a `unit-opener` block); "practice" is an end-of-unit exercise page («تدريبات الوحدة»: the Reader adds a
+   * running score and a «أعد كل الأسئلة» control). Generic + course-agnostic — a hint, never behavior.
    */
   layout?: ContentPageLayout;
 }
-export type ContentPageLayout = "standard" | "opener";
-export const CONTENT_PAGE_LAYOUTS: readonly ContentPageLayout[] = ["standard", "opener"];
+export type ContentPageLayout = "standard" | "opener" | "practice";
+export const CONTENT_PAGE_LAYOUTS: readonly ContentPageLayout[] = ["standard", "opener", "practice"];
 
 /** The explicit provenance of a block. Returns the declared value; it never invents provenance. */
 export function blockOrigin(block: BlockBase): ContentOrigin {

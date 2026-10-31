@@ -2,8 +2,11 @@
 // These tests pin what makes it a faithful, independent second course:
 //   • identity — every id carries the `791381s-` prefix, every source points at this booklet, the batches are the catalog's;
 //   • the manifest is exactly the one derived from the authored bodies, and the app / server registries list the same modules;
-//   • the whole course passes the content validator, and every block is book content (no enrichment, no generated wording:
-//     no practice, no visual, no activity, no `example` chrome, no untitled callout);
+//   • the whole course passes the content validator; every BOOK block is of a faithful type with no generated wording (no
+//     `example` chrome, no untitled callout), and the book itself is pinned by the book lock (bookLock.test.ts);
+//   • since Phase 2 (owner decisions D2/D3, docs/enterprise-791381s-enrichment-plan.md) enrichment is ADDED, never mixed into the
+//     book: an added page is all enrichment (e.g. «تدريبات الوحدة», layout "practice"), and every enrichment block is
+//     origin "teacher-enrichment" of an enrichment type;
 //   • every diagram is a cropped PNG of the booklet under public/learning-assets/791381s/ that exists, stays small, and no
 //     unreferenced asset ships.
 import { describe, it, expect } from "vitest";
@@ -23,6 +26,8 @@ const CID = "791381s";
 const server = apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string; title: string; order: number }[] };
 const assetDir = fileURLToPath(new URL("../../../../public/learning-assets/" + CID + "/", import.meta.url));
 const ALLOWED_BLOCKS = new Set(["text", "heading", "callout", "list", "table", "code", "diagram", "unit-opener"]);
+/** What enrichment may add (Phase 2 onward): exercises, visuals, activities, worked examples, teacher clarifications. */
+const ENRICHMENT_BLOCKS = new Set(["practice", "practice-table", "visual", "simulation", "animation", "guided", "interactive-diagram", "example", "callout"]);
 const DIAGRAM_SRC = /^\/learning-assets\/791381s\/[0-9a-f]{16}\.png$/;
 
 async function loadAll(): Promise<ContentModule[]> {
@@ -91,12 +96,18 @@ describe("791381s — the bodies", () => {
     expect(validateLearningCourseContent(content)).toEqual([]);
   }, 30000);
 
-  it("is book content only: every block is origin book, of a faithful type, and adds no wording of its own", async () => {
+  it("every book block is of a faithful type and adds no wording of its own; enrichment is only ever an added, marked block", async () => {
     const all = blocksOf(await loadAll());
-    expect(all.length).toBeGreaterThan(500);
+    expect(all.filter(x => x.b.origin === "book").length).toBeGreaterThan(500);
     for (const { page, b } of all) {
       const where = page + " / " + b.id;
-      expect(b.origin, where).toBe("book");
+      expect(["book", "teacher-enrichment"], where).toContain(b.origin);
+      if (b.origin === "teacher-enrichment") {
+        expect(ENRICHMENT_BLOCKS.has(b.type), where + " enrichment type " + b.type).toBe(true);
+        if (b.type === "callout") expect((b as Extract<ContentBlock, { type: "callout" }>).kind, where).toBe("clarification");
+        expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
+        continue;
+      }
       expect(ALLOWED_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);
       // block ids carry the page id without the course prefix (the bundle guard's body signature relies on it)
       expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
@@ -104,6 +115,16 @@ describe("791381s — the bodies", () => {
       if (b.type === "callout") expect((b as Extract<ContentBlock, { type: "callout" }>).title?.trim(), where).toBeTruthy();
       const text = JSON.stringify(b);
       expect(text, where).not.toMatch(/⟦NUL⟧|\*\*/);     // no extraction marker left behind
+    }
+  }, 30000);
+
+  it("an added page is all enrichment: a «تدريبات الوحدة» page (layout practice) holds only teacher-enrichment exercises", async () => {
+    const mods = await loadAll();
+    const practicePages = mods.flatMap(m => m.lessons.flatMap(l => l.pages)).filter(p => p.layout === "practice");
+    expect(practicePages.map(p => p.id)).toContain("791381s-m01-l02-p01");
+    for (const p of practicePages) {
+      expect(p.blocks.length, p.id).toBeGreaterThan(0);
+      for (const b of p.blocks) expect(b.origin, p.id + " / " + b.id).toBe("teacher-enrichment");
     }
   }, 30000);
 

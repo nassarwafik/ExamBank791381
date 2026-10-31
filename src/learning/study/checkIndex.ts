@@ -16,7 +16,8 @@ import { practiceQuestionKey, practiceTableKey, studyActivityOf, type StudyActiv
 
 /** What the server says after an answer: the right / wrong message, the hint ladder (after a wrong answer), the explanation (after a right one). */
 export interface CheckFeedback { correct?: string; incorrect?: string; hints?: string[]; explanation?: string }
-export interface CheckActivity { key: StudyActivityKey; study: boolean; feedback: CheckFeedback }
+/** `reveal`: the block is in reveal mode (types.ts RevealMarker) — the server returns the right answer with every verdict. */
+export interface CheckActivity { key: StudyActivityKey; study: boolean; feedback: CheckFeedback; reveal?: true }
 export interface CheckIndexPage { moduleId: string; activities: Record<string, CheckActivity> }
 export interface CheckIndex {
   schemaVersion: 1;
@@ -39,7 +40,7 @@ function feedbackOf(question: PracticeQuestion): CheckFeedback {
 export function checkActivityOf(block: ContentBlock): CheckActivity | null {
   if (block.type === "practice") {
     const key = practiceQuestionKey(block.question);
-    return key ? { key, study: studyActivityOf(block) !== null, feedback: feedbackOf(block.question) } : null;
+    return key ? { key, study: studyActivityOf(block) !== null, feedback: feedbackOf(block.question), ...(block.reveal === true ? { reveal: true as const } : {}) } : null;
   }
   if (block.type === "practice-table") {
     const key = practiceTableKey(block);
