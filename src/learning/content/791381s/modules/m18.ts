@@ -5,7 +5,7 @@
 // runs are `code`, printed box labels are the callout titles. The VTP Server/Client drawing is a crop of the booklet
 // itself.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 5): teacher-enrichment blocks (visuals and CLI terminal
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 5; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals and CLI terminal
 // simulations reused from course 791381 after checking their labels / commands against this section, and the end-of-unit
 // «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by the book
 // lock (bookLock.test.ts).
@@ -378,6 +378,31 @@ const m18: ContentModule = {
                 kind: "multipleChoice", prompt: "ما فائدة VTP كما يذكرها الكتاب؟",
                 options: [{ id: "a", text: "زيادة سرعة الإنترنت" }, { id: "b", text: "تشفير البيانات بين السويتشات" }, { id: "c", text: "توفير الوقت، وتقليل أخطاء تكرار الإعدادات على كل سويتش", correct: true }, { id: "d", text: "الاستغناء عن تعريف VLAN نهائيًا" }],
                 feedback: { explanation: "الفائدة: توفير الوقت، وتقليل أخطاء تكرار الإعدادات على كل سويتش." },
+              },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m18-l02-p01-lab-vtp", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: VTP — Server و Client",
+              description: "مختبر على محاكي الشبكات: اجعل سويتشًا يدير VLAN لسويتش آخر، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "SW1: vtp mode server، vtp domain HFA، vtp password 123؛ SW2: vtp mode client، vtp domain HFA، vtp password 123؛ g0/1 Trunk على السويتشين؛ ثم vlan 10 على SW1." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"sw1","kind":"switch","label":"SW1","x":0.3,"y":0.3},{"id":"sw2","kind":"switch","label":"SW2","x":0.7,"y":0.3},{"id":"pc1","kind":"pc","label":"PC1","x":0.3,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.10.11","mask":"255.255.255.0","gateway":""}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.7,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.10.12","mask":"255.255.255.0","gateway":""}}}}],"links":[{"id":"t","a":{"deviceId":"sw1","port":"g0/1"},"b":{"deviceId":"sw2","port":"g0/1"}},{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw2","port":"f0/1"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "السويتشان SW1 و SW2 متصلان بالمنفذ g0/1. اجعل الوصلة بينهما Trunk. اجعل SW1 هو الـ Server و SW2 هو الـ Client في النطاق HFA بكلمة المرور 123. ثم أنشئ VLAN 10 على الـ Server فقط وتأكّد أنها وصلت إلى الـ Client.",
+                  goals: [{"id":"d1","label":"SW1: النطاق VTP domain هو HFA"},{"id":"p1","label":"SW1: كلمة مرور VTP هي 123"},{"id":"m2","label":"SW2 هو VTP Client"},{"id":"d2","label":"SW2: النطاق VTP domain هو HFA"},{"id":"p2","label":"SW2: كلمة مرور VTP هي 123"},{"id":"prop","label":"VLAN 10 التي أُنشئت على الـ Server ظهرت على الـ Client"}],
+                },
+                checks: [{"id":"d1","label":"SW1: النطاق VTP domain هو HFA","weight":1,"kind":"switch.vtpDomain","deviceId":"sw1","value":"HFA"},{"id":"p1","label":"SW1: كلمة مرور VTP هي 123","weight":1,"kind":"switch.vtpPassword","deviceId":"sw1","value":"123"},{"id":"m2","label":"SW2 هو VTP Client","weight":1,"kind":"switch.vtpMode","deviceId":"sw2","value":"client"},{"id":"d2","label":"SW2: النطاق VTP domain هو HFA","weight":1,"kind":"switch.vtpDomain","deviceId":"sw2","value":"HFA"},{"id":"p2","label":"SW2: كلمة مرور VTP هي 123","weight":1,"kind":"switch.vtpPassword","deviceId":"sw2","value":"123"},{"id":"prop","label":"VLAN 10 التي أُنشئت على الـ Server ظهرت على الـ Client","weight":1,"kind":"switch.vlanExists","deviceId":"sw2","vlan":10}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["على SW1: vtp mode server ثم vtp domain HFA ثم vtp password 123.","على SW2: vtp mode client ثم vtp domain HFA ثم vtp password 123.","الوصلة بين السويتشين Trunk (interface g0/1 ثم switchport mode trunk)، ثم vlan 10 على SW1."],
+                  explanation: "VTP بروتوكول من Cisco لإدارة VLAN على عدة سويتشات من مكان واحد: نعرّف VLAN في الـ Server فقط فتصل إلى الباقي تلقائيًا، بشرط أن يكون النطاق وكلمة المرور متطابقين.",
+                },
+                solution: [{"type":"switch.command","deviceId":"sw1","command":"enable"},{"type":"switch.command","deviceId":"sw1","command":"configure terminal"},{"type":"switch.command","deviceId":"sw1","command":"vtp mode server"},{"type":"switch.command","deviceId":"sw1","command":"vtp domain HFA"},{"type":"switch.command","deviceId":"sw1","command":"vtp password 123"},{"type":"switch.command","deviceId":"sw1","command":"interface g0/1"},{"type":"switch.command","deviceId":"sw1","command":"switchport mode trunk"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"vlan 10"},{"type":"switch.command","deviceId":"sw1","command":"end"},{"type":"switch.command","deviceId":"sw2","command":"enable"},{"type":"switch.command","deviceId":"sw2","command":"configure terminal"},{"type":"switch.command","deviceId":"sw2","command":"vtp mode client"},{"type":"switch.command","deviceId":"sw2","command":"vtp domain HFA"},{"type":"switch.command","deviceId":"sw2","command":"vtp password 123"},{"type":"switch.command","deviceId":"sw2","command":"interface g0/1"},{"type":"switch.command","deviceId":"sw2","command":"switchport mode trunk"},{"type":"switch.command","deviceId":"sw2","command":"end"}],
               },
             },
             { id: "m18-l02-p01-lib-t16", type: "library-training", origin: "teacher-enrichment", trainingId: "T16", label: "تدريب 16", requiredModuleId: "791381s-m18" },

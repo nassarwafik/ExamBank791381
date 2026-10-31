@@ -576,3 +576,60 @@ the m19 Router-on-a-Stick pilot (`studyEligible: false`).
 | C7 | the pilot counts in Strength | KILLED |
 | C8 | the pilot's solution drops `no shutdown` | KILLED |
 | C9 | a static import of the lab in the Reader | KILLED by the bundle guard: `Net2Workspace … (first Reader load) carries the network simulator` |
+
+## 15. Phase 8B-3 record — the booklet's network labs (units 16, 17, 18, 22, 23, 24, 36)
+
+**Owner decision applied:** labs are checked, not counted in Study Strength (`studyEligible: false`, the §11.3 default; the
+owner gave no other instruction). The study index and every student's Strength are unchanged.
+
+**Seven new labs.** Each sits on the unit's «تدريبات الوحدة» page, after the questions and before the Exam Library cards.
+Every value is the unit's own:
+
+| Unit | Lab | Booklet values | Goals |
+|---|---|---|---|
+| 16 | VLAN and the management interface SVI | VLAN 10 «MNG» (192.168.10.x) and 20 «GAZ» (192.168.20.x); access ports; `interface vlan 10` 192.168.10.254 /24 with `no shutdown`; PC1 reaches the SVI | 6 |
+| 17 | Trunk and Native VLAN 99 | `interface f0/24`, `switchport mode trunk`, `native vlan 99`, `allowed vlan 10,20` on both switches; PC1 ⇄ PC2 in VLAN 10 across the trunk | 7 |
+| 18 | VTP server and client | `vtp mode server` / `client`, `vtp domain HFA`, `vtp password 123`; VLAN 10 created on the server reaches the client | 6 |
+| 22 | The router as a DHCP server | g0/0 192.168.1.254 /24 + `no shutdown`; `ip dhcp pool LAN`, `network 192.168.1.0`, `default-router 192.168.1.254`, `dns-server 8.8.8.8`; `excluded-address 192.168.1.1 192.168.1.9`; PC1 gets a lease | 8 |
+| 23 | Port Security | f0/1 access; `switchport port-security`; `mac-address sticky`; `maximum 3`; `violation shutdown` | 5 |
+| 24 | Passwords on the switch | `line console 0` / `line vty 0 4` with `password cisco123` and `login`; `enable secret cisco123`; `service password-encryption` | 6 |
+| 36 | DHCP pool STUDENTS | `excluded-address 192.168.10.1 192.168.10.10`; pool STUDENTS with `network 192.168.10.0`, `default-router 192.168.10.1`, `dns-server 8.8.8.8`; `ipconfig /renew` on PC1, which then holds the gateway and the DNS server | 8 |
+
+With the unit 19 pilot (8B-2), the booklet now has **8 labs**.
+
+- **Proof.** The real simulator proves every lab (`networkLab.contract.test.ts`): no check passes on the untouched lab, and
+  the authored solution passes every check.
+- **Review fixes before shipping.**
+  - VTP: the default `vtp mode server` already passed on an untouched switch (free credit), so that goal was removed.
+  - VLAN: PC2 was placed in 192.168.20.x, as the booklet assigns VLAN 20.
+
+**Not shipped, with the reason:**
+
+| Unit | Reason |
+|---|---|
+| 15 | Its box (`enable` / `configure terminal` / `vlan 10`) is fully inside unit 16's lab. |
+| 20 (wireless) | The booklet prints no SSID / passphrase to configure, only examples and security levels. A lab would need invented values. |
+| 11 (Command Prompt), 27 (routing) | Partial: a check sees the final state only (not "the student ran ping"), and `ip route` is refused under `@2`. |
+| 21, 28–30 (IPv6, OSPF, EIGRP, ACL) | Not in networkTopology@2; they need a future `@3`. |
+
+**Tests.**
+- `src/learning/content/791381s/networkLabs791381s.test.ts` (new):
+  - exactly units 16, 17, 18, 19, 22, 23, 24 and 36 have a lab, one each;
+  - the lab sits on the practice page, after the questions and before the Exam Library cards;
+  - every lab is checked only, with fallback text;
+  - the study index names no lab;
+  - every served lab holds `topology` and `task` only.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| D1 | a lab counts in Strength | KILLED |
+| D2 | a solution drops `maximum 3` | KILLED |
+| D3 | a check passes on the untouched lab | KILLED |
+| D4 | a goal id drifts from its check | KILLED by the content validator |
+| D5 | a wrong client VTP password | KILLED |
+| D6 | a unit loses its lab | KILLED |
+
+The first D6 run did not apply its mutant (a wrong anchor in the script). It was reported as an error and re-run with the
+exact text.

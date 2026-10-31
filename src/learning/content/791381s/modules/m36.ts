@@ -5,7 +5,7 @@
 // monospace runs are `code`, printed box labels are the callout titles. The DORA and TCP handshake drawings are crops of
 // the booklet itself. Page 112 closes with the «كلمة الختام» box, kept on the last sub-topic page as printed.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 7): teacher-enrichment blocks (visuals — including SVG
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 7; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals — including SVG
 // twins placed right after the two booklet crops, never replacing them — and CLI terminal simulations reused from course
 // 791381 after checking their labels / commands against this section, interactive practice-table twins of the review
 // tables, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay
@@ -501,6 +501,31 @@ const m36: ContentModule = {
                 kind: "multipleChoice", prompt: "أيّ أمر من أوامر Show في الأجهزة يعرض جدول التوجيه؟",
                 options: [{ id: "a", text: "show ip route", correct: true }, { id: "b", text: "show access-lists" }, { id: "c", text: "tracert" }, { id: "d", text: "show vlan brief" }],
                 feedback: { explanation: "من جدول أوامر Show: show ip route = جدول التوجيه، و show access-lists = قوائم ACL، و show vlan brief = الـ VLANs ومنافذها؛ أما tracert فأمر حاسوب يعرض مسار الوصول." },
+              },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m36-l02-p01-lab-dhcp-students", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: مجموعة DHCP باسم STUDENTS",
+              description: "مختبر على محاكي الشبكات: أنشئ مجموعة التوزيع، ثم اطلب عنوانًا من الحاسوب وتأكّد من إعداداته، واضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "ip dhcp excluded-address 192.168.10.1 192.168.10.10؛ ip dhcp pool STUDENTS، network 192.168.10.0 255.255.255.0، default-router 192.168.10.1، dns-server 8.8.8.8؛ ثم ipconfig /renew على PC1." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"r1","kind":"router","label":"R","x":0.5,"y":0.1,"initial":{"v":2,"device":"router","hostname":"R","interfaces":{"g0/0":{"ipAddress":"192.168.10.1","subnetMask":"255.255.255.0","shutdown":false}},"subinterfaces":{},"dhcp":{"excluded":[],"pools":{}},"security":{}}},{"id":"sw1","kind":"switch","label":"SW1","x":0.5,"y":0.45},{"id":"pc1","kind":"pc","label":"PC1","x":0.3,"y":0.85,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"dhcp"}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.7,"y":0.85,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"dhcp"}}}}],"links":[{"id":"u","a":{"deviceId":"r1","port":"g0/0"},"b":{"deviceId":"sw1","port":"g0/1"}},{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw1","port":"f0/2"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "الراوتر R جاهز على الشبكة 192.168.10.0/24 بالعنوان 192.168.10.1. احجز العناوين 192.168.10.1 إلى 192.168.10.10، وأنشئ المجموعة STUDENTS بشبكتها وبوابتها 192.168.10.1 وخادم DNS 8.8.8.8 كما في صندوق الوحدة. ثم على PC1 اطلب عنوانًا جديدًا بالأمر ipconfig /renew.",
+                  goals: [{"id":"ex","label":"العناوين 192.168.10.1 إلى 192.168.10.10 محجوزة (excluded-address)"},{"id":"pool","label":"المجموعة ip dhcp pool STUDENTS موجودة"},{"id":"net","label":"network 192.168.10.0 255.255.255.0"},{"id":"gw","label":"default-router 192.168.10.1"},{"id":"dns","label":"dns-server 8.8.8.8"},{"id":"lease","label":"PC1 طلب عنوانًا جديدًا (ipconfig /renew) وحصل عليه من DHCP"},{"id":"pcgw","label":"Gateway على PC1 هي 192.168.10.1"},{"id":"pcdns","label":"خادم DNS على PC1 هو 8.8.8.8"}],
+                },
+                checks: [{"id":"ex","label":"العناوين 192.168.10.1 إلى 192.168.10.10 محجوزة (excluded-address)","weight":1,"kind":"router.dhcpExcluded","deviceId":"r1","value":"192.168.10.1 192.168.10.10"},{"id":"pool","label":"المجموعة ip dhcp pool STUDENTS موجودة","weight":1,"kind":"router.dhcpPool","deviceId":"r1","pool":"STUDENTS","value":true},{"id":"net","label":"network 192.168.10.0 255.255.255.0","weight":1,"kind":"router.dhcpNetwork","deviceId":"r1","pool":"STUDENTS","value":"192.168.10.0 255.255.255.0"},{"id":"gw","label":"default-router 192.168.10.1","weight":1,"kind":"router.dhcpDefaultRouter","deviceId":"r1","pool":"STUDENTS","value":"192.168.10.1"},{"id":"dns","label":"dns-server 8.8.8.8","weight":1,"kind":"router.dhcpDns","deviceId":"r1","pool":"STUDENTS","value":"8.8.8.8"},{"id":"lease","label":"PC1 طلب عنوانًا جديدًا (ipconfig /renew) وحصل عليه من DHCP","weight":1,"kind":"host.dhcpLease","deviceId":"pc1","adapter":"eth0","value":true},{"id":"pcgw","label":"Gateway على PC1 هي 192.168.10.1","weight":1,"kind":"host.gateway","deviceId":"pc1","adapter":"eth0","value":"192.168.10.1"},{"id":"pcdns","label":"خادم DNS على PC1 هو 8.8.8.8","weight":1,"kind":"host.dns","deviceId":"pc1","adapter":"eth0","value":"8.8.8.8"}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["في الإعداد العام: ip dhcp excluded-address 192.168.10.1 192.168.10.10.","ip dhcp pool STUDENTS ثم network 192.168.10.0 255.255.255.0 ثم default-router 192.168.10.1 ثم dns-server 8.8.8.8.","على PC1 في Command Prompt: ipconfig /renew يطلب عنوانًا جديدًا من الخادم."],
+                  explanation: "الأمر ipconfig /renew يطلب عنوانًا جديدًا من الخادم، فيحصل PC1 من المجموعة STUDENTS على عنوان وبوابة 192.168.10.1 وخادم DNS 8.8.8.8؛ والعناوين من .1 إلى .10 محجوزة لا يوزّعها الخادم.",
+                },
+                solution: [{"type":"router.command","deviceId":"r1","command":"enable"},{"type":"router.command","deviceId":"r1","command":"configure terminal"},{"type":"router.command","deviceId":"r1","command":"ip dhcp excluded-address 192.168.10.1 192.168.10.10"},{"type":"router.command","deviceId":"r1","command":"ip dhcp pool STUDENTS"},{"type":"router.command","deviceId":"r1","command":"network 192.168.10.0 255.255.255.0"},{"type":"router.command","deviceId":"r1","command":"default-router 192.168.10.1"},{"type":"router.command","deviceId":"r1","command":"dns-server 8.8.8.8"},{"type":"router.command","deviceId":"r1","command":"end"},{"type":"host.command","deviceId":"pc1","command":"ipconfig /renew"}],
               },
             },
             { id: "m36-l02-p01-lib-f01", type: "library-training", origin: "teacher-enrichment", trainingId: "F01", label: "الامتحان الأول", requiredModuleId: "791381s-m30" },

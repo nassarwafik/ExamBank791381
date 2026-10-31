@@ -4,7 +4,7 @@
 // reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The VLAN drawing is a crop of the booklet itself.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–5): teacher-enrichment blocks (visuals / activities reused from
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–5; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals / activities reused from
 // course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
 // book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
@@ -470,6 +470,31 @@ const m16: ContentModule = {
             {
               id: "m16-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "بدون Gateway تعمل VLAN داخليًا، لكن أجهزتها لا تصل إلى الشبكات الأخرى.", answer: true, feedback: { explanation: "البوابة هي الباب الذي يخرج منه الجهاز إلى شبكة أخرى؛ بدون Gateway تعمل VLAN داخليًا، لكن أجهزتها لا تصل إلى الشبكات الأخرى." } },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m16-l02-p01-lab-vlan", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: VLAN وواجهة الإدارة SVI",
+              description: "مختبر على محاكي الشبكات: أنشئ شبكتين افتراضيتين ووزّع المنافذ عليهما، ثم أعطِ السويتش عنوان إدارة، واضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "vlan 10 ثم name MNG، vlan 20 ثم name GAZ؛ interface f0/1 ثم switchport mode access ثم switchport access vlan 10؛ interface f0/11 ثم switchport mode access ثم switchport access vlan 20؛ interface vlan 10 ثم ip address 192.168.10.254 255.255.255.0 ثم no shutdown." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"sw1","kind":"switch","label":"SW1","x":0.5,"y":0.2},{"id":"pc1","kind":"pc","label":"PC1","x":0.25,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.10.11","mask":"255.255.255.0","gateway":"192.168.10.254"}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.75,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.20.11","mask":"255.255.255.0","gateway":"192.168.20.254"}}}}],"links":[{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw1","port":"f0/11"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "على السويتش SW1: أنشئ VLAN 10 باسم MNG و VLAN 20 باسم GAZ. ضع المنفذ f0/1 (PC1، الشبكة 192.168.10.x) في VLAN 10 والمنفذ f0/11 (PC2، الشبكة 192.168.20.x) في VLAN 20. ثم أنشئ الواجهة interface vlan 10 بالعنوان 192.168.10.254 ‏255.255.255.0 وشغّلها.",
+                  goals: [{"id":"v10","label":"VLAN 10 موجودة باسم MNG"},{"id":"v20","label":"VLAN 20 موجودة باسم GAZ"},{"id":"f1","label":"المنفذ f0/1 (PC1) في VLAN 10"},{"id":"f11","label":"المنفذ f0/11 (PC2) في VLAN 20"},{"id":"svi","label":"عنوان إدارة VLAN 10 على السويتش: ‏192.168.10.254"},{"id":"mgmt","label":"PC1 (VLAN 10) يصل إلى عنوان إدارة السويتش 192.168.10.254"}],
+                },
+                checks: [{"id":"v10","label":"VLAN 10 موجودة باسم MNG","weight":1,"kind":"switch.vlanName","deviceId":"sw1","vlan":10,"value":"MNG"},{"id":"v20","label":"VLAN 20 موجودة باسم GAZ","weight":1,"kind":"switch.vlanName","deviceId":"sw1","vlan":20,"value":"GAZ"},{"id":"f1","label":"المنفذ f0/1 (PC1) في VLAN 10","weight":1,"kind":"switch.accessVlan","deviceId":"sw1","interface":"f0/1","value":10},{"id":"f11","label":"المنفذ f0/11 (PC2) في VLAN 20","weight":1,"kind":"switch.accessVlan","deviceId":"sw1","interface":"f0/11","value":20},{"id":"svi","label":"عنوان إدارة VLAN 10 على السويتش: ‏192.168.10.254","weight":1,"kind":"switch.sviAddress","deviceId":"sw1","interface":"vlan10","value":"192.168.10.254"},{"id":"mgmt","label":"PC1 (VLAN 10) يصل إلى عنوان إدارة السويتش 192.168.10.254","weight":1,"kind":"reachability","source":"pc1","destination":"sw1","value":true}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["vlan 10 ثم name MNG ثم exit — وكذلك vlan 20 ثم name GAZ.","interface f0/1 ثم switchport mode access ثم switchport access vlan 10 — وكذلك f0/11 مع VLAN 20.","interface vlan 10 ثم ip address 192.168.10.254 255.255.255.0 ثم no shutdown (بدونه تبقى الواجهة مطفأة)."],
+                  explanation: "VLAN تقسم الشبكة الكبيرة إلى شبكات أصغر بدون تغيير الكوابل، ولكل VLAN شبكة IP مختلفة: الإدارة MNG في 192.168.10.x والمحاسبة GAZ في 192.168.20.x. interface vlan 10 يُنشئ واجهة افتراضية لـ VLAN 10، و no shutdown يشغّلها.",
+                },
+                solution: [{"type":"switch.command","deviceId":"sw1","command":"enable"},{"type":"switch.command","deviceId":"sw1","command":"configure terminal"},{"type":"switch.command","deviceId":"sw1","command":"vlan 10"},{"type":"switch.command","deviceId":"sw1","command":"name MNG"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"vlan 20"},{"type":"switch.command","deviceId":"sw1","command":"name GAZ"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"interface f0/1"},{"type":"switch.command","deviceId":"sw1","command":"switchport mode access"},{"type":"switch.command","deviceId":"sw1","command":"switchport access vlan 10"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"interface f0/11"},{"type":"switch.command","deviceId":"sw1","command":"switchport mode access"},{"type":"switch.command","deviceId":"sw1","command":"switchport access vlan 20"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"interface vlan 10"},{"type":"switch.command","deviceId":"sw1","command":"ip address 192.168.10.254 255.255.255.0"},{"type":"switch.command","deviceId":"sw1","command":"no shutdown"},{"type":"switch.command","deviceId":"sw1","command":"end"}],
+              },
             },
             { id: "m16-l02-p01-lib-t15", type: "library-training", origin: "teacher-enrichment", trainingId: "T15", label: "تدريب 15", requiredModuleId: "791381s-m16" },
           ],

@@ -3,7 +3,7 @@
 // Verbatim conversion of booklet PDF pages 66–70 (the section header box → an opener page; each numbered sub-topic → one
 // reader page). Every converted block is origin:"book": nothing is added, removed or reworded.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6): teacher-enrichment blocks (visuals and CLI terminal
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals and CLI terminal
 // simulations reused from course 791381 after checking their labels / commands against this section, and the end-of-unit
 // «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by the book
 // lock (bookLock.test.ts).
@@ -519,6 +519,31 @@ const m22: ContentModule = {
                 ],
                 order: ["open", "on", "def", "save", "test"],
                 feedback: { explanation: "الخطوات: 1. الدخول (Server ← Services ← DHCP)، 2. التشغيل (On)، 3. التعريفات (Default Gateway و DNS Server و Start IP وعدد العناوين)، 4. الحفظ (Add أو Save)، 5. التجربة (في الحاسوب: DHCP بدل Static)." },
+              },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m22-l02-p01-lab-dhcp", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: الراوتر خادم DHCP",
+              description: "مختبر على محاكي الشبكات: اجعل الراوتر يوزّع العناوين تلقائيًا على الأجهزة، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "interface g0/0، ip address 192.168.1.254 255.255.255.0، no shutdown؛ ip dhcp pool LAN، network 192.168.1.0 255.255.255.0، default-router 192.168.1.254، dns-server 8.8.8.8؛ ip dhcp excluded-address 192.168.1.1 192.168.1.9؛ ثم ipconfig /renew على PC1." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"r1","kind":"router","label":"R1","x":0.5,"y":0.1},{"id":"sw1","kind":"switch","label":"SW1","x":0.5,"y":0.45},{"id":"pc1","kind":"pc","label":"PC1","x":0.3,"y":0.85,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"dhcp"}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.7,"y":0.85,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"dhcp"}}}}],"links":[{"id":"u","a":{"deviceId":"r1","port":"g0/0"},"b":{"deviceId":"sw1","port":"g0/1"}},{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw1","port":"f0/2"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "نريد أن يكون الراوتر R1 نفسه خادم DHCP يوزّع العناوين داخل الشبكة 192.168.1.0/24. أعطِ المنفذ g0/0 العنوان 192.168.1.254 وشغّله، وأنشئ ip dhcp pool LAN بالشبكة والبوابة وخادم DNS 8.8.8.8، واحجز العناوين 192.168.1.1 إلى 192.168.1.9. ثم اطلب من PC1 عنوانًا (ipconfig /renew في Command Prompt).",
+                  goals: [{"id":"ip","label":"R1: المنفذ g0/0 بالعنوان 192.168.1.254"},{"id":"up","label":"R1: المنفذ g0/0 مشغّل (no shutdown)"},{"id":"pool","label":"مجموعة التوزيع ip dhcp pool LAN موجودة"},{"id":"net","label":"network 192.168.1.0 255.255.255.0"},{"id":"gw","label":"default-router 192.168.1.254"},{"id":"dns","label":"dns-server 8.8.8.8"},{"id":"ex","label":"ip dhcp excluded-address 192.168.1.1 192.168.1.9"},{"id":"lease","label":"PC1 حصل على عنوان تلقائيًا من DHCP"}],
+                },
+                checks: [{"id":"ip","label":"R1: المنفذ g0/0 بالعنوان 192.168.1.254","weight":1,"kind":"router.ipAddress","deviceId":"r1","interface":"g0/0","value":"192.168.1.254"},{"id":"up","label":"R1: المنفذ g0/0 مشغّل (no shutdown)","weight":1,"kind":"router.interfaceEnabled","deviceId":"r1","interface":"g0/0","value":true},{"id":"pool","label":"مجموعة التوزيع ip dhcp pool LAN موجودة","weight":1,"kind":"router.dhcpPool","deviceId":"r1","pool":"LAN","value":true},{"id":"net","label":"network 192.168.1.0 255.255.255.0","weight":1,"kind":"router.dhcpNetwork","deviceId":"r1","pool":"LAN","value":"192.168.1.0 255.255.255.0"},{"id":"gw","label":"default-router 192.168.1.254","weight":1,"kind":"router.dhcpDefaultRouter","deviceId":"r1","pool":"LAN","value":"192.168.1.254"},{"id":"dns","label":"dns-server 8.8.8.8","weight":1,"kind":"router.dhcpDns","deviceId":"r1","pool":"LAN","value":"8.8.8.8"},{"id":"ex","label":"ip dhcp excluded-address 192.168.1.1 192.168.1.9","weight":1,"kind":"router.dhcpExcluded","deviceId":"r1","value":"192.168.1.1 192.168.1.9"},{"id":"lease","label":"PC1 حصل على عنوان تلقائيًا من DHCP","weight":1,"kind":"host.dhcpLease","deviceId":"pc1","adapter":"eth0","value":true}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["interface g0/0 ثم ip address 192.168.1.254 255.255.255.0 ثم no shutdown ثم exit.","ip dhcp pool LAN ثم network 192.168.1.0 255.255.255.0 ثم default-router 192.168.1.254 ثم dns-server 8.8.8.8 ثم exit.","في الإعدادات العامة: ip dhcp excluded-address 192.168.1.1 192.168.1.9، ثم على PC1: ipconfig /renew."],
+                  explanation: "DHCP يوزّع إعدادات الشبكة تلقائيًا على الأجهزة بدون إدخال يدوي: العنوان وقناع الشبكة والبوابة وخادم DNS. default-router هو عنوان Gateway للأجهزة، و excluded-address يحجز عناوين لا يوزّعها الخادم.",
+                },
+                solution: [{"type":"router.command","deviceId":"r1","command":"enable"},{"type":"router.command","deviceId":"r1","command":"configure terminal"},{"type":"router.command","deviceId":"r1","command":"interface g0/0"},{"type":"router.command","deviceId":"r1","command":"ip address 192.168.1.254 255.255.255.0"},{"type":"router.command","deviceId":"r1","command":"no shutdown"},{"type":"router.command","deviceId":"r1","command":"exit"},{"type":"router.command","deviceId":"r1","command":"ip dhcp pool LAN"},{"type":"router.command","deviceId":"r1","command":"network 192.168.1.0 255.255.255.0"},{"type":"router.command","deviceId":"r1","command":"default-router 192.168.1.254"},{"type":"router.command","deviceId":"r1","command":"dns-server 8.8.8.8"},{"type":"router.command","deviceId":"r1","command":"exit"},{"type":"router.command","deviceId":"r1","command":"ip dhcp excluded-address 192.168.1.1 192.168.1.9"},{"type":"router.command","deviceId":"r1","command":"end"},{"type":"host.command","deviceId":"pc1","command":"ipconfig /renew"}],
               },
             },
             { id: "m22-l02-p01-lib-t19", type: "library-training", origin: "teacher-enrichment", trainingId: "T19", label: "تدريب 19", requiredModuleId: "791381s-m22" },

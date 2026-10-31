@@ -3,7 +3,7 @@
 // Verbatim conversion of booklet PDF pages 73–76 (the section header box → an opener page; each numbered sub-topic → one
 // reader page). Every converted block is origin:"book": nothing is added, removed or reworded.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6): teacher-enrichment blocks (visuals and CLI terminal
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals and CLI terminal
 // simulations reused from course 791381 after checking their labels / commands against this section — each simulation types
 // exactly the page's own command box — and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they
 // explain. The book blocks stay verbatim — pinned by the book lock (bookLock.test.ts).
@@ -461,6 +461,31 @@ const m24: ContentModule = {
                 bank: ["show", "login", "startup-config", "password"],
                 answers: { b1: "show", b2: "startup-config" },
                 feedback: { explanation: "أوامر show نستعملها للفحص والتأكّد من الأوامر. تُكتب في الوضع المتقدّم (#). الإعدادات الحالية (running) تضيع إذا أُطفئ الجهاز، لذلك بعد البرمجة احفظها دائمًا بالأمر copy running-config startup-config." },
+              },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m24-l02-p01-lab-passwords", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: حماية السويتش بكلمات المرور",
+              description: "مختبر على محاكي الشبكات: احمِ طرق الدخول إلى السويتش بكلمات مرور، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "line console 0، password cisco123، login؛ line vty 0 4، password cisco123، login؛ enable secret cisco123؛ service password-encryption." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"sw1","kind":"switch","label":"SW1","x":0.5,"y":0.25},{"id":"pc1","kind":"pc","label":"PC1","x":0.5,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.1.11","mask":"255.255.255.0","gateway":""}}}}],"links":[{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}}]},
+                task: {
+                  intro: "على السويتش SW1: احمِ الدخول المباشر (line console 0) والدخول عن بُعد (line vty 0 4) بكلمة المرور cisco123 واجعل الجهاز يطلبها. احمِ وضع الأوامر المتقدّم بـ enable secret cisco123، ثم شفّر كلمات المرور المحفوظة.",
+                  goals: [{"id":"con","label":"line console 0: كلمة المرور cisco123"},{"id":"conl","label":"line console 0: الجهاز يطلب كلمة المرور (login)"},{"id":"vty","label":"line vty 0 4: كلمة المرور cisco123"},{"id":"vtyl","label":"line vty 0 4: الجهاز يطلب كلمة المرور (login)"},{"id":"sec","label":"enable secret cisco123"},{"id":"enc","label":"تشفير كلمات المرور (service password-encryption)"}],
+                },
+                checks: [{"id":"con","label":"line console 0: كلمة المرور cisco123","weight":1,"kind":"switch.consolePassword","deviceId":"sw1","value":"cisco123"},{"id":"conl","label":"line console 0: الجهاز يطلب كلمة المرور (login)","weight":1,"kind":"switch.consoleLogin","deviceId":"sw1","value":true},{"id":"vty","label":"line vty 0 4: كلمة المرور cisco123","weight":1,"kind":"switch.vtyPassword","deviceId":"sw1","value":"cisco123"},{"id":"vtyl","label":"line vty 0 4: الجهاز يطلب كلمة المرور (login)","weight":1,"kind":"switch.vtyLogin","deviceId":"sw1","value":true},{"id":"sec","label":"enable secret cisco123","weight":1,"kind":"switch.enableSecret","deviceId":"sw1","value":"cisco123"},{"id":"enc","label":"تشفير كلمات المرور (service password-encryption)","weight":1,"kind":"switch.passwordEncryption","deviceId":"sw1","value":true}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["line console 0 ثم password cisco123 ثم login ثم exit.","line vty 0 4 ثم password cisco123 ثم login ثم exit.","enable secret cisco123 ثم service password-encryption."],
+                  explanation: "login يجعل الجهاز يطلب كلمة المرور عند الدخول (بدونه لا يسأل عنها). enable secret أقوى من enable password لأن كلمة المرور محفوظة بشكل مشفّر، و service password-encryption يشفّر باقي كلمات المرور حتى لا تُرى مكتوبة بوضوح.",
+                },
+                solution: [{"type":"switch.command","deviceId":"sw1","command":"enable"},{"type":"switch.command","deviceId":"sw1","command":"configure terminal"},{"type":"switch.command","deviceId":"sw1","command":"line console 0"},{"type":"switch.command","deviceId":"sw1","command":"password cisco123"},{"type":"switch.command","deviceId":"sw1","command":"login"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"line vty 0 4"},{"type":"switch.command","deviceId":"sw1","command":"password cisco123"},{"type":"switch.command","deviceId":"sw1","command":"login"},{"type":"switch.command","deviceId":"sw1","command":"exit"},{"type":"switch.command","deviceId":"sw1","command":"enable secret cisco123"},{"type":"switch.command","deviceId":"sw1","command":"service password-encryption"},{"type":"switch.command","deviceId":"sw1","command":"end"}],
               },
             },
             { id: "m24-l02-p01-lib-t20", type: "library-training", origin: "teacher-enrichment", trainingId: "T20", label: "تدريب 20", requiredModuleId: "791381s-m24" },
