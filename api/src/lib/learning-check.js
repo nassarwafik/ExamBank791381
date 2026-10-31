@@ -8,6 +8,7 @@
 //       study,                                         // true when the block is a study activity (it is then in the study index)
 //       feedback: { correct?, incorrect?, hints?, explanation? },
 //       reveal? } } } } }                              // true: REVEAL mode (791381s Phase 2) — see checkResponse
+// A network lab's key is { kind: "network-lab", topology, checks } (791381s Phase 8B): judged by learning-lab.js.
 //
 // The API judges every answer here and returns the verdict with ONLY the feedback that answer earns: a right answer gets the right
 // message and the explanation, a wrong one gets the wrong message and the hint ladder. Study points stay with the study index.
@@ -15,6 +16,7 @@
 // owner's «الخطأ بالأحمر والصحيح بالأخضر مع شرح بسيط». Nothing is revealed for a malformed response or one of another kind, so the
 // key never leaves without an answer of that question.
 const { evaluateStudyResponse, structuredKeyMap } = require("./learning-study");
+const { evaluateNetworkLab } = require("./learning-lab");
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const cleanId = v => (typeof v === "string" ? v.trim() : "");
@@ -51,7 +53,14 @@ const text = v => (typeof v === "string" && v.trim() ? v : undefined);
  * that choice is right. A malformed or mismatched response is simply wrong. Pure.
  */
 function checkResponse(activity, response) {
-  const correct = evaluateStudyResponse(activity.key, response);
+  // 791381s Phase 8B — a NETWORK LAB is judged by the simulator (learning-lab.js): per-check booleans, never a reveal. A judge
+  // that cannot run (broken topology / key) answers `unavailable` — the API turns it into a retryable error and writes nothing.
+  let lab = null;
+  if (activity.key && activity.key.kind === "network-lab") {
+    lab = evaluateNetworkLab(activity.key, response);
+    if (lab.status !== "judged") return { unavailable: true };
+  }
+  const correct = lab ? lab.correct === true : evaluateStudyResponse(activity.key, response);
   const fb = activity.feedback || {};
   const feedback = {};
   const message = text(correct ? fb.correct : fb.incorrect);
@@ -70,7 +79,7 @@ function checkResponse(activity, response) {
     }
     out.cells = cells;
   }
-  const parts = partsOf(activity.key, response);
+  const parts = lab ? lab.parts : partsOf(activity.key, response);
   if (parts) out.parts = parts;
   return out;
 }

@@ -301,12 +301,39 @@ interface ActivityBlockBase extends BlockBase {
   config?: Record<string, unknown>;
 }
 
-/** Native interactive simulation (e.g. VLAN/subnet/CLI). `simulationType` is a trusted registry KEY, not a name. */
-export interface SimulationBlock extends ActivityBlockBase {
+/** Native interactive simulation (e.g. VLAN/subnet/CLI). `simulationType` is a trusted registry KEY, not a name.
+ *  `studyEligible` / `serverCheck` apply only to a server-judged network lab (`network-lab`, see NetworkLabConfig). */
+export interface SimulationBlock extends ActivityBlockBase, StudyEligibilityOptOut, ServerCheckMarker {
   type: "simulation";
   /** Trusted registry key (e.g. "vlan"). Resolved by the registry to a repo component — never executed as code. */
   simulationType: string;
 }
+
+/**
+ * 791381s Phase 8B (docs/enterprise-791381s-enrichment-plan.md §11.3) — a NETWORK LAB: `simulation` / `network-lab` v1 on the
+ * platform's curriculum network simulator (networkTopology@2). The learner configures real devices (router / switch CLI, PC
+ * Command Prompt and IP settings, access point…); the SERVER replays the learner's actions from the topology and judges the
+ * checks (all of them must pass). Authored config:
+ *   • topology — the public Net2Config (devices + links), shown to the learner;
+ *   • task     — the statement: an intro and one goal per check (same ids, same order); the goal labels are the task, so public;
+ *   • checks   — the PRIVATE answer key (networkTopology@2 check objects): never served, judged on the server only;
+ *   • feedback — right / wrong messages, hints (after a wrong check) and the explanation (after a right one): never served;
+ *   • solution — the authored proof (an action list that passes every check): never served, used by the content proof test.
+ * The served body keeps `topology` and `task` only and carries `serverCheck: true` (checkIndex.ts servedBlock).
+ */
+export const NETWORK_LAB_KEY = "network-lab";
+export const NETWORK_LAB_VERSION = 1;
+export interface NetworkLabGoal { id: string; label: string }
+export interface NetworkLabConfig {
+  topology: Record<string, unknown>;
+  task: { intro: string; goals: NetworkLabGoal[] };
+  checks?: Record<string, unknown>[];
+  feedback?: { correctFeedback?: string; incorrectFeedback?: string; hints?: string[]; explanation?: string };
+  solution?: Record<string, unknown>[];
+}
+/** A network-lab block (any version — the validator and the engine decide what a version means). */
+export const isNetworkLabBlock = (block: { type: string; simulationType?: unknown }): block is SimulationBlock =>
+  block.type === "simulation" && block.simulationType === NETWORK_LAB_KEY;
 /** A guided, stepped animation of a concept (e.g. a packet traversing a path). Registry key = `animationType`. */
 export interface AnimationBlock extends ActivityBlockBase {
   type: "animation";
