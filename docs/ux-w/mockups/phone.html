@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>UX-W0 — الهاتف</title><link rel="stylesheet" href="style.css">
+<style>
+/* phone frames for the reference render only */
+.stage { display: flex; gap: 36px; justify-content: center; padding: 48px 40px; }
+.phone { width: 375px; height: 812px; border-radius: 46px; background: var(--eb-bg); box-shadow: 0 0 0 7px #fff, 0 30px 60px -30px rgba(120,70,20,.45); position: relative; overflow: hidden; }
+.sb { height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 28px; font-size: 14px; font-weight: 700; color: var(--eb-navy); direction: ltr; }
+.scr { padding: 6px 18px 120px; }
+.top { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 14px; }
+.top h1 { font-size: 18px; font-weight: 700; color: var(--eb-navy); }
+.top p { font-size: 12.5px; color: var(--eb-muted); }
+.nav { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 7px; border-radius: 22px; background: var(--eb-navy); box-shadow: 0 14px 30px -12px rgba(43,29,20,.6); }
+.nav span { width: 48px; height: 46px; border-radius: 16px; display: grid; place-items: center; color: #f6e9d9; }
+.nav span.on { background: #fff; color: var(--eb-primary); }
+.home-ind { position: absolute; bottom: 9px; left: 50%; width: 130px; height: 5px; margin-left: -65px; border-radius: 5px; background: var(--eb-navy); }
+.ai { display: flex; align-items: center; gap: 12px; padding: 12px; }
+.ai .ic { width: 38px; height: 38px; border-radius: 12px; background: var(--eb-primary); color: #fff; display: grid; place-items: center; }
+.ai .t { flex: 1; font-size: 14px; font-weight: 700; color: var(--eb-navy); }
+.ai .t small { display: block; font-size: 11.5px; font-weight: 500; color: var(--eb-muted); }
+.chips { display: flex; gap: 8px; overflow: hidden; }
+.chips .chip { flex-direction: column; gap: 2px; padding: 10px 12px; font-size: 11.5px; text-align: center; min-width: 74px; }
+.chips .chip.on { justify-content: center; font-size: 14px; }
+/* question screen */
+.qcard { background: linear-gradient(180deg, var(--eb-hero-2), var(--eb-hero)); border-radius: var(--eb-r); padding: 14px; }
+.qcard .h { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 700; color: var(--eb-navy); }
+.qcard .q { margin-top: 10px; background: rgba(255,255,255,.55); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; line-height: 1.7; font-weight: 500; color: var(--eb-navy); }
+.ans { text-align: center; font-size: 40px; font-weight: 700; color: var(--eb-navy); margin: 14px 0 4px; direction: ltr; }
+.ans .c { display: inline-block; width: 2px; height: 34px; background: var(--eb-navy); vertical-align: -4px; margin: 0 2px; }
+.ans .g { color: #b9a796; }
+.ans .u { font-size: 15px; color: var(--eb-muted); font-weight: 600; margin-left: 6px; }
+.lim { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--eb-navy); margin: 10px 2px 8px; }
+.qn { display: flex; gap: 8px; }
+.qn span { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--eb-surface-2); color: var(--eb-navy); }
+.qn .done { background: #ffe6d3; color: var(--eb-primary); }
+.qn .cur { background: var(--eb-primary); color: #fff; }
+.qn .flag { box-shadow: inset 0 0 0 2px var(--eb-accent); }
+.pad { direction: ltr; display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 12px; }
+.pad span { height: 44px; border-radius: 13px; background: var(--eb-surface); box-shadow: var(--eb-sh); display: grid; place-items: center; font-size: 18px; font-weight: 600; color: var(--eb-navy); }
+.pad span.x { background: var(--eb-primary); color: #fff; }
+</style></head>
+<body>
+<div class="stage">
+
+<!-- 1. Student portal «اليوم» -->
+<div class="phone"><div class="sb"><span>9:41</span><span>▮▮▮ ◔ ▬</span></div><div class="scr">
+  <div class="top"><div><p>أهلًا بك 👋</p><h1>ليان أحمد</h1></div><span class="ibtn"><i data-i="bell"></i></span></div>
+  <div class="card ai"><span class="ic"><i data-i="spark" data-s="18"></i></span><span class="t">مساعد المذاكرة الذكي<small>حلّل نقاط قوتك وما تحتاج تدريبه</small></span><i data-i="chevL" data-s="18"></i></div>
+  <div class="hero" style="margin-top:14px">
+    <div class="k">معدّلي هذا الفصل</div><div class="v num">86.4%</div>
+    <div class="gauge">
+      <svg viewBox="0 0 240 132"><path d="M232 120A112 112 0 0 0 8 120" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2"/>
+        <path d="M220 120A100 100 0 0 0 20 120" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="22" stroke-linecap="round"/>
+        <path d="M220 120A100 100 0 0 0 94.1 23.4" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/></svg>
+      <span class="dot ok" style="left:210px;top:110px"><i data-i="check" data-s="12"></i></span>
+      <span class="dot ok" style="left:180.7px;top:39.3px"><i data-i="check" data-s="12"></i></span>
+      <span class="dot ok" style="left:110px;top:10px"><i data-i="check" data-s="12"></i></span>
+      <span class="dot pend" style="left:39.3px;top:39.3px"><i data-i="clock" data-s="12"></i></span>
+      <span class="dot pend" style="left:10px;top:110px"><i data-i="clock" data-s="12"></i></span>
+      <span class="lbl" style="right:-6px;top:120px">0</span><span class="lbl" style="right:20px;top:58px">3</span><span class="lbl" style="left:113px;top:-12px">6</span><span class="lbl" style="left:28px;top:58px">9</span><span class="lbl" style="left:-8px;top:120px">12</span>
+      <div class="mid"><span class="ic"><i data-i="clip" data-s="20"></i></span><b>5 واجبات متبقية</b></div>
+    </div>
+  </div>
+  <div class="sec-h"><h2>إجراءات سريعة</h2><span class="link">المزيد</span></div>
+  <div class="chips"><span class="chip on">الكل</span><span class="chip"><i data-i="play" data-s="16"></i>متابعة القراءة</span><span class="chip"><i data-i="game" data-s="16"></i>تدريب سريع</span><span class="chip"><i data-i="msg" data-s="16"></i>راسل معلمك</span></div>
+  <div class="sec-h"><h2>المهام القادمة</h2><span class="link">عرض الكل</span></div>
+  <div class="card"><div class="row"><span class="ic"><i data-i="clip"></i></span><span class="t">واجب الشبكات ٣<small>يُغلق غدًا 10:00 ص</small></span><span class="tag">جديد</span></div></div>
+</div>
+<div class="nav"><span class="on"><i data-i="home"></i></span><span><i data-i="book"></i></span><span><i data-i="clip"></i></span><span><i data-i="chart"></i></span><span><i data-i="folder"></i></span></div><div class="home-ind"></div></div>
+
+<!-- 2. Student exam: numeric answer -->
+<div class="phone"><div class="sb"><span>9:41</span><span>▮▮▮ ◔ ▬</span></div><div class="scr">
+  <div class="top"><h1>اختبار شبكات الاتصال</h1><span class="ibtn"><i data-i="flag"></i></span></div>
+  <div class="qcard"><div class="h"><span>السؤال 4 من 12</span><span class="tag" style="background:rgba(255,255,255,.7);color:var(--eb-navy)">3 علامات</span></div>
+    <div class="q">نُقل ملف حجمه 75 ميغابايت خلال 8 ثوانٍ. احسب معدّل نقل البيانات بوحدة Mbps.</div></div>
+  <div class="ans num">75<span class="c"></span><span class="g">.00</span><span class="u">Mbps</span></div>
+  <div class="lim"><span>الوقت المتبقي</span><span class="num">12:40 / 30:00</span></div>
+  <div class="prog"><i style="width:58%"></i></div>
+  <div class="card" style="margin-top:14px;padding:12px 14px"><div class="sec-h" style="margin:0 0 10px"><h2 style="font-size:14px">التنقل بين الأسئلة</h2><span class="link">عرض الكل</span></div>
+    <div class="qn"><span class="done">1</span><span class="done">2</span><span class="done flag">3</span><span class="cur">4</span><span>5</span><span>6</span><span>7</span></div></div>
+  <div class="pad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>.</span><span>0</span><span class="x"><i data-i="x" data-s="18"></i></span></div>
+</div><div class="home-ind"></div></div>
+
+<!-- 3. Student «تقدّمي» -->
+<div class="phone"><div class="sb"><span>9:41</span><span>▮▮▮ ◔ ▬</span></div><div class="scr">
+  <div class="top"><h1>تقدّمي</h1><span class="ibtn"><i data-i="bell"></i></span></div>
+  <div style="text-align:center"><div class="seg"><span class="on">الواجبات</span><span>الاختبارات</span></div>
+    <p style="margin-top:16px;font-size:13px;font-weight:600;color:var(--eb-muted)">المعدّل العام</p><p class="num" style="font-size:30px;font-weight:700;color:var(--eb-navy)">84.6%</p></div>
+  <div class="sec-h" style="margin-top:12px"><h2>مواضيع تحتاج تدريبًا</h2></div>
+  <div class="chips"><span class="chip on" style="font-size:12.5px">عنونة IP</span><span class="chip" style="min-width:0;font-size:12.5px">بروتوكول TCP</span><span class="chip" style="min-width:0;font-size:12.5px">الشبكات اللاسلكية</span></div>
+  <div class="card" style="margin-top:14px;padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p class="link">علاماتي هذا الأسبوع</p><p class="num" style="font-size:20px;font-weight:700;color:var(--eb-navy)">7 محاولات</p></div><span class="chip" style="padding:6px 10px;font-size:11.5px">أسبوع <i data-i="chevD" data-s="14"></i></span></div>
+    <div class="bars">
+      <div class="b"><span class="col" style="height:62%"></span><span class="d">سبت</span></div>
+      <div class="b"><span class="col" style="height:78%"></span><span class="d">أحد</span></div>
+      <div class="b"><span class="col" style="height:58%"></span><span class="d">إثنين</span></div>
+      <div class="b"><span class="col" style="height:60%"></span><span class="d">ثلاثاء</span></div>
+      <div class="b"><span class="col hi" style="height:92%"><span class="tip">92%</span></span><span class="d">أربعاء</span></div>
+      <div class="b"><span class="col" style="height:74%"></span><span class="d">خميس</span></div>
+      <div class="b"><span class="col" style="height:66%"></span><span class="d">جمعة</span></div>
+    </div></div>
+</div>
+<div class="nav"><span><i data-i="home"></i></span><span><i data-i="book"></i></span><span><i data-i="clip"></i></span><span class="on"><i data-i="chart"></i></span><span><i data-i="folder"></i></span></div><div class="home-ind"></div></div>
+
+</div>
+<script src="icons.js"></script>
+</body></html>

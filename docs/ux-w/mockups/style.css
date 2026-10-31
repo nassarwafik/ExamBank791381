@@ -1,0 +1,85 @@
+/* UX-W0 — reference MOCKUP of the warm theme (docs only; never built or shipped).
+   Every colour is a candidate value for the existing --eb-* tokens (see docs/enterprise-ux-w0-warm-theme-proposal.md §3). */
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 400; src: url(../../../public/fonts/IBMPlexSansArabic-400-arabic.woff2) format("woff2"); }
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 500; src: url(../../../public/fonts/IBMPlexSansArabic-500-arabic.woff2) format("woff2"); }
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 600; src: url(../../../public/fonts/IBMPlexSansArabic-600-arabic.woff2) format("woff2"); }
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 700; src: url(../../../public/fonts/IBMPlexSansArabic-700-arabic.woff2) format("woff2"); }
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 700; src: url(../../../public/fonts/IBMPlexSansArabic-700-latin.woff2) format("woff2"); unicode-range: U+0000-00FF; }
+@font-face { font-family: "IBM Plex Sans Arabic"; font-weight: 500; src: url(../../../public/fonts/IBMPlexSansArabic-500-latin.woff2) format("woff2"); unicode-range: U+0000-00FF; }
+
+:root {
+  --eb-bg: #fdf6ec;           /* cream page */
+  --eb-bg-tint: #fbeedd;
+  --eb-surface: #ffffff;
+  --eb-surface-2: #fbf4ea;
+  --eb-navy: #2b1d14;         /* warm near-black heading ink, also the dark nav pill */
+  --eb-text: #3b2a1e;
+  --eb-muted: #6e5a4b;        /* 6.06:1 on cream, 4.20:1 on the hero yellow (use 600+ there) */
+  --eb-line: #f0e4d4;
+  --eb-primary: #c2410c;      /* buttons with white text: 5.18:1 (AA) */
+  --eb-accent: #e8571e;       /* fills, bars, active chips with bold text (non-text ≥ 3:1) */
+  --eb-primary-050: #fff1e8;
+  --eb-hero: #f8c96a;         /* the yellow hero card */
+  --eb-hero-2: #fbd98f;
+  --eb-bar: #f6c66b;
+  --eb-success: #15803d;
+  --eb-r: 18px; --eb-r-lg: 24px; --eb-pill: 999px;
+  --eb-sh: 0 1px 2px rgba(43,29,20,.04), 0 8px 24px -14px rgba(120,70,20,.22);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "IBM Plex Sans Arabic", Tahoma, sans-serif; color: var(--eb-text); background: linear-gradient(160deg, #fde9cf, #fff4e6 45%, #fde4c4); }
+h1, h2, h3, p { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.card { background: var(--eb-surface); border-radius: var(--eb-r); box-shadow: var(--eb-sh); }
+.ibtn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--eb-surface); box-shadow: var(--eb-sh); color: var(--eb-navy); }
+.link { font-size: 12px; color: var(--eb-muted); font-weight: 500; }
+.sec-h { display: flex; justify-content: space-between; align-items: center; margin: 18px 2px 10px; }
+.sec-h h2 { font-size: 15px; font-weight: 700; color: var(--eb-navy); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 14px; background: var(--eb-surface); box-shadow: var(--eb-sh); font-size: 13px; font-weight: 600; color: var(--eb-navy); white-space: nowrap; }
+.chip.on { background: var(--eb-primary); color: #fff; }
+.seg { display: inline-flex; padding: 4px; border-radius: 16px; background: var(--eb-surface); box-shadow: var(--eb-sh); }
+.seg span { padding: 8px 22px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--eb-navy); }
+.seg .on { background: var(--eb-primary); color: #fff; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 14px; font-size: 14px; font-weight: 600; background: var(--eb-surface); color: var(--eb-navy); box-shadow: var(--eb-sh); }
+.btn.pri { background: var(--eb-primary); color: #fff; }
+
+/* Hero (the «Today Balance» card) */
+.hero { background: linear-gradient(180deg, var(--eb-hero-2), var(--eb-hero)); border-radius: var(--eb-r-lg); padding: 18px 16px 14px; text-align: center; color: var(--eb-navy); position: relative; overflow: hidden; }
+.hero .k { font-size: 13px; font-weight: 600; }
+.hero .v { font-size: 30px; font-weight: 700; letter-spacing: -.5px; margin-top: 2px; }
+.gauge { position: relative; width: 240px; height: 132px; margin: 10px auto 0; }
+.gauge > svg { position: absolute; inset: 0; }
+.gauge .mid { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; }
+.gauge .mid .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--eb-primary); color: #fff; display: grid; place-items: center; margin: 0 auto 4px; }
+.gauge .mid b { font-size: 14px; }
+.gauge .lbl { position: absolute; font-size: 10.5px; font-weight: 600; color: var(--eb-navy); }
+.gauge .dot { position: absolute; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 0; box-shadow: 0 0 0 3px rgba(255,255,255,.7); }
+.dot.ok { background: var(--eb-success); }
+.dot.pend { background: #fff; color: var(--eb-navy); }
+
+/* Bar chart (the «Analytics» card) */
+.bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 150px; padding-top: 26px; }
+.bars .b { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.bars .col { width: 100%; max-width: 30px; border-radius: 8px 8px 4px 4px; background: var(--eb-bar); position: relative; }
+.bars .col::before { content: ""; position: absolute; top: -3px; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--eb-navy); }
+.bars .col.hi { background: var(--eb-accent); }
+.bars .col .tip { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: var(--eb-primary); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 7px; white-space: nowrap; }
+.bars .d { font-size: 11px; color: var(--eb-muted); font-weight: 500; }
+
+/* Avatars (the «Quick Send» row) */
+.avs { display: flex; gap: 12px; }
+.av { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: var(--eb-navy); }
+.av .ph { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 15px; color: var(--eb-navy); }
+.av .ph.add { background: var(--eb-primary); color: #fff; border-radius: 50%; }
+
+/* List rows */
+.row { display: flex; align-items: center; gap: 12px; padding: 12px; }
+.row + .row { border-top: 1px solid var(--eb-line); }
+.row .ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--eb-primary-050); color: var(--eb-primary); flex: none; }
+.row .t { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--eb-navy); }
+.row .t small { display: block; font-size: 11.5px; font-weight: 500; color: var(--eb-muted); margin-top: 2px; }
+.row .end { font-size: 13px; font-weight: 700; color: var(--eb-navy); }
+.tag { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--eb-primary-050); color: var(--eb-primary); }
+.tag.ok { background: #e8f6ec; color: var(--eb-success); }
+.prog { height: 6px; border-radius: 6px; background: #f1e5d6; overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--eb-accent); border-radius: 6px; }
