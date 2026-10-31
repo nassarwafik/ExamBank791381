@@ -300,6 +300,7 @@ const m11: ContentModule = {
                 feedback: { explanation: "ipconfig /all يعرض إعدادات الشبكة في جهازك: عنوان IP، قناع الشبكة، البوابة الافتراضية، وعنوان MAC." },
               },
             },
+            { id: "m11-l02-p01-lib-t12", type: "library-training", origin: "teacher-enrichment", trainingId: "T12", label: "تدريب 12", requiredModuleId: "791381s-m11" },
           ],
         },
       ],

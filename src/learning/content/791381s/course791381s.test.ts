@@ -29,7 +29,9 @@ const server = apiRegistry as unknown as { listLearningModules: (c: string) => {
 const assetDir = fileURLToPath(new URL("../../../../public/learning-assets/" + CID + "/", import.meta.url));
 const ALLOWED_BLOCKS = new Set(["text", "heading", "callout", "list", "table", "code", "diagram", "unit-opener"]);
 /** What enrichment may add (Phase 2 onward): exercises, visuals, activities, worked examples, teacher clarifications. */
-const ENRICHMENT_BLOCKS = new Set(["practice", "practice-table", "visual", "simulation", "animation", "guided", "interactive-diagram", "example", "callout"]);
+const ENRICHMENT_BLOCKS = new Set(["practice", "practice-table", "visual", "simulation", "animation", "guided", "interactive-diagram", "example", "callout",
+  // Phase 8A (§11.2): a metadata-only pointer to an Exam Library training — no question, option, answer or title in the content.
+  "library-training"]);
 const DIAGRAM_SRC = /^\/learning-assets\/791381s\/[0-9a-f]{16}\.png$/;
 
 async function loadAll(): Promise<ContentModule[]> {

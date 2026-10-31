@@ -432,6 +432,8 @@ const m03: ContentModule = {
                 feedback: { explanation: "Static IP ثابت مناسب لـ الطابعات، الكاميرات، الخوادم. Dynamic IP متغيّر مناسب لـ البيوت والشركات الصغيرة." },
               },
             },
+            { id: "m03-l02-p01-lib-t03", type: "library-training", origin: "teacher-enrichment", trainingId: "T03", label: "تدريب 3", requiredModuleId: "791381s-m03" },
+            { id: "m03-l02-p01-lib-t04", type: "library-training", origin: "teacher-enrichment", trainingId: "T04", label: "تدريب 4", requiredModuleId: "791381s-m03" },
           ],
         },
       ],

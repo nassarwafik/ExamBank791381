@@ -368,6 +368,7 @@ const m09: ContentModule = {
                 feedback: { explanation: "كلاهما يعمل في طبقة النقل (Transport). صفة TCP: موثوق. صفة UDP: سريع — أسرع، لأنه لا ينتظر تأكيدًا على كل رسالة." },
               },
             },
+            { id: "m09-l02-p01-lib-t10", type: "library-training", origin: "teacher-enrichment", trainingId: "T10", label: "تدريب 10", requiredModuleId: "791381s-m09" },
           ],
         },
       ],

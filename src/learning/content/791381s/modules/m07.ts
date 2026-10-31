@@ -305,6 +305,7 @@ const m07: ContentModule = {
                 feedback: { explanation: "قاعدة: كلما زادت الحماية والجودة، كان الكابل أفضل ضد التشويش وفقدان البيانات. الألياف البصرية تستعمل الضوء، لذلك سرعتها عالية جدًا." },
               },
             },
+            { id: "m07-l02-p01-lib-t08", type: "library-training", origin: "teacher-enrichment", trainingId: "T08", label: "تدريب 8", requiredModuleId: "791381s-m07" },
           ],
         },
       ],

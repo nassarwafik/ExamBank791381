@@ -396,6 +396,7 @@ const m12: ContentModule = {
               id: "m12-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "اختبار موقع على Localhost يحتاج اتصالًا بالإنترنت.", answer: false, feedback: { explanation: "Localhost يُستخدم لاختبار المواقع والبرامج محليًا، ولا يحتاج اتصالًا بالإنترنت." } },
             },
+            { id: "m12-l02-p01-lib-t13", type: "library-training", origin: "teacher-enrichment", trainingId: "T13", label: "تدريب 13", requiredModuleId: "791381s-m12" },
           ],
         },
       ],

@@ -393,6 +393,7 @@ const m08: ContentModule = {
                 feedback: { explanation: "Bit أصغر وحدة، ثم Byte = 8 بت، ثم KB = 1024 بايت، ثم MB = 1024 كيلوبايت، ثم GB = 1024 ميجابايت، ثم TB = 1024 جيجابايت." },
               },
             },
+            { id: "m08-l02-p01-lib-t09", type: "library-training", origin: "teacher-enrichment", trainingId: "T09", label: "تدريب 9", requiredModuleId: "791381s-m08" },
           ],
         },
       ],

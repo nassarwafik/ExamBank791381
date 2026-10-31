@@ -521,6 +521,7 @@ const m22: ContentModule = {
                 feedback: { explanation: "الخطوات: 1. الدخول (Server ← Services ← DHCP)، 2. التشغيل (On)، 3. التعريفات (Default Gateway و DNS Server و Start IP وعدد العناوين)، 4. الحفظ (Add أو Save)، 5. التجربة (في الحاسوب: DHCP بدل Static)." },
               },
             },
+            { id: "m22-l02-p01-lib-t19", type: "library-training", origin: "teacher-enrichment", trainingId: "T19", label: "تدريب 19", requiredModuleId: "791381s-m22" },
           ],
         },
       ],

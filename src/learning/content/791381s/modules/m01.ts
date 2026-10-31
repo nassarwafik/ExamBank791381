@@ -382,6 +382,7 @@ const m01: ContentModule = {
                 feedback: { explanation: "الاستخدامات: ملفات، إنترنت، تواصل، تعاون، مشاركة أجهزة، سرعة. الإدارة والصيانة: التكوين والإدارة (ضبط الأجهزة وكلمات المرور)، أمان الشبكة، خدمات الشبكة، الفحص والصيانة (فحص الاتصال وحلّ الأعطال)." },
               },
             },
+            { id: "m01-l02-p01-lib-t01", type: "library-training", origin: "teacher-enrichment", trainingId: "T01", label: "تدريب 1", requiredModuleId: "791381s-m01" },
           ],
         },
       ],

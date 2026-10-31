@@ -12,7 +12,13 @@
 // on PDF 106 but gated by m08; T14 on PDF 119 by m18; T18 on PDF 119 by m21; T23 on PDF 191 by m27; T24 on PDF 191
 // by m06; T25/T26 — the comprehensive basic-section exams — by m24; T27–T30 and F01–F06 by m06). Teachers may
 // review/solve any item regardless of class publication. Nothing here auto-publishes any module.
+//
+// ADDITIONAL RELEASE POINTS (791381s Phase 8A, docs/enterprise-791381s-enrichment-plan.md §11.2): the summary booklet
+// «أوراق تلخيص شبكات الاتصال» (course 791381s) opens the SAME items from its own units. An item opens for a class when ANY
+// of its release points (the primary 791381 row, or its 791381s unit) is published to that class. The item, its title, its
+// grading and its Strength bucket (one `trainingId`, 40 points) are the same whichever book opens it — never 40 + 40.
 const { classHasLearningCourse, classCanSeeLearningModule } = require("./class-learning-materials");
+const { findLearningModule } = require("./learning-materials-registry");
 
 const TRAININGS = [
   { trainingId: "T01", order: 1, label: "تدريب 1", title: "أساسيات الشبكات", courseId: "791381", requiredModuleId: "791381-m01" },
@@ -58,6 +64,32 @@ const TRAININGS = [
   { trainingId: "F05", order: 35, label: "الامتحان الخامس", title: "بجروت صيف 2024", courseId: "791381", requiredModuleId: "791381-m06" },
   { trainingId: "F06", order: 36, label: "الامتحان السادس", title: "بجروت صيف 2025", courseId: "791381", requiredModuleId: "791381-m06" }
 ];
+
+/** The 791381s unit that releases each item: the LATEST booklet unit needed to answer it (owner-approved, §11.2). */
+const SUMMARY_BOOKLET_UNIT = Object.freeze({
+  T01: 1, T02: 2, T03: 3, T04: 3, T05: 4, T06: 5, T07: 6, T08: 7, T09: 8, T10: 9, T11: 10, T12: 11, T13: 12,
+  T14: 14,                        // أمان الشبكات (m13) + تجزئة البيانات (m14)
+  T15: 16,                        // برمجة السويتش (m15) + VLAN (m16)
+  T16: 18, T17: 19,
+  T18: 21,                        // DMZ / Wi-Fi (m20) + IPv6 / المنافذ (m21)
+  T19: 22,
+  T20: 24,                        // Port Security (m23) + حماية Cisco (m24)
+  T21: 25, T22: 26,
+  T23: 29,                        // مفاهيم التوجيه (m27) + OSPF (m28) + EIGRP (m29)
+  T24: 30,
+  T25: 24, T26: 24,               // the comprehensive basic-section exams: gated, as in 791381, by «حماية أجهزة Cisco»
+  T27: 30, T28: 30, T29: 30, T30: 30, F01: 30, F02: 30, F03: 30, F04: 30, F05: 30, F06: 30   // whole-course exams: the last content unit
+});
+const ALSO_RELEASED_BY = Object.freeze(Object.fromEntries(Object.entries(SUMMARY_BOOKLET_UNIT).map(([id, n]) =>
+  [id, Object.freeze([Object.freeze({ courseId: "791381s", requiredModuleId: "791381s-m" + String(n).padStart(2, "0") })])])));
+
+// Load-time integrity: every item has its 791381s point, every point names a real module of its course, nothing extra.
+for (const t of TRAININGS) if (!ALSO_RELEASED_BY[t.trainingId]) throw new Error("learning-training-registry: no 791381s release point for " + t.trainingId);
+for (const [id, points] of Object.entries(ALSO_RELEASED_BY)) {
+  if (!TRAININGS.some(t => t.trainingId === id)) throw new Error("learning-training-registry: release point for unknown item " + id);
+  for (const r of points) if (!findLearningModule(r.courseId, r.requiredModuleId)) throw new Error("learning-training-registry: unknown release module " + r.courseId + "/" + r.requiredModuleId);
+}
+
 const clone = t => ({ ...t });
 
 /** Every Learning-Practice item (T01–T30, F01–F06) in book order (copies). */
@@ -68,10 +100,22 @@ function findLearningTraining(trainingId) {
   const t = id ? TRAININGS.find(x => x.trainingId === id) : null;
   return t ? clone(t) : null;
 }
-/** The progressive-release gate for a STUDENT of `classroom` (course assigned + required module published). */
+/** Every release point of an item: its primary row first, then the additional ones (copies). */
+function trainingReleases(training) {
+  if (!training) return [];
+  return [{ courseId: training.courseId, requiredModuleId: training.requiredModuleId }, ...(ALSO_RELEASED_BY[training.trainingId] || []).map(r => ({ ...r }))];
+}
+/** The module of `courseId` that releases the item, or null (unknown item, or the course does not release it). Exact ids. */
+function trainingReleaseModuleFor(trainingId, courseId) {
+  const t = findLearningTraining(trainingId);
+  const r = trainingReleases(t).find(x => x.courseId === String(courseId || ""));
+  return r ? r.requiredModuleId : null;
+}
+/** The progressive-release gate for a STUDENT of `classroom`: for ANY release point, its course is assigned and its module
+ *  is published to the class. */
 function trainingAllowedForClass(classroom, training) {
   if (!training) return false;
-  return classHasLearningCourse(classroom, training.courseId) && classCanSeeLearningModule(classroom, training.courseId, training.requiredModuleId);
+  return trainingReleases(training).some(r => classHasLearningCourse(classroom, r.courseId) && classCanSeeLearningModule(classroom, r.courseId, r.requiredModuleId));
 }
 
-module.exports = { listLearningTrainings, findLearningTraining, trainingAllowedForClass };
+module.exports = { listLearningTrainings, findLearningTraining, trainingAllowedForClass, trainingReleases, trainingReleaseModuleFor };

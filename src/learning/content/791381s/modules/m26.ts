@@ -275,6 +275,7 @@ const m26: ContentModule = {
                 feedback: { explanation: "WAN = شبكة واسعة تمتد عبر مسافات كبيرة: مدن، دول، أو قارات. تربط فروع الشركات والمؤسسات، وتستخدم الألياف الضوئية والإنترنت والاتصالات السلكية واللاسلكية." },
               },
             },
+            { id: "m26-l02-p01-lib-t22", type: "library-training", origin: "teacher-enrichment", trainingId: "T22", label: "تدريب 22", requiredModuleId: "791381s-m26" },
           ],
         },
       ],

@@ -579,6 +579,7 @@ const m19: ContentModule = {
               id: "m19-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "إذا كان المنفذ الأصلي g0/0 في الراوتر غير مشغّل، تعمل المنافذ الفرعية رغم ذلك.", answer: false, feedback: { explanation: "المنفذ الأصلي في الراوتر يجب أن يكون مشغّلًا (interface g0/0 ثم no shutdown)، وإلا لن تعمل المنافذ الفرعية." } },
             },
+            { id: "m19-l02-p01-lib-t17", type: "library-training", origin: "teacher-enrichment", trainingId: "T17", label: "تدريب 17", requiredModuleId: "791381s-m19" },
           ],
         },
       ],

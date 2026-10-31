@@ -198,6 +198,11 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
  */
 function UnitPracticeBody({ page, ctx }: { page: ContentPage; ctx: ActivityRenderContext }) {
   const questionIds = page.blocks.filter(b => b.type === "practice").map(b => b.id);
+  // Phase 8A: the Exam Library trainings of the unit (metadata-only cards) sit in their own section after the score — they
+  // are whole exams with their own 40-point bucket, never part of the page's running score nor reset by «أعد كل الأسئلة».
+  const trainings = page.blocks.filter(b => b.type === "library-training");
+  const exercises = page.blocks.filter(b => b.type !== "library-training");
+  const libraryHeadingId = "learning-unit-practice-library-" + page.id;
   const [round, setRound] = useState(0);
   const [verdicts, setVerdicts] = useState<Record<string, "right" | "wrong">>({});
   const onVerdict = useCallback((id: string, verdict: "right" | "wrong" | null) => {
@@ -219,7 +224,7 @@ function UnitPracticeBody({ page, ctx }: { page: ContentPage; ctx: ActivityRende
       <p className="learning-unit-practice-intro">اختر إجابة كل سؤال: تظهر الإجابة الصحيحة بالأخضر، وإجابتك الخاطئة بالأحمر، ومعها شرح قصير.</p>
       {ctx.study && <StudyPageBar page={page} host={ctx.study} />}
       <div key={round} className="learning-unit-practice-items">
-        {page.blocks.map(block => <BlockView key={block.id} block={block} ctx={pageCtx} />)}
+        {exercises.map(block => <BlockView key={block.id} block={block} ctx={pageCtx} />)}
       </div>
       <div className={"learning-unit-practice-score" + (done ? " is-done" : "")} role="status" aria-live="polite">
         {done
@@ -227,6 +232,13 @@ function UnitPracticeBody({ page, ctx }: { page: ContentPage; ctx: ActivityRende
           : <p className="learning-unit-practice-progress">أجبت عن <span dir="ltr">{answered}</span> من <span dir="ltr">{total}</span> · الصحيحة: <span dir="ltr">{right}</span></p>}
         {(done || answered > 0) && <button type="button" className="eb-button is-small" onClick={restart}>أعد كل الأسئلة</button>}
       </div>
+      {trainings.length > 0 && (
+        <section className="learning-unit-practice-library" aria-labelledby={libraryHeadingId}>
+          <h3 id={libraryHeadingId} className="learning-unit-practice-library-title">تدريبات من مكتبة الامتحانات</h3>
+          <p className="learning-unit-practice-library-note">امتحان تدريبي كامل من بنك أسئلة المنصة، يصحّحه الخادم وتُحسب أفضل نتيجة فيه من نقاط قوتك. يُفتح عند نشر الوحدة المرتبطة به.</p>
+          {trainings.map(block => <BlockView key={block.id} block={block} ctx={ctx} />)}
+        </section>
+      )}
     </div>
   );
 }

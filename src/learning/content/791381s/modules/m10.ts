@@ -270,6 +270,7 @@ const m10: ContentModule = {
                 feedback: { explanation: "القاعدة: TCP للموثوقية: الويب والبريد والملفات والتحكم عن بعد. UDP للسرعة: DNS و DHCP و TFTP والبث." },
               },
             },
+            { id: "m10-l02-p01-lib-t11", type: "library-training", origin: "teacher-enrichment", trainingId: "T11", label: "تدريب 11", requiredModuleId: "791381s-m10" },
           ],
         },
       ],

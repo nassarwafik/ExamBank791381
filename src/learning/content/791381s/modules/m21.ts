@@ -362,6 +362,7 @@ const m21: ContentModule = {
                 feedback: { explanation: "من الجدول: 23 Telnet اتصال غير آمن للتحكّم عن بُعد، و 22 SSH اتصال آمن. طريقة للحفظ: SSH 22 و Telnet 23 (الآمن قبل غير الآمن)." },
               },
             },
+            { id: "m21-l02-p01-lib-t18", type: "library-training", origin: "teacher-enrichment", trainingId: "T18", label: "تدريب 18", requiredModuleId: "791381s-m21" },
           ],
         },
       ],

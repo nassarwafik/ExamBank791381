@@ -358,6 +358,7 @@ const m05: ContentModule = {
                 feedback: { explanation: "Hub: ينسخ كل ما يصله ويرسله لكل المنافذ، ويسبّب ازدحامًا وتداخلًا. Switch: يحفظ عناوين MAC، وكل منفذ فيه طريق خاص لجهاز معيّن. Router: يربط شبكة البيت أو المدرسة بالإنترنت، ويختار الطريق الأفضل لوصول البيانات." },
               },
             },
+            { id: "m05-l02-p01-lib-t06", type: "library-training", origin: "teacher-enrichment", trainingId: "T06", label: "تدريب 6", requiredModuleId: "791381s-m05" },
           ],
         },
       ],

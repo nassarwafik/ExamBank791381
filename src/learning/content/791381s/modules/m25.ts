@@ -392,6 +392,7 @@ const m25: ContentModule = {
                 feedback: { explanation: "OSPF و EIGRP: بروتوكولات توجيه تساعد الراوترات على إيجاد الطريق بين الشبكات." },
               },
             },
+            { id: "m25-l02-p01-lib-t21", type: "library-training", origin: "teacher-enrichment", trainingId: "T21", label: "تدريب 21", requiredModuleId: "791381s-m25" },
           ],
         },
       ],
