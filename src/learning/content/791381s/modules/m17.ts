@@ -4,7 +4,7 @@
 // reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The tagged-packet drawing is a crop of the booklet itself.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–5): teacher-enrichment blocks (visuals / activities reused from
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–5; the network lab: Phase 8B-3): teacher-enrichment blocks (visuals / activities reused from
 // course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
 // book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
@@ -383,6 +383,31 @@ const m17: ContentModule = {
                 kind: "multipleChoice", prompt: "لماذا يُفضّل عدم ترك Native VLAN على VLAN 1؟",
                 options: [{ id: "a", text: "لأن الـ Native VLAN لا تحمل Tag على وصلة Trunk، فنغيّرها لأسباب أمنية.", correct: true }, { id: "b", text: "لأن الـ Native VLAN تحمل Tag مثل باقي VLAN." }, { id: "c", text: "لأن الرقم 1 خارج مجال أرقام VLAN." }],
                 feedback: { explanation: "الـ Native VLAN لا تحمل Tag على وصلة Trunk، لذلك يُفضّل عدم تركها على VLAN 1 لأسباب أمنية، ونغيّرها إلى رقم آخر لا نستعمله للأجهزة، مثل 99." },
+              },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m17-l02-p01-lab-native", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: Trunk و Native VLAN 99",
+              description: "مختبر على محاكي الشبكات: اربط سويتشين بوصلة Trunk آمنة، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "على SW1 و SW2: interface f0/24 ثم switchport mode trunk ثم switchport trunk native vlan 99 ثم switchport trunk allowed vlan 10,20." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"sw1","kind":"switch","label":"SW1","x":0.3,"y":0.25,"initial":{"v":2,"device":"switch","hostname":"SW1","vlans":{"10":{"name":"VLAN0010"},"20":{"name":"VLAN0020"}},"interfaces":{"f0/1":{"mode":"access","accessVlan":10}},"vtp":{"mode":"server","domain":"","password":"","version":1,"revision":0},"security":{}}},{"id":"sw2","kind":"switch","label":"SW2","x":0.7,"y":0.25,"initial":{"v":2,"device":"switch","hostname":"SW2","vlans":{"10":{"name":"VLAN0010"},"20":{"name":"VLAN0020"}},"interfaces":{"f0/1":{"mode":"access","accessVlan":10}},"vtp":{"mode":"server","domain":"","password":"","version":1,"revision":0},"security":{}}},{"id":"pc1","kind":"pc","label":"PC1","x":0.3,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.10.11","mask":"255.255.255.0","gateway":""}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.7,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.10.12","mask":"255.255.255.0","gateway":""}}}}],"links":[{"id":"t","a":{"deviceId":"sw1","port":"f0/24"},"b":{"deviceId":"sw2","port":"f0/24"}},{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw2","port":"f0/1"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "السويتشان SW1 و SW2 متصلان بالمنفذ f0/24، و PC1 و PC2 كلاهما في VLAN 10. على كل سويتش: اجعل f0/24 منفذ Trunk، وغيّر الـ Native VLAN إلى 99، واسمح بمرور VLAN 10 و 20 فقط.",
+                  goals: [{"id":"t1","label":"SW1: المنفذ f0/24 في وضع Trunk"},{"id":"n1","label":"SW1: Native VLAN على f0/24 هي 99"},{"id":"a1","label":"SW1: يمرّ على f0/24 فقط VLAN 10 و 20"},{"id":"t2","label":"SW2: المنفذ f0/24 في وضع Trunk"},{"id":"n2","label":"SW2: Native VLAN على f0/24 هي 99"},{"id":"a2","label":"SW2: يمرّ على f0/24 فقط VLAN 10 و 20"},{"id":"ping","label":"PC1 يصل إلى PC2 (كلاهما في VLAN 10) عبر الـ Trunk"}],
+                },
+                checks: [{"id":"t1","label":"SW1: المنفذ f0/24 في وضع Trunk","weight":1,"kind":"switch.portMode","deviceId":"sw1","interface":"f0/24","value":"trunk"},{"id":"n1","label":"SW1: Native VLAN على f0/24 هي 99","weight":1,"kind":"switch.nativeVlan","deviceId":"sw1","interface":"f0/24","value":99},{"id":"a1","label":"SW1: يمرّ على f0/24 فقط VLAN 10 و 20","weight":1,"kind":"switch.allowedVlans","deviceId":"sw1","interface":"f0/24","value":"10,20"},{"id":"t2","label":"SW2: المنفذ f0/24 في وضع Trunk","weight":1,"kind":"switch.portMode","deviceId":"sw2","interface":"f0/24","value":"trunk"},{"id":"n2","label":"SW2: Native VLAN على f0/24 هي 99","weight":1,"kind":"switch.nativeVlan","deviceId":"sw2","interface":"f0/24","value":99},{"id":"a2","label":"SW2: يمرّ على f0/24 فقط VLAN 10 و 20","weight":1,"kind":"switch.allowedVlans","deviceId":"sw2","interface":"f0/24","value":"10,20"},{"id":"ping","label":"PC1 يصل إلى PC2 (كلاهما في VLAN 10) عبر الـ Trunk","weight":1,"kind":"reachability","source":"pc1","destination":"pc2","value":true}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["على كل سويتش: interface f0/24 ثم switchport mode trunk.","switchport trunk native vlan 99 — بدل VLAN 1.","switchport trunk allowed vlan 10,20 — يجب أن تتطابق الإعدادات على طرفي الوصلة."],
+                  explanation: "الـ Trunk يمرّر عدة VLAN، وكل حزمة عليه تحمل Tag برقم VLAN. بشكل تلقائي تكون Native VLAN هي VLAN 1؛ لأسباب أمنية نغيّرها إلى رقم لا نستعمله للأجهزة، مثل 99.",
+                },
+                solution: [{"type":"switch.command","deviceId":"sw1","command":"enable"},{"type":"switch.command","deviceId":"sw1","command":"configure terminal"},{"type":"switch.command","deviceId":"sw1","command":"interface f0/24"},{"type":"switch.command","deviceId":"sw1","command":"switchport mode trunk"},{"type":"switch.command","deviceId":"sw1","command":"switchport trunk native vlan 99"},{"type":"switch.command","deviceId":"sw1","command":"switchport trunk allowed vlan 10,20"},{"type":"switch.command","deviceId":"sw1","command":"end"},{"type":"switch.command","deviceId":"sw2","command":"enable"},{"type":"switch.command","deviceId":"sw2","command":"configure terminal"},{"type":"switch.command","deviceId":"sw2","command":"interface f0/24"},{"type":"switch.command","deviceId":"sw2","command":"switchport mode trunk"},{"type":"switch.command","deviceId":"sw2","command":"switchport trunk native vlan 99"},{"type":"switch.command","deviceId":"sw2","command":"switchport trunk allowed vlan 10,20"},{"type":"switch.command","deviceId":"sw2","command":"end"}],
               },
             },
           ],

@@ -3,7 +3,7 @@
 // Verbatim conversion of booklet PDF pages 70–72 (the section header box → an opener page; each numbered sub-topic → one
 // reader page). Every converted block is origin:"book": nothing is added, removed or reworded.
 //
-// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6): teacher-enrichment blocks (a visual and CLI terminal
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 6; the network lab: Phase 8B-3): teacher-enrichment blocks (a visual and CLI terminal
 // simulations reused from course 791381 after checking their labels / commands against this section — each simulation types
 // exactly the page's own command box, with `maximum 3` as printed here — and the end-of-unit «تدريبات الوحدة» lesson) are
 // ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by the book lock (bookLock.test.ts).
@@ -403,6 +403,31 @@ const m23: ContentModule = {
             {
               id: "m23-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "مع Sticky نكتب بأنفسنا عنوان MAC للجهاز المسموح قبل أن يتصل.", answer: false, feedback: { explanation: "مع Sticky يتعلّم السويتش وحده عنوان أول جهاز يتصل بالمنفذ ويحفظه؛ أما كتابة العنوان بأنفسنا فهي الطريقة الأولى: MAC ثابت." } },
+            },
+            {
+              // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
+              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m23-l02-p01-lab-portsec", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              title: "مختبر شبكي: Port Security",
+              description: "مختبر على محاكي الشبكات: احمِ منفذ السويتش من الأجهزة غير المسموح بها، ثم اضغط «تحقّق من الإعداد».",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "interface f0/1 ثم switchport mode access ثم switchport port-security ثم switchport port-security mac-address sticky ثم switchport port-security maximum 3 ثم switchport port-security violation shutdown." },
+              config: {
+                topology: {"v":2,"devices":[{"id":"sw1","kind":"switch","label":"SW1","x":0.5,"y":0.2},{"id":"pc1","kind":"pc","label":"PC1","x":0.3,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.1.11","mask":"255.255.255.0","gateway":""}}}},{"id":"pc2","kind":"pc","label":"PC2","x":0.7,"y":0.8,"initial":{"v":2,"device":"host","adapters":{"eth0":{"mode":"static","address":"192.168.1.12","mask":"255.255.255.0","gateway":""}}}}],"links":[{"id":"a","a":{"deviceId":"sw1","port":"f0/1"},"b":{"deviceId":"pc1","port":"eth0"}},{"id":"b","a":{"deviceId":"sw1","port":"f0/2"},"b":{"deviceId":"pc2","port":"eth0"}}]},
+                task: {
+                  intro: "على السويتش SW1، المنفذ f0/1 (PC1): اجعله منفذ access، وشغّل عليه الحماية Port Security. دع السويتش يتعلّم عنوان MAC تلقائيًا (sticky)، واسمح بثلاثة أجهزة فقط، وعند المخالفة يُغلق المنفذ.",
+                  goals: [{"id":"mode","label":"المنفذ f0/1 في وضع access"},{"id":"on","label":"الحماية switchport port-security مفعّلة على f0/1"},{"id":"sticky","label":"السويتش يتعلّم عنوان MAC تلقائيًا (sticky)"},{"id":"max","label":"مسموح بثلاثة أجهزة فقط على المنفذ (maximum 3)"},{"id":"viol","label":"عند المخالفة يُغلق المنفذ (violation shutdown)"}],
+                },
+                checks: [{"id":"mode","label":"المنفذ f0/1 في وضع access","weight":1,"kind":"switch.portMode","deviceId":"sw1","interface":"f0/1","value":"access"},{"id":"on","label":"الحماية switchport port-security مفعّلة على f0/1","weight":1,"kind":"switch.portSecurity","deviceId":"sw1","interface":"f0/1","value":true},{"id":"sticky","label":"السويتش يتعلّم عنوان MAC تلقائيًا (sticky)","weight":1,"kind":"switch.portSecuritySticky","deviceId":"sw1","interface":"f0/1","value":true},{"id":"max","label":"مسموح بثلاثة أجهزة فقط على المنفذ (maximum 3)","weight":1,"kind":"switch.portSecurityMaximum","deviceId":"sw1","interface":"f0/1","value":3},{"id":"viol","label":"عند المخالفة يُغلق المنفذ (violation shutdown)","weight":1,"kind":"switch.portSecurityViolation","deviceId":"sw1","interface":"f0/1","value":"shutdown"}],
+                feedback: {
+                  correctFeedback: "أحسنت! تحققت كل أهداف المختبر.",
+                  incorrectFeedback: "لم تتحقق كل الأهداف بعد.",
+                  hints: ["interface f0/1 ثم switchport mode access — الحماية تعمل على منفذ access.","switchport port-security (بدون هذا السطر لا تعمل الحماية) ثم switchport port-security mac-address sticky.","switchport port-security maximum 3 ثم switchport port-security violation shutdown."],
+                  explanation: "Port Security يحمي منفذ السويتش: switchport port-security يشغّل الحماية، و sticky يجعل السويتش يتعلّم عنوان MAC تلقائيًا ويحفظه، و maximum 3 يسمح بثلاثة أجهزة فقط، و violation shutdown يُغلق المنفذ عند المخالفة.",
+                },
+                solution: [{"type":"switch.command","deviceId":"sw1","command":"enable"},{"type":"switch.command","deviceId":"sw1","command":"configure terminal"},{"type":"switch.command","deviceId":"sw1","command":"interface f0/1"},{"type":"switch.command","deviceId":"sw1","command":"switchport mode access"},{"type":"switch.command","deviceId":"sw1","command":"switchport port-security"},{"type":"switch.command","deviceId":"sw1","command":"switchport port-security mac-address sticky"},{"type":"switch.command","deviceId":"sw1","command":"switchport port-security maximum 3"},{"type":"switch.command","deviceId":"sw1","command":"switchport port-security violation shutdown"},{"type":"switch.command","deviceId":"sw1","command":"end"}],
+              },
             },
           ],
         },
