@@ -31,6 +31,8 @@ import type { AnnotationsClient } from "../annotations/annotationsClient";
 import { AnnotationsPanel, HighlightChip } from "../annotations/ReaderAnnotations";
 import { useHighlightPainter, useReaderAnnotations } from "../annotations/useReaderAnnotations";
 import "./reader-print-l5.css";
+import "../themes/booklet-theme.css";
+import { pageThemeFor } from "../themes/courseTheme";
 
 // Phase 21E L3-B — the search panel is its own lazy chunk: the Reader pays for it only when search is opened, and it
 // indexes the manifest's titles + keywords only (opening it imports no module body).
@@ -468,6 +470,7 @@ export default function LearningReader({
     lesson: lessonPosition(located.module.lessons, located.lesson.id),
     position,
     source: located.page.source,
+    theme: pageThemeFor(courseId, manifest, located.module.id),
   } : null;
 
   // Both TOC instances share the SAME page-selection authority (`selectPage`) but carry distinct `idPrefix`es so
