@@ -100,6 +100,12 @@ function evaluateStudyResponse(key, response) {
     case "ordering":
       return response.kind === "ordering" && Array.isArray(response.order) && Array.isArray(key.order) && key.order.length > 0
         && response.order.length === key.order.length && key.order.every((id, i) => response.order[i] === id);
+    // 791381s Phase 8B — a network lab: the server replays the actions; right only when every check passes. An unavailable
+    // judge (broken topology / key) is never "right" here; the API answers it as a retryable error before recording anything.
+    case "network-lab": {
+      const lab = require("./learning-lab").evaluateNetworkLab(key, response);
+      return lab.status === "judged" && lab.correct === true;
+    }
     default:
       return false;
   }

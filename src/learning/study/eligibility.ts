@@ -9,13 +9,16 @@
 //   • `practice` shortInput with a non-empty `answer`                       → key: the normalized text
 //   • `practice-table` (every select cell carries its expected choice)      → key: every select cell's choice
 //   • `practice` wordBank / matching / ordering / classify with their key   → key: answers / pairs / order / assign
+//   • `simulation` / `network-lab` v1 (791381s Phase 8B) with a topology and checks → key: { topology, checks }; the SERVER
+//     replays the learner's actions and every check must pass (api/src/lib/learning-lab.js). It may opt out with
+//     `studyEligible: false` like any practice block (checked, never counted).
 // NOT eligible (deferred or not auto-provable): `practice` fillBlank (no interactive answering surface in the Reader
-// yet), CLI simulator exercises (their goal checking runs in the browser engine only — no server verification yet),
+// yet), the browser-engine CLI simulator exercises (`cli-terminal`) (their goal checking runs in the browser engine only — no server verification yet),
 // diagrams / animations / guided activities, open or reflective prompts, and every reading block.
 //
 // IDENTITY: the activity id is the block's own id, which the content validator guarantees unique per course and
 // which the authoring contract treats as stable (renaming a block id is a content change, never a cosmetic one).
-import type { ContentBlock, ContentPage, PracticeQuestion, PracticeTableBlock } from "../content/types";
+import { isNetworkLabBlock, NETWORK_LAB_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
 
 /** The normalization shared with the local evaluator (src/learning/practice/evaluator.ts) and the server. */
 export const normalizeStudyText = (s: string): string => String(s ?? "").trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
@@ -28,7 +31,8 @@ export type StudyActivityKey =
   | { kind: "wordBank"; answers: Record<string, string> }
   | { kind: "matching"; pairs: Record<string, string> }
   | { kind: "ordering"; order: string[] }
-  | { kind: "classify"; assign: Record<string, string> };
+  | { kind: "classify"; assign: Record<string, string> }
+  | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
 
@@ -70,12 +74,23 @@ export function practiceTableKey(block: PracticeTableBlock): StudyActivityKey | 
   return !keyless && Object.keys(cells).length > 0 ? { kind: "practice-table", cells } : null;
 }
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+/** The key of a network lab (v1, a topology object and at least one check), or null — e.g. a served body (the checks stayed on the
+ *  server) or another version. Structural only: the simulator itself judges the topology and the checks (fail closed). Pure. */
+export function networkLabKey(block: SimulationBlock): StudyActivityKey | null {
+  if (!isNetworkLabBlock(block) || block.version !== NETWORK_LAB_VERSION || !isPlainObject(block.config)) return null;
+  const { topology, checks } = block.config as { topology?: unknown; checks?: unknown };
+  if (!isPlainObject(topology) || !Array.isArray(checks) || checks.length === 0 || !checks.every(isPlainObject)) return null;
+  return { kind: "network-lab", topology, checks: checks as Record<string, unknown>[] };
+}
+
 /** The eligible activity of one block, or null. Pure.
  *  A practice-capable block may explicitly opt OUT with `studyEligible: false` (local self-check only): it stays
  *  interactive in the Reader but never earns a study point. This is generic — no page id is ever special-cased. */
 export function studyActivityOf(block: ContentBlock): StudyActivitySpec | null {
   if (block.type === "practice") { if (block.studyEligible === false) return null; const key = practiceQuestionKey(block.question); return key ? { activityId: block.id, key } : null; }
   if (block.type === "practice-table") { if (block.studyEligible === false) return null; const key = practiceTableKey(block); return key ? { activityId: block.id, key } : null; }
+  if (isNetworkLabBlock(block)) { if (block.studyEligible === false) return null; const key = networkLabKey(block); return key ? { activityId: block.id, key } : null; }
   return null;
 }
 
@@ -94,7 +109,7 @@ export function eligibleStudyActivities(page: Pick<ContentPage, "blocks">): Stud
 export function studyActivityIds(page: Pick<ContentPage, "blocks">): string[] {
   const out: string[] = [];
   for (const block of page.blocks) {
-    if (block.type !== "practice" && block.type !== "practice-table") continue;
+    if (block.type !== "practice" && block.type !== "practice-table" && !isNetworkLabBlock(block)) continue;
     if (block.serverCheck === true ? block.studyEligible !== false : studyActivityOf(block) !== null) out.push(block.id);
   }
   return out;

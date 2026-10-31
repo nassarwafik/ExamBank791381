@@ -6,7 +6,7 @@
 
 import {
   BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
-  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind,
+  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind, isNetworkLabBlock, NETWORK_LAB_VERSION,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -52,7 +52,8 @@ export type ContentIssueCode =
   | "visual-missing-id"
   | "invalid-reveal"
   | "invalid-page-layout"
-  | "invalid-structured-question";
+  | "invalid-structured-question"
+  | "invalid-network-lab";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -311,6 +312,42 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
     }
   }
   if (block.type === "guided") checkGuided(block, add, loc);
+  if (isNetworkLabBlock(block)) checkNetworkLab(block, add, loc);
+}
+
+const LAB_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+const LAB_CONFIG_KEYS = new Set(["topology", "task", "checks", "feedback", "solution"]);
+/**
+ * 791381s Phase 8B — the STRUCTURE of a network lab (`simulation` / `network-lab` v1). The simulator itself (topology, check
+ * parameters, the authored solution passing every check, an untouched lab passing none) is proven by src/learning/lab/
+ * networkLabProof.ts over every authored lab — kept out of this validator so it never pulls the simulator into a bundle.
+ */
+function checkNetworkLab(block: ActivityBlock, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  const bad = (m: string) => add("invalid-network-lab", "network-lab: " + m, loc);
+  if (block.version !== NETWORK_LAB_VERSION) bad("only version " + NETWORK_LAB_VERSION + " exists");
+  if ("reveal" in (block as object)) bad("a lab never reveals (the checks are judged, not shown)");
+  if ("serverCheck" in (block as object)) bad("serverCheck is a served-body marker, never authored");
+  const config = block.config as Record<string, unknown> | undefined;
+  if (!config || typeof config !== "object" || Array.isArray(config)) { bad("config must be an object"); return; }
+  for (const k of Object.keys(config)) if (!LAB_CONFIG_KEYS.has(k)) bad("unknown config field " + k);
+  const { topology, task, checks, feedback, solution } = config as { topology?: unknown; task?: { intro?: unknown; goals?: unknown }; checks?: unknown; feedback?: unknown; solution?: unknown };
+  if (!topology || typeof topology !== "object" || Array.isArray(topology)) bad("topology must be a networkTopology@2 configuration object");
+  if (!task || typeof task !== "object" || !isNonEmptyString(task.intro)) bad("task.intro is required");
+  const goals = Array.isArray(task?.goals) ? (task!.goals as { id?: unknown; label?: unknown }[]) : null;
+  if (!goals || goals.length === 0 || !goals.every(g => g && typeof g.id === "string" && LAB_ID.test(g.id) && isNonEmptyString(g.label))) bad("task.goals must list one { id, label } per check");
+  if (!Array.isArray(checks) || checks.length === 0 || !checks.every(c => c && typeof c === "object" && !Array.isArray(c) && typeof (c as { id?: unknown }).id === "string")) bad("checks must be a non-empty list of check objects");
+  else if (goals) {
+    const ids = (checks as { id: string }[]).map(c => c.id);
+    if (new Set(ids).size !== ids.length) bad("check ids must be unique");
+    if (ids.join("|") !== goals.map(g => String(g.id)).join("|")) bad("task.goals must name the checks, same ids in the same order");
+  }
+  if (!Array.isArray(solution) || solution.length === 0 || !solution.every(a => a && typeof a === "object" && !Array.isArray(a))) bad("solution must be the authored action list that passes every check");
+  if (feedback !== undefined) {
+    const f = feedback as Record<string, unknown>;
+    const strOk = (v: unknown) => v === undefined || typeof v === "string";
+    if (!f || typeof f !== "object" || Array.isArray(f) || !strOk(f.correctFeedback) || !strOk(f.incorrectFeedback) || !strOk(f.explanation)
+      || (f.hints !== undefined && !(Array.isArray(f.hints) && f.hints.every(h => typeof h === "string")))) bad("feedback holds correctFeedback / incorrectFeedback / explanation strings and a hints list");
+  }
 }
 
 /**

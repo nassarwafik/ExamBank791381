@@ -464,3 +464,66 @@ The other 3 tests passed on the baseline. On the head, all 6 pass.
 | A5 | T24 (ACL) is released one unit early | KILLED | the registry and gate tests |
 | A6 | the cards are rendered among the questions | KILLED | the practice-page render test |
 | A7 | a card's module drifts from the API's release module | KILLED | the placement test |
+
+## 13. Phase 8B-1 record — the network-lab contract and its server judge (no UI yet)
+
+**What changed**
+
+- **Content model (`types.ts`, `validation.ts`).**
+  - New block: `simulation` / `network-lab` v1. Its config holds:
+    - `topology`: public, networkTopology@2;
+    - `task`: an intro and one goal per check;
+    - `checks`: private;
+    - `feedback`: private;
+    - `solution`: private, the authored proof.
+  - The validator checks the structure (`invalid-network-lab`):
+    - version 1, a config allowlist, a task intro;
+    - goals equal to the checks, same ids in the same order;
+    - a solution and well-formed feedback;
+    - never a `reveal` and never an authored `serverCheck`.
+- **Proof (`src/learning/lab/networkLabProof.ts`).** The real simulator proves each lab: valid topology and key, no free
+  credit on the untouched lab, and the solution passes every check. A test applies it to every lab in every course.
+  - It stays out of the validator, so the simulator is never pulled into a bundle.
+  - The same test requires every lab to carry `studyEligible: false` until the owner decides (§11.3).
+- **Eligibility and served body (`eligibility.ts`, `checkIndex.ts`).**
+  - The key is `{ kind: "network-lab", topology, checks }`.
+  - The `studyEligible: false` opt-out works as for practice blocks.
+  - The served body is an **allowlist**: `topology` and `task` plus `serverCheck`. Checks, feedback and solution never
+    leave the server.
+- **Server judge (`api/src/lib/learning-lab.js`).**
+  - `evaluateNetworkLab` runs the same `evaluateSmartSim` as the exam grader, all-or-nothing.
+  - Only the learner's `actions` are read; the state is re-derived by replay.
+  - `parts` holds one boolean per check.
+  - A broken topology or key is `unavailable`.
+- **Practice route (`api/src/functions/learning-study.js`, `learning-check.js`, `learning-study.js`).**
+  - A lab is judged on the existing `POST /api/learning-study/{course}/attempt`.
+  - `unavailable` returns **503 retryable and writes nothing**: never a "wrong" (AGENTS.md §10).
+  - An answer over 256 KB returns 413.
+- **Defect fixed (fail-first).** The route never returned the per-part verdict (`parts`) that the server computes for the
+  structured kinds of Phase 3. On a served page, a wrong wordBank / matching / classify answer showed no per-part ✓ / ✕ and
+  no «الصحيح: …» beside the wrong parts.
+  - `api/tests/learning-study-parts.test.js` fails on `9eb9a46b`: `expected undefined to deeply equal { b1: true, b2: false, … }`.
+  - It passes on the head.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| B1 | whole lab config served (key leak) | KILLED |
+| B2 | the judge trusts a client `correct: true` | KILLED |
+| B3 | any check passes → right | KILLED |
+| B4 | broken key judged wrong instead of unavailable | KILLED |
+| B5 | `parts` carry values | KILLED |
+| B6 | checkResponse drops `unavailable` | KILLED |
+| B7 | the route drops `parts` | KILLED |
+| B8 | no size limit | KILLED |
+| B9 | a lab ignores its opt-out | KILLED |
+| B10 | the route ignores `unavailable` | KILLED |
+| B11 | the response's `state` is passed to the evaluator | SURVIVED, then the test was strengthened → KILLED |
+
+B11 survived the first run because the evaluator re-derives the state, so a normal state changes nothing. It is not
+equivalent: a junk or over-deep state made a right action list fail. The new test "the response's state is never even read"
+kills it.
+
+**Next:** 8B-2 — the lab view (lazy `Net2Workspace`, never `trustedSimPlugins`), the host check seam, the bundle guard, and
+the m19 Router-on-a-Stick pilot (`studyEligible: false`).

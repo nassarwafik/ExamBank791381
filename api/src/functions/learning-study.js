@@ -9,6 +9,7 @@ const { STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT } = require("../lib/student-
 const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, studyStateOf } = require("../lib/learning-study");
 const { listLearningModules } = require("../lib/learning-materials-registry");
 const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/learning-check");
+const { SMART_SIM_LIMITS } = require("../lib/shared-finalization/trustedSimRegistry");
 
 // Study Practice Strength API — the SERVER AUTHORITY for in-page learning exercises. Routes (one function):
 //   GET  /api/learning-study/{courseId}          → the caller's study state for the course: per-page completed
@@ -27,6 +28,10 @@ const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/lea
 //                                                   the right answer (`reveal`) and the explanation. A student's WRONG
 //                                                   answer to a reveal study activity is recorded as `revealed`; a later
 //                                                   right answer to it is judged but never completed (`revealedBefore`).
+//                                                   NETWORK LABS (791381s Phase 8B): `response` = { kind: "network-lab",
+//                                                   actions } — replayed and judged on the server (learning-lab.js), a
+//                                                   verdict per check (`parts`, booleans only); a judge that cannot run
+//                                                   → 503 retryable, nothing written; > 256 KB → 413.
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
@@ -36,6 +41,10 @@ const ARCHIVED = { status: 403, jsonBody: { ok: false, error: "هذا الصف �
 const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذه الصفحة غير متاحة لصفك بعد." } };
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "التمرين غير موجود." } };
 const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير صالح." } };
+const TOO_LARGE = { status: 413, jsonBody: { ok: false, error: "الإجابة أكبر من الحد المسموح." } };
+const LAB_UNAVAILABLE = { status: 503, jsonBody: { ok: false, retryable: true, error: "تعذّر فحص المختبر حاليًا. حاول مرة أخرى بعد قليل." } };
+/** The UTF-8 size of a JSON response (a cycle or an unserialisable value counts as too large). */
+const responseBytes = v => { try { return Buffer.byteLength(JSON.stringify(v ?? null), "utf8"); } catch { return Infinity; } };
 // Study policy as the API advertises it (the UI reads it from here, never hardcodes it): each module is worth up to
 // 20 points, round(completed / eligible × 20). `moduleCount` is the COURSE's publishable module count (791381: 28 → 560;
 // 791381s: 37), falling back to the 791381 count for a course the registry does not list.
@@ -100,16 +109,24 @@ async function handler(request, deps = {}, obs = null) {
       if (!ID.test(pageId) || !ID.test(activityId)) return BAD_REQUEST;
       const check = findCheckActivity(loadChecks(courseId), pageId, activityId);
       if (!check) return NOT_FOUND;
+      // A network lab's answer is an action list (791381s Phase 8B): bounded like every smartSim answer (256 KB, ≤ 1000 actions,
+      // enforced again by the simulator's replay).
+      if (check.key.kind === "network-lab" && responseBytes(body.response) > SMART_SIM_LIMITS.answerBytes) return TOO_LARGE;
       // The gate: the page's OWN module must be published to the student's class (the same authority as the Reader
       // and Learning Practice). Teachers preview freely.
       if (actor.kind === "student" && !classCanSeeLearningModule(classroom, courseId, check.moduleId)) return UNAVAILABLE;
       // ONLY the response is read; "correct", "points", "gained" or any other client claim is ignored.
       const verdict = checkResponse(check, body.response);
+      // The judge could not run (a broken lab topology / key — never the learner's fault): a retryable error, NOTHING recorded,
+      // never a "wrong" (AGENTS.md §10 grading safety).
+      if (verdict.unavailable) return LAB_UNAVAILABLE;
       const correct = verdict.correct;
       // Points come from the STUDY index alone (the check index only says what to answer): a block it does not list is judged and
       // answered, never recorded.
       const found = findStudyActivity(index, pageId, activityId);
-      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}) };
+      // `parts`: the per-part verdict of a structured answer / the per-check verdict of a network lab (booleans only) — the
+      // Reader's per-part marks and «الصحيح: …» on a served page come from it.
+      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.parts ? { parts: verdict.parts } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}) };
       const page = { pageId, moduleId: check.moduleId };
       // REVEAL + student + study activity: a wrong answer gave the right answer away → record it once (CAS; never over a
       // completion); a right answer after such a reveal is answered but never completed.

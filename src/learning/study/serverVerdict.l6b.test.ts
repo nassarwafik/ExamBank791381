@@ -35,6 +35,8 @@ const right = (key: StudyActivityKey) => {
     case "matching": return { kind: key.kind, choices: { ...key.pairs } };
     case "classify": return { kind: key.kind, choices: { ...key.assign } };
     case "ordering": return { kind: key.kind, order: [...key.order] };
+    // network labs are not collected here (their server judging is pinned by api/tests/learning-lab.test.js)
+    case "network-lab": throw new Error("network-lab is not a practice key");
   }
 };
 const wrong = (key: StudyActivityKey) => {
@@ -42,6 +44,7 @@ const wrong = (key: StudyActivityKey) => {
   if (key.kind === "trueFalse") return { kind: key.kind, value: !key.answer };
   if (key.kind === "shortInput") return { kind: key.kind, text: key.answer + "x" };
   if (key.kind === "ordering") return { kind: key.kind, order: [...key.order].reverse() };
+  if (key.kind === "network-lab") return { kind: key.kind, actions: [] };
   const cells = { ...(key.kind === "practice-table" ? key.cells : key.kind === "wordBank" ? key.answers : key.kind === "matching" ? key.pairs : key.assign) }, first = Object.keys(cells)[0];
   cells[first] = cells[first] + "؟";
   return { kind: key.kind, choices: cells };
