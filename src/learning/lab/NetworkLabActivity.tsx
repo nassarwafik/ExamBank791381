@@ -1,6 +1,5 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useId, useMemo, useRef, useState } from "react";
 import type { ActivityCheckResult, LearningActivityProps } from "../activities/engine";
-import Net2Workspace from "../../networkTopology2/Net2Workspace";
 import { IconCheck, IconClose } from "../../icons";
 import { readNetworkLabView } from "./labConfig";
 import "./lab.css";
@@ -17,7 +16,11 @@ import "./lab.css";
 //   • A verdict belongs to the action list it judged: any new action clears it. A transport failure or a retryable server error
 //     (a judge that could not run) says «تعذّر التحقق» — never a wrong answer.
 //   • Without a `check` seam (an authored body, a host without study) the lab is explore-only and says so.
-// It imports the simulator workspace directly (never the trusted-sim plugin set) and does no network itself.
+// It loads the simulator workspace itself (lazily — never the trusted-sim plugin set) and does no network itself.
+
+// The simulator workspace is its own chunk behind a dynamic edge (the platform rule: no module imports a networkTopology@2
+// surface statically) — shared and cached with the exam's smartSim questions.
+const Net2Workspace = lazy(() => import("../../networkTopology2/Net2Workspace"));
 
 type CheckState =
   | { kind: "idle" }
@@ -78,7 +81,9 @@ export default function NetworkLabActivity({ block, commands, emit, check }: Lea
         </ol>
       </section>
       <div className="learning-lab-stage">
-        <Net2Workspace key={commands.reset} config={lab.topology} actions={actions} onChange={onChange} label={block.title} />
+        <Suspense fallback={<p className="learning-lab-note" role="status">جارٍ تحميل محاكي الشبكة…</p>}>
+          <Net2Workspace key={commands.reset} config={lab.topology} actions={actions} onChange={onChange} label={block.title} />
+        </Suspense>
       </div>
       <div className="learning-lab-check">
         {check ? (

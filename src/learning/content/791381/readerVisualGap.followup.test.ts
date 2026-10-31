@@ -48,10 +48,10 @@ describe("Reader follow-up — registry & activity allowlists", () => {
     expect(new Set(REGISTERED_VISUAL_IDS).size).toBe(REGISTERED_VISUAL_IDS.length);   // no duplicate id
   });
   it("the activity registry gains ONLY the ipv6-compress simulator (v1); still fifteen entries", () => {
-    expect(productionActivityRegistry.size).toBe(15);
+    expect(productionActivityRegistry.size).toBe(16);   // + network-lab/v1 (791381s Phase 8B-2), the only later addition
     expect(productionActivityRegistry.has("simulation", "ipv6-compress")).toBe(true);
     expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key))
-      .toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress"]);
+      .toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab"]);
   });
 });
 
