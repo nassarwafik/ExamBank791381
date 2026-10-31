@@ -1,8 +1,12 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 2 «الأعداد والتحويل بينها».
 //
 // Verbatim conversion of booklet PDF pages 6–10 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–4): teacher-enrichment blocks (visuals / activities reused from
+// course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
+// book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -134,6 +138,15 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p03-ex1-sum", type: "text", origin: "book",
               spans: [{ text: "64 + 32 + 16 + 8 + 2 + 1 = 123", style: "code", dir: "ltr" }],
+            },
+            {
+              // ENRICHMENT: SVG of the booklet's own example 1 — 01111011 under the boxes 128…1; the boxes with 1 light up.
+              id: "m02-l01-p03-v-boxes", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/binary-to-decimal", motion: true,
+              source: src(7),
+              title: "رسم توضيحي: مثال 1 بطريقة الصناديق",
+              alt: "ثمانية صناديق قيمها من اليسار 128، 64، 32، 16، 8، 4، 2، 1 وتحتها الأرقام 0 1 1 1 1 0 1 1؛ الصناديق التي تحتها 1 مضاءة، وتحتها المجموع 64 + 32 + 16 + 8 + 2 + 1 = 123.",
+              caption: "نجمع فقط القيم التي تحتها 1: العدد 01111011 = 123.",
             },
             {
               id: "m02-l01-p03-ex1-result", type: "text", origin: "book",
@@ -278,6 +291,15 @@ const m02: ContentModule = {
               spans: [{ text: "A23F = 1010 0010 0011 1111", style: "code", dir: "ltr" }],
             },
             {
+              // ENRICHMENT: SVG of the booklet's own example — each symbol of A23F becomes 4 bits, in the same order.
+              id: "m02-l01-p06-v-hex", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/hex-to-binary", motion: true,
+              source: src(9),
+              title: "رسم توضيحي: كل رمز Hex ← 4 بتات",
+              alt: "الرموز A و 2 و 3 و F، وتحت كل رمز أربعة أرقام ثنائية: 1010 و 0010 و 0011 و 1111، بنفس الترتيب.",
+              caption: "A23F = 1010 0010 0011 1111: نستبدل كل رمز بأربعة أرقام ثنائية حسب الجدول.",
+            },
+            {
               id: "m02-l01-p06-ex-other", type: "text", origin: "book",
               spans: [{ text: "مثال آخر: " }, { text: "9A2C5 = 1001 1010 0010 1100 0101", style: "code", dir: "ltr" }],
             },
@@ -350,6 +372,127 @@ const m02: ContentModule = {
                 { text: "جدول التحويل", style: "strong" },
                 { text: ". هذه المهارات نحتاجها لاحقًا في عناوين IPv4 و IPv6 وقناع الشبكة." },
               ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages (same shape as
+      // 791381s-m01-l02-p01). Every question is answered by the section's printed text above (the explanation quotes it);
+      // reveal mode shows the right answer and the explanation after each answer. The book pages are unchanged (book lock).
+      id: "791381s-m02-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m02-l02-p01",
+          title: "تدريبات الوحدة: الأعداد والتحويل بينها",
+          order: 1,
+          layout: "practice",
+          source: src(6, 10),
+          blocks: [
+            {
+              id: "m02-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "كم رمزًا يستعمل النظام الثنائي الذي يفهمه الحاسوب؟",
+                options: [{ id: "a", text: "عشرة رموز: من 0 إلى 9" }, { id: "b", text: "رمزان فقط: 0 و 1", correct: true }, { id: "c", text: "16 رمزًا" }, { id: "d", text: "8 رموز" }],
+                feedback: { explanation: "العدد الثنائي: النظام الذي يفهمه الحاسوب. الرموز: 0 و 1 فقط، لأن الكهرباء لها حالتان فقط." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في الحاسوب: 0 = تشغيل و 1 = إطفاء.", answer: false, feedback: { explanation: "في الحاسوب: 0 = إطفاء و 1 = تشغيل. كل رقم ثنائي اسمه بت." } },
+            },
+            {
+              id: "m02-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "حوّل 01111011 من الثنائي إلى العشري:",
+                options: [{ id: "a", text: "111" }, { id: "b", text: "132" }, { id: "c", text: "255" }, { id: "d", text: "123", correct: true }],
+                feedback: { explanation: "نجمع فقط القيم التي تحتها 1: 64 + 32 + 16 + 8 + 2 + 1 = 123. إذن 01111011 في الثنائي = 123 في العشري." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "مجموع قيم الصناديق الثمانية كلها (من 1 إلى 128) يساوي 255.", answer: true, feedback: { explanation: "احفظها: 1 ← 2 ← 4 ← 8 ← 16 ← 32 ← 64 ← 128 (مجموعها كلها = 255)." } },
+            },
+            {
+              id: "m02-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "حوّل العدد العشري 44 إلى ثنائي:",
+                options: [{ id: "a", text: "00101100", correct: true }, { id: "b", text: "00110100" }, { id: "c", text: "01000100" }, { id: "d", text: "00101010" }],
+                feedback: { explanation: "نبدأ من أكبر صندوق: 32 يدخل (44−32=12)، ثم 8 (12−8=4)، ثم 4 (4−4=0): 32 + 8 + 4 = 44 ← 00101100." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "حوّل A23F من Hex إلى ثنائي:",
+                options: [{ id: "a", text: "1111 0011 0010 1010" }, { id: "b", text: "1010 0010 0011 1110" }, { id: "c", text: "1010 0010 0011 1111", correct: true }, { id: "d", text: "1011 0010 0011 1111" }],
+                feedback: { explanation: "نأخذ كل رمز Hex ونحوّله إلى 4 أرقام ثنائية حسب الجدول، بنفس الترتيب: A23F = 1010 0010 0011 1111." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "حوّل 0010 0101 1010 1001 من الثنائي إلى Hex:",
+                options: [{ id: "a", text: "52A9" }, { id: "b", text: "25A9", correct: true }, { id: "c", text: "25B9" }, { id: "d", text: "9A52" }],
+                feedback: { explanation: "نجمع كل 4 بتات معًا ونستبدلها برمز Hex واحد: 0010 0101 1010 1001 = 25A9." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "عند التحويل من الثنائي إلى Hex، إذا كانت المجموعة الأخيرة ناقصة نضيف أصفارًا من اليمين.", answer: false, feedback: { explanation: "إذا كانت المجموعة الأخيرة (في اليسار) ناقصة، نضيف أصفارًا من اليسار. مثال: 110101 ← 0011 0101 ← 35." } },
+            },
+            {
+              id: "m02-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل حرف في النظام السادس عشر بقيمته:",
+                left: [{ id: "A", text: "A" }, { id: "B", text: "B" }, { id: "C", text: "C" }, { id: "D", text: "D" }, { id: "E", text: "E" }, { id: "F", text: "F" }],
+                right: [{ id: "r1", text: "13" }, { id: "r2", text: "10" }, { id: "r3", text: "15" }, { id: "r4", text: "11" }, { id: "r5", text: "14" }, { id: "r6", text: "12" }],
+                pairs: { A: "r2", B: "r4", C: "r6", D: "r1", E: "r5", F: "r3" },
+                feedback: { explanation: "بعد الرقم 9 نستعمل الأحرف: A تعني 10، و B تعني 11، وهكذا حتى F التي تعني 15 (C = 12، D = 13، E = 14)." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب خطوات التحويل من الثنائي إلى Hex:",
+                items: [
+                  { id: "s3", text: "نحوّل كل مجموعة إلى رمز Hex حسب الجدول." },
+                  { id: "s1", text: "نقسّم العدد الثنائي إلى مجموعات من 4 بتات، نبدأ من اليمين." },
+                  { id: "s2", text: "إذا كانت المجموعة الأخيرة (في اليسار) ناقصة، نضيف أصفارًا من اليسار." },
+                ],
+                order: ["s1", "s2", "s3"],
+                feedback: { explanation: "1. نقسّم إلى مجموعات من 4 بتات من اليمين. 2. نكمل المجموعة الناقصة بأصفار من اليسار. 3. نحوّل كل مجموعة إلى رمز Hex حسب الجدول." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل الفراغات من مخزن الكلمات (طريقة الصناديق):",
+                segments: ["نكتب 8 صناديق. نبدأ من اليمين بـ ", { blank: "b1" }, "، وكل صندوق ", { blank: "b2" }, " الذي قبله. مجموعها كلها = ", { blank: "b3" }, "."],
+                bank: ["ضعف", "255", "نصف", "1", "128"],
+                answers: { b1: "1", b2: "ضعف", b3: "255" },
+                feedback: { explanation: "نكتب 8 صناديق. نبدأ من اليمين بـ 1، وكل صندوق ضعف الذي قبله: 1 ← 2 ← 4 ← 8 ← 16 ← 32 ← 64 ← 128 (مجموعها كلها = 255)." },
+              },
+            },
+            {
+              id: "m02-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل عدد: هل يمكن أن يكون عددًا ثنائيًا؟",
+                groups: [{ id: "bin", text: "يمكن أن يكون ثنائيًا (فيه 0 و 1 فقط)" }, { id: "not", text: "لا يمكن أن يكون ثنائيًا" }],
+                items: [
+                  { id: "i1", text: "1010" },
+                  { id: "i2", text: "123" },
+                  { id: "i3", text: "01111011" },
+                  { id: "i4", text: "A23F" },
+                  { id: "i5", text: "00101100" },
+                  { id: "i6", text: "44" },
+                ],
+                assign: { i1: "bin", i2: "not", i3: "bin", i4: "not", i5: "bin", i6: "not" },
+                feedback: { explanation: "العدد الثنائي رموزه 0 و 1 فقط. العدد 123 أو 44 فيه رموز من 0 إلى 9 (عشري)، و A23F فيه أحرف (Hex)." },
+              },
             },
           ],
         },

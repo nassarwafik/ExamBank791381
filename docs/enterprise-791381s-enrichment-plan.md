@@ -167,3 +167,36 @@ the distractor «السرعة»), q12 matching (PAN / LAN / WAN ↔ their printe
 
 Not in this phase: reveal for `practice-table` dropdowns (they already show a verdict per cell); drag-and-drop gestures (the
 surfaces are tap / keyboard / native controls, which work the same on phones, tablets and with a screen reader).
+
+## 7. Phase 4 record — «الدفعتان 1–2» (units 1–8) enriched
+
+Authored in parallel per unit pair, then integrated and fact-checked by the lead against the booklet text. Every addition is
+`teacher-enrichment`, placed after the book block it explains; the book blocks are byte-identical (book lock green, diffs of the
+unit files are insertions only).
+
+| Unit | Visuals / activities added (reused from 791381, labels checked against the booklet page) | «تدريبات الوحدة» |
+|---|---|---|
+| 1 أساسيات الشبكات | network-connected-devices, shared-printer, network-building-blocks, network-management-cycle; `network-scope` (PAN/LAN/WAN, booklet wording) | already in Phase 2–3 (14) |
+| 2 الأعداد | binary-to-decimal (01111011 = 123), hex-to-binary (A23F) | 12 |
+| 3 عناوين IP | ip-identity, private-public; `ipv4-octets` (192.168.100.10) | 12 |
+| 4 الفئات والقناع و CIDR | address-classes, subnet-mask (192.168.1.100), same-network; `cidr-network-host` (the page's three examples); `gateway-flow` | 12 |
+| 5 أجهزة الشبكات | switch-unicast, router-networks; `hub-switch-router-flow` | 12 |
+| 6 أشكال التوصيل | p2p-direct; `network-topologies` (booklet card wording) | 11 |
+| 7 الكوابل و MAC | `cable-comparison` (booklet table), `mac-address-anatomy` (A0:02:AF:2D:10:22) | 12 |
+| 8 أنواع الرسائل | storage-units; `message-delivery` (the booklet drawing); `broadcast-address` (the booklet's five rows; practice uses three of them); one solved example (2048 بايت = 2 KB, the booklet's own) | 12 |
+
+97 end-of-unit questions in all (multipleChoice, trueFalse, wordBank, matching, ordering, classify), every one in reveal mode with an
+explanation quoting the unit's text.
+
+**Rejected on purpose** (they would add content the booklet does not state): conversion-map (decimal ↔ Hex), network-uses-map (4 of 6
+uses), ipv4-vs-ipv6 (32 / 128 bit), static-dynamic (DHCP), localhost-loopback / apipa-fallback, cidr-prefix («32 بت», «مضيف»),
+subnetting-walkthrough (192.168.1.25 «مثال الكتاب»), collision-domains, bus-collision («فتتلف البيانات ويُعاد الإرسال»),
+mac-frame-delivery, ip-vs-mac-summary (32 / 48 bit), message-structure visuals (invented addresses). Invented practice networks in the
+broadcast builder were replaced by the booklet's own rows.
+
+**Notes for review**: router-networks / hub-switch-router-flow draw a generic «Switch» inside each network (the booklet's drawing
+shows «شبكة 1 / 2»); network-topologies labels Tree / Hybrid centres «Switch» (the page says «جهازًا مركزيًا مثل السويتش»);
+private-public draws a router at the LAN edge; the cidr-network-host task's built-in wrong-answer reasons match the booklet's p06 rule.
+
+Guards added: `course791381s.test.ts` — every enrichment visual / activity resolves to a registered renderer; units 1–8 each end with a
+«تدريبات الوحدة» page of 8+ reveal questions in 3+ kinds. Visual gate: `learning-search` change declared (booklet pages 203 → 210).

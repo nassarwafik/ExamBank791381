@@ -94,6 +94,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m02-l01-p08", title: "خلاصة التحويلات", order: 8, source: { kind: "book", sourceId: "791381s", pdfPageStart: 10 } },
           ],
         },
+        {
+          id: "791381s-m02-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m02-l02-p01", title: "تدريبات الوحدة: الأعداد والتحويل بينها", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 6, pdfPageEnd: 10 } },
+          ],
+        },
       ],
     },
     {
@@ -120,6 +128,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m03-l01-p04", title: "متى يكون عنوان IP غير صالح للحاسوب؟", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 12, pdfPageEnd: 13 } },
             { id: "791381s-m03-l01-p05", title: "عنوان عام وعنوان خاص", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 13 } },
             { id: "791381s-m03-l01-p06", title: "عنوان ثابت وعنوان متغيّر", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 14 } },
+          ],
+        },
+        {
+          id: "791381s-m03-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m03-l02-p01", title: "تدريبات الوحدة: عناوين IP", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 11, pdfPageEnd: 14 } },
           ],
         },
       ],
@@ -151,6 +167,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m04-l01-p07", title: "البوابة الافتراضية (Default Gateway)", order: 7, source: { kind: "book", sourceId: "791381s", pdfPageStart: 18, pdfPageEnd: 19 } },
           ],
         },
+        {
+          id: "791381s-m04-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m04-l02-p01", title: "تدريبات الوحدة: الفئات وقناع الشبكة و CIDR", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 14, pdfPageEnd: 19 } },
+          ],
+        },
       ],
     },
     {
@@ -174,6 +198,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m05-l01-p01", title: "جهاز Hub", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 19 } },
             { id: "791381s-m05-l01-p02", title: "جهاز Switch", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 20 } },
             { id: "791381s-m05-l01-p03", title: "جهاز Router", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 21 } },
+          ],
+        },
+        {
+          id: "791381s-m05-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m05-l02-p01", title: "تدريبات الوحدة: أجهزة الشبكات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 19, pdfPageEnd: 21 } },
           ],
         },
       ],
@@ -201,6 +233,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m06-l01-p03", title: "الشبكات الحديثة", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 22, pdfPageEnd: 23 } },
           ],
         },
+        {
+          id: "791381s-m06-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m06-l02-p01", title: "تدريبات الوحدة: أنواع شبكات الاتصال (أشكال التوصيل)", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 21, pdfPageEnd: 23 } },
+          ],
+        },
       ],
     },
     {
@@ -223,6 +263,14 @@ const manifest: LearningCourseManifest = {
           pages: [
             { id: "791381s-m07-l01-p01", title: "الكوابل المستعملة في الشبكات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 23, pdfPageEnd: 24 } },
             { id: "791381s-m07-l01-p02", title: "عنوان MAC (MAC Address)", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 24, pdfPageEnd: 25 } },
+          ],
+        },
+        {
+          id: "791381s-m07-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m07-l02-p01", title: "تدريبات الوحدة: الكوابل وعنوان MAC", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 23, pdfPageEnd: 25 } },
           ],
         },
       ],
@@ -248,6 +296,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m08-l01-p01", title: "البث (Broadcast) بالتفصيل", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 25, pdfPageEnd: 26 } },
             { id: "791381s-m08-l01-p02", title: "مبنى الرسالة في الشبكة", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 27 } },
             { id: "791381s-m08-l01-p03", title: "وحدات التخزين", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 27 } },
+          ],
+        },
+        {
+          id: "791381s-m08-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m08-l02-p01", title: "تدريبات الوحدة: أنواع الرسائل", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 25, pdfPageEnd: 27 } },
           ],
         },
       ],

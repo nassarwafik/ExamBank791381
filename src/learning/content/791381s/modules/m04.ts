@@ -1,9 +1,13 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 4 «الفئات وقناع الشبكة و CIDR».
 //
 // Verbatim conversion of booklet PDF pages 14–19 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The IP/Mask drawing and the Default Gateway drawing are
 // crops of the booklet itself. The «خلاصة الدفعة الأولى» table ends with its Gateway row at the top of PDF page 19.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–4): teacher-enrichment blocks (visuals / activities reused from
+// course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
+// book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -66,6 +70,14 @@ const m04: ContentModule = {
               ],
               columnDirs: ["rtl", "ltr", "ltr", "ltr", "rtl", "rtl"],
             },
+            {
+              id: "m04-l01-p01-v-classes", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/address-classes", motion: true,
+              source: src(14, 15),
+              title: "مخطط: الفئة من الرقم الأول",
+              alt: "خط أرقام مقسوم إلى ثلاثة مجالات ملوّنة: A من 1 إلى 126، و B من 128 إلى 191، و C من 192 إلى 223، وفوقه عبارة «الرقم الأول من اليسار يحدّد الفئة».",
+              caption: "نحدّد الفئة من الرقم الأول (الأيسر) في العنوان فقط: A من 1 إلى 126، B من 128 إلى 191، C من 192 إلى 223.",
+            },
             { id: "m04-l01-p01-examples-label", type: "heading", origin: "book", level: 4, text: "أمثلة" },
             {
               id: "m04-l01-p01-examples", type: "table", origin: "book",
@@ -118,6 +130,14 @@ const m04: ContentModule = {
               src: "/learning-assets/791381s/cc8dffda3d7b9e5b.png",
               alt: "شبكة من خانات: صف «IP» فيه 192 و 168 و 1 و 100، وصف «Mask» فيه 255 و 255 و 255 و 0؛ الخانتان الأخيرتان (100 و 0) بإطار عريض. تحت الأقسام الثلاثة الأولى عبارة «الشبكة (أول 3 أقسام)» وتحت القسم الأخير كلمة «الجهاز».",
             },
+            {
+              id: "m04-l01-p02-v-mask", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/subnet-mask", motion: true,
+              source: src(15),
+              title: "مخطط: القناع يغطّي جزء الشبكة",
+              alt: "العنوان 192.168.1.100 في أربع خانات وتحتها القناع 255.255.255.0؛ الخانات الثلاث الأولى (فوق 255) ملوّنة وعليها كلمة «شبكة»، والخانة الأخيرة 100 (فوق 0) بلون آخر وعليها كلمة «جهاز».",
+              caption: "255 = هذا القسم للشبكة، و 0 = هذا القسم للجهاز: في 192.168.1.100 مع 255.255.255.0 الشبكة أول 3 أقسام، والجهاز القسم الأخير.",
+            },
           ],
         },
         {
@@ -150,6 +170,28 @@ const m04: ContentModule = {
                 ["172.18.200.100/16", "172.18", "200.100"],
               ],
               columnDirs: ["ltr", "ltr", "ltr"],
+            },
+            {
+              id: "m04-l01-p03-cidr-activity", type: "interactive-diagram", origin: "teacher-enrichment",
+              interactionType: "cidr-network-host", version: 1,
+              title: "أين ينتهي جزء الشبكة؟",
+              description: "اختر أحد أمثلة الصفحة ثم /8 أو /16 أو /24 لترى أي أقسام العنوان لجزء الشبكة وأيها لجزء الجهاز، ثم جرّب المهمة الصغيرة.",
+              source: src(15, 16),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "مع /8 جزء الشبكة هو القسم الأول فقط (10.138.10.1 ← الشبكة 10 والجهاز 138.10.1)؛ مع /16 أول قسمين (172.18.200.100 ← الشبكة 172.18 والجهاز 200.100)؛ مع /24 أول 3 أقسام (192.168.10.10 ← الشبكة 192.168.10 والجهاز 10)." },
+              config: {
+                examples: [
+                  { address: "192.168.10.10", label: "المثال الأول" },
+                  { address: "10.138.10.1", label: "المثال الثاني" },
+                  { address: "172.18.200.100", label: "المثال الثالث" },
+                ],
+                prefixes: [8, 16, 24],
+                initialPrefix: 24,
+                networkLabel: "شبكة",
+                hostLabel: "جهاز",
+                note: "الأجهزة في نفس الشبكة لها نفس جزء الشبكة، وكل جهاز له جزء جهاز مختلف عن غيره.",
+                task: { prompt: "مهمة: اختر عنوانًا لجهاز آخر في نفس الشبكة (جزء الشبكة نفسه، وجزء الجهاز مختلف).", pick: "اختر" },
+              },
             },
           ],
         },
@@ -259,6 +301,14 @@ const m04: ContentModule = {
               ],
               columnDirs: ["rtl", "ltr"],
             },
+            {
+              id: "m04-l01-p06-v-same-network", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/same-network", motion: true,
+              source: src(17, 18),
+              title: "رسم توضيحي: أجهزة في نفس الشبكة",
+              alt: "أربعة أجهزة متصلة بدائرة «شبكة /24»: PC1 بالعنوان 192.168.1.1، و PC2 بالعنوان 192.168.1.2، و Printer بالعنوان 192.168.1.10، و Phone بالعنوان 192.168.1.20؛ الجزء 192.168.1 ملوّن بلون واحد عند الجميع، والقسم الأخير بلون آخر.",
+              caption: "جزء الشبكة 192.168.1 يبقى ثابتًا عند كل الأجهزة، ونغيّر جزء الجهاز فقط (1، 2، 10، 20).",
+            },
             { id: "m04-l01-p06-ex-label", type: "heading", origin: "book", level: 4, text: "مثال: أعطِ عنوانًا لـ PC2" },
             {
               id: "m04-l01-p06-ex-pc1", type: "text", origin: "book",
@@ -302,6 +352,24 @@ const m04: ContentModule = {
               alt: "إطار متقطع عنوانه «الشبكة المحلية» فيه حاسوبان متصلان بـ Switch؛ سهم من الشبكة المحلية إلى Router، وسهم من Router إلى سحابة «الإنترنت». تحت Router عبارة «البوابة: 192.168.1.1»، وبجانبه عبارة «كل ما يخرج من الشبكة يمرّ عبر البوابة».",
             },
             {
+              id: "m04-l01-p07-gateway-flow", type: "animation", origin: "teacher-enrichment",
+              animationType: "gateway-flow", version: 1,
+              title: "كل ما يخرج من الشبكة يمرّ عبر البوابة",
+              description: "اختر الوجهة ثم اضغط «أرسل البيانات»: داخل الشبكة المحلية تبقى البيانات في الشبكة، أما إلى الإنترنت فيرسلها الحاسوب إلى البوابة (الراوتر) والبوابة تكمل الطريق.",
+              source: src(18),
+              capabilities: { fullscreen: true, replay: true, reset: true, animated: true, interactive: true },
+              fallback: { text: "الشبكة المحلية (حاسوبان متصلان بـ Switch) ← Router وهو البوابة 192.168.1.1 ← الإنترنت. عندما يكون الهدف خارج الشبكة المحلية يرسل الحاسوب الرسالة إلى البوابة، والبوابة تكمل الطريق." },
+              config: {
+                sender: { label: "PC1" },
+                local: { label: "PC2" },
+                switchLabel: "Switch",
+                router: { label: "Router", role: "البوابة", address: "192.168.1.1" },
+                outside: { label: "الإنترنت" },
+                localCaption: "الهدف داخل الشبكة المحلية: البيانات تبقى في الشبكة المحلية ولا تخرج عبر البوابة.",
+                outsideCaption: "الهدف خارج الشبكة المحلية: الحاسوب يرسل الرسالة إلى البوابة (الراوتر)، والبوابة تكمل الطريق إلى الإنترنت.",
+              },
+            },
+            {
               id: "m04-l01-p07-points", type: "list", origin: "book", variant: "plain",
               items: [
                 {
@@ -335,6 +403,125 @@ const m04: ContentModule = {
                 ["CIDR", "طريقة مختصرة لكتابة القناع، مثل 24/."],
                 ["Gateway", "الباب الذي يخرج منه الجهاز إلى الخارج (الراوتر)."],
               ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m04-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m04-l02-p01",
+          title: "تدريبات الوحدة: الفئات وقناع الشبكة و CIDR",
+          order: 1,
+          layout: "practice",
+          source: src(14, 19),
+          blocks: [
+            {
+              id: "m04-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما فئة العنوان 129.192.168.100؟",
+                options: [{ id: "a", text: "A" }, { id: "b", text: "B", correct: true }, { id: "c", text: "C" }],
+                feedback: { explanation: "129.192.168.100 فئة B مع أن فيه 192 و 168 — لأننا ننظر للرقم الأول فقط (129 بين 128 و 191)." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما القناع الطبيعي للعنوان 200.100.50.1؟",
+                options: [{ id: "a", text: "255.0.0.0" }, { id: "b", text: "255.255.0.0" }, { id: "c", text: "255.255.255.0", correct: true }],
+                feedback: { explanation: "الرقم الأول 200 بين 192 و 223، فالعنوان فئة C، وقناعها الطبيعي 255.255.255.0." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في العنوان 10.138.10.1/8، ما جزء الشبكة؟",
+                options: [{ id: "a", text: "10", correct: true }, { id: "b", text: "10.138" }, { id: "c", text: "10.138.10" }, { id: "d", text: "138.10.1" }],
+                feedback: { explanation: "مع /8 جزء الشبكة هو القسم الأول فقط، وجزء الجهاز آخر 3 أقسام: 10.138.10.1/8 ← الشبكة 10 والجهاز 138.10.1." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "عنوان PC1 هو 172.18.10.10/16. أيّ عنوان مناسب لـ PC2؟",
+                options: [{ id: "a", text: "172.19.50.7" }, { id: "b", text: "172.18.10.10" }, { id: "c", text: "10.18.50.7" }, { id: "d", text: "172.18.50.7", correct: true }],
+                feedback: { explanation: "القناع 16/ ← نُبقي 172.18 ونغيّر الباقي، فعنوان مناسب لـ PC2 هو 172.18.50.7. ولا تستعمل نفس عنوان PC1!" },
+              },
+            },
+            {
+              id: "m04-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما وظيفة البوابة الافتراضية (Default Gateway)؟",
+                options: [{ id: "a", text: "تحديد فئة العنوان من الرقم الأول." }, { id: "b", text: "إخراج البيانات من الشبكة المحلية إلى الإنترنت أو إلى شبكة أخرى.", correct: true }, { id: "c", text: "إعطاء كل الأجهزة نفس العنوان." }, { id: "d", text: "كتابة القناع بطريقة مختصرة مثل 24/." }],
+                feedback: { explanation: "البوابة الافتراضية هي غالبًا عنوان الراوتر. وظيفتها: إخراج البيانات من الشبكة المحلية إلى الإنترنت أو إلى شبكة أخرى." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "كلما زاد رقم CIDR، زاد الجزء المتاح للأجهزة.", answer: false, feedback: { explanation: "كلما زاد رقم CIDR، زاد الجزء الخاص بالشبكة، وقلّ الجزء المتاح للأجهزة." } },
+            },
+            {
+              id: "m04-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "بدون بوابة لا تعمل الشبكة المحلية أبدًا.", answer: false, feedback: { explanation: "بدون بوابة: الشبكة المحلية قد تعمل، لكن الأجهزة لن تصل إلى الإنترنت." } },
+            },
+            {
+              id: "m04-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في كل شبكة: أول عنوان = عنوان الشبكة، وآخر عنوان = عنوان البث (Broadcast)، ولا نعطيهما للحواسيب.", answer: true, feedback: { explanation: "في كل شبكة: أول عنوان = عنوان الشبكة، وآخر عنوان = عنوان البث (Broadcast). لا نعطيهما للحواسيب، والعناوين بينهما هي للأجهزة." } },
+            },
+            {
+              id: "m04-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل الفراغات من مخزن الكلمات:",
+                segments: ["القناع يغطّي جزء ", { blank: "b1" }, " ويترك جزء ", { blank: "b2" }, " ظاهرًا: 255 = هذا القسم ", { blank: "b3" }, " و 0 = هذا القسم ", { blank: "b4" }, "."],
+                bank: ["للجهاز", "الشبكة", "للبث", "الجهاز", "للشبكة"],
+                answers: { b1: "الشبكة", b2: "الجهاز", b3: "للشبكة", b4: "للجهاز" },
+                feedback: { explanation: "القناع يغطّي جزء الشبكة ويترك جزء الجهاز ظاهرًا: 255 = هذا القسم للشبكة و 0 = هذا القسم للجهاز." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل صيغة CIDR بقناع الشبكة المقابل:",
+                left: [{ id: "p8", text: "/8" }, { id: "p16", text: "/16" }, { id: "p24", text: "/24" }],
+                right: [{ id: "r1", text: "255.255.255.0" }, { id: "r2", text: "255.0.0.0" }, { id: "r3", text: "255.255.0.0" }],
+                pairs: { p8: "r2", p16: "r3", p24: "r1" },
+                feedback: { explanation: "كل 255 = 8 بتات: /8 = 255.0.0.0، /16 = 255.255.0.0، /24 = 255.255.255.0 (8 + 8 + 8 = 24)." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "خلاصة الدفعة الأولى: صِل كل مصطلح بمعناه:",
+                left: [{ id: "net", text: "الشبكة" }, { id: "ip", text: "IP" }, { id: "mask", text: "Subnet Mask" }, { id: "cidr", text: "CIDR" }, { id: "gw", text: "Gateway" }],
+                right: [
+                  { id: "r1", text: "طريقة مختصرة لكتابة القناع، مثل 24/." },
+                  { id: "r2", text: "الباب الذي يخرج منه الجهاز إلى الخارج (الراوتر)." },
+                  { id: "r3", text: "أجهزة متصلة لتبادل المعلومات." },
+                  { id: "r4", text: "يحدّد جزء الشبكة وجزء الجهاز." },
+                  { id: "r5", text: "عنوان خاص لكل جهاز." },
+                ],
+                pairs: { net: "r3", ip: "r5", mask: "r4", cidr: "r1", gw: "r2" },
+                feedback: { explanation: "الشبكة: أجهزة متصلة لتبادل المعلومات. IP: عنوان خاص لكل جهاز. Subnet Mask: يحدّد جزء الشبكة وجزء الجهاز. CIDR: طريقة مختصرة لكتابة القناع، مثل 24/. Gateway: الباب الذي يخرج منه الجهاز إلى الخارج (الراوتر)." },
+              },
+            },
+            {
+              id: "m04-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "في الشبكة 192.168.1.0/24: صنّف كل عنوان حسب دوره.",
+                groups: [{ id: "network", text: "عنوان الشبكة" }, { id: "host", text: "عنوان جهاز" }, { id: "broadcast", text: "عنوان البث" }],
+                items: [
+                  { id: "i1", text: "192.168.1.254" },
+                  { id: "i2", text: "192.168.1.0" },
+                  { id: "i3", text: "192.168.1.255" },
+                  { id: "i4", text: "192.168.1.1" },
+                ],
+                assign: { i1: "host", i2: "network", i3: "broadcast", i4: "host" },
+                feedback: { explanation: "الشبكة 192.168.1.0/24: عنوان الشبكة 192.168.1.0، عناوين الأجهزة 192.168.1.1 → 192.168.1.254، عنوان البث 192.168.1.255." },
+              },
             },
           ],
         },

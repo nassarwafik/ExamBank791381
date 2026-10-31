@@ -98,6 +98,585 @@
           }
         }
       }
+    },
+    "791381s-m02-l02-p01": {
+      "moduleId": "791381s-m02",
+      "activities": {
+        "m02-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m02-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m02-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m02-l02-p01-q04": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m02-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m02-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m02-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m02-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m02-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "A": "r2",
+            "B": "r4",
+            "C": "r6",
+            "D": "r1",
+            "E": "r5",
+            "F": "r3"
+          }
+        },
+        "m02-l02-p01-q10": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        },
+        "m02-l02-p01-q11": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "1",
+            "b2": "ضعف",
+            "b3": "255"
+          }
+        },
+        "m02-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "bin",
+            "i2": "not",
+            "i3": "bin",
+            "i4": "not",
+            "i5": "bin",
+            "i6": "not"
+          }
+        }
+      }
+    },
+    "791381s-m03-l02-p01": {
+      "moduleId": "791381s-m03",
+      "activities": {
+        "m03-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m03-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m03-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m03-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m03-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m03-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m03-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m03-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m03-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "4",
+            "b2": "Octet",
+            "b3": "نقاط",
+            "b4": "255"
+          }
+        },
+        "m03-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "a1": "r3",
+            "a2": "r4",
+            "a3": "r1",
+            "a4": "r2"
+          }
+        },
+        "m03-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "private",
+            "i2": "public",
+            "i3": "private",
+            "i4": "public",
+            "i5": "private",
+            "i6": "public"
+          }
+        },
+        "m03-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "static",
+            "i2": "dynamic",
+            "i3": "static",
+            "i4": "dynamic",
+            "i5": "static"
+          }
+        }
+      }
+    },
+    "791381s-m04-l02-p01": {
+      "moduleId": "791381s-m04",
+      "activities": {
+        "m04-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m04-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m04-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m04-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m04-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m04-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m04-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m04-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m04-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "الشبكة",
+            "b2": "الجهاز",
+            "b3": "للشبكة",
+            "b4": "للجهاز"
+          }
+        },
+        "m04-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "p8": "r2",
+            "p16": "r3",
+            "p24": "r1"
+          }
+        },
+        "m04-l02-p01-q11": {
+          "kind": "matching",
+          "pairs": {
+            "net": "r3",
+            "ip": "r5",
+            "mask": "r4",
+            "cidr": "r1",
+            "gw": "r2"
+          }
+        },
+        "m04-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "host",
+            "i2": "network",
+            "i3": "broadcast",
+            "i4": "host"
+          }
+        }
+      }
+    },
+    "791381s-m05-l02-p01": {
+      "moduleId": "791381s-m05",
+      "activities": {
+        "m05-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m05-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m05-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m05-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m05-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m05-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m05-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m05-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m05-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "hub": "r2",
+            "switch": "r3",
+            "router": "r1"
+          }
+        },
+        "m05-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "route": "r3",
+            "link": "r5",
+            "nat": "r4",
+            "dhcp": "r1",
+            "sec": "r2"
+          }
+        },
+        "m05-l02-p01-q11": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "للجميع",
+            "b2": "للجهاز المقصود",
+            "b3": "أكثر",
+            "b4": "أفضل"
+          }
+        },
+        "m05-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "hub",
+            "i2": "switch",
+            "i3": "router",
+            "i4": "hub",
+            "i5": "router",
+            "i6": "switch"
+          }
+        }
+      }
+    },
+    "791381s-m06-l02-p01": {
+      "moduleId": "791381s-m06",
+      "activities": {
+        "m06-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m06-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m06-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m06-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m06-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m06-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m06-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m06-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m06-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "مشترك",
+            "b2": "رخيص",
+            "b3": "التصادمات"
+          }
+        },
+        "m06-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "star": "r4",
+            "tree": "r2",
+            "p2p": "r1",
+            "ring": "r3"
+          }
+        },
+        "m06-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "modern",
+            "i2": "simple",
+            "i3": "classic",
+            "i4": "modern",
+            "i5": "simple",
+            "i6": "classic",
+            "i7": "modern"
+          }
+        }
+      }
+    },
+    "791381s-m07-l02-p01": {
+      "moduleId": "791381s-m07",
+      "activities": {
+        "m07-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m07-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m07-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m07-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m07-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m07-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m07-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m07-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m07-l02-p01-q09": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m07-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "utp": "r3",
+            "stp": "r4",
+            "fiber": "r1",
+            "coax": "r2"
+          }
+        },
+        "m07-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "ip",
+            "i2": "mac",
+            "i3": "mac",
+            "i4": "ip",
+            "i5": "ip",
+            "i6": "mac"
+          }
+        },
+        "m07-l02-p01-q12": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "الحماية",
+            "b2": "الجودة",
+            "b3": "الضوء"
+          }
+        }
+      }
+    },
+    "791381s-m08-l02-p01": {
+      "moduleId": "791381s-m08",
+      "activities": {
+        "m08-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m08-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m08-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m08-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m08-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m08-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m08-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m08-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m08-l02-p01-q09": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m08-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "arp": "r2",
+            "dhcp": "r3",
+            "rip": "r1"
+          }
+        },
+        "m08-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "uni",
+            "i2": "multi",
+            "i3": "broad",
+            "i4": "broad",
+            "i5": "multi",
+            "i6": "broad"
+          }
+        },
+        "m08-l02-p01-q12": {
+          "kind": "ordering",
+          "order": [
+            "bit",
+            "byte",
+            "kb",
+            "mb",
+            "gb",
+            "tb"
+          ]
+        }
+      }
     }
   }
 }
