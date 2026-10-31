@@ -139,9 +139,9 @@ describe("791381s — the bodies", () => {
     }
   }, 30000);
 
-  it("Phase 4: units 1–8 each close with a «تدريبات الوحدة» page of 8+ reveal questions mixing kinds", async () => {
+  it("Phases 4–5: units 1–19 each close with a «تدريبات الوحدة» page of 8+ reveal questions mixing kinds", async () => {
     const mods = await loadAll();
-    for (const n of ["01", "02", "03", "04", "05", "06", "07", "08"]) {
+    for (const n of Array.from({ length: 19 }, (_, i) => String(i + 1).padStart(2, "0"))) {
       const mod = mods.find(m => m.id === CID + "-m" + n)!;
       const last = [...mod.lessons].sort((a, b) => a.order - b.order).at(-1)!;
       expect(last.title, mod.id).toBe("تدريبات الوحدة");
