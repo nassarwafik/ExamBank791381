@@ -494,6 +494,7 @@ const m02: ContentModule = {
                 feedback: { explanation: "العدد الثنائي رموزه 0 و 1 فقط. العدد 123 أو 44 فيه رموز من 0 إلى 9 (عشري)، و A23F فيه أحرف (Hex)." },
               },
             },
+            { id: "m02-l02-p01-lib-t02", type: "library-training", origin: "teacher-enrichment", trainingId: "T02", label: "تدريب 2", requiredModuleId: "791381s-m02" },
           ],
         },
       ],

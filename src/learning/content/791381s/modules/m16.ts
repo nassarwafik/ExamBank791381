@@ -471,6 +471,7 @@ const m16: ContentModule = {
               id: "m16-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "بدون Gateway تعمل VLAN داخليًا، لكن أجهزتها لا تصل إلى الشبكات الأخرى.", answer: true, feedback: { explanation: "البوابة هي الباب الذي يخرج منه الجهاز إلى شبكة أخرى؛ بدون Gateway تعمل VLAN داخليًا، لكن أجهزتها لا تصل إلى الشبكات الأخرى." } },
             },
+            { id: "m16-l02-p01-lib-t15", type: "library-training", origin: "teacher-enrichment", trainingId: "T15", label: "تدريب 15", requiredModuleId: "791381s-m16" },
           ],
         },
       ],

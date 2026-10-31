@@ -471,6 +471,10 @@
 .learning-unit-practice-score.is-done{ border-color:var(--eb-success); background:var(--eb-success-bg); }
 .learning-unit-practice-progress, .learning-unit-practice-result{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
 .learning-reader-frombook.is-enrichment{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+/* Phase 8A — the unit's Exam Library trainings, after the score: a titled group of the existing training cards. */
+.learning-unit-practice-library{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding-block-start:var(--eb-space-4); border-block-start:1px dashed var(--eb-line); }
+.learning-unit-practice-library-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); }
+.learning-unit-practice-library-note{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
 
 @media (min-width: 1024px){
   /* Phase 12A — the reading scale steps up on the wide canvas (body 19px, title 32px, roomier block gap). The title

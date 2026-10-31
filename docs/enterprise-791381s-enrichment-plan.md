@@ -410,3 +410,57 @@ Each step is its own PR, one at a time, owner-merged:
 | 8C-1 | Item store, endpoint, safety suite |
 | 8C-2 | Block, lazy view, host seam |
 | 8C-3 | Authored 791381s items, each traced to the booklet page it practises |
+
+## 12. Phase 8A record — the Exam Library trainings opened from the booklet's units
+
+The owner approved §11 on 2026-10-31. For labs, the proposed default applies: they are checked but not counted in Strength
+until the owner decides.
+
+**What changed**
+
+- **Gate (`api/src/lib/learning-training-registry.js`).**
+  - Each of the 36 items keeps its 791381 row byte for byte and gains one 791381s release point (`SUMMARY_BOOKLET_UNIT`).
+  - `trainingAllowedForClass` opens an item when **any** release point is published: course assigned and that module
+    visible, both checked with the exact course id of that point.
+  - New helpers: `trainingReleases` and `trainingReleaseModuleFor`.
+  - A load-time check fails the API start if an item has no 791381s point, a point names an unknown item, or a point
+    names a module that is not in the course registry.
+  - Nothing auto-publishes, and teacher access is unchanged.
+- **Content.**
+  - 36 metadata-only `library-training` cards, `origin: "teacher-enrichment"`, ids `mNN-l02-p01-lib-tNN` /
+    `-lib-fNN`, placed at the end of the releasing unit's «تدريبات الوحدة» page. F01–F06 go on unit 36's page, gated by
+    unit 30.
+  - The book lock is unchanged, the manifest is unchanged, and the study index is unchanged: trainings are never study
+    activities.
+  - The served bodies of the 24 touched units were regenerated.
+- **Reader (`LearningPageRenderer.tsx`, `reader.css`).**
+  - On a practice page, the training cards sit in their own section «تدريبات من مكتبة الامتحانات» after the running score.
+  - The score counts the questions only, and «أعد كل الأسئلة» leaves the cards as they are.
+  - The cards themselves are the existing training cards: the title comes only from the API when the item is available.
+- **Tests.**
+  - `api/tests/learning-training-791381s.test.js` (new).
+  - `src/learning/content/791381s/libraryTraining791381s.test.tsx` (new).
+  - `course791381s.test.ts` adds `library-training` to its enrichment list (a scope extension: the book lock still
+    guards the book).
+
+**Fail-first:** `api/tests/learning-training-791381s.test.js` against baseline code `8345b226`:
+
+| Test | Result on the baseline |
+|---|---|
+| Registry | `trainingReleaseModuleFor is not a function` |
+| Gate | a 791381s-only class with m01 published: `expected false to be true` |
+| API | the list row of T01 lacks `available: true` |
+
+The other 3 tests passed on the baseline. On the head, all 6 pass.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified; `git status` unchanged afterwards):
+
+| Id | Planted defect | Verdict | Killed by |
+|---|---|---|---|
+| A1 | gate uses the primary row only | KILLED | the 791381s gate and API tests |
+| A2 | an extra point opens on course assignment alone | KILLED | the 791381s gate and API tests |
+| A3 | the course id is compared case-insensitively | KILLED | the registry test |
+| A4 | every point is checked under the primary course | KILLED | the 791381s gate and API tests |
+| A5 | T24 (ACL) is released one unit early | KILLED | the registry and gate tests |
+| A6 | the cards are rendered among the questions | KILLED | the practice-page render test |
+| A7 | a card's module drifts from the API's release module | KILLED | the placement test |

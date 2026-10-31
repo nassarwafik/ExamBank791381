@@ -292,6 +292,7 @@ const m06: ContentModule = {
                 feedback: { explanation: "الشبكات البسيطة (اتصال مباشر بدون جهاز مركزي): P2P و Mesh. الشبكات السلكية التقليدية: Bus و Ring. الشبكات الحديثة (جهاز مركزي مثل السويتش): Star و Tree و Hybrid." },
               },
             },
+            { id: "m06-l02-p01-lib-t07", type: "library-training", origin: "teacher-enrichment", trainingId: "T07", label: "تدريب 7", requiredModuleId: "791381s-m06" },
           ],
         },
       ],

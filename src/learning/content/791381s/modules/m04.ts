@@ -523,6 +523,7 @@ const m04: ContentModule = {
                 feedback: { explanation: "الشبكة 192.168.1.0/24: عنوان الشبكة 192.168.1.0، عناوين الأجهزة 192.168.1.1 → 192.168.1.254، عنوان البث 192.168.1.255." },
               },
             },
+            { id: "m04-l02-p01-lib-t05", type: "library-training", origin: "teacher-enrichment", trainingId: "T05", label: "تدريب 5", requiredModuleId: "791381s-m04" },
           ],
         },
       ],

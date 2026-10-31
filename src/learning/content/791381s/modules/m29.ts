@@ -437,6 +437,7 @@ const m29: ContentModule = {
                 feedback: { explanation: "via 192.168.1.1: الطريق يمرّ عبر هذا العنوان (الراوتر التالي)." },
               },
             },
+            { id: "m29-l02-p01-lib-t23", type: "library-training", origin: "teacher-enrichment", trainingId: "T23", label: "تدريب 23", requiredModuleId: "791381s-m29" },
           ],
         },
       ],

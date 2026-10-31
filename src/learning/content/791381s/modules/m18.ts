@@ -380,6 +380,7 @@ const m18: ContentModule = {
                 feedback: { explanation: "الفائدة: توفير الوقت، وتقليل أخطاء تكرار الإعدادات على كل سويتش." },
               },
             },
+            { id: "m18-l02-p01-lib-t16", type: "library-training", origin: "teacher-enrichment", trainingId: "T16", label: "تدريب 16", requiredModuleId: "791381s-m18" },
           ],
         },
       ],

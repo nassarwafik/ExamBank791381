@@ -296,6 +296,7 @@ const m14: ContentModule = {
                 feedback: { explanation: "1 · SYN: الأول يطلب بدء الاتصال — مثل «ألو، هل تسمعني؟» في المكالمة الهاتفية." },
               },
             },
+            { id: "m14-l02-p01-lib-t14", type: "library-training", origin: "teacher-enrichment", trainingId: "T14", label: "تدريب 14", requiredModuleId: "791381s-m14" },
           ],
         },
       ],
