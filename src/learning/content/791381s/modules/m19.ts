@@ -1,15 +1,22 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 19 «Trunk و Router on a Stick».
 //
 // Verbatim conversion of booklet PDF pages 54–58 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The Trunk and Router-on-a-Stick drawings are crops of the
 // booklet itself.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 5): teacher-enrichment blocks (visuals and CLI terminal
+// simulations reused from course 791381 after checking their labels / commands against this section, and the end-of-unit
+// «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim — pinned by the book
+// lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
+import type { CliExerciseConfig } from "../../../cli/types";
 
 const CID = "791381s";
 const src = (pdf: number, end?: number): ContentSource =>
   end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+const EX = (exercise: CliExerciseConfig): Record<string, unknown> => ({ ...exercise });
 
 const m19: ContentModule = {
   id: "791381s-m19",
@@ -63,6 +70,14 @@ const m19: ContentModule = {
               caption: "كل حزمة تحمل Tag يدلّ على VLAN التي تنتمي إليها",
             },
             {
+              id: "m19-l01-p01-v-trunk", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/trunk-multi-vlan", motion: true,
+              source: src(54),
+              title: "رسم متحرّك: Trunk — كابل واحد يحمل عدة VLAN",
+              alt: "رسم متحرّك: كابل Trunk واحد بين Switch 1 و Switch 2 تمرّ عليه ثلاث حزم مكتوب عليها Tag 10 و Tag 20 و Tag 30؛ وتحته عبارة «بدون Trunk: كابل منفصل لكل VLAN» مع ثلاثة خطوط منفصلة.",
+              caption: "مع Trunk يكفي كابل واحد، وكل حزمة تحمل Tag حتى نعرف لأي VLAN تنتمي.",
+            },
+            {
               id: "m19-l01-p01-points", type: "list", origin: "book", variant: "plain",
               items: [
                 {
@@ -113,6 +128,14 @@ const m19: ContentModule = {
               ],
             },
             {
+              id: "m19-l01-p02-v-ports", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/inter-switch-trunk-ports", motion: false,
+              source: src(54, 55),
+              title: "مخطط: المنافذ التي ستكون Trunk في كل سويتش",
+              alt: "مخطط فيه ستة سويتشات Sw1-HFA حتى Sw6-HFA، وتحت كل سويتش منافذه التي ستكون Trunk كما في الجدول؛ و Sw6-HFA وحده فيه المنفذ G0/0.",
+              caption: "المنافذ بين السويتشات تكون Trunk، وفي Sw6 المنفذ G0/0 يربطه بالراوتر.",
+            },
+            {
               id: "m19-l01-p02-rule", type: "callout", origin: "book", kind: "summary", title: "قاعدة",
               spans: [
                 { text: "المنافذ بين السويتشات تكون غالبًا " },
@@ -139,6 +162,27 @@ const m19: ContentModule = {
                 { id: "m19-l01-p03-s1", text: [{ text: "نختار المنفذين F0/23 و F0/24 معًا." }] },
                 { id: "m19-l01-p03-s2", text: [{ text: "نحوّلهما إلى Trunk." }] },
               ],
+            },
+            {
+              id: "m19-l01-p03-sim-trunk", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: تحويل المنفذين F0/23 و F0/24 إلى Trunk",
+              description: "أنت في وضع الإعداد العام على Sw1. اكتب أمرَي صندوق الكتاب بالترتيب. في هذا المحاكي المبسّط يظهر الموجّه (config-if)# بدل (config-if-range)#. محاكاة تعليمية، ليست جهازًا حقيقيًا.",
+              source: src(55),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "على Sw1 و Sw2: interface range f0/23-24 ثم switchport mode trunk." },
+              config: EX({
+                kind: "guided",
+                device: "switch",
+                startMode: "global",
+                intro: "اختر المنفذين F0/23 و F0/24 معًا، ثم حوّلهما إلى Trunk.",
+                steps: [
+                  { id: "s1", instruction: "اختر المنفذين F0/23 و F0/24 معًا بأمر واحد", expect: { command: "interface", args: { interfaces: ["f0/23", "f0/24"] } }, success: "✓ أحسنت، اخترت المنفذين معًا", hints: ["السطر ① في صندوق الكتاب؛ الكلمة range تعني مدى.", "interface range ثم f0/23-24."] },
+                  { id: "s2", instruction: "حوّل المنفذين إلى Trunk", expect: { command: "switchport-mode", args: { mode: "trunk" } }, success: "✓ أحسنت، المنفذان الآن Trunk", hints: ["السطر ② في صندوق الكتاب.", "switchport mode ثم نوع المنفذ."] },
+                ],
+                allowed: ["switchport-mode"],
+                completion: "✓ أحسنت — وتذكّر: المنفذ المقابل في السويتش الآخر يجب أن يكون Trunk أيضًا.",
+              }),
             },
             {
               id: "m19-l01-p03-points", type: "list", origin: "book", variant: "plain",
@@ -179,6 +223,14 @@ const m19: ContentModule = {
                 { id: "m19-l01-p04-t3", text: [{ text: "يُستخدم في Trunk بين السويتشات، وبين السويتش والراوتر." }] },
               ],
             },
+            {
+              id: "m19-l01-p04-v-tag", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/dot1q-tag-frame", motion: true,
+              source: src(56),
+              title: "رسم متحرّك: Dot1Q يضع Tag يحمل رقم VLAN",
+              alt: "رسم متحرّك لحزمة فيها حقلان MAC و Data، يظهر بينهما حقل جديد مكتوب فيه «Tag: VLAN 10».",
+              caption: "الـ Tag يحمل رقم VLAN، ويسمح بتمييز عدة VLAN على نفس رابط Trunk.",
+            },
             { id: "m19-l01-p04-cli-h", type: "heading", origin: "book", level: 4, text: "Switch CLI", dir: "ltr" },
             {
               id: "m19-l01-p04-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
@@ -191,6 +243,28 @@ const m19: ContentModule = {
                 { id: "m19-l01-p04-s2", text: [{ text: "نجعله Trunk." }] },
                 { id: "m19-l01-p04-s3", text: [{ text: "نسمح بمرور VLAN 10 و 20 و 30 فقط." }] },
               ],
+            },
+            {
+              id: "m19-l01-p04-sim-allowed", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "تحدّي الأمر: Trunk على g0/1 يسمح بـ VLAN 10 و 20 و 30 فقط",
+              description: "أنت في وضع الإعداد العام لسويتش. اكتب الأمر المطلوب في كل سؤال بالترتيب؛ المحاكي لا يكشف الإجابة. محاكاة تعليمية مبسّطة.",
+              source: src(56),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "التحدّي: interface g0/1 ثم switchport mode trunk ثم switchport trunk allowed vlan 10,20,30." },
+              config: EX({
+                kind: "challenge",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام لسويتش.",
+                steps: [
+                  { id: "c1", instruction: "اختر المنفذ GigabitEthernet 0/1", expect: { command: "interface", args: { interfaces: ["g0/1"] } }, hints: ["السطر ① في صندوق الكتاب.", "interface ثم اسم المنفذ المختصر g0/1."] },
+                  { id: "c2", instruction: "اجعل هذا المنفذ Trunk", expect: { command: "switchport-mode", args: { mode: "trunk" } }, hints: ["السطر ② في صندوق الكتاب.", "switchport mode ثم نوع المنفذ."] },
+                  { id: "c3", instruction: "اسمح بمرور VLAN 10 و 20 و 30 فقط", expect: { command: "switchport-trunk-allowed-vlan", args: { vlans: [10, 20, 30] } }, hints: ["السطر ③ في صندوق الكتاب.", "switchport trunk allowed vlan ثم 10,20,30."] },
+                ],
+                allowed: ["switchport-mode", "switchport-trunk-allowed-vlan"],
+                completion: "✓ صحيح في كل الأوامر — g0/1 الآن Trunk يمرّ عليه VLAN 10 و 20 و 30 فقط.",
+              }),
             },
             {
               id: "m19-l01-p04-note", type: "callout", origin: "book", kind: "summary", title: "ملاحظة",
@@ -222,6 +296,14 @@ const m19: ContentModule = {
               id: "m19-l01-p05-drawing", type: "diagram", origin: "book",
               src: "/learning-assets/791381s/1be4e7c0b196198d.png",
               alt: "شكل بيضوي «Router» يتصل بخط عريض بمربع «Switch»، وبجانب الخط من جهة «g0/0.10» و«g0/0.20» ومن الجهة الأخرى «Trunk» و«كابل واحد»؛ ويخرج من «Switch» خطان إلى إطارين متقطعين في كل منهما حاسوبان: الأول مكتوب فيه «VLAN 10» والثاني «VLAN 20».",
+            },
+            {
+              id: "m19-l01-p05-v-ros", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/router-on-a-stick", motion: false,
+              source: src(56, 57),
+              title: "مخطط: Router on a Stick",
+              alt: "مخطط: Router في الأعلى بجانبه g0/0.10 و g0/0.20، يتصل بكابل Trunk واحد بسويتش، ويخرج من السويتش خطان إلى مجموعتين في كل منهما حاسوبان: VLAN 10 و VLAN 20.",
+              caption: "راوتر واحد، متصل بكابل Trunk واحد، ومنفذ فرعي لكل VLAN — Inter-VLAN Routing.",
             },
             {
               id: "m19-l01-p05-points", type: "list", origin: "book", variant: "plain",
@@ -270,6 +352,31 @@ const m19: ContentModule = {
                 { id: "m19-l01-p06-s6", text: [{ text: "عنوان Gateway لأجهزة VLAN 20." }] },
               ],
             },
+            {
+              id: "m19-l01-p06-sim-subif", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: منفذان فرعيان لـ VLAN 10 و VLAN 20",
+              description: "أنت في وضع الإعداد العام للراوتر. اكتب الأوامر الستة في صندوق الكتاب بالترتيب: 3 أوامر لكل VLAN. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(57, 58),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "interface g0/0.10 ثم encapsulation dot1Q 10 ثم ip address 192.168.10.254 255.255.255.0، ثم interface g0/0.20 ثم encapsulation dot1Q 20 ثم ip address 192.168.20.254 255.255.255.0." },
+              config: EX({
+                kind: "guided",
+                device: "router",
+                startMode: "global",
+                intro: "لكل VLAN: نُنشئ المنفذ الفرعي، نربطه برقم VLAN، ثم نعطيه عنوان Gateway.",
+                steps: [
+                  { id: "s1", instruction: "أنشئ منفذًا فرعيًا لـ VLAN 10: g0/0.10", expect: { command: "interface", args: { interfaces: ["g0/0.10"], sub: true } }, success: "✓ أحسنت، أنت الآن داخل المنفذ الفرعي g0/0.10", hints: ["السطر ① في صندوق الكتاب.", "interface ثم g0/0.10."] },
+                  { id: "s2", instruction: "اربط المنفذ الفرعي بـ VLAN 10", expect: { command: "encapsulation-dot1q", args: { vlanId: 10 } }, success: "✓ أحسنت، المنفذ الفرعي يقرأ الحزم التي عليها Tag رقم 10", hints: ["السطر ② في صندوق الكتاب.", "encapsulation dot1Q ثم رقم VLAN."] },
+                  { id: "s3", instruction: "أعطه عنوان Gateway لأجهزة VLAN 10: ‏192.168.10.254 بقناع 255.255.255.0", expect: { command: "ip-address", args: { address: "192.168.10.254", mask: "255.255.255.0" } }, hints: ["السطر ③ في صندوق الكتاب.", "ip address ثم العنوان ثم القناع."] },
+                  { id: "s4", instruction: "أنشئ منفذًا فرعيًا لـ VLAN 20: g0/0.20", expect: { command: "interface", args: { interfaces: ["g0/0.20"], sub: true } }, success: "✓ أحسنت، أنت الآن داخل المنفذ الفرعي g0/0.20", hints: ["السطر ④ في صندوق الكتاب.", "interface ثم g0/0.20."] },
+                  { id: "s5", instruction: "اربطه بـ VLAN 20", expect: { command: "encapsulation-dot1q", args: { vlanId: 20 } }, hints: ["السطر ⑤ في صندوق الكتاب.", "encapsulation dot1Q ثم 20."] },
+                  { id: "s6", instruction: "أعطه عنوان Gateway لأجهزة VLAN 20: ‏192.168.20.254 بقناع 255.255.255.0", expect: { command: "ip-address", args: { address: "192.168.20.254", mask: "255.255.255.0" } }, hints: ["السطر ⑥ في صندوق الكتاب.", "ip address ثم العنوان ثم القناع."] },
+                ],
+                allowed: ["encapsulation-dot1q", "ip-address"],
+                completion: "✓ أحسنت — المنفذان الفرعيان جاهزان: Gateway لـ VLAN 10 و VLAN 20.",
+              }),
+            },
           ],
         },
         {
@@ -298,6 +405,14 @@ const m19: ContentModule = {
                 ["40", "g0/0.40", "40", "192.168.40.254"],
               ],
             },
+            {
+              id: "m19-l01-p07-v-subif", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/subinterfaces-vlan30-40", motion: false,
+              source: src(58),
+              title: "مخطط: المنفذ g0/0 ومنفذاه الفرعيان g0/0.30 و g0/0.40",
+              alt: "مخطط: المنفذ g0/0 في الأعلى يتفرّع إلى g0/0.30 (encapsulation dot1Q 30، Gateway VLAN 30: ‏192.168.30.254) و g0/0.40 (encapsulation dot1Q 40، Gateway VLAN 40: ‏192.168.40.254).",
+              caption: "نفس الفكرة بالضبط: نغيّر فقط رقم VLAN ورقم الشبكة.",
+            },
             { id: "m19-l01-p07-dont-forget-h", type: "heading", origin: "book", level: 4, text: "لا تنسَ" },
             {
               id: "m19-l01-p07-dont-forget", type: "text", origin: "book",
@@ -310,6 +425,159 @@ const m19: ContentModule = {
             {
               id: "m19-l01-p07-dont-forget-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
               code: "① Router(config)# interface g0/0\n② Router(config-if)# no shutdown",
+            },
+            {
+              id: "m19-l01-p07-sim-subif", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مهمّة: VLAN 30 و VLAN 40 وتشغيل المنفذ الأصلي",
+              description: "أنت في وضع الإعداد العام للراوتر. المطلوب حالة نهائية كما في صندوقَي الكتاب في هذه الصفحة؛ المحاكي يحكم على النتيجة. محاكاة تعليمية مبسّطة.",
+              source: src(58),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "interface g0/0.30 ثم encapsulation dot1Q 30 ثم ip address 192.168.30.254 255.255.255.0، ثم interface g0/0.40 ثم encapsulation dot1Q 40 ثم ip address 192.168.40.254 255.255.255.0، ثم interface g0/0 ثم no shutdown." },
+              config: EX({
+                kind: "task",
+                device: "router",
+                startMode: "global",
+                intro: "اضبط المنفذين الفرعيين لـ VLAN 30 و VLAN 40، ولا تنسَ تشغيل المنفذ الأصلي g0/0.",
+                goals: [
+                  { id: "g30-dot1q", label: "g0/0.30 مربوط بـ VLAN 30 (dot1Q 30)", condition: { kind: "interface", name: "g0/0.30", prop: "encapsulationVlan", value: 30 } },
+                  { id: "g30-ip", label: "g0/0.30 يحمل العنوان 192.168.30.254", condition: { kind: "interface", name: "g0/0.30", prop: "ipAddress", value: "192.168.30.254" } },
+                  { id: "g30-mask", label: "قناع g0/0.30 هو 255.255.255.0", condition: { kind: "interface", name: "g0/0.30", prop: "subnetMask", value: "255.255.255.0" } },
+                  { id: "g40-dot1q", label: "g0/0.40 مربوط بـ VLAN 40 (dot1Q 40)", condition: { kind: "interface", name: "g0/0.40", prop: "encapsulationVlan", value: 40 } },
+                  { id: "g40-ip", label: "g0/0.40 يحمل العنوان 192.168.40.254", condition: { kind: "interface", name: "g0/0.40", prop: "ipAddress", value: "192.168.40.254" } },
+                  { id: "g40-mask", label: "قناع g0/0.40 هو 255.255.255.0", condition: { kind: "interface", name: "g0/0.40", prop: "subnetMask", value: "255.255.255.0" } },
+                  { id: "g-up", label: "المنفذ الأصلي g0/0 مشغّل (no shutdown)", condition: { kind: "interface", name: "g0/0", prop: "shutdown", value: false } },
+                ],
+                hints: ["لكل VLAN 3 أوامر: interface g0/0.30 ثم encapsulation dot1Q 30 ثم ip address … — وكذلك لـ 40.", "في النهاية: interface g0/0 ثم no shutdown، وإلا لن تعمل المنافذ الفرعية."],
+                allowed: ["encapsulation-dot1q", "ip-address", "no-shutdown"],
+                completion: "✓ أحسنت — المنفذان الفرعيان g0/0.30 و g0/0.40 جاهزان، والمنفذ الأصلي g0/0 مشغّل.",
+              }),
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by the section's printed text above (the explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m19-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m19-l02-p01",
+          title: "تدريبات الوحدة: Trunk و Router on a Stick",
+          order: 1,
+          layout: "practice",
+          source: src(54, 58),
+          blocks: [
+            {
+              id: "m19-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "على رابط Trunk، لماذا تحمل كل حزمة Tag؟",
+                options: [{ id: "a", text: "لتسريع الحزمة" }, { id: "b", text: "حتى نعرف لأي VLAN تنتمي", correct: true }, { id: "c", text: "لتشفير البيانات" }, { id: "d", text: "لتغيير عنوان الجهاز" }],
+                feedback: { explanation: "مع Trunk يكفي كابل واحد، وكل حزمة تحمل Tag حتى نعرف لأي VLAN تنتمي." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "بدون Trunk نحتاج كابلًا منفصلًا لكل VLAN بين السويتشات.", answer: true, feedback: { explanation: "بدون Trunk نحتاج كابلًا منفصلًا لكل VLAN بين السويتشات! مع Trunk يكفي كابل واحد." } },
+            },
+            {
+              id: "m19-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل عبارة: هل تصف منفذ Access أم Trunk؟",
+                groups: [{ id: "access", text: "Access" }, { id: "trunk", text: "Trunk" }],
+                items: [
+                  { id: "i1", text: "لنقل عدة VLAN عبر كابل واحد" },
+                  { id: "i2", text: "لجهاز واحد" },
+                  { id: "i3", text: "المنافذ التي تربط سويتشًا بسويتش آخر" },
+                  { id: "i4", text: "المنفذ في Sw6 المتصل بالراوتر" },
+                ],
+                assign: { i1: "trunk", i2: "access", i3: "trunk", i4: "trunk" },
+                feedback: { explanation: "تذكّر: Access لجهاز واحد، و Trunk لنقل عدة VLAN عبر كابل واحد. المنافذ التي تربط سويتشًا بسويتش آخر تكون Trunk، والمنفذ في Sw6 المتصل بالراوتر يجب أن يكون Trunk." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "حسب جدول منافذ الربط، كم منفذًا سيكون Trunk في Sw6-HFA؟",
+                options: [{ id: "a", text: "1" }, { id: "b", text: "2" }, { id: "c", text: "3" }, { id: "d", text: "4", correct: true }],
+                feedback: { explanation: "في Sw6-HFA المنافذ التي ستكون Trunk هي F0/22 و F0/23 و F0/24 و G0/0 (أربعة)، والمنفذ G0/0 يربطه بالراوتر." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا يحدث إذا كان أحد طرفي الكابل Trunk والآخر ليس Trunk؟",
+                options: [{ id: "a", text: "لن تمرّ VLAN بينهما", correct: true }, { id: "b", text: "تمرّ كل VLAN بشكل عادي" }, { id: "c", text: "تمرّ VLAN 10 فقط" }, { id: "d", text: "يصبح الطرفان Access تلقائيًا" }],
+                feedback: { explanation: "إذا كان أحد الطرفين Trunk والآخر ليس Trunk، لن تمرّ VLAN بينهما. يجب أن يكون الإعداد متّفقًا من الجهتين." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "يكفي أن نكتب أوامر Trunk على سويتش واحد فقط من السويتشين المتصلين.", answer: false, feedback: { explanation: "نكتب الأوامر على كل سويتش في منافذ الربط بين السويتشات، ومهم أن يكون المنفذ المقابل في السويتش الآخر Trunk أيضًا." } },
+            },
+            {
+              id: "m19-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما الاسم الرسمي لـ Dot1Q؟",
+                options: [{ id: "a", text: "802.11" }, { id: "b", text: "802.3" }, { id: "c", text: "802.1Q", correct: true }, { id: "d", text: "VTP" }],
+                feedback: { explanation: "Dot1Q (واسمه الرسمي 802.1Q) هو المعيار الذي يضع الـ Tag على الحزمة." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل أمر من صندوق Dot1Q بشرحه:",
+                left: [
+                  { id: "if", text: "interface g0/1" },
+                  { id: "mode", text: "switchport mode trunk" },
+                  { id: "allowed", text: "switchport trunk allowed vlan 10,20,30" },
+                ],
+                right: [
+                  { id: "r1", text: "نجعله Trunk" },
+                  { id: "r2", text: "نسمح بمرور VLAN 10 و 20 و 30 فقط" },
+                  { id: "r3", text: "نختار المنفذ GigabitEthernet 0/1" },
+                ],
+                pairs: { if: "r3", mode: "r1", allowed: "r2" },
+                feedback: { explanation: "interface g0/1: نختار المنفذ GigabitEthernet 0/1. switchport mode trunk: نجعله Trunk. switchport trunk allowed vlan 10,20,30: نسمح بمرور VLAN 10 و 20 و 30 فقط." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل الفراغات من مخزن الكلمات:",
+                segments: ["السويتش العادي يعمل في الطبقة الثانية (Layer 2). الحل: نوصل راوترًا بكابل ", { blank: "b1" }, " واحد، ونقسم منفذه إلى ", { blank: "b2" }, "، واحد لكل VLAN. اسم هذه الفكرة: ", { blank: "b3" }, "."],
+                bank: ["Access", "Inter-VLAN Routing", "Trunk", "VTP", "منافذ فرعية"],
+                answers: { b1: "Trunk", b2: "منافذ فرعية", b3: "Inter-VLAN Routing" },
+                feedback: { explanation: "الحل: نوصل راوترًا بكابل Trunk واحد، ونقسم منفذه إلى «منافذ فرعية»، واحد لكل VLAN. اسم هذه الفكرة: Inter-VLAN Routing." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب أوامر الراوتر الثلاثة لـ VLAN 20:",
+                items: [
+                  { id: "ip", text: "ip address 192.168.20.254 255.255.255.0" },
+                  { id: "if", text: "interface g0/0.20" },
+                  { id: "enc", text: "encapsulation dot1Q 20" },
+                ],
+                order: ["if", "enc", "ip"],
+                feedback: { explanation: "لكل VLAN نكتب 3 أوامر: نُنشئ المنفذ الفرعي (interface g0/0.20)، نربطه برقم VLAN (encapsulation dot1Q 20)، ثم نعطيه عنوان Gateway (ip address 192.168.20.254 255.255.255.0)." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أيّ أمر يربط المنفذ الفرعي g0/0.10 بـ VLAN 10؟",
+                options: [{ id: "a", text: "switchport mode trunk" }, { id: "b", text: "encapsulation dot1Q 10", correct: true }, { id: "c", text: "ip address 192.168.10.254 255.255.255.0" }, { id: "d", text: "no shutdown" }],
+                feedback: { explanation: "encapsulation dot1Q 10: يربط المنفذ الفرعي بـ VLAN 10 (يقرأ الحزم التي عليها Tag رقم 10)." },
+              },
+            },
+            {
+              id: "m19-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "إذا كان المنفذ الأصلي g0/0 في الراوتر غير مشغّل، تعمل المنافذ الفرعية رغم ذلك.", answer: false, feedback: { explanation: "المنفذ الأصلي في الراوتر يجب أن يكون مشغّلًا (interface g0/0 ثم no shutdown)، وإلا لن تعمل المنافذ الفرعية." } },
             },
           ],
         },

@@ -677,6 +677,926 @@
           ]
         }
       }
+    },
+    "791381s-m09-l02-p01": {
+      "moduleId": "791381s-m09",
+      "activities": {
+        "m09-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m09-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m09-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m09-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m09-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m09-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m09-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m09-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m09-l02-p01-q09": {
+          "kind": "ordering",
+          "order": [
+            "app",
+            "pre",
+            "ses",
+            "tra",
+            "net",
+            "dl",
+            "phy"
+          ]
+        },
+        "m09-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "net": "r3",
+            "dl": "r1",
+            "tra": "r5",
+            "app": "r2",
+            "pre": "r4"
+          }
+        },
+        "m09-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "o7": "t4",
+            "o6": "t4",
+            "o5": "t4",
+            "o4": "t3",
+            "o3": "t2",
+            "o2": "t1",
+            "o1": "t1"
+          }
+        },
+        "m09-l02-p01-q12": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "النقل",
+            "b2": "موثوق",
+            "b3": "سريع",
+            "b4": "تأكيدًا"
+          }
+        }
+      }
+    },
+    "791381s-m10-l02-p01": {
+      "moduleId": "791381s-m10",
+      "activities": {
+        "m10-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m10-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m10-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m10-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m10-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m10-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m10-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m10-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m10-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "dns": "r3",
+            "dhcp": "r4",
+            "arp": "r2",
+            "smtp": "r1",
+            "nat": "r6",
+            "icmp": "r5"
+          }
+        },
+        "m10-l02-p01-q10": {
+          "kind": "classify",
+          "assign": {
+            "http": "tcp",
+            "dhcp": "udp",
+            "smtp": "tcp",
+            "ssh": "tcp",
+            "tftp": "udp",
+            "ftp": "tcp",
+            "telnet": "tcp",
+            "https": "tcp"
+          }
+        },
+        "m10-l02-p01-q11": {
+          "kind": "ordering",
+          "order": [
+            "dhcp",
+            "dns",
+            "https"
+          ]
+        },
+        "m10-l02-p01-q12": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "TCP",
+            "b2": "UDP",
+            "b3": "TFTP"
+          }
+        }
+      }
+    },
+    "791381s-m11-l02-p01": {
+      "moduleId": "791381s-m11",
+      "activities": {
+        "m11-l02-p01-q01": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m11-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m11-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m11-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m11-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m11-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m11-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m11-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m11-l02-p01-q10": {
+          "kind": "matching",
+          "pairs": {
+            "q1": "r3",
+            "q2": "r5",
+            "q3": "r4",
+            "q4": "r1",
+            "q5": "r2"
+          }
+        },
+        "m11-l02-p01-q11": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "قناع",
+            "b2": "البوابة",
+            "b3": "MAC"
+          }
+        }
+      }
+    },
+    "791381s-m12-l02-p01": {
+      "moduleId": "791381s-m12",
+      "activities": {
+        "m12-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m12-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m12-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m12-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m12-l02-p01-q05": {
+          "kind": "matching",
+          "pairs": {
+            "sw": "r3",
+            "rt": "r1",
+            "vlan": "r2"
+          }
+        },
+        "m12-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m12-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m12-l02-p01-q08": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "الحلقات",
+            "b2": "أفضل",
+            "b3": "مؤقتًا",
+            "b4": "استقرار"
+          }
+        },
+        "m12-l02-p01-q09": {
+          "kind": "classify",
+          "assign": {
+            "i1": "half",
+            "i2": "full",
+            "i3": "half",
+            "i4": "full",
+            "i5": "full"
+          }
+        },
+        "m12-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m12-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "local",
+            "i2": "apipa",
+            "i3": "local",
+            "i4": "apipa",
+            "i5": "local",
+            "i6": "apipa"
+          }
+        },
+        "m12-l02-p01-q12": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381s-m13-l02-p01": {
+      "moduleId": "791381s-m13",
+      "activities": {
+        "m13-l02-p01-q01": {
+          "kind": "matching",
+          "pairs": {
+            "dos": "r3",
+            "ddos": "r6",
+            "hij": "r4",
+            "mitm": "r1",
+            "phish": "r5",
+            "spoof": "r2"
+          }
+        },
+        "m13-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m13-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m13-l02-p01-q04": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m13-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m13-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m13-l02-p01-q07": {
+          "kind": "matching",
+          "pairs": {
+            "vpn": "r3",
+            "https": "r2",
+            "ssh": "r1"
+          }
+        },
+        "m13-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m13-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "التشفير",
+            "b2": "البيانات",
+            "b3": "هوية"
+          }
+        },
+        "m13-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m13-l02-p01-q11": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m13-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "attack",
+            "i2": "secure",
+            "i3": "attack",
+            "i4": "secure",
+            "i5": "attack",
+            "i6": "secure"
+          }
+        }
+      }
+    },
+    "791381s-m14-l02-p01": {
+      "moduleId": "791381s-m14",
+      "activities": {
+        "m14-l02-p01-q01": {
+          "kind": "ordering",
+          "order": [
+            "data",
+            "segment",
+            "packet",
+            "frame"
+          ]
+        },
+        "m14-l02-p01-q02": {
+          "kind": "classify",
+          "assign": {
+            "i1": "seg",
+            "i2": "pkt",
+            "i3": "frm",
+            "i4": "seg",
+            "i5": "frm",
+            "i6": "pkt"
+          }
+        },
+        "m14-l02-p01-q03": {
+          "kind": "matching",
+          "pairs": {
+            "frame": "r2",
+            "packet": "r3",
+            "segment": "r1"
+          }
+        },
+        "m14-l02-p01-q04": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "البيانات",
+            "b2": "Segment",
+            "b3": "Packet",
+            "b4": "Frame"
+          }
+        },
+        "m14-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m14-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m14-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m14-l02-p01-q08": {
+          "kind": "ordering",
+          "order": [
+            "syn",
+            "synack",
+            "ack"
+          ]
+        },
+        "m14-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "syn": "r2",
+            "synack": "r3",
+            "ack": "r1"
+          }
+        },
+        "m14-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m14-l02-p01-q11": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m14-l02-p01-q12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        }
+      }
+    },
+    "791381s-m15-l02-p01": {
+      "moduleId": "791381s-m15",
+      "activities": {
+        "m15-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m15-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m15-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m15-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m15-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m15-l02-p01-q06": {
+          "kind": "matching",
+          "pairs": {
+            "user": "r2",
+            "priv": "r4",
+            "conf": "r5",
+            "if": "r1",
+            "vlan": "r3"
+          }
+        },
+        "m15-l02-p01-q07": {
+          "kind": "ordering",
+          "order": [
+            "en",
+            "conf",
+            "vlan"
+          ]
+        },
+        "m15-l02-p01-q08": {
+          "kind": "classify",
+          "assign": {
+            "i1": "fe",
+            "i2": "ge",
+            "i3": "fe",
+            "i4": "ge",
+            "i5": "fe"
+          }
+        },
+        "m15-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m15-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m15-l02-p01-q11": {
+          "kind": "ordering",
+          "order": [
+            "port",
+            "type",
+            "vlan"
+          ]
+        },
+        "m15-l02-p01-q12": {
+          "kind": "classify",
+          "assign": {
+            "i1": "access",
+            "i2": "trunk",
+            "i3": "access",
+            "i4": "trunk"
+          }
+        }
+      }
+    },
+    "791381s-m16-l02-p01": {
+      "moduleId": "791381s-m16",
+      "activities": {
+        "m16-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m16-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m16-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m16-l02-p01-q04": {
+          "kind": "matching",
+          "pairs": {
+            "sec": "r2",
+            "org": "r3",
+            "less": "r1"
+          }
+        },
+        "m16-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m16-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m16-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m16-l02-p01-q08": {
+          "kind": "ordering",
+          "order": [
+            "v10",
+            "mng",
+            "exit",
+            "v20",
+            "gaz"
+          ]
+        },
+        "m16-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "range",
+            "b2": "access",
+            "b3": "vlan"
+          }
+        },
+        "m16-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m16-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m16-l02-p01-q12": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381s-m17-l02-p01": {
+      "moduleId": "791381s-m17",
+      "activities": {
+        "m17-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m17-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m17-l02-p01-q03": {
+          "kind": "matching",
+          "pairs": {
+            "tagged": "r2",
+            "untagged": "r3",
+            "native": "r1"
+          }
+        },
+        "m17-l02-p01-q04": {
+          "kind": "classify",
+          "assign": {
+            "i1": "tag",
+            "i2": "notag",
+            "i3": "notag",
+            "i4": "tag",
+            "i5": "notag"
+          }
+        },
+        "m17-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m17-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m17-l02-p01-q07": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "trunk",
+            "b2": "native"
+          }
+        },
+        "m17-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m17-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m17-l02-p01-q10": {
+          "kind": "classify",
+          "assign": {
+            "i1": "access",
+            "i2": "trunk",
+            "i3": "access",
+            "i4": "trunk",
+            "i5": "access",
+            "i6": "trunk",
+            "i7": "trunk",
+            "i8": "access"
+          }
+        },
+        "m17-l02-p01-q11": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m17-l02-p01-q12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        }
+      }
+    },
+    "791381s-m18-l02-p01": {
+      "moduleId": "791381s-m18",
+      "activities": {
+        "m18-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m18-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m18-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m18-l02-p01-q04": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        },
+        "m18-l02-p01-q05": {
+          "kind": "classify",
+          "assign": {
+            "i1": "server",
+            "i2": "client",
+            "i3": "server",
+            "i4": "client",
+            "i5": "server"
+          }
+        },
+        "m18-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m18-l02-p01-q07": {
+          "kind": "matching",
+          "pairs": {
+            "srv": "r3",
+            "dom": "r4",
+            "pwd": "r1",
+            "cli": "r2"
+          }
+        },
+        "m18-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m18-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m18-l02-p01-q10": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "Server",
+            "b2": "Client",
+            "b3": "Domain"
+          }
+        },
+        "m18-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        }
+      }
+    },
+    "791381s-m19-l02-p01": {
+      "moduleId": "791381s-m19",
+      "activities": {
+        "m19-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m19-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m19-l02-p01-q03": {
+          "kind": "classify",
+          "assign": {
+            "i1": "trunk",
+            "i2": "access",
+            "i3": "trunk",
+            "i4": "trunk"
+          }
+        },
+        "m19-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m19-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m19-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m19-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m19-l02-p01-q08": {
+          "kind": "matching",
+          "pairs": {
+            "if": "r3",
+            "mode": "r1",
+            "allowed": "r2"
+          }
+        },
+        "m19-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "Trunk",
+            "b2": "منافذ فرعية",
+            "b3": "Inter-VLAN Routing"
+          }
+        },
+        "m19-l02-p01-q10": {
+          "kind": "ordering",
+          "order": [
+            "if",
+            "enc",
+            "ip"
+          ]
+        },
+        "m19-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m19-l02-p01-q12": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
     }
   }
 }

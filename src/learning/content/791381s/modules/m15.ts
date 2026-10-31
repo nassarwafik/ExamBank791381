@@ -1,9 +1,13 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 15 «برمجة السويتش من CLI».
 //
 // Verbatim conversion of booklet PDF pages 41–44 (the section header box → an opener page; each numbered sub-topic → one
-// reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
+// reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
 // runs are `code`, printed box labels are the callout titles. The switch front-panel drawing is a crop of the booklet
 // itself.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phases 2–5): teacher-enrichment blocks (visuals / activities reused from
+// course 791381 after checking their labels against this section, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the
+// book blocks they explain. The book blocks above stay verbatim — pinned by the book lock (bookLock.test.ts).
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -64,6 +68,15 @@ const m15: ContentModule = {
               ],
             },
             {
+              // ENRICHMENT: SVG — CLI is a command screen: one command per line (the uses listed above). Generic, no real syntax.
+              id: "m15-l01-p01-v-cli", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/cli-interface", motion: true,
+              source: src(41),
+              title: "رسم توضيحي: شاشة الأوامر CLI",
+              alt: "نافذة أوامر مكتوب في أعلاها «CLI = Command Line Interface»، وتظهر فيها أربعة أسطر واحدًا بعد الآخر: تعريف VLAN، ضبط المنافذ، كلمات المرور، إعداد Trunk.",
+              caption: "كل أمر يُكتب في سطر مستقل — ونستعمل CLI لـ VLAN والمنافذ وكلمات المرور و Trunk.",
+            },
+            {
               id: "m15-l01-p01-key", type: "callout", origin: "book", kind: "summary", title: "الأهم للطالب",
               spans: [
                 { text: "افهم " },
@@ -120,6 +133,27 @@ const m15: ContentModule = {
                 { text: "." },
               ],
             },
+            {
+              // ENRICHMENT: CLI simulation — the booklet's own «Switch CLI» box (① enable ② configure terminal ③ vlan 10).
+              id: "m15-l01-p02-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              source: src(42),
+              title: "مثال موجّه: الدخول إلى وضع البرمجة",
+              description: "اكتب أوامر صندوق Switch CLI الثلاثة بالترتيب وراقب الموجّه بعد كل أمر. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المثال الموجّه: Switch> enable ثم Switch# configure terminal ثم Switch(config)# vlan 10، فيصبح الموجّه Switch(config-vlan)#." },
+              config: {
+                kind: "guided",
+                device: "switch",
+                intro: "أنت في وضع المستخدم Switch>. نفّذ أوامر الصندوق الثلاثة بالترتيب، ولاحظ كيف يتغيّر الموجّه بعد كل أمر.",
+                steps: [
+                  { id: "s1", instruction: "ادخل إلى وضع الأوامر المتقدّم", expect: { command: "enable" }, success: "✓ أحسنت — تغيّر الموجّه من Switch> إلى Switch#", hints: ["السطر ① في صندوق Switch CLI.", "كلمة واحدة: enable."] },
+                  { id: "s2", instruction: "ادخل إلى وضع الإعدادات حتى تستطيع تغيير إعدادات السويتش", expect: { command: "configure-terminal" }, success: "✓ أحسنت — الموجّه الآن Switch(config)#: وضع الإعدادات العامة", hints: ["السطر ② في الصندوق.", "كلمتان: configure terminal."] },
+                  { id: "s3", instruction: "عرّف VLAN رقم 10", expect: { command: "vlan", args: { vlanId: 10 } }, success: "✓ أحسنت — الموجّه الآن Switch(config-vlan)#: أنت داخل VLAN", hints: ["السطر ③ في الصندوق.", "الكلمة vlan ثم الرقم 10."] },
+                ],
+                completion: "✓ أحسنت — صعدت من Switch> إلى Switch# ثم Switch(config)# ثم Switch(config-vlan)#. للرجوع خطوة إلى الوراء نكتب exit.",
+              },
+            },
           ],
         },
         {
@@ -137,6 +171,15 @@ const m15: ContentModule = {
               src: "/learning-assets/791381s/f519366debb77261.png",
               alt: "رسم للواجهة الأمامية للسويتش: صفّان من المنافذ الصغيرة وأولها محاط بإطار عريض، وتحته عبارة «F0/1»، وتحت باقي المنافذ عبارة «F0/2 … F0/24»؛ وعلى الجانب منفذان أكبر مكتوب عليهما «G0/1» و«G0/2»، وتحتهما عبارة «المنافذ الأسرع».",
               caption: "واجهة السويتش من الأمام · أول منفذ هو F0/1",
+            },
+            {
+              // ENRICHMENT: SVG next to the booklet drawing (not replacing it) — the same port names F0/1…F0/24, G0/1 · G0/2.
+              id: "m15-l01-p03-v-ports", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/switch-ports-map", motion: true,
+              source: src(43),
+              title: "رسم توضيحي: أسماء منافذ السويتش",
+              alt: "واجهة السويتش من الأمام: صفّان من منافذ FastEthernet أولها F0/1 وآخرها F0/24، وعلى الجانب منفذا Gigabit الأسرع G0/1 و G0/2؛ ويُميَّز المنفذ F0/1 بعبارة «نحدّد المنفذ F0/1».",
+              caption: "F0/1 … F0/24 هي المنافذ العادية، و G0/1 · G0/2 منافذ أسرع — نختار المنفذ الصحيح قبل البرمجة.",
             },
             {
               id: "m15-l01-p03-table", type: "table", origin: "book",
@@ -183,6 +226,118 @@ const m15: ContentModule = {
                   text: [{ text: "منفذ يكون " }, { text: "وصلة بين السويتشات", style: "strong" }, { text: " (أو بين سويتش وراوتر)." }],
                 },
               ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381s-m15-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m15-l02-p01",
+          title: "تدريبات الوحدة: برمجة السويتش من CLI",
+          order: 1,
+          layout: "practice",
+          source: src(41, 44),
+          blocks: [
+            {
+              id: "m15-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما هي CLI؟",
+                options: [{ id: "a", text: "شاشة لمس فيها أزرار نضغط عليها لبرمجة السويتش." }, { id: "b", text: "شاشة الأوامر التي نبرمج منها السويتش: نكتب أمرًا في سطر، ثم نضغط Enter.", correct: true }, { id: "c", text: "كابل نصل به السويتش بالراوتر." }, { id: "d", text: "برنامج نستعمله لتصفّح المواقع." }],
+                feedback: { explanation: "CLI هي شاشة الأوامر التي نبرمج منها السويتش: نكتب أمرًا في سطر، ثم نضغط Enter. السويتش لا يحتوي على شاشة وأزرار مثل الحاسوب، والاسم الكامل: CLI = Command Line Interface." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في CLI نكتب عدة أوامر في نفس السطر، ثم نضغط Enter مرة واحدة.", answer: false, feedback: { explanation: "كل أمر يُكتب في سطر مستقل: نكتب أمرًا في سطر، ثم نضغط Enter." } },
+            },
+            {
+              id: "m15-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أي أمر يُدخلنا إلى وضع الأوامر المتقدّم، فيتغيّر الموجّه من Switch> إلى Switch#؟",
+                options: [{ id: "a", text: "configure terminal" }, { id: "b", text: "vlan 10" }, { id: "c", text: "enable", correct: true }, { id: "d", text: "exit" }],
+                feedback: { explanation: "enable يُدخلنا إلى وضع الأوامر المتقدّم (الموجّه يتغيّر من > إلى #)، أما configure terminal فيُدخلنا إلى وضع الإعدادات." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا نكتب للرجوع خطوة إلى الوراء؟",
+                options: [{ id: "a", text: "enable" }, { id: "b", text: "configure terminal" }, { id: "c", text: "vlan 10" }, { id: "d", text: "exit", correct: true }],
+                feedback: { explanation: "للرجوع خطوة إلى الوراء نكتب exit." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "الموجّه Switch(config-if-range)# يعني أننا داخل منفذ واحد فقط.", answer: false, feedback: { explanation: "Switch(config-if-range)# يعني أننا داخل مجموعة منافذ (بعد interface range)، أما داخل منفذ واحد (بعد interface) فالموجّه Switch(config-if)#." } },
+            },
+            {
+              id: "m15-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل موجّه بمعناه (الموجّه يخبرك أين أنت):",
+                left: [{ id: "user", text: "Switch>" }, { id: "priv", text: "Switch#" }, { id: "conf", text: "Switch(config)#" }, { id: "if", text: "Switch(config-if)#" }, { id: "vlan", text: "Switch(config-vlan)#" }],
+                right: [{ id: "r1", text: "داخل منفذ واحد (بعد interface)" }, { id: "r2", text: "وضع المستخدم: أوامر بسيطة فقط" }, { id: "r3", text: "داخل VLAN (بعد vlan 10)" }, { id: "r4", text: "الوضع المتقدّم (بعد enable)" }, { id: "r5", text: "وضع الإعدادات العامة (بعد configure terminal)" }],
+                pairs: { user: "r2", priv: "r4", conf: "r5", if: "r1", vlan: "r3" },
+                feedback: { explanation: "Switch> وضع المستخدم، Switch# الوضع المتقدّم (بعد enable)، Switch(config)# وضع الإعدادات العامة (بعد configure terminal)، Switch(config-if)# داخل منفذ واحد (بعد interface)، Switch(config-vlan)# داخل VLAN (بعد vlan 10)." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب أوامر صندوق Switch CLI للوصول إلى تعريف VLAN 10:",
+                items: [{ id: "vlan", text: "vlan 10" }, { id: "en", text: "enable" }, { id: "conf", text: "configure terminal" }],
+                order: ["en", "conf", "vlan"],
+                feedback: { explanation: "① Switch> enable ② Switch# configure terminal ③ Switch(config)# vlan 10 — نصعد من وضع إلى وضع بأوامر خاصة، مثل الطوابق." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل منفذ حسب نوعه:",
+                groups: [{ id: "fe", text: "FastEthernet" }, { id: "ge", text: "GigabitEthernet" }],
+                items: [{ id: "i1", text: "F0/1" }, { id: "i2", text: "G0/2" }, { id: "i3", text: "F0/24" }, { id: "i4", text: "G0/1" }, { id: "i5", text: "F0/5" }],
+                assign: { i1: "fe", i2: "ge", i3: "fe", i4: "ge", i5: "fe" },
+                feedback: { explanation: "FastEthernet تُكتب F0/1 … F0/24 (المنافذ العادية، وهي الأكثر عددًا)، و GigabitEthernet تُكتب G0/1 · G0/2 (منافذ أسرع)." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أي منافذ أسرع، وتُستعمل غالبًا للربط بين الأجهزة؟",
+                options: [{ id: "a", text: "FastEthernet: F0/1 … F0/24" }, { id: "b", text: "GigabitEthernet: G0/1 · G0/2", correct: true }, { id: "c", text: "كل منافذ السويتش بنفس السرعة." }],
+                feedback: { explanation: "GigabitEthernet (G0/1 · G0/2): منافذ أسرع، تُستعمل غالبًا للربط بين الأجهزة. أما FastEthernet فهي المنافذ العادية، وهي الأكثر عددًا." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا يعني الاسم F0/5؟",
+                options: [{ id: "a", text: "خمسة منافذ معًا." }, { id: "b", text: "VLAN رقم 5." }, { id: "c", text: "المنفذ رقم 5 في السويتش.", correct: true }, { id: "d", text: "منفذ Gigabit رقم 5." }],
+                feedback: { explanation: "F0/1 يعني المنفذ رقم 1 في السويتش، و F0/5 هو المنفذ رقم 5." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب خطوات برمجة أي منفذ:",
+                items: [{ id: "vlan", text: "نربط المنفذ بـ VLAN المناسبة." }, { id: "port", text: "نحدّد المنفذ أو مجموعة منافذ." }, { id: "type", text: "نحدّد نوع المنفذ: Access أو Trunk." }],
+                order: ["port", "type", "vlan"],
+                feedback: { explanation: "مثل تسجيل طالب في صف: نختار الطالب، نحدّد نوعه، ثم نضعه في الصف المناسب — نحدّد المنفذ، ثم نوعه (Access أو Trunk)، ثم نربطه بـ VLAN." },
+              },
+            },
+            {
+              id: "m15-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل منفذ: هل هو Access أم Trunk؟",
+                groups: [{ id: "access", text: "Access" }, { id: "trunk", text: "Trunk" }],
+                items: [{ id: "i1", text: "منفذ يتصل به حاسوب" }, { id: "i2", text: "منفذ يربط بين سويتشين" }, { id: "i3", text: "منفذ تتصل به طابعة" }, { id: "i4", text: "منفذ يربط السويتش بالراوتر" }],
+                assign: { i1: "access", i2: "trunk", i3: "access", i4: "trunk" },
+                feedback: { explanation: "Access: منفذ يخدم جهازًا واحدًا (حاسوب، طابعة). Trunk: منفذ يكون وصلة بين السويتشات (أو بين سويتش وراوتر)." },
+              },
             },
           ],
         },

@@ -331,6 +331,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m09-l01-p03", title: "بروتوكولا النقل: TCP و UDP", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 30 } },
           ],
         },
+        {
+          id: "791381s-m09-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m09-l02-p01", title: "تدريبات الوحدة: نموذج OSI ونموذج TCP/IP", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 28, pdfPageEnd: 30 } },
+          ],
+        },
       ],
     },
     {
@@ -352,6 +360,14 @@ const manifest: LearningCourseManifest = {
           order: 1,
           pages: [
             { id: "791381s-m10-l01-p01", title: "البروتوكولات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 31, pdfPageEnd: 32 } },
+          ],
+        },
+        {
+          id: "791381s-m10-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m10-l02-p01", title: "تدريبات الوحدة: البروتوكولات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 31, pdfPageEnd: 32 } },
           ],
         },
       ],
@@ -381,6 +397,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m11-l01-p05", title: "الأمر arp", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 34 } },
           ],
         },
+        {
+          id: "791381s-m11-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m11-l02-p01", title: "تدريبات الوحدة: أوامر فحص الشبكة", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 32, pdfPageEnd: 34 } },
+          ],
+        },
       ],
     },
     {
@@ -408,6 +432,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m12-l01-p05", title: "Localhost و APIPA", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 36, pdfPageEnd: 37 } },
           ],
         },
+        {
+          id: "791381s-m12-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m12-l02-p01", title: "تدريبات الوحدة: المجالات والمفاهيم", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 34, pdfPageEnd: 37 } },
+          ],
+        },
       ],
     },
     {
@@ -430,6 +462,14 @@ const manifest: LearningCourseManifest = {
           pages: [
             { id: "791381s-m13-l01-p01", title: "القرصنة والهجمات على الشبكة", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 37, pdfPageEnd: 38 } },
             { id: "791381s-m13-l01-p02", title: "الاتصالات الآمنة", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 38, pdfPageEnd: 39 } },
+          ],
+        },
+        {
+          id: "791381s-m13-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m13-l02-p01", title: "تدريبات الوحدة: أمان الشبكات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 37, pdfPageEnd: 39 } },
           ],
         },
       ],
@@ -456,6 +496,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m14-l01-p02", title: "المصافحة الثلاثية في TCP‏ (‎3-Way Handshake)", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 40, pdfPageEnd: 41 } },
           ],
         },
+        {
+          id: "791381s-m14-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m14-l02-p01", title: "تدريبات الوحدة: تجزئة البيانات والمصافحة الثلاثية", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 39, pdfPageEnd: 41 } },
+          ],
+        },
       ],
     },
     {
@@ -480,6 +528,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m15-l01-p02", title: "الدخول إلى وضع البرمجة", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 42, pdfPageEnd: 43 } },
             { id: "791381s-m15-l01-p03", title: "منافذ السويتش وأسماؤها", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 43 } },
             { id: "791381s-m15-l01-p04", title: "خطوات برمجة أي منفذ", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 43, pdfPageEnd: 44 } },
+          ],
+        },
+        {
+          id: "791381s-m15-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m15-l02-p01", title: "تدريبات الوحدة: برمجة السويتش من CLI", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 41, pdfPageEnd: 44 } },
           ],
         },
       ],
@@ -510,6 +566,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m16-l01-p06", title: "الواجهة SVI والبوابة (Gateway)", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 48 } },
           ],
         },
+        {
+          id: "791381s-m16-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m16-l02-p01", title: "تدريبات الوحدة: الشبكات الافتراضية VLAN", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 44, pdfPageEnd: 48 } },
+          ],
+        },
       ],
     },
     {
@@ -537,6 +601,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m17-l01-p05", title: "إعداد Untagged / Access (تذكير)", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 50, pdfPageEnd: 51 } },
           ],
         },
+        {
+          id: "791381s-m17-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m17-l02-p01", title: "تدريبات الوحدة: Native و Tagged و Untagged", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 48, pdfPageEnd: 51 } },
+          ],
+        },
       ],
     },
     {
@@ -561,6 +633,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m18-l01-p02", title: "كيف يعمل VTP؟", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 52 } },
             { id: "791381s-m18-l01-p03", title: "إعداد VTP: Server و Client", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 52, pdfPageEnd: 53 } },
             { id: "791381s-m18-l01-p04", title: "تعريف VLAN على سويتش الـ Server", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 53 } },
+          ],
+        },
+        {
+          id: "791381s-m18-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m18-l02-p01", title: "تدريبات الوحدة: إدارة VLAN مركزيًا: VTP", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 51, pdfPageEnd: 53 } },
           ],
         },
       ],
@@ -590,6 +670,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m19-l01-p05", title: "Router on a Stick", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 56, pdfPageEnd: 57 } },
             { id: "791381s-m19-l01-p06", title: "أوامر الراوتر: VLAN 10 و VLAN 20", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 57, pdfPageEnd: 58 } },
             { id: "791381s-m19-l01-p07", title: "أوامر الراوتر: VLAN 30 و VLAN 40", order: 7, source: { kind: "book", sourceId: "791381s", pdfPageStart: 58 } },
+          ],
+        },
+        {
+          id: "791381s-m19-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m19-l02-p01", title: "تدريبات الوحدة: Trunk و Router on a Stick", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 54, pdfPageEnd: 58 } },
           ],
         },
       ],

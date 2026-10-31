@@ -200,3 +200,36 @@ private-public draws a router at the LAN edge; the cidr-network-host task's buil
 
 Guards added: `course791381s.test.ts` — every enrichment visual / activity resolves to a registered renderer; units 1–8 each end with a
 «تدريبات الوحدة» page of 8+ reveal questions in 3+ kinds. Visual gate: `learning-search` change declared (booklet pages 203 → 210).
+
+## 8. Phase 5 record — «الدفعتان 3–4» (units 9–19) enriched
+
+Same method and rules as Phase 4 (parallel authoring per unit group, lead integration and fact-check of every question).
+
+| Unit | Visuals / activities added (reused, labels checked) | «تدريبات الوحدة» |
+|---|---|---|
+| 9 OSI و TCP/IP | `osi-layers` (booklet table wording, send 7→1 / receive 1→7), osi-vs-tcpip, tcp-vs-udp | 12 |
+| 10 البروتوكولات | ssh-vs-telnet, dns-http-dhcp | 12 |
+| 11 أوامر الفحص | tracert-hops (no CLI sim: the engine is Cisco-only, not Windows) | 11 |
+| 12 المجالات | collision-domains, half-full-duplex, apipa-fallback; `network-domains` | 12 |
+| 13 الأمان | hijacking-vs-mitm, dos-vs-ddos, secure-two-pillars, https-secure-channel (HTTP + SSL/TLS = HTTPS) | 12 |
+| 14 التجزئة والمصافحة | encapsulation-stack, pdu-anatomy; `tcp-handshake` | 12 |
+| 15 CLI | cli-interface, switch-ports-map; `cli-terminal` (enable → configure terminal → vlan 10) | 12 |
+| 16 VLAN | vlan-segmentation, vlan-access-trunk-terms, vlan-example-topology; 3 × `cli-terminal` (vlan/name, access port, SVI) | 12 |
+| 17 Native / Tagged | tagged-untagged-native, access-port-assignment; 2 × `cli-terminal` (native vlan 99, allowed vlan 10,20) | 12 |
+| 18 VTP | vtp-roles, vtp-propagation; 2 × `cli-terminal` (server / client, domain HFA, password 123) | 11 |
+| 19 Trunk / Router on a Stick | trunk-multi-vlan, inter-switch-trunk-ports, dot1q-tag-frame, router-on-a-stick, subinterfaces-vlan30-40; 4 × `cli-terminal` (range trunk, g0/1 allowed vlan, sub-interfaces .10/.20, .30/.40) | 12 |
+
+130 new questions (227 in units 1–19). Every CLI exercise was run through the real reader (`readCliExerciseConfig`) and engine
+(`submitCommand`) with the booklet's exact command lines: all reach `completed`.
+
+**Rejected on purpose** (content the booklet does not state, or values that differ): stp-loop-blocking (blocks SW1–SW3, the booklet
+SW2–SW3), protocols-by-transport («سريع — رسائل قصيرة»), ping-echo (ICMP), arp-association / troubleshooting-command-map, tcpip-layers,
+svi-gateway (192.168.1.254 ≠ 192.168.10.254), dot1q-tag-frame on unit 17 («Dot1Q» not in that unit), subinterfaces-vlan10-20 (draws
+g0/0.20 as unfinished), the range CLI box on m16-p05 (the engine prints `(config-if)#`, the booklet teaches `(config-if-range)#`).
+
+**Notes for review**: the booklet says HTTPS in the google.com steps and HTTP in its «معًا» sentence (unit 10) — each item follows its
+own sentence; tcp-vs-udp shows «ACK» (the booklet's handshake unit uses SYN / SYN-ACK / ACK); tracert-hops labels stops «قفزة»; the
+network-domains explorer applies the booklet's rule «كل منفذ في السويتش = مجال تصادم مستقل» to its drawing (6 collision domains);
+m19-p03's range trunk exercise shows `(config-if)#` (its description tells the student).
+
+Guards: the units-1–19 practice-page test; visual gate: `learning-search` declared (pages 210 → 221).
