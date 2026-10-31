@@ -16,13 +16,19 @@ const optionText = (q: Question, index: number | null) => {
   const o = optionsFor(q)[index];
   return o ? String(o.text || o.label || o.value || "") : "";
 };
-/** The learner's OWN answer of a non-choice question (matching / table / sequence / open text) as plain text. */
-const answerText = (a: Answer | undefined): string => {
+/** The learner's OWN answer of a non-choice question (matching / table / sequence / open text, and — Phase 8C-0 — the
+ *  registered types: multipleSelect by option text, a numeric value with its unit, else a neutral «أُرسلت إجابتك») as plain text. */
+const answerText = (a: Answer | undefined, q?: Question): string => {
   if (!a) return "";
+  if (a.kind === "multiChoice") {
+    const opts = (q?.options ?? []) as { id?: string; text?: string }[];
+    return a.optionIds.map(id => String(opts.find(o => o.id === id)?.text ?? "")).filter(Boolean).join(" · ");
+  }
+  if (a.kind === "numeric") return [a.value, a.unit].filter(v => v && String(v).trim()).join(" ");
   if (a.kind === "text") return a.value.trim();
   if (a.kind === "sequence" || a.kind === "table") return a.values.map(v => (typeof v === "boolean" ? (v ? "صحيح" : "غير صحيح") : String(v ?? ""))).filter(v => v !== "").join(" · ");
   if (a.kind === "fields") return Object.values(a.values).map(v => (Array.isArray(v) ? v.join(" ") : String(v ?? ""))).filter(v => v !== "").join(" · ");
-  return "";
+  return answered(a) ? "أُرسلت إجابتك" : "";
 };
 
 /**
@@ -81,6 +87,10 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
     return { ...a, [id]: { kind: "table", values } };
   }), []);
   const setText = useCallback((id: string, value: string) => setAnswers(a => ({ ...a, [id]: { kind: "text", value } })), []);
+  // 791381s Phase 8C-0 — the generic seam of a REGISTERED question type (multipleSelect, numeric, matrix, categorization…):
+  // the renderer hands over its whole answer; it is kept as is under the question's id (the server grades it with the same
+  // grader). Without this seam the card fell back to a no-op and the answer was lost.
+  const setRegistered = useCallback((id: string, next: Answer) => setAnswers(a => ({ ...a, [id]: next })), []);
   const setField = useCallback((id: string, fieldId: string, value: FieldValue) => setAnswers(a => {
     const prev = a[id];
     return { ...a, [id]: { kind: "fields", values: { ...(prev?.kind === "fields" ? prev.values : {}), [fieldId]: value } } };
@@ -186,7 +196,7 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
               const right = row?.correct === true;
               const manual = row?.manualReview === true && !right;
               const own = answers[id];
-              const mine = own?.kind === "choice" ? optionText(q, row?.chosenIndex ?? own.index) : answerText(own);
+              const mine = own?.kind === "choice" ? optionText(q, row?.chosenIndex ?? own.index) : answerText(own, q);
               const key = row?.correctOptionIndex !== null && row?.correctOptionIndex !== undefined ? optionText(q, row.correctOptionIndex) : (row?.correctText || "");
               return (
                 <li key={id} className={"learning-training-review-item " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
@@ -242,6 +252,7 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
               onTable={(n, v) => setTable(id, n, v)}
               onText={v => setText(id, v)}
               onField={(f, v) => setField(id, f, v)}
+              onAnswer={next => setRegistered(id, next)}
               disabled={submitting}
             />
           );
