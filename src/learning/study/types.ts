@@ -9,7 +9,9 @@ export type StudyResponse =
   | { kind: "wordBank"; choices: Record<string, string> }
   | { kind: "matching"; choices: Record<string, string> }
   | { kind: "ordering"; order: string[] }
-  | { kind: "classify"; choices: Record<string, string> };
+  | { kind: "classify"; choices: Record<string, string> }
+  /** 791381s Phase 8B — a network lab: the learner's action list (the server replays and judges it). */
+  | { kind: "network-lab"; actions: unknown[] };
 
 /** The server's study policy: each module is worth up to `modulePointsMax` (20) = round(completed / eligible × 20). */
 export type StudyPolicy = { modulePointsMax: number; moduleCount: number };

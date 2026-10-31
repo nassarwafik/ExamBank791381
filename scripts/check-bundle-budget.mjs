@@ -567,6 +567,17 @@ function main() {
   if (visualChunks.length < VISUAL_GROUP_MIN_CHUNKS) failures.push(`learning visuals are packed into ${visualChunks.length} chunk(s) — the trusted per-module grouping emits ≥ ${VISUAL_GROUP_MIN_CHUNKS}`);
   if (biggest > VISUAL_GROUP_MAX_IMPLS) failures.push(`a learning visual chunk carries ${biggest} implementations (max ${VISUAL_GROUP_MAX_IMPLS}) — that is the eager all-visuals design again`);
   if (unreachable.length) failures.push(`learning visual chunk(s) not behind a dynamic edge of the Reader chunk: ${unreachable.join(", ")}`);
+  // 791381s Phase 8B-2 — the NETWORK LAB: the curriculum simulator (networkTopology@2 workspace + engines) reaches the Reader ONLY
+  // through the lab chunk's dynamic edge — never in the Reader's first-load graph — and the lab chunk never carries the whole
+  // trusted-sim plugin set (it imports the workspace directly).
+  for (const f of readerClosure) { const hit = SMARTSIM_SIGNATURES.filter(sig => read(f).includes(sig)); if (hit.length) failures.push(`${f} (first Reader load) carries the network simulator (${hit.join(", ")}) — the lab must stay lazy`); }
+  const labChunks = all.filter(f => /^NetworkLabActivity-[^.]+\.js$/.test(f));
+  if (!labChunks.length) failures.push("no NetworkLabActivity-*.js lazy chunk was emitted (is the network lab registered behind an import() thunk?)");
+  for (const f of labChunks) if (initial.includes(f) || readerClosure.includes(f)) failures.push(`${f} (the network lab) is part of a static graph — it must load through import() only`);
+  const labClosure = labChunks.length ? staticClosure(dist, labChunks) : [];
+  const pluginSet = labClosure.filter(f => /^trustedSimPlugins-[^.]+\.js$/.test(f));
+  if (pluginSet.length) failures.push(`the network lab statically reaches the whole trusted-sim plugin set (${pluginSet.join(", ")})`);
+  console.log(`Network lab chunk: ${labChunks.join(", ") || "(missing)"} — static closure ${labClosure.filter(f => !initial.includes(f)).length} files, ${kb(labClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0))} KB gzip; none in the Reader's first load`);
   const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
   console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
   console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);

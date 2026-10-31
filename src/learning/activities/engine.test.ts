@@ -11,7 +11,7 @@ const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
 describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5 and Batch 8 renderers)", () => {
-  it("registers ONLY the fifteen allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress (all v1)", () => {
+  it("registers ONLY the sixteen allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress, network-lab (all v1)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -28,13 +28,14 @@ describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–
       { kind: "interactive-diagram", key: "tcp-handshake", versions: [1] },
       { kind: "simulation", key: "cli-terminal", versions: [1] },
       { kind: "simulation", key: "ipv6-compress", versions: [1] },
+      { kind: "simulation", key: "network-lab", versions: [1] },        // 791381s Phase 8B-2 — the server-judged network lab
     ]);
-    expect(productionActivityRegistry.size).toBe(15);
+    expect(productionActivityRegistry.size).toBe(16);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });
-  it("registers exactly FOUR simulations (hub-switch-router-flow, message-delivery, cli-terminal, ipv6-compress) and ONE animation (gateway-flow); no VLAN/subnet renderer", () => {
-    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress"]);
+  it("registers exactly FIVE simulations (hub-switch-router-flow, message-delivery, cli-terminal, ipv6-compress, network-lab) and ONE animation (gateway-flow); no VLAN/subnet renderer", () => {
+    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab"]);
     expect(productionActivityRegistry.list().filter(e => e.kind === "animation").map(e => e.key)).toEqual(["gateway-flow"]);
     expect(productionActivityRegistry.resolve(simBlock)).toBeUndefined();   // the synthetic "vlan" simulation has no renderer
     expect(productionActivityRegistry.has("simulation", "vlan")).toBe(false);

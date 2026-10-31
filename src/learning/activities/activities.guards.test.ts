@@ -97,7 +97,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact fifteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
+  it("registers ONLY the exact sixteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -114,8 +114,9 @@ describe("production registry is an exact allowlist", () => {
       { kind: "interactive-diagram", key: "tcp-handshake", versions: [1] },
       { kind: "simulation", key: "cli-terminal", versions: [1] },
       { kind: "simulation", key: "ipv6-compress", versions: [1] },
+      { kind: "simulation", key: "network-lab", versions: [1] },        // 791381s Phase 8B-2 — the server-judged network lab
     ]);
-    expect(productionActivityRegistry.size).toBe(15);
+    expect(productionActivityRegistry.size).toBe(16);
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });

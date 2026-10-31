@@ -1,0 +1,24 @@
+/* 791381s Phase 8B-2 — the NETWORK LAB card inside the activity shell: the task, the goals (✓ / ✕ after a check, never colour
+   only), the simulator workspace, then «تحقّق من الإعداد» and the server's verdict. Tokens only. */
+.learning-lab{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-lab-intro{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-lh-body); }
+.learning-lab-goals{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-lab-goals-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); }
+.learning-lab-goal-list{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.learning-lab-goal{ color:var(--eb-text); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-lab-goal.is-right{ color:var(--eb-success-tx); }
+.learning-lab-goal.is-wrong{ color:var(--eb-danger-tx); }
+.learning-lab-goal-label{ unicode-bidi:plaintext; }
+.learning-lab-mark{ display:inline-flex; align-items:center; margin-inline-start:var(--eb-space-2); vertical-align:middle; }
+.learning-lab-mark.is-right{ color:var(--eb-success); }
+.learning-lab-mark.is-wrong{ color:var(--eb-danger); }
+.learning-lab-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.learning-lab-stage{ min-width:0; overflow-x:auto; }
+.learning-lab-check{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--eb-space-2); }
+.learning-lab-status{ margin:0; font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-lab-status:empty{ display:none; }
+.learning-lab-status.is-right{ color:var(--eb-success-tx); }
+.learning-lab-status.is-wrong, .learning-lab-status.is-error{ color:var(--eb-danger-tx); }
+.learning-lab-message, .learning-lab-explanation, .learning-lab-note, .learning-lab-unavailable{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-lab-explanation{ padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-lab-hints{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); }

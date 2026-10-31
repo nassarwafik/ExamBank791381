@@ -1,7 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck, IconInfo } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
+import { isActivityBlock, isNetworkLabBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import { studyActivityIds } from "../study/eligibility";
@@ -12,7 +12,7 @@ import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
 import VisualBlockView from "../visuals/VisualBlockView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
-import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
+import type { LearningActivityRegistry, LearningActivityEventSink, ActivityCheck } from "../activities/engine";
 
 /** Injection seam for the interactive-activity engine. The reader passes nothing → the PRODUCTION registry (the
  *  enumerated, test-pinned allowlist in `activities/engine.ts` — every renderer is a static import thunk keyed by
@@ -447,8 +447,22 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "animation":
     case "guided":
     case "interactive-diagram":
-      return <LearningActivityHost block={block} courseId={ctx.courseId} registry={ctx.registry} emit={ctx.emit} />;
+      return <LearningActivityHost block={block} courseId={ctx.courseId} registry={ctx.registry} emit={ctx.emit} check={labCheckOf(block, ctx)} />;
   }
+}
+
+/**
+ * 791381s Phase 8B — the server-check seam of a NETWORK LAB: only for a SERVED lab (`serverCheck`: its key stayed on the
+ * server) inside a study host with a page id. The answer goes through the study host (POST /api/learning-study/…/attempt);
+ * the activity receives the verdict only. Anything else → undefined (the lab is explore-only, never judged in the browser).
+ */
+function labCheckOf(block: ContentBlock, ctx: ActivityRenderContext): ActivityCheck | undefined {
+  if (!isNetworkLabBlock(block) || block.serverCheck !== true || !ctx.study || !ctx.pageId) return undefined;
+  const { study, pageId } = ctx;
+  return async response => {
+    const r = await study.report(pageId, block.id, response);
+    return { correct: r.correct, parts: r.parts, feedback: r.feedback, study: r.study, persisted: r.persisted, alreadyCompleted: r.alreadyCompleted };
+  };
 }
 
 function ExampleView({ block }: { block: Extract<ContentBlock, { type: "example" }> }) {

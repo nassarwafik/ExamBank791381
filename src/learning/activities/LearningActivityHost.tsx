@@ -4,7 +4,7 @@ import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import { activityKey, type ActivityBlock, type ActivityCapabilities, type ActivityCommand } from "../content/types";
 import {
   productionActivityRegistry, noopActivityEventSink,
-  type LearningActivityRegistry, type LearningActivityEventSink, type ActivityComponent, type ActivityCommandSignals,
+  type LearningActivityRegistry, type LearningActivityEventSink, type ActivityComponent, type ActivityCommandSignals, type ActivityCheck,
 } from "./engine";
 import { ACTIVITY_KIND_LABEL } from "./labels";
 import { builtinActivityRegistry } from "./builtins";
@@ -36,7 +36,7 @@ import "./activities.css";
  *   - Events flow to the INJECTED sink (default: no-op). No persistence, no network, no progress/grades.
  */
 export default function LearningActivityHost({
-  block, courseId, registry = productionActivityRegistry, emit = noopActivityEventSink, builtins = builtinActivityRegistry,
+  block, courseId, registry = productionActivityRegistry, emit = noopActivityEventSink, builtins = builtinActivityRegistry, check,
 }: {
   block: ActivityBlock;
   courseId: string;
@@ -45,6 +45,8 @@ export default function LearningActivityHost({
   /** Phase 13C-A — which built-in presenters may resolve (default: the learning built-ins). Assessment context passes an
    *  EMPTY registry so teaching scaffolding presenters (guided/reveal) are never live inside an exam. */
   builtins?: LearningActivityRegistry;
+  /** 791381s Phase 8B — the host's server-check seam, passed through to the renderer untouched (a served network lab only). */
+  check?: ActivityCheck;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [fullscreen, setFullscreen] = useState(false);
@@ -173,7 +175,7 @@ export default function LearningActivityHost({
       {block.description && <p className="learning-activity-desc">{block.description}</p>}
       <div className="learning-activity-stage">
         <LearningActivityBoundary fallback={<ActivityFallback block={block} reason="error" />} onError={onCompError}>
-          <Comp block={block} courseId={courseId} reducedMotion={reducedMotion} fullscreen={fullscreen} commands={commands} emit={emit} />
+          <Comp block={block} courseId={courseId} reducedMotion={reducedMotion} fullscreen={fullscreen} commands={commands} emit={emit} check={check} />
         </LearningActivityBoundary>
       </div>
     </div>
