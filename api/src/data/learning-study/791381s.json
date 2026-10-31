@@ -1597,6 +1597,925 @@
           "answer": false
         }
       }
+    },
+    "791381s-m20-l02-p01": {
+      "moduleId": "791381s-m20",
+      "activities": {
+        "m20-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m20-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m20-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m20-l02-p01-q04": {
+          "kind": "classify",
+          "assign": {
+            "easy": "pro",
+            "range": "con",
+            "flex": "pro",
+            "noise": "con",
+            "many": "pro",
+            "weak": "con"
+          }
+        },
+        "m20-l02-p01-q05": {
+          "kind": "matching",
+          "pairs": {
+            "wlan": "r2",
+            "wwan": "r3",
+            "wpan": "r1"
+          }
+        },
+        "m20-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m20-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m20-l02-p01-q08": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "اسم",
+            "b2": "نقطة الوصول",
+            "b3": "كلمة المرور"
+          }
+        },
+        "m20-l02-p01-q09": {
+          "kind": "ordering",
+          "order": [
+            "wep",
+            "wpa",
+            "wpa2"
+          ]
+        },
+        "m20-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m20-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m20-l02-p01-q12": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381s-m21-l02-p01": {
+      "moduleId": "791381s-m21",
+      "activities": {
+        "m21-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m21-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m21-l02-p01-q03": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m21-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m21-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m21-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m21-l02-p01-q07": {
+          "kind": "ordering",
+          "order": [
+            "full",
+            "r1",
+            "r2"
+          ]
+        },
+        "m21-l02-p01-q08": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "الجهاز",
+            "b2": "البرنامج",
+            "b3": "البناية",
+            "b4": "الشقة"
+          }
+        },
+        "m21-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "p80": "r3",
+            "p443": "r6",
+            "p22": "r1",
+            "p23": "r5",
+            "p21": "r4",
+            "p53": "r2"
+          }
+        },
+        "m21-l02-p01-q10": {
+          "kind": "classify",
+          "assign": {
+            "pop3": "recv",
+            "smtp": "send",
+            "imap": "recv"
+          }
+        },
+        "m21-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m21-l02-p01-q12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        }
+      }
+    },
+    "791381s-m22-l02-p01": {
+      "moduleId": "791381s-m22",
+      "activities": {
+        "m22-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m22-l02-p01-q02": {
+          "kind": "ordering",
+          "order": [
+            "discover",
+            "offer",
+            "request",
+            "ack"
+          ]
+        },
+        "m22-l02-p01-q03": {
+          "kind": "classify",
+          "assign": {
+            "offer": "server",
+            "discover": "device",
+            "ack": "server",
+            "request": "device"
+          }
+        },
+        "m22-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m22-l02-p01-q05": {
+          "kind": "matching",
+          "pairs": {
+            "pool": "r3",
+            "network": "r5",
+            "gw": "r4",
+            "dns": "r1",
+            "excl": "r2"
+          }
+        },
+        "m22-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m22-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m22-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m22-l02-p01-q09": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "مدة",
+            "b2": "يجدّد",
+            "b3": "APIPA"
+          }
+        },
+        "m22-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m22-l02-p01-q11": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m22-l02-p01-q12": {
+          "kind": "ordering",
+          "order": [
+            "open",
+            "on",
+            "def",
+            "save",
+            "test"
+          ]
+        }
+      }
+    },
+    "791381s-m23-l02-p01": {
+      "moduleId": "791381s-m23",
+      "activities": {
+        "m23-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m23-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m23-l02-p01-q03": {
+          "kind": "ordering",
+          "order": [
+            "if",
+            "mode",
+            "ps",
+            "mac",
+            "viol"
+          ]
+        },
+        "m23-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m23-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m23-l02-p01-q06": {
+          "kind": "classify",
+          "assign": {
+            "i1": "static",
+            "i2": "sticky",
+            "i3": "static",
+            "i4": "sticky",
+            "i5": "sticky"
+          }
+        },
+        "m23-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m23-l02-p01-q08": {
+          "kind": "matching",
+          "pairs": {
+            "ps": "r3",
+            "mac": "r5",
+            "sticky": "r4",
+            "max": "r2",
+            "viol": "r1"
+          }
+        },
+        "m23-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m23-l02-p01-q10": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "Access",
+            "b2": "maximum",
+            "b3": "مخالفة"
+          }
+        },
+        "m23-l02-p01-q11": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381s-m24-l02-p01": {
+      "moduleId": "791381s-m24",
+      "activities": {
+        "m24-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m24-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m24-l02-p01-q03": {
+          "kind": "matching",
+          "pairs": {
+            "console": "r3",
+            "vty": "r2",
+            "enable": "r1"
+          }
+        },
+        "m24-l02-p01-q04": {
+          "kind": "classify",
+          "assign": {
+            "i1": "near",
+            "i2": "remote",
+            "i3": "remote",
+            "i4": "near"
+          }
+        },
+        "m24-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m24-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m24-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m24-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m24-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m24-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m24-l02-p01-q11": {
+          "kind": "classify",
+          "assign": {
+            "i1": "running",
+            "i2": "startup",
+            "i3": "startup",
+            "i4": "running"
+          }
+        },
+        "m24-l02-p01-q12": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "show",
+            "b2": "startup-config"
+          }
+        }
+      }
+    },
+    "791381s-m25-l02-p01": {
+      "moduleId": "791381s-m25",
+      "activities": {
+        "m25-l02-p01-q01": {
+          "kind": "ordering",
+          "order": [
+            "en",
+            "conf",
+            "host",
+            "if",
+            "noshut"
+          ]
+        },
+        "m25-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m25-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m25-l02-p01-q04": {
+          "kind": "classify",
+          "assign": {
+            "i1": "vtp",
+            "i2": "ros",
+            "i3": "vlan",
+            "i4": "ps",
+            "i5": "pw",
+            "i6": "ros"
+          }
+        },
+        "m25-l02-p01-q05": {
+          "kind": "matching",
+          "pairs": {
+            "server": "r4",
+            "client": "r2",
+            "range": "r1",
+            "enc": "r3"
+          }
+        },
+        "m25-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m25-l02-p01-q07": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m25-l02-p01-q08": {
+          "kind": "matching",
+          "pairs": {
+            "vlan": "r2",
+            "route": "r3",
+            "mac": "r4",
+            "cdp": "r1"
+          }
+        },
+        "m25-l02-p01-q09": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m25-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m25-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m25-l02-p01-q12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        }
+      }
+    },
+    "791381s-m26-l02-p01": {
+      "moduleId": "791381s-m26",
+      "activities": {
+        "m26-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m26-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m26-l02-p01-q03": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m26-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m26-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m26-l02-p01-q06": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m26-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m26-l02-p01-q08": {
+          "kind": "matching",
+          "pairs": {
+            "fr": "r2",
+            "atm": "r4",
+            "hdlc": "r3",
+            "metro": "r1"
+          }
+        },
+        "m26-l02-p01-q09": {
+          "kind": "classify",
+          "assign": {
+            "i1": "new",
+            "i2": "old",
+            "i3": "new",
+            "i4": "old"
+          }
+        },
+        "m26-l02-p01-q10": {
+          "kind": "classify",
+          "assign": {
+            "i1": "wan",
+            "i2": "lan",
+            "i3": "wan",
+            "i4": "wan"
+          }
+        },
+        "m26-l02-p01-q11": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "قارات",
+            "b2": "فروع",
+            "b3": "الألياف الضوئية"
+          }
+        }
+      }
+    },
+    "791381s-m27-l02-p01": {
+      "moduleId": "791381s-m27",
+      "activities": {
+        "m27-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m27-l02-p01-q02": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "شرطي المرور",
+            "b2": "IP",
+            "b3": "جدول التوجيه"
+          }
+        },
+        "m27-l02-p01-q03": {
+          "kind": "matching",
+          "pairs": {
+            "static": "r2",
+            "ospf": "r3",
+            "eigrp": "r1"
+          }
+        },
+        "m27-l02-p01-q04": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m27-l02-p01-q05": {
+          "kind": "classify",
+          "assign": {
+            "i1": "con",
+            "i2": "pro",
+            "i3": "con",
+            "i4": "pro",
+            "i5": "con",
+            "i6": "pro"
+          }
+        },
+        "m27-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m27-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m27-l02-p01-q08": {
+          "kind": "classify",
+          "assign": {
+            "i1": "ls",
+            "i2": "dv",
+            "i3": "ls",
+            "i4": "dv",
+            "i5": "ls"
+          }
+        },
+        "m27-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "ospf": "r3",
+            "eigrp": "r2",
+            "rip": "r1"
+          }
+        },
+        "m27-l02-p01-q10": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m27-l02-p01-q11": {
+          "kind": "ordering",
+          "order": [
+            "connected",
+            "static",
+            "eigrp",
+            "ospf",
+            "rip"
+          ]
+        },
+        "m27-l02-p01-q12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        }
+      }
+    },
+    "791381s-m28-l02-p01": {
+      "moduleId": "791381s-m28",
+      "activities": {
+        "m28-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m28-l02-p01-q02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m28-l02-p01-q03": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "Link-State",
+            "b2": "الكبيرة والمعقّدة",
+            "b3": "خريطة كاملة",
+            "b4": "Bandwidth"
+          }
+        },
+        "m28-l02-p01-q04": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m28-l02-p01-q05": {
+          "kind": "classify",
+          "assign": {
+            "i1": "both",
+            "i2": "r2",
+            "i3": "r1"
+          }
+        },
+        "m28-l02-p01-q06": {
+          "kind": "ordering",
+          "order": [
+            "router",
+            "net24",
+            "net30"
+          ]
+        },
+        "m28-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m28-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m28-l02-p01-q09": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m28-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m28-l02-p01-q11": {
+          "kind": "matching",
+          "pairs": {
+            "proc": "r3",
+            "wc24": "r4",
+            "wc30": "r2",
+            "area": "r1"
+          }
+        },
+        "m28-l02-p01-q12": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "متصلة",
+            "b2": "Wildcard",
+            "b3": "area"
+          }
+        }
+      }
+    },
+    "791381s-m29-l02-p01": {
+      "moduleId": "791381s-m29",
+      "activities": {
+        "m29-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m29-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m29-l02-p01-q03": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "Distance Vector متطوّر",
+            "b2": "Cisco",
+            "b3": "Bandwidth + Delay",
+            "b4": "الطرق الصحيحة"
+          }
+        },
+        "m29-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m29-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m29-l02-p01-q06": {
+          "kind": "ordering",
+          "order": [
+            "as",
+            "lan",
+            "link"
+          ]
+        },
+        "m29-l02-p01-q07": {
+          "kind": "classify",
+          "assign": {
+            "i1": "eigrp",
+            "i2": "ospf",
+            "i3": "ospf",
+            "i4": "eigrp",
+            "i5": "ospf",
+            "i6": "eigrp"
+          }
+        },
+        "m29-l02-p01-q08": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m29-l02-p01-q09": {
+          "kind": "matching",
+          "pairs": {
+            "c": "r2",
+            "s": "r4",
+            "r": "r5",
+            "o": "r1",
+            "d": "r3"
+          }
+        },
+        "m29-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m29-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        }
+      }
+    },
+    "791381s-m30-l02-p01": {
+      "moduleId": "791381s-m30",
+      "activities": {
+        "m30-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m30-l02-p01-q02": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "قواعد",
+            "b2": "حارس البوابة",
+            "b3": "الجدران النارية"
+          }
+        },
+        "m30-l02-p01-q03": {
+          "kind": "classify",
+          "assign": {
+            "i1": "ext",
+            "i2": "std",
+            "i3": "ext",
+            "i4": "std",
+            "i5": "ext",
+            "i6": "std"
+          }
+        },
+        "m30-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m30-l02-p01-q05": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m30-l02-p01-q06": {
+          "kind": "ordering",
+          "order": [
+            "list",
+            "if",
+            "apply"
+          ]
+        },
+        "m30-l02-p01-q07": {
+          "kind": "matching",
+          "pairs": {
+            "net": "r4",
+            "deny": "r2",
+            "any": "r5",
+            "host": "r1",
+            "in": "r3"
+          }
+        },
+        "m30-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m30-l02-p01-q09": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m30-l02-p01-q10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m30-l02-p01-q11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m30-l02-p01-q12": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
     }
   }
 }

@@ -233,3 +233,37 @@ network-domains explorer applies the booklet's rule «كل منفذ في الس�
 m19-p03's range trunk exercise shows `(config-if)#` (its description tells the student).
 
 Guards: the units-1–19 practice-page test; visual gate: `learning-search` declared (pages 210 → 221).
+
+## 9. Phase 6 record — «الدفعتان 5–6» (units 20–30) enriched
+
+| Unit | Visuals / activities added (reused, labels checked) | «تدريبات الوحدة» |
+|---|---|---|
+| 20 DMZ و Wi-Fi | dmz-three-zone, wifi-radio-link, wireless-network-types, ssid-beacon, wifi-protection-technologies, access-point-bridge | 12 |
+| 21 IPv6 والمنافذ | ipv6-anatomy, well-known-ports; `ipv6-compress` (the booklet's three examples, character for character) | 12 |
+| 22 DHCP | dhcp-automatic-config, dhcp-dora, dhcp-pool-excluded, dedicated-dhcp-server; 2 × `cli-terminal` (interface + pool LAN; default-router / dns-server / excluded-address) | 12 |
+| 23 Port Security | port-security-scenario; 3 × `cli-terminal` (static MAC 00A0.1234.5678, sticky, maximum 3) | 11 |
+| 24 كلمات المرور | device-security-layers, device-access-paths; 3 × `cli-terminal` (console, vty 0 4, enable secret + service password-encryption) | 12 |
+| 25 مرجع الأوامر | 2 × `cli-terminal` (hostname SW1 / banner / g0/0; port security with maximum 2 — this page's number) | 12 |
+| 26 WAN | frame-relay-vs-atm, hdlc-vs-metro | 11 |
+| 27 التوجيه | routing-methods-overview, static-route-path, routing-update-types, admin-distance-summary; `cli-terminal` (ip route 192.168.2.0 255.255.255.0 10.0.0.2) | 12 |
+| 28 OSPF | ospf-topology (the booklet drawing), wildcard-inversion; 2 × `cli-terminal` (R1 / R2) | 12 |
+| 29 EIGRP | eigrp-metric-adaptation («Distance Vector» — this page's wording), show-ip-route ([120/1] via 192.168.1.1); 2 × `cli-terminal` (AS 100) | 11 |
+| 30 ACL | acl-gate, standard-acl-source, extended-acl-decision («مثل 80 أو 443» is on that page); 3 × `cli-terminal` (standard 10, 10/20/30 examples, extended 100 eq 80) | 12 |
+
+129 new questions (356 in units 1–30). Every CLI exercise ran through the real reader + engine with the booklet's command lines
+and completes (and, as a negative check, R2 does not complete with `router eigrp 200`).
+
+**Rejected or removed by the lead**: port-security-config-summary (Restrict / Protect), route-types-summary (0.0.0.0/0), wan-vs-lan-scope
+(ownership / provider claims), ssh-vs-telnet on unit 24 («نص مقروء»), cli-mode-ladder (draws `vlan 10`), apipa-fallback on unit 22, the
+extended-ACL sim with port 443, the show-commands map on unit 25 (adds a grouping — «show interfaces» under «Config» — the booklet's table
+does not have), and a duplicate AD visual on unit 27's Metric page (kept on its AD page). No `copy` CLI exercise (the engine has no
+`copy`), no show-command exercise (4 of the 13 table commands are not in the engine).
+
+**Checked, not an error**: unit 21 «db8 → 0db8»: on the printed page (PDF 64) the arrow points from «0db8» to «db8»; the Reader shows the
+same visual order (direction marks), so the meaning «احذف الأصفار» is right.
+
+**Notes for review**: m30-p05's extended exercise applies the list on g0/0 (the page names no interface; the unit's standard page uses
+g0/0); m23-p03/p04 and m25-p02 run on f0/1 (the unit's p02 port); m24's first visual already names Console / VTY / Enable (introduced on
+the next page of the same unit).
+
+Guards: units-1–30 practice-page test; visual gate: `learning-search` declared (pages 221 → 232).

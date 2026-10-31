@@ -230,6 +230,11 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "791381s Phase 5 — units 9–19 gain their «تدريبات الوحدة» page, so every booklet search hit's «الصفحة X من Y» reads Y = 221 (was 210) and X shifts after each added page; no hit, title or layout changes."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "791381s Phase 6 — units 20–30 gain their «تدريبات الوحدة» page, so every booklet search hit's «الصفحة X من Y» reads Y = 232 (was 221) and X shifts after each added page; no hit, title or layout changes."
     }
   ]
 }
