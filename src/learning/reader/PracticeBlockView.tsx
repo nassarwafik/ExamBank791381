@@ -3,7 +3,7 @@ import { IconCheck, IconClose } from "../../icons";
 import { hintLadder, type PracticeQuestion } from "../content/types";
 import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFeedbackState, type LearningResponse } from "../practice/evaluator";
 import { practiceQuestionKey } from "../study/eligibility";
-import type { StudyAttemptResponse, StudyHost } from "../study/types";
+import type { StudyAttemptResponse, StudyHost, StudyReveal } from "../study/types";
 
 /** A server check of one answer (L.6b): in flight, answered, or not reachable (never shown as a wrong answer). */
 type ServerCheck = { stamp: string; kind: "pending" } | { stamp: string; kind: "done"; r: StudyAttemptResponse } | { stamp: string; kind: "error" };
@@ -32,9 +32,20 @@ type ServerCheck = { stamp: string; kind: "pending" } | { stamp: string; kind: "
  * the reply is on its way the view says so; when the server cannot be reached it says that and offers a retry — a transport
  * failure is never shown as a wrong answer. Each distinct answer is asked once per mount. Without a host a served block is
  * shown statically. An authored block (the key in the content: tests and tools) keeps the local checker above.
+ *
+ * REVEAL MODE (791381s Phase 2, `reveal`): the owner's «يختار الطالب، يظهر الخطأ بالأحمر والصحيح بالأخضر مع شرح بسيط تحته».
+ * After an answer the question locks: the chosen wrong option turns red (✕ إجابتك), the right option green (✓ الإجابة الصحيحة),
+ * and the explanation shows under the verdict for a right or a wrong answer alike; «أعد السؤال» clears it. No hint ladder. The
+ * right answer comes from the server's reply to that answer (served block) or from the authored key (tools/tests) — never before
+ * an answer. A right answer after a shown answer earns nothing: the server says `revealedBefore`, and the local path never
+ * reports it either.
  */
-export default function PracticeBlockView({ question, activityId, pageId, study, serverCheck = false, studyEligible = true }: {
+export default function PracticeBlockView({ question, activityId, pageId, study, serverCheck = false, studyEligible = true, reveal = false, onVerdict }: {
   question: PracticeQuestion; activityId?: string; pageId?: string; study?: StudyHost;
+  /** Reveal mode (see the header): lock after an answer and show the right answer with the explanation. */
+  reveal?: boolean;
+  /** Told the verdict on screen (right / wrong, or null when cleared / undecided) — the practice page's running score. */
+  onVerdict?: (activityId: string, verdict: "right" | "wrong" | null) => void;
   /** The block arrived without its answer material (L.6b): the server judges every answer. */
   serverCheck?: boolean;
   /** False for a self-check block (`studyEligible: false`): judged, never recorded. */
@@ -46,6 +57,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
   const [feedback, setFeedback] = useState<LearningFeedbackState>(INITIAL_FEEDBACK_STATE);
   const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
   const reportedRef = useRef<string | null>(null);        // the response the server ACCEPTED (never re-reported)
+  const revealedRef = useRef(false);                      // reveal mode: the right answer was shown after a wrong answer
   const inFlightRef = useRef<string | null>(null);        // the response currently being reported (never duplicated)
   const latestStampRef = useRef<string | null>(null);     // the answer currently on screen (a late outcome for an old answer is dropped)
   const mountedRef = useRef(true);
@@ -68,7 +80,13 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
     : local?.status === "correct" ? "right" : local && local.status !== "unknown" ? "wrong" : "empty";
   const message = server ? reply?.feedback?.message : local?.message;
   const explanation = server ? reply?.feedback?.explanation : question.feedback?.explanation;
-  const ladder = server ? (reply?.feedback?.hints ?? []) : hintLadder(question.feedback);
+  const ladder = reveal ? [] : server ? (reply?.feedback?.hints ?? []) : hintLadder(question.feedback);
+  // Reveal mode: the right answer, known only once an answer has been judged (the server's reply, or the authored key).
+  const revealed: StudyReveal | null = !reveal || (status !== "right" && status !== "wrong") ? null
+    : server ? (reply?.reveal ?? null) : localReveal(question);
+  const locked = reveal && (status === "right" || status === "wrong");
+  // Remember that the right answer was shown after a wrong answer (declared before the reporting effect, which reads it).
+  useEffect(() => { if (locked && status === "wrong") revealedRef.current = true; }, [locked, status]);
   const shownHints = ladder.slice(0, feedback.revealedHints);
   const feedbackId = baseId + "-fb";
 
@@ -99,6 +117,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
   // right answer can be reported again (the server stays authoritative and idempotent — a retry can never farm).
   useEffect(() => {
     if (server) return;                                    // server mode: every answer was already asked (see `ask`)
+    if (reveal && revealedRef.current) return;             // reveal mode: the answer was shown after a wrong one → never reported
     if (!eligible || !study || !activityId || !pageId || !response || status !== "right") { latestStampRef.current = null; return; }
     const stamp = JSON.stringify(response);
     latestStampRef.current = stamp;
@@ -108,7 +127,11 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
       .then(r => { reportedRef.current = stamp; if (mountedRef.current && latestStampRef.current === stamp) setOutcome(r); })
       .catch(() => { /* quiet: the local verdict stands; the marker is released so a later pick reports again */ })
       .finally(() => { if (inFlightRef.current === stamp) inFlightRef.current = null; });
-  }, [server, eligible, study, activityId, pageId, response, status]);
+  }, [server, reveal, eligible, study, activityId, pageId, response, status]);
+
+  // The practice page's running score: the verdict on screen, or null while there is none.
+  const verdictNow: "right" | "wrong" | null = status === "right" || status === "wrong" ? status : null;
+  useEffect(() => { if (onVerdict && activityId) onVerdict(activityId, verdictNow); }, [onVerdict, activityId, verdictNow]);
 
   if (!hasKey) return <StaticPractice question={question} offline={server} />;
 
@@ -120,17 +143,20 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
         <div className="learning-reader-practice-options" role="radiogroup" aria-labelledby={baseId + "-q"}>
           {question.options.map(o => {
             const picked = response?.kind === "multipleChoice" && response.optionId === o.id;
+            const isAnswer = revealed?.kind === "multipleChoice" && revealed.optionIds.includes(o.id);
             return (
               <button
                 key={o.id}
                 type="button"
                 role="radio"
                 aria-checked={picked}
-                className={"learning-reader-practice-option" + (picked ? " is-picked is-" + status : "")}
-                onClick={() => answer({ kind: "multipleChoice", optionId: o.id })}
+                aria-disabled={locked || undefined}
+                className={"learning-reader-practice-option" + (picked ? " is-picked is-" + status : "") + (isAnswer ? " is-answer" : "")}
+                onClick={locked ? undefined : () => answer({ kind: "multipleChoice", optionId: o.id })}
               >
                 <span className="learning-reader-practice-radio" aria-hidden="true">{picked ? "●" : "○"}</span>
                 <span className="learning-reader-practice-optiontext">{o.text}</span>
+                {locked && <RevealTag picked={picked} isAnswer={isAnswer} />}
               </button>
             );
           })}
@@ -141,12 +167,14 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
         <div className="learning-reader-practice-options" role="radiogroup" aria-labelledby={baseId + "-q"}>
           {[{ value: true, label: "صح" }, { value: false, label: "خطأ" }].map(o => {
             const picked = response?.kind === "trueFalse" && response.value === o.value;
+            const isAnswer = revealed?.kind === "trueFalse" && revealed.answer === o.value;
             return (
-              <button key={o.label} type="button" role="radio" aria-checked={picked}
-                className={"learning-reader-practice-option" + (picked ? " is-picked is-" + status : "")}
-                onClick={() => answer({ kind: "trueFalse", value: o.value })}>
+              <button key={o.label} type="button" role="radio" aria-checked={picked} aria-disabled={locked || undefined}
+                className={"learning-reader-practice-option" + (picked ? " is-picked is-" + status : "") + (isAnswer ? " is-answer" : "")}
+                onClick={locked ? undefined : () => answer({ kind: "trueFalse", value: o.value })}>
                 <span className="learning-reader-practice-radio" aria-hidden="true">{picked ? "●" : "○"}</span>
                 <span className="learning-reader-practice-optiontext">{o.label}</span>
+                {locked && <RevealTag picked={picked} isAnswer={isAnswer} />}
               </button>
             );
           })}
@@ -183,11 +211,14 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
           <p className="learning-reader-practice-feedback">
             {status === "right"
               ? <><IconCheck size={14} aria-hidden="true" />✓ صحيح</>
-              : <><IconClose size={14} aria-hidden="true" />✕ غير صحيح — حاول مرة أخرى</>}
+              : reveal
+                ? <><IconClose size={14} aria-hidden="true" /><span>✕ إجابة خاطئة{revealText(question, revealed) && <> — الإجابة الصحيحة: <strong>{revealText(question, revealed)}</strong></>}</span></>
+                : <><IconClose size={14} aria-hidden="true" />✕ غير صحيح — حاول مرة أخرى</>}
           </p>
           {message && <p className="learning-reader-practice-message">{message}</p>}
-          {status === "right" && explanation && <p className="learning-reader-practice-explain">{explanation}</p>}
-          {status === "right" && outcome && <StudyOutcome outcome={outcome} />}
+          {(status === "right" || reveal) && explanation && <p className="learning-reader-practice-explain"><span className="learning-reader-practice-explain-label">الشرح: </span>{explanation}</p>}
+          {status === "right" && outcome?.revealedBefore && <p className="learning-reader-study-outcome is-revealed" role="status">عُرضت الإجابة الصحيحة لهذا السؤال من قبل، لذلك لا تُحسب له نقاط قوة.</p>}
+          {status === "right" && outcome && !outcome.revealedBefore && <StudyOutcome outcome={outcome} />}
           {status === "wrong" && shownHints.length > 0 && (
             <ol className="learning-reader-practice-hints" aria-label="التلميحات">
               {shownHints.map((h, i) => <li key={i}><span className="learning-reader-practice-hintno">تلميح {i + 1}</span>{h}</li>)}
@@ -197,7 +228,9 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
       )}
 
       <div className="learning-reader-practice-foot">
-        <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُسجَّل لك مرة واحدة وترفع نقاط قوة هذه الوحدة (حتى 20 نقطة للوحدة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
+        <p className="learning-reader-practice-hint">{reveal
+          ? (eligible ? "اختر إجابتك: تظهر الإجابة الصحيحة والشرح فورًا. إذا أجبت صحيحًا من أول مرة تُسجَّل لك وترفع نقاط قوة هذه الوحدة." : "اختر إجابتك: تظهر الإجابة الصحيحة والشرح فورًا. لا يُحفظ شيء ولا تُحسب نقاط.")
+          : eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُسجَّل لك مرة واحدة وترفع نقاط قوة هذه الوحدة (حتى 20 نقطة للوحدة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
         <div className="learning-reader-practice-actions">
           {status === "wrong" && feedback.revealedHints < ladder.length && (
             <button type="button" className="eb-button is-quiet is-small" onClick={() => setFeedback(s => (server ? { ...s, revealedHints: Math.min(s.revealedHints + 1, ladder.length) } : revealNextHint(question.feedback, s)))}>
@@ -205,7 +238,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
             </button>
           )}
           {(response !== null || feedback.revealedHints > 0) && (
-            <button type="button" className="eb-button is-quiet is-small" onClick={clear}>امسح الإجابة</button>
+            <button type="button" className="eb-button is-quiet is-small" onClick={clear}>{reveal ? "أعد السؤال" : "امسح الإجابة"}</button>
           )}
         </div>
       </div>
@@ -222,6 +255,28 @@ export function StudyOutcome({ outcome }: { outcome: StudyAttemptResponse }) {
   if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">هذا التمرين محسوب سابقًا.</p>;
   if (outcome.module.points >= outcome.module.max) return <p className="learning-reader-study-outcome is-module-full" role="status">أكملت نقاط قوة هذه الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span></p>;
   return <p className="learning-reader-study-outcome is-recorded" role="status">سُجّل التمرين ({outcome.module.completed} من {outcome.module.eligible} في هذه الوحدة) — نقاط قوة الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span>.</p>;
+}
+
+/** Reveal mode: the tag beside an option once the question is locked — never colour-only (icon + words). */
+function RevealTag({ picked, isAnswer }: { picked: boolean; isAnswer: boolean }) {
+  if (isAnswer) return <span className="learning-reader-practice-revealtag is-answer"><IconCheck size={14} aria-hidden="true" />الإجابة الصحيحة</span>;
+  if (picked) return <span className="learning-reader-practice-revealtag is-wrong"><IconClose size={14} aria-hidden="true" />إجابتك</span>;
+  return null;
+}
+
+/** The right answer of an AUTHORED question (tools / tests; a served block gets it from the server's reply). */
+function localReveal(question: PracticeQuestion): StudyReveal | null {
+  if (question.kind === "multipleChoice") { const ids = question.options.filter(o => o.correct === true).map(o => o.id); return ids.length ? { kind: "multipleChoice", optionIds: ids } : null; }
+  if (question.kind === "trueFalse" && typeof question.answer === "boolean") return { kind: "trueFalse", answer: question.answer };
+  return null;
+}
+
+/** The right answer as words for the verdict line («الإجابة الصحيحة: …»), or "" when unknown. */
+function revealText(question: PracticeQuestion, revealed: StudyReveal | null): string {
+  if (!revealed) return "";
+  if (revealed.kind === "trueFalse") return revealed.answer ? "صح" : "خطأ";
+  if (question.kind !== "multipleChoice") return "";
+  return question.options.filter(o => revealed.optionIds.includes(o.id)).map(o => o.text).join(" · ");
 }
 
 /** The kinds that have a complete interactive answering surface in this view. */

@@ -411,6 +411,31 @@
 .learning-reader-practice-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 @media (prefers-reduced-motion: reduce){ .learning-reader-practice.is-interactive .learning-reader-practice-option{ transition:none; } }
 
+/* ── 791381s Phase 2 — REVEAL mode (PracticeBlockView `reveal`): after an answer the question locks; the right option is green
+   (✓ الإجابة الصحيحة), the chosen wrong option red (✕ إجابتك), the explanation sits under the verdict. Never colour-only: every
+   state also carries an icon and words. Tokens only (the dark theme re-maps them). ─────────────────────────────────────────── */
+.learning-reader-practice-option.is-answer{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
+.learning-reader-practice-option.is-picked.is-wrong{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-reader-practice-option[aria-disabled="true"]{ cursor:default; }
+.learning-reader-practice.is-interactive .learning-reader-practice-option[aria-disabled="true"]:hover{ border-color:inherit; }
+.learning-reader-practice.is-interactive .learning-reader-practice-option.is-answer[aria-disabled="true"]:hover{ border-color:var(--eb-success); }
+.learning-reader-practice.is-interactive .learning-reader-practice-option.is-picked.is-wrong[aria-disabled="true"]:hover{ border-color:var(--eb-danger); }
+.learning-reader-practice-revealtag{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
+.learning-reader-practice-revealtag.is-answer{ background:var(--eb-success); color:var(--eb-surface); }
+.learning-reader-practice-revealtag.is-wrong{ background:var(--eb-danger); color:var(--eb-surface); }
+.learning-reader-practice-verdict.is-wrong .learning-reader-practice-feedback{ color:var(--eb-danger-tx); }
+.learning-reader-practice-verdict.is-right .learning-reader-practice-feedback{ color:var(--eb-success-tx); }
+.learning-reader-practice-explain-label{ font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-reader-study-outcome.is-revealed{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
+
+/* «تدريبات الوحدة» page (layout "practice"): a how-to line, the questions, then the running score / result with «أعد كل الأسئلة». */
+.learning-unit-practice-intro{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-unit-practice-items{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-unit-practice-score{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-unit-practice-score.is-done{ border-color:var(--eb-success); background:var(--eb-success-bg); }
+.learning-unit-practice-progress, .learning-unit-practice-result{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.learning-reader-frombook.is-enrichment{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+
 @media (min-width: 1024px){
   /* Phase 12A — the reading scale steps up on the wide canvas (body 19px, title 32px, roomier block gap). The title
      token itself steps too, so anything floored at it (the presentation title) follows the desktop title size. */

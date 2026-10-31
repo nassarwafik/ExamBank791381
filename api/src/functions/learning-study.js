@@ -6,7 +6,8 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT } = require("../lib/student-strength");
-const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, normalizeStudyDoc, applyStudyCompletion, studyStateOf } = require("../lib/learning-study");
+const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, studyStateOf } = require("../lib/learning-study");
+const { listLearningModules } = require("../lib/learning-materials-registry");
 const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/learning-check");
 
 // Study Practice Strength API — the SERVER AUTHORITY for in-page learning exercises. Routes (one function):
@@ -22,6 +23,10 @@ const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/lea
 //                                                   recorded (idempotent); `gained` is the ACTUAL Study Strength delta
 //                                                   (module formula, all modules). `study: false` (a self-check block)
 //                                                   is judged and never recorded.
+//                                                   REVEAL blocks (791381s Phase 2): every well-formed answer also gets
+//                                                   the right answer (`reveal`) and the explanation. A student's WRONG
+//                                                   answer to a reveal study activity is recorded as `revealed`; a later
+//                                                   right answer to it is judged but never completed (`revealedBefore`).
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
@@ -32,8 +37,12 @@ const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذه الص�
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "التمرين غير موجود." } };
 const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير صالح." } };
 // Study policy as the API advertises it (the UI reads it from here, never hardcodes it): each module is worth up to
-// 20 points, round(completed / eligible × 20); 28 modules → 560.
-const POLICY = { modulePointsMax: STUDY_MODULE_MAX_POINTS, moduleCount: STUDY_MODULE_COUNT };
+// 20 points, round(completed / eligible × 20). `moduleCount` is the COURSE's publishable module count (791381: 28 → 560;
+// 791381s: 37), falling back to the 791381 count for a course the registry does not list.
+const policyFor = courseId => {
+  const n = (listLearningModules(courseId) || []).length;
+  return { modulePointsMax: STUDY_MODULE_MAX_POINTS, moduleCount: n > 0 ? n : STUDY_MODULE_COUNT };
+};
 const EMPTY_MODULE = { completed: 0, eligible: 0, points: 0, max: STUDY_MODULE_MAX_POINTS };
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -46,7 +55,7 @@ async function resolveActor(request, deps) {
 }
 
 function stateBody(actor, courseId, state) {
-  return { ok: true, actor, courseId, policy: POLICY, pages: state.pages, modules: state.moduleViews, totalPoints: state.totalPoints };
+  return { ok: true, actor, courseId, policy: policyFor(courseId), pages: state.pages, modules: state.moduleViews, totalPoints: state.totalPoints };
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -100,8 +109,31 @@ async function handler(request, deps = {}, obs = null) {
       // Points come from the STUDY index alone (the check index only says what to answer): a block it does not list is judged and
       // answered, never recorded.
       const found = findStudyActivity(index, pageId, activityId);
-      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}) };
+      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}) };
       const page = { pageId, moduleId: check.moduleId };
+      // REVEAL + student + study activity: a wrong answer gave the right answer away → record it once (CAS; never over a
+      // completion); a right answer after such a reveal is answered but never completed.
+      if (actor.kind === "student" && found && verdict.reveal) {
+        const completedAlready = !!(studyDoc.pages[pageId] && Object.prototype.hasOwnProperty.call(studyDoc.pages[pageId].completed, activityId));
+        if (!correct && !completedAlready && !wasRevealed(studyDoc, pageId, activityId)) {
+          let revealedDoc = null;
+          try {
+            await mut(actor.container, studyDocName(actor.student.userId), current => {
+              revealedDoc = applyStudyReveal(current, { courseId, moduleId: found.moduleId, pageId, activityId }, new Date().toISOString()).doc;
+              return revealedDoc;
+            });
+          } catch (e) {
+            if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+            throw e;
+          }
+          studyDoc = revealedDoc;
+        }
+        if (correct && !completedAlready && wasRevealed(studyDoc, pageId, activityId)) {
+          const state = studyStateOf(studyDoc, index);
+          const view = state.pages[pageId] || { completed: [], eligible: pageEligibleCount(index, pageId) };
+          return { status: 200, jsonBody: { ok: true, actor: "student", correct: true, persisted: false, alreadyCompleted: false, revealedBefore: true, gained: 0, ...said, page: { ...page, completed: view.completed, eligible: view.eligible }, module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
+        }
+      }
       if (!correct || !found) {
         const state = actor.kind === "student" ? studyStateOf(studyDoc, index) : studyStateOf(null, index);
         const view = state.pages[pageId] || { completed: [], eligible: pageEligibleCount(index, pageId) };
@@ -132,9 +164,10 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const state = studyStateOf(finalDoc, index);
-      const view = state.pages[pageId];
+      const view = state.pages[pageId] || { completed: [], eligible: pageEligibleCount(index, pageId) };
       return { status: 200, jsonBody: {
-        ok: true, actor: "student", correct: true, persisted: !outcome.alreadyCompleted, alreadyCompleted: outcome.alreadyCompleted,
+        ok: true, actor: "student", correct: true, persisted: !outcome.alreadyCompleted && !outcome.revealedBefore, alreadyCompleted: outcome.alreadyCompleted,
+        ...(outcome.revealedBefore ? { revealedBefore: true } : {}),   // a reveal landed first (overlapping requests): never completed
         gained: outcome.gained,                                  // the ACTUAL Strength delta (module formula), from the CAS-fresh document
         ...said,
         page: { ...page, completed: view.completed, eligible: view.eligible },

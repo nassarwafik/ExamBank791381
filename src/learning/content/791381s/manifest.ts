@@ -56,6 +56,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m01-l01-p05", title: "إدارة الشبكة وصيانتها", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 6 } },
           ],
         },
+        {
+          id: "791381s-m01-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m01-l02-p01", title: "تدريبات الوحدة: أساسيات الشبكات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 4, pdfPageEnd: 6 } },
+          ],
+        },
       ],
     },
     {

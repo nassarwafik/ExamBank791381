@@ -190,6 +190,98 @@ const m01: ContentModule = {
         },
       ],
     },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment (owner decisions D2/D3/D6, docs/enterprise-791381s-enrichment-plan.md): an end-of-unit
+      // exercise page after the booklet's own pages. Every question is answered by the section's printed text above (the
+      // explanation quotes it); reveal mode shows the right answer and the explanation after each answer; study activities
+      // count toward Strength. The book pages of this module are unchanged (book lock).
+      id: "791381s-m01-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m01-l02-p01",
+          title: "تدريبات الوحدة: أساسيات الشبكات",
+          order: 1,
+          layout: "practice",
+          source: src(4, 6),
+          blocks: [
+            {
+              id: "m01-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما هي الشبكة؟",
+                options: [{ id: "a", text: "مجموعة أجهزة متصلة مع بعضها، حتى تتبادل المعلومات والملفات وتصل إلى الإنترنت.", correct: true }, { id: "b", text: "جهاز واحد يعمل وحده بدون أي اتصال." }, { id: "c", text: "برنامج نستعمله لتصفّح المواقع فقط." }, { id: "d", text: "كابل واحد يربط الحاسوب بالطابعة." }],
+                feedback: { explanation: "الشبكة = مجموعة أجهزة متصلة مع بعضها، حتى تتبادل المعلومات والملفات وتصل إلى الإنترنت." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "بدون شبكة تستطيع الأجهزة أن تتواصل بسهولة.", answer: false, feedback: { explanation: "بدون شبكة لا تستطيع الأجهزة أن تتواصل بسهولة. الشبكة هي التي تجعل الأجهزة تعمل معًا." } },
+            },
+            {
+              id: "m01-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في غرفة الحاسوب في المدرسة طابعة واحدة، وكل الحواسيب تطبع عليها عن طريق الشبكة. أيّ استخدام للشبكة هذا؟",
+                options: [{ id: "a", text: "تواصل" }, { id: "b", text: "مشاركة أجهزة", correct: true }, { id: "c", text: "سرعة" }, { id: "d", text: "تعاون" }],
+                feedback: { explanation: "مشاركة أجهزة: مثل طابعة واحدة لعدة حواسيب، بدل أن نشتري طابعة لكل حاسوب." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "«بريد إلكتروني ورسائل ومحادثات» — أيّ استخدام للشبكة هذا؟",
+                options: [{ id: "a", text: "ملفات" }, { id: "b", text: "إنترنت" }, { id: "c", text: "تواصل", correct: true }, { id: "d", text: "مشاركة أجهزة" }],
+                feedback: { explanation: "تواصل: بريد إلكتروني ورسائل ومحادثات." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "هاتف متصل بسماعة بلوتوث: ما نوع هذه الشبكة؟",
+                options: [{ id: "a", text: "PAN · شبكة شخصية", correct: true }, { id: "b", text: "LAN · شبكة محلية" }, { id: "c", text: "WAN · شبكة واسعة" }],
+                feedback: { explanation: "PAN · شبكة شخصية: أجهزة قريبة جدًا. مثال: هاتف + سماعة بلوتوث." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما أكبر مثال على الشبكة الواسعة WAN؟",
+                options: [{ id: "a", text: "غرفة الحاسوب" }, { id: "b", text: "شبكة البيت" }, { id: "c", text: "هاتف + سماعة بلوتوث" }, { id: "d", text: "الإنترنت", correct: true }],
+                feedback: { explanation: "WAN · شبكة واسعة: بين مدن أو دول. أكبر مثال: الإنترنت." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما الفرق بين أنواع الشبكات PAN و LAN و WAN؟",
+                options: [{ id: "a", text: "نوع الكابل فقط" }, { id: "b", text: "الحجم والمسافة", correct: true }, { id: "c", text: "عدد الطابعات" }, { id: "d", text: "لون الأجهزة" }],
+                feedback: { explanation: "الفرق بين الأنواع هو الحجم والمسافة: PAN الأصغر ← LAN ← WAN الأكبر (العالم كله)." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "«لغة متّفق عليها لتبادل البيانات، مثل TCP/IP» — أيّ شيء نحتاجه لبناء الشبكة هذا؟",
+                options: [{ id: "a", text: "بنية تحتية" }, { id: "b", text: "عناوين IP" }, { id: "c", text: "بروتوكول اتصال", correct: true }],
+                feedback: { explanation: "بروتوكول اتصال: لغة متّفق عليها لتبادل البيانات، مثل TCP/IP." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "بعد بناء الشبكة، بأيّ أوامر نفحصها لنتأكد أن الأجهزة تتواصل بشكل صحيح؟",
+                options: [{ id: "a", text: "ping و ipconfig", correct: true }, { id: "b", text: "copy و paste" }, { id: "c", text: "save و open" }, { id: "d", text: "print و scan" }],
+                feedback: { explanation: "بعد بناء الشبكة نفحصها بأوامر مثل ping و ipconfig لنتأكد أن الأجهزة تتواصل بشكل صحيح." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "بناء الشبكة هو النهاية، ولا نحتاج إلى فحصها بعد ذلك.", answer: false, feedback: { explanation: "بناء الشبكة ليس النهاية: يجب أن نضبطها ونحميها ونفحصها دائمًا حتى تبقى تعمل بشكل صحيح." } },
+            },
+          ],
+        },
+      ],
+    },
   ],
 };
 

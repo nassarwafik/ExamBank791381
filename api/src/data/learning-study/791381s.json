@@ -1,5 +1,67 @@
 {
   "schemaVersion": 1,
   "courseId": "791381s",
-  "pages": {}
+  "pages": {
+    "791381s-m01-l02-p01": {
+      "moduleId": "791381s-m01",
+      "activities": {
+        "m01-l02-p01-q01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m01-l02-p01-q02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m01-l02-p01-q03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m01-l02-p01-q04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m01-l02-p01-q05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m01-l02-p01-q06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "d"
+          ]
+        },
+        "m01-l02-p01-q07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "b"
+          ]
+        },
+        "m01-l02-p01-q08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "c"
+          ]
+        },
+        "m01-l02-p01-q09": {
+          "kind": "multipleChoice",
+          "correct": [
+            "a"
+          ]
+        },
+        "m01-l02-p01-q10": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    }
+  }
 }

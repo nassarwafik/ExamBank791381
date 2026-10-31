@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck, IconInfo } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
@@ -33,6 +33,8 @@ export type ActivityRenderContext = {
   pageId?: string;
   /** The course's visual skin for this page (null/absent → the established Reader look, unchanged DOM). */
   theme?: PageTheme | null;
+  /** A practice page's running score: each exercise reports the verdict on screen (absent elsewhere). */
+  onVerdict?: (activityId: string, verdict: "right" | "wrong" | null) => void;
 };
 
 // The page header is always derived from the MANIFEST, so title/context/position/source render immediately —
@@ -106,7 +108,9 @@ export default function LearningPageRenderer({ header, body, activity, training,
         <div className="learning-reader-metarow">
           {header.lesson && <span className="learning-reader-lessonpos">الدرس {header.lesson.index} من {header.lesson.total}</span>}
           <span className="learning-reader-position">صفحة {header.position.index} من {header.position.total}</span>
-          <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>
+          {body.kind === "ready" && body.page.layout === "practice"
+            ? <span className="learning-reader-frombook is-enrichment"><IconSparkles size={14} aria-hidden="true" />تدريبات تفاعلية</span>
+            : <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>}
         </div>
         {header.source && <SourceInfo source={header.source} />}
       </header>
@@ -175,6 +179,7 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
         </div>
       );
     case "ready":
+      if (body.page.layout === "practice") return <UnitPracticeBody key={body.page.id} page={body.page} ctx={ctx} />;
       return (
         <div className="learning-reader-blocks">
           {ctx.study && <StudyPageBar page={body.page} host={ctx.study} />}
@@ -182,6 +187,48 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
         </div>
       );
   }
+}
+
+/**
+ * «تدريبات الوحدة» — an end-of-unit exercise page (layout "practice", 791381s Phase 2). The exercises render exactly as on any
+ * page (reveal mode, server check, study points); this body only adds a short how-to line, a running score of the `practice`
+ * questions — «أجبت عن a من n · الصحيحة: r» — and, once every question is answered, «نتيجتك: r من n» with «أعد كل الأسئلة»,
+ * which remounts the questions empty. The score is this screen's state only: nothing is stored or sent from here (each
+ * exercise talks to the study host itself, and the server decides any point).
+ */
+function UnitPracticeBody({ page, ctx }: { page: ContentPage; ctx: ActivityRenderContext }) {
+  const questionIds = page.blocks.filter(b => b.type === "practice").map(b => b.id);
+  const [round, setRound] = useState(0);
+  const [verdicts, setVerdicts] = useState<Record<string, "right" | "wrong">>({});
+  const onVerdict = useCallback((id: string, verdict: "right" | "wrong" | null) => {
+    setVerdicts(v => {
+      if ((v[id] ?? null) === verdict) return v;
+      const next = { ...v };
+      if (verdict) next[id] = verdict; else delete next[id];
+      return next;
+    });
+  }, [setVerdicts]);
+  const total = questionIds.length;
+  const answered = questionIds.filter(id => verdicts[id]).length;
+  const right = questionIds.filter(id => verdicts[id] === "right").length;
+  const done = total > 0 && answered === total;
+  const restart = () => { setVerdicts({}); setRound(r => r + 1); };
+  const pageCtx = { ...ctx, onVerdict };
+  return (
+    <div className="learning-reader-blocks learning-unit-practice">
+      <p className="learning-unit-practice-intro">اختر إجابة كل سؤال: تظهر الإجابة الصحيحة بالأخضر، وإجابتك الخاطئة بالأحمر، ومعها شرح قصير.</p>
+      {ctx.study && <StudyPageBar page={page} host={ctx.study} />}
+      <div key={round} className="learning-unit-practice-items">
+        {page.blocks.map(block => <BlockView key={block.id} block={block} ctx={pageCtx} />)}
+      </div>
+      <div className={"learning-unit-practice-score" + (done ? " is-done" : "")} role="status" aria-live="polite">
+        {done
+          ? <p className="learning-unit-practice-result">نتيجتك: <span dir="ltr">{right} / {total}</span> {right === total ? "— ممتاز! كل إجاباتك صحيحة." : "— راجع الشرح تحت كل سؤال ثم أعد المحاولة."}</p>
+          : <p className="learning-unit-practice-progress">أجبت عن <span dir="ltr">{answered}</span> من <span dir="ltr">{total}</span> · الصحيحة: <span dir="ltr">{right}</span></p>}
+        {(done || answered > 0) && <button type="button" className="eb-button is-small" onClick={restart}>أعد كل الأسئلة</button>}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -374,7 +421,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "unit-opener":
       return <UnitOpenerView block={block} />;
     case "practice":
-      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} serverCheck={block.serverCheck === true} studyEligible={block.studyEligible !== false} />;
+      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} serverCheck={block.serverCheck === true} studyEligible={block.studyEligible !== false} reveal={block.reveal === true} onVerdict={ctx.onVerdict} />;
     case "practice-table":
       return <PracticeTableView block={block} pageId={ctx.pageId} study={ctx.study} />;
     case "visual":

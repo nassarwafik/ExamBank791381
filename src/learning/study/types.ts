@@ -34,7 +34,13 @@ export type StudyAttemptResponse = {
   feedback?: StudyFeedback;
   /** L.6b — a practice-table: for every answered cell ("row:col"), whether its choice is right. */
   cells?: Record<string, boolean>;
+  /** 791381s Phase 2 — a REVEAL block: the right answer, sent with the verdict on an answer (never before one). */
+  reveal?: StudyReveal;
+  /** 791381s Phase 2 — a right answer AFTER the right answer was shown (a wrong answer came first): judged, never recorded. */
+  revealedBefore?: boolean;
 };
+/** The right answer of a reveal block, as the server sends it after an answer. */
+export type StudyReveal = { kind: "multipleChoice"; optionIds: string[] } | { kind: "trueFalse"; answer: boolean };
 export type StudyFeedback = { message?: string; explanation?: string; hints?: string[] };
 
 export interface StudyClient {

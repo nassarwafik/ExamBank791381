@@ -6,7 +6,7 @@
 
 import {
   BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
-  LEARNING_CONTENT_SCHEMA_VERSION, isActivityBlock, activityKey,
+  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -49,7 +49,9 @@ export type ContentIssueCode =
   | "invalid-table-row"
   | "library-training-invalid"
   | "invalid-practice-table"
-  | "visual-missing-id";
+  | "visual-missing-id"
+  | "invalid-reveal"
+  | "invalid-page-layout";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -133,6 +135,7 @@ export function validateLearningCourseContent(content: LearningCourseContent): C
         const blocks = Array.isArray(p?.blocks) ? p.blocks : [];
         if (blocks.length === 0) add("page-no-blocks", "page has no blocks", pLoc);
         for (const b of blocks) checkBlock(b, courseId, add, { ...pLoc, blockId: b?.id }, noteId);
+        checkPageLayout(p, blocks, add, pLoc);
       }
     }
   }
@@ -234,6 +237,7 @@ function checkBlock(
       break;
     case "practice":
       checkPractice(block.question, add, loc);
+      if ((block as { reveal?: unknown }).reveal !== undefined) checkReveal(block, add, loc);
       break;
     case "practice-table":
       checkPracticeTable(block, add, loc);
@@ -399,6 +403,40 @@ function isEnrichmentOnly(block: ContentBlock): boolean {
 }
 function enrichmentKindLabel(block: ContentBlock): string {
   return block.type === "callout" ? "a clarification callout" : `a ${block.type} block`;
+}
+
+/**
+ * Reveal mode (types.ts RevealMarker): exactly `true`, on a question kind whose right answer can be shown (multipleChoice /
+ * trueFalse), with an answer key and an explanation in the authored content. A SERVED body (serverCheck) carries
+ * neither — the server holds them — so only the kind is checked there.
+ */
+function checkReveal(block: Extract<ContentBlock, { type: "practice" }>, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  const q = block.question;
+  if (block.reveal !== true) { add("invalid-reveal", "reveal must be exactly true", loc); return; }
+  if (q?.kind !== "multipleChoice" && q?.kind !== "trueFalse") {
+    add("invalid-reveal", "reveal is only for multipleChoice / trueFalse questions", loc); return;
+  }
+  if (block.serverCheck === true) return;
+  const keyed = q.kind === "multipleChoice" ? q.options.some(o => o.correct === true) : typeof q.answer === "boolean";
+  if (!keyed) add("invalid-reveal", "a reveal question needs its answer key (the right answer is shown after an answer)", loc);
+  if (!isNonEmptyString(q.feedback?.explanation)) add("invalid-reveal", "a reveal question needs an explanation (shown under every answer)", loc);
+}
+
+/**
+ * Page layout: one of CONTENT_PAGE_LAYOUTS. A "practice" page («تدريبات الوحدة») is added enrichment: every block on it is
+ * teacher-enrichment and at least one is an exercise (practice / practice-table).
+ */
+function checkPageLayout(
+  page: { layout?: unknown },
+  blocks: ContentBlock[],
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  if (page.layout === undefined) return;
+  if (!(CONTENT_PAGE_LAYOUTS as readonly unknown[]).includes(page.layout)) { add("invalid-page-layout", "unknown page layout", loc); return; }
+  if (page.layout !== "practice") return;
+  if (blocks.some(b => b?.origin !== "teacher-enrichment")) add("invalid-page-layout", "a practice page holds only teacher-enrichment blocks (never book content)", loc);
+  if (!blocks.some(b => b?.type === "practice" || b?.type === "practice-table")) add("invalid-page-layout", "a practice page needs at least one exercise", loc);
 }
 
 function checkPractice(

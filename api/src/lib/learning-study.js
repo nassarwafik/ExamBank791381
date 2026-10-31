@@ -1,7 +1,13 @@
 // Study Practice Strength — the per-student COMPLETION STATE of in-page learning exercises, the source of the STUDY
 // part of Unified Strength. Storage: platform/learning-study/<studentId>.json, ONE document per student:
 //
-//   { schemaVersion: 1, pages: { "<pageId>": { courseId, moduleId, completed: { "<activityId>": "<iso time>" } } } }
+//   { schemaVersion: 1, pages: { "<pageId>": { courseId, moduleId, completed: { "<activityId>": "<iso time>" },
+//                                             revealed?: { "<activityId>": "<iso time>" } } } }
+//
+// REVEALED (791381s Phase 2, reveal-mode exercises): a WRONG answer to a reveal-mode study activity shows the learner the right
+// answer, so it is recorded once as `revealed`; a later right answer to that activity is judged and answered but NEVER completed
+// (no Strength) — the answer was given away. A first right answer completes it as usual. `revealed` never adds points and an
+// activity already completed is never marked revealed. Absent when empty, so documents without reveal exercises are unchanged.
 //
 // COMPLETION STATE, NOT A COUNTER (anti-farming): an activity id is either completed or not; a repeat, a duplicate
 // request, a retry or a re-opened page can never add a second entry, and a wrong answer writes nothing. Points are
@@ -98,6 +104,12 @@ function normalizeStudyDoc(doc) {
     const rawCompleted = entry.completed && typeof entry.completed === "object" ? entry.completed : {};
     for (const [activityId, at] of Object.entries(rawCompleted)) if (ID.test(activityId)) completed[activityId] = typeof at === "string" ? at : "";
     out.pages[pageId] = { courseId: cleanId(entry.courseId), moduleId: cleanId(entry.moduleId), completed };
+    const rawRevealed = entry.revealed && typeof entry.revealed === "object" && !Array.isArray(entry.revealed) ? entry.revealed : null;
+    if (rawRevealed) {
+      const revealed = {};
+      for (const [activityId, at] of Object.entries(rawRevealed)) if (ID.test(activityId)) revealed[activityId] = typeof at === "string" ? at : "";
+      if (Object.keys(revealed).length) out.pages[pageId].revealed = revealed;
+    }
   }
   return out;
 }
@@ -117,12 +129,40 @@ function applyStudyCompletion(doc, index, { courseId, moduleId, pageId, activity
   const page = normalized.pages[pageId] || { courseId: cleanId(courseId), moduleId: cleanId(moduleId), completed: {} };
   const alreadyCompleted = Object.prototype.hasOwnProperty.call(page.completed, activityId);
   const pageBefore = eligibleCompletedCount(index, pageId, page.completed);
+  // A reveal-mode activity whose right answer was shown after a wrong one is never completed — also when the reveal landed in
+  // the FRESHEST document between this request's read and its write (overlapping wrong / right requests).
+  if (!alreadyCompleted && page.revealed && Object.prototype.hasOwnProperty.call(page.revealed, activityId)) {
+    return { doc: normalized, alreadyCompleted: false, revealedBefore: true, pageBefore, pageAfter: pageBefore, gained: 0 };
+  }
   if (!alreadyCompleted) page.completed = { ...page.completed, [activityId]: String(now || new Date().toISOString()) };
   page.courseId = cleanId(courseId); page.moduleId = cleanId(moduleId);
   normalized.pages[pageId] = page;
   const pageAfter = eligibleCompletedCount(index, pageId, page.completed);
   const after = studyStateOf(normalized, index).totalPoints;
   return { doc: normalized, alreadyCompleted, pageBefore, pageAfter, gained: alreadyCompleted ? 0 : Math.max(0, after - before) };
+}
+
+/** True when the learner's document records that the right answer of this activity was shown after a wrong answer. Pure. */
+function wasRevealed(doc, pageId, activityId) {
+  const page = doc && doc.pages ? doc.pages[pageId] : null;
+  return !!(page && page.revealed && Object.prototype.hasOwnProperty.call(page.revealed, activityId));
+}
+
+/**
+ * Record ONE reveal (a wrong answer to a reveal-mode study activity). Idempotent: an activity already revealed keeps its first
+ * timestamp, and an activity already COMPLETED is never marked (its Strength stays earned). Returns { doc, recorded }. Called
+ * inside the CAS mutation with the FRESHEST document. Pure.
+ */
+function applyStudyReveal(doc, { courseId, moduleId, pageId, activityId }, now) {
+  const normalized = normalizeStudyDoc(doc);
+  const page = normalized.pages[pageId] || { courseId: cleanId(courseId), moduleId: cleanId(moduleId), completed: {} };
+  const completed = Object.prototype.hasOwnProperty.call(page.completed, activityId);
+  const already = !!(page.revealed && Object.prototype.hasOwnProperty.call(page.revealed, activityId));
+  if (completed || already) return { doc: normalized, recorded: false };
+  page.revealed = { ...(page.revealed || {}), [activityId]: String(now || new Date().toISOString()) };
+  page.courseId = cleanId(courseId); page.moduleId = cleanId(moduleId);
+  normalized.pages[pageId] = page;
+  return { doc: normalized, recorded: true };
 }
 
 /** How many of a page's completed ids the index STILL lists as eligible (ids that left the content stop counting). */
@@ -200,6 +240,6 @@ function studyAllowedForClass(classroom, courseId, moduleId) {
 
 module.exports = {
   STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, pageEligibleCount, moduleEligibleCounts, findStudyActivity, evaluateStudyResponse,
-  normalizeStudyDoc, applyStudyCompletion, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
+  normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
   latestStudyActivity,
 };
