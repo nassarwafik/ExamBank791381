@@ -634,6 +634,42 @@ With the unit 19 pilot (8B-2), the booklet now has **8 labs**.
 The first D6 run did not apply its mutant (a wrong anchor in the script). It was reported as an error and re-run with the
 exact text.
 
+## 16. Phase 8C-0 record — the training runner answers registered question types (defect fix)
+
+**Defect.** `LearningTrainingRunner.tsx` rendered the student exam's `StudentQuestionCard` without the generic `onAnswer`
+seam. A **registered** question type (multipleSelect, numericResponse, matrix, categorization… — the platform's advanced
+types) got the card's no-op fallback:
+
+- the learner's answer was dropped;
+- the question never counted as answered;
+- «أرسل الإجابات» stayed disabled.
+
+Today's Exam Library items hold only legacy kinds, so no student was affected yet. The fix comes first because 8C puts
+advanced types in front of students.
+
+**Fix.**
+- The runner passes `onAnswer`. The renderer's whole answer is kept under the question's id and sent with the others:
+  still only the answers, and the server grades them with the same grader.
+- The post-submit review shows the learner's own answer for these kinds: multipleSelect by option text, a numeric value
+  with its unit, otherwise «أُرسلت إجابتك». It never shows «لم تُجب» for an answered question.
+
+**Fail-first.** `src/learning/training/LearningTrainingRunner.registered.test.tsx` uses a sanitized multipleChoice and a
+multipleSelect@1, exactly as the API serves a training.
+
+| Head | Result |
+|---|---|
+| `58adfae9` (baseline) | 2 / 2 failed: `expected '1 / 2 أسئلة مُجابة' to contain '2 / 2'` and `expected true to be false` (the disabled submit button) |
+| Fixed head | 2 / 2 passed, plus the review check |
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| E1 | no `onAnswer` (the defect) | KILLED |
+| E2 | the answer is stored under the wrong id | KILLED |
+| E3 | the review shows «لم تُجب» | KILLED |
+| E4 | only the first emission is kept | KILLED |
+
 ## 17. Phase 8C-1 record — the private exam-item store and the practice endpoint (no UI, no content yet)
 
 **What changed**
