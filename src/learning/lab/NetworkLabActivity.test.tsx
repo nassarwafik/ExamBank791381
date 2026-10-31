@@ -115,6 +115,16 @@ describe("the page renderer wires the seam to the study host", () => {
     expect(report).toHaveBeenCalledWith(page.id, "m19-l02-p01-lab-roas", { kind: "network-lab", actions: [{ type: "switch.command", deviceId: "sw1", command: "enable" }] });
   }, 30000);
 
+  it("an AUTHORED lab (not a served body: no serverCheck) never gets a seam, even inside a study host", async () => {
+    const report = vi.fn();
+    const study = { pageStatus: () => ({ kind: "ready", completed: new Set<string>(), eligible: 0, module: null }), report } as unknown as StudyHost;
+    const authored = { ...page, blocks: page.blocks.map(b => (b.id === lab.id ? { ...lab, serverCheck: undefined } : b)) };
+    render(<LearningPageRenderer header={header} body={{ kind: "ready", page: authored }} study={study} />);
+    await ws();
+    expect(screen.queryByRole("button", { name: "تحقّق من الإعداد" })).toBeNull();
+    expect(report).not.toHaveBeenCalled();
+  }, 30000);
+
   it("no study host → no seam (explore-only)", async () => {
     render(<LearningPageRenderer header={header} body={{ kind: "ready", page }} />);
     await ws();

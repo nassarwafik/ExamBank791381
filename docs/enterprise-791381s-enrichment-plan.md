@@ -527,3 +527,48 @@ kills it.
 
 **Next:** 8B-2 — the lab view (lazy `Net2Workspace`, never `trustedSimPlugins`), the host check seam, the bundle guard, and
 the m19 Router-on-a-Stick pilot (`studyEligible: false`).
+
+## 14. Phase 8B-2 record — the network lab in the Reader + the unit 19 pilot
+
+**What changed**
+
+- **Engine (`activities/engine.ts`, `LearningActivityHost.tsx`).**
+  - `simulation` / `network-lab` v1 is registered behind an `import()` thunk. The allowlist pins now name sixteen entries.
+  - New optional host seam `check` (`ActivityCheck`), passed through untouched. The engine and the renderer never fetch.
+- **Lab view (`src/learning/lab/NetworkLabActivity.tsx`, `labConfig.ts`, `lab.css`).**
+  - It shows the task, the goals and the real networkTopology@2 student workspace. The workspace is imported directly,
+    never the trusted-sim plugin set.
+  - The actions live in React state only. The shell's «إعادة تعيين» empties them.
+  - «تحقّق من الإعداد» sends `{ kind: "network-lab", actions }` and nothing else.
+  - The result shows ✓ / ✕ with words for each goal: hints after a wrong check, the explanation after a right one.
+  - A new action clears the verdict.
+  - A failed or retryable check says «تعذّر التحقق», never a wrong verdict.
+  - Without a seam, the lab is explore-only.
+- **Reader (`LearningPageRenderer.tsx`).** The seam is given only to a **served** lab (`serverCheck`) inside a study host.
+  It goes through `study.report` to the practice route (8B-1).
+- **Pilot (`791381s-m19`, «تدريبات الوحدة»).** «مختبر شبكي: Router on a Stick» uses the booklet's own values: VLAN 10 / 20,
+  g0/0.10 / g0/0.20 with `encapsulation dot1Q`, the gateways 192.168.10.254 and 192.168.20.254 /24, the trunk on g0/1, and
+  `no shutdown` on g0/0.
+  - SW1 starts with the VLANs and access ports of unit 16, so the task is this unit's.
+  - Seven goals; the last is PC1 (VLAN 10) ⇄ PC2 (VLAN 20).
+  - The simulator proves it: no free credit, the booklet's commands pass 7 / 7, and leaving out `no shutdown` fails both the
+    router-port goal and the ping goal.
+  - It is marked `studyEligible: false`: checked but not counted, so the study index is unchanged.
+- **Bundle guard (`scripts/check-bundle-budget.mjs`).**
+  - No simulator signature is allowed in the Reader's first-load graph.
+  - A lazy `NetworkLabActivity` chunk must exist, and its static closure must not include `trustedSimPlugins`.
+  - Measured: the lab chunk's closure is 10 files, 64.6 KB gzip. The Reader's first load is 39.1 KB (budget 40; it was 38.5).
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| C1 | the seam is given to an authored lab | KILLED |
+| C2 | a client claim is sent with the actions | KILLED |
+| C3 | a verdict survives a new action | KILLED |
+| C4 | a failed check is shown as wrong | KILLED |
+| C5 | every goal is marked right | KILLED |
+| C6 | reset keeps the actions | KILLED |
+| C7 | the pilot counts in Strength | KILLED |
+| C8 | the pilot's solution drops `no shutdown` | KILLED |
+| C9 | a static import of the lab in the Reader | KILLED by the bundle guard: `Net2Workspace … (first Reader load) carries the network simulator` |
