@@ -1,14 +1,28 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 34 «التبديل و VLANs».
 //
 // Verbatim conversion of booklet PDF pages 101–104 (the section header box → an opener page; each numbered sub-topic →
-// one reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
-// runs are `code`, printed box labels are the callout titles.
+// one reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`,
+// monospace runs are `code`, printed box labels are the callout titles.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 7): teacher-enrichment blocks (an interactive
+// practice-table twin under each review table — the same table with one column turned into dropdowns —, visuals and CLI
+// terminal simulations reused from course 791381 after checking their labels / commands against this section, and the
+// end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay verbatim —
+// pinned by the book lock (bookLock.test.ts).
 
-import type { ContentModule, ContentSource } from "../../types";
+import type { ContentModule, ContentSource, PracticeTableSelectCell } from "../../types";
+import type { CliExerciseConfig } from "../../../cli/types";
 
 const CID = "791381s";
 const src = (pdf: number, end?: number): ContentSource =>
   end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+const EX = (exercise: CliExerciseConfig): Record<string, unknown> => ({ ...exercise });
+/** A dropdown cell of a practice-table twin: `options` = the values the column takes in the booklet table. */
+const sel = (options: readonly string[]) => (key: string): PracticeTableSelectCell => ({ kind: "select", options: [...options], key });
+const TECH = sel(["Trunk (802.1Q)", "DMZ", "VPN"]);
+const VTP = sel(["Server", "Client", "Transparent"]);
+const STP = sel(["الهدف من STP", "الطريقة", "حالات المنافذ"]);
+const METRO = sel(["Metro-Ethernet", "VLANs", "العلاقة بينهما"]);
 
 const m34: ContentModule = {
   id: "791381s-m34",
@@ -85,6 +99,16 @@ const m34: ContentModule = {
                 ["VPN", "شبكة آمنة (مشفّرة) عبر الإنترنت."],
               ],
             },
+            {
+              // ENRICHMENT: reuse of 791381/m04/trunk-multi-vlan — one cable carrying VLAN 10 / 20 / 30 (the same VLANs as the
+              // trunk box on the next page).
+              id: "m34-l01-p01-v-trunk", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/trunk-multi-vlan", motion: true,
+              source: src(101),
+              title: "مخطط: Trunk ينقل عدة VLANs عبر كابل واحد",
+              alt: "مخطط متحرّك لكابل Trunk واحد بين Switch 1 و Switch 2 تمرّ عليه ثلاث حزم لـ VLAN 10 و VLAN 20 و VLAN 30، ولكل حزمة Tag يبيّن الـ VLAN التي تنتمي إليها.",
+              caption: "Trunk (802.1Q) ينقل عدة VLANs عبر كابل واحد.",
+            },
           ],
         },
         {
@@ -133,6 +157,31 @@ const m34: ContentModule = {
                 { id: "m34-l01-p02-b4", text: [{ text: "تغيير الـ " }, { text: "Native VLAN", style: "strong" }, { text: " إلى 99 لأغراض الأمان." }] },
               ],
             },
+            {
+              // ENRICHMENT: CLI simulation — the booklet's «منفذ الربط» box exactly: ① interface g0/1 ② switchport mode trunk
+              // ③ switchport trunk allowed vlan 10,20,30 ④ switchport trunk native vlan 99. (The first box is not simulated:
+              // after interface range the simulator prints Switch(config-if)#, while the booklet prints Switch(config-if-range)#.)
+              id: "m34-l01-p02-sim-trunk", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: منفذ الربط g0/1 في وضع Trunk",
+              description: "أنت في وضع الإعداد العام للسويتش. نفّذ أسطر صندوق «منفذ الربط» الأربعة بالترتيب. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(102),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المثال الموجّه: Switch(config)# interface g0/1 ثم switchport mode trunk ثم switchport trunk allowed vlan 10,20,30 ثم switchport trunk native vlan 99." },
+              config: EX({
+                kind: "guided",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام Switch(config)#. اجعل منفذ الربط g0/1 وصلة Trunk كما في الصندوق.",
+                steps: [
+                  { id: "s1", instruction: "اختر منفذ الربط g0/1", expect: { command: "interface", args: { interfaces: ["g0/1"] } }, success: "✓ أحسنت — الموجّه الآن Switch(config-if)#", hints: ["السطر ① في صندوق «منفذ الربط».", "interface ثم g0/1."] },
+                  { id: "s2", instruction: "اجعله في وضع Trunk لنقل عدة VLANs", expect: { command: "switchport-mode", args: { mode: "trunk" } }, hints: ["السطر ② في الصندوق.", "switchport mode ثم trunk."] },
+                  { id: "s3", instruction: "حدّد الـ VLANs المسموح بمرورها: 10 و 20 و 30", expect: { command: "switchport-trunk-allowed-vlan", args: { vlans: [10, 20, 30] } }, hints: ["السطر ③ في الصندوق: الكلمة allowed.", "switchport trunk allowed vlan 10,20,30"] },
+                  { id: "s4", instruction: "غيّر الـ Native VLAN إلى 99 لأغراض الأمان", expect: { command: "switchport-trunk-native-vlan", args: { vlanId: 99 } }, hints: ["السطر ④ في الصندوق: الكلمة native.", "switchport trunk native vlan 99"] },
+                ],
+                completion: "✓ أحسنت — المنفذ g0/1 أصبح Trunk ينقل VLAN 10 و 20 و 30، والـ Native VLAN عليه 99 لأغراض الأمان.",
+              }),
+            },
           ],
         },
         {
@@ -158,6 +207,28 @@ const m34: ContentModule = {
                 "② Switch(config)# vtp domain HFA",
                 "③ Switch(config)# vtp password SA1234",
               ].join("\n"),
+            },
+            {
+              // ENRICHMENT: CLI simulation — the booklet's box exactly: ① vtp mode server ② vtp domain HFA ③ vtp password SA1234.
+              id: "m34-l01-p03-sim-vtp", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: إعداد VTP",
+              description: "أنت في وضع الإعداد العام للسويتش. نفّذ أسطر صندوق Switch CLI الثلاثة بالترتيب. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(103),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المثال الموجّه: Switch(config)# vtp mode server ثم vtp domain HFA ثم vtp password SA1234." },
+              config: EX({
+                kind: "guided",
+                device: "switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام Switch(config)#. نفّذ أسطر الصندوق بالترتيب.",
+                steps: [
+                  { id: "s1", instruction: "اجعل السويتش في وضع Server", expect: { command: "vtp-mode", args: { mode: "server" } }, hints: ["السطر ① في الصندوق.", "vtp mode ثم server."] },
+                  { id: "s2", instruction: "حدّد اسم الـ Domain: HFA", expect: { command: "vtp-domain", args: { name: "HFA" } }, hints: ["السطر ② في الصندوق.", "vtp domain ثم HFA."] },
+                  { id: "s3", instruction: "حدّد كلمة المرور SA1234", expect: { command: "vtp-password", args: { password: "SA1234" } }, hints: ["السطر ③ في الصندوق.", "vtp password ثم SA1234."] },
+                ],
+                completion: "✓ أحسنت — السويتش Server في الـ Domain HFA بكلمة المرور SA1234. انتبه: يجب توحيد Domain و Password بين السويتشات حتى تصل التحديثات.",
+              }),
             },
             {
               id: "m34-l01-p03-warning", type: "callout", origin: "book", kind: "warning", title: "انتبه",
@@ -199,6 +270,31 @@ const m34: ContentModule = {
               ],
             },
             {
+              // ENRICHMENT: CLI simulation — the booklet's Router CLI box exactly: ① interface gi0/0 ② no shutdown
+              // ③ interface gi0/0.10 ④ encapsulation dot1Q 10 ⑤ ip address 192.168.10.1 255.255.255.0.
+              id: "m34-l01-p04-sim-dot1q", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: الواجهة الفرعية gi0/0.10 لـ VLAN 10",
+              description: "أنت في وضع الإعداد العام للراوتر. نفّذ أسطر صندوق Router CLI الخمسة بالترتيب. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(103, 104),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المثال الموجّه: Router(config)# interface gi0/0 ثم no shutdown، ثم interface gi0/0.10 ثم encapsulation dot1Q 10 ثم ip address 192.168.10.1 255.255.255.0." },
+              config: EX({
+                kind: "guided",
+                device: "router",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام Router(config)#. نفّذ أسطر الصندوق بالترتيب.",
+                steps: [
+                  { id: "s1", instruction: "اختر المنفذ الفيزيائي gi0/0", expect: { command: "interface", args: { interfaces: ["g0/0"] } }, success: "✓ أحسنت — الموجّه الآن Router(config-if)#", hints: ["السطر ① في الصندوق.", "interface ثم gi0/0."] },
+                  { id: "s2", instruction: "شغّل المنفذ", expect: { command: "no-shutdown" }, hints: ["السطر ② في الصندوق.", "no shutdown"] },
+                  { id: "s3", instruction: "أنشئ الواجهة الفرعية لـ VLAN 10", expect: { command: "interface", args: { interfaces: ["g0/0.10"], sub: true } }, success: "✓ أحسنت — الموجّه الآن Router(config-subif)#", hints: ["السطر ③ في الصندوق: اسم المنفذ ثم نقطة ثم 10.", "interface gi0/0.10"] },
+                  { id: "s4", instruction: "فعّل ترميز 802.1Q لـ VLAN 10", expect: { command: "encapsulation-dot1q", args: { vlanId: 10 } }, hints: ["السطر ④ في الصندوق.", "encapsulation dot1Q 10"] },
+                  { id: "s5", instruction: "أعطِ الواجهة الفرعية عنوان Gateway لأجهزة VLAN 10", expect: { command: "ip-address", args: { address: "192.168.10.1", mask: "255.255.255.0" } }, hints: ["السطر ⑤ في الصندوق.", "ip address 192.168.10.1 255.255.255.0"] },
+                ],
+                completion: "✓ أحسنت — 192.168.10.1 أصبح عنوان Gateway لأجهزة VLAN 10. شرط أساسي: منفذ السويتش المتصل بالراوتر يجب أن يكون Trunk.",
+              }),
+            },
+            {
               id: "m34-l01-p04-condition", type: "callout", origin: "book", kind: "summary", title: "شرط أساسي",
               spans: [
                 { text: "المنفذ في السويتش المتصل بالراوتر يجب أن يكون " },
@@ -222,6 +318,15 @@ const m34: ContentModule = {
                 ["الطريقة", "اختيار Root Bridge وتعطيل المسارات الزائدة."],
                 ["حالات المنافذ", "Blocking → Listening → Learning → Forwarding"],
               ],
+            },
+            {
+              // ENRICHMENT: reuse of 791381/m16/stp-loop-blocking — generic SW1 / SW2 / SW3 loop with one redundant path blocked.
+              id: "m34-l01-p05-v-stp", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/stp-loop-blocking", motion: true,
+              source: src(104),
+              title: "مخطط: STP يمنع الحلقة",
+              alt: "مخطط لثلاثة سويتشات SW1 و SW2 و SW3 بروابط زائدة تشكّل حلقة؛ STP يعطّل مسارًا زائدًا (منفذ محظور) فتمرّ البيانات على المسارات الباقية دون حلقة.",
+              caption: "STP يمنع الحلقات (Loops) بتعطيل المسارات الزائدة.",
             },
             {
               id: "m34-l01-p05-flooding", type: "callout", origin: "book", kind: "summary", title: "سلوك السويتش مع MAC غير معروف",
@@ -259,6 +364,191 @@ const m34: ContentModule = {
                 { text: "منطقيًا", style: "strong" },
                 { text: " داخل نفس البنية." },
               ],
+            },
+            {
+              // ENRICHMENT: reuse of 791381/m28/metro-vlan-summary — the same physical / logical idea (generic branches A / B).
+              id: "m34-l01-p06-v-metro", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/metro-vlan-summary", motion: false,
+              source: src(104),
+              title: "مخطط: Metro-Ethernet و VLAN",
+              alt: "مخطط لفرعين يربطهما Metro-Ethernet بألياف (ربط فيزيائي)، وداخل البنية نفسها VLAN لكل عميل تفصل حركته عن الآخر (فصل منطقي).",
+              caption: "Metro-Ethernet يربط المواقع فيزيائيًا، و VLAN تفصلها منطقيًا.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by this section's printed tables / text / command boxes above (the explanation quotes it). The book pages
+      // are unchanged (book lock).
+      id: "791381s-m34-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m34-l02-p01",
+          title: "تدريبات الوحدة: التبديل و VLANs",
+          order: 1,
+          layout: "practice",
+          source: src(101, 104),
+          blocks: [
+            {
+              // ENRICHMENT: interactive twin of the table above — the «التقنية» column becomes dropdowns.
+              id: "m34-l02-p01-t01", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ العمود «التقنية»: اختر التقنية المناسبة لكل وظيفة.",
+              source: src(101),
+              headers: ["التقنية", "وظيفتها"],
+              rows: [
+                [TECH("Trunk (802.1Q)"), "ينقل عدة VLANs عبر كابل واحد."],
+                [TECH("DMZ"), "تعزل السيرفرات العامة عن الشبكة الداخلية."],
+                [TECH("VPN"), "شبكة آمنة (مشفّرة) عبر الإنترنت."],
+              ],
+              columnDirs: ["ltr", "rtl"],
+            },
+            {
+              // ENRICHMENT: interactive twin of the table above — the «الوضع» column becomes dropdowns.
+              id: "m34-l02-p01-t02", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ العمود «الوضع»: اختر وضع VTP المناسب لكل وصف.",
+              source: src(103),
+              headers: ["الوضع", "الوصف"],
+              rows: [
+                [VTP("Server"), "يُنشئ ويعدّل ويحذف VLANs وينشرها."],
+                [VTP("Client"), "يستقبل التحديثات فقط ولا يعدّل."],
+                [VTP("Transparent"), "يحتفظ بإعداداته محليًا ويمرّر التحديثات."],
+              ],
+              columnDirs: ["ltr", "rtl"],
+            },
+            {
+              // ENRICHMENT: interactive twin of the table above — the «العنصر» column becomes dropdowns.
+              id: "m34-l02-p01-t03", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ العمود «العنصر»: اختر العنصر المناسب لكل شرح.",
+              source: src(104),
+              headers: ["العنصر", "الشرح"],
+              rows: [
+                [STP("الهدف من STP"), "يمنع الحلقات (Loops) في الشبكة."],
+                [STP("الطريقة"), "اختيار Root Bridge وتعطيل المسارات الزائدة."],
+                [STP("حالات المنافذ"), "Blocking → Listening → Learning → Forwarding"],
+              ],
+            },
+            {
+              // ENRICHMENT: interactive twin of the table above — the «المفهوم» column becomes dropdowns.
+              id: "m34-l02-p01-t04", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ العمود «المفهوم»: اختر المفهوم المناسب لكل شرح.",
+              source: src(104),
+              headers: ["المفهوم", "الشرح"],
+              rows: [
+                [METRO("Metro-Ethernet"), "شبكة ألياف تربط عدة فروع أو مدارس بسرعات عالية."],
+                [METRO("VLANs"), "تقسيم الشبكة منطقيًا داخل البنية نفسها للعزل."],
+                [METRO("العلاقة بينهما"), "تُطبَّق VLANs في Metro-Ethernet للفصل بين العملاء."],
+              ],
+            },
+            {
+              id: "m34-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ما نطاق أرقام VLAN بحسب الصفحة؟",
+                options: [{ id: "a", text: "من 0 إلى 255" }, { id: "b", text: "من 1 إلى 4094", correct: true }, { id: "c", text: "من 1 إلى 99" }, { id: "d", text: "من 100 إلى 199" }],
+                feedback: { explanation: "النطاق من 1 إلى 4094، و VLAN 1 هي الافتراضية." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "VLAN تزيد حركة البث (Broadcast) في الشبكة.", answer: false, feedback: { explanation: "VLAN تقلّل حركة البث (Broadcast) وتزيد الأمان والتنظيم." } },
+            },
+            {
+              id: "m34-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل تقنية بوظيفتها:",
+                left: [{ id: "trunk", text: "Trunk (802.1Q)" }, { id: "dmz", text: "DMZ" }, { id: "vpn", text: "VPN" }],
+                right: [{ id: "r1", text: "شبكة آمنة (مشفّرة) عبر الإنترنت." }, { id: "r2", text: "ينقل عدة VLANs عبر كابل واحد." }, { id: "r3", text: "تعزل السيرفرات العامة عن الشبكة الداخلية." }],
+                pairs: { trunk: "r2", dmz: "r3", vpn: "r1" },
+                feedback: { explanation: "Trunk (802.1Q): ينقل عدة VLANs عبر كابل واحد · DMZ: تعزل السيرفرات العامة عن الشبكة الداخلية · VPN: شبكة آمنة (مشفّرة) عبر الإنترنت." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل أمر من صندوقي الصفحة: منفذ Access أم منفذ الربط Trunk؟",
+                groups: [{ id: "access", text: "منفذ Access" }, { id: "trunk", text: "منفذ Trunk" }],
+                items: [
+                  { id: "i1", text: "switchport mode access" },
+                  { id: "i2", text: "switchport trunk allowed vlan 10,20,30" },
+                  { id: "i3", text: "switchport access vlan 10" },
+                  { id: "i4", text: "switchport mode trunk" },
+                  { id: "i5", text: "switchport trunk native vlan 99" },
+                ],
+                assign: { i1: "access", i2: "trunk", i3: "access", i4: "trunk", i5: "trunk" },
+                feedback: { explanation: "وضع Access: المنفذ لجهاز واحد وVLAN واحدة (switchport mode access ثم switchport access vlan 10). منفذ الربط Trunk لنقل عدة VLANs (switchport mode trunk ثم allowed vlan 10,20,30 ثم native vlan 99)." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "لماذا نغيّر الـ Native VLAN إلى 99 على منفذ الربط؟",
+                options: [{ id: "a", text: "لزيادة سرعة الكابل" }, { id: "b", text: "لأن VLAN 99 هي الافتراضية" }, { id: "c", text: "لأغراض الأمان", correct: true }],
+                feedback: { explanation: "④ تغيير الـ Native VLAN إلى 99 لأغراض الأمان. (الافتراضية هي VLAN 1.)" },
+              },
+            },
+            {
+              id: "m34-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب أسطر الصندوق الأول: إنشاء VLAN 10 وربط المنافذ بها:",
+                items: [
+                  { id: "acc", text: "switchport access vlan 10" },
+                  { id: "range", text: "interface range fa0/1-10" },
+                  { id: "vlan", text: "vlan 10" },
+                  { id: "mode", text: "switchport mode access" },
+                  { id: "name", text: "name SALES" },
+                ],
+                order: ["vlan", "name", "range", "mode", "acc"],
+                feedback: { explanation: "① vlan 10 (إنشاء VLAN رقم 10) ② name SALES (تسميتها) ③ interface range fa0/1-10 (تحديد عدة منافذ معًا) ④ switchport mode access ⑤ switchport access vlan 10 (ربط المنافذ بـ VLAN 10)." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أي وضع VTP يستقبل التحديثات فقط ولا يعدّل؟",
+                options: [{ id: "a", text: "Client", correct: true }, { id: "b", text: "Server" }, { id: "c", text: "Transparent" }],
+                feedback: { explanation: "Client: يستقبل التحديثات فقط ولا يعدّل. Server يُنشئ ويعدّل ويحذف VLANs وينشرها، و Transparent يحتفظ بإعداداته محليًا ويمرّر التحديثات." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "يكفي توحيد الـ Domain بين السويتشات حتى تصل تحديثات VTP، ولو اختلفت الـ Password.", answer: false, feedback: { explanation: "انتبه: يجب توحيد Domain و Password بين السويتشات حتى تصل التحديثات." } },
+            },
+            {
+              id: "m34-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أي سطر في صندوق Router CLI يعني «ترميز 802.1Q لـ VLAN 10»؟",
+                options: [{ id: "a", text: "interface gi0/0.10" }, { id: "b", text: "no shutdown" }, { id: "c", text: "ip address 192.168.10.1 255.255.255.0" }, { id: "d", text: "encapsulation dot1Q 10", correct: true }],
+                feedback: { explanation: "④ encapsulation dot1Q 10 = ترميز 802.1Q لـ VLAN 10. أما interface gi0/0.10 فهي الواجهة الفرعية، و ip address 192.168.10.1 هو عنوان Gateway لأجهزة VLAN 10." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في التوجيه بين VLANs يجب أن يكون منفذ السويتش المتصل بالراوتر في وضع Access.", answer: false, feedback: { explanation: "شرط أساسي: المنفذ في السويتش المتصل بالراوتر يجب أن يكون Trunk (لا Access) لتمرير وسوم كل الـ VLANs." } },
+            },
+            {
+              id: "m34-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب حالات المنافذ في STP كما في الجدول:",
+                items: [
+                  { id: "learn", text: "Learning" },
+                  { id: "fwd", text: "Forwarding" },
+                  { id: "block", text: "Blocking" },
+                  { id: "listen", text: "Listening" },
+                ],
+                order: ["block", "listen", "learn", "fwd"],
+                feedback: { explanation: "حالات المنافذ: Blocking → Listening → Learning → Forwarding." },
+              },
+            },
+            {
+              id: "m34-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "ماذا يفعل السويتش عند استقبال إطار بعنوان MAC غير موجود في جدوله؟",
+                options: [{ id: "a", text: "يحذف الإطار فورًا" }, { id: "b", text: "Flooding: يرسله لكل المنافذ عدا المصدر", correct: true }, { id: "c", text: "يعيده إلى منفذ المصدر فقط" }, { id: "d", text: "يعطّل المنفذ بـ STP" }],
+                feedback: { explanation: "عند استقبال إطار بعنوان MAC غير موجود في الجدول، يقوم السويتش بـ Flooding: يرسله لكل المنافذ عدا المصدر. وعندما يردّ الجهاز الهدف، يتعلّم السويتش العنوان ويضيفه إلى جدول MAC." },
+              },
             },
           ],
         },

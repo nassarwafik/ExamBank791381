@@ -1,15 +1,29 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 35 «التوجيه والأمان».
 //
 // Verbatim conversion of booklet PDF pages 105–109 (the section header box → an opener page; each numbered sub-topic →
-// one reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
-// runs are `code`, printed box labels are the callout titles. The part of page 109 from the section 36 header box on
-// belongs to module m36.
+// one reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`,
+// monospace runs are `code`, printed box labels are the callout titles. The part of page 109 from the section 36 header
+// box on belongs to module m36.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 7): teacher-enrichment blocks (visuals and CLI terminal
+// simulations reused from course 791381 after checking their labels / commands against this section, interactive
+// practice-table twins of the review tables, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks
+// they explain. The book blocks stay verbatim — pinned by the book lock (bookLock.test.ts).
 
-import type { ContentModule, ContentSource } from "../../types";
+import type { ContentModule, ContentSource, PracticeTableSelectCell } from "../../types";
+import type { CliExerciseConfig } from "../../../cli/types";
 
 const CID = "791381s";
 const src = (pdf: number, end?: number): ContentSource =>
   end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+const EX = (exercise: CliExerciseConfig): Record<string, unknown> => ({ ...exercise });
+/** A practice-table dropdown cell: the options are the values the column takes in the booklet table; `key` is the cell's exact text. */
+const sel = <const O extends readonly string[]>(options: O) => (key: O[number]): PracticeTableSelectCell => ({ kind: "select", options: [...options], key });
+const AD = sel(["0", "1", "90", "110", "120"] as const);
+const KIND = sel(["Link-State (ذكي)", "Hybrid (Cisco فقط)", "Distance Vector (قديم)"] as const);
+const ATTACK = sel(["التقاط البيانات", "تعطيل من أجهزة كثيرة", "صفحات / إيميلات مزيّفة", "تعطيل الخدمة من جهاز واحد", "سرقة الجلسة Session", "تزييف IP / MAC / DNS", "اعتراض الاتصال بين طرفين"] as const);
+const VIOLATION = sel(["إسقاط البيانات مع تنبيه.", "إسقاط البيانات بلا تنبيه.", "إغلاق المنفذ (err-disabled)."] as const);
+const PLACE = sel(["قريب من المصدر", "قريب من الوجهة"] as const);
 
 const m35: ContentModule = {
   id: "791381s-m35",
@@ -65,6 +79,14 @@ const m35: ContentModule = {
                 },
               ],
             },
+            {
+              id: "m35-l01-p01-v-route-types", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/route-types-summary", motion: false,
+              source: src(105),
+              title: "مخطط: أنواع المسارات الثلاثة ومثال المسار الثابت",
+              alt: "مخطط من جزأين: في الأعلى ثلاث بطاقات — Static «يدوي · سريع وآمن · لا يتغيّر»، Dynamic «تلقائي · OSPF · EIGRP»، Default «0.0.0.0/0 لغير المعروف»؛ وفي الأسفل الأمر ip route 192.168.2.0 255.255.255.0 10.0.0.2 مفكّكًا إلى الوجهة 192.168.2.0 والقناع 255.255.255.0 والقفزة التالية 10.0.0.2، ثم المسار الافتراضي 0.0.0.0/0.",
+              caption: "‏Static يدوي، و Dynamic تلقائي عبر OSPF و EIGRP، و Default لكل ما هو غير معروف.",
+            },
             { id: "m35-l01-p01-cli-h", type: "heading", origin: "book", level: 4, text: "Router CLI", dir: "ltr" },
             {
               id: "m35-l01-p01-cli", type: "code", origin: "book", language: "cli", dir: "ltr",
@@ -79,6 +101,29 @@ const m35: ContentModule = {
                 { id: "m35-l01-p01-s1", text: [{ text: "مسار ثابت إلى الشبكة 192.168.2.0/24 عبر 10.0.0.2." }] },
                 { id: "m35-l01-p01-s2", text: [{ text: "مسار افتراضي: أي شبكة غير معروفة تُرسل إلى 10.0.0.2." }] },
               ],
+            },
+            {
+              id: "m35-l01-p01-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مهمّة: مسار ثابت ومسار افتراضي",
+              description: "أنت في وضع الإعداد العام للراوتر. نفّذ سطري صندوق الوحدة: مسار ثابت إلى الشبكة 192.168.2.0/24 عبر 10.0.0.2، ثم مسار افتراضي يرسل أي شبكة غير معروفة إلى 10.0.0.2. تُقيَّم الحالة النهائية. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(105),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المهمّة: ip route 192.168.2.0 255.255.255.0 10.0.0.2 ثم ip route 0.0.0.0 0.0.0.0 10.0.0.2." },
+              config: EX({
+                kind: "task",
+                device: "router",
+                hostname: "Router",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام للراوتر. أضف المسار الثابت ثم المسار الافتراضي كما في صندوق الوحدة.",
+                goals: [
+                  { id: "g-static", label: "مسار ثابت إلى 192.168.2.0/24 عبر 10.0.0.2", condition: { kind: "static-route", prop: "route", value: "192.168.2.0 255.255.255.0 10.0.0.2" } },
+                  { id: "g-default", label: "مسار افتراضي 0.0.0.0 0.0.0.0 عبر 10.0.0.2", condition: { kind: "static-route", prop: "route", value: "0.0.0.0 0.0.0.0 10.0.0.2" } },
+                ],
+                hints: ["السطر ① في الصندوق: ip route ثم الشبكة ثم القناع ثم 10.0.0.2.", "السطر ②: ip route 0.0.0.0 0.0.0.0 10.0.0.2."],
+                allowed: ["ip-route"],
+                completion: "✓ أحسنت، الراوتر يعرف طريق 192.168.2.0/24، وأي شبكة غير معروفة تُرسل إلى 10.0.0.2.",
+              }),
             },
           ],
         },
@@ -100,6 +145,14 @@ const m35: ContentModule = {
                 { text: "الأقلّ AD", style: "strong" },
                 { text: ": Connected ثم Static ثم EIGRP ثم OSPF ثم RIP." },
               ],
+            },
+            {
+              id: "m35-l01-p02-v-ad", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/admin-distance-summary", motion: false,
+              source: src(105),
+              title: "مخطط: سُلّم المسافة الإدارية AD",
+              alt: "مخطط عنوانه «المسافة الإدارية AD — الأصغر أوثق» وتحته خمسة صفوف من الأعلى: Connected 0، Static 1، EIGRP 90، OSPF 110، RIP 120، وفي أسفله «عند تعدّد المسارات لنفس الشبكة يفوز الأقل AD».",
+              caption: "‏عند وجود أكثر من مسار لنفس الشبكة يختار الراوتر الأقلّ AD: Connected ثم Static ثم EIGRP ثم OSPF ثم RIP.",
             },
           ],
         },
@@ -127,6 +180,29 @@ const m35: ContentModule = {
                 "③ R(config)# router eigrp 100",
                 "④ R(config-router)# network 192.168.1.0 0.0.0.255",
               ].join("\n"),
+            },
+            {
+              id: "m35-l01-p03-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "تحدّي الأمر: OSPF ثم EIGRP كما في الصندوق",
+              description: "أنت في وضع الإعداد العام للراوتر R. فعّل OSPF بالعملية 1 وأعلن الشبكة في area 0، ثم ارجع إلى الإعداد العام وفعّل EIGRP 100 وأعلن الشبكة نفسها مع Wildcard. المحاكي لا يكشف الإجابة. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(106),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "التحدّي: router ospf 1 ثم network 192.168.1.0 0.0.0.255 area 0 ثم exit ثم router eigrp 100 ثم network 192.168.1.0 0.0.0.255." },
+              config: EX({
+                kind: "challenge",
+                device: "router",
+                hostname: "R",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام للراوتر R. نفّذ أسطر الصندوق الأربعة: OSPF أولًا ثم EIGRP.",
+                steps: [
+                  { id: "s1", instruction: "فعّل OSPF بالعملية رقم 1", expect: { command: "router", args: { protocol: "ospf", number: 1 } }, hints: ["السطر ① في الصندوق.", "router ospf 1."] },
+                  { id: "s2", instruction: "أعلن الشبكة 192.168.1.0 مع Wildcard 0.0.0.255 في area 0", expect: { condition: { kind: "routing", protocol: "ospf", prop: "network", value: "192.168.1.0 0.0.0.255 area 0" } }, hints: ["السطر ② في الصندوق.", "network ثم الشبكة ثم Wildcard ثم area 0."] },
+                  { id: "s3", instruction: "فعّل EIGRP بالرقم 100", expect: { command: "router", args: { protocol: "eigrp", number: 100 } }, hints: ["السطر ③ يبدأ من R(config)#: اخرج أولًا بـ exit.", "router eigrp 100."] },
+                  { id: "s4", instruction: "أعلن الشبكة 192.168.1.0 مع Wildcard 0.0.0.255", expect: { condition: { kind: "routing", protocol: "eigrp", prop: "network", value: "192.168.1.0 0.0.0.255" } }, hints: ["السطر ④ في الصندوق.", "network 192.168.1.0 0.0.0.255 — بلا area في EIGRP."] },
+                ],
+                completion: "✓ أحسنت، نفّذت أسطر الصندوق الأربعة. وفي EIGRP يمكن كتابة Wildcard بعد الشبكة أو تركه.",
+              }),
             },
             { id: "m35-l01-p03-memo-h", type: "heading", origin: "book", level: 4, text: "للتذكّر" },
             {
@@ -167,6 +243,14 @@ const m35: ContentModule = {
               ],
             },
             {
+              id: "m35-l01-p04-v-dos", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/dos-vs-ddos", motion: true,
+              source: src(106, 107),
+              title: "رسم متحرّك: DoS مقابل DDoS",
+              alt: "رسم متحرّك من لوحتين: لوحة DoS فيها مصدر واحد يرسل حزمًا متتابعة إلى «خادم» وتحتها «مصدر واحد يُغرق الخادم»، ولوحة DDoS فيها ثلاثة أجهزة ترسل حزمها معًا إلى خادم واحد وتحتها «أجهزة كثيرة تُغرقه معًا».",
+              caption: "‏DoS تعطيل الخدمة من جهاز واحد، و DDoS تعطيل من أجهزة كثيرة.",
+            },
+            {
               id: "m35-l01-p04-prevention", type: "callout", origin: "book", kind: "summary", title: "الوقاية",
               spans: [{ text: "التشفير (HTTPS / VPN / SSH)، وكلمات المرور القوية، و Port Security، و ACL — تقلّل أثر هذه الهجمات." }],
             },
@@ -200,6 +284,31 @@ const m35: ContentModule = {
               ],
             },
             {
+              id: "m35-l01-p05-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مثال موجّه: أسطر Port Security الخمسة",
+              description: "أنت داخل منفذ السويتش في وضع إعداد الواجهة. نفّذ أسطر صندوق الوحدة الخمسة بالترتيب. الوحدة لا تسمّي المنفذ؛ في هذا التمرين نستعمل f0/1. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(107),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المثال الموجّه: switchport mode access ثم switchport port-security ثم switchport port-security maximum 2 ثم switchport port-security mac-address sticky ثم switchport port-security violation shutdown." },
+              config: EX({
+                kind: "guided",
+                device: "switch",
+                hostname: "Switch",
+                startMode: "interface",
+                startInterface: "f0/1",
+                intro: "أنت داخل المنفذ f0/1 في وضع إعداد الواجهة. نفّذ أسطر صندوق الوحدة بالترتيب.",
+                steps: [
+                  { id: "s1", instruction: "اجعل المنفذ في وضع Access (مطلوب لتفعيل الحماية)", expect: { command: "switchport-mode", args: { mode: "access" } }, hints: ["السطر ① في الصندوق.", "switchport mode access."] },
+                  { id: "s2", instruction: "فعّل الميزة", expect: { command: "switchport-port-security" }, hints: ["السطر ② في الصندوق.", "switchport port-security بلا قيم إضافية."] },
+                  { id: "s3", instruction: "اجعل عدد الأجهزة المسموح بها 2", expect: { command: "port-security-maximum", args: { maximum: 2 } }, hints: ["السطر ③ في الصندوق.", "switchport port-security maximum 2."] },
+                  { id: "s4", instruction: "اجعل السويتش يتعلّم عناوين MAC تلقائيًا ويحفظها (sticky)", expect: { command: "port-security-sticky" }, hints: ["السطر ④ في الصندوق.", "switchport port-security mac-address sticky."] },
+                  { id: "s5", instruction: "حدّد الإجراء عند المخالفة: إغلاق المنفذ", expect: { command: "port-security-violation", args: { action: "shutdown" } }, hints: ["السطر ⑤ في الصندوق.", "switchport port-security violation shutdown."] },
+                ],
+                completion: "✓ أحسنت، المنفذ مؤمَّن كما في الصندوق: جهازان على الأكثر، و sticky، وإغلاق المنفذ عند المخالفة.",
+              }),
+            },
+            {
               id: "m35-l01-p05-table", type: "table", origin: "book",
               headers: ["نوع المخالفة", "ماذا يحدث؟"],
               rows: [
@@ -207,6 +316,14 @@ const m35: ContentModule = {
                 ["Restrict", "إسقاط البيانات مع تنبيه."],
                 ["Protect", "إسقاط البيانات بلا تنبيه."],
               ],
+            },
+            {
+              id: "m35-l01-p05-v-config", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/port-security-config-summary", motion: false,
+              source: src(107),
+              title: "مخطط: إعداد Port Security وأنواع المخالفة",
+              alt: "مخطط عنوانه «تأمين المنفذ Port Security»: من «المنفذ Port» تنزل خمس خطوات بالترتيب — Access (switchport mode access)، Port Security (تفعيل الميزة)، Maximum 2 (جهازان على الأكثر)، Sticky (تعلّم MAC تلقائيًّا)، Violation (سياسة المخالفة) — وتحتها ثلاث بطاقات: Shutdown «إغلاق المنفذ · err-disabled»، Restrict «إسقاط + تنبيه»، Protect «إسقاط بلا تنبيه».",
+              caption: "‏خمس خطوات إعداد ثم ثلاثة أنواع مخالفة؛ Shutdown وحده يغلق المنفذ.",
             },
           ],
         },
@@ -238,6 +355,32 @@ const m35: ContentModule = {
                 { id: "m35-l01-p06-l3", text: [{ text: "السطر 7: كلمة مرور " }, { text: "مشفّرة", style: "strong" }, { text: " للوضع المميّز (#)." }] },
                 { id: "m35-l01-p06-l4", text: [{ text: "السطر 8: تشفير كل كلمات المرور في الإعدادات." }] },
               ],
+            },
+            {
+              id: "m35-l01-p06-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مهمّة: حماية الوصول كما في الصندوق",
+              description: "أنت في وضع الإعداد العام. احمِ خط Console وخطوط VTY بكلمة المرور cisco مع login، وضع enable secret cisco123، وفعّل تشفير كل كلمات المرور. تُقيَّم الحالة النهائية والترتيب لك. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(108),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المهمّة: line console 0 ثم password cisco ثم login، ثم line vty 0 4 ثم password cisco ثم login، ثم enable secret cisco123، ثم service password-encryption." },
+              config: EX({
+                kind: "task",
+                device: "switch",
+                hostname: "Switch",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام. نفّذ أسطر الصندوق الثمانية.",
+                goals: [
+                  { id: "g-con-pw", label: "خط Console يحمل كلمة المرور cisco", condition: { kind: "line", line: "console", prop: "password", value: "cisco" } },
+                  { id: "g-con-login", label: "خط Console يطلب كلمة المرور (login)", condition: { kind: "line", line: "console", prop: "login", value: true } },
+                  { id: "g-vty-pw", label: "خطوط VTY 0 4 تحمل كلمة المرور cisco", condition: { kind: "line", line: "vty", prop: "password", value: "cisco" } },
+                  { id: "g-vty-login", label: "خطوط VTY تطلب كلمة المرور (login)", condition: { kind: "line", line: "vty", prop: "login", value: true } },
+                  { id: "g-secret", label: "كلمة مرور مشفّرة للوضع المميّز: enable secret cisco123", condition: { kind: "device", prop: "enableSecret", value: "cisco123" } },
+                  { id: "g-enc", label: "تشفير كل كلمات المرور مفعّل", condition: { kind: "device", prop: "passwordEncryption", value: true } },
+                ],
+                hints: ["الأسطر 1–3: line console 0 ثم password cisco ثم login، ثم exit قبل line vty 0 4.", "الأسطر 7–8 في الإعداد العام: enable secret cisco123 ثم service password-encryption."],
+                completion: "✓ أحسنت، الوصول المحلي (Console) والدخول عن بُعد (VTY) والوضع المميّز كلها محمية، وكلمات المرور مشفّرة.",
+              }),
             },
             {
               id: "m35-l01-p06-ssh", type: "callout", origin: "book", kind: "summary", title: "SSH",
@@ -283,6 +426,29 @@ const m35: ContentModule = {
               ],
             },
             {
+              id: "m35-l01-p07-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مهمّة: القائمة Standard والقائمة Extended",
+              description: "أنت في وضع الإعداد العام للراوتر. اكتب قائمتي الصندوق كما هما، ثم طبّق القائمة 10 للبيانات الخارجة والقائمة 100 للبيانات الداخلة. الوحدة لا تسمّي الواجهات؛ في هذا التمرين نطبّق 10 على g0/0 و 100 على g0/1. الترتيب لك. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(108, 109),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المهمّة: access-list 10 permit 192.168.1.0 0.0.0.255 ثم interface g0/0 و ip access-group 10 out، ثم access-list 100 permit tcp 192.168.1.0 0.0.0.255 any eq 80 ثم interface g0/1 و ip access-group 100 in." },
+              config: EX({
+                kind: "task",
+                device: "router",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام. القوائم تُكتب هنا، والتطبيق ip access-group داخل الواجهة: 10 خروجًا على g0/0، و 100 دخولًا على g0/1.",
+                goals: [
+                  { id: "g-std", label: "القائمة 10 تسمح لشبكة 192.168.1.0/24", condition: { kind: "acl", number: 10, prop: "entry", value: "permit 192.168.1.0 0.0.0.255" } },
+                  { id: "g-std-apply", label: "القائمة 10 مطبّقة على g0/0 للبيانات الخارجة (out)", condition: { kind: "interface", name: "g0/0", prop: "accessGroup", value: "10 out" } },
+                  { id: "g-ext", label: "القائمة 100 تسمح للشبكة بالتصفّح HTTP إلى أي وجهة", condition: { kind: "acl", number: 100, prop: "entry", value: "permit tcp 192.168.1.0 0.0.0.255 any eq 80" } },
+                  { id: "g-ext-apply", label: "القائمة 100 مطبّقة على g0/1 للبيانات الداخلة (in)", condition: { kind: "interface", name: "g0/1", prop: "accessGroup", value: "100 in" } },
+                ],
+                hints: ["السطران ① و ③ في الإعداد العام، والسطران ② و ④ داخل الواجهة (interface g0/0 أو interface g0/1).", "access-list 100 permit tcp 192.168.1.0 0.0.0.255 any eq 80، ثم ip access-group 100 in."],
+                completion: "✓ أحسنت، القائمتان مكتوبتان ومطبّقتان: Standard للبيانات الخارجة، و Extended للبيانات الداخلة.",
+              }),
+            },
+            {
               id: "m35-l01-p07-rule", type: "callout", origin: "book", kind: "summary", title: "القاعدة",
               spans: [
                 { text: "Standard", style: "strong" },
@@ -290,6 +456,210 @@ const m35: ContentModule = {
                 { text: "Extended", style: "strong" },
                 { text: " قريبة من المصدر (تفحص المصدر والوجهة والمنفذ)." },
               ],
+            },
+            {
+              id: "m35-l01-p07-v-gate", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m06/acl-gate", motion: true,
+              source: src(108, 109),
+              title: "رسم متحرّك: ACL — بوابة permit / deny وقاعدة الموضع",
+              alt: "رسم متحرّك: خط «Permit ✓» تعبر عليه حزمة واجهة الراوتر المكتوب عليها ACL وتكمل طريقها، وخط «Deny ✕» تتوقّف حزمته عند الواجهة؛ وتحتهما عبارة: Standard قرب الوجهة (المصدر فقط) · Extended قرب المصدر (المصدر + الوجهة + المنفذ).",
+              caption: "‏Standard قريبة من الوجهة (تفحص المصدر فقط)، و Extended قريبة من المصدر.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages. Every question is
+      // answered by the section's printed text above (the explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m35-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m35-l02-p01",
+          title: "تدريبات الوحدة: التوجيه والأمان",
+          order: 1,
+          layout: "practice",
+          source: src(105, 109),
+          blocks: [
+            {
+              id: "m35-l02-p01-t01", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ صف AD: اختر قيمة المسافة الإدارية لكل مصدر",
+              headers: ["البروتوكول", "Connected", "Static", "EIGRP", "OSPF", "RIP"],
+              rows: [["AD", AD("0"), AD("1"), AD("90"), AD("110"), AD("120")]],
+            },
+            {
+              id: "m35-l02-p01-t02", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «النوع»: اختر نوع كل بروتوكول كما في جدول المقارنة",
+              headers: ["البروتوكول", "النوع", "AD", "المقياس Metric"],
+              rows: [
+                ["RIP", KIND("Distance Vector (قديم)"), "120", "عدد القفزات Hops"],
+                ["OSPF", KIND("Link-State (ذكي)"), "110", "Cost (سرعة الخط)"],
+                ["EIGRP", KIND("Hybrid (Cisco فقط)"), "90", "Bandwidth + Delay"],
+              ],
+            },
+            {
+              id: "m35-l02-p01-t03", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «الوصف»: اختر وصف كل هجوم",
+              headers: ["الهجوم", "المعنى", "الوصف"],
+              rows: [
+                ["DoS", "Denial of Service", ATTACK("تعطيل الخدمة من جهاز واحد")],
+                ["DDoS", "Distributed DoS", ATTACK("تعطيل من أجهزة كثيرة")],
+                ["Spoofing", "تزييف", ATTACK("تزييف IP / MAC / DNS")],
+                ["MitM", "الرجل الوسيط", ATTACK("اعتراض الاتصال بين طرفين")],
+                ["Sniffing", "تنصّت", ATTACK("التقاط البيانات")],
+                ["Hijacking", "اختطاف الجلسة", ATTACK("سرقة الجلسة Session")],
+                ["Phishing", "احتيال", ATTACK("صفحات / إيميلات مزيّفة")],
+              ],
+            },
+            {
+              id: "m35-l02-p01-t04", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «ماذا يحدث؟»: اختر نتيجة كل نوع مخالفة",
+              headers: ["نوع المخالفة", "ماذا يحدث؟"],
+              rows: [
+                ["Shutdown", VIOLATION("إغلاق المنفذ (err-disabled).")],
+                ["Restrict", VIOLATION("إسقاط البيانات مع تنبيه.")],
+                ["Protect", VIOLATION("إسقاط البيانات بلا تنبيه.")],
+              ],
+            },
+            {
+              id: "m35-l02-p01-t05", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «التطبيق»: أين تُطبَّق كل قائمة؟",
+              headers: ["النوع", "الرقم", "الفلترة", "التطبيق"],
+              rows: [
+                ["Standard ACL", "1–99", "المصدر فقط (Source IP)", PLACE("قريب من الوجهة")],
+                ["Extended ACL", "100–199", "IP + Port + Protocol", PLACE("قريب من المصدر")],
+              ],
+              columnDirs: ["rtl", "ltr", "rtl", "rtl"],
+            },
+            {
+              id: "m35-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "الراوتر يعرف الشبكة نفسها عبر OSPF وعبر EIGRP. أيّ مسار يختار؟",
+                options: [{ id: "a", text: "OSPF لأن AD له 110 وهو الأكبر" }, { id: "b", text: "EIGRP لأن AD له 90 وهو الأقلّ", correct: true }, { id: "c", text: "يستعمل المسارين معًا دائمًا" }],
+                feedback: { explanation: "عند وجود أكثر من مسار لنفس الشبكة، يختار الراوتر الأقلّ AD؛ وفي الجدول EIGRP = 90 و OSPF = 110." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب مصادر المسارات من الأكثر تفضيلًا (الأقلّ AD) إلى الأقلّ تفضيلًا:",
+                items: [
+                  { id: "ospf", text: "OSPF" },
+                  { id: "connected", text: "Connected" },
+                  { id: "rip", text: "RIP" },
+                  { id: "eigrp", text: "EIGRP" },
+                  { id: "static", text: "Static" },
+                ],
+                order: ["connected", "static", "eigrp", "ospf", "rip"],
+                feedback: { explanation: "يختار الراوتر الأقلّ AD: Connected (0) ثم Static (1) ثم EIGRP (90) ثم OSPF (110) ثم RIP (120)." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل بروتوكول بمقياسه Metric كما في جدول المقارنة:",
+                left: [
+                  { id: "rip", text: "RIP" },
+                  { id: "ospf", text: "OSPF" },
+                  { id: "eigrp", text: "EIGRP" },
+                ],
+                right: [
+                  { id: "r1", text: "Bandwidth + Delay" },
+                  { id: "r2", text: "عدد القفزات Hops" },
+                  { id: "r3", text: "Cost (سرعة الخط)" },
+                ],
+                pairs: { rip: "r2", ospf: "r3", eigrp: "r1" },
+                feedback: { explanation: "من جدول المقارنة: RIP مقياسه عدد القفزات Hops، و OSPF مقياسه Cost (سرعة الخط)، و EIGRP مقياسه Bandwidth + Delay." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في EIGRP يمكن كتابة Wildcard بعد الشبكة أو تركه.", answer: true, feedback: { explanation: "من «للتذكّر»: في EIGRP يمكن كتابة Wildcard بعد الشبكة أو تركه." } },
+            },
+            {
+              id: "m35-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أيّ بروتوكول من نوع Link-State بحسب جدول المقارنة؟",
+                options: [{ id: "a", text: "RIP" }, { id: "b", text: "EIGRP" }, { id: "c", text: "OSPF", correct: true }],
+                feedback: { explanation: "في جدول المقارنة: OSPF من نوع Link-State (ذكي) و AD له 110، ومقياسه Cost (سرعة الخط)." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أيّ هجوم يصفه جدول الهجمات بأنه «صفحات / إيميلات مزيّفة»؟",
+                options: [{ id: "a", text: "Phishing", correct: true }, { id: "b", text: "Sniffing" }, { id: "c", text: "DDoS" }, { id: "d", text: "Hijacking" }],
+                feedback: { explanation: "من الجدول: Phishing (احتيال) = صفحات / إيميلات مزيّفة، أما Sniffing فالتقاط البيانات، و DDoS تعطيل من أجهزة كثيرة، و Hijacking سرقة الجلسة." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في Port Security، ماذا يحدث عند المخالفة إذا كان نوعها Restrict؟",
+                options: [{ id: "a", text: "إغلاق المنفذ (err-disabled)" }, { id: "b", text: "إسقاط البيانات بلا تنبيه" }, { id: "c", text: "لا يحدث شيء" }, { id: "d", text: "إسقاط البيانات مع تنبيه", correct: true }],
+                feedback: { explanation: "من جدول أنواع المخالفة: Shutdown = إغلاق المنفذ (err-disabled)، Restrict = إسقاط البيانات مع تنبيه، Protect = إسقاط البيانات بلا تنبيه." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "الأمر switchport port-security mac-address sticky يعني أن المدير يكتب كل عناوين MAC يدويًا.", answer: false, feedback: { explanation: "sticky: السويتش يتعلّم عناوين MAC تلقائيًا ويحفظها." } },
+            },
+            {
+              id: "m35-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل صندوق SSH من مخزن الكلمات:",
+                segments: ["SSH بديل آمن و", { blank: "b1" }, " لـ ", { blank: "b2" }, " لتسجيل الدخول إلى السويتش أو الراوتر عبر الشبكة (المنفذ ", { blank: "b3" }, ")."],
+                bank: ["Telnet", "مشفّر", "22", "80", "مكشوف"],
+                answers: { b1: "مشفّر", b2: "Telnet", b3: "22" },
+                feedback: { explanation: "SSH بديل آمن ومشفّر لـ Telnet لتسجيل الدخول إلى السويتش أو الراوتر عبر الشبكة (المنفذ 22)." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل أمر بما يحميه كما في شرح صندوق كلمات المرور:",
+                left: [
+                  { id: "con", text: "line console 0" },
+                  { id: "vty", text: "line vty 0 4" },
+                  { id: "secret", text: "enable secret cisco123" },
+                  { id: "enc", text: "service password-encryption" },
+                ],
+                right: [
+                  { id: "r1", text: "تشفير كل كلمات المرور في الإعدادات" },
+                  { id: "r2", text: "الدخول عن بُعد (VTY)" },
+                  { id: "r3", text: "كلمة مرور مشفّرة للوضع المميّز (#)" },
+                  { id: "r4", text: "الوصول المحلي بالكابل (Console)" },
+                ],
+                pairs: { con: "r4", vty: "r2", secret: "r3", enc: "r1" },
+                feedback: { explanation: "الأسطر 1–3: حماية الوصول المحلي بالكابل (Console)، الأسطر 4–6: حماية الدخول عن بُعد (VTY)، السطر 7: كلمة مرور مشفّرة للوضع المميّز (#)، السطر 8: تشفير كل كلمات المرور في الإعدادات." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل خاصية حسب جدول ACL: Standard أم Extended؟",
+                groups: [{ id: "std", text: "Standard ACL" }, { id: "ext", text: "Extended ACL" }],
+                items: [
+                  { id: "i1", text: "الرقم 100–199" },
+                  { id: "i2", text: "تفلتر المصدر فقط (Source IP)" },
+                  { id: "i3", text: "تُطبَّق قريبًا من المصدر" },
+                  { id: "i4", text: "الرقم 1–99" },
+                  { id: "i5", text: "تفلتر IP + Port + Protocol" },
+                  { id: "i6", text: "تُطبَّق قريبًا من الوجهة" },
+                ],
+                assign: { i1: "ext", i2: "std", i3: "ext", i4: "std", i5: "ext", i6: "std" },
+                feedback: { explanation: "Standard ACL: الرقم 1–99، الفلترة المصدر فقط (Source IP)، التطبيق قريب من الوجهة. Extended ACL: الرقم 100–199، الفلترة IP + Port + Protocol، التطبيق قريب من المصدر." },
+              },
+            },
+            {
+              id: "m35-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في السطر ip access-group 100 in، على أيّ بيانات تُطبَّق القائمة؟",
+                options: [{ id: "a", text: "البيانات الخارجة من الواجهة" }, { id: "b", text: "البيانات الداخلة إلى الواجهة", correct: true }, { id: "c", text: "كل بيانات الراوتر على كل الواجهات" }],
+                feedback: { explanation: "السطر ④ في الصندوق: تطبيق القائمة 100 على الواجهة للبيانات الداخلة (in)، أما السطر ② فيطبّق القائمة 10 للبيانات الخارجة (out)." },
+              },
             },
           ],
         },

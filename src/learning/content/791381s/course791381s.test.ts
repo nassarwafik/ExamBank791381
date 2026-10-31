@@ -139,9 +139,9 @@ describe("791381s — the bodies", () => {
     }
   }, 30000);
 
-  it("Phases 4–6: units 1–30 each close with a «تدريبات الوحدة» page of 8+ reveal questions mixing kinds", async () => {
+  it("Phases 4–7: every unit 1–36 closes with a «تدريبات الوحدة» page of 8+ reveal questions mixing kinds", async () => {
     const mods = await loadAll();
-    for (const n of Array.from({ length: 30 }, (_, i) => String(i + 1).padStart(2, "0"))) {
+    for (const n of Array.from({ length: 36 }, (_, i) => String(i + 1).padStart(2, "0"))) {
       const mod = mods.find(m => m.id === CID + "-m" + n)!;
       const last = [...mod.lessons].sort((a, b) => a.order - b.order).at(-1)!;
       expect(last.title, mod.id).toBe("تدريبات الوحدة");
@@ -151,6 +151,17 @@ describe("791381s — the bodies", () => {
       expect(qs.length, mod.id).toBeGreaterThanOrEqual(8);
       for (const q of qs) expect(q.reveal, q.id).toBe(true);
       expect(new Set(qs.map(q => q.question.kind)).size, mod.id + " kinds").toBeGreaterThanOrEqual(3);
+    }
+  }, 30000);
+
+  it("Phase 7: the «الملخّص الشامل» units 31–36 practise their review tables from memory — every practice-table twin sits on the unit's «تدريبات الوحدة» page, never under the book table", async () => {
+    const mods = await loadAll();
+    for (const n of ["31", "32", "33", "34", "35", "36"]) {
+      const mod = mods.find(m => m.id === CID + "-m" + n)!;
+      const pages = mod.lessons.flatMap(l => l.pages);
+      const practice = pages.find(p => p.layout === "practice")!;
+      expect(practice.blocks.filter(b => b.type === "practice-table").length, mod.id).toBeGreaterThanOrEqual(3);
+      for (const p of pages) if (p !== practice) expect(p.blocks.some(b => b.type === "practice-table"), p.id).toBe(false);
     }
   }, 30000);
 

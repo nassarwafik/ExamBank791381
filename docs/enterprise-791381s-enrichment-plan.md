@@ -16,6 +16,7 @@
 | D4 | **Simulations are welcome** where they help (reuse 791381's activities first). | Owner, 2026-10-31 |
 | D5 | **Colour, typography and icons are very important**: attractive colours, beautiful fonts, attractive icons — as presentation of the unchanged book. | Owner, 2026-10-31 |
 | D6 | **End-of-unit exercises count toward the student's Strength points**, exactly as in the first book (791381) — the existing Study Practice Strength path (server-judged, best-once). | Owner, 2026-10-31 |
+| D7 | **Finish Phases 7 and 9 in the current form; Phase 8 becomes the exam-system integration**: bring the platform's exam engine and its curriculum network simulator (`networkTopology@2`: routers / switches / PCs with Command Prompt / servers / access points), its advanced question types (labelDiagram / hotspot on the booklet's drawings, parametricNumeric, inlineCloze, tableFill, multipleSelect…) and the Exam Library trainings (T01–T30, F01–F06) into the booklet, in the places that make it professional — without ever creating an exam record or a grade from practice, and without any answer reaching the browser before an answer. | Owner, 2026-10-31 |
 
 The book is protected mechanically, not by convention: the **book lock** (Phase 1, section 4) fails the root suite on any
 change to a book block, a book page's identity / order / source, or a booklet drawing's bytes.
@@ -70,8 +71,8 @@ stays the teacher's explicit action (deployment ≠ publication).
 | **4** | **Enrich «الدفعتان 1–2»** (m01–m08) | Reuse 791381 visuals/activities under the paragraphs they explain; added solved examples (conversions, IP validity, CIDR); «تدريبات الوحدة» (8–12 items) per unit. New activity candidates: `binary-boxes` (m02 «أهم أداة في الوحدة»), `ip-validity-checker` (m03). | Book lock green; every item answerable from its page; study index regenerated. |
 | **5** | **Enrich «الدفعتان 3–4»** (m09–m19) | OSI, TCP handshake, message delivery, CLI terminal setups for switch / VLAN / trunk / VTP; end-of-unit pages. New candidates: `pc-command-prompt` (ping / ipconfig), `trunk-tagging`. | idem |
 | **6** | **Enrich «الدفعتان 5–6»** (m20–m30) | Wi-Fi / DMZ visuals, IPv6 compress, DHCP DORA, Port Security, passwords, routing, ACL; CLI setups (DHCP, port security, static route); end-of-unit pages. New visual candidate: running-config vs startup-config (`copy`). | idem |
-| **7** | **«الملخّص الشامل»** (m31–m36) | An interactive twin **under** each review table (dropdown / classify), reusing 791381-m28's 17 worksheets where they match the booklet; a cumulative review set per unit. | idem |
-| **8** | **New simulations** | VLAN + trunk, subnetting calculator, ACL rule evaluator, DHCP DORA, OSPF / EIGRP path choice — registry-backed, reduced-motion safe. Can run in parallel with 5–7. | Each activity: allowlist entry + fallback + tests. |
+| **7** | **«الملخّص الشامل»** (m31–m36) | An interactive twin of each review table (one column as dropdowns), placed on the unit's «تدريبات الوحدة» page so it is filled from memory (not copied from the table above); a cumulative review set per unit. | idem |
+| **8** | **Exam-system integration (D7)** | 8A — link units to the existing Exam Library trainings (T01–T30, F01–F06; same Strength bucket, no double count). 8B — network labs in the units with the full curriculum simulator (`networkTopology@2`): VLAN, Trunk / Router on a Stick, DHCP, Port Security, wireless, `ping` / `ipconfig` on a PC. 8C — advanced question types on «تدريبات الوحدة» (label the booklet drawing, numbers that change per attempt, passage completion, table fill). Practice never creates an exam record or grade; keys stay server-side. | Design record + fail-first tests on the practice ↔ exam boundary; mutation proof on key secrecy and on "no exam record from practice". |
 | **9** | **Final audit** | Every page on phone / desktop, light / sepia / dark, presentation mode, print, load size; every item traced to its page text. | Report to the owner; ready for class publication. |
 
 Order: **1 → 2 → 3**, then **4 → 5 → 6 → 7**; **8** in parallel with 5–7.
@@ -267,3 +268,34 @@ g0/0); m23-p03/p04 and m25-p02 run on f0/1 (the unit's p02 port); m24's first vi
 the next page of the same unit).
 
 Guards: units-1–30 practice-page test; visual gate: `learning-search` declared (pages 221 → 232).
+
+## 10. Phase 7 record — «الملخّص الشامل» (units 31–36) enriched
+
+| Unit | Interactive table twins (on the practice page) | Visuals / activities | Questions |
+|---|---|---|---|
+| 31 الأساسيات | 8 (property, Subnet Mask, base, the 192 boxes row, layer, cable, connection type, network symbol) | private-public, address-classes; `hub-switch-router-flow`, `cable-comparison`, `network-scope` | 12 |
+| 32 النماذج والبروتوكولات | 4 (OSI layer, Port, UDP, data unit) | encapsulation-stack; `osi-layers` (the booklet's Arabic layer names) | 12 |
+| 33 العنونة والتجزئة | 6 (address, message type, prefix, Wildcard, IPv6 value, IPv6 special address) | subnetting-walkthrough (192.168.1.25/24, the booklet's example), wildcard-inversion; `ipv6-compress` (2001:0DB8:…:0001 → 2001:DB8::1); a solved example on the table's 172.16.5.40/16 row | 12 |
+| 34 التبديل و VLANs | 4 (technology, VTP mode, STP element, concept) | trunk-multi-vlan, stp-loop-blocking, metro-vlan-summary; 3 × `cli-terminal` (g0/1 trunk with allowed 10,20,30 + native 99, VTP HFA / SA1234, gi0/0.10 dot1Q 10) | 12 |
+| 35 التوجيه والأمان | 5 (AD row, protocol type — this unit's «Hybrid (Cisco فقط)», attack description, violation result, ACL placement) | route-types-summary and port-security-config-summary (this unit prints 0.0.0.0/0 and Restrict / Protect), admin-distance-summary, dos-vs-ddos, acl-gate; 5 × `cli-terminal` | 12 |
+| 36 الخدمات والأوامر | 3 (term NAT / PAT / APIPA, CMD command, Show command) | nat-pat-apipa, dhcp-dora and tcp-three-way-handshake (SVG twins next to the booklet's crops), web-opening-journey; 2 × `cli-terminal` | 12 |
+
+30 table twins and 72 questions (458 checkable activities in the whole booklet). **Placement decision (lead)**: the agents first put
+each twin right under its book table, with the same rows — the answer was in view just above; the twins were moved to the unit's
+«تدريبات الوحدة» page (renamed to that page's ids) so the student recalls the table. A test pins it (no practice-table on a book page of
+units 31–36). Every CLI exercise ran through the real engine with the booklet's lines and completes.
+
+**Rejected on purpose** (selection): ip-vs-mac-summary, static-dynamic, binary-to-decimal (123 ≠ the page's 192), cable-media-overview
+(100 Gbps, Coaxial), utp-vs-stp, well-known-ports (FTP 21 ≠ «20 , 21»), tcp-vs-udp («مرتّب»), protocols-by-transport (DNS UDP-only),
+ssh-vs-telnet, message-delivery on unit 33, apipa-fallback (169.254.10.7), ipv6-summary («أطول سلسلة»), vlan-segmentation (VLAN 20 =
+المحاسبة ≠ the booklet's SALES), vtp-roles / vtp-propagation, router-on-a-stick (g0/0.20), routing-update-types on unit 35 (EIGRP «Distance
+Vector» ≠ this unit's «Hybrid»), extended-acl-decision on unit 35 (443 / ICMP), dhcp-pool-excluded, troubleshooting-command-map; the range
+CLI box (`config-if-range`).
+
+**Notes for review**: unit 35's protocol-type table offers «Distance Vector (قديم)» (RIP's value in that table) as a wrong choice for EIGRP;
+the EIGRP challenge on unit 35 requires the wildcard as printed in line ④, although its «للتذكّر» says it is optional; CLI exercises without
+a named interface run on f0/1 (port security) and g0/0 / g0/1 (ACL), each description says so.
+
+Guards: every unit 1–36 ends with an 8+ question reveal page; units 31–36's twins live on the practice page. Visual gate: `learning-search`
+declared (pages 232 → 238). **With Phase 7, every unit of the booklet is enriched**; Phase 8 (exam-system integration, D7) and Phase 9
+(final audit) remain.

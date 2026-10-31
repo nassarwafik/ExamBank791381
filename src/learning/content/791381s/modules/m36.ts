@@ -1,15 +1,28 @@
 // Learning Materials — «أوراق تلخيص للمراجعة» (791381s), section 36 «الخدمات والأوامر».
 //
 // Verbatim conversion of booklet PDF pages 109–112 (the section header box → an opener page; each numbered sub-topic →
-// one reader page). Every block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`, monospace
-// runs are `code`, printed box labels are the callout titles. The DORA and TCP handshake drawings are crops of the
-// booklet itself. Page 112 closes with the «كلمة الختام» box, kept on the last sub-topic page as printed.
+// one reader page). Every converted block is origin:"book": nothing is added, removed or reworded; bold runs are `strong`,
+// monospace runs are `code`, printed box labels are the callout titles. The DORA and TCP handshake drawings are crops of
+// the booklet itself. Page 112 closes with the «كلمة الختام» box, kept on the last sub-topic page as printed.
+//
+// Enrichment (docs/enterprise-791381s-enrichment-plan.md, Phase 7): teacher-enrichment blocks (visuals — including SVG
+// twins placed right after the two booklet crops, never replacing them — and CLI terminal simulations reused from course
+// 791381 after checking their labels / commands against this section, interactive practice-table twins of the review
+// tables, and the end-of-unit «تدريبات الوحدة» lesson) are ADDED after the book blocks they explain. The book blocks stay
+// verbatim — pinned by the book lock (bookLock.test.ts).
 
-import type { ContentModule, ContentSource } from "../../types";
+import type { ContentModule, ContentSource, PracticeTableSelectCell } from "../../types";
+import type { CliExerciseConfig } from "../../../cli/types";
 
 const CID = "791381s";
 const src = (pdf: number, end?: number): ContentSource =>
   end ? { kind: "book", sourceId: CID, pdfPageStart: pdf, pdfPageEnd: end } : { kind: "book", sourceId: CID, pdfPageStart: pdf };
+const EX = (exercise: CliExerciseConfig): Record<string, unknown> => ({ ...exercise });
+/** A practice-table dropdown cell: the options are the values the column takes in the booklet table; `key` is the cell's exact text. */
+const sel = <const O extends readonly string[]>(options: O) => (key: O[number]): PracticeTableSelectCell => ({ kind: "select", options: [...options], key });
+const TERM = sel(["PAT", "APIPA", "NAT"] as const);
+const CMD = sel(["nslookup", "ipconfig /all", "ping 8.8.8.8", "arp -a", "tracert", "ipconfig"] as const);
+const SHOW = sel(["show ip route", "show interfaces status", "show vlan brief", "show access-lists", "show spanning-tree", "show interfaces trunk", "show vtp status", "show mac address-table"] as const);
 
 const m36: ContentModule = {
   id: "791381s-m36",
@@ -67,6 +80,14 @@ const m36: ContentModule = {
                 { text: "." },
               ],
             },
+            {
+              id: "m36-l01-p01-v-nat", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/nat-pat-apipa", motion: false,
+              source: src(109, 110),
+              title: "مخطط: NAT و PAT و APIPA — ثلاثة مفاهيم منفصلة",
+              alt: "مخطط عنوانه «ثلاثة مفاهيم منفصلة»: على اليسار تحت «تحويل للخروج إلى الإنترنت» بطاقتان — NAT «تحويل العنوان الخاص إلى العام» و PAT «عنوان عام واحد لعدة أجهزة بالمنافذ (Ports)»؛ وبعد خط فاصل، تحت «ليس تحويلًا — فشل DHCP» بطاقة APIPA «الجهاز يعطي نفسه 169.254.x.x عند فشل DHCP».",
+              caption: "‏NAT/PAT للخروج بعنوان عام، و APIPA إشارة إلى مشكلة في DHCP.",
+            },
           ],
         },
         {
@@ -79,6 +100,14 @@ const m36: ContentModule = {
               id: "m36-l01-p02-drawing", type: "diagram", origin: "book",
               src: "/learning-assets/791381s/eb50b11c5e80a5dc.png",
               alt: "رسم تبادل الرسائل بين «خادم DHCP» (أيقونة خادم على اليمين) و«العميل (الحاسوب)» (أيقونة حاسوب على اليسار) بأربعة أسهم: «1 · Discover» من العميل إلى الخادم وتحته «العميل يبحث عن خادم (Broadcast)»؛ «2 · Offer» من الخادم إلى العميل وتحته «الخادم يعرض عنوان IP»؛ «3 · Request» من العميل إلى الخادم وتحته «العميل يطلب العنوان المعروض»؛ «4 · ACK» من الخادم إلى العميل وتحته «الخادم يؤكّد: العنوان أصبح لك».",
+            },
+            {
+              id: "m36-l01-p02-v-dora", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dhcp-dora", motion: true,
+              source: src(110),
+              title: "رسم متحرّك: رسائل DORA الأربع بالترتيب",
+              alt: "رسم متحرّك: «الجهاز» على اليسار و«خادم DHCP» على اليمين، وأربع رسائل تتحرّك واحدة بعد الأخرى: Discover من الجهاز إلى الخادم، ثم Offer من الخادم إلى الجهاز، ثم Request من الجهاز إلى الخادم، ثم ACK من الخادم إلى الجهاز.",
+              caption: "‏Discover ثم Offer ثم Request ثم ACK — العميل يبدأ والخادم يردّ.",
             },
             {
               id: "m36-l01-p02-memo", type: "text", origin: "book",
@@ -105,6 +134,31 @@ const m36: ContentModule = {
                 { id: "m36-l01-p02-s5", text: [{ text: "عنوان خادم DNS." }] },
               ],
             },
+            {
+              id: "m36-l01-p02-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "مهمّة: مجموعة DHCP باسم STUDENTS",
+              description: "أنت في وضع الإعداد العام للراوتر R. احجز العناوين 192.168.10.1 إلى 192.168.10.10، وأنشئ المجموعة STUDENTS بشبكتها وبوابتها وخادم DNS كما في صندوق الوحدة. تُقيَّم الحالة النهائية. محاكاة تعليمية مبسّطة، ليست جهازًا حقيقيًا.",
+              source: src(110, 111),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "المهمّة: ip dhcp excluded-address 192.168.10.1 192.168.10.10 ثم ip dhcp pool STUDENTS ثم network 192.168.10.0 255.255.255.0 ثم default-router 192.168.10.1 ثم dns-server 8.8.8.8." },
+              config: EX({
+                kind: "task",
+                device: "router",
+                hostname: "R",
+                startMode: "global",
+                intro: "أنت في وضع الإعداد العام للراوتر R. نفّذ أسطر الصندوق الخمسة.",
+                goals: [
+                  { id: "g-excl", label: "العناوين 192.168.10.1 إلى 192.168.10.10 محجوزة لا يوزّعها الخادم", condition: { kind: "dhcp-excluded", from: "192.168.10.1", to: "192.168.10.10" } },
+                  { id: "g-net", label: "المجموعة STUDENTS توزّع من الشبكة 192.168.10.0", condition: { kind: "dhcp-pool", name: "STUDENTS", prop: "network", value: "192.168.10.0" } },
+                  { id: "g-mask", label: "قناع الشبكة 255.255.255.0", condition: { kind: "dhcp-pool", name: "STUDENTS", prop: "mask", value: "255.255.255.0" } },
+                  { id: "g-gw", label: "البوابة Gateway للأجهزة 192.168.10.1", condition: { kind: "dhcp-pool", name: "STUDENTS", prop: "defaultRouter", value: "192.168.10.1" } },
+                  { id: "g-dns", label: "خادم DNS 8.8.8.8", condition: { kind: "dhcp-pool", name: "STUDENTS", prop: "dnsServers", value: ["8.8.8.8"] } },
+                ],
+                hints: ["السطر ① في الإعداد العام: ip dhcp excluded-address 192.168.10.1 192.168.10.10.", "ثم ip dhcp pool STUDENTS، وداخلها network و default-router و dns-server."],
+                completion: "✓ أحسنت، المجموعة STUDENTS جاهزة، والعناوين من .1 إلى .10 محجوزة لا يوزّعها الخادم.",
+              }),
+            },
             { id: "m36-l01-p02-pc-h", type: "heading", origin: "book", level: 4, text: "في الحاسوب" },
             {
               id: "m36-l01-p02-pc1", type: "text", origin: "book",
@@ -126,6 +180,14 @@ const m36: ContentModule = {
               id: "m36-l01-p03-drawing", type: "diagram", origin: "book",
               src: "/learning-assets/791381s/f3dcb027c928e93a.png",
               alt: "رسم تبادل الرسائل بين «الخادم» (أيقونة خادم على اليمين) و«العميل» (أيقونة حاسوب على اليسار) بثلاثة أسهم: «SYN» من العميل إلى الخادم وتحته «طلب بدء اتصال + رقم تسلسل»؛ «SYN-ACK» من الخادم إلى العميل وتحته «موافقة + رقم تسلسله + تأكيد SYN»؛ «ACK» من العميل إلى الخادم وتحته «تأكيد الردّ — يبدأ تبادل البيانات».",
+            },
+            {
+              id: "m36-l01-p03-v-handshake", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/tcp-three-way-handshake", motion: true,
+              source: src(111),
+              title: "رسم متحرّك: مصافحة TCP الثلاثية",
+              alt: "رسم متحرّك: «العميل» على اليسار و«الخادم» على اليمين، وثلاث رسائل تتحرّك واحدة بعد الأخرى: 1 · SYN من العميل إلى الخادم «طلب اتصال + رقم تسلسل»، 2 · SYN-ACK من الخادم إلى العميل «موافقة + رقم تسلسل + تأكيد SYN»، 3 · ACK من العميل إلى الخادم «تأكيد الرد»؛ وفي الأسفل «بعد ACK يبدأ تبادل البيانات — اتصال TCP موثوق».",
+              caption: "‏SYN ثم SYN-ACK ثم ACK — ثم يبدأ تبادل البيانات.",
             },
             {
               id: "m36-l01-p03-result", type: "callout", origin: "book", kind: "summary", title: "النتيجة",
@@ -169,6 +231,14 @@ const m36: ContentModule = {
               ],
             },
             {
+              id: "m36-l01-p04-v-journey", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/web-opening-journey", motion: true,
+              source: src(111, 112),
+              title: "رسم متحرّك: الخطوات الأربع لفتح موقع",
+              alt: "رسم متحرّك لأربع بطاقات مرقّمة تظهر بالترتيب على خط واحد: 1 · DNS «UDP 53»، 2 · ARP «Broadcast · L2»، 3 · TCP Handshake «SYN·SYN-ACK·ACK»، 4 · HTTP/HTTPS «GET · TLS · 80/443».",
+              caption: "‏DNS ثم ARP ثم TCP ثم HTTP/S — كل خطوة بعد التي قبلها.",
+            },
+            {
               id: "m36-l01-p04-idea", type: "callout", origin: "book", kind: "summary", title: "الفكرة",
               spans: [{ text: "فتح موقع واحد يجمع DNS وARP وTCP وHTTP معًا — مثال يربط كل البروتوكولات." }],
             },
@@ -210,6 +280,27 @@ const m36: ContentModule = {
               ],
               columnDirs: ["ltr", "rtl"],
             },
+            {
+              id: "m36-l01-p05-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "cli-terminal", version: 1,
+              title: "تحدّي الأمر: أمرا Show على السويتش",
+              description: "أنت في الوضع المميّز (#) لسويتش جديد. اكتب أمر Show المناسب من الجدول لكل سؤال؛ المحاكي لا يكشف الإجابة. مخرجات المحاكاة مبسّطة، وليست مخرجات جهاز حقيقي.",
+              source: src(112),
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "التحدّي: show vlan brief ثم show vtp status." },
+              config: EX({
+                kind: "challenge",
+                device: "switch",
+                hostname: "Switch",
+                startMode: "privileged",
+                intro: "أنت في الوضع المميّز للسويتش. أجب بأمر Show المناسب من جدول «في الأجهزة · أوامر Show».",
+                steps: [
+                  { id: "s1", instruction: "اعرض الـ VLANs ومنافذها", expect: { command: "show", args: { what: "vlan-brief" } }, hints: ["الصف الأول في جدول أوامر Show.", "show vlan brief."] },
+                  { id: "s2", instruction: "اعرض إعدادات VTP", expect: { command: "show", args: { what: "vtp-status" } }, hints: ["صف «إعدادات VTP» في الجدول.", "show vtp status."] },
+                ],
+                completion: "✓ أحسنت، استعملت أمرين من جدول أوامر Show.",
+              }),
+            },
             { id: "m36-l01-p05-closing-h", type: "heading", origin: "book", level: 4, text: "كلمة الختام" },
             {
               id: "m36-l01-p05-closing1", type: "text", origin: "book",
@@ -218,6 +309,199 @@ const m36: ContentModule = {
             {
               id: "m36-l01-p05-closing2", type: "text", origin: "book",
               spans: [{ text: "بالتوفيق في الامتحان — " }, { text: "الأستاذ وفيق نصار", style: "strong" }],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // «تدريبات الوحدة» — ADDED enrichment: an end-of-unit exercise page after the booklet's own pages (after «كلمة
+      // الختام», which stays on its printed page). Every question is answered by the section's printed text above (the
+      // explanation quotes it). The book pages are unchanged (book lock).
+      id: "791381s-m36-l02",
+      title: "تدريبات الوحدة",
+      order: 2,
+      pages: [
+        {
+          id: "791381s-m36-l02-p01",
+          title: "تدريبات الوحدة: الخدمات والأوامر",
+          order: 1,
+          layout: "practice",
+          source: src(109, 112),
+          blocks: [
+            {
+              id: "m36-l02-p01-t01", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «المصطلح»: اختر المصطلح الذي يطابق كل شرح",
+              headers: ["المصطلح", "الشرح"],
+              rows: [
+                [TERM("NAT"), "تحويل عناوين IP الداخلية (الخاصة) إلى العامة."],
+                [TERM("PAT"), "عنوان عام واحد لعدة أجهزة باختلاف المنافذ (NAT + Ports)."],
+                [TERM("APIPA"), "عند فشل DHCP، يعطي الجهاز نفسه IP يبدأ بـ 169.254.x.x"],
+              ],
+            },
+            {
+              id: "m36-l02-p01-t02", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «الأمر»: اختر أمر CMD لكل وظيفة",
+              headers: ["الأمر", "الوظيفة"],
+              rows: [
+                [CMD("ping 8.8.8.8"), "اختبار الاتصال"],
+                [CMD("tracert"), "مسار الوصول"],
+                [CMD("ipconfig"), "عرض عنوان IP"],
+                [CMD("ipconfig /all"), "تفاصيل كاملة"],
+                [CMD("nslookup"), "فحص DNS"],
+                [CMD("arp -a"), "جدول MAC"],
+              ],
+              columnDirs: ["ltr", "rtl"],
+            },
+            {
+              id: "m36-l02-p01-t03", type: "practice-table", origin: "teacher-enrichment",
+              caption: "املأ عمود «الأمر»: اختر أمر Show لكل وظيفة",
+              headers: ["الأمر", "الوظيفة"],
+              rows: [
+                [SHOW("show vlan brief"), "الـ VLANs ومنافذها"],
+                [SHOW("show interfaces trunk"), "منافذ Trunk"],
+                [SHOW("show mac address-table"), "جدول MAC"],
+                [SHOW("show interfaces status"), "حالة المنافذ"],
+                [SHOW("show vtp status"), "إعدادات VTP"],
+                [SHOW("show spanning-tree"), "معلومات STP"],
+                [SHOW("show ip route"), "جدول التوجيه"],
+                [SHOW("show access-lists"), "قوائم ACL"],
+              ],
+              columnDirs: ["ltr", "rtl"],
+            },
+            {
+              id: "m36-l02-p01-q01", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "عند فشل DHCP يعطي الجهاز نفسه عنوان APIPA. بماذا يبدأ هذا العنوان؟",
+                options: [{ id: "a", text: "192.168.x.x" }, { id: "b", text: "8.8.x.x" }, { id: "c", text: "169.254.x.x", correct: true }, { id: "d", text: "0.0.x.x" }],
+                feedback: { explanation: "APIPA: عند فشل DHCP، يعطي الجهاز نفسه IP يبدأ بـ 169.254.x.x" },
+              },
+            },
+            {
+              id: "m36-l02-p01-q02", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "ظهور عنوان يبدأ بـ 169.254 على الجهاز يعني أن خادم DHCP أعطاه هذا العنوان.", answer: false, feedback: { explanation: "عند فشل DHCP يعطي الجهاز نفسه IP يبدأ بـ 169.254.x.x؛ لذلك APIPA إشارة إلى مشكلة في DHCP." } },
+            },
+            {
+              id: "m36-l02-p01-q03", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب رسائل DHCP الأربع (DORA) كما تحدث:",
+                items: [
+                  { id: "request", text: "Request — العميل يطلب العنوان المعروض" },
+                  { id: "ack", text: "ACK — الخادم يؤكّد: العنوان أصبح لك" },
+                  { id: "discover", text: "Discover — العميل يبحث عن خادم (Broadcast)" },
+                  { id: "offer", text: "Offer — الخادم يعرض عنوان IP" },
+                ],
+                order: ["discover", "offer", "request", "ack"],
+                feedback: { explanation: "احفظها بالترتيب: Discover ثم Offer ثم Request ثم ACK (اختصارها: DORA)." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q04", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل أمر من صندوق DHCP بوظيفته:",
+                left: [
+                  { id: "excl", text: "ip dhcp excluded-address 192.168.10.1 192.168.10.10" },
+                  { id: "pool", text: "ip dhcp pool STUDENTS" },
+                  { id: "net", text: "network 192.168.10.0 255.255.255.0" },
+                  { id: "gw", text: "default-router 192.168.10.1" },
+                  { id: "dns", text: "dns-server 8.8.8.8" },
+                ],
+                right: [
+                  { id: "r1", text: "عنوان البوابة Gateway للأجهزة" },
+                  { id: "r2", text: "عناوين محجوزة لا يوزّعها الخادم" },
+                  { id: "r3", text: "عنوان خادم DNS" },
+                  { id: "r4", text: "إنشاء مجموعة توزيع باسم STUDENTS" },
+                  { id: "r5", text: "الشبكة التي توزَّع منها العناوين" },
+                ],
+                pairs: { excl: "r2", pool: "r4", net: "r5", gw: "r1", dns: "r3" },
+                feedback: { explanation: "① عناوين محجوزة لا يوزّعها الخادم، ② إنشاء مجموعة توزيع باسم STUDENTS، ③ الشبكة التي توزَّع منها العناوين، ④ عنوان البوابة Gateway للأجهزة، ⑤ عنوان خادم DNS." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q05", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "بحسب صندوق DHCP، هل يوزّع الخادم العنوان 192.168.10.5 على الأجهزة؟",
+                options: [{ id: "a", text: "لا، لأنه من العناوين المحجوزة (من .1 إلى .10)", correct: true }, { id: "b", text: "نعم، لأنه داخل الشبكة 192.168.10.0" }, { id: "c", text: "نعم، لأنه عنوان خادم DNS" }],
+                feedback: { explanation: "الأمر ip dhcp excluded-address 192.168.10.1 192.168.10.10 يحدّد عناوين محجوزة لا يوزّعها الخادم (من .1 إلى .10)، و .5 بينها." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q06", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أيّ أمر في الحاسوب يطلب عنوانًا جديدًا من خادم DHCP؟",
+                options: [{ id: "a", text: "ipconfig /release" }, { id: "b", text: "ipconfig /all" }, { id: "c", text: "nslookup" }, { id: "d", text: "ipconfig /renew", correct: true }],
+                feedback: { explanation: "في الحاسوب: الأمر ipconfig /release يحرّر العنوان الحالي، والأمر ipconfig /renew يطلب عنوانًا جديدًا من الخادم." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q07", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب رسائل مصافحة TCP الثلاثية:",
+                items: [
+                  { id: "ack", text: "ACK — تأكيد الردّ، يبدأ تبادل البيانات" },
+                  { id: "syn", text: "SYN — طلب بدء اتصال + رقم تسلسل" },
+                  { id: "synack", text: "SYN-ACK — موافقة + رقم تسلسله + تأكيد SYN" },
+                ],
+                order: ["syn", "synack", "ack"],
+                feedback: { explanation: "العميل يرسل SYN (طلب بدء اتصال + رقم تسلسل)، ثم يردّ الخادم SYN-ACK (موافقة + رقم تسلسله + تأكيد SYN)، ثم يرسل العميل ACK (تأكيد الردّ — يبدأ تبادل البيانات)." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q08", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: { kind: "trueFalse", prompt: "في TCP تبدأ البيانات الفعلية بالانتقال قبل المصافحة الثلاثية.", answer: false, feedback: { explanation: "النتيجة: اتصال موثوق بين الجهازين قبل تبادل أي بيانات فعلية عبر TCP؛ تبادل البيانات يبدأ بعد ACK." } },
+            },
+            {
+              id: "m36-l02-p01-q09", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل خطوة في سيناريو «فتح موقع» بما كُتب في بطاقتها:",
+                left: [
+                  { id: "dns", text: "DNS · 1" },
+                  { id: "arp", text: "ARP · 2" },
+                  { id: "tcp", text: "TCP · 3" },
+                  { id: "http", text: "HTTP/S · 4" },
+                ],
+                right: [
+                  { id: "r1", text: "يطلب الصفحة (GET)، مع تشفير TLS في HTTPS — 80 / 443" },
+                  { id: "r2", text: "يسأل الحاسوب عن عنوان IP للموقع — UDP 53" },
+                  { id: "r3", text: "يبني اتصالًا موثوقًا: SYN ثم SYN-ACK ثم ACK" },
+                  { id: "r4", text: "يجد عنوان MAC للبوابة عبر Broadcast — L2" },
+                ],
+                pairs: { dns: "r2", arp: "r4", tcp: "r3", http: "r1" },
+                feedback: { explanation: "DNS يسأل عن عنوان IP للموقع (UDP 53)، و ARP يجد عنوان MAC للبوابة عبر Broadcast (L2)، و TCP يبني اتصالًا موثوقًا (Handshake)، و HTTP/S يطلب الصفحة GET مع TLS في HTTPS (80 / 443)." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل أمر حسب مكان كتابته:",
+                groups: [{ id: "pc", text: "في الحاسوب · Windows CMD" }, { id: "dev", text: "في الأجهزة · أوامر Show" }],
+                items: [
+                  { id: "i1", text: "ipconfig /all" },
+                  { id: "i2", text: "show mac address-table" },
+                  { id: "i3", text: "nslookup" },
+                  { id: "i4", text: "show spanning-tree" },
+                  { id: "i5", text: "arp -a" },
+                  { id: "i6", text: "show interfaces status" },
+                ],
+                assign: { i1: "pc", i2: "dev", i3: "pc", i4: "dev", i5: "pc", i6: "dev" },
+                feedback: { explanation: "في الحاسوب (Windows CMD): ping و tracert و ipconfig و ipconfig /all و nslookup و arp -a. وفي الأجهزة: أوامر show مثل show mac address-table و show interfaces status و show spanning-tree." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "في سيناريو فتح موقع، أيّ خطوة تجد عنوان MAC للبوابة عبر Broadcast؟",
+                options: [{ id: "a", text: "DNS" }, { id: "b", text: "ARP", correct: true }, { id: "c", text: "TCP" }, { id: "d", text: "HTTP/S" }],
+                feedback: { explanation: "الخطوة 2 (ARP): يجد عنوان MAC للبوابة عبر Broadcast (L2)." },
+              },
+            },
+            {
+              id: "m36-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "multipleChoice", prompt: "أيّ أمر من أوامر Show في الأجهزة يعرض جدول التوجيه؟",
+                options: [{ id: "a", text: "show ip route", correct: true }, { id: "b", text: "show access-lists" }, { id: "c", text: "tracert" }, { id: "d", text: "show vlan brief" }],
+                feedback: { explanation: "من جدول أوامر Show: show ip route = جدول التوجيه، و show access-lists = قوائم ACL، و show vlan brief = الـ VLANs ومنافذها؛ أما tracert فأمر حاسوب يعرض مسار الوصول." },
+              },
             },
           ],
         },
