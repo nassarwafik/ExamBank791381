@@ -83,3 +83,79 @@ into a darker primary for anything that carries text (`#c2410c`) and the bright 
 
 **Unchanged in every W phase:** grading, `reviewRequired`, exam JSON and question versions, API, Runner, persistence, and every
 existing test expectation.
+
+## 6. Implementation readiness (W0.1, prepared while another window works on `main`)
+
+Nothing under `src/` changes until the parallel window's work has merged to `main`. Work starts from that new `origin/main`
+(AGENTS.md §4, §7). This section records what the existing guards demand of the new palette, so W1 does not discover it by failing CI.
+
+### 6.1 Guards that constrain the palette (they stay; the new values must satisfy them)
+
+| Guard | Rule | Consequence for the warm palette |
+|---|---|---|
+| `src/login.ux-r16.test.ts:39-40` | `primary-200`, `primary-050`, `surface` ≥ **7 : 1** on `navy`, `primary`, `primary-strong` (login hero gradient) | `--eb-primary` must be a **deep** rust (≈ `#852c0d`, white 8.9 : 1). The bright orange cannot be `--eb-primary` |
+| `src/scienceColours.ux-r16a.test.ts:49-50` | `primary-strong` ≥ 7 : 1 with white | `--eb-primary-strong` ≈ `#521b07` (13.8 : 1) |
+| `src/designSystem/tokensV2.ux-r1.test.ts:58-75` | white on primary / strong ≥ 4.5; as text on bg, surface, 050, 100 ≥ 4.5; hover step ≥ 1.4 | met by `#852c0d` / `#521b07` (step 1.56) |
+| `src/designSystem/mutedContrast.21e1s2.test.ts` | muted ≥ 4.5 on 10 grounds; text > muted > faint | `--eb-muted` `#634f40` (≥ 6.5 : 1 everywhere tested) |
+| `api/tests/ux2-shell-foundation.test.js:284-286` | faint at least as light as `#94a3b8`, and < 4.5 on surface | `--eb-faint` `#c9b8a6` |
+| `src/functionGraphs/functionGraphSeries.ux-r16c.test.ts:37-48` | series 1 (`--fg-c1` = primary-strong) stays distinguishable under colour-blindness from `#C2410C`, `#B91C1C` | **a brown series 1 collides with the red / orange series**: owner decision 4 below |
+| `src/designSystem/darkTokens.ux-r18a.test.ts` | light half of every `light-dark()` equals `design-tokens.css`; dark halves ≥ AA | both token files move in one commit |
+| `scripts/ux-color-inventory.test.mjs` | no stylesheet gains colour literals | new colours live only in the token files |
+| visual gate `ux-visual-regression-r19b.yml` | every changed capture declared in `docs/ux-r/visual-changes.json` | each W phase declares its pages (6 jobs: 3 viewports × light / dark) |
+
+Literal pins that move with the palette (owner-approved design change, updated in the same commit as the tokens, never to hide a
+defect): `tokensV2.ux-r1.test.ts:42-51` (approved map, radius), `login.ux-r16.test.ts:86-103` (ErrorBoundary fallbacks,
+`public/offline.html`), `ux2-shell-foundation.test.js:283` (faint literal), `functionGraphSeries.ux-r16c.test.ts:69`,
+`referencePreset.ux-r16d.test.ts` (only if the exam reference preset follows).
+
+Source mirrors that must move in step: `src/projects/chartPalette.ts` (FALLBACK), `src/charts/chartTheme.ts:10`,
+`src/presentation/presentationModel.ts:103` + regenerate `api/src/lib/shared-finalization/**`
+(`scripts/build-shared-finalization.mjs`), `src/ErrorBoundary.tsx`, `public/offline.html`, `src/avatars.tsx:23`,
+`src/ui/ProfileAvatar.tsx:24`, `src/coding/editor/editorOptions.ts:210-234` (dark Monaco theme),
+`scripts/capture-visual-baseline-ux-r.mjs:507` (asserts the reference preset's `#2A0A4E`).
+
+### 6.2 Recommended token split (all guards pass without relaxing any)
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `--eb-primary` | `#852c0d` | `#ff9a5c` | links, focus ring, login hero, text-bearing primary |
+| `--eb-primary-strong` | `#521b07` | `#ffc29b` | hover / pressed |
+| `--eb-primary-050 / -100 / -200` | `#fff4ec` / `#ffe8d6` / `#fde6d2` | `#2a1a10` / `#352215` / `#4a2e1c` | tints |
+| **new** `--eb-cta` | `#b83a0b` (white 5.76 : 1) | `#ff9a5c` | filled buttons, active chips, segmented «on» — the vibrant look of the reference |
+| **new** `--eb-accent` | `#e8571e` | `#f08a52` | non-text fills: highlighted bar, progress, gauge |
+| **new** `--eb-hero` / `--eb-hero-2` | `#f8c96a` / `#fbd98f` | `#3a2a14` / `#45321a` | the yellow hero card |
+| `--eb-bg` / `--eb-surface` / `--eb-surface-2` | `#fdf6ec` / `#ffffff` / `#fbf4ea` | `#16100b` / `#211912` / `#2a2018` | grounds |
+| `--eb-navy` / `--eb-text` / `--eb-muted` / `--eb-placeholder` / `--eb-faint` | `#2b1d14` / `#3b2a1e` / `#634f40` / `#76604f` / `#c9b8a6` | `#fbf3ea` / `#eadfd3` / `#b9a796` / `#a5927f` / `#5e4d3f` | ink ladder |
+| `--eb-line` | `#f0e4d4` | `#3a2d22` | hairlines |
+| **new** `--eb-r-card` / `--eb-r-hero` | 18 px / 24 px | same | cards and hero (controls keep `--eb-r`) |
+
+Measured: every text pair ≥ 4.5 : 1 on every ground in both themes; the login 7 : 1 rule holds (`primary-200` on primary 7.37,
+`primary-050` 8.21). `primary-variants.png` compares `--eb-cta` (left, recommended) with a strict single-primary rust (right).
+
+### 6.3 Execution order once `main` is free
+
+| # | Phase | Main files | Visual-gate pages declared |
+|---|---|---|---|
+| W1 | Tokens (light + dark), mirrors, literal pins | `design-tokens*.css`, mirrors above | all (palette) |
+| W2 | Shell: dark pill bottom nav (student phone), sidebar active pill, top bar | `shell/*`, `shell.css`, `teacher-nav-21e.css`, `studentMobileNav.css` | all (chrome) |
+| W3 | Kit: hero + gauge, chips, avatar row, segmented, card radius, Chart.js warm theme | `src/ui/*`, `charts/chartTheme.ts`, `page-parts.css` | gallery |
+| W4 | Student portal (today, tasks, progress, achievements) | `StudentPortal.tsx`, `student/*`, `studentportal-pro.css`, `student/student-portal-v2.css` | student-portal, student-messages |
+| W5 | Student exam chrome (timer bar, navigator, numeric keypad on phones) | `student/exam`, `studentexam-pro.css` | exam scenes |
+| W6 | Teacher dashboard | `TeacherDashboard.tsx`, `teacher/TeacherTodayHub.tsx`, `dashboard-pro.css`, `teacher/teacherToday.css` | dashboard |
+| W7 | Classes / students, assignments, reports, messages | `students/*`, `assignments-pro.css`, `reports-pro.css`, `messages/*` | students, assignments, reports, messages |
+| W8 | Learning, projects, games | `learning/*`, `projects-pro.css`, `games/*` | learning*, projects, games* |
+| W9 | Exam bank, import, builder, reviews, audit, login, offline | `bank-pro.css`, `builder-pro.css`, `structured-*.css`, `login-pro.css`, `public/offline.html` | bank*, import, reviews, studio*, audit, login |
+
+Each phase: baseline captures (`scripts/capture-visual-baseline-ux-r.mjs`, verified working in this container) → change → full
+validation (`npm test`, lint, `tsc -b`, build) → after captures at 1440 / 1024 / 390 px, light and dark → PR with
+`⛔ DO NOT MERGE` header → owner merge.
+
+### 6.4 Owner decisions (additions to §4)
+
+4. **Chart series 1.** The function-graph and chart palettes start with the brand colour. A brown / orange series 1 cannot be told
+   apart from the existing red and orange series by colour-blind readers. Recommended: series 1 becomes a deep teal or keeps the
+   purple `#4A2380` (the series palette is decoupled from the brand). Changing the existing series order is not recommended:
+   stored graphs refer to series by index.
+5. **Primary split.** Recommended: deep rust `--eb-primary` plus a vibrant `--eb-cta` for filled buttons (§6.2). The alternative,
+   a single vibrant primary `#b83a0b`, needs the owner to lower the login and science 7 : 1 rules to 4.5 : 1. Agents never lower a
+   rule themselves.
