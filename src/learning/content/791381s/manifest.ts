@@ -1089,6 +1089,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m31-l01-p06", title: "أنواع الشبكات حسب النطاق", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 95, pdfPageEnd: 96 } },
           ],
         },
+        {
+          id: "791381s-m31-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m31-l02-p01", title: "تدريبات الوحدة: الأساسيات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 93, pdfPageEnd: 96 } },
+          ],
+        },
       ],
     },
     {
@@ -1113,6 +1121,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m32-l01-p02", title: "البروتوكولات والمنافذ المهمّة", order: 2, source: { kind: "book", sourceId: "791381s", pdfPageStart: 97 } },
             { id: "791381s-m32-l01-p03", title: "الفروق بين TCP و UDP", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 97, pdfPageEnd: 98 } },
             { id: "791381s-m32-l01-p04", title: "وحدات البيانات والتغليف", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 98 } },
+          ],
+        },
+        {
+          id: "791381s-m32-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m32-l02-p01", title: "تدريبات الوحدة: النماذج والبروتوكولات", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 96, pdfPageEnd: 98 } },
           ],
         },
       ],
@@ -1141,6 +1157,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m33-l01-p04", title: "العنوان IPv6 — البنية والتصغير", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 100, pdfPageEnd: 101 } },
           ],
         },
+        {
+          id: "791381s-m33-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m33-l02-p01", title: "تدريبات الوحدة: العنونة والتجزئة", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 98, pdfPageEnd: 101 } },
+          ],
+        },
       ],
     },
     {
@@ -1167,6 +1191,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m34-l01-p04", title: "التوجيه بين VLANs — Dot1Q", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 103, pdfPageEnd: 104 } },
             { id: "791381s-m34-l01-p05", title: "بروتوكول STP وسلوك السويتش", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 104 } },
             { id: "791381s-m34-l01-p06", title: "Metro-Ethernet و VLAN", order: 6, source: { kind: "book", sourceId: "791381s", pdfPageStart: 104 } },
+          ],
+        },
+        {
+          id: "791381s-m34-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m34-l02-p01", title: "تدريبات الوحدة: التبديل و VLANs", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 101, pdfPageEnd: 104 } },
           ],
         },
       ],
@@ -1198,6 +1230,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m35-l01-p07", title: "قوائم التحكم بالوصول ACL", order: 7, source: { kind: "book", sourceId: "791381s", pdfPageStart: 108, pdfPageEnd: 109 } },
           ],
         },
+        {
+          id: "791381s-m35-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m35-l02-p01", title: "تدريبات الوحدة: التوجيه والأمان", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 105, pdfPageEnd: 109 } },
+          ],
+        },
       ],
     },
     {
@@ -1223,6 +1263,14 @@ const manifest: LearningCourseManifest = {
             { id: "791381s-m36-l01-p03", title: "مصافحة TCP الثلاثية", order: 3, source: { kind: "book", sourceId: "791381s", pdfPageStart: 111 } },
             { id: "791381s-m36-l01-p04", title: "سيناريو تكاملي: فتح موقع", order: 4, source: { kind: "book", sourceId: "791381s", pdfPageStart: 111, pdfPageEnd: 112 } },
             { id: "791381s-m36-l01-p05", title: "أوامر CMD و Show", order: 5, source: { kind: "book", sourceId: "791381s", pdfPageStart: 112 } },
+          ],
+        },
+        {
+          id: "791381s-m36-l02",
+          title: "تدريبات الوحدة",
+          order: 2,
+          pages: [
+            { id: "791381s-m36-l02-p01", title: "تدريبات الوحدة: الخدمات والأوامر", order: 1, source: { kind: "book", sourceId: "791381s", pdfPageStart: 109, pdfPageEnd: 112 } },
           ],
         },
       ],
