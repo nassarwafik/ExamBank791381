@@ -60,6 +60,42 @@
         "m01-l02-p01-q10": {
           "kind": "trueFalse",
           "answer": false
+        },
+        "m01-l02-p01-q11": {
+          "kind": "wordBank",
+          "answers": {
+            "b1": "الحجم",
+            "b2": "المسافة",
+            "b3": "PAN",
+            "b4": "WAN"
+          }
+        },
+        "m01-l02-p01-q12": {
+          "kind": "matching",
+          "pairs": {
+            "pan": "r2",
+            "lan": "r3",
+            "wan": "r1"
+          }
+        },
+        "m01-l02-p01-q13": {
+          "kind": "ordering",
+          "order": [
+            "pan",
+            "lan",
+            "wan"
+          ]
+        },
+        "m01-l02-p01-q14": {
+          "kind": "classify",
+          "assign": {
+            "i1": "use",
+            "i2": "admin",
+            "i3": "use",
+            "i4": "admin",
+            "i5": "use",
+            "i6": "admin"
+          }
         }
       }
     }

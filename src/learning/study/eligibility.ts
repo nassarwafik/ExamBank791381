@@ -8,6 +8,7 @@
 //   • `practice` trueFalse with an `answer`                                 → key: the boolean
 //   • `practice` shortInput with a non-empty `answer`                       → key: the normalized text
 //   • `practice-table` (every select cell carries its expected choice)      → key: every select cell's choice
+//   • `practice` wordBank / matching / ordering / classify with their key   → key: answers / pairs / order / assign
 // NOT eligible (deferred or not auto-provable): `practice` fillBlank (no interactive answering surface in the Reader
 // yet), CLI simulator exercises (their goal checking runs in the browser engine only — no server verification yet),
 // diagrams / animations / guided activities, open or reflective prompts, and every reading block.
@@ -23,7 +24,11 @@ export type StudyActivityKey =
   | { kind: "multipleChoice"; correct: string[] }
   | { kind: "trueFalse"; answer: boolean }
   | { kind: "shortInput"; answer: string }
-  | { kind: "practice-table"; cells: Record<string, string> };
+  | { kind: "practice-table"; cells: Record<string, string> }
+  | { kind: "wordBank"; answers: Record<string, string> }
+  | { kind: "matching"; pairs: Record<string, string> }
+  | { kind: "ordering"; order: string[] }
+  | { kind: "classify"; assign: Record<string, string> };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
 
@@ -40,6 +45,14 @@ export function practiceQuestionKey(question: PracticeQuestion): StudyActivityKe
       const answer = typeof question.answer === "string" ? normalizeStudyText(question.answer) : "";
       return answer ? { kind: "shortInput", answer } : null;
     }
+    case "wordBank":
+      return question.answers && Object.keys(question.answers).length > 0 ? { kind: "wordBank", answers: { ...question.answers } } : null;
+    case "matching":
+      return question.pairs && Object.keys(question.pairs).length > 0 ? { kind: "matching", pairs: { ...question.pairs } } : null;
+    case "ordering":
+      return question.order && question.order.length > 0 ? { kind: "ordering", order: [...question.order] } : null;
+    case "classify":
+      return question.assign && Object.keys(question.assign).length > 0 ? { kind: "classify", assign: { ...question.assign } } : null;
     default:
       return null;                                   // fillBlank: no interactive surface yet → never a study point
   }

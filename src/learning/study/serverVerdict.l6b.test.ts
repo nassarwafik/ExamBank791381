@@ -25,12 +25,24 @@ async function checkables(): Promise<Checkable[]> {
   }
   return out;
 }
-const right = (key: StudyActivityKey) => key.kind === "multipleChoice" ? { kind: key.kind, optionId: key.correct[0] } : key.kind === "trueFalse" ? { kind: key.kind, value: key.answer } : key.kind === "shortInput" ? { kind: key.kind, text: key.answer } : { kind: key.kind, choices: { ...key.cells } };
+const right = (key: StudyActivityKey) => {
+  switch (key.kind) {
+    case "multipleChoice": return { kind: key.kind, optionId: key.correct[0] };
+    case "trueFalse": return { kind: key.kind, value: key.answer };
+    case "shortInput": return { kind: key.kind, text: key.answer };
+    case "practice-table": return { kind: key.kind, choices: { ...key.cells } };
+    case "wordBank": return { kind: key.kind, choices: { ...key.answers } };
+    case "matching": return { kind: key.kind, choices: { ...key.pairs } };
+    case "classify": return { kind: key.kind, choices: { ...key.assign } };
+    case "ordering": return { kind: key.kind, order: [...key.order] };
+  }
+};
 const wrong = (key: StudyActivityKey) => {
   if (key.kind === "multipleChoice") return { kind: key.kind, optionId: "no-such-option" };
   if (key.kind === "trueFalse") return { kind: key.kind, value: !key.answer };
   if (key.kind === "shortInput") return { kind: key.kind, text: key.answer + "x" };
-  const cells = { ...key.cells }, first = Object.keys(cells)[0];
+  if (key.kind === "ordering") return { kind: key.kind, order: [...key.order].reverse() };
+  const cells = { ...(key.kind === "practice-table" ? key.cells : key.kind === "wordBank" ? key.answers : key.kind === "matching" ? key.pairs : key.assign) }, first = Object.keys(cells)[0];
   cells[first] = cells[first] + "؟";
   return { kind: key.kind, choices: cells };
 };

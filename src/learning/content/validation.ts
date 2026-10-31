@@ -6,7 +6,7 @@
 
 import {
   BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
-  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey,
+  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -51,7 +51,8 @@ export type ContentIssueCode =
   | "invalid-practice-table"
   | "visual-missing-id"
   | "invalid-reveal"
-  | "invalid-page-layout";
+  | "invalid-page-layout"
+  | "invalid-structured-question";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -237,6 +238,7 @@ function checkBlock(
       break;
     case "practice":
       checkPractice(block.question, add, loc);
+      if (isStructuredKind(block.question?.kind)) checkStructured(block.question, block.serverCheck === true, add, loc);
       if ((block as { reveal?: unknown }).reveal !== undefined) checkReveal(block, add, loc);
       break;
     case "practice-table":
@@ -407,19 +409,90 @@ function enrichmentKindLabel(block: ContentBlock): string {
 
 /**
  * Reveal mode (types.ts RevealMarker): exactly `true`, on a question kind whose right answer can be shown (multipleChoice /
- * trueFalse), with an answer key and an explanation in the authored content. A SERVED body (serverCheck) carries
+ * trueFalse / the structured kinds), with an answer key and an explanation in the authored content. A SERVED body (serverCheck) carries
  * neither — the server holds them — so only the kind is checked there.
  */
 function checkReveal(block: Extract<ContentBlock, { type: "practice" }>, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
   const q = block.question;
   if (block.reveal !== true) { add("invalid-reveal", "reveal must be exactly true", loc); return; }
-  if (q?.kind !== "multipleChoice" && q?.kind !== "trueFalse") {
-    add("invalid-reveal", "reveal is only for multipleChoice / trueFalse questions", loc); return;
+  if (q?.kind !== "multipleChoice" && q?.kind !== "trueFalse" && !isStructuredKind(q?.kind)) {
+    add("invalid-reveal", "reveal is only for multipleChoice / trueFalse / wordBank / matching / ordering / classify questions", loc); return;
   }
   if (block.serverCheck === true) return;
-  const keyed = q.kind === "multipleChoice" ? q.options.some(o => o.correct === true) : typeof q.answer === "boolean";
+  const keyed = q.kind === "multipleChoice" ? q.options.some(o => o.correct === true)
+    : q.kind === "trueFalse" ? typeof q.answer === "boolean"
+    : q.kind === "wordBank" ? !!q.answers && Object.keys(q.answers).length > 0
+    : q.kind === "matching" ? !!q.pairs && Object.keys(q.pairs).length > 0
+    : q.kind === "ordering" ? !!q.order && q.order.length > 0
+    : q.kind === "classify" ? !!q.assign && Object.keys(q.assign).length > 0
+    : false;
   if (!keyed) add("invalid-reveal", "a reveal question needs its answer key (the right answer is shown after an answer)", loc);
   if (!isNonEmptyString(q.feedback?.explanation)) add("invalid-reveal", "a reveal question needs an explanation (shown under every answer)", loc);
+}
+
+/**
+ * The structured kinds (types.ts — wordBank / matching / ordering / classify). Presentation: non-empty unique ids and texts,
+ * enough parts to be a real exercise. Key (authored content only — a served body has none): it covers EVERY part with a valid
+ * choice; matching is one-to-one; an ordering's authored item order is not already the answer (the learner must reorder).
+ */
+function checkStructured(
+  question: Extract<ContentBlock, { type: "practice" }>["question"],
+  served: boolean,
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  const bad = (m: string) => add("invalid-structured-question", m, loc);
+  const items = (xs: unknown, min: number, what: string): string[] | null => {
+    if (!Array.isArray(xs) || xs.length < min) { bad(`${what} needs at least ${min} items`); return null; }
+    const ids = xs.map(x => (x && typeof x === "object" ? (x as { id?: unknown }).id : undefined));
+    if (xs.some(x => !isNonEmptyString((x as { id?: unknown })?.id) || !isNonEmptyString((x as { text?: unknown })?.text))) { bad(`${what}: every item needs an id and a text`); return null; }
+    if (new Set(ids).size !== ids.length) { bad(`${what}: duplicate item id`); return null; }
+    return ids as string[];
+  };
+  const coversMap = (map: unknown, parts: string[], values: string[], what: string): boolean => {
+    if (!map || typeof map !== "object" || Array.isArray(map)) { bad(`${what} key missing`); return false; }
+    const m = map as Record<string, unknown>;
+    if (Object.keys(m).length !== parts.length || !parts.every(p => Object.prototype.hasOwnProperty.call(m, p))) { bad(`${what} key must cover every part exactly`); return false; }
+    if (!parts.every(p => typeof m[p] === "string" && values.includes(m[p] as string))) { bad(`${what} key holds a choice that is not offered`); return false; }
+    return true;
+  };
+  switch (question.kind) {
+    case "wordBank": {
+      const segs = Array.isArray(question.segments) ? question.segments : [];
+      const blanks = segs.filter((s): s is { blank: string } => !!s && typeof s === "object" && isNonEmptyString((s as { blank?: unknown }).blank)).map(s => s.blank);
+      if (segs.some(s => typeof s !== "string" && !(s && typeof s === "object" && isNonEmptyString((s as { blank?: unknown }).blank)))) bad("wordBank segment must be text or { blank }");
+      if (blanks.length === 0) { bad("wordBank needs at least one blank"); return; }
+      if (new Set(blanks).size !== blanks.length) { bad("wordBank: duplicate blank id"); return; }
+      const bank = Array.isArray(question.bank) ? question.bank : [];
+      if (bank.length < blanks.length || bank.some(w => !isNonEmptyString(w)) || new Set(bank).size !== bank.length) { bad("wordBank bank needs ≥ one unique word per blank"); return; }
+      if (!served) coversMap(question.answers, blanks, bank, "wordBank");
+      return;
+    }
+    case "matching": {
+      const left = items(question.left, 2, "matching left"), right = items(question.right, 2, "matching right");
+      if (!left || !right) return;
+      if (right.length < left.length) { bad("matching needs at least as many right items as left items"); return; }
+      if (!served && coversMap(question.pairs, left, right, "matching")) {
+        const values = Object.values(question.pairs!);
+        if (new Set(values).size !== values.length) bad("matching key must be one-to-one");
+      }
+      return;
+    }
+    case "ordering": {
+      const ids = items(question.items, 3, "ordering items");
+      if (!ids || served) return;
+      const order = question.order;
+      if (!Array.isArray(order) || order.length !== ids.length || new Set(order).size !== ids.length || !ids.every(id => order.includes(id))) { bad("ordering key must be a permutation of the item ids"); return; }
+      if (order.every((id, i) => ids[i] === id)) bad("ordering items must not be authored in the answer order");
+      return;
+    }
+    case "classify": {
+      const groups = items(question.groups, 2, "classify groups"), its = items(question.items, 2, "classify items");
+      if (!groups || !its || served) return;
+      coversMap(question.assign, its, groups, "classify");
+      return;
+    }
+  }
 }
 
 /**

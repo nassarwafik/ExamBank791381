@@ -5,7 +5,11 @@ export type StudyResponse =
   | { kind: "multipleChoice"; optionId: string }
   | { kind: "trueFalse"; value: boolean }
   | { kind: "shortInput"; text: string }
-  | { kind: "practice-table"; choices: Record<string, string> };
+  | { kind: "practice-table"; choices: Record<string, string> }
+  | { kind: "wordBank"; choices: Record<string, string> }
+  | { kind: "matching"; choices: Record<string, string> }
+  | { kind: "ordering"; order: string[] }
+  | { kind: "classify"; choices: Record<string, string> };
 
 /** The server's study policy: each module is worth up to `modulePointsMax` (20) = round(completed / eligible × 20). */
 export type StudyPolicy = { modulePointsMax: number; moduleCount: number };
@@ -34,13 +38,21 @@ export type StudyAttemptResponse = {
   feedback?: StudyFeedback;
   /** L.6b — a practice-table: for every answered cell ("row:col"), whether its choice is right. */
   cells?: Record<string, boolean>;
+  /** 791381s Phase 3 — a structured question: for every answered part (blank / left item / item), whether it is right. */
+  parts?: Record<string, boolean>;
   /** 791381s Phase 2 — a REVEAL block: the right answer, sent with the verdict on an answer (never before one). */
   reveal?: StudyReveal;
   /** 791381s Phase 2 — a right answer AFTER the right answer was shown (a wrong answer came first): judged, never recorded. */
   revealedBefore?: boolean;
 };
 /** The right answer of a reveal block, as the server sends it after an answer. */
-export type StudyReveal = { kind: "multipleChoice"; optionIds: string[] } | { kind: "trueFalse"; answer: boolean };
+export type StudyReveal =
+  | { kind: "multipleChoice"; optionIds: string[] }
+  | { kind: "trueFalse"; answer: boolean }
+  | { kind: "wordBank"; answers: Record<string, string> }
+  | { kind: "matching"; pairs: Record<string, string> }
+  | { kind: "ordering"; order: string[] }
+  | { kind: "classify"; assign: Record<string, string> };
 export type StudyFeedback = { message?: string; explanation?: string; hints?: string[] };
 
 export interface StudyClient {

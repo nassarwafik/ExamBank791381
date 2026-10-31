@@ -278,6 +278,52 @@ const m01: ContentModule = {
               id: "m01-l02-p01-q10", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "بناء الشبكة هو النهاية، ولا نحتاج إلى فحصها بعد ذلك.", answer: false, feedback: { explanation: "بناء الشبكة ليس النهاية: يجب أن نضبطها ونحميها ونفحصها دائمًا حتى تبقى تعمل بشكل صحيح." } },
             },
+            {
+              id: "m01-l02-p01-q11", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "wordBank", prompt: "أكمل الفراغات من مخزن الكلمات:",
+                segments: ["الفرق بين أنواع الشبكات هو ", { blank: "b1" }, " و", { blank: "b2" }, ": ", { blank: "b3" }, " الأصغر \u200F←\u200F LAN \u200F←\u200F ", { blank: "b4" }, " الأكبر (العالم كله)."],
+                bank: ["المسافة", "WAN", "السرعة", "الحجم", "PAN"],
+                answers: { b1: "الحجم", b2: "المسافة", b3: "PAN", b4: "WAN" },
+                feedback: { explanation: "الفرق بين الأنواع هو الحجم والمسافة: PAN الأصغر ‏←‏ LAN ‏←‏ WAN الأكبر (العالم كله)." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "matching", prompt: "صِل كل نوع شبكة بوصفه:",
+                left: [{ id: "pan", text: "PAN · شبكة شخصية" }, { id: "lan", text: "LAN · شبكة محلية" }, { id: "wan", text: "WAN · شبكة واسعة" }],
+                right: [{ id: "r1", text: "بين مدن أو دول، وأكبر مثال: الإنترنت" }, { id: "r2", text: "أجهزة قريبة جدًا، مثل هاتف + سماعة بلوتوث" }, { id: "r3", text: "داخل بيت أو مدرسة أو بناية، مثل غرفة الحاسوب" }],
+                pairs: { pan: "r2", lan: "r3", wan: "r1" },
+                feedback: { explanation: "PAN: أجهزة قريبة جدًا (هاتف + سماعة بلوتوث). LAN: داخل بيت أو مدرسة أو بناية (غرفة الحاسوب). WAN: بين مدن أو دول، وأكبر مثال الإنترنت." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q13", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "ordering", prompt: "رتّب أنواع الشبكات من الأصغر إلى الأكبر:",
+                items: [{ id: "wan", text: "WAN · شبكة واسعة" }, { id: "pan", text: "PAN · شبكة شخصية" }, { id: "lan", text: "LAN · شبكة محلية" }],
+                order: ["pan", "lan", "wan"],
+                feedback: { explanation: "PAN الأصغر ‏←‏ LAN ‏←‏ WAN الأكبر (العالم كله): الفرق بين الأنواع هو الحجم والمسافة." },
+              },
+            },
+            {
+              id: "m01-l02-p01-q14", type: "practice", origin: "teacher-enrichment", reveal: true,
+              question: {
+                kind: "classify", prompt: "صنّف كل عبارة: هل هي من استخدامات الشبكة، أم من إدارة الشبكة وصيانتها؟",
+                groups: [{ id: "use", text: "استخدامات الشبكة" }, { id: "admin", text: "إدارة الشبكة وصيانتها" }],
+                items: [
+                  { id: "i1", text: "مشاركة الملفات والصور بين الأجهزة" },
+                  { id: "i2", text: "ضبط الأجهزة وكلمات المرور" },
+                  { id: "i3", text: "بريد إلكتروني ورسائل ومحادثات" },
+                  { id: "i4", text: "فحص الاتصال وحلّ الأعطال" },
+                  { id: "i5", text: "طابعة واحدة لعدة حواسيب" },
+                  { id: "i6", text: "حمايتها من الدخول غير المسموح" },
+                ],
+                assign: { i1: "use", i2: "admin", i3: "use", i4: "admin", i5: "use", i6: "admin" },
+                feedback: { explanation: "الاستخدامات: ملفات، إنترنت، تواصل، تعاون، مشاركة أجهزة، سرعة. الإدارة والصيانة: التكوين والإدارة (ضبط الأجهزة وكلمات المرور)، أمان الشبكة، خدمات الشبكة، الفحص والصيانة (فحص الاتصال وحلّ الأعطال)." },
+              },
+            },
           ],
         },
       ],

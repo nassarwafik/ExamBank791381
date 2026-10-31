@@ -137,3 +137,33 @@ origin teacher-enrichment, enrichment-only added pages) while the book lock pins
 
 Not in this phase: reveal for `practice-table` dropdowns and shortInput (Phase 3 with the new kinds); content for the other units
 (Phases 4–7).
+
+## 6. Phase 3 record — new exercise kinds (مخزن كلمات · وصل · ترتيب · تصنيف)
+
+Four **structured** `PracticeQuestion` kinds (`src/learning/content/types.ts`), course-agnostic, each with its presentation and —
+in authored content only — its key:
+
+| Kind | Presentation | Key | Reader surface (`StructuredPracticeInput.tsx`) |
+|---|---|---|---|
+| `wordBank` | `segments` (text + `{ blank }`), `bank` (distractors allowed) | `answers` {blank: word} | passage with blank buttons + word chips; a chip fills the selected / next blank, a filled blank gives its word back, each chip once |
+| `matching` | `left`, `right` items | `pairs` {left: right}, one-to-one | one native `<select>` per left item |
+| `ordering` | `items` in the authored (scrambled) order | `order` (item ids) | list with ▲ / ▼ buttons |
+| `classify` | `groups`, `items` | `assign` {item: group} | one radio group of group buttons per item |
+
+- **Judging** (local evaluator, server `evaluateStudyResponse`): right only when **every** part is right; malformed / other-kind
+  responses are wrong. The server also returns `parts` (right / wrong per answered part — never the expected value), shown as an
+  icon + screen-reader word beside each part. Outside reveal mode the learner edits (the verdict clears) and checks again.
+- **Reveal** (Phase 2 mode, extended): the key comes back only for a response of the same kind that answers **every** part (an
+  empty or partial answer cannot fish for it). The surface locks and each wrong part shows «الصحيح: …» (ordering: «الترتيب
+  الصحيح» list); the explanation shows underneath. Anti-farming and Strength are unchanged (the same study rules).
+- **Served bodies** keep the presentation only (`servedQuestion`); the check / study indexes carry the keys (`practiceQuestionKey`).
+- **Validator** (`invalid-structured-question`): unique non-empty ids and texts, minimum sizes (≥ 1 blank and a word per blank;
+  ≥ 2 per matching side and right ≥ left; ≥ 3 ordering items; ≥ 2 groups and items), a key covering every part with an offered
+  choice, matching one-to-one, ordering items not authored in the answer order. Reveal accepts the four kinds (key + explanation).
+
+**Pilot**: four new reveal questions on `791381s-m01-l02-p01` (now 14 questions) — q11 wordBank (الحجم · المسافة · PAN · WAN, with
+the distractor «السرعة»), q12 matching (PAN / LAN / WAN ↔ their printed descriptions), q13 ordering (PAN → LAN → WAN), q14 classify
+(network uses vs. management and maintenance) — all answered by section 1's printed text. Book lock green.
+
+Not in this phase: reveal for `practice-table` dropdowns (they already show a verdict per cell); drag-and-drop gestures (the
+surfaces are tap / keyboard / native controls, which work the same on phones, tablets and with a screen reader).

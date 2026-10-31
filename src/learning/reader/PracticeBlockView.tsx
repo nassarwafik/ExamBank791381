@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { IconCheck, IconClose } from "../../icons";
-import { hintLadder, type PracticeQuestion } from "../content/types";
+import { hintLadder, isStructuredKind, type PracticeQuestion } from "../content/types";
+import StructuredPracticeInput, { type PartVerdict } from "./StructuredPracticeInput";
 import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFeedbackState, type LearningResponse } from "../practice/evaluator";
 import { practiceQuestionKey } from "../study/eligibility";
 import type { StudyAttemptResponse, StudyHost, StudyReveal } from "../study/types";
@@ -54,6 +55,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
   const baseId = useId();
   const [response, setResponse] = useState<LearningResponse | null>(null);
   const [draft, setDraft] = useState("");
+  const [round, setRound] = useState(0);                  // remounts a structured surface (its draft) on «امسح» / «أعد السؤال»
   const [feedback, setFeedback] = useState<LearningFeedbackState>(INITIAL_FEEDBACK_STATE);
   const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
   const reportedRef = useRef<string | null>(null);        // the response the server ACCEPTED (never re-reported)
@@ -85,6 +87,11 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
   const revealed: StudyReveal | null = !reveal || (status !== "right" && status !== "wrong") ? null
     : server ? (reply?.reveal ?? null) : localReveal(question);
   const locked = reveal && (status === "right" || status === "wrong");
+  // Structured kinds: the verdict per part — all right on a right answer; else the server's `parts` (served block) or the
+  // authored key (tools / tests). Never before a verdict.
+  const partVerdicts: Record<string, boolean> | null = status !== "right" && status !== "wrong" || !response ? null
+    : server ? (reply?.parts ?? null) : localParts(question, response);
+  const partOf = (part: string): PartVerdict => (status === "right" ? "right" : partVerdicts && part in partVerdicts ? (partVerdicts[part] ? "right" : "wrong") : undefined);
   // Remember that the right answer was shown after a wrong answer (declared before the reporting effect, which reads it).
   useEffect(() => { if (locked && status === "wrong") revealedRef.current = true; }, [locked, status]);
   const shownHints = ladder.slice(0, feedback.revealedHints);
@@ -110,7 +117,9 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
       .finally(() => { askingRef.current.delete(stamp); });
   };
   const answer = (r: LearningResponse) => { setResponse(r); setOutcome(null); if (server) ask(r); };
-  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); setCheck(null); if (server) latestStampRef.current = null; };
+  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); setCheck(null); setRound(r => r + 1); if (server) latestStampRef.current = null; };
+  // A structured draft edited after a verdict (outside reveal mode): that verdict no longer describes the work on screen.
+  const editAfterVerdict = () => { if (response) { setResponse(null); setCheck(null); setOutcome(null); if (server) latestStampRef.current = null; } };
 
   // Report a right answer ONCE: a response the server accepted is never re-reported (re-picking it is deduplicated),
   // a response in flight is never duplicated by a re-render, and a TRANSPORT FAILURE releases the marker so the same
@@ -181,6 +190,19 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
         </div>
       )}
 
+      {isStructuredKind(question.kind) && (
+        <StructuredPracticeInput
+          key={round}
+          question={question as Extract<PracticeQuestion, { kind: "wordBank" | "matching" | "ordering" | "classify" }>}
+          labelledBy={baseId + "-q"}
+          locked={locked || status === "checking"}
+          partOf={partOf}
+          revealed={revealed}
+          onSubmit={answer}
+          onEdit={editAfterVerdict}
+        />
+      )}
+
       {question.kind === "shortInput" && (
         <form className="learning-reader-practice-form" onSubmit={e => { e.preventDefault(); if (draft.trim()) answer({ kind: "shortInput", text: draft }); }}>
           <input
@@ -212,7 +234,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study,
             {status === "right"
               ? <><IconCheck size={14} aria-hidden="true" />✓ صحيح</>
               : reveal
-                ? <><IconClose size={14} aria-hidden="true" /><span>✕ إجابة خاطئة{revealText(question, revealed) && <> — الإجابة الصحيحة: <strong>{revealText(question, revealed)}</strong></>}</span></>
+                ? <><IconClose size={14} aria-hidden="true" /><span>✕ إجابة خاطئة{revealText(question, revealed) ? <> — الإجابة الصحيحة: <strong>{revealText(question, revealed)}</strong></> : isStructuredKind(question.kind) ? " — التصحيح ظاهر بجانب كل جزء" : null}</span></>
                 : <><IconClose size={14} aria-hidden="true" />✕ غير صحيح — حاول مرة أخرى</>}
           </p>
           {message && <p className="learning-reader-practice-message">{message}</p>}
@@ -266,22 +288,44 @@ function RevealTag({ picked, isAnswer }: { picked: boolean; isAnswer: boolean })
 
 /** The right answer of an AUTHORED question (tools / tests; a served block gets it from the server's reply). */
 function localReveal(question: PracticeQuestion): StudyReveal | null {
-  if (question.kind === "multipleChoice") { const ids = question.options.filter(o => o.correct === true).map(o => o.id); return ids.length ? { kind: "multipleChoice", optionIds: ids } : null; }
-  if (question.kind === "trueFalse" && typeof question.answer === "boolean") return { kind: "trueFalse", answer: question.answer };
-  return null;
+  switch (question.kind) {
+    case "multipleChoice": { const ids = question.options.filter(o => o.correct === true).map(o => o.id); return ids.length ? { kind: "multipleChoice", optionIds: ids } : null; }
+    case "trueFalse": return typeof question.answer === "boolean" ? { kind: "trueFalse", answer: question.answer } : null;
+    case "wordBank": return question.answers ? { kind: "wordBank", answers: { ...question.answers } } : null;
+    case "matching": return question.pairs ? { kind: "matching", pairs: { ...question.pairs } } : null;
+    case "ordering": return question.order ? { kind: "ordering", order: [...question.order] } : null;
+    case "classify": return question.assign ? { kind: "classify", assign: { ...question.assign } } : null;
+    default: return null;
+  }
+}
+
+/** The per-part verdict of an AUTHORED structured question (mirrors the server's `parts`), or null. */
+function localParts(question: PracticeQuestion, response: LearningResponse): Record<string, boolean> | null {
+  if (question.kind !== response.kind) return null;
+  if (question.kind === "ordering" && response.kind === "ordering") {
+    if (!question.order) return null;
+    const key = question.order, out: Record<string, boolean> = {};
+    response.order.forEach((id, i) => { out[id] = key[i] === id; });
+    return out;
+  }
+  const key = question.kind === "wordBank" ? question.answers : question.kind === "matching" ? question.pairs : question.kind === "classify" ? question.assign : undefined;
+  if (!key || !("choices" in response)) return null;
+  const out: Record<string, boolean> = {};
+  for (const [part, value] of Object.entries(response.choices)) if (part in key) out[part] = value === key[part];
+  return out;
 }
 
 /** The right answer as words for the verdict line («الإجابة الصحيحة: …»), or "" when unknown. */
 function revealText(question: PracticeQuestion, revealed: StudyReveal | null): string {
   if (!revealed) return "";
   if (revealed.kind === "trueFalse") return revealed.answer ? "صح" : "خطأ";
-  if (question.kind !== "multipleChoice") return "";
+  if (question.kind !== "multipleChoice" || revealed.kind !== "multipleChoice") return "";
   return question.options.filter(o => revealed.optionIds.includes(o.id)).map(o => o.text).join(" · ");
 }
 
 /** The kinds that have a complete interactive answering surface in this view. */
 function hasInteractiveSurface(question: PracticeQuestion): boolean {
-  return question.kind === "multipleChoice" || question.kind === "trueFalse" || question.kind === "shortInput";
+  return question.kind === "multipleChoice" || question.kind === "trueFalse" || question.kind === "shortInput" || isStructuredKind(question.kind);
 }
 
 /** A throwaway response of the question's kind, used only to ask the evaluator whether a key exists at all. */
@@ -291,6 +335,8 @@ function probeResponse(question: PracticeQuestion): LearningResponse {
     case "trueFalse": return { kind: "trueFalse", value: true };
     case "shortInput": return { kind: "shortInput", text: "" };
     case "fillBlank": return { kind: "fillBlank", texts: [] };
+    case "wordBank": case "matching": case "classify": return { kind: question.kind, choices: {} };
+    case "ordering": return { kind: "ordering", order: [] };
   }
 }
 
@@ -313,6 +359,17 @@ function StaticPractice({ question, offline = false }: { question: PracticeQuest
       )}
       {(question.kind === "shortInput" || question.kind === "fillBlank") && (
         <p className="learning-reader-practice-input" aria-hidden="true">✎ ________</p>
+      )}
+      {question.kind === "wordBank" && (
+        <>
+          <p className="learning-practice-passage">{question.segments.map((seg, i) => (typeof seg === "string" ? <span key={i}>{seg}</span> : <span key={i}> ________ </span>))}</p>
+          <p className="learning-practice-bank">مخزن الكلمات: {question.bank.join(" · ")}</p>
+        </>
+      )}
+      {(question.kind === "matching" || question.kind === "ordering" || question.kind === "classify") && (
+        <ul className="learning-reader-practice-options">
+          {(question.kind === "matching" ? question.left : question.items).map(it => <li key={it.id} className="learning-reader-practice-option">{it.text}</li>)}
+        </ul>
       )}
       <p className="learning-reader-practice-hint">{offline ? "التحقق من هذه الإجابة يتم على المنصة، وهو غير متاح هنا." : "سيتوفر التحقق من الإجابة في مرحلة لاحقة."}</p>
     </div>

@@ -51,9 +51,15 @@ export function checkActivityOf(block: ContentBlock): CheckActivity | null {
 
 /** The question as the browser receives it: the prompt and the option texts, nothing that tells or explains the answer. */
 function servedQuestion(q: PracticeQuestion): PracticeQuestion {
+  const items = (xs: { id: string; text: string }[]) => xs.map(x => ({ id: x.id, text: x.text }));
   switch (q.kind) {
     case "multipleChoice": return { kind: q.kind, prompt: q.prompt, options: q.options.map(o => ({ id: o.id, text: o.text })) };
-    default: return { kind: q.kind, prompt: q.prompt };
+    // Structured kinds keep their presentation only — never `answers` / `pairs` / `order` / `assign` (the key).
+    case "wordBank": return { kind: q.kind, prompt: q.prompt, segments: q.segments.map(s => (typeof s === "string" ? s : { blank: s.blank })), bank: [...q.bank] };
+    case "matching": return { kind: q.kind, prompt: q.prompt, left: items(q.left), right: items(q.right) };
+    case "ordering": return { kind: q.kind, prompt: q.prompt, items: items(q.items) };
+    case "classify": return { kind: q.kind, prompt: q.prompt, groups: items(q.groups), items: items(q.items) };
+    case "trueFalse": case "shortInput": case "fillBlank": return { kind: q.kind, prompt: q.prompt };
   }
 }
 
