@@ -5,6 +5,8 @@ import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSourc
 import type { LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import { studyActivityIds } from "../study/eligibility";
+import CalloutToneIcon from "../themes/CalloutToneIcon";
+import { calloutTone, type PageTheme } from "../themes/courseTheme";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
@@ -29,6 +31,8 @@ export type ActivityRenderContext = {
   study?: StudyHost;
   /** The id of the page being rendered (set only for a ready body) — what an exercise reports against. */
   pageId?: string;
+  /** The course's visual skin for this page (null/absent → the established Reader look, unchanged DOM). */
+  theme?: PageTheme | null;
 };
 
 // The page header is always derived from the MANIFEST, so title/context/position/source render immediately —
@@ -42,6 +46,11 @@ export type ReaderPageHeader = {
   lesson?: { index: number; total: number } | null;
   position: { index: number; total: number };
   source?: ContentSource;
+  /**
+   * The course's visual skin (themes/courseTheme.ts): drawn as `data-course-theme` / `data-theme-tone` on the page and an
+   * icon per printed box label. Presentation only — no block, word or order changes. Absent → the established look.
+   */
+  theme?: PageTheme | null;
 };
 
 // The body of the current page, resolved from the (lazily loaded) module — or a controlled non-content state.
@@ -68,14 +77,16 @@ export default function LearningPageRenderer({ header, body, activity, training,
   /** Optional Study-Practice host (completion state + report). Omitted → in-page practice stays local, no points UI. */
   study?: StudyHost;
 }) {
-  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, study, pageId: body.kind === "ready" ? body.page.id : undefined };
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, study, pageId: body.kind === "ready" ? body.page.id : undefined, theme: header.theme };
+  // Undefined attributes are omitted by React, so an unthemed course renders exactly the markup it always had.
+  const themeAttrs = { "data-course-theme": header.theme?.id, "data-theme-tone": header.theme?.tone };
 
   // Unit-opener pages render an intentionally distinct hero instead of the normal lesson header. The hero owns the
   // focus target (its <h2> carries the reader's title id/class); the source line is kept for traceability.
   if (body.kind === "ready" && body.page.layout === "opener") {
     const opener = body.page.blocks.find((b): b is UnitOpenerBlock => b.type === "unit-opener");
     return (
-      <article className="learning-reader-page is-opener" aria-labelledby="learning-reader-page-title">
+      <article className="learning-reader-page is-opener" aria-labelledby="learning-reader-page-title" {...themeAttrs}>
         {opener
           ? <UnitOpenerView block={opener} headed />
           : <h2 id="learning-reader-page-title" className="learning-reader-opener-title" tabIndex={-1}>{header.pageTitle}</h2>}
@@ -86,7 +97,7 @@ export default function LearningPageRenderer({ header, body, activity, training,
   }
 
   return (
-    <article className="learning-reader-page" aria-labelledby="learning-reader-page-title">
+    <article className="learning-reader-page" aria-labelledby="learning-reader-page-title" {...themeAttrs}>
       <header className="learning-reader-pagehead">
         {/* Phase L.1 — the kicker names the unit (the Reader's toolbar already names the book), the context line the lesson. */}
         <p className="learning-reader-kicker">{header.moduleTitle}</p>
@@ -308,6 +319,16 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       // label here only nests a second surface and repeats the label — emit just the body (surface economy).
       if (block.kind === "clarification") {
         return <p className="learning-reader-callout-body" dir={block.dir}><RichTextRenderer spans={block.spans} /></p>;
+      }
+      if (ctx.theme) {
+        // Themed course: the printed label keeps its exact text; the box gains its family's colour and a decorative icon.
+        const tone = calloutTone(block.title, block.kind);
+        return (
+          <div className={"learning-reader-callout kind-" + block.kind} data-callout-tone={tone}>
+            <p className="learning-reader-callout-label"><CalloutToneIcon tone={tone} />{block.title || CALLOUT_LABELS[block.kind]}</p>
+            <p className="learning-reader-callout-body" dir={block.dir}><RichTextRenderer spans={block.spans} /></p>
+          </div>
+        );
       }
       return (
         <div className={"learning-reader-callout kind-" + block.kind}>

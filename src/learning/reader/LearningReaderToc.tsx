@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { IconCheck, IconChevronDown } from "../../icons";
 import { flattenPageRefs, orderedModules } from "../content/navigation";
 import type { LearningCourseManifest } from "../content/types";
+import { pageThemeFor } from "../themes/courseTheme";
 
 /**
  * The reader's table of contents — driven ONLY by the manifest (module → lesson → page identities). It never loads a
@@ -59,7 +60,7 @@ export default function LearningReaderToc({
           const isActiveModule = m.id === activeModuleId;
           const panelId = "learning-reader-toc-" + idPrefix + "-" + m.id;
           return (
-            <li key={m.id} className={"learning-reader-toc-module" + (isActiveModule ? " is-current" : "")}>
+            <li key={m.id} className={"learning-reader-toc-module" + (isActiveModule ? " is-current" : "")} data-theme-tone={pageThemeFor(manifest.courseId, manifest, m.id)?.tone}>
               <button
                 type="button"
                 className="learning-reader-toc-modbtn"

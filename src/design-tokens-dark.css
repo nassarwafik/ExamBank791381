@@ -80,5 +80,22 @@
 
     /* Content: the axis keeps ≥ 3:1 on every content ground */
     --eb-content-axis: light-dark(#7c7690, #8d86a4);
+
+    /* 791381s booklet skin: each hue keeps its role in dark (tone brighter, ink lighter, tints deep) */
+    --eb-book-slate: light-dark(#475569, #94a3b8); --eb-book-slate-ink: light-dark(#334155, #cbd5e1); --eb-book-slate-soft: light-dark(#f1f5f9, #1c2433); --eb-book-slate-line: light-dark(#cbd5e1, #475569);
+    --eb-book-indigo: light-dark(#4f46e5, #818cf8); --eb-book-indigo-ink: light-dark(#4338ca, #a5b4fc); --eb-book-indigo-soft: light-dark(#eef2ff, #1f1d45); --eb-book-indigo-line: light-dark(#c7d2fe, #3730a3);
+    --eb-book-blue: light-dark(#0b6bcb, #5ea8f0); --eb-book-blue-ink: light-dark(#0a58a8, #9ccaf7); --eb-book-blue-soft: light-dark(#eaf3fc, #13263b); --eb-book-blue-line: light-dark(#b9d7f5, #1f4f82);
+    --eb-book-teal: light-dark(#0d9488, #2dd4bf); --eb-book-teal-ink: light-dark(#0f766e, #5eead4); --eb-book-teal-soft: light-dark(#f0fdfa, #0f2a2a); --eb-book-teal-line: light-dark(#99f6e4, #115e59);
+    --eb-book-violet: light-dark(#7c3aed, #a78bfa); --eb-book-violet-ink: light-dark(#6d28d9, #c4b5fd); --eb-book-violet-soft: light-dark(#f5f3ff, #241a3d); --eb-book-violet-line: light-dark(#ddd6fe, #5b21b6);
+    --eb-book-orange: light-dark(#ea580c, #fb923c); --eb-book-orange-ink: light-dark(#c2410c, #fdba74); --eb-book-orange-soft: light-dark(#fff7ed, #2f1d10); --eb-book-orange-line: light-dark(#fed7aa, #9a3412);
+    --eb-book-rose: light-dark(#db2777, #f472b6); --eb-book-rose-ink: light-dark(#be185d, #f9a8d4); --eb-book-rose-soft: light-dark(#fdf2f8, #321427); --eb-book-rose-line: light-dark(#fbcfe8, #9d174d);
+    --eb-book-green: light-dark(#16a34a, #4ade80); --eb-book-green-ink: light-dark(#15803d, #86efac); --eb-book-green-soft: light-dark(#f0fdf4, #10291a); --eb-book-green-line: light-dark(#bbf7d0, #166534);
+    --eb-book-amber: light-dark(#d97706, #fbbf24); --eb-book-amber-ink: light-dark(#b45309, #fcd34d); --eb-book-amber-soft: light-dark(#fffbeb, #2d230c); --eb-book-amber-line: light-dark(#fde68a, #92400e);
+    --eb-book-yellow: light-dark(#ca8a04, #facc15); --eb-book-yellow-ink: light-dark(#a16207, #fde047); --eb-book-yellow-soft: light-dark(#fefce8, #2b260c);
+    --eb-book-red: light-dark(#dc2626, #f87171); --eb-book-red-ink: light-dark(#b91c1c, #fca5a5); --eb-book-red-soft: light-dark(#fef2f2, #321617);
+    --eb-book-purple: light-dark(#9333ea, #c084fc); --eb-book-purple-ink: light-dark(#7e22ce, #d8b4fe); --eb-book-purple-soft: light-dark(#faf5ff, #2a1a3d);
+    --eb-book-sky: light-dark(#0284c7, #38bdf8); --eb-book-sky-ink: light-dark(#0369a1, #7dd3fc); --eb-book-sky-soft: light-dark(#f0f9ff, #0f2636);
+    --eb-book-crimson: light-dark(#e11d48, #fb7185); --eb-book-crimson-ink: light-dark(#be123c, #fda4af); --eb-book-crimson-soft: light-dark(#fff1f2, #331520);
+    --eb-book-emerald: light-dark(#059669, #34d399); --eb-book-emerald-ink: light-dark(#047857, #6ee7b7); --eb-book-emerald-soft: light-dark(#ecfdf5, #0e2a22);
   }
 }

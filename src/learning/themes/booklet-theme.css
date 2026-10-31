@@ -1,0 +1,143 @@
+/* ============================================================================================================================
+   «أوراق تلخيص» booklet skin (courseTheme.ts → theme id "booklet"; today: course 791381s).
+
+   Presentation only: colour, type and icons. It never changes a word, a block, an order or a page — the printed booklet the
+   students annotate stays exactly what the Reader shows (book lock: src/learning/content/791381s/bookLock.test.ts).
+
+   How it is keyed
+   • The Reader puts data-course-theme="booklet" and data-theme-tone="<batch>" on the page <article>, and data-theme-tone on
+     each index module. Every rule below is scoped to those attributes, so no other course is touched.
+   • A tone is one of the booklet's own groups (intro, the six «دفعات» b1–b6, the «الملخص الشامل» summary): the student
+     recognises the group by its colour — on the unit opener, the page band, the headings, the tables and the index dot.
+   • A printed box label («تذكّر», «انتبه», «مثال», «الفكرة» …) gets data-callout-tone: one colour + one icon per family,
+     the same in every group.
+   • Headings use Cairo (the booklet's printed face, self-hosted, SIL OFL 1.1: public/fonts/Cairo-OFL.txt); running text keeps
+     the app's IBM Plex Sans Arabic, which reads better on screens.
+
+   Colours: every hue is a design token (--eb-book-*, src/design-tokens.css) whose dark half (design-tokens-dark.css,
+   light-dark()) the browser picks wherever the colour scheme is dark — the app's dark mode and the Reader's «داكن» reading
+   theme (both set color-scheme: dark). Sepia keeps the light values. This sheet holds no colour literal. Ink tokens (text) are
+   ≥ 4.5:1 on white; tone tokens are for bars, dots, borders and icon chips (≥ 3:1 graphics).
+   ============================================================================================================================ */
+
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/Cairo-600-arabic.woff2") format("woff2"); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/Cairo-600-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/Cairo-700-arabic.woff2") format("woff2"); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/Cairo-700-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 800; font-display: swap; src: url("/fonts/Cairo-800-arabic.woff2") format("woff2"); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
+@font-face { font-family: "Cairo"; font-style: normal; font-weight: 800; font-display: swap; src: url("/fonts/Cairo-800-latin.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+/* ── 1. Group tones: --th-tone (bars, dots, borders) · --th-ink (text) · --th-soft (tints) · --th-line (hairlines).
+   The hues are design tokens (src/design-tokens.css «791381s booklet skin», dark halves in design-tokens-dark.css). ─────── */
+[data-theme-tone="base"]      { --th-tone: var(--eb-book-slate); --th-ink: var(--eb-book-slate-ink); --th-soft: var(--eb-book-slate-soft); --th-line: var(--eb-book-slate-line); }
+[data-theme-tone="intro"]     { --th-tone: var(--eb-book-indigo); --th-ink: var(--eb-book-indigo-ink); --th-soft: var(--eb-book-indigo-soft); --th-line: var(--eb-book-indigo-line); }
+[data-theme-tone="b1"]        { --th-tone: var(--eb-book-blue); --th-ink: var(--eb-book-blue-ink); --th-soft: var(--eb-book-blue-soft); --th-line: var(--eb-book-blue-line); }
+[data-theme-tone="b2"]        { --th-tone: var(--eb-book-teal); --th-ink: var(--eb-book-teal-ink); --th-soft: var(--eb-book-teal-soft); --th-line: var(--eb-book-teal-line); }
+[data-theme-tone="b3"]        { --th-tone: var(--eb-book-violet); --th-ink: var(--eb-book-violet-ink); --th-soft: var(--eb-book-violet-soft); --th-line: var(--eb-book-violet-line); }
+[data-theme-tone="b4"]        { --th-tone: var(--eb-book-orange); --th-ink: var(--eb-book-orange-ink); --th-soft: var(--eb-book-orange-soft); --th-line: var(--eb-book-orange-line); }
+[data-theme-tone="b5"]        { --th-tone: var(--eb-book-rose); --th-ink: var(--eb-book-rose-ink); --th-soft: var(--eb-book-rose-soft); --th-line: var(--eb-book-rose-line); }
+[data-theme-tone="b6"]        { --th-tone: var(--eb-book-green); --th-ink: var(--eb-book-green-ink); --th-soft: var(--eb-book-green-soft); --th-line: var(--eb-book-green-line); }
+[data-theme-tone="summary"]   { --th-tone: var(--eb-book-amber); --th-ink: var(--eb-book-amber-ink); --th-soft: var(--eb-book-amber-soft); --th-line: var(--eb-book-amber-line); }
+
+/* ── 2. Box families: --co-tone · --co-ink · --co-soft (the same in every group) ────────────────────────────────────────── */
+[data-callout-tone="remember"]    { --co-tone: var(--eb-book-yellow); --co-ink: var(--eb-book-yellow-ink); --co-soft: var(--eb-book-yellow-soft); }
+[data-callout-tone="warning"]     { --co-tone: var(--eb-book-red); --co-ink: var(--eb-book-red-ink); --co-soft: var(--eb-book-red-soft); }
+[data-callout-tone="example"]     { --co-tone: var(--eb-book-green); --co-ink: var(--eb-book-green-ink); --co-soft: var(--eb-book-green-soft); }
+[data-callout-tone="idea"]        { --co-tone: var(--eb-book-purple); --co-ink: var(--eb-book-purple-ink); --co-soft: var(--eb-book-purple-soft); }
+[data-callout-tone="rule"]        { --co-tone: var(--eb-book-blue); --co-ink: var(--eb-book-blue-ink); --co-soft: var(--eb-book-blue-soft); }
+[data-callout-tone="note"]        { --co-tone: var(--eb-book-sky); --co-ink: var(--eb-book-sky-ink); --co-soft: var(--eb-book-sky-soft); }
+[data-callout-tone="mistake"]     { --co-tone: var(--eb-book-crimson); --co-ink: var(--eb-book-crimson-ink); --co-soft: var(--eb-book-crimson-soft); }
+[data-callout-tone="analogy"]     { --co-tone: var(--eb-book-teal); --co-ink: var(--eb-book-teal-ink); --co-soft: var(--eb-book-teal-soft); }
+[data-callout-tone="prevention"]  { --co-tone: var(--eb-book-emerald); --co-ink: var(--eb-book-emerald-ink); --co-soft: var(--eb-book-emerald-soft); }
+[data-callout-tone="benefit"]     { --co-tone: var(--eb-book-amber); --co-ink: var(--eb-book-amber-ink); --co-soft: var(--eb-book-amber-soft); }
+[data-callout-tone="why"]         { --co-tone: var(--eb-book-indigo); --co-ink: var(--eb-book-indigo-ink); --co-soft: var(--eb-book-indigo-soft); }
+[data-callout-tone="exam"]        { --co-tone: var(--eb-book-orange); --co-ink: var(--eb-book-orange-ink); --co-soft: var(--eb-book-orange-soft); }
+
+/* ── 3. The page: a group-coloured band on top; the Reader's own accent tokens take the group colour ─────────────────────── */
+.learning-reader-page[data-course-theme="booklet"] {
+  --eb-read-accent: var(--th-tone); --eb-read-accent-strong: var(--th-ink);
+  --eb-read-accent-2: var(--th-ink); --eb-read-accent-2-bg: var(--th-line);
+  --booklet-display: "Cairo", var(--eb-font, "IBM Plex Sans Arabic"), "Segoe UI", Tahoma, Arial, sans-serif;
+  border-block-start: 6px solid var(--th-tone);
+}
+.learning-reader-page[data-course-theme="booklet"] :is(.learning-reader-page-title, .learning-reader-heading, .learning-reader-opener-title,
+  .learning-reader-opener-number, .learning-reader-opener-label, .learning-reader-kicker, .learning-reader-callout-label,
+  .learning-reader-table th, .learning-reader-list-term, .learning-reader-list-title) { font-family: var(--booklet-display); }
+
+/* Page head: the unit name becomes a coloured pill; the title is heavier, with the group's bar. */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-pagehead { border-block-end-color: var(--th-line); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-kicker {
+  align-self: flex-start; padding: 2px var(--eb-space-3); border-radius: var(--eb-pill); background: var(--th-soft); color: var(--th-ink);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-page-title { font-weight: 800; }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-frombook { background: var(--th-soft); color: var(--th-ink); }
+
+/* Headings: level 3 underlined in the group's hairline, level 4 led by a small group-coloured square (decorative, no text). */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-heading.is-level-3 { color: var(--th-ink); border-block-end-color: var(--th-line); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-heading.is-level-4 { color: var(--th-ink); display: flex; align-items: center; gap: var(--eb-space-2); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-heading.is-level-4::before {
+  content: ""; flex: 0 0 auto; inline-size: 10px; block-size: 10px; border-radius: 3px; background: var(--th-tone);
+}
+
+/* Bold runs of the book carry the group's ink (still bold: the colour is never the only signal). */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-block.is-book :is(.learning-reader-text, .learning-reader-list-text) strong { color: var(--th-ink); }
+
+/* ── 4. Unit opener: a tinted hero with the big group-coloured number ──────────────────────────────────────────────────── */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-opener {
+  padding: var(--eb-space-5, 20px) var(--eb-space-4); border: 1px solid var(--th-line); border-radius: var(--eb-r-xl);
+  background: linear-gradient(135deg, var(--th-soft), var(--eb-surface) 75%);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-opener-number { color: var(--th-tone); font-weight: 800; }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-opener-label {
+  align-self: flex-start; padding: 2px var(--eb-space-3); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--th-ink); border: 1px solid var(--th-line);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-opener-title { border-inline-start-color: var(--th-tone); font-weight: 800; }
+
+/* ── 5. Cards, numbered steps, tables, code, figures ───────────────────────────────────────────────────────────────────── */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-list.variant-cards .learning-reader-list-item {
+  border-color: var(--th-line); border-block-start: 4px solid var(--th-tone);
+  background: linear-gradient(180deg, var(--th-soft), var(--eb-surface) 70%);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-list.variant-ordered .learning-reader-list-item::before { background: var(--th-tone); color: var(--eb-surface); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-list-check { color: var(--th-tone); }
+
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-tablewrap { border-color: var(--th-line); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-table th {
+  background: var(--th-soft); color: var(--th-ink); border-color: var(--th-line); border-block-end: 2px solid var(--th-tone);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-table td { border-color: var(--th-line); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-table tbody tr:nth-child(even) td { background: var(--eb-surface-2); }
+
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-codewrap { box-shadow: inset 0 3px 0 var(--th-tone); }
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-inline-code { background: var(--th-soft); border-color: var(--th-line); color: var(--th-ink); }
+
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-block.is-book .learning-reader-figure {
+  padding: var(--eb-space-2); border: 1px solid var(--th-line); border-radius: var(--eb-r-lg);
+}
+
+/* ── 6. Printed boxes: one colour + one icon per family («تذكّر» «انتبه» «مثال» «الفكرة» «قاعدة» «لاحظ» «خطأ شائع» …) ────── */
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-callout[data-callout-tone] {
+  border-color: color-mix(in srgb, var(--co-tone) 30%, var(--eb-surface)); border-inline-start: 5px solid var(--co-tone); background: var(--co-soft);
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-callout[data-callout-tone] .learning-reader-callout-label {
+  display: flex; align-items: center; gap: var(--eb-space-2); color: var(--co-ink); font-weight: 800;
+}
+.learning-reader-page[data-course-theme="booklet"] .learning-reader-callout[data-callout-tone] .learning-reader-callout-body strong { color: var(--co-ink); }
+.learning-reader-page[data-course-theme="booklet"] .booklet-callout-icon {
+  flex: 0 0 auto; box-sizing: content-box; padding: 5px; border-radius: var(--eb-pill); background: var(--co-tone); color: var(--eb-surface);
+}
+
+/* ── 7. Index: each unit carries its group's dot; the current unit's title takes the group ink ─────────────────────────── */
+.learning-reader-toc-module[data-theme-tone] > .learning-reader-toc-modbtn::after {
+  content: ""; flex: 0 0 auto; inline-size: 10px; block-size: 10px; margin-inline-start: auto; border-radius: var(--eb-pill); background: var(--th-tone);
+}
+.learning-reader-toc-module[data-theme-tone].is-current > .learning-reader-toc-modbtn { color: var(--th-ink); }
+
+/* ── 8. Accessibility & output ─────────────────────────────────────────────────────────────────────────────────────────── */
+@media (forced-colors: active) {
+  .learning-reader-page[data-course-theme="booklet"] .booklet-callout-icon { background: Canvas; color: CanvasText; outline: 1px solid CanvasText; }
+  .learning-reader-toc-module[data-theme-tone] > .learning-reader-toc-modbtn::after { background: CanvasText; }
+}
+@media print {
+  .learning-reader-page[data-course-theme="booklet"] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

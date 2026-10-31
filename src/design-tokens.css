@@ -152,4 +152,25 @@
 
   /* UX-7 — medal / personal-rank accents (same values as src/medals.ts MEDAL_COLORS) */
   --eb-medal-gold: #eab308; --eb-medal-silver: #94a3b8; --eb-medal-bronze: #c2703d;
+
+  /* 791381s — the «أوراق تلخيص» booklet skin (docs/enterprise-791381s-enrichment-plan.md §4; src/learning/themes/booklet-theme.css).
+     One hue per booklet group (slate base · indigo intro · blue b1 · teal b2 · violet b3 · orange b4 · rose b5 · green b6 · amber
+     summary) plus the printed-box families that need their own hue (yellow تذكّر · red انتبه · purple الفكرة · sky لاحظ ·
+     crimson خطأ شائع · emerald الوقاية). Roles: the bare token = bars, dots, icon chips (≥ 3:1); -ink = text (≥ 4.5:1 on white);
+     -soft = tints; -line = hairlines. Presentation of the unchanged book only. */
+  --eb-book-slate: #475569; --eb-book-slate-ink: #334155; --eb-book-slate-soft: #f1f5f9; --eb-book-slate-line: #cbd5e1;
+  --eb-book-indigo: #4f46e5; --eb-book-indigo-ink: #4338ca; --eb-book-indigo-soft: #eef2ff; --eb-book-indigo-line: #c7d2fe;
+  --eb-book-blue: #0b6bcb; --eb-book-blue-ink: #0a58a8; --eb-book-blue-soft: #eaf3fc; --eb-book-blue-line: #b9d7f5;
+  --eb-book-teal: #0d9488; --eb-book-teal-ink: #0f766e; --eb-book-teal-soft: #f0fdfa; --eb-book-teal-line: #99f6e4;
+  --eb-book-violet: #7c3aed; --eb-book-violet-ink: #6d28d9; --eb-book-violet-soft: #f5f3ff; --eb-book-violet-line: #ddd6fe;
+  --eb-book-orange: #ea580c; --eb-book-orange-ink: #c2410c; --eb-book-orange-soft: #fff7ed; --eb-book-orange-line: #fed7aa;
+  --eb-book-rose: #db2777; --eb-book-rose-ink: #be185d; --eb-book-rose-soft: #fdf2f8; --eb-book-rose-line: #fbcfe8;
+  --eb-book-green: #16a34a; --eb-book-green-ink: #15803d; --eb-book-green-soft: #f0fdf4; --eb-book-green-line: #bbf7d0;
+  --eb-book-amber: #d97706; --eb-book-amber-ink: #b45309; --eb-book-amber-soft: #fffbeb; --eb-book-amber-line: #fde68a;
+  --eb-book-yellow: #ca8a04; --eb-book-yellow-ink: #a16207; --eb-book-yellow-soft: #fefce8;
+  --eb-book-red: #dc2626; --eb-book-red-ink: #b91c1c; --eb-book-red-soft: #fef2f2;
+  --eb-book-purple: #9333ea; --eb-book-purple-ink: #7e22ce; --eb-book-purple-soft: #faf5ff;
+  --eb-book-sky: #0284c7; --eb-book-sky-ink: #0369a1; --eb-book-sky-soft: #f0f9ff;
+  --eb-book-crimson: #e11d48; --eb-book-crimson-ink: #be123c; --eb-book-crimson-soft: #fff1f2;
+  --eb-book-emerald: #059669; --eb-book-emerald-ink: #047857; --eb-book-emerald-soft: #ecfdf5;
 }

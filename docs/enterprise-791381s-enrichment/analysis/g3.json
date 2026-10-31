@@ -1,0 +1,785 @@
+{
+  "group": "g3",
+  "modules": [
+    {
+      "moduleId": "791381s-m19",
+      "title": "Trunk و Router on a Stick",
+      "pdfPages": "54–58",
+      "origCounterparts": ["791381-m04", "791381-m05", "791381-m25"],
+      "summary": "تشرح الوحدة Trunk ومعيار Dot1Q وفكرة Router on a Stick مع أوامر السويتش والراوتر؛ شكلها الحالي افتتاحية + 7 صفحات، فيها جدولان و5 صناديق أوامر CLI ورسمتان PNG مقصوصتان من الكتيّب، وبلا أي تمرين.",
+      "pages": [
+        {
+          "pageId": "791381s-m19-l00-p01",
+          "title": "Trunk و Router on a Stick",
+          "pdfPage": 54,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m19-l01-p01",
+          "title": "ما هو Trunk؟",
+          "pdfPage": 54,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m04/trunk-multi-vlan", "why": "الرسم الملوّن في 791381 يعرض المشهد نفسه (Switch 1 و Switch 2 وكابل Trunk واحد يحمل VLAN 10 و20 و30 مع Tag) بدل الخطوط المتصلة والمتقطعة والمنقّطة غير الواضحة في PNG.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m03/vlan-access-trunk-terms", "why": "يدعم صندوق «تذكّر» بالمقارنة بين منفذ Access لجهاز واحد ووصلة Trunk لعدة VLAN.", "priority": 3 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "يصنّف الطالب العبارات إلى Access أو Trunk.", "sample": "صنّف إلى مجموعتين (Access / Trunk): «لجهاز واحد» · «لنقل عدة VLAN عبر كابل واحد» · «بين سويتش وسويتش» · «بين سويتش وراوتر»", "answer": "Access: لجهاز واحد · Trunk: لنقل عدة VLAN عبر كابل واحد، بين سويتش وسويتش، بين سويتش وراوتر", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "سؤال عن سبب وضع Tag على الحزمة.", "sample": "لماذا تحمل كل حزمة Tag على رابط Trunk؟ أ) لتسريع الحزمة ب) حتى نعرف لأي VLAN تنتمي ج) لتشفير البيانات د) لتغيير عنوان MAC", "answer": "ب) حتى نعرف لأي VLAN تنتمي", "reuseFrom": "791381-m04-l01-p03 (m04-l01-p03-q1 multipleChoice)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن الحاجة إلى كابل لكل VLAN بدون Trunk.", "sample": "بدون Trunk نحتاج كابلًا منفصلًا لكل VLAN بين السويتشات. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m04-l01-p03 (m04-l01-p03-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p02",
+          "title": "منافذ الربط بين السويتشات",
+          "pdfPage": 54,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m04/inter-switch-trunk-ports", "why": "يحوّل جدول السويتشات الستة إلى مخطط يرى فيه الطالب منافذ Trunk لكل سويتش وأن Sw6 وحده يحمل G0/0 نحو الراوتر.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "قراءة الجدول لعدّ منافذ Trunk في سويتش.", "sample": "كم منفذًا سيكون Trunk في Sw1-HFA حسب الجدول؟ أ) 1 ب) 2 ج) 3 د) 4", "answer": "ب) 2 (F0/23 و F0/24)", "reuseFrom": "791381-m04-l01-p02 (m04-l01-p02-q1 multipleChoice)", "priority": 2 },
+            { "type": "shortInput", "what": "كتابة المنفذ الذي يربط Sw6 بالراوتر.", "sample": "ما المنفذ في Sw6-HFA الذي يربطه بالراوتر؟ اكتب اسمه.", "answer": "G0/0", "reuseFrom": "791381-m04-l01-p02 (m04-l01-p02-q2 shortInput)، 791381-m04-l01-p05 (m04-l01-p05-q1)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p03",
+          "title": "أوامر Trunk على السويتشات",
+          "pdfPage": 55,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (إعداد جديد على نمط 791381-m05-l01-p02-sim / 791381-m25-l01-p02-sim)", "why": "يكتب الطالب بنفسه interface range f0/23-24 ثم switchport mode trunk ويرى تغيّر الموجّه إلى (config-if-range)#؛ القواعد interface و switchport-mode موجودة في محرّك المحاكي.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "dropdown", "what": "إكمال صندوق الأوامر بقوائم منسدلة.", "sample": "Switch(config)# interface [range ▾ / vlan / line] f0/23-24\nSwitch(config-if-range)# switchport mode [trunk ▾ / access]", "answer": "range · trunk", "reuseFrom": "791381-m04-l01-p01 (m04-l01-p01-q1 multipleChoice)", "priority": 2 },
+            { "type": "mcq", "what": "سؤال عن نتيجة عدم توافق الطرفين.", "sample": "ماذا يحدث إذا كان أحد طرفي الكابل Trunk والآخر ليس Trunk؟ أ) تمرّ كل VLAN ب) تمرّ VLAN 10 فقط ج) لن تمرّ VLAN بينهما د) يصبح الطرفان Trunk تلقائيًا", "answer": "ج) لن تمرّ VLAN بينهما", "reuseFrom": "791381-m04-l01-p04 (m04-l01-p04-q1 trueFalse، m04-l01-p04-q2 multipleChoice)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة عن كتابة الأوامر على سويتش واحد فقط.", "sample": "يكفي أن نكتب أوامر Trunk على سويتش واحد فقط من السويتشين المتصلين. (صح / خطأ)", "answer": "خطأ — يجب أن يكون المنفذ المقابل في السويتش الآخر Trunk أيضًا", "reuseFrom": "791381-m04-l01-p01 (m04-l01-p01-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p04",
+          "title": "ما هو Dot1Q؟",
+          "pdfPage": 56,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m04/dot1q-tag-frame", "why": "مخطط متحرّك يُظهر إدراج حقل Tag يحمل رقم VLAN داخل الإطار، وهي فكرة مجرّدة يصعب تخيّلها من النص وحده.", "priority": 1 },
+            { "action": "reuse-activity", "ref": "cli-terminal (إعداد جديد: interface g0/1 ثم switchport mode trunk ثم switchport trunk allowed vlan 10,20,30)", "why": "قاعدة switchport-trunk-allowed-vlan موجودة في المحرّك، فيتدرّب الطالب على السماح بـ VLAN محدّدة فقط.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل سطر من صندوق الأوامر بشرحه.", "sample": "صِل: (1) interface g0/1 (2) switchport mode trunk (3) switchport trunk allowed vlan 10,20,30 ← بـ: (أ) نجعله Trunk (ب) نسمح بمرور VLAN 10 و 20 و 30 فقط (ج) نختار المنفذ GigabitEthernet 0/1", "answer": "1←ج · 2←أ · 3←ب", "reuseFrom": "791381-m04-l02-p03 (m04-l02-p03-match practice-table)", "priority": 2 },
+            { "type": "shortInput", "what": "عدّ VLAN المسموح بها بعد الأوامر.", "sample": "بعد الأوامر الثلاثة على g0/1، كم VLAN يُسمح لها بالمرور؟ (اكتب الرقم)", "answer": "3", "reuseFrom": "791381-m04-l02-p03 (m04-l02-p03-q1 multipleChoice)", "priority": 2 },
+            { "type": "mcq", "what": "تعريف Dot1Q واسمه الرسمي.", "sample": "ما الاسم الرسمي لـ Dot1Q؟ أ) 802.11 ب) 802.1Q ج) 802.3 د) VTP", "answer": "ب) 802.1Q", "reuseFrom": "791381-m04-l02-p02 (m04-l02-p02-q1 multipleChoice، m04-l02-p02-q2 trueFalse)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن الملاحظة الخاصة بأجهزة Cisco الحديثة.", "sample": "أجهزة Cisco الحديثة تحتاج أمرًا إضافيًا على السويتش حتى تستخدم Dot1Q. (صح / خطأ)", "answer": "خطأ — تستخدمه تلقائيًا بدون أمر إضافي", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p05",
+          "title": "Router on a Stick",
+          "pdfPage": 56,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m04/router-on-a-stick", "why": "نفس الطوبولوجيا (راوتر، كابل Trunk واحد، g0/0.10 و g0/0.20، مجموعتا VLAN 10 و 20) لكن بخطوط واضحة وألوان لكل VLAN.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m04/inter-vlan-flow", "why": "مخطط متحرّك لرحلة الحزمة من VLAN 10 عبر Trunk إلى g0/0.10 ثم خروجها من g0/0.20 إلى VLAN 20، يشرح معنى Inter-VLAN Routing.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "wordBank", "what": "فقرة التعريف مع فراغات ومخزن كلمات.", "sample": "نوصل راوترًا بكابل ____ واحد، ونقسم منفذه إلى ____ واحد لكل VLAN. اسم هذه الفكرة: ____. | المخزن: Trunk · Sub-Interface · Inter-VLAN Routing · Access · Layer 2", "answer": "Trunk · Sub-Interface · Inter-VLAN Routing", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "سبب عدم تواصل VLAN المختلفة مباشرة.", "sample": "لماذا لا تتواصل الأجهزة في VLAN مختلفة مباشرة عبر السويتش العادي؟ أ) لأن الكابل قصير ب) لأن السويتش يعمل في الطبقة الثانية Layer 2 ج) لأن DHCP متوقف د) لأن Trunk مطفأ", "answer": "ب) لأن السويتش يعمل في الطبقة الثانية Layer 2", "reuseFrom": "791381-m04-l02-p01 (m04-l02-p01-q1، m04-l02-p01-q2 multipleChoice)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن نوع منفذ Sw6 المتصل بالراوتر.", "sample": "الراوتر يعرف VLAN حتى لو وصلته الحزم عبر منفذ Access. (صح / خطأ)", "answer": "خطأ — المنفذ يجب أن يكون Trunk", "reuseFrom": "791381-m04-l01-p05 (m04-l01-p05-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p06",
+          "title": "أوامر الراوتر: VLAN 10 و VLAN 20",
+          "pdfPage": 57,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m25-l01-p04-sim «تحدّي الأمر: واجهة فرعية لـ VLAN 10» و 791381-m05-l02-p02-sim)", "why": "المحاكي الموجود ينفّذ بالضبط الأوامر الثلاثة للواجهة g0/0.10؛ يُوسّع بخطوات VLAN 20.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m04/subinterfaces-vlan10-20", "why": "يربط كل منفذ فرعي برقم dot1Q وعنوان Gateway في رسم واحد.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب أوامر VLAN 20 الثلاثة.", "sample": "رتّب الأوامر: ip address 192.168.20.254 255.255.255.0 · interface g0/0.20 · encapsulation dot1Q 20", "answer": "1) interface g0/0.20 2) encapsulation dot1Q 20 3) ip address 192.168.20.254 255.255.255.0", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "تحديد الأمر الذي يربط المنفذ الفرعي برقم VLAN.", "sample": "أي أمر يربط المنفذ الفرعي g0/0.10 بـ VLAN 10؟ أ) switchport access vlan 10 ب) encapsulation dot1Q 10 ج) vlan 10 د) ip address 192.168.10.254", "answer": "ب) encapsulation dot1Q 10", "reuseFrom": "791381-m04-l02-p04 (m04-l02-p04-q1، m04-l02-p04-q2 multipleChoice)", "priority": 1 },
+            { "type": "shortInput", "what": "كتابة عنوان Gateway لـ VLAN.", "sample": "ما عنوان Gateway لأجهزة VLAN 20 في المثال؟", "answer": "192.168.20.254", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m19-l01-p07",
+          "title": "أوامر الراوتر: VLAN 30 و VLAN 40",
+          "pdfPage": 58,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m04/subinterfaces-vlan30-40", "why": "يكمل الرسم للواجهتين g0/0.30 و g0/0.40 ويُبرز أن الفكرة نفسها تتكرر.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "dropdown", "what": "تحويل جدول الكتاب (VLAN، المنفذ الفرعي، رقم Dot1Q، Gateway) إلى جدول خاناته قوائم منسدلة.", "sample": "VLAN 30 | المنفذ الفرعي [g0/0.30 ▾ / g0/0.3 / g0/30] | رقم Dot1Q [30 ▾ / 3 / 10] | Gateway [192.168.30.254 ▾ / 192.168.3.254 / 192.168.30.1]", "answer": "g0/0.30 · 30 · 192.168.30.254", "reuseFrom": "791381-m04-l02-p05 (m04-l02-p05-match practice-table، m04-l02-p05-q1 multipleChoice)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة عن ضرورة تشغيل المنفذ الأصلي.", "sample": "إذا كان المنفذ الأصلي g0/0 مطفأ، تعمل المنافذ الفرعية رغم ذلك. (صح / خطأ)", "answer": "خطأ — يجب تشغيله بـ no shutdown وإلا لن تعمل المنافذ الفرعية", "reuseFrom": null, "priority": 1 },
+            { "type": "shortInput", "what": "كتابة أمر عنوان Gateway لـ VLAN 40 كاملًا.", "sample": "اكتب الأمر الذي يعطي المنفذ الفرعي g0/0.40 عنوان Gateway كما في الكتاب.", "answer": "ip address 192.168.40.254 255.255.255.0", "reuseFrom": "791381-m04-l03-p02 (m04-l03-p02-r1..r3 multipleChoice مراجعة)", "priority": 2 }
+          ]
+        }
+      ],
+      "colour": [
+        "لون ثابت لكل VLAN في الوحدة كلها (مثلًا 10 أزرق، 20 أخضر، 30 برتقالي، 40 بنفسجي) في الكابل والرسوم والجداول، ويُلوَّن به في الأوامر الرقم بعد النقطة (.10) ورقم dot1Q والمقطع الثالث في عنوان Gateway، فيرى الطالب أن الأرقام الثلاثة متطابقة.",
+        "تمييز منافذ Trunk (لون الوصلة العريضة) عن منافذ Access (لون الجهاز) في جدول السويتشات الستة ورسم Router on a Stick.",
+        "تلوين موجّه CLI حسب الوضع: (config)# و (config-if)# و (config-if-range)# و (config-subif)#، حتى يلاحظ الطالب الانتقال إلى وضع المنفذ الفرعي.",
+        "إبراز حقل Tag في الحزمة بلون الـ VLAN التي يحملها."
+      ],
+      "notes": "الوحدة متوافقة تمامًا مع 791381-m04 التي فيها 8 رسوم و22 سؤالًا و3 أوراق practice-table، ويمكن نقل معظمها كما هي. لا يوجد في 791381-m04 محاكي CLI؛ أقرب محاكٍ جاهز هو 791381-m25-l01-p04-sim و 791381-m05-l02-p02-sim. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m20",
+      "title": "المنطقة العازلة DMZ والشبكات اللاسلكية",
+      "pdfPages": "59–63",
+      "origCounterparts": ["791381-m20", "791381-m17"],
+      "summary": "تشرح الوحدة DMZ وWi-Fi وأنواع الشبكات اللاسلكية وSSID وأمان Wi-Fi ونقطة الوصول؛ شكلها الحالي افتتاحية + 6 صفحات، فيها 3 جداول ورسمتان PNG، وبلا أي تمرين.",
+      "pages": [
+        {
+          "pageId": "791381s-m20-l00-p01",
+          "title": "المنطقة العازلة DMZ والشبكات اللاسلكية",
+          "pdfPage": 59,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m20-l01-p01",
+          "title": "المنطقة العازلة DMZ",
+          "pdfPage": 59,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m20/dmz-three-zone", "why": "مخطط متحرّك يطابق رسمة الكتيّب (الإنترنت ← جدار ← DMZ فيها Web و Mail و DNS ← جدار ← الشبكة الداخلية) ويُظهر أن الزائر يتوقف عند DMZ.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف عناصر مثال المدرسة إلى DMZ أو الشبكة الداخلية.", "sample": "ضع كل عنصر في مكانه (DMZ / الشبكة الداخلية): خادم موقع المدرسة Web · خادم Mail · خادم DNS · ملفات الموظفين", "answer": "DMZ: Web، Mail، DNS · الشبكة الداخلية: ملفات الموظفين", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "أين نضع خادم موقع المدرسة.", "sample": "أين نضع خادم موقع المدرسة حسب الكتاب؟ أ) داخل شبكة الموظفين ب) في DMZ ج) على حاسوب المدير د) خارج جدار الحماية الأول", "answer": "ب) في DMZ", "reuseFrom": "791381-m20-l01-p01 (m20-l01-p01-q1 multipleChoice، m20-l01-p01-q2 trueFalse)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن حدود وصول الزائر.", "sample": "الزائر من الإنترنت يصل إلى DMZ فقط ولا يدخل الشبكة الداخلية. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m20-l01-p01 (m20-l01-p01-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m20-l01-p02",
+          "title": "الشبكة اللاسلكية Wi-Fi",
+          "pdfPage": 60,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m20/wifi-radio-link", "why": "مخطط متحرّك لجهاز يتصل عبر موجات الراديو ضمن مدى التغطية، فيوضّح ميزة الحركة وعيب المدى المحدود معًا.", "priority": 3 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف صفات Wi-Fi إلى حسنات وعيوب.", "sample": "صنّف (حسنات / عيوب): سهلة · مرنة · تربط عدة أجهزة بدون كوابل · المدى محدود · قد تتأثر بالتداخل · أمانها أضعف من الكوابل", "answer": "حسنات: سهلة، مرنة، تربط عدة أجهزة بدون كوابل · عيوب: المدى محدود، التداخل، أمانها أضعف من الكوابل", "reuseFrom": "791381-m20-l01-p02 (m20-l01-p02-classify practice-table، m20-l01-p02-q1 multipleChoice، m20-l01-p02-q2 practice-table)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة عن الوسط الذي تعتمد عليه Wi-Fi.", "sample": "Wi-Fi تقنية اتصال بدون كوابل تعتمد على موجات الراديو. (صح / خطأ)", "answer": "صح", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m20-l01-p03",
+          "title": "أنواع الشبكات اللاسلكية",
+          "pdfPage": 61,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m20/wireless-network-types", "why": "يرتّب PAN و WPAN و WLAN و WWAN حسب المدى كما في جدول الكتاب، فيصبح الفرق مكانيًا لا مجرد أحرف.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل نوع بمثاله من الجدول.", "sample": "صِل: WLAN · WWAN · WPAN ← بـ: شبكة الهاتف الخلوي 4G / 5G · Bluetooth / IR · Wi-Fi في البيت أو المدرسة", "answer": "WLAN ← Wi-Fi في البيت أو المدرسة · WWAN ← 4G / 5G · WPAN ← Bluetooth / IR", "reuseFrom": "791381-m20-l01-p03 (m20-l01-p03-ws practice-table، m20-l01-p03-q1 multipleChoice)", "priority": 1 },
+            { "type": "mcq", "what": "معنى الحرف W في البداية.", "sample": "ماذا يعني الحرف W في بداية WLAN و WWAN؟ أ) Wide ب) Wireless أي لاسلكي ج) Web د) World", "answer": "ب) Wireless أي لاسلكي", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m20-l01-p04",
+          "title": "SSID — اسم شبكة Wi-Fi",
+          "pdfPage": 61,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m20/ssid-beacon", "why": "مخطط متحرّك لنقطة الوصول تبثّ SSID فيظهر في قائمة الهاتف، يربط التعريف بتجربة الطالب اليومية.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "trueFalse", "what": "تصحيح الخلط الشائع بين SSID وكلمة السر.", "sample": "SSID هو كلمة سر الشبكة اللاسلكية. (صح / خطأ)", "answer": "خطأ — SSID اسم الشبكة الذي تراه عند البحث", "reuseFrom": "791381-m20-l02-p01 (m20-l02-p01-q1 trueFalse، m20-l02-p01-q2 multipleChoice)", "priority": 1 },
+            { "type": "mcq", "what": "من يبثّ SSID.", "sample": "من يبثّ SSID حتى تكون الشبكة مرئية؟ أ) الهاتف ب) الراوتر أو نقطة الوصول Access Point ج) خادم DNS د) السويتش فقط", "answer": "ب) الراوتر أو نقطة الوصول Access Point", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m20-l01-p05",
+          "title": "أمان الشبكة اللاسلكية",
+          "pdfPage": 62,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m20/wifi-protection-technologies", "why": "سُلّم يرتّب WEP ثم WPA ثم WPA2 / WPA3 من الأضعف إلى الأفضل، وهو جوهر الجدول.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m20/wifi-security", "why": "يقارن شبكة مفتوحة معرّضة للتنصّت والدخول بدون إذن و Spoofing بشبكة محمية بتشفير وكلمة مرور.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب تقنيات الحماية من الأضعف إلى الأفضل.", "sample": "رتّب من الأضعف إلى الأفضل: WPA2 / WPA3 · WEP · WPA", "answer": "WEP ← WPA ← WPA2 / WPA3", "reuseFrom": "791381-m20-l02-p03 (m20-l02-p03-ws practice-table، m20-l02-p03-q1 multipleChoice)", "priority": 1 },
+            { "type": "mcq", "what": "اسم هجوم انتحال الهوية.", "sample": "ما اسم هجوم «انتحال الهوية» المذكور في الكتاب؟ أ) Spoofing ب) WEP ج) SSID د) DMZ", "answer": "أ) Spoofing", "reuseFrom": "791381-m20-l02-p02 (m20-l02-p02-q1 multipleChoice، m20-l02-p02-q2 trueFalse)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن قاعدة عدم ترك الشبكة مفتوحة.", "sample": "يمكن ترك شبكة Wi-Fi مفتوحة بدون كلمة مرور. (صح / خطأ)", "answer": "خطأ — لا تترك شبكة Wi-Fi مفتوحة أبدًا", "reuseFrom": "791381-m20-l02-p02 (m20-l02-p02-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m20-l01-p06",
+          "title": "نقطة الوصول Access Point",
+          "pdfPage": 62,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m20/access-point-bridge", "why": "يعرض السويتش موصولًا بكابل إلى AP والأجهزة لاسلكيًا، مثل رسمة الكتيّب لكن بتمييز واضح بين الجزء السلكي واللاسلكي.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "wordBank", "what": "فقرة تشبيه الجسر مع مخزن كلمات.", "sample": "نقطة الوصول تشبه ____ بين الهواء والكابل: من جهة تتصل بـ ____ بكابل، ومن الجهة الأخرى ترسل ____ للأجهزة. | المخزن: جسرًا · السويتش · Wi-Fi · SSID · الإنترنت", "answer": "جسرًا · السويتش · Wi-Fi", "reuseFrom": null, "priority": 2 },
+            { "type": "mcq", "what": "وظيفة Access Point.", "sample": "ما وظيفة Access Point؟ أ) هو الإنترنت نفسه ب) يربط الأجهزة اللاسلكية بالشبكة السلكية ج) يوزّع عناوين IP د) يشفّر كلمة المرور فقط", "answer": "ب) يربط الأجهزة اللاسلكية بالشبكة السلكية", "reuseFrom": "791381-m20-l02-p04 (m20-l02-p04-q1 multipleChoice، m20-l02-p04-r1 multipleChoice، m20-l02-p04-r2 shortInput، m20-l02-p04-r3 trueFalse)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة صندوق «تذكّر».", "sample": "Access Point هو الإنترنت نفسه. (صح / خطأ)", "answer": "خطأ — هو نقطة اتصال بالشبكة", "reuseFrom": null, "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "رسم DMZ بثلاث مناطق لونها يدل على الثقة: الإنترنت أحمر (غير موثوق)، DMZ برتقالي (خدمات عامة)، الشبكة الداخلية أخضر (محمية)، وجدار الحماية بلون حدّ فاصل.",
+        "عمود «التقييم» في جدول الحماية بألوان إشارة المرور: WEP أحمر (ضعيف ✗)، WPA أصفر (أفضل من WEP)، WPA2 / WPA3 أخضر (الأفضل ✓).",
+        "جدول حسنات/عيوب Wi-Fi: صف الحسنات أخضر وصف العيوب أحمر فاتح.",
+        "أنواع الشبكات اللاسلكية بتدرّج لون واحد من الفاتح (WPAN قريبة جدًا) إلى الغامق (WWAN واسعة)، ليظهر أن الترتيب حسب المدى.",
+        "في رسم Access Point: الكابل بلون والموجات اللاسلكية بلون آخر، لإبراز فكرة «الجسر»."
+      ],
+      "notes": "791381-m20 تغطي كل صفحات الوحدة (7 رسوم، 13 سؤالًا، 4 أوراق practice-table) ويمكن نقلها كلها تقريبًا. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m21",
+      "title": "IPv6 والمنافذ Ports",
+      "pdfPages": "63–65",
+      "origCounterparts": ["791381-m21", "791381-m07"],
+      "summary": "تشرح الوحدة طول عنوان IPv6 وطريقة كتابته، وقاعدتي اختصاره، وجدول المنافذ المهمة؛ شكلها الحالي افتتاحية + 3 صفحات فيها 4 جداول بلا رسوم ولا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m21-l00-p01",
+          "title": "IPv6 والمنافذ Ports",
+          "pdfPage": 63,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m21-l01-p01",
+          "title": "IPv6 — عنوان الجيل الجديد",
+          "pdfPage": 63,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m21/ipv6-anatomy", "why": "يقارن طول 32 بت بـ 128 بت بصريًا ويبيّن أن IPv6 يُكتب Hex في 8 أقسام، فيصبح «أطول بكثير» محسوسًا.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "dropdown", "what": "جدول مقارنة IPv4 و IPv6 بخانات منسدلة.", "sample": "الطول: IPv4 [32 بت ▾ / 128 بت] · IPv6 [128 بت ▾ / 32 بت] | طريقة الكتابة: IPv6 [سادس عشري، 8 أقسام بينها : ▾ / عشري، 4 أقسام بينها نقاط]", "answer": "IPv4 = 32 بت · IPv6 = 128 بت · IPv6 سادس عشري في 8 أقسام بينها (:)", "reuseFrom": "791381-m21-l01-p01 (m21-l01-p01-q1 multipleChoice، m21-l01-p01-q2 shortInput)", "priority": 1 },
+            { "type": "shortInput", "what": "كتابة طول عنوان IPv6.", "sample": "كم بتًا طول عنوان IPv6؟ (اكتب الرقم فقط)", "answer": "128", "reuseFrom": "791381-m21-l01-p01 (m21-l01-p01-q2 shortInput)", "priority": 2 },
+            { "type": "mcq", "what": "عدد رموز Hex في كل قسم.", "sample": "كم رمز Hex في كل قسم من أقسام IPv6 (مثل 0db8)؟ أ) 2 ب) 4 ج) 8 د) 16", "answer": "ب) 4", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m21-l01-p02",
+          "title": "اختصار عنوان IPv6",
+          "pdfPage": 64,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "ipv6-compress", "why": "المحاكي في 791381-m21-l01-p02-sim يستعمل الأمثلة الثلاثة نفسها في جداول الكتيّب حرفيًا، فينقل كما هو ليطبّق الطالب القاعدتين بنفسه.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m21/ipv6-compression", "why": "مخطط متحرّك يحذف الأصفار في بداية كل قسم ثم يستبدل الأقسام الصفرية بـ :: خطوة خطوة.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "shortInput", "what": "اختصار عنوان من جدول «أمثلة أخرى».", "sample": "اختصر العنوان fe80:0000:0000:0000:0202:b3ff:fe1e:8329", "answer": "fe80::202:b3ff:fe1e:8329", "reuseFrom": "791381-m21-l01-p02 (m21-l01-p02-q1 multipleChoice)", "priority": 1 },
+            { "type": "mcq", "what": "تطبيق القاعدة الأولى وحدها.", "sample": "ماذا يصبح 2001:0db8:0000:0000:0000:ff00:0042:8329 بعد القاعدة 1 فقط؟ أ) 2001:db8::ff00:42:8329 ب) 2001:db8:0:0:0:ff00:42:8329 ج) 2001:0db8::ff00:0042:8329 د) 2001:db8:ff00:42:8329", "answer": "ب) 2001:db8:0:0:0:ff00:42:8329", "reuseFrom": "791381-m21-l01-p03 (m21-l01-p03-r2 multipleChoice)", "priority": 1 },
+            { "type": "trueFalse", "what": "قاعدة استعمال :: مرة واحدة.", "sample": "يمكن استعمال :: أكثر من مرة في العنوان الواحد. (صح / خطأ)", "answer": "خطأ — مرة واحدة فقط، وإلا لن نعرف كم صفرًا حذفنا", "reuseFrom": "791381-m21-l01-p02 (m21-l01-p02-q2 trueFalse)", "priority": 2 },
+            { "type": "shortInput", "what": "العكس: كتابة العنوان الكامل من المختصر.", "sample": "اكتب العنوان الكامل للعنوان المختصر 2a00:8640::200:23ff:fe10:8329", "answer": "2a00:8640:0000:0000:0200:23ff:fe10:8329", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m21-l01-p03",
+          "title": "المنافذ المهمة Ports",
+          "pdfPage": 64,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m21/well-known-ports", "why": "يعرض المنافذ التسعة وخدماتها في مخطط واحد، ويمكن أن يضيف تشبيه البناية (IP) والشقة (Port) من نص الكتاب.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل رقم منفذ بخدمته.", "sample": "صِل: 80 · 443 · 22 · 23 · 53 ← بـ: SSH · DNS · HTTP · Telnet · HTTPS", "answer": "80 ← HTTP · 443 ← HTTPS · 22 ← SSH · 23 ← Telnet · 53 ← DNS", "reuseFrom": "791381-m21-l01-p03 (m21-l01-p03-ws practice-table، m21-l01-p03-q1 shortInput، m21-l01-p03-r3 multipleChoice)", "priority": 1 },
+            { "type": "classify", "what": "تصنيف خدمات البريد إلى إرسال واستقبال.", "sample": "صنّف (إرسال البريد / استقبال البريد): SMTP 25 · POP3 110 · IMAP 143", "answer": "إرسال: SMTP 25 · استقبال: POP3 110، IMAP 143", "reuseFrom": null, "priority": 2 },
+            { "type": "shortInput", "what": "مثال فتح موقع https.", "sample": "عندما تفتح موقعًا يبدأ بـ https:// على أي منفذ يتصل المتصفح؟ (رقم)", "answer": "443", "reuseFrom": null, "priority": 2 },
+            { "type": "mcq", "what": "التمييز بين الاتصال الآمن وغير الآمن للتحكّم عن بُعد.", "sample": "أي منفذ يستعمله الاتصال غير الآمن للتحكّم عن بُعد؟ أ) 22 ب) 23 ج) 443 د) 21", "answer": "ب) 23 (Telnet)", "reuseFrom": null, "priority": 2 }
+          ]
+        }
+      ],
+      "colour": [
+        "شريطا طول: IPv4 (32 بت) قصير و IPv6 (128 بت) أطول بأربع مرات بلونين مختلفين.",
+        "تلوين كل قسم (hextet) من أقسام IPv6 الثمانية بلون متناوب حتى تُعدّ الأقسام بسهولة.",
+        "في مثال الاختصار: الأصفار البادئة المحذوفة باهتة أو مشطوبة بالأحمر، والأقسام الصفرية التي تحوّلت إلى :: مظلّلة بلون واحد يظهر مكانها في العنوان المختصر.",
+        "جدول المنافذ ملوّن حسب العائلة: الويب (80، 443)، البريد (25، 110، 143)، التحكّم عن بُعد (22، 23)، الملفات (21)، الأسماء (53).",
+        "زوج «آمن / غير آمن»: SSH 22 و HTTPS 443 بالأخضر، Telnet 23 بالأحمر (وصف «غير آمن» مذكور في الجدول)."
+      ],
+      "notes": "صفحة الاختصار هي الأعلى قيمة: محاكي ipv6-compress جاهز ومطابق حرفيًا لأمثلة الكتيّب. في جدول القاعدة 1 كُتب السهم بين db8 و 0db8 مع علامات اتجاه؛ يُستحسن التأكد من أن الاتجاه يُقرأ «0db8 ← db8» بعد الحذف. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m22",
+      "title": "بروتوكول DHCP",
+      "pdfPages": "66–70",
+      "origCounterparts": ["791381-m22", "791381-m16"],
+      "summary": "تشرح الوحدة وظيفة DHCP ومراحل DORA وبرمجة DHCP على الراوتر وملاحظات APIPA وإعداد DHCP على Server في Packet Tracer؛ شكلها الحالي افتتاحية + 5 صفحات فيها 3 جداول و3 صناديق أوامر ورسمتان PNG، بلا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m22-l00-p01",
+          "title": "بروتوكول DHCP",
+          "pdfPage": 66,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m22-l01-p01",
+          "title": "ما هو DHCP؟",
+          "pdfPage": 66,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m22/dhcp-automatic-config", "why": "مخطط متحرّك لجهاز جديد يحصل تلقائيًا على IP والبوابة و DNS، يوضّح الفرق عن الإدخال اليدوي في مثال المدرسة.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "ما الذي يوزّعه DHCP.", "sample": "ماذا يوزّع DHCP على الأجهزة؟ أ) عنوان IP فقط ب) عنوان IP و Gateway و DNS وقناع الشبكة ج) أسماء SSID د) كلمات مرور VTY", "answer": "ب) عنوان IP و Gateway و DNS وقناع الشبكة", "reuseFrom": "791381-m22-l01-p01 (m22-l01-p01-q1 multipleChoice، m22-l01-p01-q2 trueFalse)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة صندوق «تذكّر».", "sample": "بدون DHCP نحتاج إدخال IP يدويًا لكل جهاز على حدة. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m22-l01-p01 (m22-l01-p01-q2 trueFalse)", "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m22-l01-p02",
+          "title": "مراحل عمل DHCP (DORA)",
+          "pdfPage": 66,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m22/dhcp-dora", "why": "مخطط متحرّك للرسائل الأربع بالترتيب بين الجهاز والخادم، يطابق رسمة الكتيّب ويُظهر اتجاه كل رسالة.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب رسائل DHCP الأربع.", "sample": "رتّب الرسائل: Request · ACK · Discover · Offer", "answer": "Discover ← Offer ← Request ← ACK (DORA)", "reuseFrom": "791381-m22-l01-p02 (m22-l01-p02-ws practice-table)، 791381-m22-l03-p04 (m22-l03-p04-r1 multipleChoice)", "priority": 1 },
+            { "type": "classify", "what": "تصنيف الرسائل حسب المرسِل.", "sample": "صنّف (يرسلها الجهاز / يرسلها الخادم): Discover · Offer · Request · ACK", "answer": "الجهاز: Discover، Request · الخادم: Offer، ACK", "reuseFrom": "791381-m22-l01-p02 (m22-l01-p02-q1 multipleChoice)", "priority": 1 },
+            { "type": "matching", "what": "وصل كل رسالة بمعناها العربي.", "sample": "صِل: Discover · Offer · Request · ACK ← بـ: طلب · تأكيد · اكتشاف · عرض", "answer": "Discover ← اكتشاف · Offer ← عرض · Request ← طلب · ACK ← تأكيد", "reuseFrom": null, "priority": 2 },
+            { "type": "mcq", "what": "الرسالة التي تُرسل بثًا للجميع.", "sample": "أي رسالة يرسلها الجهاز بثًا للجميع بحثًا عن خادم DHCP؟ أ) Offer ب) ACK ج) Discover د) Request", "answer": "ج) Discover", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m22-l01-p03",
+          "title": "مثال: DHCP على الراوتر",
+          "pdfPage": 67,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m22-l02-p01-sim و 791381-m22-l02-p02-sim و 791381-m22-l02-p03-sim)", "why": "المحاكيات الثلاثة (مثال موجّه، تحدٍّ، مهمة كاملة) تنفّذ صندوقَي الكتيّب حرفيًا: الواجهة 192.168.1.254 ثم ip dhcp pool LAN و network و default-router و dns-server و excluded-address.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m22/dhcp-pool-excluded", "why": "شريط مساحة العناوين يبيّن العناوين المستثناة ونطاق التوزيع 10 إلى 50 من «المثال الإضافي» والبوابة 254.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل أمر بوظيفته.", "sample": "صِل: ip dhcp pool LAN · network · default-router · dns-server · ip dhcp excluded-address ← بـ: عنوان Gateway الذي يُعطى للأجهزة · نُنشئ مجموعة توزيع اسمها LAN · نستثني عناوين فلا يوزّعها DHCP · الشبكة التي سنوزّع منها · عنوان خادم DNS الذي يُعطى للأجهزة", "answer": "ip dhcp pool LAN ← مجموعة توزيع · network ← الشبكة التي سنوزّع منها · default-router ← Gateway · dns-server ← DNS · excluded-address ← استثناء العناوين", "reuseFrom": "791381-m22-l02-p03 (m22-l02-p03-ws practice-table، m22-l02-p03-q1 multipleChoice)، 791381-m22-l02-p01 (m22-l02-p01-q1)", "priority": 1 },
+            { "type": "dropdown", "what": "اختيار الوضع الصحيح لكتابة الأمر.", "sample": "الأمر ip dhcp excluded-address 192.168.1.1 192.168.1.9 يُكتب في [وضع الإعدادات العامة Router(config)# ▾ / داخل مجموعة التوزيع Router(dhcp-config)#]", "answer": "وضع الإعدادات العامة Router(config)#", "reuseFrom": null, "priority": 2 },
+            { "type": "shortInput", "what": "عنوان Gateway في المثال.", "sample": "ما عنوان الراوتر (Gateway) في مثال الكتاب؟", "answer": "192.168.1.254", "reuseFrom": "791381-m22-l01-p03 (m22-l01-p03-q1 shortInput، m22-l01-p03-q2 multipleChoice)، 791381-m22-l02-p02 (m22-l02-p02-q2 shortInput)", "priority": 2 },
+            { "type": "mcq", "what": "الأمر المطلوب لتقييد التوزيع من 10 إلى 50.", "sample": "نريد أن يوزّع DHCP فقط العناوين من 10. حتى 50. — أي أمر نضيف؟ أ) ip dhcp excluded-address 192.168.1.51 192.168.1.254 ب) network 192.168.1.50 ج) default-router 192.168.1.50 د) ip dhcp pool 50", "answer": "أ) ip dhcp excluded-address 192.168.1.51 192.168.1.254", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m22-l01-p04",
+          "title": "ملاحظات مهمة عن DHCP",
+          "pdfPage": 69,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m16/apipa-fallback", "why": "يبيّن جهازًا لا يجد خادم DHCP فيأخذ عنوان 169.254، وهي الملاحظة الأهم في الصفحة.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "تشخيص عنوان APIPA.", "sample": "حاسوب حصل على عنوان يبدأ بـ 169.254. ماذا يعني ذلك؟ أ) DHCP عمل بنجاح ب) إشارة لمشكلة في DHCP ج) العنوان مستثنى د) الجهاز يستعمل IPv6", "answer": "ب) إشارة لمشكلة في DHCP", "reuseFrom": "791381-m22-l02-p04 (m22-l02-p04-q1 multipleChoice، m22-l02-p04-q2 trueFalse)، 791381-m22-l03-p04 (m22-l03-p04-r3 trueFalse)", "priority": 1 },
+            { "type": "wordBank", "what": "فقرة الملاحظات مع فراغات.", "sample": "لكل عنوان ____. إذا انتهت، الجهاز ____ العنوان. وإذا فشل DHCP يأخذ الجهاز عنوان ____ الذي يبدأ بـ 169.254. | المخزن: مدة · يجدّد · APIPA · يحذف · Gateway", "answer": "مدة · يجدّد · APIPA", "reuseFrom": null, "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة عن العناوين المستثناة.", "sample": "العناوين المستثناة تُوزَّع على الأجهزة. (صح / خطأ)", "answer": "خطأ — لا توزّع", "reuseFrom": "791381-m22-l02-p04 (m22-l02-p04-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m22-l01-p05",
+          "title": "DHCP عن طريق Server (في Packet Tracer)",
+          "pdfPage": 69,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m22/dedicated-dhcp-server", "why": "خادم مخصّص يوزّع الإعدادات عبر السويتش على شبكة 192.168.10.0/24، يطابق رسمة الكتيّب دون إعادة رسم واجهة Packet Tracer.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب خطوات إعداد الخدمة على Server.", "sample": "رتّب: نضغط Add أو Save · نختار On لتفعيل الخدمة · نفتح Server ← Services ← DHCP · في الحاسوب نختار DHCP بدل Static · نكتب Default Gateway و DNS Server و Start IP", "answer": "1) نفتح Server ← Services ← DHCP 2) On 3) نكتب Gateway و DNS و Start IP 4) Add / Save 5) في الحاسوب نختار DHCP", "reuseFrom": "791381-m22-l03-p02 (m22-l03-p02-q1)، 791381-m22-l03-p03 (m22-l03-p03-q1 trueFalse، m22-l03-p03-q2)، 791381-m22-l03-p04 (m22-l03-p04-q1)", "priority": 1 },
+            { "type": "trueFalse", "what": "أثر ترك الخدمة Off.", "sample": "إذا بقيت خدمة DHCP على Server في وضع Off فسيحصل الحاسوب على عنوان IP رغم ذلك. (صح / خطأ)", "answer": "خطأ", "reuseFrom": "791381-m22-l03-p03 (m22-l03-p03-q1 trueFalse)", "priority": 2 },
+            { "type": "shortInput", "what": "قراءة قيمة من صندوق المثال.", "sample": "في مثال الشبكة 192.168.10.0/24، ما قيمة Start IP؟", "answer": "192.168.10.10", "reuseFrom": "791381-m22-l03-p01 (m22-l03-p01-q1 multipleChoice، m22-l03-p01-q2 practice-table)", "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "أسهم DORA بلونين حسب الاتجاه: رسائل الجهاز (Discover، Request) بلون، ورسائل الخادم (Offer، ACK) بلون آخر، تطبيقًا لعبارة «الطلب يبدأ من الجهاز، والخادم يردّ في كل مرة».",
+        "شريط عناوين 192.168.1.0/24: العناوين المستثناة (1–9، أو 51–254 في المثال الإضافي) رمادي/محجوز، نطاق التوزيع أخضر، والبوابة 192.168.1.254 بلون مميّز.",
+        "تلوين موجّه CLI حسب الوضع: (config-if)# و (config)# و (dhcp-config)#، لأن الكتاب ينبّه أن excluded-address يُكتب في الوضع العام وليس داخل المجموعة.",
+        "العنوان 169.254.x.x بلون تحذير (أحمر/برتقالي) لأنه «إشارة لمشكلة في DHCP»."
+      ],
+      "notes": "أغنى تطابق في المجموعة: 791381-m22 فيها 4 رسوم و3 محاكيات CLI و20 سؤالًا و3 أوراق practice-table. رسم dhcp-pool-excluded في 791381 يعرض نطاق 10–50 (المثال الإضافي) فيُوضع بجانب «مثال إضافي» لا بجانب الجدول الأول. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m23",
+      "title": "حماية المنافذ Port Security",
+      "pdfPages": "70–72",
+      "origCounterparts": ["791381-m23", "791381-m28"],
+      "summary": "تشرح الوحدة فكرة Port Security وطريقتي MAC الثابت و Sticky وتحديد عدد الأجهزة مع ملخّص الأوامر؛ شكلها الحالي افتتاحية + 4 صفحات فيها 3 صناديق أوامر وجدول ورسمة PNG واحدة، بلا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m23-l00-p01",
+          "title": "حماية المنافذ Port Security",
+          "pdfPage": 70,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m23-l01-p01",
+          "title": "ما هو Port Security؟",
+          "pdfPage": 70,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m23/port-security-scenario", "why": "يطابق رسمة الكتيّب حرفيًا (PC0 ✓ و PC1 ✓ وجهاز غريب ✗) بألوان سماح ومنع واضحة.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m23/port-security-concept", "why": "نسخة متحرّكة تُظهر المنفذ يقبل الجهاز المعروف بعنوان MAC ويمنع المجهول.", "priority": 3 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "على ماذا يعتمد Port Security.", "sample": "على ماذا يعتمد Port Security غالبًا لمعرفة الجهاز الغريب؟ أ) عنوان IP ب) MAC Address ج) SSID د) اسم المستخدم", "answer": "ب) MAC Address", "reuseFrom": "791381-m23-l01-p01 (m23-l01-p01-q1 multipleChoice، m23-l01-p01-q2 trueFalse)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة صندوق «تذكّر».", "sample": "المنفذ المحمي بـ Port Security يقبل أي جهاز عشوائي. (صح / خطأ)", "answer": "خطأ — يقبل المسموح به فقط", "reuseFrom": "791381-m23-l01-p02 (m23-l01-p02-ws practice-table، m23-l01-p02-q1 multipleChoice)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m23-l01-p02",
+          "title": "الطريقة الأولى: MAC ثابت",
+          "pdfPage": 71,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m23-l02-p01-sim «مثال موجّه: MAC ثابت على المنفذ f0/1»)", "why": "المحاكي ينفّذ الأسطر الخمسة نفسها على f0/1 مع العنوان 00A0.1234.5678.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب الأوامر الخمسة.", "sample": "رتّب: switchport port-security violation shutdown · interface f0/1 · switchport port-security · switchport mode access · switchport port-security mac-address 00A0.1234.5678", "answer": "1) interface f0/1 2) switchport mode access 3) switchport port-security 4) mac-address 00A0.1234.5678 5) violation shutdown", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "معنى violation shutdown.", "sample": "ماذا يفعل الأمر switchport port-security violation shutdown؟ أ) يطفئ السويتش كله ب) يُغلق المنفذ إذا اتصل جهاز غير مسموح ج) يحذف عنوان MAC د) يجعل المنفذ Trunk", "answer": "ب) يُغلق المنفذ إذا اتصل جهاز غير مسموح", "reuseFrom": "791381-m23-l02-p01 (m23-l02-p01-q1 multipleChoice، m23-l02-p01-q2 shortInput)", "priority": 1 },
+            { "type": "trueFalse", "what": "أهمية سطر التفعيل.", "sample": "بدون السطر switchport port-security لا تعمل الحماية على المنفذ. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m23-l02-p03 (m23-l02-p03-r1 multipleChoice)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m23-l01-p03",
+          "title": "الطريقة الثانية: Sticky MAC",
+          "pdfPage": 71,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m23-l02-p02-sim «تحدّي الأمر: فعّل الحماية واجعلها Sticky»)", "why": "يكتب الطالب السطرين بنفسه ويرى أن السويتش يحفظ العنوان.", "priority": 2 },
+            { "action": "new-visual", "ref": "sticky-mac-learning", "why": "لا يوجد رسم يُظهر «التعلّم»: أول جهاز يتصل فيلتصق عنوانه بالمنفذ، ثم يُمنع غيره؛ رسم من مرحلتين يشرح معنى «لاصق».", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "التمييز بين الطريقتين.", "sample": "صنّف (MAC ثابت / Sticky): نكتب بأنفسنا عنوان MAC للجهاز المسموح · السويتش يتعلّم عنوان أول جهاز يتصل ويحفظه · mac-address 00A0.1234.5678 · mac-address sticky · نستعمله عندما لا نعرف عنوان MAC مسبقًا", "answer": "MAC ثابت: نكتب العنوان بأنفسنا، mac-address 00A0.1234.5678 · Sticky: يتعلّم أول جهاز، mac-address sticky، لا نعرف العنوان مسبقًا", "reuseFrom": "791381-m23-l02-p02 (m23-l02-p02-q1 multipleChoice)، 791381-m23-l02-p03 (m23-l02-p03-r2 trueFalse)", "priority": 1 }
+          ]
+        },
+        {
+          "pageId": "791381s-m23-l01-p04",
+          "title": "تحديد عدد الأجهزة",
+          "pdfPage": 72,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m23-l02-p03-sim «مهمة إعداد: أمّن المنفذ f0/1 كاملًا»)", "why": "مهمة تجمع كل أوامر الوحدة بما فيها maximum و violation shutdown.", "priority": 2 },
+            { "action": "new-visual", "ref": "port-maximum-counter", "why": "رسم يعرض منفذًا بحدّ 3 أجهزة: ثلاثة تعمل، والرابع يسبّب مخالفة فيُغلق المنفذ — يجعل «إذا زاد العدد» محسوسًا.", "priority": 3 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل أمر في جدول الملخّص بمعناه.", "sample": "صِل: port-security · mac-address sticky · maximum 3 · violation shutdown · mac-address 00A0.1234.5678 ← بـ: العقوبة: إغلاق المنفذ · عدد الأجهزة المسموح · تشغيل الحماية · تعلّم الجهاز تلقائيًا · السماح لجهاز محدّد", "answer": "port-security ← تشغيل الحماية · mac-address 00A0.1234.5678 ← جهاز محدّد · mac-address sticky ← تعلّم تلقائي · maximum 3 ← عدد الأجهزة · violation shutdown ← إغلاق المنفذ", "reuseFrom": "791381-m23-l02-p03 (m23-l02-p03-ws practice-table، m23-l02-p03-q1 shortInput، m23-l02-p03-r1..r3)", "priority": 1 },
+            { "type": "mcq", "what": "سيناريو تجاوز الحد.", "sample": "منفذ عليه maximum 3 و violation shutdown، واتصل به جهاز رابع. ماذا يحدث؟ أ) يعمل الجهاز الرابع عاديًا ب) تحدث مخالفة فيُغلق المنفذ ج) يُحذف أول جهاز د) يصبح الحد 4", "answer": "ب) تحدث مخالفة فيُغلق المنفذ", "reuseFrom": "791381-m23-l02-p03 (m23-l02-p03-r3 multipleChoice)", "priority": 1 },
+            { "type": "shortInput", "what": "قراءة الرقم من الأمر.", "sample": "كم جهازًا يسمح به الأمر switchport port-security maximum 3؟", "answer": "3", "reuseFrom": "791381-m23-l02-p03 (m23-l02-p03-q1 shortInput)", "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "السماح بالأخضر (✓ PC0 و PC1) والمنع/المخالفة بالأحمر (✗ الجهاز الغريب، violation shutdown)، بنفس الألوان في الرسم والجدول.",
+        "في صناديق الأوامر: الجزء الثابت switchport port-security بلون، والكلمة التي تحدّد الخيار (mac-address، sticky، maximum، violation) بلون ثانٍ، والقيمة (00A0.1234.5678، 3، shutdown) بلون ثالث، فيظهر أن كل الأوامر على نفس القالب.",
+        "عنوان MAC بلون مميّز (خط أحادي) لربطه بفكرة «المنفذ يحفظ عنوان MAC المسموح».",
+        "حالة المنفذ: يعمل (أخضر) / مغلق بعد المخالفة (رمادي أو أحمر)."
+      ],
+      "notes": "رسم 791381/m28/port-security-config-summary يذكر Restrict و Protect غير الموجودين في الكتيّب، فلا يُستعمل هنا. الكتيّب يستعمل maximum 3 في هذه الوحدة و maximum 2 في جدول مرجع الأوامر (m25) — مثالان مختلفان، لا تناقض، لكن يجب أن تتبع كل صفحة رقمها. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m24",
+      "title": "حماية أجهزة Cisco بكلمات المرور",
+      "pdfPages": "73–76",
+      "origCounterparts": ["791381-m24", "791381-m14"],
+      "summary": "تشرح الوحدة سبب حماية الأجهزة وطرق الدخول Console و VTY و Enable وأوامر كلمات المرور وتشفيرها وعرض الإعدادات وحفظها؛ شكلها الحالي افتتاحية + 6 صفحات فيها جدول و4 صناديق أوامر، بلا رسوم ولا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m24-l00-p01",
+          "title": "حماية أجهزة Cisco بكلمات المرور",
+          "pdfPage": 73,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m24-l01-p01",
+          "title": "لماذا نحمي السويتشات والراوترات؟",
+          "pdfPage": 73,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m24/device-security-layers", "why": "جهاز Cisco بثلاثة مداخل مقفلة (Console و VTY و Enable)، تمهيد بصري لبقية الوحدة.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "هدف الحماية.", "sample": "ما الهدف من وضع كلمات مرور على الراوتر؟ أ) تسريع الشبكة ب) السماح للتقني المسؤول فقط بتعديل الإعدادات ج) توزيع العناوين د) إخفاء SSID", "answer": "ب) السماح للتقني المسؤول فقط بتعديل الإعدادات", "reuseFrom": "791381-m24-l01-p01 (m24-l01-p01-q1 multipleChoice، m24-l01-p01-q2 practice-table)", "priority": 2 },
+            { "type": "trueFalse", "what": "عبارة صندوق «تذكّر».", "sample": "حماية الجهاز نفسه أقل أهمية من حماية الشبكة. (صح / خطأ)", "answer": "خطأ — لا تقل أهمية", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m24-l01-p02",
+          "title": "طرق الدخول إلى أجهزة Cisco",
+          "pdfPage": 73,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m24/device-access-paths", "why": "يرسم الطرق الثلاث مع أوامرها (line console 0، line vty 0 4، enable secret) كما في جدول الكتاب، ويبيّن «قريب بكابل» مقابل «عن بُعد».", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل طريقة دخول بأمرها.", "sample": "صِل: Console · VTY · Enable ← بـ: enable secret · line vty 0 4 · line console 0", "answer": "Console ← line console 0 · VTY ← line vty 0 4 · Enable ← enable secret", "reuseFrom": "791381-m24-l01-p02 (m24-l01-p02-ws practice-table، m24-l01-p02-q1 multipleChoice)", "priority": 1 },
+            { "type": "classify", "what": "تصنيف إلى دخول قريب أو عن بُعد.", "sample": "صنّف (قريب من الجهاز بكابل / عن بُعد عبر الشبكة): Console · VTY · Telnet · SSH · البرمجة الأولى للجهاز", "answer": "قريب: Console، البرمجة الأولى · عن بُعد: VTY، Telnet، SSH", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m24-l01-p03",
+          "title": "كلمة مرور Console",
+          "pdfPage": 74,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m24-l02-p02-sim «تحدّي الأمر: احمِ منفذ Console»)", "why": "يكتب الطالب line console 0 ثم password ثم login ويرى الموجّه (config-line)#.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "mcq", "what": "دور الأمر login.", "sample": "ماذا يحدث إذا كتبنا password cisco123 ولم نكتب login؟ أ) يطلب الجهاز كلمة المرور مرتين ب) لا يسأل الجهاز عن كلمة المرور ج) تُشفّر كلمة المرور د) يُغلق المنفذ", "answer": "ب) لا يسأل الجهاز عن كلمة المرور", "reuseFrom": "791381-m24-l02-p01 (m24-l02-p01-q1 multipleChoice)", "priority": 1 },
+            { "type": "dropdown", "what": "إكمال صندوق Console بقوائم منسدلة.", "sample": "Switch(config)# line [console ▾ / vty] 0\nSwitch(config-line)# [password ▾ / secret] cisco123\nSwitch(config-line)# [login ▾ / enable]", "answer": "console · password · login", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m24-l01-p04",
+          "title": "كلمة مرور VTY (الدخول عن بُعد)",
+          "pdfPage": 74,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m24-l02-p01-sim «مثال موجّه: كلمة مرور للدخول عن بُعد»)", "why": "المثال الموجّه ينفّذ line vty 0 4 و password و login كما في الصندوق.", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m14/ssh-vs-telnet", "why": "يدعم صندوق «تذكّر»: SSH بقناة مشفّرة مقابل Telnet بنص يمكن قراءته.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "shortInput", "what": "حساب عدد خطوط VTY.", "sample": "كم شخصًا يستطيع الدخول عن بُعد معًا مع line vty 0 4؟ (رقم)", "answer": "5", "reuseFrom": "791381-m24-l03-p01 (m24-l03-p01-r1 multipleChoice)", "priority": 1 },
+            { "type": "trueFalse", "what": "المفاضلة بين SSH و Telnet.", "sample": "يُفضّل Telnet بدل SSH لأنه يشفّر البيانات. (صح / خطأ)", "answer": "خطأ — يُفضّل SSH لأنه أكثر أمانًا ويشفّر البيانات", "reuseFrom": "791381-m24-l02-p01 (m24-l02-p01-q2 trueFalse)", "priority": 2 },
+            { "type": "mcq", "what": "الفرق بين صندوقَي Console و VTY.", "sample": "ما الفرق بين صندوق Console وصندوق VTY؟ أ) كلمة المرور ب) السطر الأول فقط (line console 0 / line vty 0 4) ج) الأمر login د) لا فرق", "answer": "ب) السطر الأول فقط", "reuseFrom": "791381-m24-l02-p02 (m24-l02-p02-q1 multipleChoice)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m24-l01-p05",
+          "title": "تشفير كلمات المرور",
+          "pdfPage": 75,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m24-l02-p03-sim «مهمة إعداد: احمِ الجهاز كاملًا»)", "why": "مهمة تجمع enable secret و service password-encryption مع كلمات Console و VTY.", "priority": 2 },
+            { "action": "new-visual", "ref": "password-encryption-before-after", "why": "لا يوجد رسم يعرض ما يقوله صندوق «لماذا نشفّر؟»: ملف إعدادات فيه password cisco123 واضحة، ثم نفس السطر برموز غير مفهومة بعد service password-encryption.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل الأمرين بوظيفتيهما.", "sample": "صِل: enable secret cisco123 · service password-encryption ← بـ: يخفي كلمات المرور العادية (Console و VTY) في ملف الإعدادات · كلمة مرور للوضع المتقدّم محفوظة بشكل مشفّر", "answer": "enable secret ← الوضع المتقدّم مشفّرة · service password-encryption ← يخفي كلمات المرور العادية", "reuseFrom": "791381-m24-l02-p03 (m24-l02-p03-q1 multipleChoice، m24-l02-p03-q2 trueFalse)، 791381-m24-l03-p01 (m24-l03-p01-r2 shortInput)", "priority": 1 },
+            { "type": "trueFalse", "what": "المقارنة بين enable secret و enable password.", "sample": "enable secret أقوى من enable password. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m24-l02-p03 (m24-l02-p03-q2 trueFalse)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m24-l01-p06",
+          "title": "عرض الإعدادات وحفظها",
+          "pdfPage": 75,
+          "visuals": [
+            { "action": "new-visual", "ref": "running-vs-startup-copy", "why": "رسم لصندوقين running-config (الحالية، تضيع عند الإطفاء) و startup-config (المحفوظة، تُحمّل عند التشغيل) وسهم copy بينهما؛ لا يوجد مثله في 791381.", "priority": 1 },
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m24-l02-p04-sim «تحدّي الفحص: اعرض الإعدادات»)", "why": "يكتب الطالب show running-config و show startup-config ويرى الناتج.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف العبارات إلى running أو startup.", "sample": "صنّف (running-config / startup-config): الإعدادات الحالية التي تعمل الآن · الإعدادات المحفوظة · تُحمّل عند تشغيل الجهاز · تضيع إذا أُطفئ الجهاز", "answer": "running: الحالية، تضيع عند الإطفاء · startup: المحفوظة، تُحمّل عند التشغيل", "reuseFrom": "791381-m24-l02-p04 (m24-l02-p04-q1 multipleChoice)، 791381-m24-l03-p01 (m24-l03-p01-r3 trueFalse)", "priority": 1 },
+            { "type": "shortInput", "what": "كتابة أمر الحفظ كاملًا.", "sample": "اكتب الأمر الذي يحفظ الإعدادات الحالية حتى لا تضيع عند إطفاء الجهاز.", "answer": "copy running-config startup-config", "reuseFrom": null, "priority": 1 },
+            { "type": "trueFalse", "what": "مكان كتابة أوامر show.", "sample": "أوامر show تُكتب في الوضع المتقدّم (#). (صح / خطأ)", "answer": "صح", "reuseFrom": null, "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "لون ثابت لكل طريقة دخول (Console، VTY، Enable) في الجدول والأوامر والرسوم، ويُعاد في مرجع الأوامر m25.",
+        "كلمة المرور الظاهرة (password cisco123) بالأحمر، والمشفّرة (بعد enable secret أو service password-encryption) بالأخضر.",
+        "running-config بلون «مؤقّت» (كهرماني) و startup-config بلون «محفوظ» (أخضر)، والأمر copy سهم بينهما.",
+        "موجّه (config-line)# بلون وضع الخط لتمييزه عن (config)#."
+      ],
+      "notes": "791381-m24 فيها 4 محاكيات CLI ورسمان و11 سؤالًا وورقتا practice-table، تغطي كل الصفحات عدا رسم running/startup ورسم التشفير قبل/بعد. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m25",
+      "title": "مرجع أوامر Cisco",
+      "pdfPages": "76–79",
+      "origCounterparts": ["791381-m05", "791381-m25", "791381-m03"],
+      "summary": "صفحات مرجعية تجمع أوامر البداية وجدول الأوامر حسب الموضوع وأوامر الفحص show ولمحة عن OSPF و EIGRP و ACL؛ شكلها الحالي افتتاحية + 4 صفحات فيها 3 جداول وصندوق أوامر واحد، بلا رسوم ولا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m25-l00-p01",
+          "title": "مرجع أوامر Cisco",
+          "pdfPage": 76,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m25-l01-p01",
+          "title": "أوامر أساسية للجهاز",
+          "pdfPage": 76,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m05-l01-p01-sim «مثال موجّه: أوامر البداية على السويتش»)", "why": "نفس الخطوات الست: enable ثم configure terminal ثم hostname SW1 ثم banner motd ثم interface ثم no shutdown (يُعدّل المنفذ إلى g0/0 كما في الكتيّب).", "priority": 1 },
+            { "action": "reuse-visual", "ref": "791381/m03/cli-mode-ladder", "why": "سُلّم الأوضاع يوضّح تغيّر الموجّه من > إلى # إلى (config)# إلى (config-if)#.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب أوامر البداية.", "sample": "رتّب: hostname SW1 · interface g0/0 · enable · no shutdown · configure terminal", "answer": "enable ← configure terminal ← hostname SW1 ← interface g0/0 ← no shutdown", "reuseFrom": null, "priority": 1 },
+            { "type": "mcq", "what": "وظيفة banner motd.", "sample": "ماذا يفعل الأمر banner motd #Authorized only#؟ أ) يغيّر اسم الجهاز ب) يضيف رسالة تظهر عند الدخول للجهاز ج) يشغّل المنفذ د) يحفظ الإعدادات", "answer": "ب) يضيف رسالة تظهر عند الدخول للجهاز", "reuseFrom": "791381-m05-l01-p01 (m05-l01-p01-q1 multipleChoice، m05-l01-p01-q2 shortInput)، 791381-m25-l01-p01 (m25-l01-p01-q1، m25-l01-p01-q2)", "priority": 2 },
+            { "type": "mcq", "what": "تغيّر الموجّه بعد hostname.", "sample": "بعد الأمر hostname SW1 كيف يصبح الموجّه؟ أ) Switch(config)# ب) SW1(config)# ج) SW1> د) Switch#", "answer": "ب) SW1(config)#", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m25-l01-p02",
+          "title": "جدول الأوامر حسب الموضوع",
+          "pdfPage": 77,
+          "visuals": [
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m25-l01-p02-sim و p03-sim و p04-sim و p05-sim)", "why": "أربعة تحديات جاهزة تغطي VLAN و Trunk، VTP وكلمات المرور، الواجهة الفرعية، وأمان المنفذ — نفس مجموعات الجدول.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف الأوامر إلى مواضيع الجدول.", "sample": "صنّف إلى (VLAN و Trunk / VTP / Router on a Stick / Port Security / كلمات المرور): vtp mode client · encapsulation dot1Q 10 · switchport access vlan 10 · switchport port-security maximum 2 · line vty 0 4", "answer": "VLAN و Trunk: switchport access vlan 10 · VTP: vtp mode client · Router on a Stick: encapsulation dot1Q 10 · Port Security: maximum 2 · كلمات المرور: line vty 0 4", "reuseFrom": null, "priority": 1 },
+            { "type": "matching", "what": "وصل الأمر بوظيفته من الجدول.", "sample": "صِل: vtp mode server · vtp mode client · interface range f0/1-10 · service password-encryption ← بـ: يحدّد عدة منافذ · يستقبل التحديثات · تشفير كلمات المرور العادية · يدير VLAN ويرسل التحديثات", "answer": "server ← يدير ويرسل · client ← يستقبل · interface range ← عدة منافذ · service password-encryption ← تشفير العادية", "reuseFrom": "791381-m25-l01-p02 (m25-l01-p02-q1، m25-l01-p02-q2)، 791381-m25-l01-p03 (m25-l01-p03-q1، m25-l01-p03-q2)، 791381-m05-l03-p02 (m05-l03-p02-r1)", "priority": 1 },
+            { "type": "trueFalse", "what": "عبارة صندوق «تذكّر».", "sample": "في VTP يجب أن يكون Domain متطابقًا بين الأجهزة. (صح / خطأ)", "answer": "صح", "reuseFrom": "791381-m05-l02-p01 (m05-l02-p01-q1 multipleChoice)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m25-l01-p03",
+          "title": "أوامر الفحص المهمة (show)",
+          "pdfPage": 78,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m05/show-commands-map", "why": "خريطة قرار «ماذا أريد أن أفحص؟» تجمع أوامر show الثلاثة عشر في مجموعات، بدل قائمة طويلة يصعب حفظها.", "priority": 1 },
+            { "action": "reuse-activity", "ref": "cli-terminal (791381-m25-l01-p06-sim «تحدّي الفحص: أي أمر show؟»)", "why": "يكتب الطالب أمر show المناسب لكل سؤال فحص ويرى الناتج.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل حاجة الفحص بالأمر.", "sample": "صِل: قائمة VLAN والمنافذ التابعة لكل واحدة · جدول التوجيه في الراوتر · جدول عناوين MAC في السويتش · أجهزة Cisco المجاورة المتصلة مباشرة ← بـ: show cdp neighbors · show vlan brief · show ip route · show mac-address-table", "answer": "VLAN ← show vlan brief · التوجيه ← show ip route · MAC ← show mac-address-table · المجاورة ← show cdp neighbors", "reuseFrom": "791381-m05-l03-p01 (m05-l03-p01-ws practice-table)، 791381-m25-l01-p06 (m25-l01-p06-ws practice-table)، 791381-m05-l03-p02 (m05-l03-p02-r3)", "priority": 1 },
+            { "type": "trueFalse", "what": "طبيعة أوامر show.", "sample": "أوامر show تغيّر إعدادات الجهاز. (صح / خطأ)", "answer": "خطأ — للفحص فقط", "reuseFrom": "791381-m05-l03-p01 (m05-l03-p01-q1 trueFalse)، 791381-m25-l01-p06 (m25-l01-p06-q1 trueFalse)", "priority": 2 },
+            { "type": "mcq", "what": "اختيار أمر لفحص DHCP.", "sample": "أي أمر يعرض مجموعات توزيع DHCP؟ أ) show ip route ب) show ip dhcp pool ج) show arp د) show vtp status", "answer": "ب) show ip dhcp pool", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m25-l01-p04",
+          "title": "لمحة عن الوحدة القادمة: OSPF و EIGRP و ACL",
+          "pdfPage": 79,
+          "visuals": [],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل كلمة بفكرتها.", "sample": "صِل: OSPF و EIGRP · ACL · show access-lists ← بـ: يفحص قوائم ACL · قوائم تتحكّم بالسماح أو المنع لمرور البيانات · بروتوكولات توجيه تساعد الراوترات على إيجاد الطريق", "answer": "OSPF و EIGRP ← بروتوكولات توجيه · ACL ← السماح أو المنع · show access-lists ← يفحص ACL", "reuseFrom": "791381-m05-l03-p02 (m05-l03-p02-q1 multipleChoice)", "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "شريط لون لكل موضوع في جدول الأوامر (VLAN و Trunk، VTP، Router on a Stick، Port Security، كلمات المرور) بنفس ألوان وحداتها m16–m24، فيصبح الجدول فهرسًا بصريًا.",
+        "أوامر الفحص show بلون محايد/أزرق (لا تغيّر شيئًا) مقابل أوامر الإعداد بلون برتقالي (تغيّر الإعدادات)، تطبيقًا لعبارة «للفحص فقط».",
+        "موجّه CLI ملوّن حسب الوضع (> ، # ، (config)# ، (config-if)#) مع إبراز تغيّر الاسم إلى SW1 بعد hostname."
+      ],
+      "notes": "صفحة مراجعة تجميعية؛ أفضل إثراء لها التمارين التجميعية (تصنيف ووصل) والمحاكيات الجاهزة في 791381-m05 و 791381-m25 (5 محاكيات في m05 و6 في m25). لاحظ أن جدول الموضوع يستعمل port-security maximum 2 بينما وحدة m23 تستعمل maximum 3. صفحة اللمحة (p04) مقدمة قصيرة تكفيها تمرينة وصل واحدة. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m26",
+      "title": "الشبكة الواسعة WAN",
+      "pdfPages": "80–81",
+      "origCounterparts": ["791381-m26", "791381-m10"],
+      "summary": "تعرّف الوحدة WAN وتذكر تقنياتها القديمة (Frame Relay و ATM) والأحدث (HDLC و Metro Ethernet)؛ شكلها الحالي افتتاحية + 3 صفحات فيها جدول وقائمة بطاقات ورسمة PNG واحدة، بلا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m26-l00-p01",
+          "title": "الشبكة الواسعة WAN",
+          "pdfPage": 80,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m26-l01-p01",
+          "title": "ما هي WAN؟",
+          "pdfPage": 80,
+          "visuals": [
+            { "action": "replace-png", "ref": "791381/m26/wan-vs-lan-scope", "why": "يقارن نطاق LAN داخل مبنى بنطاق WAN التي تربط الفروع بالمقر، وهو مضمون رسمة الكتيّب (LAN المقر و LAN الفرع وسحابة WAN) بوضوح أكبر.", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف العبارات إلى LAN أو WAN.", "sample": "صنّف (LAN / WAN): تربط أجهزة في مكان واحد · تمتد عبر مدن ودول وقارات · تربط فروع الشركات والمؤسسات · الإنترنت", "answer": "LAN: أجهزة في مكان واحد · WAN: مدن ودول وقارات، فروع الشركات، الإنترنت", "reuseFrom": "791381-m26-l01-p01 (m26-l01-p01-q1 multipleChoice، m26-l01-p01-q2 trueFalse)", "priority": 1 },
+            { "type": "mcq", "what": "أكبر مثال على WAN.", "sample": "ما أكبر مثال على WAN؟ أ) شبكة غرفة الحاسوب ب) الإنترنت ج) سماعة بلوتوث د) سويتش المدرسة", "answer": "ب) الإنترنت", "reuseFrom": "791381-m26-l01-p03 (m26-l01-p03-r1 multipleChoice)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m26-l01-p02",
+          "title": "تقنيات WAN القديمة",
+          "pdfPage": 81,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m26/frame-relay-vs-atm", "why": "لوحتا مقارنة لما يذكره الجدول: Frame Relay (Frames و Packet Switching) و ATM (صوت وفيديو وبيانات معًا).", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل كل تقنية بوصفها.", "sample": "صِل: Frame Relay · ATM ← بـ: تنقل صوتًا وفيديو وبيانات معًا على نفس الخط · تنقل البيانات على شكل Frames وتعتمد على Packet Switching", "answer": "Frame Relay ← Frames و Packet Switching · ATM ← صوت وفيديو وبيانات معًا", "reuseFrom": "791381-m26-l01-p02 (m26-l01-p02-q1 multipleChoice)", "priority": 1 },
+            { "type": "shortInput", "what": "إكمال الكلمة الناقصة.", "sample": "Frame Relay يعتمد على ____ Switching. (اكتب الكلمة)", "answer": "Packet", "reuseFrom": "791381-m26-l01-p02 (m26-l01-p02-q2 shortInput)، 791381-m26-l01-p03 (m26-l01-p03-r2)", "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m26-l01-p03",
+          "title": "تقنيات WAN الأحدث",
+          "pdfPage": 81,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m26/hdlc-vs-metro", "why": "يميّز HDLC (ربط راوتر براوتر عبر خطوط WAN) من Metro Ethernet (مواقع متعددة داخل مدينة واحدة).", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف التقنيات الأربع إلى قديمة وأحدث (سطر «للامتحان»).", "sample": "صنّف (قديمة / أحدث): HDLC · Frame Relay · Metro Ethernet · ATM", "answer": "قديمة: Frame Relay، ATM · أحدث: HDLC، Metro Ethernet", "reuseFrom": "791381-m26-l01-p03 (m26-l01-p03-ws practice-table)", "priority": 1 },
+            { "type": "mcq", "what": "التقنية الشائعة داخل مدينة.", "sample": "أي تقنية شائعة لربط فروع داخل منطقة حضرية واحدة (مدينة)؟ أ) HDLC ب) ATM ج) Metro Ethernet د) Frame Relay", "answer": "ج) Metro Ethernet", "reuseFrom": "791381-m26-l01-p03 (m26-l01-p03-q1 trueFalse، m26-l01-p03-r3 multipleChoice)", "priority": 2 },
+            { "type": "trueFalse", "what": "وظيفة HDLC.", "sample": "HDLC بروتوكول لربط راوتر براوتر عبر خطوط WAN. (صح / خطأ)", "answer": "صح", "reuseFrom": null, "priority": 3 }
+          ]
+        }
+      ],
+      "colour": [
+        "LAN بلون (أخضر، شبكة محلية في مكان واحد) و WAN بلون آخر (أزرق، سحابة تربط المسافات)، ويُستعمل اللونان نفسهما في كل الرسوم.",
+        "التقنيات القديمة (Frame Relay، ATM) برمادي، والأحدث (HDLC، Metro Ethernet) بلون حيّ، تطبيقًا لسطر «للامتحان»."
+      ],
+      "notes": "وحدة قصيرة؛ 791381-m26 فيها 3 رسوم و8 أسئلة وورقة practice-table واحدة تغطيها بالكامل. صفحة الافتتاحية تبقى كما هي."
+    },
+    {
+      "moduleId": "791381s-m27",
+      "title": "مفاهيم التوجيه Routing",
+      "pdfPages": "82–84",
+      "origCounterparts": ["791381-m27", "791381-m28", "791381-m09"],
+      "summary": "تشرح الوحدة معنى التوجيه وطرقه الثلاث (Static و OSPF و EIGRP) والمسار الثابت بأمره، و Distance Vector مقابل Link-State، والمقياس Metric، والمسافة الإدارية AD؛ شكلها الحالي افتتاحية + 6 صفحات فيها 4 جداول وقائمة بطاقات وصندوق أوامر، بلا رسوم ولا تمارين.",
+      "pages": [
+        {
+          "pageId": "791381s-m27-l00-p01",
+          "title": "مفاهيم التوجيه Routing",
+          "pdfPage": 82,
+          "visuals": [],
+          "exercises": []
+        },
+        {
+          "pageId": "791381s-m27-l01-p01",
+          "title": "ما هو التوجيه؟",
+          "pdfPage": 82,
+          "visuals": [
+            { "action": "new-visual", "ref": "router-traffic-officer", "why": "رسم لتشبيه الكتيّب: الراوتر «شرطي مرور» يقرأ IP الوجهة في الحزمة ويستشير جدول التوجيه ثم يرسلها في أفضل طريق؛ أقرب رسم موجود 791381/m09/router-networks لا يُظهر جدول التوجيه.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "wordBank", "what": "فقرة التعريف مع فراغات.", "sample": "الراوتر يشبه ____: يقرأ عنوان ____ الوجهة في الحزمة، ثم يرسلها في أفضل طريق. ويعرف الطرق من ____. | المخزن: شرطي المرور · IP · جدول التوجيه · MAC · السويتش", "answer": "شرطي المرور · IP · جدول التوجيه", "reuseFrom": null, "priority": 1 }
+          ]
+        },
+        {
+          "pageId": "791381s-m27-l01-p02",
+          "title": "ثلاث طرق للتوجيه",
+          "pdfPage": 82,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m27/routing-methods-overview", "why": "يعرض الطرق الثلاث كما في بطاقات الكتاب (يدوي، Link-State حسب Bandwidth، Cisco بـ Bandwidth + Delay).", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل الطريقة بوصفها.", "sample": "صِل: Static Route · OSPF · EIGRP ← بـ: بروتوكول من Cisco يعتمد على Bandwidth + Delay · مسار يدوي يكتبه مدير الشبكة بنفسه · بروتوكول يختار الطريق حسب السرعة Bandwidth", "answer": "Static ← مسار يدوي · OSPF ← Bandwidth · EIGRP ← Cisco، Bandwidth + Delay", "reuseFrom": "791381-m27-l01-p01 (m27-l01-p01-q1 multipleChoice، m27-l01-p01-q2 trueFalse)", "priority": 1 },
+            { "type": "classify", "what": "تصنيف إلى يدوي وتلقائي.", "sample": "صنّف (يدوي Static / تلقائي Dynamic): Static Route · OSPF · EIGRP", "answer": "يدوي: Static Route · تلقائي: OSPF، EIGRP", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m27-l01-p03",
+          "title": "التوجيه الثابت Static Route",
+          "pdfPage": 82,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m27/static-route-path", "why": "مخطط متحرّك لمسار ثابت واحد يحدّده المدير من الراوتر إلى الشبكة الهدف.", "priority": 2 },
+            { "action": "reuse-activity", "ref": "cli-terminal (إعداد جديد: ip route 192.168.2.0 255.255.255.0 10.0.0.2)", "why": "قاعدة ip-route موجودة في محرّك المحاكي لكن 791381-m27 لا تملك محاكيًا للمسار الثابت؛ تحدٍّ قصير من سطر واحد.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل أجزاء الأمر بمعانيها.", "sample": "في الأمر ip route 192.168.2.0 255.255.255.0 10.0.0.2 صِل: ip route · 192.168.2.0 255.255.255.0 · 10.0.0.2 ← بـ: عنوان الراوتر التالي Next Hop · أمر كتابة مسار ثابت · الشبكة البعيدة وقناعها", "answer": "ip route ← أمر مسار ثابت · 192.168.2.0 255.255.255.0 ← الشبكة البعيدة وقناعها · 10.0.0.2 ← Next Hop", "reuseFrom": null, "priority": 1 },
+            { "type": "classify", "what": "تصنيف عبارات الجدول إلى مزايا وعيوب.", "sample": "صنّف (مزايا / عيوب): غير مناسب للشبكات الكبيرة · لا يستهلك موارد كثيرة من الراوتر · أي تغيير يحتاج تعديلًا يدويًا · مناسب للشبكات الصغيرة والبسيطة", "answer": "مزايا: لا يستهلك موارد كثيرة، مناسب للشبكات الصغيرة · عيوب: غير مناسب للكبيرة، أي تغيير يحتاج تعديلًا يدويًا", "reuseFrom": "791381-m27-l01-p02 (m27-l01-p02-q1 multipleChoice، m27-l01-p02-q2 trueFalse)", "priority": 2 },
+            { "type": "shortInput", "what": "قراءة Next Hop من الأمر.", "sample": "ما عنوان الراوتر التالي (Next Hop) في الأمر ip route 192.168.2.0 255.255.255.0 10.0.0.2؟", "answer": "10.0.0.2", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m27-l01-p04",
+          "title": "Distance Vector و Link-State",
+          "pdfPage": 83,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m27/routing-update-types", "why": "مخطط متحرّك يقارن التحديثات الدورية (Distance Vector مثل EIGRP) بالتحديث عند التغيير وبناء خريطة كاملة (Link-State مثل OSPF).", "priority": 1 }
+          ],
+          "exercises": [
+            { "type": "classify", "what": "تصنيف الصفات إلى النوعين.", "sample": "صنّف (Distance Vector / Link-State): يرسل تحديثات دورية · يرسل تحديثات عند التغيير فقط · يجمع معلومات عن الشبكة كلها · يعتمد على Metric · OSPF · EIGRP", "answer": "Distance Vector: تحديثات دورية، يعتمد على Metric، EIGRP · Link-State: عند التغيير فقط، معلومات عن الشبكة كلها، OSPF", "reuseFrom": "791381-m27-l01-p03 (m27-l01-p03-q1 multipleChoice، m27-l01-p03-q2 shortInput)", "priority": 1 },
+            { "type": "mcq", "what": "سبب تسمية EIGRP هجينًا.", "sample": "لماذا يسمّى EIGRP أحيانًا هجينًا (Hybrid)؟ أ) لأنه من Cisco ب) لأنه يجمع صفات النوعين ج) لأنه يدوي د) لأنه يعتمد على Hops", "answer": "ب) لأنه يجمع صفات النوعين", "reuseFrom": null, "priority": 2 }
+          ]
+        },
+        {
+          "pageId": "791381s-m27-l01-p05",
+          "title": "المقياس Metric",
+          "pdfPage": 83,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m27/admin-distance", "why": "يميّز سؤال Metric (أفضل طريق داخل البروتوكول: OSPF Bandwidth و EIGRP Bandwidth + Delay) عن سؤال AD، وهو الخلط الأشيع.", "priority": 2 }
+          ],
+          "exercises": [
+            { "type": "matching", "what": "وصل البروتوكول بأساس Metric.", "sample": "صِل: OSPF · EIGRP · RIP ← بـ: عدد القفزات Hops · Bandwidth فقط (Cost) · Bandwidth + Delay", "answer": "OSPF ← Bandwidth فقط (Cost) · EIGRP ← Bandwidth + Delay · RIP ← Hops", "reuseFrom": "791381-m27-l03-p01 (m27-l03-p01-q1 multipleChoice)", "priority": 1 },
+            { "type": "trueFalse", "what": "قاعدة «الأصغر أفضل».", "sample": "في Metric القيمة الأكبر تعني طريقًا أفضل. (صح / خطأ)", "answer": "خطأ — الأصغر أفضل", "reuseFrom": null, "priority": 2 },
+            { "type": "shortInput", "what": "اسم Metric في OSPF.", "sample": "ماذا يسمّى Metric في OSPF؟", "answer": "Cost", "reuseFrom": null, "priority": 3 }
+          ]
+        },
+        {
+          "pageId": "791381s-m27-l01-p06",
+          "title": "المسافة الإدارية AD",
+          "pdfPage": 84,
+          "visuals": [
+            { "action": "reuse-visual", "ref": "791381/m28/admin-distance-summary", "why": "سُلّم قيم AD (Connected 0، Static 1، EIGRP 90، OSPF 110، RIP 120) والأصغر أوثق، مطابق لجدول الصفحة وسطر الأولوية.", "priority": 1 },
+            { "action": "new-activity", "ref": "route-source-picker", "why": "نشاط قصير: يُعرض على الطالب مصدران لنفس الشبكة (مثل OSPF و EIGRP) فيختار ما يأخذه الراوتر ويرى قيمتي AD؛ يطبّق القاعدة بدل حفظها.", "priority": 3 }
+          ],
+          "exercises": [
+            { "type": "ordering", "what": "ترتيب المصادر حسب الأولوية.", "sample": "رتّب من الأعلى أولوية إلى الأقل: RIP · Connected · OSPF · Static · EIGRP", "answer": "Connected 0 ← Static 1 ← EIGRP 90 ← OSPF 110 ← RIP 120", "reuseFrom": "791381-m27-l01-p04 (m27-l01-p04-ws practice-table)", "priority": 1 },
+            { "type": "mcq", "what": "الاختيار بين مصدرين لنفس الشبكة.", "sample": "عرف الراوتر نفس الشبكة من OSPF ومن EIGRP. أيهما يختار؟ أ) OSPF لأن 110 أكبر ب) EIGRP لأن AD له 90 وهو الأصغر ج) كلاهما معًا د) لا يختار أيًّا منهما", "answer": "ب) EIGRP لأن AD له 90 وهو الأصغر", "reuseFrom": "791381-m27-l01-p04 (m27-l01-p04-q1 multipleChoice)، 791381-m27-l03-p05 (m27-l03-p05-r3 multipleChoice)", "priority": 1 },
+            { "type": "shortInput", "what": "قيمة AD لبروتوكول.", "sample": "ما قيمة AD لـ OSPF؟", "answer": "110", "reuseFrom": null, "priority": 2 },
+            { "type": "classify", "what": "التمييز بين Metric و AD (صندوق «تذكّر»).", "sample": "صنّف (Metric / AD): يقارن بين طرق داخل نفس البروتوكول · يقارن بين بروتوكولات مختلفة · درجة الثقة في مصدر المسار · OSPF يحسبه من Bandwidth", "answer": "Metric: داخل نفس البروتوكول، OSPF من Bandwidth · AD: بين بروتوكولات مختلفة، درجة الثقة في المصدر", "reuseFrom": null, "priority": 1 }
+          ]
+        }
+      ],
+      "colour": [
+        "لون ثابت لكل مصدر/بروتوكول في البطاقات والجداول والسُلّم: Connected، Static، EIGRP، OSPF، RIP — ويُعاد في وحدتي OSPF و EIGRP (m28، m29) وجدول show ip route.",
+        "Distance Vector و Link-State بلونين، مع تلوين خانة «مثال» (EIGRP / OSPF) بلون البروتوكول نفسه.",
+        "تدرّج لوني في جدول AD من الأغمق (0، الأوثق) إلى الأفتح (120)، يجسّد قاعدة «الأصغر أفضل».",
+        "أجزاء الأمر ip route ملوّنة: الشبكة البعيدة، القناع، Next Hop — كلٌّ بلون مطابق لشرحه في القائمة المرقّمة.",
+        "عمودا المزايا ✓ (أخضر) والعيوب ✗ (أحمر) في جدول Static."
+      ],
+      "notes": "791381-m27 أوسع (تشمل OSPF و EIGRP التي تقابل m28 و m29 في الكتيّب)؛ للصفحات l01-p01 إلى l01-p04 في 791381-m27 رسوم وأسئلة تُنقل مباشرة. رسم 791381/m28/route-types-summary يضيف المسار الافتراضي 0.0.0.0/0 غير المذكور في هذه الصفحات، فلا يُستعمل لصفحة Static. صفحة الافتتاحية تبقى كما هي."
+    }
+  ]
+}
