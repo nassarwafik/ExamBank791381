@@ -299,3 +299,114 @@ a named interface run on f0/1 (port security) and g0/0 / g0/1 (ACL), each descri
 Guards: every unit 1–36 ends with an 8+ question reveal page; units 31–36's twins live on the practice page. Visual gate: `learning-search`
 declared (pages 232 → 238). **With Phase 7, every unit of the booklet is enriched**; Phase 8 (exam-system integration, D7) and Phase 9
 (final audit) remain.
+
+## 11. Phase 8 design — the exam system inside the booklet (D7)
+
+Design only (read-only study of HEAD `8345b226`); implementation starts after the owner approves this section. Every part
+keeps the owner's rules: the book never changes (book lock), everything added is `teacher-enrichment`, practice never
+creates an exam record, an attempt or a grade, and no key reaches the browser before an answer.
+
+### 11.1 What the platform already provides
+
+| Piece | Where | Reused for |
+|---|---|---|
+| Exam Library trainings T01–T30, F01–F06 (607 items: 550 MCQ, 40 matching, 17 open) | `api/src/lib/learning-training-registry.js`, `api/src/functions/learning-training.js`, `src/learning/training/*` | 8A |
+| Training Strength bucket, keyed by `trainingId` only (40 pts each) | `learning-practice.js`, `student-strength.js` | 8A, unchanged (no double count) |
+| Curriculum network simulator `networkTopology@2` (routers, switches, PCs with Command Prompt, servers, AP) and its server-side checks | `src/networkTopology2/Net2Workspace.tsx`, `evaluateSmartSim` / `evaluateNet2Check` (shared CJS) | 8B |
+| Official pure grader `gradeExam` and student projection `sanitizeExamForStudent` | `api/src/lib/assignment-grading.js`, `student-exam-sanitize.js` | 8C |
+
+**Defect found during the study (fixed fail-first in 8C-0):** `LearningTrainingRunner.tsx` renders `StudentQuestionCard`
+without `onAnswer`. A registered (advanced) question type therefore gets the no-op fallback, its answer is lost and Submit
+stays disabled. Today's library holds no such type, so no student is affected yet.
+
+### 11.2 8A — the 36 Exam Library trainings opened from the booklet's units
+
+- **Gate:** the registry keeps its 791381 rows untouched and adds 791381s *release points*
+  (`ALSO_RELEASED_BY`). A training opens when **any** of its release modules is published to the class. Nothing is
+  published automatically, and teacher access is unchanged.
+- **Placement:** one metadata-only `library-training` block (six keys, no question text) on the «تدريبات الوحدة» page of
+  the releasing unit: T01 m01 · T02 m02 · T03–T04 m03 · T05 m04 · T06 m05 · T07 m06 · T08 m07 · T09 m08 · T10 m09 ·
+  T11 m10 · T12 m11 · T13 m12 · T14 m14 · T15 m16 · T16 m18 · T17 m19 · T18 m21 · T19 m22 · T20 m24 · T21 m25 · T22 m26 ·
+  T23 m29 · T24 m30 · T25–T26 m24 · T27–T30 m30 · F01–F06 on m36's page, gated by m30.
+- **Strength:** the same `trainingId` bucket. A student whose class has both books has one record (best score kept).
+  `library-training` blocks are never study activities.
+- **Tests:**
+  - fail-first: a 791381s-only class with m01 published gets 403 on T01 today and 200 after;
+  - unpublished → 403;
+  - one practice document across both books;
+  - every id placed exactly once, at its release module;
+  - no training id in the 791381s study index.
+- **Mutations:** drop the extra release points; skip the publication check; compare the course id loosely.
+- `course791381s.test.ts` gains `library-training` in its enrichment list. This is a scope extension, not a loosening:
+  the book lock still guards the book.
+
+### 11.3 8B — network labs with the curriculum simulator
+
+- **Block:** `simulation` / `network-lab` v1, config `{topology, task{intro, goals}, checks, feedback, solution}`.
+- **Served body:** strips `checks`, `feedback` and `solution` and adds `serverCheck`. The Reader mounts
+  `Net2Workspace` lazily (`src/learning/lab/NetworkLabActivity.tsx`, never `trustedSimPlugins`).
+- **Judging:** the existing practice route `POST /api/learning-study/{course}/attempt` replays the student's action list
+  on the server (256 KB cap). It uses `evaluateSmartSim` all-or-nothing and returns per-goal booleans only, never values.
+  A broken envelope or key returns a retryable error and writes nothing: never a "wrong" because of infrastructure.
+- **Labs where the simulator supports the booklet's commands:**
+  - m15 hostname / SVI
+  - m16 VLAN and isolation
+  - m17 native / allowed VLANs
+  - m18 VTP
+  - m19 Router on a Stick
+  - m20 wireless (SSID / WPA2 / DHCP)
+  - m22 DHCP
+  - m23 Port Security (real err-disabled)
+  - m24 Cisco passwords
+  - m36 services (DNS / HTTP, nslookup, browse)
+  - m11 (Command Prompt) and m27 (connected routes) are partial.
+- **Not possible under `@2`:** m21 IPv6, m28–m29 OSPF / EIGRP, m30 ACL (`ip route` / `access-list` are refused). These
+  units keep their Phase 5–7 `cli-terminal` exercises. Supporting them needs a future `networkTopology@3` (versioned
+  semantics are immutable).
+- **Cost:** about 65 KB gzip, loaded only when a lab opens. The Reader's first load is unchanged, and a bundle-guard
+  extension proves it.
+- **Strength (owner decision):** an eligible lab raises a unit's denominator, so existing students' unit Strength
+  (`round(completed / eligible × 20)`) can drop. Proposed default: labs ship as checked but not counted
+  (`studyEligible:false`) until the owner decides.
+- **Mutations M1–M7:**
+  - M1 checks left in the served body
+  - M2 trusting a client state
+  - M3 any-check-passes
+  - M4 `unavailable` recorded as wrong
+  - M5 values in `parts`
+  - M6 simulator code on the first load
+  - M7 `fetch(` in the lab code
+
+### 11.4 8C — advanced question types in «تدريبات الوحدة»
+
+- **Block:** `exam-item` `{id, origin, itemId, label}`, metadata only.
+- **Store:** the question lives in a private store under `api/src/data/learning-exam-items/791381s/`, written with the
+  existing Builder schema. Allowed types: multipleSelect, numericResponse, matrix, categorization, inlineCloze,
+  labelDiagram / hotspot on the booklet's own drawings, parametricNumeric, tableFill / cliFill. Every node passes the
+  shared `validateQuestionTypeNode`.
+- **Endpoint** `learning-exam-item/{course}/{item}` (same caller / class / archive gate as trainings, plus "the item's
+  unit is published"):
+  - `GET` returns `sanitizeExamForStudent` (no key).
+  - `POST …/check` runs `gradeExam` and returns `persisted:false` with per-part verdicts. The reveal and explanation are
+    returned only after a well-formed answer, as in Phase 2.
+  - The parametric instance is seeded on the server, the same for GET and check.
+- **Writes:** none. No exam, attempt, gradebook or study record (v1). Counting the items in Strength is a later, separate
+  owner decision.
+- **UI:** a lazy `ExamItemBlockView` reusing `StudentQuestionCard` (with `onAnswer`). A bundle guard keeps the question
+  renderers out of the Reader's first load.
+- **Mutations:** remove the sanitize call; drop the gate; trust a client score; drop the parametric context.
+
+### 11.5 Pull-request order
+
+Each step is its own PR, one at a time, owner-merged:
+
+| PR | Content |
+|---|---|
+| 8A | Release points, gate, and the 36 blocks in the units |
+| 8B-1 | Lab contract and server judging; no UI |
+| 8B-2 | Lab view, bundle guard, one pilot (m19 ROAS, not counted) |
+| 8B-3 | The labs of m15–m24, m11, m36 |
+| 8C-0 | Training runner `onAnswer` fix (fail-first) |
+| 8C-1 | Item store, endpoint, safety suite |
+| 8C-2 | Block, lazy view, host seam |
+| 8C-3 | Authored 791381s items, each traced to the booklet page it practises |
