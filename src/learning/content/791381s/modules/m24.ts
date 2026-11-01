@@ -465,9 +465,9 @@ const m24: ContentModule = {
             },
             {
               // Phase 8B-3 — a network lab on the curriculum network simulator (networkTopology@2) with this unit's own values; the
-              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Checked only — not counted in
-              // Study Strength until the owner decides (§11.3). Proven by networkLab.contract.test.ts (no free credit, solution passes).
-              id: "m24-l02-p01-lab-passwords", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              // SERVER replays and judges it (checks, feedback and solution never reach the browser). Counted in
+              // Study Strength (owner decision 2026-11-01, §21). Proven by networkLab.contract.test.ts (no free credit, solution passes).
+              id: "m24-l02-p01-lab-passwords", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1,
               title: "مختبر شبكي: حماية السويتش بكلمات المرور",
               description: "مختبر على محاكي الشبكات: احمِ طرق الدخول إلى السويتش بكلمات مرور، ثم اضغط «تحقّق من الإعداد».",
               capabilities: { fullscreen: true, reset: true, interactive: true },

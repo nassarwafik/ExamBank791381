@@ -160,7 +160,15 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   const examItems = useMemo<ExamItemHost | undefined>(() => {
     const items = client?.examItems;
     if (!items) return undefined;
-    return { load: itemId => items.load(courseId, itemId), check: (itemId, answers) => items.check(courseId, itemId, answers) };
+    return {
+      load: itemId => items.load(courseId, itemId),
+      // Phase 8D — a completion recorded by the server refreshes the page's study state (its bar and module points).
+      check: async (itemId, answers) => {
+        const r = await items.check(courseId, itemId, answers);
+        if (r.study?.persisted) { setStudyNonce(n => n + 1); if (r.study.gained > 0) onStudyPointsEarnedRef.current?.(); }
+        return r;
+      },
+    };
   }, [client, courseId]);
 
   // The runner's client wraps the host's so a successful submission is observable (Strength refresh on exit).

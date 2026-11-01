@@ -967,3 +967,61 @@ Lead decisions recorded in §§7–19: rejected visuals that showed other values
 - **Booklet inconsistencies noted earlier, for the author:**
   - EIGRP is «Distance Vector متطوّر» in unit 29 but «Hybrid» in unit 35;
   - HTTPS vs HTTP in unit 10.
+
+## 21. Phase 8D record — the labs and the advanced items count in Study Strength (owner decision 2026-11-01)
+
+**Decision.** «احسب المختبرات والأسئلة المتقدمة في نقاط القوة». The 8 network labs and the 8 advanced exam items become study
+activities.
+- Each unit has 20 Strength points, earned as `round(completed / eligible × 20)`.
+- The booklet's study index grows from **458 to 474** activities, so a unit that gained a lab or an item has one more
+  eligible activity.
+- A student who had finished such a unit sees its points drop slightly until the new activity is solved. This consequence
+  was explained to the owner beforehand and accepted.
+
+**What changed**
+
+- **Labs.** The `studyEligible: false` opt-out was removed from all 8 labs. They are completed through the existing
+  practice route (8B-1):
+  - only when **every** check passes;
+  - once and idempotently (`applyStudyCompletion`);
+  - never for a teacher.
+  - Labs reveal nothing, so there is no reveal rule.
+- **Advanced items.**
+  - `eligibility.ts` gives every `exam-item` block the key `{ kind: "exam-item", itemId }`, and `studyActivityIds` covers
+    it. The block is metadata only, so the authored and served bodies agree.
+  - On a student's `POST …/check`, `learning-exam-item.js` finds the item's activity in the study index.
+  - **Full marks** (every question answered right, nothing left to manual review) **complete** the activity in the
+    learner's study document, with the same CAS completion as every exercise.
+  - A check with a **wrong** answered question shows that question's explanation, so it marks the item **revealed**, as in
+    reveal mode. A later full-marks check is answered and **never counted** (`revealedBefore`).
+  - Right but incomplete answers write nothing. Teachers are never stored. A persistent storage conflict returns 503
+    retryable.
+  - Still no exam, attempt, submission or gradebook record.
+- **UI.**
+  - The item view states the server's outcome:
+    - «أُضيف هذا التدريب إلى نقاط قوتك (+n)»;
+    - «أنجزت هذا التدريب سابقًا»;
+    - «لا تُحسب … لأنك رأيت الشرح بعد إجابة خاطئة»;
+    - or how to earn it.
+  - The lab view states a recorded or already-recorded completion.
+  - A persisted completion refreshes the page's study bar and module points.
+- **Tests, updated to the new decision** (they pinned «not counted until the owner decides»):
+  - `networkLab.contract.test.ts`: every authored lab counts.
+  - `networkLabs791381s.test.ts`: the study index lists the 8 labs.
+  - `NetworkLabActivity.test.tsx`: the pilot has no opt-out.
+- **Tests, new:**
+  - `learning-exam-item.test.js` (+4): full marks completes once, and a repeat is read-only; a wrong answer → revealed →
+    never counted; incomplete answers and teachers → nothing written; a conflict → 503.
+  - `examItems791381s.test.ts` (+1, +2 assertions): every card is a study activity, and the index lists all 8 items.
+  - `ExamItemView.test.tsx` (+1): the study outcome lines.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| I1 | completion without full marks | KILLED |
+| I2 | a wrong answer no longer marks revealed | KILLED |
+| I3 | a teacher's check is recorded | KILLED |
+| I4 | the eligibility rule drops exam items | KILLED |
+| I5 | a lab opts out again | KILLED |
+| I6 | a repeat completion is counted again | KILLED |

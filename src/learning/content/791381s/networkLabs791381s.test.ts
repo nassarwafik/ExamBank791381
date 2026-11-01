@@ -2,8 +2,8 @@
 //   • exactly one lab on the «تدريبات الوحدة» page of each unit the simulator supports with the unit's own commands
 //     (16 VLAN, 17 Native/Trunk, 18 VTP, 19 Router on a Stick, 22 DHCP, 23 Port Security, 24 Cisco passwords, 36 DHCP STUDENTS),
 //     after the unit's questions and before its Exam Library cards;
-//   • every lab is checked only (studyEligible: false) — the study index carries no lab id (Strength unchanged until the owner
-//     decides);
+//   • every lab counts in Study Strength (owner decision 2026-11-01, §21): no opt-out, and the study index lists each lab with its
+//     server key (topology + checks) — while the served body still carries no key;
 //   • the SERVED body of each lab keeps the topology and the task only: no check kind, no expected value field, no solution.
 // (Validity and the simulator proof of every lab — no free credit, the solution passes — are networkLab.contract.test.ts.)
 import { describe, it, expect } from "vitest";
@@ -19,7 +19,7 @@ const data = (rel: string) => readFileSync(fileURLToPath(new URL("../../../../ap
 const isLab = (b: { type: string; simulationType?: string }) => b.type === "simulation" && b.simulationType === "network-lab";
 
 describe("the booklet's network labs", () => {
-  it("one lab per supported unit, on its practice page, after the questions and before the Exam Library cards; checked only", async () => {
+  it("one lab per supported unit, on its practice page, after the questions and before the Exam Library cards; counted", async () => {
     const found: string[] = [];
     for (const ref of manifest.modules) {
       const mod: ContentModule = await loadBundledModuleContent(CID, ref.id);
@@ -32,7 +32,7 @@ describe("the booklet's network labs", () => {
         expect(page.layout, page.id).toBe("practice");
         const lab = labs[0], at = page.blocks.indexOf(lab);
         expect(lab.origin).toBe("teacher-enrichment");
-        expect(lab.studyEligible, lab.id).toBe(false);
+        expect(lab.studyEligible, lab.id).toBeUndefined();
         expect(lab.id.startsWith(unit + "-l02-p01-lab-"), lab.id).toBe(true);
         expect(page.blocks.slice(0, at).every(b => b.type === "practice" || b.type === "practice-table"), lab.id + " follows the questions").toBe(true);
         expect(page.blocks.slice(at + 1).every(b => b.type === "library-training"), lab.id + " precedes only the Exam Library cards").toBe(true);
@@ -42,8 +42,10 @@ describe("the booklet's network labs", () => {
     expect(found).toEqual(LAB_UNITS);
   }, 60000);
 
-  it("the study index names no lab (Strength unchanged); the served bodies carry the topology and the task only", () => {
-    expect(data("learning-study/" + CID + ".json")).not.toMatch(/-lab-/);
+  it("the study index lists every lab (counted, with its server key); the served bodies carry the topology and the task only", () => {
+    const index = JSON.parse(data("learning-study/" + CID + ".json")) as { pages: Record<string, { activities: Record<string, { kind: string }> }> };
+    const labIds = Object.values(index.pages).flatMap(p => Object.entries(p.activities).filter(([, k]) => k.kind === "network-lab").map(([id]) => id)).sort();
+    expect(labIds.map(id => id.slice(0, 3))).toEqual(LAB_UNITS);
     for (const unit of LAB_UNITS) {
       const body = JSON.parse(data("learning-content/" + CID + "/" + CID + "-" + unit + ".json")) as ContentModule;
       const labs = body.lessons.flatMap(l => l.pages).flatMap(p => p.blocks).filter(isLab) as SimulationBlock[];

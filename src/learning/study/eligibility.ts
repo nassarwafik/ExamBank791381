@@ -12,6 +12,9 @@
 //   • `simulation` / `network-lab` v1 (791381s Phase 8B) with a topology and checks → key: { topology, checks }; the SERVER
 //     replays the learner's actions and every check must pass (api/src/lib/learning-lab.js). It may opt out with
 //     `studyEligible: false` like any practice block (checked, never counted).
+//   • `exam-item` (791381s Phase 8D) → key: { itemId }. Judged by the official grader on its own route
+//     (/api/learning-exam-item/…/check): completed only when EVERY question of the item is answered right; a wrong answer shows
+//     the explanation, which marks the item revealed (a later full-marks check is answered, never counted — as reveal mode).
 // NOT eligible (deferred or not auto-provable): `practice` fillBlank (no interactive answering surface in the Reader
 // yet), the browser-engine CLI simulator exercises (`cli-terminal`) (their goal checking runs in the browser engine only — no server verification yet),
 // diagrams / animations / guided activities, open or reflective prompts, and every reading block.
@@ -32,7 +35,8 @@ export type StudyActivityKey =
   | { kind: "matching"; pairs: Record<string, string> }
   | { kind: "ordering"; order: string[] }
   | { kind: "classify"; assign: Record<string, string> }
-  | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] };
+  | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] }
+  | { kind: "exam-item"; itemId: string };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
 
@@ -91,6 +95,7 @@ export function studyActivityOf(block: ContentBlock): StudyActivitySpec | null {
   if (block.type === "practice") { if (block.studyEligible === false) return null; const key = practiceQuestionKey(block.question); return key ? { activityId: block.id, key } : null; }
   if (block.type === "practice-table") { if (block.studyEligible === false) return null; const key = practiceTableKey(block); return key ? { activityId: block.id, key } : null; }
   if (isNetworkLabBlock(block)) { if (block.studyEligible === false) return null; const key = networkLabKey(block); return key ? { activityId: block.id, key } : null; }
+  if (block.type === "exam-item") return typeof block.itemId === "string" && block.itemId ? { activityId: block.id, key: { kind: "exam-item", itemId: block.itemId } } : null;
   return null;
 }
 
@@ -109,6 +114,7 @@ export function eligibleStudyActivities(page: Pick<ContentPage, "blocks">): Stud
 export function studyActivityIds(page: Pick<ContentPage, "blocks">): string[] {
   const out: string[] = [];
   for (const block of page.blocks) {
+    if (block.type === "exam-item") { if (studyActivityOf(block)) out.push(block.id); continue; }   // metadata only: same authored / served
     if (block.type !== "practice" && block.type !== "practice-table" && !isNetworkLabBlock(block)) continue;
     if (block.serverCheck === true ? block.studyEligible !== false : studyActivityOf(block) !== null) out.push(block.id);
   }

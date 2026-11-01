@@ -181,6 +181,10 @@
             "i5": "bin",
             "i6": "not"
           }
+        },
+        "m02-l02-p01-x-adv-numbers": {
+          "kind": "exam-item",
+          "itemId": "m02-adv-numbers"
         }
       }
     },
@@ -267,6 +271,10 @@
             "i4": "dynamic",
             "i5": "static"
           }
+        },
+        "m03-l02-p01-x-adv-ip": {
+          "kind": "exam-item",
+          "itemId": "m03-adv-ip"
         }
       }
     },
@@ -350,6 +358,10 @@
             "i3": "broadcast",
             "i4": "host"
           }
+        },
+        "m04-l02-p01-x-adv-classes": {
+          "kind": "exam-item",
+          "itemId": "m04-adv-classes"
         }
       }
     },
@@ -435,6 +447,10 @@
             "i5": "router",
             "i6": "switch"
           }
+        },
+        "m05-l02-p01-x-adv-devices": {
+          "kind": "exam-item",
+          "itemId": "m05-adv-devices"
         }
       }
     },
@@ -765,6 +781,10 @@
             "b3": "سريع",
             "b4": "تأكيدًا"
           }
+        },
+        "m09-l02-p01-x-adv-osi": {
+          "kind": "exam-item",
+          "itemId": "m09-adv-osi"
         }
       }
     },
@@ -854,6 +874,10 @@
             "b2": "UDP",
             "b3": "TFTP"
           }
+        },
+        "m10-l02-p01-x-adv-protocols": {
+          "kind": "exam-item",
+          "itemId": "m10-adv-protocols"
         }
       }
     },
@@ -1352,6 +1376,139 @@
         "m16-l02-p01-q12": {
           "kind": "trueFalse",
           "answer": true
+        },
+        "m16-l02-p01-lab-vlan": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.2
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.11",
+                      "mask": "255.255.255.0",
+                      "gateway": "192.168.10.254"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.20.11",
+                      "mask": "255.255.255.0",
+                      "gateway": "192.168.20.254"
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/11"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "v10",
+              "label": "VLAN 10 موجودة باسم MNG",
+              "weight": 1,
+              "kind": "switch.vlanName",
+              "deviceId": "sw1",
+              "vlan": 10,
+              "value": "MNG"
+            },
+            {
+              "id": "v20",
+              "label": "VLAN 20 موجودة باسم GAZ",
+              "weight": 1,
+              "kind": "switch.vlanName",
+              "deviceId": "sw1",
+              "vlan": 20,
+              "value": "GAZ"
+            },
+            {
+              "id": "f1",
+              "label": "المنفذ f0/1 (PC1) في VLAN 10",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": 10
+            },
+            {
+              "id": "f11",
+              "label": "المنفذ f0/11 (PC2) في VLAN 20",
+              "weight": 1,
+              "kind": "switch.accessVlan",
+              "deviceId": "sw1",
+              "interface": "f0/11",
+              "value": 20
+            },
+            {
+              "id": "svi",
+              "label": "عنوان إدارة VLAN 10 على السويتش: ‏192.168.10.254",
+              "weight": 1,
+              "kind": "switch.sviAddress",
+              "deviceId": "sw1",
+              "interface": "vlan10",
+              "value": "192.168.10.254"
+            },
+            {
+              "id": "mgmt",
+              "label": "PC1 (VLAN 10) يصل إلى عنوان إدارة السويتش 192.168.10.254",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "sw1",
+              "value": true
+            }
+          ]
         }
       }
     },
@@ -1437,6 +1594,220 @@
           "correct": [
             "a"
           ]
+        },
+        "m17-l02-p01-lab-native": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.3,
+                "y": 0.25,
+                "initial": {
+                  "v": 2,
+                  "device": "switch",
+                  "hostname": "SW1",
+                  "vlans": {
+                    "10": {
+                      "name": "VLAN0010"
+                    },
+                    "20": {
+                      "name": "VLAN0020"
+                    }
+                  },
+                  "interfaces": {
+                    "f0/1": {
+                      "mode": "access",
+                      "accessVlan": 10
+                    }
+                  },
+                  "vtp": {
+                    "mode": "server",
+                    "domain": "",
+                    "password": "",
+                    "version": 1,
+                    "revision": 0
+                  },
+                  "security": {}
+                }
+              },
+              {
+                "id": "sw2",
+                "kind": "switch",
+                "label": "SW2",
+                "x": 0.7,
+                "y": 0.25,
+                "initial": {
+                  "v": 2,
+                  "device": "switch",
+                  "hostname": "SW2",
+                  "vlans": {
+                    "10": {
+                      "name": "VLAN0010"
+                    },
+                    "20": {
+                      "name": "VLAN0020"
+                    }
+                  },
+                  "interfaces": {
+                    "f0/1": {
+                      "mode": "access",
+                      "accessVlan": 10
+                    }
+                  },
+                  "vtp": {
+                    "mode": "server",
+                    "domain": "",
+                    "password": "",
+                    "version": 1,
+                    "revision": 0
+                  },
+                  "security": {}
+                }
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.3,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.11",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.7,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.12",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "t",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/24"
+                },
+                "b": {
+                  "deviceId": "sw2",
+                  "port": "f0/24"
+                }
+              },
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw2",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "t1",
+              "label": "SW1: المنفذ f0/24 في وضع Trunk",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw1",
+              "interface": "f0/24",
+              "value": "trunk"
+            },
+            {
+              "id": "n1",
+              "label": "SW1: Native VLAN على f0/24 هي 99",
+              "weight": 1,
+              "kind": "switch.nativeVlan",
+              "deviceId": "sw1",
+              "interface": "f0/24",
+              "value": 99
+            },
+            {
+              "id": "a1",
+              "label": "SW1: يمرّ على f0/24 فقط VLAN 10 و 20",
+              "weight": 1,
+              "kind": "switch.allowedVlans",
+              "deviceId": "sw1",
+              "interface": "f0/24",
+              "value": "10,20"
+            },
+            {
+              "id": "t2",
+              "label": "SW2: المنفذ f0/24 في وضع Trunk",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw2",
+              "interface": "f0/24",
+              "value": "trunk"
+            },
+            {
+              "id": "n2",
+              "label": "SW2: Native VLAN على f0/24 هي 99",
+              "weight": 1,
+              "kind": "switch.nativeVlan",
+              "deviceId": "sw2",
+              "interface": "f0/24",
+              "value": 99
+            },
+            {
+              "id": "a2",
+              "label": "SW2: يمرّ على f0/24 فقط VLAN 10 و 20",
+              "weight": 1,
+              "kind": "switch.allowedVlans",
+              "deviceId": "sw2",
+              "interface": "f0/24",
+              "value": "10,20"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 يصل إلى PC2 (كلاهما في VLAN 10) عبر الـ Trunk",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
         }
       }
     },
@@ -1514,6 +1885,151 @@
           "kind": "multipleChoice",
           "correct": [
             "c"
+          ]
+        },
+        "m18-l02-p01-lab-vtp": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.3,
+                "y": 0.3
+              },
+              {
+                "id": "sw2",
+                "kind": "switch",
+                "label": "SW2",
+                "x": 0.7,
+                "y": 0.3
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.3,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.11",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.7,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.12",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "t",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                },
+                "b": {
+                  "deviceId": "sw2",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw2",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "d1",
+              "label": "SW1: النطاق VTP domain هو HFA",
+              "weight": 1,
+              "kind": "switch.vtpDomain",
+              "deviceId": "sw1",
+              "value": "HFA"
+            },
+            {
+              "id": "p1",
+              "label": "SW1: كلمة مرور VTP هي 123",
+              "weight": 1,
+              "kind": "switch.vtpPassword",
+              "deviceId": "sw1",
+              "value": "123"
+            },
+            {
+              "id": "m2",
+              "label": "SW2 هو VTP Client",
+              "weight": 1,
+              "kind": "switch.vtpMode",
+              "deviceId": "sw2",
+              "value": "client"
+            },
+            {
+              "id": "d2",
+              "label": "SW2: النطاق VTP domain هو HFA",
+              "weight": 1,
+              "kind": "switch.vtpDomain",
+              "deviceId": "sw2",
+              "value": "HFA"
+            },
+            {
+              "id": "p2",
+              "label": "SW2: كلمة مرور VTP هي 123",
+              "weight": 1,
+              "kind": "switch.vtpPassword",
+              "deviceId": "sw2",
+              "value": "123"
+            },
+            {
+              "id": "prop",
+              "label": "VLAN 10 التي أُنشئت على الـ Server ظهرت على الـ Client",
+              "weight": 1,
+              "kind": "switch.vlanExists",
+              "deviceId": "sw2",
+              "vlan": 10
+            }
           ]
         }
       }
@@ -1595,6 +2111,197 @@
         "m19-l02-p01-q12": {
           "kind": "trueFalse",
           "answer": false
+        },
+        "m19-l02-p01-lab-roas": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.12
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.45,
+                "initial": {
+                  "v": 2,
+                  "device": "switch",
+                  "hostname": "SW1",
+                  "vlans": {
+                    "10": {
+                      "name": "VLAN0010"
+                    },
+                    "20": {
+                      "name": "VLAN0020"
+                    }
+                  },
+                  "interfaces": {
+                    "f0/1": {
+                      "mode": "access",
+                      "accessVlan": 10
+                    },
+                    "f0/2": {
+                      "mode": "access",
+                      "accessVlan": 20
+                    }
+                  },
+                  "vtp": {
+                    "mode": "server",
+                    "domain": "",
+                    "password": "",
+                    "version": 1,
+                    "revision": 0
+                  },
+                  "security": {}
+                }
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.25,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.10.11",
+                      "mask": "255.255.255.0",
+                      "gateway": "192.168.10.254"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.75,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.20.11",
+                      "mask": "255.255.255.0",
+                      "gateway": "192.168.20.254"
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "u",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "trunk",
+              "label": "SW1: المنفذ g0/1 في وضع Trunk",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw1",
+              "interface": "g0/1",
+              "value": "trunk"
+            },
+            {
+              "id": "g0-up",
+              "label": "R1: المنفذ الأصلي g0/0 مشغّل (no shutdown)",
+              "weight": 1,
+              "kind": "router.interfaceEnabled",
+              "deviceId": "r1",
+              "interface": "g0/0",
+              "value": true
+            },
+            {
+              "id": "s10-vlan",
+              "label": "R1: g0/0.10 مربوط بـ VLAN 10 (encapsulation dot1Q 10)",
+              "weight": 1,
+              "kind": "router.subinterfaceVlan",
+              "deviceId": "r1",
+              "interface": "g0/0.10",
+              "value": 10
+            },
+            {
+              "id": "s10-ip",
+              "label": "R1: g0/0.10 يحمل عنوان Gateway لـ VLAN 10: ‏192.168.10.254",
+              "weight": 1,
+              "kind": "router.ipAddress",
+              "deviceId": "r1",
+              "interface": "g0/0.10",
+              "value": "192.168.10.254"
+            },
+            {
+              "id": "s20-vlan",
+              "label": "R1: g0/0.20 مربوط بـ VLAN 20 (encapsulation dot1Q 20)",
+              "weight": 1,
+              "kind": "router.subinterfaceVlan",
+              "deviceId": "r1",
+              "interface": "g0/0.20",
+              "value": 20
+            },
+            {
+              "id": "s20-ip",
+              "label": "R1: g0/0.20 يحمل عنوان Gateway لـ VLAN 20: ‏192.168.20.254",
+              "weight": 1,
+              "kind": "router.ipAddress",
+              "deviceId": "r1",
+              "interface": "g0/0.20",
+              "value": "192.168.20.254"
+            },
+            {
+              "id": "ping",
+              "label": "PC1 في VLAN 10 يصل إلى PC2 في VLAN 20 عبر الراوتر",
+              "weight": 1,
+              "kind": "reachability",
+              "source": "pc1",
+              "destination": "pc2",
+              "value": true
+            }
+          ]
         }
       }
     },
@@ -1762,6 +2469,10 @@
           "correct": [
             "b"
           ]
+        },
+        "m21-l02-p01-x-adv-ports": {
+          "kind": "exam-item",
+          "itemId": "m21-adv-ports"
         }
       }
     },
@@ -1851,6 +2562,168 @@
             "save",
             "test"
           ]
+        },
+        "m22-l02-p01-lab-dhcp": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R1",
+                "x": 0.5,
+                "y": 0.1
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.45
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.3,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "dhcp"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.7,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "dhcp"
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "u",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "ip",
+              "label": "R1: المنفذ g0/0 بالعنوان 192.168.1.254",
+              "weight": 1,
+              "kind": "router.ipAddress",
+              "deviceId": "r1",
+              "interface": "g0/0",
+              "value": "192.168.1.254"
+            },
+            {
+              "id": "up",
+              "label": "R1: المنفذ g0/0 مشغّل (no shutdown)",
+              "weight": 1,
+              "kind": "router.interfaceEnabled",
+              "deviceId": "r1",
+              "interface": "g0/0",
+              "value": true
+            },
+            {
+              "id": "pool",
+              "label": "مجموعة التوزيع ip dhcp pool LAN موجودة",
+              "weight": 1,
+              "kind": "router.dhcpPool",
+              "deviceId": "r1",
+              "pool": "LAN",
+              "value": true
+            },
+            {
+              "id": "net",
+              "label": "network 192.168.1.0 255.255.255.0",
+              "weight": 1,
+              "kind": "router.dhcpNetwork",
+              "deviceId": "r1",
+              "pool": "LAN",
+              "value": "192.168.1.0 255.255.255.0"
+            },
+            {
+              "id": "gw",
+              "label": "default-router 192.168.1.254",
+              "weight": 1,
+              "kind": "router.dhcpDefaultRouter",
+              "deviceId": "r1",
+              "pool": "LAN",
+              "value": "192.168.1.254"
+            },
+            {
+              "id": "dns",
+              "label": "dns-server 8.8.8.8",
+              "weight": 1,
+              "kind": "router.dhcpDns",
+              "deviceId": "r1",
+              "pool": "LAN",
+              "value": "8.8.8.8"
+            },
+            {
+              "id": "ex",
+              "label": "ip dhcp excluded-address 192.168.1.1 192.168.1.9",
+              "weight": 1,
+              "kind": "router.dhcpExcluded",
+              "deviceId": "r1",
+              "value": "192.168.1.1 192.168.1.9"
+            },
+            {
+              "id": "lease",
+              "label": "PC1 حصل على عنوان تلقائيًا من DHCP",
+              "weight": 1,
+              "kind": "host.dhcpLease",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": true
+            }
+          ]
         }
       }
     },
@@ -1930,6 +2803,130 @@
         "m23-l02-p01-q11": {
           "kind": "trueFalse",
           "answer": false
+        },
+        "m23-l02-p01-lab-portsec": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.2
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.3,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.1.11",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.7,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.1.12",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "mode",
+              "label": "المنفذ f0/1 في وضع access",
+              "weight": 1,
+              "kind": "switch.portMode",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": "access"
+            },
+            {
+              "id": "on",
+              "label": "الحماية switchport port-security مفعّلة على f0/1",
+              "weight": 1,
+              "kind": "switch.portSecurity",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": true
+            },
+            {
+              "id": "sticky",
+              "label": "السويتش يتعلّم عنوان MAC تلقائيًا (sticky)",
+              "weight": 1,
+              "kind": "switch.portSecuritySticky",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": true
+            },
+            {
+              "id": "max",
+              "label": "مسموح بثلاثة أجهزة فقط على المنفذ (maximum 3)",
+              "weight": 1,
+              "kind": "switch.portSecurityMaximum",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": 3
+            },
+            {
+              "id": "viol",
+              "label": "عند المخالفة يُغلق المنفذ (violation shutdown)",
+              "weight": 1,
+              "kind": "switch.portSecurityViolation",
+              "deviceId": "sw1",
+              "interface": "f0/1",
+              "value": "shutdown"
+            }
+          ]
         }
       }
     },
@@ -2010,6 +3007,103 @@
             "b1": "show",
             "b2": "startup-config"
           }
+        },
+        "m24-l02-p01-lab-passwords": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.25
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.5,
+                "y": 0.8,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "static",
+                      "address": "192.168.1.11",
+                      "mask": "255.255.255.0",
+                      "gateway": ""
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "con",
+              "label": "line console 0: كلمة المرور cisco123",
+              "weight": 1,
+              "kind": "switch.consolePassword",
+              "deviceId": "sw1",
+              "value": "cisco123"
+            },
+            {
+              "id": "conl",
+              "label": "line console 0: الجهاز يطلب كلمة المرور (login)",
+              "weight": 1,
+              "kind": "switch.consoleLogin",
+              "deviceId": "sw1",
+              "value": true
+            },
+            {
+              "id": "vty",
+              "label": "line vty 0 4: كلمة المرور cisco123",
+              "weight": 1,
+              "kind": "switch.vtyPassword",
+              "deviceId": "sw1",
+              "value": "cisco123"
+            },
+            {
+              "id": "vtyl",
+              "label": "line vty 0 4: الجهاز يطلب كلمة المرور (login)",
+              "weight": 1,
+              "kind": "switch.vtyLogin",
+              "deviceId": "sw1",
+              "value": true
+            },
+            {
+              "id": "sec",
+              "label": "enable secret cisco123",
+              "weight": 1,
+              "kind": "switch.enableSecret",
+              "deviceId": "sw1",
+              "value": "cisco123"
+            },
+            {
+              "id": "enc",
+              "label": "تشفير كلمات المرور (service password-encryption)",
+              "weight": 1,
+              "kind": "switch.passwordEncryption",
+              "deviceId": "sw1",
+              "value": true
+            }
+          ]
         }
       }
     },
@@ -2950,6 +4044,10 @@
         "m33-l02-p01-q12": {
           "kind": "trueFalse",
           "answer": false
+        },
+        "m33-l02-p01-x-adv-hosts": {
+          "kind": "exam-item",
+          "itemId": "m33-adv-hosts"
         }
       }
     },
@@ -3321,6 +4419,186 @@
           "kind": "multipleChoice",
           "correct": [
             "a"
+          ]
+        },
+        "m36-l02-p01-lab-dhcp-students": {
+          "kind": "network-lab",
+          "topology": {
+            "v": 2,
+            "devices": [
+              {
+                "id": "r1",
+                "kind": "router",
+                "label": "R",
+                "x": 0.5,
+                "y": 0.1,
+                "initial": {
+                  "v": 2,
+                  "device": "router",
+                  "hostname": "R",
+                  "interfaces": {
+                    "g0/0": {
+                      "ipAddress": "192.168.10.1",
+                      "subnetMask": "255.255.255.0",
+                      "shutdown": false
+                    }
+                  },
+                  "subinterfaces": {},
+                  "dhcp": {
+                    "excluded": [],
+                    "pools": {}
+                  },
+                  "security": {}
+                }
+              },
+              {
+                "id": "sw1",
+                "kind": "switch",
+                "label": "SW1",
+                "x": 0.5,
+                "y": 0.45
+              },
+              {
+                "id": "pc1",
+                "kind": "pc",
+                "label": "PC1",
+                "x": 0.3,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "dhcp"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "pc2",
+                "kind": "pc",
+                "label": "PC2",
+                "x": 0.7,
+                "y": 0.85,
+                "initial": {
+                  "v": 2,
+                  "device": "host",
+                  "adapters": {
+                    "eth0": {
+                      "mode": "dhcp"
+                    }
+                  }
+                }
+              }
+            ],
+            "links": [
+              {
+                "id": "u",
+                "a": {
+                  "deviceId": "r1",
+                  "port": "g0/0"
+                },
+                "b": {
+                  "deviceId": "sw1",
+                  "port": "g0/1"
+                }
+              },
+              {
+                "id": "a",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/1"
+                },
+                "b": {
+                  "deviceId": "pc1",
+                  "port": "eth0"
+                }
+              },
+              {
+                "id": "b",
+                "a": {
+                  "deviceId": "sw1",
+                  "port": "f0/2"
+                },
+                "b": {
+                  "deviceId": "pc2",
+                  "port": "eth0"
+                }
+              }
+            ]
+          },
+          "checks": [
+            {
+              "id": "ex",
+              "label": "العناوين 192.168.10.1 إلى 192.168.10.10 محجوزة (excluded-address)",
+              "weight": 1,
+              "kind": "router.dhcpExcluded",
+              "deviceId": "r1",
+              "value": "192.168.10.1 192.168.10.10"
+            },
+            {
+              "id": "pool",
+              "label": "المجموعة ip dhcp pool STUDENTS موجودة",
+              "weight": 1,
+              "kind": "router.dhcpPool",
+              "deviceId": "r1",
+              "pool": "STUDENTS",
+              "value": true
+            },
+            {
+              "id": "net",
+              "label": "network 192.168.10.0 255.255.255.0",
+              "weight": 1,
+              "kind": "router.dhcpNetwork",
+              "deviceId": "r1",
+              "pool": "STUDENTS",
+              "value": "192.168.10.0 255.255.255.0"
+            },
+            {
+              "id": "gw",
+              "label": "default-router 192.168.10.1",
+              "weight": 1,
+              "kind": "router.dhcpDefaultRouter",
+              "deviceId": "r1",
+              "pool": "STUDENTS",
+              "value": "192.168.10.1"
+            },
+            {
+              "id": "dns",
+              "label": "dns-server 8.8.8.8",
+              "weight": 1,
+              "kind": "router.dhcpDns",
+              "deviceId": "r1",
+              "pool": "STUDENTS",
+              "value": "8.8.8.8"
+            },
+            {
+              "id": "lease",
+              "label": "PC1 طلب عنوانًا جديدًا (ipconfig /renew) وحصل عليه من DHCP",
+              "weight": 1,
+              "kind": "host.dhcpLease",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": true
+            },
+            {
+              "id": "pcgw",
+              "label": "Gateway على PC1 هي 192.168.10.1",
+              "weight": 1,
+              "kind": "host.gateway",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": "192.168.10.1"
+            },
+            {
+              "id": "pcdns",
+              "label": "خادم DNS على PC1 هو 8.8.8.8",
+              "weight": 1,
+              "kind": "host.dns",
+              "deviceId": "pc1",
+              "adapter": "eth0",
+              "value": "8.8.8.8"
+            }
           ]
         }
       }

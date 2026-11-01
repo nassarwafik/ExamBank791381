@@ -101,6 +101,8 @@ export default function NetworkLabActivity({ block, commands, emit, check }: Lea
         )}
         {result?.correct && fb?.explanation && <p className="learning-lab-explanation">{fb.explanation}</p>}
         {result && result.study === false && <p className="learning-lab-note">مختبر للتدريب: لا يُحسب في نقاط القوة.</p>}
+        {result && result.study !== false && result.correct && result.persisted && <p className="learning-lab-note">✓ سُجِّل إنجاز هذا المختبر في نقاط قوتك.</p>}
+        {result && result.study !== false && result.correct && !result.persisted && result.alreadyCompleted && <p className="learning-lab-note">أنجزت هذا المختبر سابقًا، وهو محسوب في نقاط قوتك.</p>}
       </div>
     </div>
   );
