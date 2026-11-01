@@ -11,6 +11,7 @@
 const crypto = require("crypto");
 const storage = require("./platform-storage");   // looked up at call time (the route inventory tests swap in a memory container)
 const { requireBuilderAuth } = require("./builder-auth");
+const { requireTeacherSession } = require("./teacher-session");
 const { createRequestContext } = require("./observability");
 
 const AI_RATE_POLICIES = Object.freeze({
@@ -69,7 +70,9 @@ function withAiRateLimit(route, policyName, innerHandler, deps = {}) {
   const auth = deps.requireBuilderAuth || requireBuilderAuth;
   const reserve = deps.reserve || reserveAiCall;
   return async function aiRateLimitedHandler(request, ...rest) {
-    const session = auth(request);
+    // Tadris+ P2-A2 — keyed through the async teacher-session seam, so a MANAGED teacher (token v3) is rate-limited like any
+    // other teacher (the synchronous check alone would not recognise the session and would skip the limiter).
+    const session = await requireTeacherSession(request, { requireBuilderAuth: auth, getContainer: deps.getContainer });
     if (!session || !session.ok) return innerHandler(request, ...rest);       // the handler answers its own 401
     const observed = rest[1] && typeof rest[1].logWarn === "function" ? rest[1] : null;
     const log = (event, fields) => { try { (observed || createRequestContext(request, { route })).logWarn(event, { route, reason: policyName, ...fields }); } catch { /* logging never changes the answer */ } };

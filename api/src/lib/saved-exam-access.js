@@ -19,7 +19,7 @@ const MAX_UNCONDITIONAL_ATTEMPTS = 3;
 
 /** The owner identity of a verified teacher session: its subject in multi-user mode, else null (no ownership). */
 function examOwnerOf(user) {
-  return user && user.am === "multi-user" && typeof user.sub === "string" && user.sub ? user.sub : null;
+  return user && (user.am === "multi-user" || user.am === "managed") && typeof user.sub === "string" && user.sub ? user.sub : null;   // Tadris+ P2-A2: managed teachers own their exams too
 }
 
 /** The owner stamped on a stored saved-exam document, or null. */

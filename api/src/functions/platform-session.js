@@ -1,9 +1,10 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
+const { resolveTeacherDisplayName, resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");
 const { verifyBuilderToken } = require("../lib/builder-auth");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+const { requireTeacherSession } = require("../lib/teacher-session");
 
 // Roadmap #8 §12 — authoritative session introspection used by the frontend on startup/reload to validate
 // a stored session before rendering an authenticated app. Never returns secrets/hashes. Always no-store.
@@ -34,11 +35,25 @@ async function handler(request, deps = {}, obs = null) {
   const studentDeps = { getContainer: deps.getContainer || getContainer, downloadJsonOrNull: deps.downloadJsonOrNull || downloadJsonOrNull, container: deps.container };
 
   // Teacher display name: the self-profile document (platform/teacher-profiles/<sub>.json) → configured fallback → "المعلم".
-  const teacherResult = async payload => ({ status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName: await resolveTeacherDisplayName(() => studentDeps.container || studentDeps.getContainer(), payload.sub, studentDeps), expiresAt: isoFromExp(payload.exp) } });
+  const teacherResult = async payload => {
+    const containerOf = () => studentDeps.container || studentDeps.getContainer();
+    const displayName = payload.am === "managed"
+      ? await resolveManagedTeacherDisplayName(containerOf, payload.sub, payload.displayName, studentDeps)   // P2-A2: own profile, else the account's name
+      : await resolveTeacherDisplayName(containerOf, payload.sub, studentDeps);
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp) } };
+  };
   const studentResult = sess => ({
     status: 200, headers: NO_STORE,
     jsonBody: { ok: true, role: "student", displayName: String(sess.student.displayName || ""), userCode: String(sess.student.code || ""), classId: String(sess.student.classId || ""), expiresAt: isoFromExp(sess.user.exp) }
   });
+
+  // Tadris+ P2-A2 — a MANAGED teacher session (token v3) is valid only while its stored account is active and the session was
+  // not ended: the same per-request check every teacher route uses. 401 = definitively ended; 503 = could not check (kept).
+  const managedTeacher = async () => {
+    const r = await requireTeacherSession(request, { requireBuilderAuth: () => ({ ok: false }), getContainer: studentDeps.getContainer, container: studentDeps.container, now: deps.now });
+    if (r.ok) return { ok: true, response: await teacherResult(r.user) };
+    return { ok: false, unavailable: r.response && r.response.status === 503 };
+  };
 
   try {
     const builderHeader = readHeader(request, "x-builder-token");
@@ -51,6 +66,9 @@ async function handler(request, deps = {}, obs = null) {
     if (builderHeader) {
       const payload = verifyBuilder(builderHeader);
       if (payload) return await teacherResult(payload);
+      const m = await managedTeacher();
+      if (m.ok) return m.response;
+      if (m.unavailable) return SERVER_UNAVAILABLE;
       obs?.logWarn("auth.session.rejected", { reason: "invalid_teacher_token" });
       return UNAUTH;
     }
@@ -63,6 +81,9 @@ async function handler(request, deps = {}, obs = null) {
     if (authBearer) {
       const teacher = verifyBuilder(authBearer);
       if (teacher) return await teacherResult(teacher);
+      const m = await managedTeacher();
+      if (m.ok) return m.response;
+      if (m.unavailable) return SERVER_UNAVAILABLE;
       const sess = await requireStudent(request, studentDeps);
       if (sess.ok) return studentResult(sess);
     }

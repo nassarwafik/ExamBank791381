@@ -35,6 +35,9 @@ const REGISTRY = {
     // 791381s Phase 8C-1 — the learning book's advanced exam items: platform course content (a private store under api/data),
     // read-only for teachers (preview), practice for students; nothing stored per teacher is read or written.
     "learning-exam-item.js"],
+  // Tadris+ P2-A2 — a teacher ends their OWN session (the verified token subject and session id; nothing else is read or written).
+  // platform-session describes the caller's OWN session (role, display name, expiry) and reads only that account.
+  ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/ },
   operator: ["assignment-index-control.js", "build-bank-2025.js", "classify-bank-batch.js", "classify-question-preview.js", "import-html-exam.js", "inspect-html.js", "storage-status.js"],
   noData: ["ai-exam-composer.js", "ai-question-author.js", "ai-scenario-author.js", "analyze-global-exam-instruction.js", "exam-quality-fix.js",
     "game-number-conversion-preview.js", "generate-question-image.js", "interpret-exam-request.js", "question-ai-action.js",
@@ -42,7 +45,7 @@ const REGISTRY = {
     // D3 — client error / CSP reports: a teacher or student session sends a content-free report that becomes one log line; nothing stored is read.
     "client-error-report.js"]
 };
-const classified = () => [...Object.keys(REGISTRY.classScoped), ...Object.keys(REGISTRY.teacherOwned), ...REGISTRY.sharedByDesign, ...REGISTRY.operator, ...REGISTRY.noData];
+const classified = () => [...Object.keys(REGISTRY.classScoped), ...Object.keys(REGISTRY.teacherOwned), ...REGISTRY.sharedByDesign, ...Object.keys(REGISTRY.ownSession), ...REGISTRY.operator, ...REGISTRY.noData];
 const source = file => readFileSync(join(FUNCTIONS, file), "utf8");
 
 describe("21G.0 tenancy registry", () => {
@@ -53,7 +56,7 @@ describe("21G.0 tenancy registry", () => {
     expect([...all].sort()).toEqual(teacherEndpoints);
   });
   it("every class-scoped and teacher-owned endpoint carries its tenancy guard", () => {
-    for (const [file, evidence] of [...Object.entries(REGISTRY.classScoped), ...Object.entries(REGISTRY.teacherOwned)]) {
+    for (const [file, evidence] of [...Object.entries(REGISTRY.classScoped), ...Object.entries(REGISTRY.teacherOwned), ...Object.entries(REGISTRY.ownSession)]) {
       expect({ file, guarded: evidence.test(source(file)) }).toEqual({ file, guarded: true });
     }
   });

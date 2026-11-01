@@ -2,6 +2,7 @@ const storage = require("../platform-storage");
 const { requireBuilderAuth } = require("../builder-auth");
 const { requireOwnerSession, verifyOwnerToken, ownerTokenFromRequest, stepUpDenial, NO_STORE } = require("./owner-session");
 const { BOOTSTRAP_MARKER } = require("./owner-store");
+const { managedTeacherClaim } = require("./teacher-token");
 
 // Tadris+ P1-B — the platform's operator tools are the OWNER's (owner decision D9). Blueprint §3.4 S1: before this phase any
 // signed-in teacher could rewrite the official question bank, switch the platform-wide assignment index, or list the raw
@@ -40,7 +41,10 @@ async function requireOperator(request, deps = {}) {
   // Cheap checks first (signatures only, no storage): an anonymous or forged request is refused before any storage access.
   const teacher = (deps.requireBuilderAuth || requireBuilderAuth)(request);
   const ownerClaim = verifyOwnerToken(ownerTokenFromRequest(request), { nowMs, env: deps.env || process.env });
-  if (!teacher.ok && !ownerClaim) return { ok: false, response: teacher.response };
+  // Tadris+ P2-A2 — a managed teacher (token v3) is a teacher too: refused 403 once an owner exists (managed accounts exist
+  // only after the owner did), never treated as anonymous.
+  const managedTeacher = !teacher.ok && Boolean(managedTeacherClaim(request, { nowMs }));
+  if (!teacher.ok && !ownerClaim && !managedTeacher) return { ok: false, response: teacher.response };
 
   let exists;
   try {

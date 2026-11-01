@@ -11,8 +11,11 @@
 // An owned document is visible ONLY to its owner; another teacher's is reported exactly like a missing one (existence not disclosed).
 
 /** The tenant of a verified teacher session: its subject in multi-user mode, else null (single tenant — no isolation). */
+// Tadris+ P2-A2 — a MANAGED teacher session (am "managed", accounts created by the owner) is a tenant exactly like a
+// BUILDER_USERS session: its subject (the account id) owns what it creates and sees only its own space.
+const TENANT_MODES = new Set(["multi-user", "managed"]);
 function tenantOf(user) {
-  return user && user.am === "multi-user" && typeof user.sub === "string" && user.sub ? user.sub : null;
+  return user && TENANT_MODES.has(user.am) && typeof user.sub === "string" && user.sub ? user.sub : null;
 }
 
 /** The operator-configured owner of pre-tenancy (unowned) documents, or null (they stay shared). */

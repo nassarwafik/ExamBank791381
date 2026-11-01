@@ -42,6 +42,9 @@ const PUBLIC_BY_DESIGN = {
   // Tadris+ P1-A — platform-owner credential exchanges (like builderLogin / platformLogin). ownerSession is NOT listed: it
   // requires an owner session and stays under the 401 rule above.
   ownerLogin: "platform-owner credential exchange (username + password + TOTP or recovery code → 2 h owner session); throttled; one generic 401; no data without valid credentials",
+  // Tadris+ P2-A2 — a teacher sets their own password through the owner's invitation / reset link: the link token (32 random
+  // bytes, only its SHA-256 stored, 72 h, single use, superseded by a newer link) is the credential; throttled; one generic 404.
+  teacherInvitation: "teacher sets their password through the owner's one-time invitation / reset link (hash-only, 72 h, single use); throttled; unusable link → 404",
   ownerBootstrap: "one-time first-owner creation; open only while the owner's own OWNER_BOOTSTRAP_* settings are valid (≤ 24 h) AND the create-only marker is absent, closed for good afterwards; needs the bootstrap token AND a verified authenticator code; throttled; without settings it answers without storage"
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
