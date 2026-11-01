@@ -1,7 +1,7 @@
 const storage = require("../platform-storage");
 const { requireBuilderAuth } = require("../builder-auth");
 const { requireOwnerSession, verifyOwnerToken, ownerTokenFromRequest, stepUpDenial, NO_STORE } = require("./owner-session");
-const { BOOTSTRAP_MARKER } = require("./owner-store");
+const { ownerExists, resetOwnerPresenceCache } = require("./owner-presence");
 const { managedTeacherClaim } = require("./teacher-token");
 
 // Tadris+ P1-B — the platform's operator tools are the OWNER's (owner decision D9). Blueprint §3.4 S1: before this phase any
@@ -15,17 +15,8 @@ const { managedTeacherClaim } = require("./teacher-token");
 //       teacher token → 403 OWNER_REQUIRED · no / invalid token → 401 · owner without recent step-up → 403 STEP_UP_REQUIRED;
 //   - the owner's existence cannot be read (storage error) → 503, never "allowed".
 // Token signatures are checked BEFORE any storage access, so an anonymous or forged request is a 401 that costs no storage call.
-// Once seen, the marker is cached for the life of the process: an owner never stops existing, so a later storage hiccup
-// can never re-open the tools to teachers.
-
-let ownerSeen = false;
-
-async function ownerExists(container) {
-  if (ownerSeen) return true;
-  const marker = await storage.downloadJsonOrNull(container, BOOTSTRAP_MARKER);
-  if (marker) ownerSeen = true;
-  return Boolean(marker);
-}
+// Once seen, the marker is cached for the life of the process (identity/owner-presence.js, shared with P2-B's D6 closure): an
+// owner never stops existing, so a later storage hiccup can never re-open the tools to teachers.
 
 function deny(status, code, error) {
   return { ok: false, response: { status, headers: NO_STORE, jsonBody: { ok: false, code, error } } };
@@ -67,6 +58,6 @@ async function requireOperator(request, deps = {}) {
 }
 
 /** Tests only: forget the cached marker between isolated scenarios. */
-function resetOperatorGateCache() { ownerSeen = false; }
+function resetOperatorGateCache() { resetOwnerPresenceCache(); }
 
 module.exports = { requireOperator, resetOperatorGateCache };

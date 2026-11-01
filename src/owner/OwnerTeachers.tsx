@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconCheck, IconCopy, IconKey, IconPlus, IconWarning } from "../icons";
-import { ownerApi, ownerTeachersApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult } from "./ownerApi";
+import { ownerApi, ownerTeachersApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft } from "./ownerApi";
 import OwnerQr from "./OwnerQr";
 
 /**
@@ -11,11 +11,14 @@ import OwnerQr from "./OwnerQr";
  *     button; the owner sends it themselves; the teacher sets their own password (the owner never sees it);
  *   - per teacher: new invitation link, password reset (new link), end sessions, suspend / reactivate — each takes effect on the
  *     teacher's next request; the disruptive ones ask for an inline confirmation (no browser dialogs);
- *   - every change needs a recent second-factor check: a STEP_UP_REQUIRED answer asks for the code inline, then retries.
+ *   - every change needs a recent second-factor check: a STEP_UP_REQUIRED answer asks for the code inline, then retries;
+ *   - P2-B «استيراد مساحتي القديمة»: when the server says it is available (shared-password mode, not imported yet), the owner
+ *     creates — once — the teacher account of the old shared-password workspace (username + display name → an invitation link).
+ *     It then sees the old classes, exams and students exactly as before; nothing is moved or deleted.
  * The server decides everything; a 401 signs the owner out.
  */
 
-type Pending = { kind: "create"; draft: Parameters<typeof ownerTeachersApi.create>[1] } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher };
+type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft: TeacherDraft } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher };
 type Issued = { teacher: ManagedTeacher; invitation: TeacherInvitationLink };
 
 const STATUS_LABEL: Record<ManagedTeacher["status"], string> = { invited: "بانتظار كلمة المرور", active: "نشط", suspended: "موقوف" };
@@ -35,6 +38,8 @@ function formatDate(iso: string): string {
 
 export default function OwnerTeachers({ token, onSignedOut }: { token: string; onSignedOut: () => void }) {
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
+  const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -48,7 +53,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
     let live = true;
     void ownerTeachersApi.list(token).then(r => {
       if (!live) return;
-      if (r.ok) setTeachers(r.data.teachers);
+      if (r.ok) { setTeachers(r.data.teachers); setLegacy(r.data.legacyImport || null); }
       else if (r.status === 401) onSignedOut();
       else setError(r.error);
     });
@@ -68,7 +73,9 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
     setError("");
     const r: ApiResult<{ teacher: ManagedTeacher; invitation?: TeacherInvitationLink }> = p.kind === "create"
       ? await ownerTeachersApi.create(token, p.draft)
-      : await ownerTeachersApi.act(token, p.action, p.teacher.accountId);
+      : p.kind === "import"
+        ? await ownerTeachersApi.importLegacy(token, p.draft)
+        : await ownerTeachersApi.act(token, p.action, p.teacher.accountId);
     setBusy(false);
     if (r.ok) {
       setStepUp(null);
@@ -76,10 +83,12 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
       upsert(r.data.teacher);
       if (r.data.invitation) setIssued({ teacher: r.data.teacher, invitation: r.data.invitation });
       if (p.kind === "create") setShowCreate(false);
+      if (p.kind === "import") { setShowImport(false); setLegacy({ available: false, reason: "ALREADY_IMPORTED", accountId: r.data.teacher.accountId }); }
       return;
     }
     if (r.status === 401) { onSignedOut(); return; }
     if (r.code === "STEP_UP_REQUIRED") { setStepUp(p); return; }
+    if (p.kind === "import" && r.code.startsWith("LEGACY_IMPORT_")) { setShowImport(false); setLegacy(l => (l && l.available ? { available: false, reason: "ALREADY_IMPORTED" } : l)); }
     setError(r.error);
   }
 
@@ -103,6 +112,19 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
         <h2 id="eb-owner-teachers-title" className="eb-owner-h2">المعلمون</h2>
         {!showCreate && <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate(true); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>}
       </div>
+
+      {legacy && legacy.available && !showImport && (
+        <div className="eb-owner-notice eb-owner-legacy" role="region" aria-label="مساحتك القديمة">
+          <p><strong>مساحتك القديمة</strong>: الصفوف والامتحانات والطلاب التي أُنشئت بالدخول بكلمة المرور المشتركة. أُغلق ذلك الدخول بعد إنشاء حساب المالك. استوردها لحساب معلم خاص بك لتعود إليها كما هي.</p>
+          <div className="eb-owner-actions">
+            <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => { setShowImport(true); setShowCreate(false); setIssued(null); }}>استيراد مساحتي القديمة</button>
+          </div>
+        </div>
+      )}
+      {legacy && !legacy.available && legacy.reason === "LEGACY_DATA_OWNER_SET" && (
+        <p className="eb-owner-hint">لا يمكن استيراد المساحة القديمة: بياناتها مُسندة لمعلم آخر بإعداد على الخادم (LEGACY_DATA_OWNER).</p>
+      )}
+      {showImport && <LegacyImportForm busy={busy} onCancel={() => setShowImport(false)} onSubmit={draft => run({ kind: "import", draft })} />}
 
       {showCreate && <CreateTeacherForm busy={busy} onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} />}
 
@@ -135,6 +157,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
                 <strong><bdi>{t.displayName}</bdi></strong>
                 <span className="eb-owner-teacher-user" dir="ltr">{t.username}</span>
                 <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
+                {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
               </div>
               <p className="eb-owner-hint">
                 {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : "لم يدخل بعد."}
@@ -222,6 +245,38 @@ function CreateTeacherForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubm
       {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
       <div className="eb-owner-actions">
         <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الإنشاء…" : "إنشاء الحساب وإصدار رابط الدعوة"}</button>
+        <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
+      </div>
+    </form>
+  );
+}
+
+function LegacyImportForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubmit: (d: TeacherDraft) => void; onCancel: () => void }) {
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [error, setError] = useState("");
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+    if (!username.trim() || !displayName.trim()) { setError("اسم المستخدم واسم العرض مطلوبان."); return; }
+    setError("");
+    onSubmit({ username: username.trim(), displayName: displayName.trim() });
+  }
+  return (
+    <form className="auth-form eb-owner-create" onSubmit={submit} noValidate aria-label="استيراد مساحتي القديمة">
+      <p className="eb-owner-hint">سيُنشأ حساب معلم واحد يرى صفوفك وامتحاناتك وطلابك ونتائجك القديمة كما هي. لا يُنقل شيء ولا يُحذف. يُسمح بذلك <strong>مرة واحدة فقط</strong>، ولا يمكن إعطاء هذه المساحة لحساب آخر. بعد ذلك يظهر رابط دعوة تضع منه كلمة مرورك.</p>
+      <div className="eb-owner-grid">
+        <label className="auth-field"><span>اسم المستخدم</span>
+          <div className="auth-input"><input type="text" value={username} onChange={e => setUsername(e.target.value)} dir="ltr" spellCheck={false} autoComplete="off" placeholder="t.ahmad" /></div>
+          <small className="eb-owner-hint">اسم مستخدم جديد لدخولك كمعلم. لا يُستخدم رقم الهوية.</small>
+        </label>
+        <label className="auth-field"><span>اسم العرض</span>
+          <div className="auth-input"><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} /></div>
+        </label>
+      </div>
+      {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
+      <div className="eb-owner-actions">
+        <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الاستيراد…" : "استيراد وإصدار رابط الدعوة"}</button>
         <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
       </div>
     </form>

@@ -69,14 +69,19 @@ export type ManagedTeacher = {
   accountId: string; username: string; displayName: string; fullName: string; email: string; phone: string;
   subjects: string[]; notes: string; organizationId: string; status: TeacherStatus; hasPassword: boolean;
   invitation: { purpose: "invite" | "reset"; expiresAt: string } | null; createdAt: string; updatedAt: string; lastLoginAt: string;
+  /** P2-B — "shared-password-workspace" for the imported account of the old shared-password sign-in; "console" otherwise. */
+  origin?: "console" | "shared-password-workspace";
 };
+/** P2-B — whether the owner may import the shared-password workspace now (once), and if not, why. */
+export type LegacyImportState = { available: true } | { available: false; reason: "NOT_SHARED_PASSWORD_MODE" | "LEGACY_DATA_OWNER_SET" | "ALREADY_IMPORTED"; accountId?: string };
 export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
 export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string };
 export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
 
 export const ownerTeachersApi = {
-  list: (token: string) => call<{ ok: true; teachers: ManagedTeacher[] }>("/api/owner-teachers", { token }),
+  list: (token: string) => call<{ ok: true; teachers: ManagedTeacher[]; legacyImport?: LegacyImportState }>("/api/owner-teachers", { token }),
   create: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/create", { method: "POST", token, body: draft }),
+  importLegacy: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/import-legacy", { method: "POST", token, body: draft }),
   act: (token: string, action: TeacherAction, accountId: string) =>
     call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId } })
 };

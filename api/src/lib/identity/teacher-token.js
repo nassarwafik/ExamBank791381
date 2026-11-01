@@ -12,8 +12,19 @@ const { getSigningSecret, getBuilderSessionVersion, getBearerToken, TOKEN_TTL_SE
 // "active", authVersion === av, and the session id not revoked. BUILDER_SESSION_VERSION still revokes every teacher session.
 
 const MANAGED_CONTEXT = "ExamBank791381:teacher-session:v3";
+/** The ids the Owner Console issues for the teachers it creates ("t_" + 16 hex). */
 const ACCOUNT_ID_RE = /^t_[a-f0-9]{16}$/;
 const SESSION_ID_RE = /^[a-f0-9]{32}$/;
+// Tadris+ P2-B — the ONE account the owner may create, once, for the workspace of the shared-password mode (owner decisions D6,
+// D7): a fixed id, never a personal identity number and never what was typed at the old sign-in. It is not a console id, so it
+// keeps that workspace's view of pre-tenancy data (teacher-tenancy.js); nothing else can be issued this id.
+const LEGACY_TEACHER_ACCOUNT_ID = "t_legacy";
+
+/** Whether `id` is a managed teacher account id: one the console issued, or the imported shared-password workspace. */
+function isTeacherAccountId(id) {
+  const s = String(id);
+  return ACCOUNT_ID_RE.test(s) || s === LEGACY_TEACHER_ACCOUNT_ID;
+}
 
 function keyFor(secret) { return crypto.createHmac("sha256", secret).update(MANAGED_CONTEXT).digest(); }
 
@@ -22,7 +33,7 @@ function newTeacherSessionId() { return crypto.randomBytes(16).toString("hex"); 
 function createManagedTeacherToken({ accountId, sid, authVersion }, { nowMs = Date.now() } = {}) {
   const secret = getSigningSecret();
   if (!secret) throw new Error("No teacher signing secret is configured.");
-  if (!ACCOUNT_ID_RE.test(String(accountId)) || !SESSION_ID_RE.test(String(sid))) throw new Error("Invalid managed teacher session identity.");
+  if (!isTeacherAccountId(accountId) || !SESSION_ID_RE.test(String(sid))) throw new Error("Invalid managed teacher session identity.");
   const av = Number(authVersion);
   if (!Number.isInteger(av) || av < 1) throw new Error("Invalid teacher auth version.");
   const iat = Math.floor(nowMs / 1000);
@@ -44,7 +55,7 @@ function verifyManagedTeacherToken(token, { nowMs = Date.now() } = {}) {
     if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return null;
     const p = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
     if (!p || p.ver !== 3 || p.role !== "teacher" || p.am !== "managed") return null;
-    if (!ACCOUNT_ID_RE.test(String(p.sub)) || !SESSION_ID_RE.test(String(p.sid))) return null;
+    if (!isTeacherAccountId(p.sub) || !SESSION_ID_RE.test(String(p.sid))) return null;
     if (!Number.isInteger(p.av) || p.av < 1 || !Number.isInteger(p.iat) || !Number.isInteger(p.exp)) return null;
     const now = Math.floor(nowMs / 1000);
     if (p.exp - p.iat > TOKEN_TTL_SECONDS) return null;
@@ -60,4 +71,4 @@ function managedTeacherClaim(request, opts) {
   try { return verifyManagedTeacherToken(getBearerToken(request), opts); } catch { return null; }
 }
 
-module.exports = { MANAGED_CONTEXT, ACCOUNT_ID_RE, SESSION_ID_RE, newTeacherSessionId, createManagedTeacherToken, verifyManagedTeacherToken, managedTeacherClaim };
+module.exports = { MANAGED_CONTEXT, ACCOUNT_ID_RE, SESSION_ID_RE, LEGACY_TEACHER_ACCOUNT_ID, isTeacherAccountId, newTeacherSessionId, createManagedTeacherToken, verifyManagedTeacherToken, managedTeacherClaim };

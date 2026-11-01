@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createRequire } from "node:module";
 
 // Roadmap #9 — Observability. These tests prove: correlation ids are generated/sanitized/echoed, logs are
 // structured, durations are measured, unexpected throws become a safe 500 with a request id (no stack), the
@@ -380,6 +381,11 @@ describe("R9 fix#3 — real endpoint domain events are emitted and safe", () => 
   it("C: a real import-analyze failure emits import.started + import.failed, leaking no request body content", async () => {
     const prev = process.env.AZURE_STORAGE_CONNECTION_STRING;
     delete process.env.AZURE_STORAGE_CONNECTION_STRING; // getRawContainer() will throw → import.failed
+    // Tadris+ P2-B — the shared-password session is first checked against the owner's existence (D6) in the PLATFORM container:
+    // that one answers "no owner" here, so the request reaches the import code, whose raw container is still missing.
+    const cjsStorage = createRequire(import.meta.url)("../src/lib/platform-storage.js");
+    const realGetContainer = cjsStorage.getContainer;
+    cjsStorage.getContainer = () => ({ getBlobClient: () => ({ download: async () => { const e = new Error("BlobNotFound"); e.statusCode = 404; throw e; } }) });
     const token = createBuilderToken("t1");
     const req = { method: "POST", headers: { get: k => (String(k).toLowerCase() === "authorization" ? "Bearer " + token : null) }, json: async () => ({ importJobId: "imp-abc-123", password: "IMPORT_BODY_SENTINEL" }) };
     // Wrap the inner with the TEST's observability instance so its logs reach our sink (vitest gives ESM
@@ -390,6 +396,7 @@ describe("R9 fix#3 — real endpoint domain events are emitted and safe", () => 
     expect(records.some(r => r.event === "import.started")).toBe(true);
     expect(records.some(r => r.event === "import.failed")).toBe(true);
     expect(serialized()).not.toContain("IMPORT_BODY_SENTINEL");
+    cjsStorage.getContainer = realGetContainer;
     if (prev !== undefined) process.env.AZURE_STORAGE_CONNECTION_STRING = prev;
   });
 });

@@ -443,7 +443,8 @@ describe("R8 platform-login storage safety", () => {
 // ── platform-session introspection ───────────────────────────────────────────
 describe("R8 platform-session", () => {
   it("AB: teacher session returns authoritative teacher info (no-store)", async () => {
-    const r = await sessionHandler(reqWith({ "x-builder-token": createBuilderToken("t1") }), {});
+    // Tadris+ P2-B — a shared-password session is checked against the owner's existence (D6); storage here: no owner.
+    const r = await sessionHandler(reqWith({ "x-builder-token": createBuilderToken("t1") }), { getContainer: () => ({}), downloadJsonOrNull: async () => null });
     expect(r.status).toBe(200); expect(r.jsonBody.role).toBe("teacher"); expect(r.jsonBody.expiresAt).toBeTruthy();
     expect(r.headers["Cache-Control"]).toBe("no-store");
   });
@@ -497,7 +498,7 @@ describe("R8 §4 — v2 student token requires an explicit integer sv >= 1", () 
 // ── §5: platform-session Bearer fall-through ─────────────────────────────────
 describe("R8 §5 — platform-session Bearer-only tries teacher then student", () => {
   it("teacher Bearer-only → teacher", async () => {
-    const r = await sessionHandler(reqWith({ authorization: "Bearer " + createBuilderToken("t1") }), {});
+    const r = await sessionHandler(reqWith({ authorization: "Bearer " + createBuilderToken("t1") }), { getContainer: () => ({}), downloadJsonOrNull: async () => null });   // P2-B: no owner
     expect(r.status).toBe(200); expect(r.jsonBody.role).toBe("teacher");
   });
   it("student Bearer-only → student (falls through past the teacher check)", async () => {
@@ -520,7 +521,8 @@ describe("R8 §5 — platform-session Bearer-only tries teacher then student", (
 // ── §1: builder-login is throttled + credential-checked ──────────────────────
 describe("R8 §1 — builder-login throttling & credentials", () => {
   const baseDeps = extra => ({
-    getContainer: () => ({}), clientIdFromRequest: () => "203.0.113.1",
+    // Tadris+ P2-B — the shared-password sign-in first asks storage whether a platform owner exists (D6); here: no owner.
+    getContainer: () => ({}), downloadJsonOrNull: async () => null, clientIdFromRequest: () => "203.0.113.1",
     validateBuilderCredentials: (uc, pw) => uc === "ADMIN" && pw === "correct-pw",
     createBuilderToken: () => "builder-token-xyz",
     reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {},

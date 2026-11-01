@@ -17,7 +17,9 @@ const observability = require("../src/lib/observability.js");
 
 const req = (token, body) => ({ method: "POST", url: "https://example.invalid/api/client-error-report", headers: new Headers(token ? { authorization: "Bearer " + token } : {}), text: async () => (typeof body === "string" ? body : JSON.stringify(body)) });
 let logs;
-const call = async (token, body, deps) => {
+// Tadris+ P2-B — a shared-password teacher session is checked against the owner's existence (D6): storage here answers "no owner".
+const NO_OWNER_STORAGE = { getContainer: () => ({ getBlobClient: () => ({ download: async () => { const e = new Error("BlobNotFound"); e.statusCode = 404; throw e; } }) }) };
+const call = async (token, body, deps = NO_OWNER_STORAGE) => {
   const ctx = observability.createRequestContext(req(token, body), { route: "client-error-report" });
   return handler(req(token, body), {}, ctx, deps);
 };
@@ -78,7 +80,7 @@ describe("the route", () => {
   });
   it("volume: 30 reports per user per 10 minutes on this instance, then 429 until the window passes; other users unaffected", async () => {
     const t = createBuilderToken("teacher-1"), now = { v: 0 };
-    const deps = { now: () => now.v };
+    const deps = { ...NO_OWNER_STORAGE, now: () => now.v };
     for (let i = 0; i < 30; i++) expect((await call(t, { kind: "runtime" }, deps)).status).toBe(204);
     expect((await call(t, { kind: "runtime" }, deps)).status).toBe(429);
     expect((await call(createBuilderToken("teacher-2"), { kind: "runtime" }, deps)).status).toBe(204);

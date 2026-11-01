@@ -91,6 +91,8 @@
 .eb-owner-status--active { background: var(--eb-success-bg); color: var(--eb-success-tx); }
 .eb-owner-status--invited { background: var(--eb-info-bg); color: var(--eb-info-tx); }
 .eb-owner-status--suspended { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-owner-status--legacy { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-owner-legacy { align-items: stretch; }
 .eb-owner-confirm { width: 100%; padding: var(--eb-space-3); border: 1px solid var(--eb-danger); background: var(--eb-danger-bg); border-radius: var(--eb-r); color: var(--eb-danger-tx); display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .eb-owner-confirm p { margin: 0; font-weight: var(--eb-fw-semibold); }
 .eb-owner-invite { align-items: stretch; }

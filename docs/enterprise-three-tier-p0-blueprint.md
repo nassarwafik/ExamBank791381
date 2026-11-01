@@ -1235,7 +1235,7 @@ flowchart TD
 | **P1-A2** Owner setup & sign-in screens *(أُضيفت بقرار المالك، §19.2)* | شاشة تأسيس المالك (الرمز، اسم المستخدم، كلمة المرور، QR لتطبيق المصادقة، رموز الاسترداد) وشاشة دخول المالك، كحزمة lazy مستقلة على `#/owner` | `src/owner/*` | ميزانية الحزمة + own chunk + البوابة البصرية |
 | **P1-B** Administrative access protection | `requireOwner` على أدوات التشغيل السبع (فور وجود مالك)، تصنيف `operator` في سجل الـ Tenancy يصبح `owner-only` مفروضًا، 503 عند تلف الإعدادات في `platform-login` (fail-first)، تحسين الـ throttle (Lockout DoS)، logout API | المسارات السبعة، `login-throttle.js`، `platform-login.js` | Fail-first لـ S1 و"broken config = 401" |
 | **P2-A** Dynamic teacher accounts | Teacher account store، API المالك (create / invite / activate / suspend / archive / reset / revoke)، فهرس الحسابات، توكن v3 بـ `av`/`sid`، فحص الحساب في `requireBuilderAuth` | `builder-auth.js`، `identity/*` | Mutation: suspend، `authVersion`، `sid` |
-| **P2-B** BUILDER_USERS import | الاستيراد بالمعرّف نفسه، تعيين كلمة المرور الإجباري، إغلاق الوضع القديم عند وجود مالك (D6)، تقييد `GOVERNANCE_CAPABILITIES` | | Fail-first لـ S4 |
+| **P2-B** Shared-password closure + workspace import *(نطاق معدَّل بقرار المالك، §19.5)* | إغلاق الدخول بكلمة المرور المشتركة عند وجود مالك (D6، ويُغلق معه S4)، و«استيراد مساحتي القديمة» مرة واحدة لحساب معلم مُدار (`t_legacy`، D7). استيراد `BUILDER_USERS` حُذف لأن المنصة لا تستخدمه | `teacher-session.js`، `identity/owner-presence.js`، `owner-teachers.js`، `src/owner/OwnerTeachers.tsx` | Fail-first لـ D6 / S4، Mutation على الإغلاق والاستيراد |
 | **P3-A** Capability registry + resolver | سجل القدرات، Presets، Access revisions، Resolver، وضع `legacy`/`observe`، `platform-session` يعيد القدرات | `api/src/lib/access/*` | Mutation على default-deny، حذف `platform.*` من المعلم، التبعيات، fail-closed |
 | **P3-B** Central enforcement | `authorize()` على كل المسارات والأفعال، اختبار سجل القدرات (CI يفشل لمسار بلا تصريح)، وضع `enforce` | كل `api/src/functions` تقريبًا (تغيير ميكانيكي) | Mutation لكل وحدة |
 | **P3-C** Capability-driven UI | `visibleNav`، حراس الرابط العميق، حالة "غير مفعّل"، شاشة فشل الصلاحيات | `teacherNav.ts`، `TeacherAppShell.tsx`، `App.tsx` | البوابة البصرية: صفر تغيير لـ `legacy-full` |
@@ -1583,3 +1583,11 @@ flowchart LR
 6. **التدقيق:** حدث على جانب المالك (`owner.teacher-handoff.issued`)، وحدث على جانب المعلم (`teacher.session.from-owner`).
 
 **الاعتماديات:** P2-A2 (حسابات المعلمين المُدارة وتوكن v3) وP4-A (غلاف لوحة المالك).
+
+### 19.5 اعتماد تصميم P2-B (2026-11-01)
+
+| البند | قرار المالك | الأثر على الخطة |
+|---|---|---|
+| وضع الدخول الحالي | «لا يوجد BUILDER_USERS، ولم أنشئ حساب المالك بعد» | المنصة تعمل بكلمة المرور المشتركة. لا يوجد معلمون بهويات `BUILDER_USERS` لاستيرادهم |
+| مستخدمو كلمة المرور المشتركة | «لا أحد غيري» | المساحة القديمة كلها للمالك. تُستورد لحساب معلم واحد له، دون توزيع |
+| التصميم | «أوافق على التصميم ابدأ بالمرحلة P2-B» | P2-B = إغلاق D6 + «استيراد مساحتي القديمة» (مرة واحدة، `t_legacy`، دون نقل بيانات). استيراد `BUILDER_USERS` حُذف من النطاق. السجل: `docs/enterprise-legacy-import-p2b.md` |

@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { downloadJsonOrNull, listJson, deleteBlob, mutateJsonWithRetry } = require("../platform-storage");
 const { parseBuilderUsers } = require("../builder-users");
 const { validUsername, usernameReservationName, createOnly } = require("./owner-store");
-const { ACCOUNT_ID_RE } = require("./teacher-token");
+const { isTeacherAccountId } = require("./teacher-token");
 
 // Tadris+ P2-A2 — managed teacher accounts, created by the platform owner (owner decisions §19.3, D13).
 //
@@ -20,7 +20,7 @@ const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
 const MAX_REVOKED_SESSIONS = 50;
 
 const teacherAccountName = id => {
-  if (!ACCOUNT_ID_RE.test(String(id))) throw new Error("Invalid teacher account id.");
+  if (!isTeacherAccountId(id)) throw new Error("Invalid teacher account id.");
   return TEACHER_PREFIX + id + ".json";
 };
 const sha256Hex = t => crypto.createHash("sha256").update(String(t), "utf8").digest("hex");
@@ -28,7 +28,7 @@ const invitationName = token => INVITATION_PREFIX + sha256Hex(token) + ".json";
 const newTeacherAccountId = () => "t_" + crypto.randomBytes(8).toString("hex");
 
 async function readTeacherAccount(container, id, opts = {}) {
-  if (!ACCOUNT_ID_RE.test(String(id))) return null;
+  if (!isTeacherAccountId(id)) return null;
   const doc = await (opts.downloadJsonOrNull || downloadJsonOrNull)(container, teacherAccountName(id));
   return doc && doc.role === "teacher" && doc.accountId === id ? doc : null;
 }
@@ -45,7 +45,7 @@ async function findTeacherByUsername(container, username, opts = {}) {
 
 async function listTeacherAccounts(container) {
   const docs = await listJson(container, TEACHER_PREFIX);
-  return docs.filter(d => d && d.role === "teacher" && ACCOUNT_ID_RE.test(String(d.accountId)));
+  return docs.filter(d => d && d.role === "teacher" && isTeacherAccountId(d.accountId));
 }
 
 function mutateTeacherAccount(container, id, mutate) {
@@ -73,7 +73,7 @@ async function resolveInvitation(container, token, nowMs) {
   const text = String(token || "").trim();
   if (!/^[A-Za-z0-9_-]{43}$/.test(text)) return null;
   const pointer = await downloadJsonOrNull(container, invitationName(text));
-  if (!pointer || !ACCOUNT_ID_RE.test(String(pointer.accountId))) return null;
+  if (!pointer || !isTeacherAccountId(pointer.accountId)) return null;
   const account = await readTeacherAccount(container, pointer.accountId);
   const inv = account && account.invitation;
   if (!inv || !(Number(inv.expiresAtMs) > nowMs) || account.status === "suspended") return null;
@@ -128,7 +128,7 @@ function ownerView(a, nowMs = Date.now()) {
   return {
     accountId: a.accountId, username: a.username, displayName: a.displayName, fullName: a.fullName || "", email: a.email || "", phone: a.phone || "",
     subjects: Array.isArray(a.subjects) ? a.subjects : [], notes: a.adminNotes || "", organizationId: a.organizationId || "default",
-    status: a.status, hasPassword: Boolean(a.credential), invitation: inv,
+    status: a.status, hasPassword: Boolean(a.credential), invitation: inv, origin: a.origin === "shared-password-workspace" ? a.origin : "console",
     createdAt: a.createdAt || "", updatedAt: a.updatedAt || "", lastLoginAt: a.lastLoginAt || ""
   };
 }

@@ -561,7 +561,9 @@ describe("P1-A boundaries", () => {
     for (const f of readdirSync(FN).filter(n => n.endsWith(".js") && !owners.includes(n))) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/platform\/(accounts|sessions\/owners|owner\/|owner-audit)/);
-      expect(src, f).not.toMatch(/identity\/owner-/);
+      // Tadris+ P2-B — the ONE exception: identity/owner-presence (read-only, the bootstrap marker only — pinned in
+      // legacy-closure-p2b.test.js) answers "does an owner exist?" for the D6 closure of the shared-password sign-in.
+      expect(src.replace(/require\("\.\.\/lib\/identity\/owner-presence"\)/g, ""), f).not.toMatch(/identity\/owner-/);
     }
   });
   it("the owner routes never accept a teacher session and never call the teacher login", () => {

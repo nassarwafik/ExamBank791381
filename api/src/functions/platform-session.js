@@ -4,7 +4,8 @@ const { resolveTeacherDisplayName, resolveManagedTeacherDisplayName } = require(
 const { verifyBuilderToken } = require("../lib/builder-auth");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
-const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireTeacherSession, sharedPasswordSession } = require("../lib/teacher-session");
+const { ownerExists } = require("../lib/identity/owner-presence");
 
 // Roadmap #8 §12 — authoritative session introspection used by the frontend on startup/reload to validate
 // a stored session before rendering an authenticated app. Never returns secrets/hashes. Always no-store.
@@ -55,6 +56,19 @@ async function handler(request, deps = {}, obs = null) {
     return { ok: false, unavailable: r.response && r.response.status === 503 };
   };
 
+  // Tadris+ P2-B (D6) — a shared-password session is valid only while no platform owner exists (lib/teacher-session.js): once the
+  // owner exists the probe answers 401 so the app clears that session; the owner's existence unreadable → 503 (kept, retried).
+  const sharedPasswordGate = async payload => {
+    if (!sharedPasswordSession(payload)) return "open";
+    try { return (await ownerExists(() => studentDeps.container || studentDeps.getContainer(), { downloadJsonOrNull: studentDeps.downloadJsonOrNull })) ? "closed" : "open"; } catch { return "unknown"; }
+  };
+  const teacherOrClosed = async payload => {
+    const gate = await sharedPasswordGate(payload);
+    if (gate === "unknown") return SERVER_UNAVAILABLE;
+    if (gate === "closed") { obs?.logWarn("auth.session.rejected", { reason: "shared_password_closed" }); return UNAUTH; }
+    return teacherResult(payload);
+  };
+
   try {
     const builderHeader = readHeader(request, "x-builder-token");
     const studentHeader = readHeader(request, "x-student-token") || readHeader(request, "x-platform-token");
@@ -65,7 +79,7 @@ async function handler(request, deps = {}, obs = null) {
     // student, before returning 401.
     if (builderHeader) {
       const payload = verifyBuilder(builderHeader);
-      if (payload) return await teacherResult(payload);
+      if (payload) return await teacherOrClosed(payload);
       const m = await managedTeacher();
       if (m.ok) return m.response;
       if (m.unavailable) return SERVER_UNAVAILABLE;
@@ -80,7 +94,7 @@ async function handler(request, deps = {}, obs = null) {
     }
     if (authBearer) {
       const teacher = verifyBuilder(authBearer);
-      if (teacher) return await teacherResult(teacher);
+      if (teacher) return await teacherOrClosed(teacher);
       const m = await managedTeacher();
       if (m.ok) return m.response;
       if (m.unavailable) return SERVER_UNAVAILABLE;
