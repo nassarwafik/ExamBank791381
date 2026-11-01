@@ -669,3 +669,67 @@ multipleSelect@1, exactly as the API serves a training.
 | E2 | the answer is stored under the wrong id | KILLED |
 | E3 | the review shows «لم تُجب» | KILLED |
 | E4 | only the first emission is kept | KILLED |
+
+## 17. Phase 8C-1 record — the private exam-item store and the practice endpoint (no UI, no content yet)
+
+**What changed**
+
+- **Store (`api/src/lib/learning-exam-items.js`).** One file per course: `api/src/data/learning-exam-items/<courseId>.json`.
+  None ships yet: 8C-3 authors the items. Each item holds `moduleId`, `label`, an `examSnapshot` in the Builder's own node
+  schema, and an optional per-question `explanation`.
+  - The file lives under `api/`, never in a browser bundle. It is read once and deep-frozen.
+  - **Validated at load with the platform's own authorities:**
+    - the shared per-type validator (`validateQuestionTypeNode`, the same validators as the grader);
+    - an **allowlist** of auto-graded types: multipleChoice, trueFalse, multipleSelect, numericResponse, matrix,
+      categorization, inlineCloze, labelDiagram, hotspot, parametricNumeric, tableFill (no openResponse, coding,
+      simulations, composites or networkCli);
+    - 1–12 questions per item, with safe unique ids and positive marks;
+    - the unit must exist in the course registry;
+    - every feedback entry must belong to a known question.
+  - An item that fails validation is kept as **invalid**.
+- **Endpoint (`api/src/functions/learning-exam-item.js`)**, route `learning-exam-item/{courseId}/{itemId}/{action?}`.
+  - `GET` returns the card metadata and `sanitizeExamForStudent`: the platform's student projection, with no key, no
+    explanation and no parametric formula.
+  - `POST …/check {answers}` runs **`gradeExam`**, the official grader. It returns, per question: `answered`, `correct`,
+    `manualReview`, `score` / `maxMarks` and the part counts, plus the item's explanation **only for an answered question**.
+  - Only `answers` is read; any client score, percentage or `correct` claim is ignored. Bodies over 64 KB get 413.
+  - **Nothing is written** (`persisted: false`): no assignment, attempt, gradebook or study record.
+- **Gate.** The persisted class (never the token's), then the lifecycle (archived → 403), then the course assigned **and**
+  the item's own unit published (else 403). An unknown item gets 404. Teachers preview every item.
+  - An invalid item is gated the same way. Where the student may see it, the answer is **503 retryable**: it is never
+    graded and never "wrong".
+- **Parametric.** The generation context is built on the server as `learning:<course>:<item>`, the learner, attempt 1. It
+  is the same on GET and on check, and it differs from learner to learner.
+
+**Tests.** `api/tests/learning-exam-item.test.js`, 9 tests through the real handler, sanitizer and grader:
+- store validation;
+- secrecy of GET;
+- the gate, and invalid items → 503;
+- grading and explanations;
+- client claims ignored;
+- the parametric instance stays the same per learner and varies across learners;
+- the teacher preview, 413, and zero writes.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| F1 | the sanitize call is removed | KILLED |
+| F2 | the gate ignores the unit | KILLED |
+| F3 | a client score is trusted | KILLED |
+| F4 | the parametric context is dropped on check | KILLED |
+| F5 | an explanation is sent for an unanswered question | KILLED |
+| F6 | an invalid item is graded | KILLED |
+| F7 | the type allowlist is bypassed | KILLED |
+| F8 | the per-type validator is skipped | KILLED |
+| F9 | one instance for every learner | SURVIVED, then the test was strengthened → KILLED |
+
+F9 survived the first run because the per-learner test skipped its comparison when two learners happened to get the same
+instance. It now requires more than one instance across five learners.
+
+**Tenancy classification.** The first full run on the reconciled head `5fb7c9c0` failed one test:
+`tenancy-registry-21g0` «every teacher-authenticated endpoint is classified exactly once». Every endpoint that accepts a
+teacher token must carry an explicit tenancy decision, and the new endpoint had none.
+- Decision: **sharedByDesign**, like `learning-study.js` and `learning-training.js`. It serves platform course content from
+  a private store under `api/data`, it is read-only for teachers, and it reads or writes nothing per teacher.
+- No guard was changed or loosened.
