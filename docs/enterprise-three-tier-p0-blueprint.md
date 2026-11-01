@@ -1232,6 +1232,7 @@ flowchart TD
 |---|---|---|---|
 | **P0** | هذه الوثيقة | `docs/` | docs-only |
 | **P1-A** Owner identity foundation | مكتبة `identity/` (account store، scrypt v2 بمعاملات مخزنة، username reservation)، Bootstrap endpoint + سكربت توليد الرمز، `owner-login`، جلسات المالك المخزنة، TOTP + رموز الاسترداد، تدقيق أحداث الدخول. لا شيء يتغير للمعلم والطالب | `api/src/lib/identity/*`، `api/src/functions/owner-*.js` | Mutation على: create-only bootstrap، فحص TOTP، فحص الصلاحية الزمنية، سياق HMAC |
+| **P1-A2** Owner setup & sign-in screens *(أُضيفت بقرار المالك، §19.2)* | شاشة تأسيس المالك (الرمز، اسم المستخدم، كلمة المرور، QR لتطبيق المصادقة، رموز الاسترداد) وشاشة دخول المالك، كحزمة lazy مستقلة على `#/owner` | `src/owner/*` | ميزانية الحزمة + own chunk + البوابة البصرية |
 | **P1-B** Administrative access protection | `requireOwner` على أدوات التشغيل السبع (فور وجود مالك)، تصنيف `operator` في سجل الـ Tenancy يصبح `owner-only` مفروضًا، 503 عند تلف الإعدادات في `platform-login` (fail-first)، تحسين الـ throttle (Lockout DoS)، logout API | المسارات السبعة، `login-throttle.js`، `platform-login.js` | Fail-first لـ S1 و"broken config = 401" |
 | **P2-A** Dynamic teacher accounts | Teacher account store، API المالك (create / invite / activate / suspend / archive / reset / revoke)، فهرس الحسابات، توكن v3 بـ `av`/`sid`، فحص الحساب في `requireBuilderAuth` | `builder-auth.js`، `identity/*` | Mutation: suspend، `authVersion`، `sid` |
 | **P2-B** BUILDER_USERS import | الاستيراد بالمعرّف نفسه، تعيين كلمة المرور الإجباري، إغلاق الوضع القديم عند وجود مالك (D6)، تقييد `GOVERNANCE_CAPABILITIES` | | Fail-first لـ S4 |
@@ -1240,8 +1241,9 @@ flowchart TD
 | **P3-C** Capability-driven UI | `visibleNav`، حراس الرابط العميق، حالة "غير مفعّل"، شاشة فشل الصلاحيات | `teacherNav.ts`، `TeacherAppShell.tsx`، `App.tsx` | البوابة البصرية: صفر تغيير لـ `legacy-full` |
 | **P4-A** UI primitives + Console shell | Table، Tabs، Switch، Stepper، DiffView + غلاف Owner Console + الدخول | `src/ui/*`، `src/owner/*` | ميزانية الحزمة + own chunk |
 | **P4-B** Teacher management | القائمة، المعالج، التفاصيل، Presets، Cloning، Diff/History/Rollback، Effective Access Preview، Readiness | `src/owner/*` | E2E Playwright على بيانات تجريبية |
+| **P4-C** School identity *(أُضيفت بقرار المالك، §19.2)* | المالك ينشئ مدرسة (اسم + شعار) ويربط بها المعلمين؛ كل معلم يرى شعار مدرسته واسمها أعلى الصفحة بتنسيق ثابت (RTL، Light/Dark). الشعار PNG/JPEG/WebP فقط (لا SVG)، حجم محدود، يُخزَّن في Blob خاص ويُقدَّم عبر مسار مصادق | `api/src/functions/owner-schools.js`، `src/shell/TeacherAppShell.tsx` | فحص نوع الملف بالبايتات، البوابة البصرية (معلم بلا شعار = صفر فرق) |
 | **P5-A** Learning entitlements | الكتالوج (الحالة)، Teacher course entitlement، إغلاق تجاوز المعلم، Access Formula على كل مسارات التعلم، سياسة السحب | `learning-*.js`، `class-learning-materials.js` | Fail-first: "معلم يقرأ مقررًا غير مخوَّل" |
-| **P5-B** Classes at scale | المالك ينشئ صفوف المعلم، `classes.class.create`، فهرس لكل مالك يزيل المسح الكامل، خطة النقل بين معلمين | `manage-classrooms.js`، `manage-students.js` | اختبار أداء: 300 معلم × 10 صفوف |
+| **P5-B** Classes & student permissions *(عُدّلت، §19.2)* | المالك ينشئ صفوف المعلم (D18 المعدَّل)، والمعلم يضيف طالبًا ويعدّل بياناته ويؤرشفه داخل صفوفه، خطة النقل بين معلمين. **الفهرس لكل مالك مؤجل**: الحجم المتوقع (10 معلمين، ≈900 طالب) لا يحتاجه | `manage-classrooms.js`، `manage-students.js` | اختبار أداء على 10 معلمين × 3 صفوف × 30 طالبًا |
 | **P5-C** Protected assets | نقل الصور إلى Blob + روابط موقعة + فحص build | `public/…`، endpoint جديد | |
 | **P6-A** Exam Library & Bank entitlements | المجموعات، الفرق بين view/preview/keys/copy/assign، إصلاح 403-leak | `exam-library*.js`، `bank-tenancy.js` | Fail-first: مفاتيح المكتبة لمعلم غير مخوَّل |
 | **P6-B** Builder / AI / import capabilities | `examBuilder.*`، `examBuilder.ai.use`، `examBank.import.use`، فحص ملكية الـ Revision المنشور (S6) | `manage-saved-exams.js`، `ai-*.js`، `import-*.js`، `exam-governance.js` | اختبار القبول 6 |
@@ -1539,3 +1541,12 @@ flowchart LR
 **البدء بـ P1-A:** يبدأ بعد دمج هذا الـ PR. السبب هو القاعدة: «لا تنتقل إلى تنفيذ مرحلة تعتمد على PR غير مدموج».
 
 **القرارات المعلّقة:** D7، D8، D10–D18 تبقى بانتظار اعتماد المالك قبل المراحل المذكورة أعلاه.
+
+### 19.2 قرارات المالك بعد P0 (2026-11-01)
+
+| البند | قرار المالك | الأثر على الخطة |
+|---|---|---|
+| الحجم المتوقع | حتى 10 معلمين، لكل معلم 2–3 صفوف، حتى 30 طالبًا للصف (≈900 طالب) | الفهرس لكل مالك (P5-B) مؤجل؛ المسح الحالي كافٍ لهذا الحجم. يُعاد النظر عند تجاوز ~30 معلمًا |
+| **D18 (معدَّل)** | «انا المالك انشيء الصفوف ولكن اعطي للمعلم اضافة طالب اذا نسيت احد او حتلنة تفاصيل طالب او حذف طالب» | الصفوف ينشئها المالك فقط (لا `classes.class.create` للمعلم). للمعلم: `students.student.create` و`.edit` و«الحذف». **التوصية:** الحذف = أرشفة ناعمة (`.archive` + `.restore`) تحفظ النتائج؛ الحذف النهائي قدرة منفصلة يمنحها المالك صراحة |
+| P1-A2 | «نعم» — واجهة تأسيس المالك ودخوله مباشرة بعد P1-A | مرحلة جديدة P1-A2 في §12 |
+| هوية المدرسة | «اعط للمالك امكانية اضافة شعار المدرسة للمعلم وبهذا كل معلم يدخل يرى شعار مدرسته اعلى الصفحة منسق» | مرحلة جديدة P4-C: كيان «مدرسة» (اسم + شعار) يربطه المالك بالمعلمين. التخصيص شكلي فقط ولا يمنح أي صلاحية. ظهور الشعار للطلاب أيضًا قرار مفتوح للمالك |
