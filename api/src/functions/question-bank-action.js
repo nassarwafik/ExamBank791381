@@ -7,9 +7,7 @@ const {
 
 const crypto = require("crypto");
 
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 
@@ -189,11 +187,11 @@ function getBankContainer() {
 // Testable seam (same convention as the other functions): deps override auth / container / blob reads so the
 // selection can run against an in-memory index + source documents. Behaviour is unchanged for production callers.
 async function handler(request, deps = {}) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const getBank = deps.getBankContainer || getBankContainer;
   const readJson = deps.downloadJson || downloadJson;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) {
       return auth.response;
     }

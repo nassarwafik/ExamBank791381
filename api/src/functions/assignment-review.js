@@ -1,7 +1,7 @@
 
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
-const {requireBuilderAuth}=require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
@@ -125,8 +125,8 @@ function historicalSubmissionProvesOwnership(submission,assignmentId,studentId,a
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior or the grading logic.
 async function handler(request,deps={},obs=null){
- const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||syncAssessmentMedal;
- try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
+ const authFn=requireTeacherSession,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||syncAssessmentMedal;
+ try{const auth=await authFn(request, deps);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),assignmentId=String(u.searchParams.get("assignmentId")||""),studentId=String(u.searchParams.get("studentId")||""),attemptNumber=attemptNumberOf(u.searchParams.get("attemptNumber"));
    if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};

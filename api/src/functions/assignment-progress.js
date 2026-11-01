@@ -7,7 +7,7 @@
 //   → { ok, generatedAt, progress: [{ assignmentId, classId, expected, submitted, notSubmitted, pendingReview, graded, active, average, lastSubmittedAt }] }
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, listJson, listBlobNames, downloadManyJson, getReadConcurrency, mapConcurrent } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { normalizeAssignmentStatus } = require("../lib/assignment-lifecycle");
@@ -32,7 +32,7 @@ async function loadFolder(container, assignmentId, deps, tally) {
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const container = deps.container || (deps.getContainer || getContainer)();
     const lj = deps.listJson || listJson, nowMs = typeof deps.nowMs === "number" ? deps.nowMs : Date.now();

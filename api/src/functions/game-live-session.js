@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull, uploadJsonConditional, mutateJsonWithRetry, isConcurrencyConflict } = require("../lib/platform-storage");
 const { challengeDocName, challengeFromDoc } = require("../lib/live-challenge-store");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -153,7 +153,7 @@ async function mutateOwned(mutate, container, joinCode, teacherId, apply) {
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    const sess = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const sess = (await requireTeacherSession(request, deps));
     if (!sess.ok) return sess.response;
     const teacherId = String(sess.user && sess.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };

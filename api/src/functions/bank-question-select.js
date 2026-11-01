@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { withObservability } = require("../lib/observability");
 const { buildExamQuestion } = require("../lib/bank-question-exam");
 const { isBlobNotFound } = require("./question-bank-action");
@@ -51,12 +51,12 @@ function entryFromStored(question, sourceId) {
 const isUnsupported = q => String(q.type || "") === "multiPart" || (Array.isArray(q.parts) && q.parts.length > 0);
 
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const getBank = deps.getBankContainer || getBankContainer;
   const readJson = deps.downloadJson || downloadJson;
   const ls = deps.listJson || listJson;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
     if (request.method !== "POST") return bad(405, "الطريقة غير مدعومة.");
     let body = {};

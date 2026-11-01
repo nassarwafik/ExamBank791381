@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { mutateJsonWithRetry, StorageConflictError, uploadJsonConditional, isConcurrencyConflict } = require("../lib/platform-storage");
 // Roadmap #25 — explicit, teacher-triggered roster-index repair (the only O(all-users) path in this function;
 // the normal class list stays O(classes) and reads the cheap studentIds count).
@@ -168,7 +168,7 @@ function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const getC = deps.getContainer || getContainer;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const up = deps.uploadJson || uploadJson;
@@ -181,7 +181,7 @@ async function handler(request, deps = {}, obs = null) {
   const rawRec = deps.recordAuditEvent || recordAuditEvent;
   const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
     const container = deps.container || getC();
     const tenant = tenantOf(auth.user);

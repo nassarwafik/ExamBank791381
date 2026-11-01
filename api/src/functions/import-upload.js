@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf, ownerStamp } = require("../lib/teacher-tenancy");
 const { detectAndValidateKind } = require("../lib/file-sniff");
 
@@ -49,7 +49,7 @@ app.http("importUpload", {
   route: "import-upload",
   handler: withObservability("import-upload", async (request, _ctx, obs) => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
       if (!auth.ok) {
         return auth.response;
       }

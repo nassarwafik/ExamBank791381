@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
@@ -17,7 +17,7 @@ function timestamp(value) {
 // Neither changes runtime behavior.
 async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+      const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
 
       const url = new URL(request.url);

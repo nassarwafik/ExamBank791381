@@ -9,7 +9,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 // Phase 21G.0 — teacher tenancy: project tracking covers only the teacher's own classes.
 const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
@@ -178,7 +178,7 @@ function boardBody(projectCode, config, readOnly, entries, workDef, now, names =
 async function handler(request, deps = {}, obs = null) {
     const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
-      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+      const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
       const tenant = tenantOf(auth.user);

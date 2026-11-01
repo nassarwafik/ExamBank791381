@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { listLearningCourses } = require("../lib/learning-materials-registry");
 
 // GET /api/learning-materials-catalog — the teacher's PUBLISHABLE catalog (production-approved courses and their
@@ -8,9 +8,9 @@ const { listLearningCourses } = require("../lib/learning-materials-registry");
 // lesson bodies, no answer keys, no PDF. The teacher UI fetches it once per workspace lifecycle.
 // `deps` is the unit-test seam (production passes nothing).
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
     return { status: 200, jsonBody: { ok: true, courses: listLearningCourses() } };
   } catch (e) {

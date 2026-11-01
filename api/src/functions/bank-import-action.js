@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
 const { isValidBankSection } = require("../lib/section-resolver");
@@ -261,7 +261,7 @@ app.http("bankImportAction", {
   route: "bank-import-action",
   handler: async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
       if (!auth.ok) {
         return auth.response;
       }

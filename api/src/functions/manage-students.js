@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {
   studentCodeHash,
   hashPassword,
@@ -864,7 +864,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
     const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
     let action = "";                                  // Roadmap #29: visible to the catch below (safe log metadata)
     try {
-      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+      const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
       // Phase 21G.0 — tenancy: the classes this teacher may act on (null = every class: single mode), read once per request;

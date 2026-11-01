@@ -81,7 +81,7 @@ describe("14B Review Fix 1 — session binding guards (builder-auth is the ONE t
     expect(mint).toMatch(/am: mode,/);
     expect(mint).not.toMatch(/passwordEnv|configuredPasswordFor|GOVERNANCE_CAPABILITIES|capabilities|password\b/);
     expect(mint).not.toMatch(/\b(body|request|req)\b/);
-    expect(FN).toMatch(/requireBuilderAuth/); expect(INBOX_FN).toMatch(/requireBuilderAuth/);    // every teacher endpoint inherits through the shared authority
+    expect(FN).toMatch(/await requireTeacherSession\(request, deps\)/); expect(INBOX_FN).toMatch(/await requireTeacherSession\(request, deps\)/);    // every teacher endpoint inherits through the shared authority (P2-A1 seam → requireBuilderAuth)
     expect(FN).not.toMatch(/verifyBuilderToken|parseBuilderUsers|getBuilderAccount|currentAuthMode/);   // no governance-local re-implementation of the session binding
   });
 });
@@ -137,7 +137,7 @@ describe("14B §57 — inbox + UI guards", () => {
   it("the inbox endpoint derives the actor ONLY from the token subject and never reads an actor id from the query or body", () => {
     expect(INBOX_FN).toMatch(/const actorId = String\(auth\.user\.sub\);/);
     expect(INBOX_FN).not.toMatch(/actorId["']?\)|body\.actorId|body\.sub|searchParams\.get\("actorId"\)|searchParams\.get\("sub"\)/);
-    expect(INBOX_FN).toMatch(/requireBuilderAuth/);
+    expect(INBOX_FN).toMatch(/await requireTeacherSession\(request, deps\)/);
     expect(INBOX_FN).not.toMatch(/student-auth|requireStudentAuth/);
   });
   it("the inbox reader validates every pointer against the validated manifest before returning it, and the actor key is a hash", () => {

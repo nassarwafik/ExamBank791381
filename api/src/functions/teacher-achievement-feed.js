@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
@@ -60,7 +60,7 @@ async function readScope(request, container, tenant = null) {
 // Neither changes runtime behavior.
 async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+      const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
 

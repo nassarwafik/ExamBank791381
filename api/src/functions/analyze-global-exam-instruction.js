@@ -2,9 +2,7 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 
 const ALLOWED_TOPICS = [
   "NUMBER_SYSTEMS",
@@ -487,9 +485,7 @@ app.http(
       withAiRateLimit("analyze-global-exam-instruction", "ai-general", async request => {
         try {
           const auth =
-            requireBuilderAuth(
-              request
-            );
+            await requireTeacherSession(request);
 
           if (!auth.ok) {
             return auth.response;

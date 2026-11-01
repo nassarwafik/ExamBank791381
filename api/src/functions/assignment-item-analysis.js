@@ -1,7 +1,7 @@
 
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
-const {requireBuilderAuth}=require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
@@ -18,9 +18,9 @@ function difficultyFor(pct){if(pct===null)return null;if(pct>=75)return "easy";i
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
- const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
+ const authFn=requireTeacherSession,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
  try{
-  const auth=authFn(request);if(!auth.ok)return auth.response;
+  const auth=await authFn(request, deps);if(!auth.ok)return auth.response;
   const c=getC(),u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");
   if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
   const a=await dl(c,AP+id+".json");if(!a||!(await classAccessible(n=>dl(c,n),a.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};

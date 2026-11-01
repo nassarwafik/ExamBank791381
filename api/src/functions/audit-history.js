@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listBlobNames } = require("../lib/platform-storage");
 const { AUDIT_PREFIX } = require("../lib/audit-log");
@@ -67,12 +67,12 @@ function matchesFilters(ev, f) {
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const getC = deps.getContainer || getContainer;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const lbn = deps.listBlobNames || listBlobNames;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;               // 401, no student access
     const container = deps.container || getC();
     const tenant = tenantOf(auth.user);

@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { chunkPages } = require("../lib/import-chunking");
 const {
@@ -232,7 +232,7 @@ async function importAnalyzeInner(request, _ctx, obs) {
     const requestStartedAt = Date.now();
 
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
       if (!auth.ok) {
         return auth.response;
       }

@@ -24,7 +24,7 @@
 // a messaging blip never blanks the attention cards. Item lists are capped for display; counts stay complete.
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
-const {requireBuilderAuth}=require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {getContainer,listJson,listBlobNames,downloadManyJson,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
@@ -153,7 +153,7 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
 // context withObservability passes as the third argument. Neither changes runtime behaviour.
 async function handler(request,deps={},obs=null){
  try{
-  const auth=(deps.requireBuilderAuth||requireBuilderAuth)(request);
+  const auth=(await requireTeacherSession(request, deps));
   if(!auth.ok)return auth.response;
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();

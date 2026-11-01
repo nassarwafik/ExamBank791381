@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { publicActive, startAttempt, applyAnswer, isPath, isLevel, INVALID_ANSWER_FORMAT } = require("../lib/number-conversion-store");
 const { isValidBits } = require("../lib/number-conversion");
 const { defaultPreviewKey, sealPreview, openPreview, MAX_CONTINUATION_LENGTH } = require("../lib/number-conversion-preview");
@@ -21,7 +21,7 @@ async function readBody(request) { try { return await request.json(); } catch { 
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const sub = String(auth.user && auth.user.sub || "");
     if (!sub) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };

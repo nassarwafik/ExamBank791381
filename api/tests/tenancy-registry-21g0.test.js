@@ -47,7 +47,7 @@ const source = file => readFileSync(join(FUNCTIONS, file), "utf8");
 
 describe("21G.0 tenancy registry", () => {
   it("every teacher-authenticated endpoint is classified exactly once", () => {
-    const teacherEndpoints = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireBuilderAuth|requireOperator/.test(source(f))).sort();
+    const teacherEndpoints = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireBuilderAuth|requireOperator|requireTeacherSession/.test(source(f))).sort();
     const all = classified();
     expect(all.length).toBe(new Set(all).size);
     expect([...all].sort()).toEqual(teacherEndpoints);
@@ -65,6 +65,20 @@ describe("21G.0 tenancy registry", () => {
     }
     const users = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireOperator/.test(source(f))).sort();
     expect(users).toEqual([...REGISTRY.operator].sort());
+  });
+  it("P2-A1: the seam is the ONE teacher-session authority and delegates to requireBuilderAuth (honouring the deps injection)", () => {
+    const seam = readFileSync(join(__dirname, "..", "src", "lib", "teacher-session.js"), "utf8");
+    expect(seam).toMatch(/require\("\.\/builder-auth"\)/);
+    expect(seam).toMatch(/\(deps\.requireBuilderAuth \|\| requireBuilderAuth\)\(request\)/);
+  });
+  it("P2-A1: every teacher endpoint awaits requireTeacherSession (operator tools: requireOperator); none calls requireBuilderAuth itself", () => {
+    const code = file => source(file).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    for (const file of classified()) {
+      const src = code(file);
+      expect({ file, directCall: /requireBuilderAuth\s*\)?\s*\(/.test(src) }).toEqual({ file, directCall: false });
+      if (REGISTRY.operator.includes(file)) continue;
+      expect({ file, awaitsSeam: /await (requireTeacherSession|authFn)\(request/.test(src) && /require\("\.\.\/lib\/teacher-session"\)/.test(src) }).toEqual({ file, awaitsSeam: true });
+    }
   });
   it("stateless endpoints read no stored teacher data", () => {
     const storage = /listJson\(|downloadJson[A-Za-z]*\(|mutateJson[A-Za-z]*\(|listBlobsFlat\(/;

@@ -2,7 +2,7 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 
 // Phase 20G.3 — the ONE legacy table authority (shared build): the rows the student card draws and the legacy table grader grades,
@@ -187,7 +187,7 @@ app.http("examQualityFix", {
   route: "exam-quality-fix",
   handler: withAiRateLimit("exam-quality-fix", "ai-general", async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
       if (!auth.ok) {
         return auth.response;
       }

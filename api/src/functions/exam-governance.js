@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
 const { isSafeExamId } = require("../lib/exam-governance-model");
@@ -45,7 +45,7 @@ function assignmentsOf(body) {
 }
 
 async function handler(request, deps = {}, obs = null) {
-  const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) return auth.response;
   const container = (deps.getContainer || getContainer)();
   const body = await readBody(request);

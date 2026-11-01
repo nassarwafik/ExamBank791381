@@ -5,9 +5,7 @@ const {
   BlobServiceClient
 } = require("@azure/storage-blob");
 
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {
   hydrateBankAssets
 } = require("../lib/bank-asset-hydrate");
@@ -274,7 +272,7 @@ async function listSavedExams(
 // exam reopened days after authoring still shows its bank images. The stored document is never rewritten by a read.
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
 async function handler(request, deps = {}) {
-  const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) {
     return auth.response;
   }

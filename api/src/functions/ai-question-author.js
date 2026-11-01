@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 const { withObservability } = require("../lib/observability");
 const draft = require("../lib/shared-finalization/aiQuestionDraft");
@@ -23,11 +23,11 @@ const MAX_REQUEST_CHARS = draft.AI_AUTHOR_LIMITS.requestChars;
 const bad = error => ({ status: 400, jsonBody: { ok: false, error } });
 
 async function handler(request, deps = {}) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const ai = deps.callTextJson || callTextJson;
   const log = deps.log || (() => {});
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
 
     let body = null;

@@ -5,9 +5,7 @@ const {
   BlobServiceClient
 } = require("@azure/storage-blob");
 
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 
 const BANK_CONTAINER = "bank";
@@ -133,7 +131,7 @@ async function listTemplates(container, tenant = null, read = downloadJson) {
 // `deps` is the dependency-injection seam for tests (production passes nothing).
 async function handler(request, deps = {}) {
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const container = (deps.getContainer || getContainer)();
     const read = deps.downloadJson || downloadJson;

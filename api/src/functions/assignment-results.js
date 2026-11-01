@@ -1,7 +1,7 @@
 
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
-const {requireBuilderAuth}=require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: results of an assignment belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
@@ -75,8 +75,8 @@ async function loadTarget(dl,c,id,studentId){
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
 async function handler(request,deps={},obs=null){
- const gradeFn=deps.gradeExam||gradeExam,authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent;
- try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
+ const gradeFn=deps.gradeExam||gradeExam,authFn=requireTeacherSession,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent;
+ try{const auth=await authFn(request, deps);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const a=await dl(c,AP+id+".json");if(!a||!(await classAccessible(n=>dl(c,n),a.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
    // Phase 8A: an optional STUDENT scope (the dashboard's student drill). When `studentId` is present the population is

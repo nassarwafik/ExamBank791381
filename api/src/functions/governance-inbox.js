@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer } = require("../lib/platform-storage");
 const { listActorTasks, TASK_STAGES } = require("../lib/governance-inbox");
 
@@ -24,7 +24,7 @@ function parseArgs(request, body) {
 }
 
 async function handler(request, deps = {}, obs = null) {
-  const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) return auth.response;
   const actorId = String(auth.user.sub);                                   // the ONE source of the inbox identity
   let body = null;

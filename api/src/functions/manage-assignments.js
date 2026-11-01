@@ -1,7 +1,7 @@
 
 const {app}=require("@azure/functions"),crypto=require("crypto");
 const {withObservability}=require("../lib/observability");
-const {requireBuilderAuth}=require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
@@ -65,10 +65,10 @@ function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,classN
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
- const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,lbn=deps.listBlobNames||listBlobNames,db=deps.deleteBlob||deleteBlob,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,wl=deps.withAssignmentLock||withAssignmentLock;
+ const authFn=requireTeacherSession,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,lbn=deps.listBlobNames||listBlobNames,db=deps.deleteBlob||deleteBlob,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,wl=deps.withAssignmentLock||withAssignmentLock;
  const ensureIdx=deps.ensurePublishedAssignmentIndexed||ensurePublishedAssignmentIndexed,removeIdx=deps.removePublishedAssignmentFromIndex||removePublishedAssignmentFromIndex;
  try{
-  const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
+  const auth=await authFn(request, deps);if(!auth.ok)return auth.response;const c=getC();
   const tenant=tenantOf(auth.user);
   // Phase 21G.2 — the LIGHT list: summaries from the ETag-verified cache; only new / changed documents are downloaded.
   if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");const loaded=await (deps.loadAssignmentSummaries||loadAssignmentSummaries)(c,{prefix:PREFIX,summarize:summary,summaryVersion:SUMMARY_VERSION},{...(deps.summaryCacheDeps||{}),onCacheError:()=>obs?.logWarn?.("assignment.summary_cache.failed",{retryable:true})});let list=loaded.summaries;if(classId)list=list.filter(x=>x.classId===classId);

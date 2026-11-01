@@ -171,7 +171,7 @@ describe("20F-API privacy boundary, prompt injection, provider failures, rate li
   it("the endpoint never persists, publishes, approves or assigns (source guard) and keys stay server-side", () => {
     const src = fs.readFileSync(path.resolve(here, "../src/functions/ai-exam-composer.js"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");   // code only
     expect(src).not.toMatch(/uploadJson|save-exam|governance|transition\(|publish\(|assign/i);
-    expect(src).toMatch(/requireBuilderAuth/);
+    expect(src).toMatch(/requireTeacherSession/);   // P2-A1: the shared teacher-session authority (delegates to requireBuilderAuth)
     const app = fs.readFileSync(path.resolve(here, "../../src/App.tsx"), "utf8");
     expect(app).not.toMatch(/OPENAI_API_KEY|api\.openai\.com/);
   });

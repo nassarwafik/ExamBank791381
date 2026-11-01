@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -56,7 +56,7 @@ const EMPTY_MODULE = { completed: 0, eligible: 0, points: 0, max: STUDY_MODULE_M
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 async function resolveActor(request, deps) {
-  const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const builder = (await requireTeacherSession(request, deps));
   if (builder.ok) return { kind: "teacher", user: builder.user, container: deps.container || (deps.getContainer || getContainer)() };
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (!sess.ok) return { kind: "denied", response: sess.response };
