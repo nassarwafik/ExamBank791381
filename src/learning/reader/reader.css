@@ -151,7 +151,7 @@
 .learning-reader-diagram-missing{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-4); color:var(--eb-text-secondary); background:var(--eb-surface-2); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r); font-size:var(--eb-read-fs-small); }
 
 /* Practice (static preview — NO answer key) & simulation placeholder */
-.learning-reader-practice, .learning-reader-simulation{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; font-size:var(--eb-read-fs-body); }
+.learning-reader-practice, .learning-reader-simulation{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; font-size:var(--eb-read-fs-body); overflow-wrap:anywhere; }
 .learning-reader-practice-kicker, .learning-reader-simulation-kicker{ margin:0; align-self:flex-start; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
 .learning-reader-practice-prompt, .learning-reader-simulation-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-read-fs-h5); line-height:var(--eb-read-lh-heading); }
 .learning-reader-practice-options{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }

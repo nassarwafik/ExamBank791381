@@ -8,7 +8,6 @@
 .learning-lab-goal{ color:var(--eb-text); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
 .learning-lab-goal.is-right{ color:var(--eb-success-tx); }
 .learning-lab-goal.is-wrong{ color:var(--eb-danger-tx); }
-.learning-lab-goal-label{ unicode-bidi:plaintext; }
 .learning-lab-mark{ display:inline-flex; align-items:center; margin-inline-start:var(--eb-space-2); vertical-align:middle; }
 .learning-lab-mark.is-right{ color:var(--eb-success); }
 .learning-lab-mark.is-wrong{ color:var(--eb-danger); }
