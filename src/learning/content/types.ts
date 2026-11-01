@@ -459,6 +459,21 @@ export interface LibraryTrainingBlock extends BlockBase {
 }
 
 /**
+ * 791381s Phase 8C-2 (docs/enterprise-791381s-enrichment-plan.md §11.4) — a pointer to an ADVANCED exam item of the platform
+ * (multipleSelect, numericResponse, matrix, categorization, inline cloze, label / hotspot diagrams, parametric numeric, table
+ * fill…) held in the API's PRIVATE store (api/src/data/learning-exam-items/<course>.json) and served by the practice endpoint
+ * /api/learning-exam-item. METADATA ONLY: the item id and the card's label. The question, its key and its explanation never
+ * live in the content; the host loads the student projection and the official grader judges the answers. Enrichment only.
+ */
+export interface ExamItemBlock extends BlockBase {
+  type: "exam-item";
+  /** Stable item id in the course's private store — the ONLY key the learning-exam-item API accepts. */
+  itemId: string;
+  /** The card's label (safe to show). */
+  label: string;
+}
+
+/**
  * One answerable cell of a `practice-table`: a small closed choice list (the printed worksheet's own vocabulary,
  * e.g. «صالح / غير صالح») plus the expected choice (`key`). The Reader checks the choice LOCALLY the moment the
  * learner picks it (immediate, non-persistent feedback); nothing is stored, sent or scored. The key never reaches
@@ -527,6 +542,7 @@ export type ContentBlock =
   | GuidedBlock
   | InteractiveDiagramBlock
   | LibraryTrainingBlock
+  | ExamItemBlock
   | PracticeTableBlock
   | VisualBlock;
 
@@ -534,7 +550,7 @@ export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
-  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table", "visual",
+  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table", "visual", "exam-item",
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];

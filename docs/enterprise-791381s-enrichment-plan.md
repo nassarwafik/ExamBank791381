@@ -733,3 +733,57 @@ teacher token must carry an explicit tenancy decision, and the new endpoint had 
 - Decision: **sharedByDesign**, like `learning-study.js` and `learning-training.js`. It serves platform course content from
   a private store under `api/data`, it is read-only for teachers, and it reads or writes nothing per teacher.
 - No guard was changed or loosened.
+
+## 18. Phase 8C-2 record — the exam-item block and its lazy view in the Reader (no items yet)
+
+**What changed**
+
+- **Content model (`types.ts`, `validation.ts`).** New block `exam-item` `{ id, type, origin, itemId, label }`, **metadata
+  only**. The validator (`exam-item-invalid`) requires:
+  - a safe item id and a label;
+  - no other field (no question, option, answer or exam);
+  - always `teacher-enrichment`.
+- **Transport (`training/trainingClient.ts`, `training/types.ts`).** `TrainingClient.examItems` provides `load` and `check`
+  on `/api/learning-exam-item/{course}/{item}[/check]` (8C-1). It uses the **same** auth headers as the trainings, for both
+  the student session and the teacher's builder token.
+- **Host seam.** `LearningReaderWithTraining` builds an `ExamItemHost` for its course, which travels through `LearningReader`
+  to `LearningPageRenderer` (`ctx.examItems`).
+- **Card (`LearningPageRenderer.tsx`, `reader.css`).** It shows «سؤال متقدّم» and the label. «حلّ السؤال» mounts the
+  **lazy** `ExamItemView`. Without a host, the card is static with a note and makes no network call.
+- **View (`src/learning/examItem/ExamItemView.tsx`, `examItem.css`, a lazy chunk).**
+  - It loads the sanitized exam and renders it through the student exam's own `StudentQuestionCard`. Registered types
+    answer through `onAnswer`; legacy kinds use their own handlers.
+  - «تحقّق» sends **only** the answers map.
+  - The verdict shows per question, with an icon **and** words: «صحيح» / «غير صحيح» / «لم تُجب» / «يحتاج إلى تصحيح
+    المعلّم», plus the part counts and the explanation of an answered question.
+  - The score line reads «للتدريب فقط، لا تُسجَّل علامة».
+  - An edit clears the verdict, and «أعد المحاولة» empties the answers.
+  - A failed load offers a retry; a failed check shows an error line, never a wrong verdict.
+- **Bundle guard (`scripts/check-bundle-budget.mjs`).** A lazy `ExamItemView` chunk must exist outside every static graph,
+  and `StudentQuestionCard` must never be in the Reader's first-load graph.
+  - Measured: the Reader's first load is 39.3 KB gzip (budget 40), up 0.4 KB for the card and its lazy edge.
+
+**Tests.** `src/learning/examItem/ExamItemView.test.tsx` (5 tests) covers:
+- the block contract and the static card;
+- the full answer → check → verdict → edit → restart flow, with a registered multipleSelect;
+- failures;
+- the transport's URLs, body and headers.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| G1 | a client claim is sent with the answers | KILLED |
+| G2 | a verdict survives an edit | KILLED |
+| G3 | a failed check is shown as wrong | KILLED |
+| G4 | the card offers a button without a host | KILLED |
+| G5 | the validator admits content fields | KILLED |
+| G6 | every question is marked right | KILLED |
+| G7 | no `onAnswer` | KILLED |
+| G8 | a static import of the view in the Reader | KILLED by the bundle guard: «StudentQuestionCard … is in the Reader's first-load graph» and «57.8 KB — over its 40 KB budget» |
+
+The first G8 run stopped at the TypeScript stage (`lazy` was left unused) before reaching the guard, so it was re-run as a
+side-effect static import.
+
+**Next:** 8C-3 authors the 791381s items: the private store file, plus one `exam-item` block per chosen unit, each traced to
+its booklet page.

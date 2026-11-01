@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import LearningReader from "../reader/LearningReader";
 import { lazyWithRetry } from "../../lazyWithRetry";
 import type { ReaderContentApi } from "../reader/readerContentApi";
-import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingStatus } from "./types";
+import type { ExamItemHost, LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingStatus } from "./types";
 import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, StudyPageState, StudyPageStatus, StudyResponse } from "../study/types";
 import type { SearchScope } from "../content/searchProvider";
 import type { SearchHit, SearchProviderFactory } from "../search/searchModel";
@@ -156,6 +156,13 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
     };
   }, [client, list, refreshList]);
 
+  // 791381s Phase 8C-2 — the advanced exam items of THIS course, over the same client (auth headers) as the trainings.
+  const examItems = useMemo<ExamItemHost | undefined>(() => {
+    const items = client?.examItems;
+    if (!items) return undefined;
+    return { load: itemId => items.load(courseId, itemId), check: (itemId, answers) => items.check(courseId, itemId, answers) };
+  }, [client, courseId]);
+
   // The runner's client wraps the host's so a successful submission is observable (Strength refresh on exit).
   const runnerClient = useMemo<TrainingClient | null>(() => {
     if (!client) return null;
@@ -187,6 +194,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       onExit={onExit}
       exitLabel={exitLabel}
       training={host}
+      examItems={examItems}
       study={studyHost}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
       initialModuleId={initialModuleId}

@@ -471,6 +471,11 @@
 .learning-unit-practice-score.is-done{ border-color:var(--eb-success); background:var(--eb-success-bg); }
 .learning-unit-practice-progress, .learning-unit-practice-result{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
 .learning-reader-frombook.is-enrichment{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+/* Phase 8C-2 — an advanced exam item card (the question view itself is lazy: examItem.css). */
+.learning-reader-examitem{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary-strong); border-radius:var(--eb-r-lg); }
+.learning-reader-examitem-head{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-reader-examitem-kicker{ display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
+.learning-reader-examitem-label{ color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); }
 /* Phase 8A — the unit's Exam Library trainings, after the score: a titled group of the existing training cards. */
 .learning-unit-practice-library{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding-block-start:var(--eb-space-4); border-block-start:1px dashed var(--eb-line); }
 .learning-unit-practice-library-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); }

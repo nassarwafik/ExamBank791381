@@ -1,8 +1,8 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useState, type ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck, IconInfo } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, isNetworkLabBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
-import type { LibraryTrainingHost } from "../training/types";
+import { isActivityBlock, isNetworkLabBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock, type ExamItemBlock } from "../content/types";
+import type { ExamItemHost, LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import { studyActivityIds } from "../study/eligibility";
 import CalloutToneIcon from "../themes/CalloutToneIcon";
@@ -26,6 +26,8 @@ export type ActivityRenderContext = {
   /** Learning-Practice seam: the HOST decides a training's availability/title/best result and owns "open". Absent
    *  (e.g. a Reader with no session) → a generic label card with no CTA and no network. */
   training?: LibraryTrainingHost;
+  /** 791381s Phase 8C-2 — the advanced exam-item seam. Absent → a static card (no network). */
+  examItems?: ExamItemHost;
   /** Study-Practice seam: the HOST holds the student's completion state and reports a correct answer to the server,
    *  which alone decides correctness and points. Absent (no session / teacher preview) → practice stays local. */
   study?: StudyHost;
@@ -69,17 +71,18 @@ export type ReaderPageBody =
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
  * nothing is regrouped. No answer key reaches the DOM before the student answers (see PracticeBlockView).
  */
-export default function LearningPageRenderer({ header, body, activity, training, study }: {
+export default function LearningPageRenderer({ header, body, activity, training, examItems, study }: {
   header: ReaderPageHeader;
   body: ReaderPageBody;
   /** Optional activity-engine injection. Omitted in production → the production allowlist registry + no-op sink. */
   activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
   /** Optional Learning-Practice host (availability + open). Omitted → generic training cards, no CTA. */
   training?: LibraryTrainingHost;
+  examItems?: ExamItemHost;
   /** Optional Study-Practice host (completion state + report). Omitted → in-page practice stays local, no points UI. */
   study?: StudyHost;
 }) {
-  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, study, pageId: body.kind === "ready" ? body.page.id : undefined, theme: header.theme };
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, examItems, study, pageId: body.kind === "ready" ? body.page.id : undefined, theme: header.theme };
   // Undefined attributes are omitted by React, so an unthemed course renders exactly the markup it always had.
   const themeAttrs = { "data-course-theme": header.theme?.id, "data-theme-tone": header.theme?.tone };
 
@@ -440,6 +443,8 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <VisualBlockView block={block} />;
     case "library-training":
       return <LibraryTrainingView block={block} host={ctx.training} />;
+    case "exam-item":
+      return <ExamItemCard block={block} host={ctx.examItems} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the
     // trusted registry (an exact allowlist; unmatched descriptors → faithful static fallback), isolates a live renderer, and owns
     // fullscreen/reduced-motion. This keeps the renderer lean and the security boundary in one place.
@@ -484,6 +489,36 @@ function ExampleView({ block }: { block: Extract<ContentBlock, { type: "example"
       )}
       {solved && block.explanation && <p className="learning-reader-example-explain">{block.explanation}</p>}
     </div>
+  );
+}
+
+/**
+ * 791381s Phase 8C-2 — an `exam-item` block: an ADVANCED question of the platform (multipleSelect, numeric, matrix, diagrams…)
+ * from the API's private store. The card shows the label; «حلّ السؤال» mounts the LAZY item view (its own chunk: the student
+ * exam's question card + the official grader's verdict through the host). Without a host the card stays static (no network).
+ */
+const ExamItemView = lazy(() => import("../examItem/ExamItemView"));
+function ExamItemCard({ block, host }: { block: ExamItemBlock; host?: ExamItemHost }) {
+  const [open, setOpen] = useState(false);
+  const headingId = "learning-reader-examitem-" + block.id;
+  return (
+    <section className={"learning-reader-examitem" + (open ? " is-open" : "")} aria-labelledby={headingId}>
+      <p className="learning-reader-examitem-head">
+        <span className="learning-reader-examitem-kicker">سؤال متقدّم</span>
+        <span id={headingId} className="learning-reader-examitem-label">{block.label}</span>
+      </p>
+      {!host && <p className="learning-reader-training-note">يُحلّ هذا السؤال تفاعليًا من داخل المنصة.</p>}
+      {host && !open && (
+        <button type="button" className="eb-button is-primary learning-reader-training-cta" onClick={() => setOpen(true)} aria-describedby={headingId}>
+          <IconSparkles size={16} aria-hidden="true" />حلّ السؤال
+        </button>
+      )}
+      {host && open && (
+        <Suspense fallback={<p className="learning-reader-training-note" role="status">جارٍ تحميل السؤال…</p>}>
+          <ExamItemView itemId={block.itemId} host={host} />
+        </Suspense>
+      )}
+    </section>
   );
 }
 
