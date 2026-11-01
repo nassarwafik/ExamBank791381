@@ -15,7 +15,8 @@ const TESTS = ["api/tests/tenancy-registry-21g0.test.js", "api/tests/route-auth-
 const SEAM = "api/src/lib/teacher-session.js";
 
 export const MUTANTS = [
-  { id: "P2A1-M1", what: "the seam accepts any request", edits: [{ file: SEAM, find: "  return (deps.requireBuilderAuth || requireBuilderAuth)(request);", replace: "  return { ok: true, user: { sub: \"anyone\" } };" }] },
+  // Follows the seam as P2-A2a / P2-B shaped it (the verifier's result is now named `legacy`).
+  { id: "P2A1-M1", what: "the seam accepts any request", edits: [{ file: SEAM, find: "  const legacy = (deps.requireBuilderAuth || requireBuilderAuth)(request);", replace: "  const legacy = { ok: true, user: { sub: \"anyone\" } };" }] },
   { id: "P2A1-M2", what: "a route forgets to await the seam (manage-students)", edits: [{ file: "api/src/functions/manage-students.js", find: "(await requireTeacherSession(request, deps))", replace: "(requireTeacherSession(request, deps))" }] },
   { id: "P2A1-M3", what: "a route forgets to await an authFn alias (manage-assignments)", edits: [{ file: "api/src/functions/manage-assignments.js", find: "await authFn(request, deps)", replace: "authFn(request, deps)" }] },
   { id: "P2A1-M4", what: "a route goes back to calling requireBuilderAuth directly (messages)", edits: [{ file: "api/src/functions/messages.js", find: "(await requireTeacherSession(request, deps))", replace: "(require(\"../lib/builder-auth\").requireBuilderAuth(request))" }] },

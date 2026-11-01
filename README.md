@@ -83,7 +83,7 @@ Configured as application settings of the Static Web App's managed API. Derived 
 | Variable | Status | Purpose |
 |---|---|---|
 | `BUILDER_USER_CODE` | production-recommended | The teacher's login code. When set, login requires an exact match. |
-| `BUILDER_PASSWORD` | **required** (or the fallback) | The teacher's password |
+| `BUILDER_PASSWORD` | **required** (or the fallback) | The teacher's shared password (single-password mode, `BUILDER_USERS` absent). Tadris+ P2-B (D6): it stops signing teachers in once a platform owner exists; the owner then imports that workspace into a personal teacher account. See `docs/enterprise-legacy-import-p2b.md` |
 | `BUILDER_SESSION_SECRET` | **required** (or the fallback) | HMAC root for teacher session tokens (8 h lifetime) |
 | `STUDENT_SESSION_SECRET` | production-recommended | HMAC root for student session tokens (12 h lifetime); falls back to `BUILDER_SESSION_SECRET` |
 | `BUILDER_SESSION_VERSION` | optional, default `1` | Bump to revoke every teacher session at once |

@@ -34,6 +34,7 @@ const { normalizeIdentityNumber } = require("../lib/roster-input");
 const { findTeacherByUsername, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
 const { verifySecret } = require("../lib/identity/password-hash");
+const { ownerExists } = require("../lib/identity/owner-presence");
 // QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
 // login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
 // leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
@@ -43,6 +44,10 @@ const IDENTITY_LIKE = /^[\s0-9\u0660-\u0669\u06F0-\u06F9\-./]+$/;
 
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
+// Tadris+ P2-B (D6) — once the platform owner exists the shared teacher password no longer signs anyone in. The answer to a failed
+// sign-in then also says how teachers sign in now. It is the SAME for every failed attempt (student or teacher, right or wrong
+// shared password): the shared password is never checked any more, so nothing can tell it apart.
+const CLOSED_AUTH_ERROR = GENERIC_AUTH_ERROR + " المعلمون يدخلون الآن باسم المستخدم وكلمة المرور الخاصين بهم.";
 
 // DI seam for tests (production passes nothing → real implementations). `obs` is an optional observability
 // context injected by the withObservability wrapper (absent when a test calls the bare handler).
@@ -109,9 +114,18 @@ async function handler(request, deps = {}, obs = null) {
       return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS } };
     }
 
-    // Teacher credentials.
+    // Teacher credentials — the shared-password mode (BUILDER_USERS absent) only while no platform owner exists (D6). The owner's
+    // existence is read only in that mode; unreadable → the shared password is not checked and a failed sign-in answers 503.
+    let sharedPassword = "open";
+    let authMode = "legacy";
+    try { authMode = (deps.builderAuthConfigurationStatus || builderAuthConfigurationStatus)().mode; } catch { authMode = "legacy"; }
+    if (authMode === "legacy") {
+      try { sharedPassword = (await ownerExists(container, { downloadJsonOrNull: dl })) ? "closed" : "open"; } catch { sharedPassword = "unknown"; }
+    }
     let isTeacher = false;
-    try { isTeacher = validateBuilder(userCode, password); } catch { isTeacher = false; }
+    if (sharedPassword === "open") {
+      try { isTeacher = validateBuilder(userCode, password); } catch { isTeacher = false; }
+    }
     if (isTeacher) {
       await throttleClear(container, throttleKey, clientId, deps);
       const token = mkBuilderToken(userCode);
@@ -154,9 +168,13 @@ async function handler(request, deps = {}, obs = null) {
         obs?.logError("auth.login.config_invalid", new Error("BUILDER_USERS invalid"), { kind: "platform" });
         return { status: 503, headers: NO_STORE, jsonBody: { ok: false, code: "AUTH_CONFIG_INVALID", error: "إعدادات حسابات المعلمين على الخادم غير صالحة. لا يمكن لدخول المعلمين أن يتم حتى يصحّحها المسؤول." } };
       }
+      if (sharedPassword === "unknown") {
+        obs?.logWarn("auth.login.unavailable", { reason: "owner_presence_unreadable", retryable: true });
+        return { status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى بعد قليل." } };
+      }
       // The attempt was already counted at reserve; just return the single generic error (no enumeration).
       obs?.logWarn("auth.login.failed", { reason: "invalid_credentials" });
-      return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
+      return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: sharedPassword === "closed" ? CLOSED_AUTH_ERROR : GENERIC_AUTH_ERROR } };
     }
 
     // Optimistic read-modify-write of lastLogin (§11) that ALSO re-validates the credential version under

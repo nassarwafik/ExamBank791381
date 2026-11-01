@@ -73,16 +73,20 @@ function withAiRateLimit(route, policyName, innerHandler, deps = {}) {
     // Tadris+ P2-A2 — keyed through the async teacher-session seam, so a MANAGED teacher (token v3) is rate-limited like any
     // other teacher (the synchronous check alone would not recognise the session and would skip the limiter).
     const session = await requireTeacherSession(request, { requireBuilderAuth: auth, getContainer: deps.getContainer });
-    if (!session || !session.ok) return innerHandler(request, ...rest);       // the handler answers its own 401
     const observed = rest[1] && typeof rest[1].logWarn === "function" ? rest[1] : null;
     const log = (event, fields) => { try { (observed || createRequestContext(request, { route })).logWarn(event, { route, reason: policyName, ...fields }); } catch { /* logging never changes the answer */ } };
+    const unavailable = () => ({ status: 503, headers: NO_STORE, jsonBody: { ok: false, code: "AI_UNAVAILABLE", error: "خدمة الذكاء الاصطناعي غير متاحة حاليًا." } });
+    // Tadris+ P2-B — the session check itself may need storage (a managed account, or whether a platform owner exists for a
+    // shared-password session). When it could not decide (503) the request is refused here, fail closed — never handed on.
+    if (session && !session.ok && session.response && session.response.status === 503) { log("ai.rate_limit.unavailable", { outcome: "refused" }); return unavailable(); }
+    if (!session || !session.ok) return innerHandler(request, ...rest);       // the handler answers its own 401
     let decision;
     try {
       const container = (deps.getContainer || storage.getContainer)();
       decision = await reserve(container, policyName, String((session.user && session.user.sub) || "teacher"), deps);
     } catch {
       log("ai.rate_limit.unavailable", { outcome: "refused" });
-      return { status: 503, headers: NO_STORE, jsonBody: { ok: false, code: "AI_UNAVAILABLE", error: "خدمة الذكاء الاصطناعي غير متاحة حاليًا." } };
+      return unavailable();
     }
     if (!decision || !decision.allowed) {
       const retryAfterSeconds = Math.max(1, Number(decision && decision.retryAfterSeconds) || 1);

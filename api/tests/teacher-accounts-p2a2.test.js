@@ -251,7 +251,16 @@ describe("P2-A2a managed sign-in and the per-request account check", () => {
   });
 
   it("logout of an existing (v2) teacher session answers revoked:false; anonymous logout is 401", async () => {
+    // Tadris+ P2-B (D6) — a shared-password v2 session exists only while no owner exists: this scenario now runs before the owner.
+    const marker = ctx.mem.getJson(BOOTSTRAP_MARKER);
+    ctx.mem.store.delete(BOOTSTRAP_MARKER);
+    resetOperatorGateCache();
     expect((await sessionEnd(req({ action: "logout", headers: teacherHeaders(createBuilderToken("legacy-teacher")) }), ctx.deps)).jsonBody).toEqual({ ok: true, revoked: false });
+    // Once the owner exists the same session is closed: the browser forgets it as before (the sign-out is best effort).
+    ctx.mem.setJson(BOOTSTRAP_MARKER, marker);
+    const closed = await sessionEnd(req({ action: "logout", headers: teacherHeaders(createBuilderToken("legacy-teacher")) }), ctx.deps);
+    expect(closed.status).toBe(401);
+    expect(closed.jsonBody.code).toBe("LEGACY_SESSION_CLOSED");
     expect((await sessionEnd(req({ action: "logout" }), ctx.deps)).status).toBe(401);
   });
 

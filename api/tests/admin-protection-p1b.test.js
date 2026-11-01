@@ -124,7 +124,9 @@ describe("P1-B A. operator tools", () => {
   it("after the owner has been seen, a storage hiccup does not re-open the tools to teachers", async () => {
     storageDown = true;
     try {
-      for (const r of await callAll(teacherHeaders())) expect({ route: r.route, status: r.status, code: r.code }).toEqual({ route: r.route, ...whenStorageDown(r.route, { status: 403, code: "OWNER_REQUIRED" }) });
+      // Tadris+ P2-B (D6) — these teacher tokens are shared-password sessions. Once an owner exists the AI limiter's session check
+      // refuses such a session WITHOUT storage, so the two AI-wrapped tools now reach the gate's answer too (no AI_UNAVAILABLE).
+      for (const r of await callAll(teacherHeaders())) expect({ route: r.route, status: r.status, code: r.code }).toEqual({ route: r.route, status: 403, code: "OWNER_REQUIRED" });
     } finally { storageDown = false; }
   });
 });

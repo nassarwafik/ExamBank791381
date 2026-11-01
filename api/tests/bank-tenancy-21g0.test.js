@@ -30,7 +30,9 @@ function bank() {
     ] }
   });
   const download = async (_c, name) => { const v = mem.getJson(name); if (v === null) throw Object.assign(new Error("The specified blob does not exist."), { statusCode: 404, code: "BlobNotFound" }); return v; };
-  const deps = auth => ({ requireBuilderAuth: () => auth, getBankContainer: () => mem.container, getPlatformContainer: () => mem.container, recordAuditEvent: async () => {}, downloadJson: download });
+  // Tadris+ P2-B — a shared-password session (`legacy()`) is checked against the owner's existence (D6) in the platform
+  // container (`getContainer`); this storage has no owner.
+  const deps = auth => ({ requireBuilderAuth: () => auth, getContainer: () => mem.container, getBankContainer: () => mem.container, getPlatformContainer: () => mem.container, recordAuditEvent: async () => {}, downloadJson: download });
   const call = (auth, body) => bankQuestions.handler({ method: "POST", url: "http://x/api/bank-questions", json: async () => body }, deps(auth));
   return {
     mem,

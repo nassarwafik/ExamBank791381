@@ -7,6 +7,7 @@ const {
   builderAuthConfigurationStatus
 } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
+const { ownerExists } = require("../lib/identity/owner-presence");
 const {
   reserveLoginAttempt,
   clearLoginThrottle,
@@ -49,6 +50,20 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     const container = getC();
+
+    // Tadris+ P2-B (owner decision D6) — the shared-password mode closes for teachers once the platform owner exists. Decided
+    // BEFORE any password work: the shared password is never checked again (it may also be the signing-key fallback, so it must
+    // not become an oracle). The owner's existence unreadable → 503, never a sign-in.
+    if (authConfig.mode === "legacy") {
+      let closed;
+      try { closed = await ownerExists(container, { downloadJsonOrNull: deps.downloadJsonOrNull }); } catch {
+        return { status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى بعد قليل." } };
+      }
+      if (closed) {
+        obs?.logWarn("auth.login.refused", { reason: "shared_password_closed", kind: "builder" });
+        return { status: 403, headers: NO_STORE, jsonBody: { ok: false, code: "LEGACY_LOGIN_CLOSED", error: "أُغلق الدخول بكلمة المرور المشتركة بعد إنشاء حساب مالك المنصة. ادخل باسم المستخدم وكلمة المرور الخاصين بك." } };
+      }
+    }
 
     // Reserve-before-verify (§2): count this attempt atomically before validating credentials.
     let gate;

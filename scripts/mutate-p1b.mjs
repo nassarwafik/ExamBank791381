@@ -21,8 +21,9 @@ export const MUTANTS = [
   { id: "P1B-M2", what: "a teacher token is let through instead of 403 OWNER_REQUIRED", edits: [{ file: GATE, find: 'if (!ownerClaim) return deny(403, "OWNER_REQUIRED", "هذه الأداة لمالك المنصة فقط.");', replace: 'if (!ownerClaim) return { ok: true, actor: "teacher", user: teacher.user };' }] },
   { id: "P1B-M3", what: "the step-up requirement is skipped", edits: [{ file: GATE, find: "  if (stepUp) return { ok: false, response: stepUp };\n", replace: "" }] },
   { id: "P1B-M4", what: "an unreadable owner marker counts as «no owner» (fail open)", edits: [{ file: GATE, find: '  } catch {\n    return deny(503, "OPERATOR_GATE_UNAVAILABLE"', replace: '  } catch {\n    exists = false;\n  }\n  if (false) {\n    return deny(503, "OPERATOR_GATE_UNAVAILABLE"' }] },
-  { id: "P1B-M5", what: "the owner marker is not cached once seen", edits: [{ file: GATE, find: "  if (ownerSeen) return true;\n", replace: "" }] },
-  { id: "P1B-M6", what: "an anonymous call reaches storage before any token check", edits: [{ file: GATE, find: "  if (!teacher.ok && !ownerClaim) return { ok: false, response: teacher.response };\n", replace: "" }] },
+  // P2-B: the marker cache moved to identity/owner-presence.js (shared with the D6 closure); M6 follows the P2-A2a gate.
+  { id: "P1B-M5", what: "the owner marker is not cached once seen", edits: [{ file: "api/src/lib/identity/owner-presence.js", find: "  if (ownerSeen) return true;\n", replace: "" }] },
+  { id: "P1B-M6", what: "an anonymous call reaches storage before any token check", edits: [{ file: GATE, find: "  if (!teacher.ok && !ownerClaim && !managedTeacher) return { ok: false, response: teacher.response };\n", replace: "" }] },
   { id: "P1B-M7", what: "a revoked owner session still passes the gate", edits: [{ file: GATE, find: "  if (!owner.ok) return owner;\n", replace: "" }] },
   { id: "P1B-M8", what: "storage-status goes back to a plain teacher session", edits: [{ file: "api/src/functions/storage-status.js", find: "const auth = await requireOperator(request);", replace: "const auth = require(\"../lib/builder-auth\").requireBuilderAuth(request);" }] },
   { id: "P1B-M9", what: "platform-login answers «wrong password» for a malformed teacher directory again", edits: [{ file: LOGIN, find: "      if (configBroken) {", replace: "      if (false) {" }] },
