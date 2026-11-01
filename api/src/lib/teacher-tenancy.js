@@ -30,11 +30,18 @@ function ownerOfDocument(doc, env = process.env) {
   return stamped || legacyDataOwner(env);
 }
 
+// Tadris+ hotfix after P2-A2 — an account the owner creates from the Owner Console (id "t_" + 16 hex, identity/teacher-token.js)
+// starts with an EMPTY space: a pre-tenancy document (no ownerId, no LEGACY_DATA_OWNER) is never visible to it. Owner rule:
+// «لا تُسند البيانات القديمة عشوائيًا لأي معلم». Existing teachers (BUILDER_USERS ids, later imported with the same id in P2-B)
+// keep today's shared view (owner decision D7) until the owner assigns that data explicitly.
+const CONSOLE_ACCOUNT_RE = /^t_[a-f0-9]{16}$/;
+
 /** Whether `tenant` (tenantOf) may see / change this document. No tenant (single mode) or a shared document → yes. */
 function canAccessDocument(doc, tenant, env = process.env) {
   if (!tenant) return true;
   const owner = ownerOfDocument(doc, env);
-  return owner === null || owner === tenant;
+  if (owner === null) return !CONSOLE_ACCOUNT_RE.test(tenant);
+  return owner === tenant;
 }
 
 /** The ownership fields a NEW document created by `tenant` carries ({} in single mode). */
@@ -84,4 +91,4 @@ async function studentAccessible(load, student, tenant, env = process.env) {
   return classAccessible(load, student.classId, tenant, env);
 }
 
-module.exports = { classAccessible, studentAccessible, tenantOf, legacyDataOwner, ownerOfDocument, canAccessDocument, ownerStamp, filterAccessible, accessibleClassIds, classIdAllowed };
+module.exports = { CONSOLE_ACCOUNT_RE, classAccessible, studentAccessible, tenantOf, legacyDataOwner, ownerOfDocument, canAccessDocument, ownerStamp, filterAccessible, accessibleClassIds, classIdAllowed };
