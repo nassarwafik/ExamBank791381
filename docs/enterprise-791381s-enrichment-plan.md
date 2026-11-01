@@ -726,3 +726,10 @@ multipleSelect@1, exactly as the API serves a training.
 
 F9 survived the first run because the per-learner test skipped its comparison when two learners happened to get the same
 instance. It now requires more than one instance across five learners.
+
+**Tenancy classification.** The first full run on the reconciled head `5fb7c9c0` failed one test:
+`tenancy-registry-21g0` «every teacher-authenticated endpoint is classified exactly once». Every endpoint that accepts a
+teacher token must carry an explicit tenancy decision, and the new endpoint had none.
+- Decision: **sharedByDesign**, like `learning-study.js` and `learning-training.js`. It serves platform course content from
+  a private store under `api/data`, it is read-only for teachers, and it reads or writes nothing per teacher.
+- No guard was changed or loosened.
