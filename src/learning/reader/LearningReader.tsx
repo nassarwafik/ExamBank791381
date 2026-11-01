@@ -9,7 +9,7 @@ import type { LearningCourseManifest, ContentModule, ContentPage } from "../cont
 import LearningReaderToc from "./LearningReaderToc";
 import LearningPageRenderer, { type ReaderPageBody, type ReaderPageHeader } from "./LearningPageRenderer";
 import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
-import type { LibraryTrainingHost } from "../training/types";
+import type { ExamItemHost, LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import "./reader.css";
 import "./reader-enterprise-l2a.css";
@@ -63,7 +63,7 @@ type ManifestState =
  * authority and stays usable when the request is refused or unavailable. Nothing is persisted.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, initialModuleId, onPageChange,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, initialPageId, initialModuleId, onPageChange,
   initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null,
 }: {
   courseId: string;
@@ -73,6 +73,8 @@ export default function LearningReader({
   exitLabel?: string;
   /** Learning-Practice host seam (availability + open) for `library-training` blocks. Absent → generic cards. */
   training?: LibraryTrainingHost;
+  /** 791381s Phase 8C-2 — the advanced exam-item seam (load the student projection / check with the official grader). */
+  examItems?: ExamItemHost;
   /** Study-Practice host seam (completion state + report) for in-page exercises. Absent → practice stays local. */
   study?: StudyHost;
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
@@ -633,7 +635,7 @@ export default function LearningReader({
               </button>
             </div>
           )}
-          {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {header ? <LearningPageRenderer header={header} body={body} training={training} examItems={examItems} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
           {located && body.kind === "ready" && body.page.blocks.some(b => b.type === "unit-opener") && (
             <UnitContents module={located.module} currentLessonId={located.lesson.id} onSelectPage={selectPage} visited={visitedScope ? visited : undefined} />
           )}

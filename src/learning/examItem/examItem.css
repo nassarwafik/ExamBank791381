@@ -1,0 +1,18 @@
+/* 791381s Phase 8C-2 — the advanced exam item inside a Reader card: the student exam's question cards, then the official grader's
+   verdict per question (icon + words, never colour only), the score line and the actions. Tokens only. */
+.learning-examitem{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-examitem-questions{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-examitem-q{ border-inline-start:3px solid transparent; padding-inline-start:var(--eb-space-2); }
+.learning-examitem-q.is-right{ border-inline-start-color:var(--eb-success); }
+.learning-examitem-q.is-wrong{ border-inline-start-color:var(--eb-danger); }
+.learning-examitem-q.is-manual{ border-inline-start-color:var(--eb-line-2); }
+.learning-examitem-verdict{ display:flex; flex-direction:column; gap:var(--eb-space-1); margin-block-start:var(--eb-space-2); }
+.learning-examitem-mark{ margin:0; display:inline-flex; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); color:var(--eb-text-secondary); }
+.learning-examitem-mark.is-right{ color:var(--eb-success-tx); }
+.learning-examitem-mark.is-wrong{ color:var(--eb-danger-tx); }
+.learning-examitem-explanation{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-examitem-bar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-examitem-score, .learning-examitem-count{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.learning-examitem-error{ margin:0; color:var(--eb-danger-tx); font-size:var(--eb-read-fs-small); }
+.learning-examitem-actions{ display:inline-flex; gap:var(--eb-space-2); }
+.learning-examitem-status{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); }

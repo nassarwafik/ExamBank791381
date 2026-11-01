@@ -53,7 +53,8 @@ export type ContentIssueCode =
   | "invalid-reveal"
   | "invalid-page-layout"
   | "invalid-structured-question"
-  | "invalid-network-lab";
+  | "invalid-network-lab"
+  | "exam-item-invalid";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -255,6 +256,16 @@ function checkBlock(
       } else if (/^library-training-/.test(block.trainingId) || Object.keys(block).some(k => /^(question|options|answer|title|exam)/i.test(k))) {
         add("library-training-invalid", "library-training carries metadata only (no questions, options, answers or titles)", loc);
       }
+      break;
+    case "exam-item":
+      // 791381s Phase 8C-2 — metadata only: a safe item id and a label; never a question, option, answer or exam field
+      // (the item lives in the API's private store), and always teacher enrichment (never a book block).
+      if (!isNonEmptyString(block.itemId) || !/^[A-Za-z0-9_-]{1,64}$/.test(block.itemId) || !isNonEmptyString(block.label)) {
+        add("exam-item-invalid", "exam-item requires a safe itemId and a non-empty label", loc);
+      } else if (Object.keys(block).some(k => !["id", "type", "origin", "itemId", "label"].includes(k))) {
+        add("exam-item-invalid", "exam-item carries metadata only (id, type, origin, itemId, label)", loc);
+      }
+      if (block.origin !== "teacher-enrichment") add("exam-item-invalid", "exam-item is teacher enrichment, never a book block", loc);
       break;
     case "simulation":
     case "animation":

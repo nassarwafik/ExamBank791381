@@ -71,6 +71,8 @@ export interface TrainingClient {
   list(): Promise<TrainingListResponse>;
   load(trainingId: string): Promise<TrainingLoadResponse>;
   submit(trainingId: string, answers: Record<string, Answer>): Promise<TrainingSubmitResponse>;
+  /** 791381s Phase 8C-2 — the advanced exam items, over the same auth headers. Absent → exam-item cards stay static. */
+  examItems?: ExamItemClient;
 }
 
 /** What the Reader shows on a `library-training` block: decided by the HOST, never by the content. */
@@ -85,4 +87,27 @@ export interface LibraryTrainingHost {
   status(trainingId: string): TrainingStatus;
   onOpen(trainingId: string): void;
   onRetry?(): void;
+}
+
+// ── 791381s Phase 8C-2 — the learning book's ADVANCED exam items (GET / POST /api/learning-exam-item/{course}/{item}) ──────────────
+/** `GET` — the card metadata and the SANITIZED exam (the platform's student projection: no key, no explanation). */
+export type ExamItemLoadResponse = {
+  ok: true;
+  actor: "teacher" | "student";
+  item: { itemId: string; label: string; moduleId: string; questionCount: number; totalMarks: number };
+  exam: { sections?: { id: string; questions: Question[] }[]; questions?: Question[] };
+};
+/** One question as the official grader judged it (after an answer only — never a key). */
+export type ExamItemQuestionResult = { questionId: string; answered: boolean; correct: boolean; manualReview: boolean; score: number; maxMarks: number; parts?: { correct: number; total: number }; explanation?: string };
+/** `POST …/check` — practice only (`persisted: false`). */
+export type ExamItemCheckResponse = { ok: true; actor: "teacher" | "student"; persisted: false; result: { score: number; totalMarks: number; percentage: number; questions: ExamItemQuestionResult[] } };
+/** The transport of the exam items, built from the SAME auth headers as the trainings (student session / teacher builder). */
+export interface ExamItemClient {
+  load(courseId: string, itemId: string): Promise<ExamItemLoadResponse>;
+  check(courseId: string, itemId: string, answers: Record<string, Answer>): Promise<ExamItemCheckResponse>;
+}
+/** The Reader's seam for `exam-item` blocks: the course is the host's. Absent → a static card (no network). */
+export interface ExamItemHost {
+  load(itemId: string): Promise<ExamItemLoadResponse>;
+  check(itemId: string, answers: Record<string, Answer>): Promise<ExamItemCheckResponse>;
 }

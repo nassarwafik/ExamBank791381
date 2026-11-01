@@ -578,6 +578,13 @@ function main() {
   const pluginSet = labClosure.filter(f => /^trustedSimPlugins-[^.]+\.js$/.test(f));
   if (pluginSet.length) failures.push(`the network lab statically reaches the whole trusted-sim plugin set (${pluginSet.join(", ")})`);
   console.log(`Network lab chunk: ${labChunks.join(", ") || "(missing)"} — static closure ${labClosure.filter(f => !initial.includes(f)).length} files, ${kb(labClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0))} KB gzip; none in the Reader's first load`);
+  // 791381s Phase 8C-2 — the ADVANCED exam item: its view (the student exam's question card and every registered renderer) reaches the
+  // Reader ONLY through the card's dynamic edge — never in the Reader's first-load graph.
+  const examItemChunks = all.filter(f => /^ExamItemView-[^.]+\.js$/.test(f));
+  if (!examItemChunks.length) failures.push("no ExamItemView-*.js lazy chunk was emitted (is the exam-item view behind React.lazy?)");
+  for (const f of examItemChunks) if (initial.includes(f) || readerClosure.includes(f)) failures.push(`${f} (the exam-item view) is part of a static graph — it must load through import() only`);
+  for (const f of readerClosure) if (/^StudentQuestionCard-[^.]+\.js$/.test(f)) failures.push(`${f} (the student question card) is in the Reader's first-load graph — exam items must stay lazy`);
+  console.log(`Exam-item view chunk: ${examItemChunks.join(", ") || "(missing)"} — none in the Reader's first load`);
   const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
   console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
   console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);
