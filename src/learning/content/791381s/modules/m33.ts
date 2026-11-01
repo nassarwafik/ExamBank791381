@@ -480,6 +480,8 @@ const m33: ContentModule = {
               id: "m33-l02-p01-q12", type: "practice", origin: "teacher-enrichment", reveal: true,
               question: { kind: "trueFalse", prompt: "في IPv6 يوجد عنوان Broadcast كما في IPv4.", answer: false, feedback: { explanation: "صندوق «تذكّر»: لا يوجد Broadcast في IPv6." } },
             },
+            // Phase 8C-3 — an advanced exam item (private store api/src/data/learning-exam-items/791381s.json; the official grader judges it).
+            { id: "m33-l02-p01-x-adv-hosts", type: "exam-item", origin: "teacher-enrichment", itemId: "m33-adv-hosts", label: "تدريب متقدّم: عدد الأجهزة القابلة للاستخدام" },
           ],
         },
       ],

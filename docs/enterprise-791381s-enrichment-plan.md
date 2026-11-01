@@ -787,3 +787,50 @@ side-effect static import.
 
 **Next:** 8C-3 authors the 791381s items: the private store file, plus one `exam-item` block per chosen unit, each traced to
 its booklet page.
+
+## 19. Phase 8C-3 record — the booklet's advanced exam items (8 items, 15 questions)
+
+**What changed**
+
+- **Store.** `api/src/data/learning-exam-items/791381s.json` holds 8 items.
+  - It is private: served only by `/api/learning-exam-item`, as the student projection and the official grader's verdict.
+  - Every fact comes from the unit's own booklet table or sentence; the wrong options are clearly wrong by that text.
+
+| Item | Unit | Questions (types) | Booklet source |
+|---|---|---|---|
+| m02-adv-numbers | 2 | binary → decimal with **8 random bits per learner** (parametricNumeric, b7 = 1); Hex A / C / F → decimal (matrix) | the 128 … 1 boxes; the Hex table |
+| m03-adv-ip | 3 | valid addresses (multipleSelect, 2 of 6); private address → class (categorization) | the validity table; the private-address table |
+| m04-adv-classes | 4 | address → class (matrix); CIDR → mask (matrix); /24 host addresses = 254 (numericResponse) | the class table; the CIDR table; the /24 ranges |
+| m05-adv-devices | 5 | Hub or Switch (matrix); router properties (multipleSelect) | the Hub / Switch comparison; the router-properties table |
+| m09-adv-osi | 9 | keyword → layer (matrix); OSI has 7 layers (numericResponse) | the seven-layer table |
+| m10-adv-protocols | 10 | protocol → TCP / UDP (categorization); encrypted protocols (multipleSelect) | the protocol table |
+| m21-adv-ports | 21 | port → service (matrix); IPv6 = 128 bits (numericResponse) | the ports table; the IPv4 / IPv6 table |
+| m33-adv-hosts | 33 | usable hosts = **2^(host) − 2**, with host bits 2–10 random per learner (parametricNumeric) | «عدد الأجهزة القابلة للاستخدام = 2^(host) − 2» |
+
+- **Cards.** One metadata-only `exam-item` card per item, `origin: "teacher-enrichment"`, ids `mNN-l02-p01-x-adv-…`. Each sits
+  on the unit's «تدريبات الوحدة» page, right after the questions and before any lab or Exam Library card.
+  - `course791381s.test.ts` adds `exam-item` to its enrichment list (a scope extension; the book lock still guards the book).
+  - The book lock and the study index are unchanged: items are not study activities.
+  - The served bodies of the 8 units were regenerated.
+- **Test** `src/learning/content/791381s/examItems791381s.test.ts`, through the real server authorities:
+  - the store passes `validateExamItem`, and every question has an explanation;
+  - the five advanced types are all used;
+  - **the official grader accepts each item's key in full for two learners and refuses a wrong answer** (a parametric
+    question is solved from the instance the learner is shown);
+  - there is one card per item, on its own unit's practice page, after the questions;
+  - no served body carries a key or an explanation.
+
+**Mutation campaign** (each file restored byte for byte, hash-verified):
+
+| Id | Planted defect | Verdict |
+|---|---|---|
+| H1 | a card points at a missing item | KILLED |
+| H2 | an explanation is removed | KILLED |
+| H3 | a type outside the allowlist | KILLED |
+| H4 | a card's label drifts from the store | KILLED |
+| H5 | an item is released by another unit | KILLED |
+| H6 | a numeric key the validator rejects | KILLED (re-run after a wrong anchor in the script) |
+| H7 | the parametric formula `2^h` instead of `2^h − 2` | KILLED |
+
+**Not machine-checkable:** that a key matches the booklet. Every key above was copied from the cited table and checked by
+the lead. A wrong but valid key would only be caught by review.

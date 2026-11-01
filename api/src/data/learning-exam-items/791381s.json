@@ -1,0 +1,868 @@
+{
+  "schemaVersion": 1,
+  "courseId": "791381s",
+  "items": {
+    "m02-adv-numbers": {
+      "moduleId": "791381s-m02",
+      "label": "تدريب متقدّم: أنظمة العد",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "parametricNumeric",
+                "questionTypeVersion": 1,
+                "text": "حوّل العدد الثنائي {{b7}}{{b6}}{{b5}}{{b4}}{{b3}}{{b2}}{{b1}}{{b0}} إلى عدد عشري.",
+                "marks": 2,
+                "parametric": {
+                  "v": 1,
+                  "generatorVersion": 1,
+                  "variables": [
+                    {
+                      "id": "b7",
+                      "kind": "int",
+                      "min": 1,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b6",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b5",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b4",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b3",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b2",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b1",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    },
+                    {
+                      "id": "b0",
+                      "kind": "int",
+                      "min": 0,
+                      "max": 1,
+                      "step": 1
+                    }
+                  ],
+                  "constraints": [],
+                  "response": {
+                    "unit": "none"
+                  }
+                },
+                "answer": {
+                  "expression": "b7*128 + b6*64 + b5*32 + b4*16 + b3*8 + b2*4 + b1*2 + b0",
+                  "mode": "tolerance",
+                  "tolerance": 0
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "ما قيمة كل رمز Hex بالعدد العشري؟",
+                "marks": 3,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "A",
+                      "label": "A"
+                    },
+                    {
+                      "id": "C",
+                      "label": "C"
+                    },
+                    {
+                      "id": "F",
+                      "label": "F"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "c10",
+                      "label": "10"
+                    },
+                    {
+                      "id": "c12",
+                      "label": "12"
+                    },
+                    {
+                      "id": "c13",
+                      "label": "13"
+                    },
+                    {
+                      "id": "c15",
+                      "label": "15"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "A": "c10",
+                    "C": "c12",
+                    "F": "c15"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "نستعمل الصناديق 128، 64، 32، 16، 8، 4، 2، 1 ثم نجمع القيم التي تحتها 1."
+        },
+        "q2": {
+          "explanation": "A = 10، B = 11، C = 12، D = 13، E = 14، F = 15."
+        }
+      }
+    },
+    "m03-adv-ip": {
+      "moduleId": "791381s-m03",
+      "label": "تدريب متقدّم: صلاحية العناوين والعناوين الخاصة",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "multipleSelect",
+                "questionTypeVersion": 1,
+                "text": "أي العناوين التالية صالحة لجهاز؟ (اختر كل الإجابات الصحيحة)",
+                "marks": 2,
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "192.168.10.1"
+                  },
+                  {
+                    "id": "b",
+                    "text": "192.255.10.10"
+                  },
+                  {
+                    "id": "c",
+                    "text": "192.168.10.255"
+                  },
+                  {
+                    "id": "d",
+                    "text": "192.168.300.10"
+                  },
+                  {
+                    "id": "e",
+                    "text": "127.11.10.1"
+                  },
+                  {
+                    "id": "f",
+                    "text": "169.254.10.234"
+                  }
+                ],
+                "answer": {
+                  "correctOptionIds": [
+                    "a",
+                    "b"
+                  ],
+                  "scoring": "allOrNothing"
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "categorization",
+                "questionTypeVersion": 1,
+                "text": "صنّف كل عنوان خاص حسب فئته.",
+                "marks": 3,
+                "categorization": {
+                  "categories": [
+                    {
+                      "id": "A",
+                      "label": "Class A"
+                    },
+                    {
+                      "id": "B",
+                      "label": "Class B"
+                    },
+                    {
+                      "id": "C",
+                      "label": "Class C"
+                    }
+                  ],
+                  "items": [
+                    {
+                      "id": "i1",
+                      "label": "10.0.0.1"
+                    },
+                    {
+                      "id": "i2",
+                      "label": "172.23.100.13"
+                    },
+                    {
+                      "id": "i3",
+                      "label": "192.168.100.6"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctCategoryByItem": {
+                    "i1": "A",
+                    "i2": "B",
+                    "i3": "C"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "192.168.10.1 و 192.255.10.10 صالحان (255 في الوسط مسموح). أما 192.168.10.255 فعنوان بث، و 300 أكبر من 255، و 127 و 169.254 (APIPA) غير صالحة."
+        },
+        "q2": {
+          "explanation": "الخاص في Class A يبدأ بـ 10، وفي Class B من 172.16 حتى 172.31، وفي Class C يبدأ بـ 192.168."
+        }
+      }
+    },
+    "m04-adv-classes": {
+      "moduleId": "791381s-m04",
+      "label": "تدريب متقدّم: الفئات وقناع الشبكة",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "حدّد فئة كل عنوان من رقمه الأول.",
+                "marks": 3,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "r1",
+                      "label": "20.20.20.10"
+                    },
+                    {
+                      "id": "r2",
+                      "label": "129.192.168.100"
+                    },
+                    {
+                      "id": "r3",
+                      "label": "200.100.50.1"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "A",
+                      "label": "A"
+                    },
+                    {
+                      "id": "B",
+                      "label": "B"
+                    },
+                    {
+                      "id": "C",
+                      "label": "C"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "r1": "A",
+                    "r2": "B",
+                    "r3": "C"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "ما القناع الطبيعي لكل CIDR؟",
+                "marks": 3,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "s8",
+                      "label": "/8"
+                    },
+                    {
+                      "id": "s16",
+                      "label": "/16"
+                    },
+                    {
+                      "id": "s24",
+                      "label": "/24"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "m8",
+                      "label": "255.0.0.0"
+                    },
+                    {
+                      "id": "m16",
+                      "label": "255.255.0.0"
+                    },
+                    {
+                      "id": "m24",
+                      "label": "255.255.255.0"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "s8": "m8",
+                    "s16": "m16",
+                    "s24": "m24"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q3",
+                "presentationType": "numericResponse",
+                "questionTypeVersion": 1,
+                "text": "كم عنوانًا للأجهزة في شبكة /24 (من 192.168.1.1 إلى 192.168.1.254)؟",
+                "marks": 1,
+                "numeric": {
+                  "unitRequired": false
+                },
+                "answer": {
+                  "mode": "tolerance",
+                  "expected": 254,
+                  "tolerance": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "A: الرقم الأول 1 – 126، B: ‏128 – 191، C: ‏192 – 223."
+        },
+        "q2": {
+          "explanation": "/8 = 255.0.0.0، ‏/16 = 255.255.0.0، ‏/24 = 255.255.255.0."
+        },
+        "q3": {
+          "explanation": "في /24 عناوين الأجهزة من .1 إلى .254 — أي 254 جهازًا؛ .0 للشبكة و .255 للبث."
+        }
+      }
+    },
+    "m05-adv-devices": {
+      "moduleId": "791381s-m05",
+      "label": "تدريب متقدّم: Hub و Switch والراوتر",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "لمن كل صفة: Hub أم Switch؟",
+                "marks": 4,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "r1",
+                      "label": "يرسل البيانات للجميع"
+                    },
+                    {
+                      "id": "r2",
+                      "label": "ازدحام أقل"
+                    },
+                    {
+                      "id": "r3",
+                      "label": "أكثر ذكاءً"
+                    },
+                    {
+                      "id": "r4",
+                      "label": "أداء أضعف"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "hub",
+                      "label": "Hub"
+                    },
+                    {
+                      "id": "sw",
+                      "label": "Switch"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "r1": "hub",
+                    "r2": "sw",
+                    "r3": "sw",
+                    "r4": "hub"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "multipleSelect",
+                "questionTypeVersion": 1,
+                "text": "أي هذه من خصائص الراوتر؟ (اختر كل الإجابات الصحيحة)",
+                "marks": 2,
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "يختار الطريق الأفضل لوصول البيانات"
+                  },
+                  {
+                    "id": "b",
+                    "text": "يربط بين شبكات مختلفة"
+                  },
+                  {
+                    "id": "c",
+                    "text": "يوزّع عناوين IP تلقائيًا (DHCP)"
+                  },
+                  {
+                    "id": "d",
+                    "text": "يرسل البيانات لكل الأجهزة دائمًا"
+                  }
+                ],
+                "answer": {
+                  "correctOptionIds": [
+                    "a",
+                    "b",
+                    "c"
+                  ],
+                  "scoring": "allOrNothing"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "الـ Hub يرسل للجميع فيزداد الازدحام ويضعف الأداء، والـ Switch يرسل للجهاز المقصود فهو أكثر ذكاءً وأفضل أداءً."
+        },
+        "q2": {
+          "explanation": "من خصائص الراوتر: التوجيه، الربط بين شبكات مختلفة، NAT، DHCP، والأمان. الإرسال للجميع صفة الـ Hub."
+        }
+      }
+    },
+    "m09-adv-osi": {
+      "moduleId": "791381s-m09",
+      "label": "تدريب متقدّم: طبقات OSI",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "إلى أي طبقة تنتمي كل كلمة مفتاح؟",
+                "marks": 4,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "k1",
+                      "label": "HTTP"
+                    },
+                    {
+                      "id": "k2",
+                      "label": "TCP"
+                    },
+                    {
+                      "id": "k3",
+                      "label": "IP"
+                    },
+                    {
+                      "id": "k4",
+                      "label": "MAC"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "l7",
+                      "label": "7 · التطبيق"
+                    },
+                    {
+                      "id": "l4",
+                      "label": "4 · النقل"
+                    },
+                    {
+                      "id": "l3",
+                      "label": "3 · الشبكة"
+                    },
+                    {
+                      "id": "l2",
+                      "label": "2 · ربط البيانات"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "k1": "l7",
+                    "k2": "l4",
+                    "k3": "l3",
+                    "k4": "l2"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "numericResponse",
+                "questionTypeVersion": 1,
+                "text": "كم طبقة في نموذج OSI؟",
+                "marks": 1,
+                "numeric": {
+                  "unitRequired": false
+                },
+                "answer": {
+                  "mode": "tolerance",
+                  "expected": 7,
+                  "tolerance": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "HTTP في التطبيق (7)، TCP في النقل (4)، IP في الشبكة (3)، MAC في ربط البيانات (2)."
+        },
+        "q2": {
+          "explanation": "نموذج OSI سبع طبقات: من الفيزيائية (1) حتى التطبيق (7)."
+        }
+      }
+    },
+    "m10-adv-protocols": {
+      "moduleId": "791381s-m10",
+      "label": "تدريب متقدّم: البروتوكولات وطريقة النقل",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "categorization",
+                "questionTypeVersion": 1,
+                "text": "صنّف كل بروتوكول حسب طريقة النقل في جدول الوحدة.",
+                "marks": 4,
+                "categorization": {
+                  "categories": [
+                    {
+                      "id": "tcp",
+                      "label": "TCP"
+                    },
+                    {
+                      "id": "udp",
+                      "label": "UDP"
+                    }
+                  ],
+                  "items": [
+                    {
+                      "id": "i1",
+                      "label": "HTTP"
+                    },
+                    {
+                      "id": "i2",
+                      "label": "SMTP"
+                    },
+                    {
+                      "id": "i3",
+                      "label": "SSH"
+                    },
+                    {
+                      "id": "i4",
+                      "label": "DHCP"
+                    },
+                    {
+                      "id": "i5",
+                      "label": "TFTP"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctCategoryByItem": {
+                    "i1": "tcp",
+                    "i2": "tcp",
+                    "i3": "tcp",
+                    "i4": "udp",
+                    "i5": "udp"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "multipleSelect",
+                "questionTypeVersion": 1,
+                "text": "أي البروتوكولات تستعمل التشفير (آمنة)؟ (اختر كل الإجابات الصحيحة)",
+                "marks": 2,
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "HTTPS"
+                  },
+                  {
+                    "id": "b",
+                    "text": "SSH"
+                  },
+                  {
+                    "id": "c",
+                    "text": "Telnet"
+                  },
+                  {
+                    "id": "d",
+                    "text": "HTTP"
+                  }
+                ],
+                "answer": {
+                  "correctOptionIds": [
+                    "a",
+                    "b"
+                  ],
+                  "scoring": "allOrNothing"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "HTTP و SMTP و SSH تعمل فوق TCP، و DHCP و TFTP فوق UDP."
+        },
+        "q2": {
+          "explanation": "HTTPS نسخة آمنة من HTTP تستعمل التشفير، و SSH اتصال آمن ومشفّر. أما Telnet فغير آمن لأنه لا يشفّر البيانات."
+        }
+      }
+    },
+    "m21-adv-ports": {
+      "moduleId": "791381s-m21",
+      "label": "تدريب متقدّم: IPv6 والمنافذ",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "matrix",
+                "questionTypeVersion": 1,
+                "text": "ما الخدمة على كل منفذ Port؟",
+                "marks": 4,
+                "matrix": {
+                  "rows": [
+                    {
+                      "id": "p80",
+                      "label": "80"
+                    },
+                    {
+                      "id": "p443",
+                      "label": "443"
+                    },
+                    {
+                      "id": "p25",
+                      "label": "25"
+                    },
+                    {
+                      "id": "p22",
+                      "label": "22"
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "id": "http",
+                      "label": "HTTP"
+                    },
+                    {
+                      "id": "https",
+                      "label": "HTTPS"
+                    },
+                    {
+                      "id": "smtp",
+                      "label": "SMTP"
+                    },
+                    {
+                      "id": "ssh",
+                      "label": "SSH"
+                    }
+                  ]
+                },
+                "answer": {
+                  "correctColumnByRow": {
+                    "p80": "http",
+                    "p443": "https",
+                    "p25": "smtp",
+                    "p22": "ssh"
+                  }
+                }
+              },
+              {
+                "examQuestionId": "q2",
+                "presentationType": "numericResponse",
+                "questionTypeVersion": 1,
+                "text": "كم بتًا طول عنوان IPv6؟",
+                "marks": 1,
+                "numeric": {
+                  "unitRequired": false
+                },
+                "answer": {
+                  "mode": "tolerance",
+                  "expected": 128,
+                  "tolerance": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "80 = HTTP، ‏443 = HTTPS، ‏25 = SMTP (إرسال البريد)، ‏22 = SSH."
+        },
+        "q2": {
+          "explanation": "IPv4 طوله 32 بت، و IPv6 طوله 128 بت."
+        }
+      }
+    },
+    "m33-adv-hosts": {
+      "moduleId": "791381s-m33",
+      "label": "تدريب متقدّم: عدد الأجهزة القابلة للاستخدام",
+      "examSnapshot": {
+        "examId": "LX",
+        "title": "تدريب متقدّم",
+        "status": "published",
+        "schemaVersion": 2,
+        "sections": [
+          {
+            "id": "s1",
+            "title": "تدريب متقدّم",
+            "gradingPolicy": "all",
+            "stimuli": {},
+            "questions": [
+              {
+                "examQuestionId": "q1",
+                "presentationType": "parametricNumeric",
+                "questionTypeVersion": 1,
+                "text": "في شبكة عدد بتات جزء الأجهزة فيها (host) هو {{h}}. كم جهازًا قابلًا للاستخدام فيها؟",
+                "marks": 2,
+                "parametric": {
+                  "v": 1,
+                  "generatorVersion": 1,
+                  "variables": [
+                    {
+                      "id": "h",
+                      "kind": "int",
+                      "min": 2,
+                      "max": 10,
+                      "step": 1
+                    }
+                  ],
+                  "constraints": [],
+                  "response": {
+                    "unit": "none"
+                  }
+                },
+                "answer": {
+                  "expression": "2^h - 2",
+                  "mode": "tolerance",
+                  "tolerance": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "feedback": {
+        "q1": {
+          "explanation": "عدد الأجهزة القابلة للاستخدام = 2^(host) − 2: نطرح عنوان الشبكة وعنوان البث."
+        }
+      }
+    }
+  }
+}

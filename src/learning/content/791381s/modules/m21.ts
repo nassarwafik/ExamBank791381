@@ -362,6 +362,8 @@ const m21: ContentModule = {
                 feedback: { explanation: "من الجدول: 23 Telnet اتصال غير آمن للتحكّم عن بُعد، و 22 SSH اتصال آمن. طريقة للحفظ: SSH 22 و Telnet 23 (الآمن قبل غير الآمن)." },
               },
             },
+            // Phase 8C-3 — an advanced exam item (private store api/src/data/learning-exam-items/791381s.json; the official grader judges it).
+            { id: "m21-l02-p01-x-adv-ports", type: "exam-item", origin: "teacher-enrichment", itemId: "m21-adv-ports", label: "تدريب متقدّم: IPv6 والمنافذ" },
             { id: "m21-l02-p01-lib-t18", type: "library-training", origin: "teacher-enrichment", trainingId: "T18", label: "تدريب 18", requiredModuleId: "791381s-m21" },
           ],
         },
