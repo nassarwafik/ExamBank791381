@@ -1,0 +1,73 @@
+/* Tadris+ P1-A2 — the platform owner's sign-in / setup / home pages (lazy chunk, #/owner). Tokens only: every colour comes from
+   design-tokens.css, so the dark theme (design-tokens-dark.css) follows automatically. The form controls reuse the login
+   page's .auth-* classes (login-pro.css). The QR code is a light island (.eb-light-island): dark modules on a light ground in
+   both themes, so it always scans. */
+
+.eb-owner-page { min-height: 100vh; background: var(--eb-bg); color: var(--eb-text); font-family: var(--eb-font); display: flex; flex-direction: column; }
+.eb-owner-top {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-3);
+  padding: var(--eb-space-3) var(--eb-space-5); background: var(--eb-chrome-bg); border-bottom: 1px solid var(--eb-chrome-border);
+}
+.eb-owner-brand { display: inline-flex; align-items: center; gap: var(--eb-space-2); font-weight: var(--eb-fw-bold); color: var(--eb-chrome-text); }
+.eb-owner-tag {
+  padding: 2px 10px; border-radius: var(--eb-pill); background: var(--eb-primary-050); color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold);
+}
+.eb-owner-body { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: var(--eb-space-6) var(--eb-space-4); }
+.eb-owner-card { max-width: 460px; background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl); padding: var(--eb-space-5); box-shadow: var(--eb-sh-sm); }
+
+.eb-owner-steps { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin: 0 0 var(--eb-space-3); font-size: var(--eb-fs-12); color: var(--eb-muted); }
+.eb-owner-steps span { padding: 2px 10px; border-radius: var(--eb-pill); background: var(--eb-surface-2); }
+.eb-owner-steps span[aria-current="step"] { background: var(--eb-primary-050); color: var(--eb-primary-strong); font-weight: var(--eb-fw-semibold); }
+
+.eb-owner-hint { margin: 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
+.eb-owner-hint code { font-family: var(--eb-font-mono); font-size: var(--eb-fs-12); overflow-wrap: anywhere; }
+.eb-owner-h2 { margin: 0 0 var(--eb-space-2); font-size: var(--eb-fs-17); color: var(--eb-text-heading); }
+
+.eb-owner-qr { margin: 0 auto; width: min(240px, 100%); padding: var(--eb-space-2); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); }
+.eb-owner-qr svg { display: block; width: 100%; height: auto; }
+.eb-owner-qr-ground { fill: var(--eb-surface); }
+.eb-owner-qr-ink { fill: var(--eb-ink); }
+
+.eb-owner-secret { display: flex; flex-direction: column; gap: var(--eb-space-2); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-owner-secret code, .eb-owner-recovery-list code {
+  font-family: var(--eb-font-mono); font-size: var(--eb-fs-15); color: var(--eb-ink); letter-spacing: .04em; overflow-wrap: anywhere;
+}
+.eb-owner-secret code { padding: var(--eb-space-2) var(--eb-space-3); background: var(--eb-surface-2); border-radius: var(--eb-r); text-align: center; }
+
+.eb-owner-recovery { display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-owner-recovery-list {
+  margin: 0; padding-block: var(--eb-space-3); padding-inline: 3em var(--eb-space-4); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-2) var(--eb-space-5);
+  background: var(--eb-surface-2); border-radius: var(--eb-r); text-align: left;
+}
+@media (max-width: 420px) { .eb-owner-recovery-list { grid-template-columns: 1fr; } }
+
+.eb-owner-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); align-items: center; }
+.eb-owner-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2); padding: 9px 14px;
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); background: var(--eb-surface); color: var(--eb-text);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer; text-decoration: none;
+}
+.eb-owner-secondary:hover:not(:disabled) { background: var(--eb-surface-2); }
+.eb-owner-secondary:disabled { opacity: .6; cursor: not-allowed; }
+.eb-owner-danger { color: var(--eb-danger-tx); border-color: color-mix(in srgb, var(--eb-danger) 40%, var(--eb-surface)); }
+.eb-owner-link { background: none; border: 0; padding: 0; color: var(--eb-primary-strong); font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; align-self: flex-start; }
+.eb-owner-check { display: flex; gap: var(--eb-space-2); align-items: flex-start; font-size: var(--eb-fs-14); color: var(--eb-text); }
+.eb-owner-check input { margin-top: 3px; }
+
+.eb-owner-home { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--eb-space-4); }
+.eb-owner-panel { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl); padding: var(--eb-space-5); display: flex; flex-direction: column; gap: var(--eb-space-3); align-items: flex-start; }
+.eb-owner-notice { width: 100%; padding: var(--eb-space-3); border: 1px solid var(--eb-warn); background: var(--eb-warn-bg); border-radius: var(--eb-r); color: var(--eb-warn-tx); display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-notice p { margin: 0; font-weight: var(--eb-fw-semibold); }
+.eb-owner-stepup { width: 100%; display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-owner-stepup .auth-submit { width: auto; padding-inline: var(--eb-space-5); }
+
+.eb-owner-secondary:focus-visible, .eb-owner-link:focus-visible, .eb-owner-check input:focus-visible {
+  outline: var(--eb-focus-ring);
+  outline-offset: var(--eb-focus-offset);
+}
+@media (max-width: 600px) {
+  .eb-owner-top { padding-inline: var(--eb-space-4); }
+  .eb-owner-body { padding: var(--eb-space-4) var(--eb-space-3); }
+  .eb-owner-card, .eb-owner-panel { padding: var(--eb-space-4); }
+}
