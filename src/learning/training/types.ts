@@ -100,7 +100,11 @@ export type ExamItemLoadResponse = {
 /** One question as the official grader judged it (after an answer only — never a key). */
 export type ExamItemQuestionResult = { questionId: string; answered: boolean; correct: boolean; manualReview: boolean; score: number; maxMarks: number; parts?: { correct: number; total: number }; explanation?: string };
 /** `POST …/check` — practice only (`persisted: false`). */
-export type ExamItemCheckResponse = { ok: true; actor: "teacher" | "student"; persisted: false; result: { score: number; totalMarks: number; percentage: number; questions: ExamItemQuestionResult[] } };
+/** 791381s Phase 8D — the item as a STUDY activity (present when the item is in the course's study index): completed only with
+ *  full marks; `revealedBefore` when a wrong answer showed the explanation first (answered, never counted). */
+export type ExamItemStudy = { counted: true; completed: boolean; persisted: boolean; alreadyCompleted?: boolean; revealedBefore?: boolean; gained: number; module?: { completed: number; eligible: number; points: number; max: number } | null; totalPoints?: number };
+/** `POST …/check` — practice: never an exam record or a grade; a student's full marks may complete the study activity. */
+export type ExamItemCheckResponse = { ok: true; actor: "teacher" | "student"; persisted: boolean; result: { score: number; totalMarks: number; percentage: number; questions: ExamItemQuestionResult[] }; study?: ExamItemStudy };
 /** The transport of the exam items, built from the SAME auth headers as the trainings (student session / teacher builder). */
 export interface ExamItemClient {
   load(courseId: string, itemId: string): Promise<ExamItemLoadResponse>;

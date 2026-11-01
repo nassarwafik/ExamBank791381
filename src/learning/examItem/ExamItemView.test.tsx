@@ -91,6 +91,21 @@ describe("the lazy item view", () => {
     expect((screen.getByRole("button", { name: "تحقّق" }) as HTMLButtonElement).disabled).toBe(true);
   }, 30000);
 
+  it("Study Strength (8D): the server's study outcome is shown — counted (+n), already counted, or not counted after a reveal", async () => {
+    let study: ExamItemCheckResponse["study"] = { counted: true, completed: true, persisted: true, gained: 2 };
+    const host = { load: vi.fn(async () => served()), check: vi.fn(async () => ({ ...graded(), persisted: true, study })) };
+    show(host);
+    await open();
+    await answerBoth();
+    fireEvent.click(screen.getByRole("button", { name: "تحقّق" }));
+    await screen.findByText(/أُضيف هذا التدريب إلى نقاط قوتك \(\+2\)/);
+    fireEvent.click(screen.getByRole("button", { name: "أعد المحاولة" }));
+    study = { counted: true, completed: false, persisted: false, revealedBefore: true, gained: 0 };
+    await answerBoth();
+    fireEvent.click(screen.getByRole("button", { name: "تحقّق" }));
+    await screen.findByText(/لا تُحسب في نقاط القوة لأنك رأيت الشرح/);
+  }, 30000);
+
   it("a failed load offers «إعادة المحاولة»; a failed check is an error line — never a wrong verdict", async () => {
     let fail = true;
     const host = { load: vi.fn(async () => { if (fail) throw new Error("تعذّر فتح السؤال حاليًا."); return served(); }), check: vi.fn(async () => { throw new Error("تعذّر فتح هذا السؤال حاليًا. حاول مرة أخرى لاحقًا."); }) };

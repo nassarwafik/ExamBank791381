@@ -28,8 +28,9 @@ const props = (check?: ActivityCheck, reset = 0) => ({ block: lab, courseId: "79
 const checkBtn = () => screen.getByRole("button", { name: "تحقّق من الإعداد" }) as HTMLButtonElement;
 
 describe("the served m19 pilot", () => {
-  it("is a served lab: topology + task only, serverCheck, opted out of Study Strength", () => {
-    expect(lab).toMatchObject({ type: "simulation", simulationType: "network-lab", version: 1, serverCheck: true, studyEligible: false });
+  it("is a served lab: topology + task only, serverCheck, counted in Study Strength (owner decision 2026-11-01)", () => {
+    expect(lab).toMatchObject({ type: "simulation", simulationType: "network-lab", version: 1, serverCheck: true });
+    expect(lab.studyEligible).toBeUndefined();
     expect(Object.keys(lab.config!).sort()).toEqual(["task", "topology"]);
     expect(JSON.stringify(lab)).not.toMatch(/router\.subinterfaceVlan|reachability|"solution"|"checks"|"feedback"/);
   });

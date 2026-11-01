@@ -4,7 +4,8 @@
 //   • the served body keeps ONLY the public topology and task (+ serverCheck) — never a check, a feedback text or the solution;
 //   • the check index holds the key { topology, checks } and the feedback; a lab that opts out (`studyEligible: false`) is
 //     checked but never a study activity, and the authored and served bodies name the same study activities;
-//   • every lab authored in any course is valid and proven, and — until the owner decides (§11.3) — opts out of Study Strength.
+//   • every lab authored in any course is valid and proven, and — by the owner's decision of 2026-11-01 (§21) — counts in Study
+//     Strength (no opt-out).
 import { describe, it, expect } from "vitest";
 import { validateLearningCourseContent } from "../content/validation";
 import { cloneCourse } from "../content/content.fixtures";
@@ -110,7 +111,7 @@ describe("served body · check index · study rule", () => {
 });
 
 describe("every authored lab (all courses)", () => {
-  it("is valid, proven by the simulator, and opts out of Study Strength until the owner decides (§11.3)", async () => {
+  it("is valid, proven by the simulator, and counts in Study Strength (owner decision 2026-11-01, §21)", async () => {
     let n = 0;
     for (const courseId of registeredCourseIds()) {
       for (const moduleId of COURSE_CONTENT_MODULE_IDS[courseId]) {
@@ -120,7 +121,8 @@ describe("every authored lab (all courses)", () => {
           n++;
           const where = courseId + "/" + page.id + "/" + b.id;
           expect(proveNetworkLab(b.config as unknown as NetworkLabConfig), where).toEqual({ ok: true, problems: [] });
-          expect((b as SimulationBlock).studyEligible, where).toBe(false);
+          expect((b as SimulationBlock).studyEligible, where).toBeUndefined();
+          expect(studyActivityOf(b), where).not.toBeNull();
         }
       }
     }

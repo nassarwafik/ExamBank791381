@@ -146,3 +146,63 @@ describe("check — the official grader, practice only", () => {
     expect(written(ctx)).toEqual([]);
   });
 });
+
+// ── 791381s Phase 8D — Study Strength (owner decision 2026-11-01): an item in the study index is a study activity ─────────────
+describe("Study Strength — an exam item in the study index", () => {
+  const PAGE = "791381s-m10-l99-p01", ACT = "m10-l99-p01-x-adv1";
+  const index = () => ({ schemaVersion: 1, courseId: CID, pages: { [PAGE]: { moduleId: MID, activities: { [ACT]: { kind: "exam-item", itemId: "adv1" }, other: { kind: "trueFalse", answer: true } } } } });
+  const sDeps = (ctx, id = "u1", extra = {}) => ({ ...studentDeps(ctx, id), loadStudyIndex: c => (c === CID ? index() : null), ...extra });
+  const tDeps = ctx => ({ ...teacherDeps(ctx), loadStudyIndex: c => (c === CID ? index() : null) });
+  const DOC = id => "platform/learning-study/" + id + ".json";
+  async function fullMarks(ctx, id = "u1") {
+    const shown = productShown((await get(sDeps(ctx, id))).jsonBody);
+    return { q1: { kind: "multiChoice", optionIds: ["o1", "o2"] }, q2: { kind: "numeric", value: "32" }, q3: { kind: "fields", values: { r1: "c1", r2: "c2" } }, q4: { kind: "numeric", value: shown.value } };
+  }
+
+  it("full marks completes the item once (gained > 0); a repeat is read-only; only the learner's study document is written", async () => {
+    const ctx = seed();
+    const answers = await fullMarks(ctx);
+    const r = await check(sDeps(ctx), { answers });
+    expect(r.jsonBody.result.score).toBe(r.jsonBody.result.totalMarks);
+    expect(r.jsonBody.study).toMatchObject({ counted: true, completed: true, persisted: true, alreadyCompleted: false });
+    expect(r.jsonBody.study.gained).toBeGreaterThan(0);
+    expect(r.jsonBody.study.module).toMatchObject({ completed: 1, eligible: 2 });
+    expect(Object.keys(ctx.getJson(DOC("u1")).pages[PAGE].completed)).toEqual([ACT]);
+    const again = await check(sDeps(ctx), { answers });
+    expect(again.jsonBody.study).toMatchObject({ completed: true, persisted: false, alreadyCompleted: true, gained: 0 });
+    expect(written(ctx)).toEqual([DOC("u1")]);
+  });
+
+  it("a wrong answer shows its explanation → the item is marked revealed; a later full-marks check is answered, never counted", async () => {
+    const ctx = seed();
+    const w = await check(sDeps(ctx), { answers: { q1: { kind: "multiChoice", optionIds: ["o3"] } } });
+    expect(w.jsonBody.result.questions.find(q => q.questionId === "q1").explanation).toBeTruthy();
+    expect(w.jsonBody.study).toMatchObject({ completed: false, persisted: false, gained: 0 });
+    expect(Object.keys(ctx.getJson(DOC("u1")).pages[PAGE].revealed)).toEqual([ACT]);
+    const r = await check(sDeps(ctx), { answers: await fullMarks(ctx) });
+    expect(r.jsonBody.result.score).toBe(r.jsonBody.result.totalMarks);
+    expect(r.jsonBody.study).toMatchObject({ completed: false, persisted: false, revealedBefore: true, gained: 0 });
+    expect(ctx.getJson(DOC("u1")).pages[PAGE].completed).toEqual({});
+  });
+
+  it("right but incomplete answers (an unanswered question, no wrong one) write nothing; a teacher's full marks are never stored", async () => {
+    const ctx = seed();
+    const r = await check(sDeps(ctx), { answers: { q1: { kind: "multiChoice", optionIds: ["o1", "o2"] } } });
+    expect(r.jsonBody.study).toMatchObject({ completed: false, persisted: false, gained: 0 });
+    expect(r.jsonBody.study.revealedBefore).toBeUndefined();
+    expect(written(ctx)).toEqual([]);
+    const t = seed(null);
+    const tr = await check(tDeps(t), { answers: { q1: { kind: "multiChoice", optionIds: ["o1", "o2"] }, q2: { kind: "numeric", value: "32" }, q3: { kind: "fields", values: { r1: "c1", r2: "c2" } } } });
+    expect(tr.jsonBody).toMatchObject({ actor: "teacher", persisted: false });
+    expect(tr.jsonBody.study).toMatchObject({ completed: false, persisted: false });
+    expect(written(t)).toEqual([]);
+  });
+
+  it("a persistent storage conflict → 503 retryable (never a silent completion)", async () => {
+    const answers = await fullMarks(seed());
+    const stuck = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room([MID]), [DOC("u1")]: { pages: {} } }, { beforeConditionalUpload: (name, api) => { if (name === DOC("u1")) api.setJson(name, api.getJson(name)); } });
+    const r = await check(sDeps(stuck), { answers });
+    expect(r.status).toBe(503);
+    expect(r.jsonBody).toMatchObject({ ok: false, retryable: true });
+  });
+});

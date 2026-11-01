@@ -583,8 +583,8 @@ const m19: ContentModule = {
               // Phase 8B-2 — the FIRST network lab (pilot): the curriculum network simulator (networkTopology@2) on this section's
               // Router-on-a-Stick task, with the booklet's own values (VLAN 10 / 20, g0/0.10 / g0/0.20, dot1Q, 192.168.10.254 /
               // 192.168.20.254 /24, the trunk on g0/1, «no shutdown» on g0/0). The SERVER replays and judges it; checks, feedback and
-              // the solution never reach the browser. Checked only — not counted in Study Strength until the owner decides (§11.3).
-              id: "m19-l02-p01-lab-roas", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1, studyEligible: false,
+              // the solution never reach the browser. Counted in Study Strength (owner decision 2026-11-01, §21).
+              id: "m19-l02-p01-lab-roas", type: "simulation", origin: "teacher-enrichment", simulationType: "network-lab", version: 1,
               title: "مختبر شبكي: Router on a Stick",
               description: "مختبر على محاكي الشبكات: أكمل إعداد السويتش والراوتر حتى يتواصل جهازان في VLAN مختلفتين، ثم اضغط «تحقّق من الإعداد».",
               capabilities: { fullscreen: true, reset: true, interactive: true },

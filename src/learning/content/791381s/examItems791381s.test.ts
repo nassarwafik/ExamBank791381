@@ -12,6 +12,7 @@ import { fileURLToPath } from "url";
 import manifest from "./manifest";
 import { loadBundledModuleContent } from "../bundledModules";
 import type { ContentModule } from "../types";
+import { studyActivityOf, studyActivityIds } from "../../study/eligibility";
 // @ts-expect-error — untyped CommonJS server modules, imported on purpose to cross-check the store with the real authorities.
 import * as storeLib from "../../../../api/src/lib/learning-exam-items.js";
 import * as grading from "../../../../api/src/lib/assignment-grading.js";
@@ -88,6 +89,8 @@ describe("the cards in the units", () => {
           expect(page.layout, b.id).toBe("practice");
           expect(b.label, b.id).toBe(item.label);
           expect(Object.keys(b).sort(), b.id).toEqual(["id", "itemId", "label", "origin", "type"]);
+          expect(studyActivityOf(b), b.id).toEqual({ activityId: b.id, key: { kind: "exam-item", itemId: b.itemId } });
+          expect(studyActivityIds(page), b.id).toContain(b.id);
           expect(page.blocks.slice(0, at).every(x => x.type === "practice" || x.type === "practice-table"), b.id + " follows the questions").toBe(true);
           expect(page.blocks.slice(at + 1).every(x => x.type === "simulation" || x.type === "library-training"), b.id + " precedes only labs / library cards").toBe(true);
         });
@@ -95,6 +98,12 @@ describe("the cards in the units", () => {
     }
     expect(seen.sort()).toEqual(Object.keys(store.items).sort());
   }, 60000);
+
+  it("every card is a study activity (owner decision 2026-11-01, §21): the study index lists it with its item id", () => {
+    const index = JSON.parse(readFileSync(fileURLToPath(new URL("../../../../api/src/data/learning-study/" + CID + ".json", import.meta.url)), "utf8")) as { pages: Record<string, { activities: Record<string, { kind: string; itemId?: string }> }> };
+    const listed = Object.values(index.pages).flatMap(p => Object.values(p.activities).filter(k => k.kind === "exam-item").map(k => k.itemId)).sort();
+    expect(listed).toEqual(Object.keys(store.items).sort());
+  });
 
   it("no served module body carries the store's keys or explanations", () => {
     const secrets = Object.values(store.items).flatMap(item => Object.values(item.feedback ?? {}).map(f => f.explanation));

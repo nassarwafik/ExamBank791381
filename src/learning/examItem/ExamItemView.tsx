@@ -17,6 +17,14 @@ type Phase =
   | { kind: "ready"; data: ExamItemLoadResponse };
 type Check = { kind: "idle" } | { kind: "pending" } | { kind: "error"; message: string } | { kind: "done"; outcome: ExamItemCheckResponse };
 
+/** 791381s Phase 8D — what the student learns about Study Strength from this check (the server decides it all). */
+function studyLine(st: NonNullable<ExamItemCheckResponse["study"]>): string {
+  if (st.revealedBefore) return "إجابتك صحيحة الآن، لكنها لا تُحسب في نقاط القوة لأنك رأيت الشرح بعد إجابة خاطئة.";
+  if (st.completed && st.persisted) return st.gained > 0 ? "✓ أُضيف هذا التدريب إلى نقاط قوتك (+" + st.gained + ")." : "✓ سُجِّل إنجاز هذا التدريب في نقاط قوتك.";
+  if (st.completed) return "أنجزت هذا التدريب سابقًا، وهو محسوب في نقاط قوتك.";
+  return "يُحسب هذا التدريب في نقاط القوة عندما تجيب عن كل أسئلته إجابة صحيحة.";
+}
+
 const questionsOf = (data: ExamItemLoadResponse): Question[] => (data.exam.sections ? data.exam.sections.flatMap(s => s.questions || []) : data.exam.questions || []);
 
 export default function ExamItemView({ itemId, host }: { itemId: string; host: ExamItemHost }) {
@@ -101,8 +109,9 @@ export default function ExamItemView({ itemId, host }: { itemId: string; host: E
       </div>
       <div className="learning-examitem-bar" role="status" aria-live="polite">
         {outcome
-          ? <p className="learning-examitem-score">نتيجتك: <span dir="ltr">{outcome.result.score} / {outcome.result.totalMarks}</span> — للتدريب فقط، لا تُسجَّل علامة.</p>
+          ? <p className="learning-examitem-score">نتيجتك: <span dir="ltr">{outcome.result.score} / {outcome.result.totalMarks}</span> — تدريب، لا تُسجَّل علامة في دفتر العلامات.</p>
           : <p className="learning-examitem-count">أجبت عن <span dir="ltr">{answeredCount}</span> من <span dir="ltr">{questions.length}</span></p>}
+        {outcome?.study && <p className="learning-examitem-study">{studyLine(outcome.study)}</p>}
         {check.kind === "error" && <p className="learning-examitem-error">{check.message}</p>}
         <span className="learning-examitem-actions">
           {!outcome && (
