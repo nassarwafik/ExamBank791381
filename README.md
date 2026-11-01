@@ -89,6 +89,9 @@ Configured as application settings of the Static Web App's managed API. Derived 
 | `BUILDER_SESSION_VERSION` | optional, default `1` | Bump to revoke every teacher session at once |
 | `BANK_SETUP_KEY` | fallback-compatible only | Legacy fallback for the three secrets above and for the number-conversion preview key |
 | `TEACHER_DISPLAY_NAME` | optional | Display name used until the teacher sets one in their profile |
+| `OWNER_BOOTSTRAP_TOKEN_SHA256` | temporary, owner setup only | SHA-256 (hex) of the one-time owner bootstrap token printed by `node scripts/owner-bootstrap-token.mjs` on the owner's computer. Remove after the owner account exists (the route stays closed anyway). See `docs/enterprise-owner-identity-p1a.md` |
+| `OWNER_BOOTSTRAP_EXPIRES_AT` | temporary, owner setup only | ISO-8601 end of the bootstrap window, at most 24 h ahead |
+| `OWNER_SESSION_SECRET` | production-recommended | HMAC root for platform-owner sessions (2 h) and the owner's sealed TOTP secret; falls back to `BUILDER_SESSION_SECRET`, then `BANK_SETUP_KEY`. Rotating it requires the owner to re-enrol TOTP with a recovery code |
 | `LEGACY_DATA_OWNER` | optional (multi-user mode) | The `BUILDER_USERS` key of the teacher who owns data created before teacher tenancy (Phase 21G.0). Unset: that data stays shared by every teacher. See `docs/enterprise-assignments-21g-plan.md` §3 |
 
 Fallback chains, exactly as the code resolves them:
@@ -98,6 +101,7 @@ Fallback chains, exactly as the code resolves them:
 | Teacher signing | `BUILDER_SESSION_SECRET`, then `BANK_SETUP_KEY` |
 | Student signing | `STUDENT_SESSION_SECRET`, then `BUILDER_SESSION_SECRET`, then `BANK_SETUP_KEY` |
 | Teacher password | `BUILDER_PASSWORD`, then `BANK_SETUP_KEY` |
+| Owner signing / secret box | `OWNER_SESSION_SECRET`, then `BUILDER_SESSION_SECRET`, then `BANK_SETUP_KEY` |
 
 **Recommended production configuration:** set `BUILDER_PASSWORD`, `BUILDER_SESSION_SECRET` and
 `STUDENT_SESSION_SECRET` to three different strong random values. With only `BANK_SETUP_KEY`, one value is both the
