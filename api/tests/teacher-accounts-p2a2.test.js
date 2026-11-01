@@ -216,6 +216,16 @@ describe("P2-A2a managed sign-in and the per-request account check", () => {
     expect((await signIn(ctx)).status).toBe(200);
   });
 
+  it("an account marked suspended by any path (no authVersion change) is refused on the next request — the status guard alone", async () => {
+    const id = await activate(ctx);
+    const { token } = (await signIn(ctx)).jsonBody;
+    const doc = ctx.mem.getJson(teacherAccountName(id));
+    ctx.mem.setJson(teacherAccountName(id), { ...doc, status: "suspended" });
+    const r = await requireTeacherSession(req({ headers: teacherHeaders(token) }), ctx.deps);
+    expect(r.ok).toBe(false);
+    expect(r.response.jsonBody.code).toBe("TEACHER_SESSION_REVOKED");
+  });
+
   it("reset → every session ends, the old password stops working, the reset link sets a new one", async () => {
     const id = await activate(ctx);
     const { token } = (await signIn(ctx)).jsonBody;
