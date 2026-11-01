@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import "../owner/owner.css";
 import { BRAND_NAME } from "../brand";
@@ -32,21 +32,21 @@ const errorText = (json: Record<string, unknown>, fallback: string) => (typeof j
 
 export default function InviteApp() {
   // Read once, then forget it from the URL (the fragment never reached a server; now it also leaves the history entry).
-  const tokenRef = useRef<string>(inviteTokenFromHash());
-  const [view, setView] = useState<View>(() => (tokenRef.current ? { kind: "loading" } : { kind: "missing" }));
+  const [token, setToken] = useState<string>(() => inviteTokenFromHash());
+  const [view, setView] = useState<View>(() => (inviteTokenFromHash() ? { kind: "loading" } : { kind: "missing" }));
 
   useEffect(() => {
-    if (!tokenRef.current) return;
+    if (!token) return;
     try { window.history.replaceState(null, "", window.location.pathname + window.location.search + INVITE_BARE_HASH); } catch { /* best effort */ }
     let live = true;
-    void post("inspect", { token: tokenRef.current }).then(({ status, json }) => {
+    void post("inspect", { token }).then(({ status, json }) => {
       if (!live) return;
       if (status === 200 && json.ok) setView({ kind: "form", info: json as unknown as Info });
       else if (status === 404) setView({ kind: "invalid", message: errorText(json, "الرابط غير صالح أو انتهت صلاحيته.") });
       else setView({ kind: "error", message: errorText(json, "تعذر التحقق من الرابط حاليًا.") });
     });
     return () => { live = false; };
-  }, []);
+  }, [token]);
 
   let body;
   if (view.kind === "loading") body = <p className="auth-sub" role="status">جارٍ التحقق من الرابط…</p>;
@@ -69,7 +69,7 @@ export default function InviteApp() {
       <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{view.message}</div>
     </>
   );
-  else if (view.kind === "form") body = <SetPassword info={view.info} token={tokenRef.current} onDone={(username, reset) => { tokenRef.current = ""; setView({ kind: "done", username, reset }); }} onInvalid={message => setView({ kind: "invalid", message })} />;
+  else if (view.kind === "form") body = <SetPassword info={view.info} token={token} onDone={(username, reset) => { setToken(""); setView({ kind: "done", username, reset }); }} onInvalid={message => setView({ kind: "invalid", message })} />;
   else body = (
     <>
       <h1 className="auth-welcome"><IconCheck size={22} aria-hidden="true" /> {view.reset ? "تم تغيير كلمة المرور" : "تم تفعيل حسابك"}</h1>
