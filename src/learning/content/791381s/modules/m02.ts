@@ -494,6 +494,8 @@ const m02: ContentModule = {
                 feedback: { explanation: "العدد الثنائي رموزه 0 و 1 فقط. العدد 123 أو 44 فيه رموز من 0 إلى 9 (عشري)، و A23F فيه أحرف (Hex)." },
               },
             },
+            // Phase 8C-3 — an advanced exam item (private store api/src/data/learning-exam-items/791381s.json; the official grader judges it).
+            { id: "m02-l02-p01-x-adv-numbers", type: "exam-item", origin: "teacher-enrichment", itemId: "m02-adv-numbers", label: "تدريب متقدّم: أنظمة العد" },
             { id: "m02-l02-p01-lib-t02", type: "library-training", origin: "teacher-enrichment", trainingId: "T02", label: "تدريب 2", requiredModuleId: "791381s-m02" },
           ],
         },

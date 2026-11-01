@@ -368,6 +368,8 @@ const m09: ContentModule = {
                 feedback: { explanation: "كلاهما يعمل في طبقة النقل (Transport). صفة TCP: موثوق. صفة UDP: سريع — أسرع، لأنه لا ينتظر تأكيدًا على كل رسالة." },
               },
             },
+            // Phase 8C-3 — an advanced exam item (private store api/src/data/learning-exam-items/791381s.json; the official grader judges it).
+            { id: "m09-l02-p01-x-adv-osi", type: "exam-item", origin: "teacher-enrichment", itemId: "m09-adv-osi", label: "تدريب متقدّم: طبقات OSI" },
             { id: "m09-l02-p01-lib-t10", type: "library-training", origin: "teacher-enrichment", trainingId: "T10", label: "تدريب 10", requiredModuleId: "791381s-m09" },
           ],
         },

@@ -270,6 +270,8 @@ const m10: ContentModule = {
                 feedback: { explanation: "القاعدة: TCP للموثوقية: الويب والبريد والملفات والتحكم عن بعد. UDP للسرعة: DNS و DHCP و TFTP والبث." },
               },
             },
+            // Phase 8C-3 — an advanced exam item (private store api/src/data/learning-exam-items/791381s.json; the official grader judges it).
+            { id: "m10-l02-p01-x-adv-protocols", type: "exam-item", origin: "teacher-enrichment", itemId: "m10-adv-protocols", label: "تدريب متقدّم: البروتوكولات وطريقة النقل" },
             { id: "m10-l02-p01-lib-t11", type: "library-training", origin: "teacher-enrichment", trainingId: "T11", label: "تدريب 11", requiredModuleId: "791381s-m10" },
           ],
         },
