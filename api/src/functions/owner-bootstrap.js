@@ -18,7 +18,8 @@ const { NO_STORE } = require("../lib/identity/owner-session");
 
 // Tadris+ P1-A — one-time creation of the first platform owner (owner decision D3). Route: /api/owner-bootstrap/{action?}
 //
-//   GET                → { state }  "completed" | "open" | "unavailable"   (no secret, no account detail)
+//   GET                → { state }  "completed" | "open" | "unavailable"   (no secret, no account detail; without the
+//                        bootstrap settings the answer is "unavailable" and storage is not read)
 //   POST begin         { token, username, displayName, password }
 //                      → the TOTP secret to enrol in an authenticator app (shown once), valid 15 minutes
 //   POST confirm       { token, code }   (code = the 6 digits the app now shows)
@@ -174,14 +175,18 @@ async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
+  const settingsPresent = Boolean(env.OWNER_BOOTSTRAP_TOKEN_SHA256 || env.OWNER_BOOTSTRAP_EXPIRES_AT);
+  // Cheap checks first: without the owner's bootstrap settings nothing can ever be created, so the route answers without
+  // touching storage (an anonymous probe never costs a storage call and never sees a 5xx).
+  if (method === "GET" && !settingsPresent) return reply(200, { ok: true, state: "unavailable" });
+  if (method !== "GET" && (method !== "POST" || (action !== "begin" && action !== "confirm"))) return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
+  if (method === "POST" && bootstrapConfig(env, nowMs).state !== "open") return unavailable();
   let container;
   try { container = (deps.getContainer || getContainer)(); } catch { return storageDown(); }
   try {
     if (method === "GET") return await handleGet(container, env, nowMs);
-    if (method !== "POST" || (action !== "begin" && action !== "confirm")) return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     // The marker closes the route before any other work, even when the settings are still valid.
     if (await downloadJsonOrNull(container, BOOTSTRAP_MARKER) && action === "begin") return gone();
-    if (bootstrapConfig(env, nowMs).state !== "open") return unavailable();
     const body = await readBody(request);
     if (String(body.token ?? "").length > 128 || String(body.password ?? "").length > 1024 || String(body.username ?? "").length > 128 || String(body.displayName ?? "").length > 256) {
       return reply(400, { ok: false, code: "INVALID_INPUT", error: "بيانات غير صالحة." });

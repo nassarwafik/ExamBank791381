@@ -38,7 +38,11 @@ const PUBLIC_BY_DESIGN = {
   // (shared GLB authority) and that a published exam pins; the hash is validated before any storage access (malformed / unknown → 404);
   // the bytes are re-verified against the hash before they are served; model/gltf-binary + nosniff + CSP sandbox + attachment, so the
   // response can never become a document; no listing, no owner data. Upload and list require builder auth.
-  meshAssetRuntime: "validated GLB mesh asset by exact sha256 capability; hash checked before storage; bytes re-verified; 404 otherwise; no enumeration"
+  meshAssetRuntime: "validated GLB mesh asset by exact sha256 capability; hash checked before storage; bytes re-verified; 404 otherwise; no enumeration",
+  // Tadris+ P1-A — platform-owner credential exchanges (like builderLogin / platformLogin). ownerSession is NOT listed: it
+  // requires an owner session and stays under the 401 rule above.
+  ownerLogin: "platform-owner credential exchange (username + password + TOTP or recovery code → 2 h owner session); throttled; one generic 401; no data without valid credentials",
+  ownerBootstrap: "one-time first-owner creation; open only while the owner's own OWNER_BOOTSTRAP_* settings are valid (≤ 24 h) AND the create-only marker is absent, closed for good afterwards; needs the bootstrap token AND a verified authenticator code; throttled; without settings it answers without storage"
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
 const SIGNED = {

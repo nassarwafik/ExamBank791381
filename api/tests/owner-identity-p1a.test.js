@@ -236,7 +236,8 @@ describe("P1-A bootstrap flow", () => {
   beforeEach(() => { ctx = setup(); });
 
   it("GET reports unavailable without settings and open with valid settings — never a value", async () => {
-    const none = await bootstrapHandler(request({ method: "GET" }), { ...ctx.deps, env: {} });
+    const noStorage = () => { throw new Error("storage must not be touched without bootstrap settings"); };
+    const none = await bootstrapHandler(request({ method: "GET" }), { ...ctx.deps, env: {}, getContainer: noStorage });
     expect(none.jsonBody).toEqual({ ok: true, state: "unavailable" });
     const open = await bootstrapHandler(request({ method: "GET" }), ctx.deps);
     expect(open.jsonBody).toEqual({ ok: true, state: "open" });
@@ -245,7 +246,7 @@ describe("P1-A bootstrap flow", () => {
 
   it("without valid settings every POST is 404 (no default owner can ever be created)", async () => {
     for (const env of [{}, { ...ctx.env, OWNER_BOOTSTRAP_EXPIRES_AT: new Date(T0 - 1).toISOString() }]) {
-      const r = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), { ...ctx.deps, env });
+      const r = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), { ...ctx.deps, env, getContainer: () => { throw new Error("no storage call expected"); } });
       expect(r.status).toBe(404);
     }
     expect(ctx.mem.names("platform/accounts/")).toEqual([]);

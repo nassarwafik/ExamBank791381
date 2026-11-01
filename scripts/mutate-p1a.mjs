@@ -38,7 +38,7 @@ export const MUTANTS = [
   { id: "P1A-M8", what: "any token matches the configured hash", edits: [{ file: BOOTLIB,
     find: "return left.length === right.length && crypto.timingSafeEqual(left, right);", replace: "return true;" }] },
   { id: "P1A-M9", what: "POSTs are served without a valid bootstrap configuration", edits: [{ file: BOOT,
-    find: "if (bootstrapConfig(env, nowMs).state !== \"open\") return unavailable();", replace: "" }] },
+    find: "if (method === \"POST\" && bootstrapConfig(env, nowMs).state !== \"open\") return unavailable();", replace: "" }] },
   { id: "P1A-M10", what: "bootstrap attempts are not throttled", edits: [{ file: BOOT,
     find: "return g.allowed ? { ok: true, clientId } : { ok: false, response: throttled(g.retryAfterSeconds) };", replace: "return { ok: true, clientId };" }] },
   { id: "P1A-M11", what: "the owner password policy is not enforced", edits: [{ file: BOOT,
