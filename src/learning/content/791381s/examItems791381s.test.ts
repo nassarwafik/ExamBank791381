@@ -14,9 +14,7 @@ import { loadBundledModuleContent } from "../bundledModules";
 import type { ContentModule } from "../types";
 // @ts-expect-error — untyped CommonJS server modules, imported on purpose to cross-check the store with the real authorities.
 import * as storeLib from "../../../../api/src/lib/learning-exam-items.js";
-// @ts-expect-error — idem (the official grader).
 import * as grading from "../../../../api/src/lib/assignment-grading.js";
-// @ts-expect-error — idem (the student projection).
 import * as sanitizer from "../../../../api/src/lib/student-exam-sanitize.js";
 
 type Q = { examQuestionId: string; presentationType: string; text: string; options?: { id: string }[]; matrix?: unknown; categorization?: unknown; answer: Record<string, unknown> };
