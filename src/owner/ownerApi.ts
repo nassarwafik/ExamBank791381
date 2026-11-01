@@ -62,6 +62,30 @@ export const ownerApi = {
   regenerateRecoveryCodes: (token: string) => call<{ ok: true; recoveryCodes: string[] }>("/api/owner-session/recovery-codes", { method: "POST", token, body: {} })
 };
 
+// Tadris+ P2-A2b — the owner's teacher management (P2-A2a /api/owner-teachers). Every change needs a recent step-up; the
+// caller handles STEP_UP_REQUIRED by asking for a code and retrying.
+export type TeacherStatus = "invited" | "active" | "suspended";
+export type ManagedTeacher = {
+  accountId: string; username: string; displayName: string; fullName: string; email: string; phone: string;
+  subjects: string[]; notes: string; organizationId: string; status: TeacherStatus; hasPassword: boolean;
+  invitation: { purpose: "invite" | "reset"; expiresAt: string } | null; createdAt: string; updatedAt: string; lastLoginAt: string;
+};
+export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
+export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string };
+export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
+
+export const ownerTeachersApi = {
+  list: (token: string) => call<{ ok: true; teachers: ManagedTeacher[] }>("/api/owner-teachers", { token }),
+  create: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/create", { method: "POST", token, body: draft }),
+  act: (token: string, action: TeacherAction, accountId: string) =>
+    call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId } })
+};
+
+/** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */
+export function invitationUrl(invitationPath: string, location: { origin: string; pathname: string } = window.location): string {
+  return location.origin + location.pathname + invitationPath;
+}
+
 /** "ABCDEFGH…" → "ABCD EFGH …" for reading and typing the TOTP secret by hand. */
 export function groupSecret(secret: string): string {
   return String(secret || "").replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
