@@ -834,3 +834,136 @@ its booklet page.
 
 **Not machine-checkable:** that a key matches the booklet. Every key above was copied from the cited table and checked by
 the lead. A wrong but valid key would only be caught by review.
+
+## 20. Phase 9 record — the final audit and the readiness report
+
+**Verdict:** the enriched booklet is **ready for class publication**. Publication itself remains the teacher's explicit
+action, unit by unit (deployment ≠ publication).
+
+### 20.1 What the booklet now holds (on `main` after Phases 1–8)
+
+| Item | Count |
+|---|---|
+| Units with a «تدريبات الوحدة» page | 36 (1–36; unit 00 is the cover) |
+| Pages | 238 |
+| Book blocks, verbatim and book-locked | 793 |
+| Reveal questions, six kinds (multipleChoice, trueFalse, wordBank, matching, ordering, classify) | 428 |
+| Interactive table twins | 30 |
+| Visuals | 88 |
+| Interactive activities (diagrams, simulations, CLI terminal) | 59 |
+| Network labs (networkTopology@2, server-judged) | 8 |
+| Advanced exam items (15 questions, official grader) | 8 |
+| Exam Library trainings opened from the units | 36 |
+| Study activities counted in Strength (D6) | 458 |
+
+**Not counted in Strength, by the owner's default:** the labs and the advanced items.
+
+**Per-unit inventory** — questions / tables / visuals / activities / labs / items / trainings:
+
+| Unit | q | tbl | vis | act | lab | item | trainings |
+|---|---|---|---|---|---|---|---|
+| 1 | 14 | – | 4 | 1 | – | – | T01 |
+| 2 | 12 | – | 2 | – | – | 1 | T02 |
+| 3 | 12 | – | 2 | 1 | – | 1 | T03 T04 |
+| 4 | 12 | – | 3 | 2 | – | 1 | T05 |
+| 5 | 12 | – | 2 | 1 | – | 1 | T06 |
+| 6 | 11 | – | 1 | 1 | – | – | T07 |
+| 7 | 12 | – | – | 2 | – | – | T08 |
+| 8 | 12 | – | 1 | 2 | – | – | T09 |
+| 9 | 12 | – | 2 | 1 | – | 1 | T10 |
+| 10 | 12 | – | 2 | – | – | 1 | T11 |
+| 11 | 11 | – | 1 | – | – | – | T12 |
+| 12 | 12 | – | 3 | 1 | – | – | T13 |
+| 13 | 12 | – | 4 | – | – | – | – |
+| 14 | 12 | – | 2 | 1 | – | – | T14 |
+| 15 | 12 | – | 2 | 1 | – | – | – |
+| 16 | 12 | – | 3 | 3 | 1 | – | T15 |
+| 17 | 12 | – | 2 | 2 | 1 | – | – |
+| 18 | 11 | – | 2 | 2 | 1 | – | T16 |
+| 19 | 12 | – | 5 | 4 | 1 | – | T17 |
+| 20 | 12 | – | 6 | – | – | – | – |
+| 21 | 12 | – | 2 | 1 | – | 1 | T18 |
+| 22 | 12 | – | 4 | 2 | 1 | – | T19 |
+| 23 | 11 | – | 1 | 3 | 1 | – | – |
+| 24 | 12 | – | 2 | 3 | 1 | – | T20 T25 T26 |
+| 25 | 12 | – | – | 2 | – | – | T21 |
+| 26 | 11 | – | 2 | – | – | – | T22 |
+| 27 | 12 | – | 4 | 1 | – | – | – |
+| 28 | 12 | – | 2 | 2 | – | – | – |
+| 29 | 11 | – | 2 | 2 | – | – | T23 |
+| 30 | 12 | – | 3 | 3 | – | – | T24 T27–T30 |
+| 31 | 12 | 8 | 2 | 3 | – | – | – |
+| 32 | 12 | 4 | 1 | 1 | – | – | – |
+| 33 | 12 | 6 | 2 | 1 | – | 1 | – |
+| 34 | 12 | 4 | 3 | 3 | – | – | – |
+| 35 | 12 | 5 | 5 | 5 | – | – | – |
+| 36 | 12 | 3 | 4 | 2 | 1 | – | F01–F06 |
+
+Every page carries its booklet source. Every enrichment block is `teacher-enrichment`.
+
+### 20.2 The browser audit
+
+Every page of the booklet was opened in the Reader in a real browser (Playwright, Chromium), in six modes. On each load the
+audit checked:
+- page errors and console errors;
+- sideways overflow of the document;
+- elements past the screen outside any scroll container;
+- broken images;
+- activities left on their static fallback.
+
+| Pass | Loads | Issues |
+|---|---|---|
+| desktop 1280 (first pass) | 238 | 0 real (2 SVG drawings flagged by the first script, inside their visual) |
+| phone 390, light / dark / sepia (first pass) | 714 | **6**: units 21 and 33 practice pages wider than the phone (396 / 416 px) |
+| **after the fixes:** phone light, dark, sepia, large font (size 4 · spacing 3), desktop, desktop presentation | **1,428** | **0** |
+
+**Print** (print media, A4 PDF) was checked on five representative pages: a book table, a CLI page, two practice pages
+with trainings and a lab, and the summary unit.
+- The Reader's navigation and table of contents are hidden.
+- The page prints with no overflow and no errors.
+- One rendered PDF page was inspected by eye.
+
+**Load size:** the Reader's first load is 39.3 KB gzip (budget 40).
+- The simulator (about 65 KB), the exam-item view and its question card stay behind their dynamic edges, as the bundle
+  guards prove.
+
+### 20.3 Defects found and fixed (fail-first)
+
+1. **Phone pages scrolled sideways (units 21 and 33).** A practice question whose prompt or option is a full IPv6 address
+   could not wrap.
+   - Fix: `overflow-wrap:anywhere` on the practice container, as every other Reader text block already had.
+   - `practiceWrap.p9.test.ts` fails on `8a2109d3` and passes on the head.
+   - The browser measured 396 → 390 and 416 → 390 px.
+2. **Network-lab goals starting with a device name read scrambled** («SW1: …»). The label used
+   `unicode-bidi: plaintext`.
+   - Fix: removed, so the goals inherit RTL.
+   - `labGoalsRtl.p9.test.ts` fails on `8a2109d3` and passes on the head.
+   - The re-shot lab shows every goal in RTL order.
+
+### 20.4 Content traceability
+
+Each exercise is checked against its booklet page in one of two ways:
+- **automatically**, by the tests below;
+- **by hand**, in the lead's review of each phase.
+
+Automatic checks:
+- the book lock: 202 pages and 32 drawings byte-identical to the conversion;
+- the validator over the whole course;
+- every reveal page has 8+ questions of 3+ kinds;
+- every visual and activity is registered;
+- every lab is proven by the simulator (no free credit, the solution passes);
+- every advanced item is accepted by the official grader on its key and validated by the platform;
+- every training is placed at its release unit;
+- no served body carries a key.
+
+Lead decisions recorded in §§7–19: rejected visuals that showed other values, moved table twins, booklet inconsistencies.
+
+### 20.5 Open decisions for the owner (none blocks publication)
+
+- **Strength:** count the 8 labs and the 8 advanced items? This is one flag per block plus a regenerated study index. It
+  lowers a finished unit's points until the new activity is solved.
+- **Future `networkTopology@3`:** labs for IPv6, OSPF, EIGRP and ACL (units 21, 28–30). This is a separate project:
+  versioned simulator semantics are immutable.
+- **Booklet inconsistencies noted earlier, for the author:**
+  - EIGRP is «Distance Vector متطوّر» in unit 29 but «Hybrid» in unit 35;
+  - HTTPS vs HTTP in unit 10.
