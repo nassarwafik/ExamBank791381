@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { isStudentClassMember } = require("../lib/class-membership");
@@ -22,7 +22,7 @@ const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "الصف أو ا
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const classId = String(request.params?.classId || "").trim();
     const courseId = String(request.params?.courseId || "").trim();

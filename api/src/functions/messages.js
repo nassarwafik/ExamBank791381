@@ -30,7 +30,7 @@
 // (reads, polling, mark-read, announcements) triggers a push.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -109,7 +109,7 @@ async function handle(request, deps = {}, obs = null) {
   const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
   const teacherName = deps.resolveTeacherDisplayName || resolveTeacherDisplayName;
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const teacherId = String(auth.user && auth.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };

@@ -17,7 +17,7 @@
 //   (only account activation is blocked for archived students), so photo upload / remove follow that same policy.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf, studentAccessible } = require("../lib/teacher-tenancy");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
@@ -38,7 +38,7 @@ const userDocName = studentId => USER_PREFIX + String(studentId) + ".json";
  * carries the loaded current document + container from the session helper (no duplicate read).
  */
 async function resolveActor(request, deps) {
-  const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const builder = (await requireTeacherSession(request, deps));
   if (builder.ok) return { kind: "teacher", user: builder.user };
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (sess.ok) return { kind: "student", user: sess.user, student: sess.student, container: sess.container };

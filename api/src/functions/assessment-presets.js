@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer } = require("../lib/platform-storage");
 const PRESETS = require("../lib/assessment-presets");
 
@@ -20,7 +20,7 @@ const ACTIONS = new Set(["list", "load", "create", "update", "delete"]);
 const NO_STORE = { "Cache-Control": "no-store" };
 
 async function handler(request, deps = {}, obs = null) {
-  const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) return auth.response;
   const ownerId = String(auth.user.sub);                                       // the ONE source of preset ownership
   let body = {};

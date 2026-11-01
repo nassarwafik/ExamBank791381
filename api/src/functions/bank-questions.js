@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { VALID_SECTIONS } = require("../lib/section-resolver");
 const { downloadJsonOrNull, listJson, mutateJsonWithRetry, isConcurrencyConflict, getContainer: getPlatformContainer } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -234,7 +234,7 @@ const SKIP = Symbol("skip-write");
 const ownershipOf = (question, entry, sourceId) => ({ sourceId, examCode: question?.examCode ?? entry?.examCode, ownerId: question?.ownerId || entry?.ownerId });
 
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const getBank = deps.getBankContainer || getBankContainer;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const ls = deps.listJson || listJson;
@@ -245,7 +245,7 @@ async function handler(request, deps = {}, obs = null) {
   const now = deps.now || (() => new Date().toISOString());
   let phase = "read";
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
     const bank = getBank();
     const actor = String(auth.user?.sub || auth.user?.userCode || "teacher");

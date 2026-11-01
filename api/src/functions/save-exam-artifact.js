@@ -6,9 +6,7 @@ const {
   BlobServiceClient
 } = require("@azure/storage-blob");
 
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { normalizeBankAssetsInQuestion } = require("../lib/bank-asset-hydrate");
 // Phase 14A — the ONE canonical exam content form (shared with the immutable governance revisions).
 const { canonicalizeExamContent } = require("../lib/exam-canonical");
@@ -125,9 +123,7 @@ function buildTemplateDocument(
 async function handler(request, deps = {}) {
         try {
           const auth =
-            (deps.requireBuilderAuth || requireBuilderAuth)(
-              request
-            );
+            (await requireTeacherSession(request, deps));
 
           if (
             !auth.ok

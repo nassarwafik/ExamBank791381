@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 
 async function loadOpenAI() {
   const module = await import("openai");
@@ -29,11 +29,11 @@ function buildImagePrompt(question) {
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request, deps = {}) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const load = deps.loadOpenAI || loadOpenAI;
   const env = deps.env || process.env;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
 
     let body = {};

@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability, pseudonym } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireStudentAuth } = require("../lib/student-auth");
 
 // D3 (item 3) — client error reporting. Before D3 a crash in a student's or teacher's browser (a render error, an unhandled
@@ -63,7 +63,7 @@ function admit(userref, nowMs) {
 }
 
 async function handler(request, _azureContext, obs, deps = {}) {
-  const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const builder = (await requireTeacherSession(request, deps));
   const student = builder.ok ? null : (deps.requireStudentAuth || requireStudentAuth)(request);
   const session = builder.ok ? builder : student;
   if (!session || !session.ok) return { status: 401, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "Unauthorized" } };

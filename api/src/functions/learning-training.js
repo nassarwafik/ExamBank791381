@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -35,7 +35,7 @@ const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذا الت�
 
 /** Teacher (builder token) or active student (persisted document); 401 otherwise. */
 async function resolveActor(request, deps) {
-  const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  const builder = (await requireTeacherSession(request, deps));
   if (builder.ok) return { kind: "teacher", user: builder.user, container: deps.container || (deps.getContainer || getContainer)() };
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (!sess.ok) return { kind: "denied", response: sess.response };

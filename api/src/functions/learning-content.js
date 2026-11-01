@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -29,7 +29,7 @@ async function handler(request, deps = {}, obs = null) {
     const moduleId = String(request.params?.moduleId || "").trim();
 
     // Who is asking: a teacher, else an active student session, else refused.
-    const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const builder = (await requireTeacherSession(request, deps));
     let classDocs = 0;
     if (!builder.ok) {
       const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);

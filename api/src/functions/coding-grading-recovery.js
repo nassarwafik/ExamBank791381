@@ -13,7 +13,7 @@
 // source or hidden test.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: only the teacher of the assignment's class may re-grade its attempts.
 const { tenantOf, classAccessible } = require("../lib/teacher-tenancy");
@@ -72,7 +72,7 @@ async function sweepHandler(request, deps = {}, obs = null) {
 
 async function bulkRetryHandler(request, deps = {}, obs = null) {
   try {
-    const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
     const text = await readText(request, BULK_MAX_CHARS);
     let b = null;

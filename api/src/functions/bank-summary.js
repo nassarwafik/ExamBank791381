@@ -2,9 +2,7 @@ const { app } = require("@azure/functions");
 const {
   BlobServiceClient
 } = require("@azure/storage-blob");
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 
@@ -120,7 +118,7 @@ app.http("bankSummary", {
       // ----------------------------------------------------
 
       const auth =
-        requireBuilderAuth(request);
+        await requireTeacherSession(request);
 
       if (!auth.ok) {
         return auth.response;

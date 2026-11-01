@@ -4,9 +4,9 @@ const {
 } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const {
-  requireBuilderAuth,
   createSignedAssetParams
 } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 const {
@@ -514,7 +514,7 @@ app.http("generateExam", {
 
   handler: async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
 
       if (!auth.ok) {
         return auth.response;

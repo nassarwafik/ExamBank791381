@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 const { withObservability } = require("../lib/observability");
 
@@ -146,10 +146,10 @@ function validateProposal(result, question) {
 }
 
 async function handler(request, deps = {}) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const ai = deps.callTextJson || callTextJson;
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
 
     let body = {};

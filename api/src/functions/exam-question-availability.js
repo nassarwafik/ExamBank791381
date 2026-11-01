@@ -1,7 +1,7 @@
 const { app } = require("@azure/functions");
 const fs = require("fs");
 const path = require("path");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { INDEX_BLOB, filterEligibleCandidates, presentationTypeFromIndex } = require("../lib/exam-question-selection");
 const { resolveSectionFromTopic } = require("../lib/section-resolver");
@@ -29,7 +29,7 @@ app.http("examQuestionAvailability", {
   route: "exam-question-availability",
   handler: async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
       if (!auth.ok) return auth.response;
 
       let body = {};

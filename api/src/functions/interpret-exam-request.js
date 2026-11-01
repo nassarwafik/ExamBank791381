@@ -2,9 +2,7 @@ const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const fs = require("fs");
 const path = require("path");
-const {
-  requireBuilderAuth
-} = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 
 function loadConfig(fileName) {
   const candidates = [
@@ -502,7 +500,7 @@ app.http("interpretExamRequest", {
 
   handler: withAiRateLimit("interpret-exam-request", "ai-general", async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireTeacherSession(request);
 
       if (!auth.ok) {
         return auth.response;

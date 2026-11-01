@@ -3,7 +3,7 @@
 // every registered project and any future one. Never leaks answer keys, passwords, codes or tokens.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 // Phase R-3 — every listing a report reads (users, classes, assignments, submissions) goes through the shared ETag-verified
 // document cache: the listing is still made on every request (so nothing can be stale) and a document is downloaded again only
@@ -82,7 +82,7 @@ async function projectContext(container, projectCode, classroom, reads = request
 // implementations are used). It does not change runtime behavior.
 async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+      const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
       const container = deps.container || (deps.getContainer || getContainer)();
       const reads = requestReads(container);

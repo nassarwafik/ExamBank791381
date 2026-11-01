@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { getContainer, downloadJsonOrNull, uploadJson, listJson, deleteBlob } = require("../lib/platform-storage");
 const { teacherPrefix, challengeDocName, summaryOf, validateChallengeInput, storedDoc, challengeFromDoc } = require("../lib/live-challenge-store");
 
@@ -18,7 +18,7 @@ async function readBody(request) { try { return await request.json(); } catch { 
 
 async function handler(request, deps = {}, obs = null) {
   try {
-    const sess = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+    const sess = (await requireTeacherSession(request, deps));
     if (!sess.ok) return sess.response;
     const teacherId = String(sess.user && sess.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };

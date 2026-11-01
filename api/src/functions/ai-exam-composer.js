@@ -1,5 +1,5 @@
 const { app } = require("@azure/functions");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 const { withObservability } = require("../lib/observability");
 const { getContainer } = require("../lib/platform-storage");
@@ -46,12 +46,12 @@ function parseScope(raw, exam) {
 }
 
 async function handler(request, deps = {}) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const authFn = requireTeacherSession;
   const ai = deps.callTextJson || callTextJson;
   const log = deps.log || (() => {});
   const now = deps.now || (() => new Date().toISOString());
   try {
-    const auth = authFn(request);
+    const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
 
     let body = null;

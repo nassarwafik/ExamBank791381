@@ -7,7 +7,7 @@
 // teacher-managed student photo — no weaker path; the profile document keeps metadata only (blobKey stays internal).
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireStudentAuth } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -18,8 +18,8 @@ const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhoto
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const STUDENT_DENIED = { status: 403, jsonBody: { ok: false, error: "هذه الخدمة للمعلم فقط." } };
 
-function resolveTeacher(request, deps) {
-  const builder = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+async function resolveTeacher(request, deps) {
+  const builder = (await requireTeacherSession(request, deps));
   if (builder.ok && teacherKey(builder.user && builder.user.sub)) return { kind: "teacher", sub: String(builder.user.sub) };
   const student = (deps.requireStudentAuth || requireStudentAuth)(request);
   if (student.ok) return { kind: "student" };
@@ -44,7 +44,7 @@ async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const rec = deps.recordAuditEvent || recordAuditEvent;
   try {
-    const actor = resolveTeacher(request, deps);
+    const actor = await resolveTeacher(request, deps);
     if (actor.kind === "student") return STUDENT_DENIED;
     if (actor.kind !== "teacher") return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const container = deps.container || (deps.getContainer || getContainer)();
