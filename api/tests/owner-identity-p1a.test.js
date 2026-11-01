@@ -321,6 +321,37 @@ describe("P1-A bootstrap flow", () => {
     expect(ctx.mem.names(store.OWNER_PREFIX)).toHaveLength(1);
   });
 
+  it("confirm with a wrong bootstrap token is refused even after a valid begin", async () => {
+    const begin = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), ctx.deps);
+    const code = totp.totpAt(totp.base32Decode(begin.jsonBody.totp.secret), ctx.clock.now);
+    const r = await bootstrapHandler(request({ action: "confirm", body: { token: createBootstrapMaterial({ now: T0 }).token, code } }), ctx.deps);
+    expect(r.status).toBe(401);
+    expect(ctx.mem.has(store.BOOTSTRAP_MARKER)).toBe(false);
+    expect(ctx.mem.names(store.OWNER_PREFIX)).toEqual([]);
+  });
+
+  it("two confirms racing in lockstep (no throttle serialization) still create ONE owner and show the codes once", async () => {
+    const lockstep = { ...ctx.deps, reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {} };
+    const begin = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), lockstep);
+    const code = totp.totpAt(totp.base32Decode(begin.jsonBody.totp.secret), ctx.clock.now);
+    const fresh = await Promise.all([0, 1].map(() => bootstrapHandler(request({ action: "confirm", body: { token: ctx.material.token, code } }), lockstep)));
+    expect(fresh.map(r => r.status).sort()).toEqual([201, 410]);
+    expect(ctx.mem.names(store.OWNER_PREFIX)).toHaveLength(1);
+  });
+
+  it("two lockstep confirms resuming after the marker: the account is created once, never overwritten", async () => {
+    const lockstep = { ...ctx.deps, reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {} };
+    const begin = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), lockstep);
+    const pending = ctx.mem.getJson(store.BOOTSTRAP_PENDING);
+    ctx.mem.setJson(store.BOOTSTRAP_MARKER, { schemaVersion: 1, accountId: pending.accountId, completedAtMs: T0 });
+    const code = totp.totpAt(totp.base32Decode(begin.jsonBody.totp.secret), ctx.clock.now);
+    const results = await Promise.all([0, 1].map(() => bootstrapHandler(request({ action: "confirm", body: { token: ctx.material.token, code } }), lockstep)));
+    expect(results.map(r => r.status).sort()).toEqual([201, 410]);
+    const winner = results.find(r => r.status === 201);
+    const stored = ctx.mem.getJson(store.ownerAccountName(pending.accountId));
+    expect(rc.findUnusedRecoveryCode(stored.mfa.recoveryCodes, winner.jsonBody.recoveryCodes[0])).toBe(0);
+  });
+
   it("a confirm interrupted after the marker resumes for the same pending owner only", async () => {
     const begin = await bootstrapHandler(request({ action: "begin", body: { token: ctx.material.token, username: USERNAME, displayName: "x", password: PASSWORD } }), ctx.deps);
     const pending = ctx.mem.getJson(store.BOOTSTRAP_PENDING);
@@ -455,6 +486,16 @@ describe("P1-A owner login and session", () => {
     const broken = { getBlobClient: () => ({ download: async () => { const e = new Error("boom"); e.statusCode = 500; throw e; } }) };
     const r = await sessionHandler(request({ method: "GET", headers: ownerHeaders(jsonBody.token) }), { ...ctx.deps, getContainer: () => broken });
     expect(r.status).toBe(503);
+  });
+
+  it("a session document of ANOTHER account never authenticates this account's token", async () => {
+    const { jsonBody } = await login(ctx, secret);
+    const accountId = jsonBody.owner.accountId;
+    const sid = "e".repeat(32);
+    ctx.mem.setJson(store.ownerSessionName(sid), { schemaVersion: 1, sid, accountId: "own_ffffffffffffffff", authVersion: 1, createdAtMs: ctx.clock.now, expiresAtMs: ctx.clock.now + 3600e3, stepUpAtMs: ctx.clock.now });
+    const token = sess.createOwnerToken({ accountId, sid, authVersion: 1 }, { nowMs: ctx.clock.now, env: ctx.env }).token;
+    const r = await sessionHandler(request({ method: "GET", headers: ownerHeaders(token) }), ctx.deps);
+    expect(r.status).toBe(401);
   });
 
   it("the session document's own expiry is enforced", async () => {
