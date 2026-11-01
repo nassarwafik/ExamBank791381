@@ -29,7 +29,11 @@ const {
 // accepted, and a missing import turns every successful teacher login into a 500 (hotfix regression test:
 // api/tests/platform-login-teacher.test.js).
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
+const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");   // Tadris+ P2-A2: managed teachers
 const { normalizeIdentityNumber } = require("../lib/roster-input");
+const { findTeacherByUsername, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
+const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
+const { verifySecret } = require("../lib/identity/password-hash");
 // QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
 // login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
 // leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
@@ -88,6 +92,21 @@ async function handler(request, deps = {}, obs = null) {
     if (!gate.allowed) {
       obs?.logWarn("auth.login.throttled", { reason: "rate_limited", retryable: true });
       return { status: 429, headers: { ...NO_STORE, "Retry-After": String(gate.retryAfterSeconds || 5) }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
+    }
+
+    // Tadris+ P2-A2 — a MANAGED teacher account (created by the owner): username + the password the teacher set through the
+    // invitation link (scrypt). Only an "active" account with a credential signs in; the session is a v3 token checked against
+    // the stored account on every request (lib/teacher-session.js). A wrong password continues to the other checks below, so
+    // the answer is the same single generic error as before.
+    const managed = await (deps.findTeacherByUsername || findTeacherByUsername)(container, userCode, { downloadJsonOrNull: dl });
+    if (managed && managed.status === "active" && managed.credential && await verifySecret(password, managed.credential)) {
+      await throttleClear(container, throttleKey, clientId, deps);
+      const nowMs = deps.now ? deps.now() : Date.now();
+      const { token } = createManagedTeacherToken({ accountId: managed.accountId, sid: newTeacherSessionId(), authVersion: managed.authVersion }, { nowMs });
+      try { await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...a, lastLoginAt: new Date(nowMs).toISOString() })); } catch { /* the stamp is informational */ }
+      obs?.logInfo("auth.login.succeeded", { role: "teacher", kind: "managed" });
+      const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS } };
     }
 
     // Teacher credentials.

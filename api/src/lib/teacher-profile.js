@@ -68,4 +68,19 @@ async function resolveTeacherDisplayName(containerOrGetter, sub, deps = {}) {
   }
 }
 
-module.exports = { PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
+/** Tadris+ P2-A2 — a MANAGED teacher's name: their own profile name if they set one, else the name the owner gave the account.
+ *  Never the deployment-wide TEACHER_DISPLAY_NAME / BUILDER_USERS fallbacks (those describe other identities). */
+async function resolveManagedTeacherDisplayName(containerOrGetter, sub, accountDisplayName, deps = {}) {
+  const fallback = String(accountDisplayName || "").trim() || DEFAULT_DISPLAY_NAME;
+  try {
+    const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+    if (!teacherKey(sub)) return fallback;
+    const container = typeof containerOrGetter === "function" ? containerOrGetter() : containerOrGetter;
+    const profile = publicTeacherProfile(sub, await dl(container, profileDocName(sub)));
+    return profile.hasCustomName ? profile.displayName : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+module.exports = { resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };

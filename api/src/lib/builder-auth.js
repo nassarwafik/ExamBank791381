@@ -292,5 +292,9 @@ module.exports = {
   validateBuilderCredentials,
   builderAuthConfigurationStatus,
   currentAuthMode,
-  getBuilderSessionVersion
+  getBuilderSessionVersion,
+  // Tadris+ P2-A2 — shared with the managed-teacher token (identity/teacher-token.js): same root secret and header
+  // conventions, a DIFFERENT signing context, so a v3 token never verifies here and a v2 token never verifies there.
+  getSigningSecret,
+  getBearerToken
 };

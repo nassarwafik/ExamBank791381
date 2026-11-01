@@ -557,7 +557,7 @@ describe("P1-A owner login and session", () => {
 describe("P1-A boundaries", () => {
   const FN = path.join(import.meta.dirname, "../src/functions");
   it("no teacher or student route touches the owner's storage prefixes", () => {
-    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js"];
+    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js"];   // P2-A2: the owner's teacher management
     for (const f of readdirSync(FN).filter(n => n.endsWith(".js") && !owners.includes(n))) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/platform\/(accounts|sessions\/owners|owner\/|owner-audit)/);
@@ -565,9 +565,9 @@ describe("P1-A boundaries", () => {
     }
   });
   it("the owner routes never accept a teacher session and never call the teacher login", () => {
-    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js"]) {
+    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js"]) {
       const src = readFileSync(path.join(FN, f), "utf8");
-      expect(src, f).not.toMatch(/requireBuilderAuth|validateBuilderCredentials|requireStudentAuth/);
+      expect(src, f).not.toMatch(/requireBuilderAuth|validateBuilderCredentials|requireStudentAuth|requireTeacherSession/);
     }
   });
   it("the teacher audit reader still lists only the teacher prefix", () => {
