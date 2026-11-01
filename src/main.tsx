@@ -11,6 +11,14 @@ import { registerServiceWorker } from './pwa/registerServiceWorker'
 import { installPullToRefreshGuard } from './pwa/pullToRefreshGuard'
 import { initThemePreference } from './ui/themePreference'
 import { installClientErrorReporting } from './observability/clientErrorReporter'
+import { isOwnerLocation } from './owner/ownerRoute'
+import OwnerEntry from './owner/OwnerEntry'
+
+// Tadris+ P1-A2 — the platform owner's area (#/owner) is its own surface and its own LAZY chunk: the teacher / student app is not
+// mounted there, and teachers / students never download the owner screens (bundle guard). Crossing the boundary reloads, so the
+// two surfaces never share state in one page.
+const ownerSurface = isOwnerLocation()
+window.addEventListener('hashchange', () => { if (isOwnerLocation() !== ownerSurface) window.location.reload() })
 
 // Phase 6A — optional installation: capture the browser's install prompt early, register the (non-caching)
 // service worker in production builds. Neither affects sign-in or the app when unsupported.
@@ -27,7 +35,7 @@ installClientErrorReporting()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      {ownerSurface ? <OwnerEntry /> : <App />}
     </ErrorBoundary>
   </StrictMode>,
 )
