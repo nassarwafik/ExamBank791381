@@ -118,7 +118,8 @@ describe("the transport", () => {
     expect(calls[1].url).toBe("/api/learning-exam-item/791381s/adv1/check");
     expect(calls[1].init?.method).toBe("POST");
     expect(JSON.parse(String(calls[1].init?.body))).toEqual({ answers: { q1: { kind: "choice", index: 0 } } });
-    expect((calls[0].init?.headers as Record<string, string>)["x-student-token"]).toBe("tok");
+    const sentHeaders = (calls[0].init && calls[0].init.headers) as Record<string, string>;
+    expect(sentHeaders["x-student-token"]).toBe("tok");
     vi.unstubAllGlobals();
   });
 });
