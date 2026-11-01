@@ -71,3 +71,28 @@
   .eb-owner-body { padding: var(--eb-space-4) var(--eb-space-3); }
   .eb-owner-card, .eb-owner-panel { padding: var(--eb-space-4); }
 }
+
+/* Tadris+ P2-A2b — «المعلمون». Tokens only. */
+.eb-owner-panel-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-3); flex-wrap: wrap; }
+.eb-owner-teachers { gap: var(--eb-space-4); }
+.eb-owner-create { width: 100%; }
+.eb-owner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--eb-space-3) var(--eb-space-4); }
+@media (max-width: 600px) { .eb-owner-grid { grid-template-columns: 1fr; } }
+.eb-owner-textarea {
+  width: 100%; box-sizing: border-box; font: inherit; color: var(--eb-text); background: var(--eb-surface);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); padding: var(--eb-space-2) var(--eb-space-3); resize: vertical;
+}
+.eb-owner-textarea:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-owner-teacher-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-owner-teacher { border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); padding: var(--eb-space-3) var(--eb-space-4); display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-teacher-main { display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; color: var(--eb-text-heading); }
+.eb-owner-teacher-user { font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-owner-status { padding: 2px 10px; border-radius: var(--eb-pill); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); }
+.eb-owner-status--active { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-owner-status--invited { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+.eb-owner-status--suspended { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-owner-confirm { width: 100%; padding: var(--eb-space-3); border: 1px solid var(--eb-danger); background: var(--eb-danger-bg); border-radius: var(--eb-r); color: var(--eb-danger-tx); display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-confirm p { margin: 0; font-weight: var(--eb-fw-semibold); }
+.eb-owner-invite { align-items: stretch; }
+.eb-owner-link-text { display: block; padding: var(--eb-space-2) var(--eb-space-3); background: var(--eb-surface); color: var(--eb-ink); border-radius: var(--eb-r); font-family: var(--eb-font-mono); font-size: var(--eb-fs-13); overflow-wrap: anywhere; user-select: all; }
+.eb-invite-go { display: block; text-align: center; text-decoration: none; }

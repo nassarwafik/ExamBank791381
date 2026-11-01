@@ -13,12 +13,16 @@ import { initThemePreference } from './ui/themePreference'
 import { installClientErrorReporting } from './observability/clientErrorReporter'
 import { isOwnerLocation } from './owner/ownerRoute'
 import OwnerEntry from './owner/OwnerEntry'
+import { isInviteLocation } from './invite/inviteRoute'
+import InviteEntry from './invite/InviteEntry'
 
 // Tadris+ P1-A2 — the platform owner's area (#/owner) is its own surface and its own LAZY chunk: the teacher / student app is not
 // mounted there, and teachers / students never download the owner screens (bundle guard). Crossing the boundary reloads, so the
 // two surfaces never share state in one page.
-const ownerSurface = isOwnerLocation()
-window.addEventListener('hashchange', () => { if (isOwnerLocation() !== ownerSurface) window.location.reload() })
+// Tadris+ P2-A2b — the teacher invitation / reset page (#/invite/<token>) is a third surface with its own lazy chunk.
+const surfaceOf = () => (isOwnerLocation() ? 'owner' : isInviteLocation() ? 'invite' : 'app')
+const surface = surfaceOf()
+window.addEventListener('hashchange', () => { if (surfaceOf() !== surface) window.location.reload() })
 
 // Phase 6A — optional installation: capture the browser's install prompt early, register the (non-caching)
 // service worker in production builds. Neither affects sign-in or the app when unsupported.
@@ -35,7 +39,7 @@ installClientErrorReporting()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      {ownerSurface ? <OwnerEntry /> : <App />}
+      {surface === 'owner' ? <OwnerEntry /> : surface === 'invite' ? <InviteEntry /> : <App />}
     </ErrorBoundary>
   </StrictMode>,
 )

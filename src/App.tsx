@@ -97,6 +97,7 @@ import { TEACHER_SESSION_EXPIRED_EVENT } from "./teacherFetch";
 import { NETWORK_ERROR_TEXT, UNEXPECTED_RESPONSE_TEXT, userFacingMessage } from "./userFacingErrors";
 import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
+import { endTeacherServerSession } from "./teacher/teacherServerLogout";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
@@ -5874,7 +5875,7 @@ function App() {
       displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
       identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
       onNavigate={navigateTeacher}
-      onLogout={() => leavePlatformThen(handleLogout)}
+      onLogout={() => leavePlatformThen(() => { endTeacherServerSession(token); handleLogout(); })}
     >
       {confirmDialog}
       {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>

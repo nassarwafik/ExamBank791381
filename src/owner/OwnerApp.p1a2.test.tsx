@@ -24,7 +24,8 @@ function json(status: number, body: unknown) {
 
 beforeEach(() => {
   calls = [];
-  routes = {};
+  // P2-A2b: the home page also loads «المعلمون»; an empty list keeps these scenarios about the session itself.
+  routes = { "GET /api/owner-teachers": () => ({ status: 200, body: { ok: true, teachers: [] } }) };
   sessionStorage.clear();
   window.location.hash = "#/owner";
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -53,7 +54,7 @@ describe("P1-A2 owner route", () => {
   it("main.tsx mounts the owner entry INSTEAD of the teacher / student app; the owner app itself is only imported lazily", () => {
     const main = readFileSync(path.join(import.meta.dirname, "..", "main.tsx"), "utf8");
     const entry = readFileSync(path.join(import.meta.dirname, "OwnerEntry.tsx"), "utf8");
-    expect(main).toMatch(/ownerSurface \? <OwnerEntry \/> : <App \/>/);
+    expect(main).toMatch(/surface === 'owner' \? <OwnerEntry \/> : surface === 'invite' \? <InviteEntry \/> : <App \/>/);   // P2-A2b: + the invite surface
     expect(main).not.toMatch(/OwnerApp/);
     expect(entry).toMatch(/lazy\(lazyWithRetry\(\(\) => import\("\.\/OwnerApp"\)/);
     expect(entry).not.toMatch(/^import .*OwnerApp/m);

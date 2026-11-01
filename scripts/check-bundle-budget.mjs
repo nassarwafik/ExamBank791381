@@ -69,6 +69,9 @@ const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-li
 // Tadris+ P1-A2 — the platform owner's screens (setup / sign-in / home) and the QR encoder: class names and the encoder's error text
 // used nowhere else. ANY one in an initial file fails; every one must exist in some chunk (no stale list).
 const OWNER_SIGNATURES = ["eb-owner-recovery-list", "eb-owner-stepup", "eb-owner-qr-ink", "Text is too long for a QR code."];
+// Tadris+ P2-A2b — the teacher invitation / reset page: its endpoint path and copy, used nowhere else. ANY one in an initial file
+// fails; every one must exist in some chunk.
+const INVITE_SIGNATURES = ["/api/teacher-invitation/", "رابط الدعوة غير مكتمل"];
 // Phase 17A — CodingEditor / coding renderer / authoring editor class names (used nowhere else). ANY one in an initial file fails.
 // Phase 18B — the enterprise coding workspace (toolbar / focus mode) carries its own signature: the workspace UI ships with the
 // coding chunks only.
@@ -354,6 +357,10 @@ function main() {
   if (!ownerChunks.length) failures.push("no OwnerApp-*.js lazy chunk was emitted (is the owner area imported statically in main.tsx?)");
   for (const f of ownerChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
   for (const sig of OWNER_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the owner signature "${sig}" was not found in any chunk — the signature list is stale`);
+  const inviteChunks = all.filter(f => /^InviteApp-[^.]+\.js$/.test(f));
+  if (!inviteChunks.length) failures.push("no InviteApp-*.js lazy chunk was emitted (is the invitation page imported statically in main.tsx?)");
+  for (const f of inviteChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
+  for (const sig of INVITE_SIGNATURES) if (!all.some(f => read(f).includes(sig))) failures.push(`the invite signature "${sig}" was not found in any chunk — the signature list is stale`);
   const portalChunks = all.filter(f => /^StudentPortal-[^.]+\.js$/.test(f));
   if (!portalChunks.length) failures.push("no StudentPortal-*.js lazy chunk was emitted (is StudentPortal imported statically again in App.tsx?)");
   for (const f of portalChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
@@ -375,6 +382,8 @@ function main() {
     if (portal.length >= 2) failures.push(`${f} (initial) contains the Student Portal payload (${portal.join(", ")})`);
     const owner = OWNER_SIGNATURES.filter(s => src.includes(s));
     if (owner.length) failures.push(`${f} (initial) contains the platform-owner screens (${owner.join(", ")}) — they must stay lazy`);
+    const invite = INVITE_SIGNATURES.filter(s => src.includes(s));
+    if (invite.length) failures.push(`${f} (initial) contains the teacher invitation page (${invite.join(", ")}) — it must stay lazy`);
     const coding = CODING_SIGNATURES.filter(s => src.includes(s));
     if (coding.length) failures.push(`${f} (initial) contains the coding editor payload (${coding.join(", ")}) — it must stay lazy`);
     const netcli = NETCLI_SIGNATURES.filter(s => src.includes(s));
