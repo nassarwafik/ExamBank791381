@@ -40,7 +40,8 @@ function req({ method = "POST", action = "", body = {}, headers = {} } = {}) {
 
 function setup() {
   const mem = createMemoryContainer();
-  const clock = { now: Date.parse("2026-11-01T10:00:00Z") };
+  // Real time: some layers (the AI limiter) read the clock themselves, so a fixed date would let 8-hour tokens expire mid-suite.
+  const clock = { now: Date.now() };
   const deps = { getContainer: () => mem.container, now: () => clock.now, hashParams: FAST, reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "10.0.0.1" };
   mem.setJson(BOOTSTRAP_MARKER, { schemaVersion: 1, accountId: OWNER_ID, completedAtMs: clock.now });
   mem.setJson(ownerAccountName(OWNER_ID), { schemaVersion: 1, accountId: OWNER_ID, role: "owner", username: "tadris.owner", displayName: "مالك", status: "active", authVersion: 1, mfa: {}, credential: {} });
@@ -148,6 +149,7 @@ describe("P2-A2a invitation links", () => {
     expect((await invitation(req({ action: "inspect", body: { token: second } }), ctx.deps)).status).toBe(404);
     await ownerTeachers(req({ action: "reactivate", headers: ctx.owner, body: { accountId: out.teacher.accountId } }), ctx.deps);
     ctx.clock.now += 73 * 3600e3;
+    expect((await invitation(req({ action: "inspect", body: { token: second } }), ctx.deps)).status).toBe(404);
     expect((await invitation(req({ action: "accept", body: { token: second, password: PASSWORD } }), ctx.deps)).status).toBe(404);
     for (const token of ["", "x", "a".repeat(43)]) expect((await invitation(req({ action: "inspect", body: { token } }), ctx.deps)).status).toBe(404);
   });
@@ -176,6 +178,16 @@ describe("P2-A2a managed sign-in and the per-request account check", () => {
     const s = await requireTeacherSession(req({ headers: teacherHeaders(r.jsonBody.token) }), ctx.deps);
     expect(s.ok).toBe(true);
     expect(s.user.sub).toBe(id);
+  });
+
+  it("a forged v3 token (another subject, original signature) is refused", async () => {
+    await activate(ctx, "t.sara");
+    const omarId = await activate(ctx, "t.omar");
+    const { token } = (await signIn(ctx, "t.sara")).jsonBody;
+    const [enc, sig] = token.split(".");
+    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(enc, "base64url").toString()), sub: omarId })).toString("base64url") + "." + sig;
+    expect(verifyManagedTeacherToken(forged, { nowMs: ctx.clock.now })).toBeNull();
+    expect((await requireTeacherSession(req({ headers: teacherHeaders(forged) }), ctx.deps)).ok).toBe(false);
   });
 
   it("an invited (no password) teacher cannot sign in, and a wrong password is the generic 401", async () => {

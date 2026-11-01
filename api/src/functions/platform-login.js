@@ -28,7 +28,8 @@ const {
 // platform-session. It MUST be required here: the teacher branch below calls it after valid credentials are
 // accepted, and a missing import turns every successful teacher login into a 500 (hotfix regression test:
 // api/tests/platform-login-teacher.test.js).
-const { resolveTeacherDisplayName, resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");
+const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
+const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");   // Tadris+ P2-A2: managed teachers
 const { normalizeIdentityNumber } = require("../lib/roster-input");
 const { findTeacherByUsername, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
