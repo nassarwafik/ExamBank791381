@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+// Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
+const { requireOperator } = require("../lib/identity/operator-gate");
 
 app.http("storageStatus", {
   methods: ["GET"],
@@ -9,7 +10,7 @@ app.http("storageStatus", {
 
   handler: async request => {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = await requireOperator(request);
       if (!auth.ok) return auth.response;
 
       const connectionString =

@@ -22,6 +22,9 @@ const { remainingRecoveryCodes } = require("../lib/identity/recovery-codes");
 // Storage failures answer 503 (fail closed).
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
+// Tadris+ P1-B — the owner's username-wide bucket is a bounded delay (≤ 2 minutes), not a lockout: the owner also needs TOTP,
+// so failing on purpose can no longer keep the owner out for 15 minutes. The per-address bucket keeps the full escalation.
+const OWNER_THROTTLE_POLICY = Object.freeze({ globalFreeAttempts: 10, globalMaxCooldownSeconds: 120 });
 const denied = () => reply(401, { ok: false, code: "OWNER_LOGIN_DENIED", error: "بيانات الدخول غير صحيحة." });
 
 // Same-cost decoy for unknown usernames (computed once per parameter set, then cached).
@@ -56,7 +59,7 @@ async function handler(request, deps = {}, obs = null) {
   const clientId = (deps.clientIdFromRequest || clientIdFromRequest)(request);
   try {
     let gate;
-    try { gate = await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, throttleId, clientId, deps); }
+    try { gate = await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, throttleId, clientId, deps, OWNER_THROTTLE_POLICY); }
     catch { return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": "5" }); }
     if (!gate.allowed) {
       obs?.logWarn("owner.login.throttled", { retryable: true });
@@ -106,4 +109,4 @@ async function handler(request, deps = {}, obs = null) {
 }
 
 app.http("ownerLogin", { methods: ["POST"], authLevel: "anonymous", route: "owner-login", handler: withObservability("owner-login", handler) });
-module.exports = { handler };
+module.exports = { handler, OWNER_THROTTLE_POLICY };

@@ -6,7 +6,8 @@ const {
 
 const fs = require("fs");
 const path = require("path");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+// Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
+const { requireOperator } = require("../lib/identity/operator-gate");
 const { updateSourceQuestions, updateIndexEntries } = require("../lib/bank-index-writes");
 
 const BANK_CONTAINER = "bank";
@@ -752,7 +753,7 @@ app.http("classifyQuestionPreview", {
       // ----------------------------------------------------
 
       const auth =
-        requireBuilderAuth(request);
+        await requireOperator(request);
 
       if (!auth.ok) {
         return auth.response;

@@ -1,7 +1,8 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+// Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
+const { requireOperator } = require("../lib/identity/operator-gate");
 const { replaceSourceInIndex } = require("../lib/bank-index-writes");
 
 const RAW_CONTAINER = "raw";
@@ -827,7 +828,7 @@ app.http("buildBank2025", {
       // Authentication (teacher/builder session required)
       // --------------------------------------------------
 
-      const auth = requireBuilderAuth(request);
+      const auth = await requireOperator(request);
 
       if (!auth.ok) {
         return auth.response;

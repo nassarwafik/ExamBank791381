@@ -3,7 +3,8 @@ const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teache
 const { BlobServiceClient } = require("@azure/storage-blob");
 const fs = require("fs");
 const path = require("path");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+// Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
+const { requireOperator } = require("../lib/identity/operator-gate");
 
 const BANK_CONTAINER = "bank";
 const ASSETS_CONTAINER = "assets";
@@ -1769,9 +1770,7 @@ app.http(
           // =================================================
 
           const auth =
-            requireBuilderAuth(
-              request
-            );
+            await requireOperator(request);
 
           if (!auth.ok) {
             return auth.response;
