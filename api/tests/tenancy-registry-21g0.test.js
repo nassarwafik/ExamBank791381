@@ -66,6 +66,11 @@ describe("21G.0 tenancy registry", () => {
     const users = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireOperator/.test(source(f))).sort();
     expect(users).toEqual([...REGISTRY.operator].sort());
   });
+  it("P2-A1: the seam is the ONE teacher-session authority and delegates to requireBuilderAuth (honouring the deps injection)", () => {
+    const seam = readFileSync(join(__dirname, "..", "src", "lib", "teacher-session.js"), "utf8");
+    expect(seam).toMatch(/require\("\.\/builder-auth"\)/);
+    expect(seam).toMatch(/\(deps\.requireBuilderAuth \|\| requireBuilderAuth\)\(request\)/);
+  });
   it("P2-A1: every teacher endpoint awaits requireTeacherSession (operator tools: requireOperator); none calls requireBuilderAuth itself", () => {
     const code = file => source(file).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
     for (const file of classified()) {

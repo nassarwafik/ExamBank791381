@@ -51,7 +51,7 @@ describe("auth — teacher/builder only, never a student session", () => {
   });
   it("the handler authenticates with requireBuilderAuth and does not reference the student session guard", () => {
     const src = fs.readFileSync(path.join(process.cwd(), "api/src/functions/game-number-conversion-preview.js"), "utf8");
-    expect(src).toContain("requireBuilderAuth");
+    expect(src).toContain("await requireTeacherSession(request, deps)");   // P2-A1 seam → requireBuilderAuth
     expect(src).not.toMatch(/requireActiveStudentSession|student-auth/);
   });
   it("unsupported methods/actions → 405", async () => {

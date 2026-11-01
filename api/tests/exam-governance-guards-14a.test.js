@@ -62,7 +62,7 @@ describe("14A §52 — governance source guards", () => {
   });
   it("students never reach governance: the student endpoint has no governance import and the governance API requires the builder session", () => {
     expect(STUDENT).not.toMatch(/exam-governance/);
-    expect(FN).toMatch(/requireBuilderAuth/);
+    expect(FN).toMatch(/await requireTeacherSession\(request, deps\)/);   // P2-A1: the shared teacher-session authority (delegates to requireBuilderAuth)
     expect(FN).not.toMatch(/student-auth|requireStudentAuth|requireActiveStudentSession/);
   });
   it("audit events reference revision ids only — the audit descriptor / event factory has no exam field", () => {

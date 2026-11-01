@@ -76,7 +76,7 @@ describe("15A §62 — pure model guards", () => {
 
 describe("15A §62 — server guards", () => {
   it("ownership is ONLY the authenticated subject: the function uses requireBuilderAuth and never reads body.ownerId / owner / version / presetId-on-create", () => {
-    expect(FN).toMatch(/requireBuilderAuth/); expect(FN).toMatch(/const ownerId = String\(auth\.user\.sub\);/);
+    expect(FN).toMatch(/await requireTeacherSession\(request, deps\)/); expect(FN).toMatch(/const ownerId = String\(auth\.user\.sub\);/);   // P2-A1 seam → requireBuilderAuth
     expect(FN).not.toMatch(/body\.(ownerId|owner|version|createdAt|updatedAt|role|capabilities|sub)\b/);
     expect(FN).not.toMatch(/student-auth|requireStudentAuth|verifyBuilderToken|BUILDER_USERS/);
     expect(LIB).not.toMatch(/\b(body|request|req|query)\b/);
