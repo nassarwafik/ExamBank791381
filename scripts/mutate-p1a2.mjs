@@ -21,7 +21,7 @@ export const MUTANTS = [
   { id: "P1A2-M1", what: "the owner token shares the teacher's storage key", edits: [{ file: API, find: 'export const OWNER_TOKEN_KEY = "tadrisOwnerToken";', replace: 'export const OWNER_TOKEN_KEY = "examBankBuilderToken";' }] },
   { id: "P1A2-M2", what: "the owner token is also sent as a Bearer Authorization header", edits: [{ file: API, find: 'if (init.token) headers["x-owner-token"] = init.token;', replace: 'if (init.token) { headers["x-owner-token"] = init.token; headers["Authorization"] = "Bearer " + init.token; }' }] },
   { id: "P1A2-M3", what: "a 401 on the stored session keeps the token", edits: [{ file: APP, find: "if (s.status === 401) clearOwnerToken();", replace: "if (s.status === 401) { /* kept */ }" }] },
-  { id: "P1A2-M4", what: "a server outage on load shows the sign-in instead of an error", edits: [{ file: APP, find: "else { setBoot({ kind: \"error\", message: s.error }); return; }", replace: "" }] },
+  { id: "P1A2-M4", what: "a server outage on load shows the sign-in instead of an error", edits: [{ file: APP, find: "    else return { kind: \"error\", message: s.error };\n", replace: "" }] },
   { id: "P1A2-M5", what: "the setup screen is offered while the bootstrap is closed", edits: [{ file: APP, find: 'route === "setup" && boot.bootstrap === "open"', replace: 'route === "setup"' }] },
   { id: "P1A2-M6", what: "continuing past the recovery codes no longer requires «حفظت الرموز»", edits: [{ file: SETUP, find: "disabled={!saved} onClick={onDone}", replace: "disabled={false} onClick={onDone}" }] },
   { id: "P1A2-M7", what: "the password confirmation is not compared", edits: [{ file: SETUP, find: 'if (password !== confirm) { setError("تأكيد كلمة المرور لا يطابقها."); return; }', replace: "" }] },
