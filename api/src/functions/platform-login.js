@@ -3,7 +3,8 @@ const { withObservability, storageObserver } = require("../lib/observability");
 const {
   TOKEN_TTL_SECONDS,
   createBuilderToken,
-  validateBuilderCredentials
+  validateBuilderCredentials,
+  builderAuthConfigurationStatus
 } = require("../lib/builder-auth");
 const {
   STUDENT_TOKEN_TTL_SECONDS,
@@ -124,6 +125,16 @@ async function handler(request, deps = {}, obs = null) {
     );
 
     if (!credentialsOk) {
+      // Tadris+ P1-B — a malformed BUILDER_USERS refuses every teacher (Phase 14B, fail closed). Before P1-B this route then
+      // answered the generic 401, so a teacher with the right password saw «wrong password» while the real cause was the server
+      // configuration. Now, when the student path also fails, the answer names the configuration problem (503, as
+      // /api/builder-login already does) — never a value, an account or a variable name. Students keep signing in normally.
+      let configBroken = false;
+      try { configBroken = Boolean((deps.builderAuthConfigurationStatus || builderAuthConfigurationStatus)().broken); } catch { configBroken = false; }
+      if (configBroken) {
+        obs?.logError("auth.login.config_invalid", new Error("BUILDER_USERS invalid"), { kind: "platform" });
+        return { status: 503, headers: NO_STORE, jsonBody: { ok: false, code: "AUTH_CONFIG_INVALID", error: "إعدادات حسابات المعلمين على الخادم غير صالحة. لا يمكن لدخول المعلمين أن يتم حتى يصحّحها المسؤول." } };
+      }
       // The attempt was already counted at reserve; just return the single generic error (no enumeration).
       obs?.logWarn("auth.login.failed", { reason: "invalid_credentials" });
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };

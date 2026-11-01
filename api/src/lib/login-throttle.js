@@ -37,15 +37,15 @@ function throttleName(identifier, clientId) {
 }
 
 // Escalating, capped cooldown by level (1 => 5s, 2 => 10s, 3 => 20s, ... capped at 15 min).
-function cooldownForLevel(level) {
+function cooldownForLevel(level, maxCooldownSeconds = MAX_COOLDOWN_SECONDS) {
   if (level <= 0) return 0;
-  return Math.min(MAX_COOLDOWN_SECONDS, Math.round(BASE_COOLDOWN_SECONDS * Math.pow(2, level - 1)));
+  return Math.min(maxCooldownSeconds, Math.round(BASE_COOLDOWN_SECONDS * Math.pow(2, level - 1)));
 }
 
 // PURE decision for one bucket given its current state. Returns { allowed, retryAfterSeconds, nextState }.
 // The caller decides whether to COMMIT nextState (this separation is what lets the composed reservation
 // avoid consuming one dimension's probe when the OTHER dimension is the one that rejects — §2).
-function evaluateBucket(current, nowMs, freeAttempts) {
+function evaluateBucket(current, nowMs, freeAttempts, maxCooldownSeconds = MAX_COOLDOWN_SECONDS) {
   const decayed = !current || !Number(current.lastAt) || nowMs - Number(current.lastAt) > DECAY_SECONDS * 1000;
   const state = decayed
     ? { attempts: 0, blockedUntil: 0, level: 0, lastAt: nowMs }
@@ -65,7 +65,7 @@ function evaluateBucket(current, nowMs, freeAttempts) {
   state.lastAt = nowMs;
   if (state.attempts > band) {
     state.level += 1;
-    const cd = cooldownForLevel(state.level);
+    const cd = cooldownForLevel(state.level, maxCooldownSeconds);
     state.blockedUntil = nowMs + cd * 1000;
     return { allowed: false, retryAfterSeconds: cd, nextState: state };
   }
@@ -120,7 +120,13 @@ async function withLoginLease(container, identifier, fn, deps = {}) {
 // is COMMITTED only when it is NOT "allowing but wasted" — i.e. a request rejected by EITHER dimension
 // never consumes the OTHER dimension's one-time post-cooldown probe. ALLOWED ⇒ both committed one attempt
 // for the SAME verification; REJECTED ⇒ the non-blocking dimension keeps its probe.
-async function reserveLoginAttempt(container, identifier, clientId, deps = {}) {
+// Tadris+ P1-B — `policy` (optional) softens ONLY the identifier-wide global bucket for an account whose sign-in also needs a
+// second factor (the platform owner: password + TOTP). There, anyone who knows the username could otherwise keep the owner
+// locked out for up to 15 minutes by failing on purpose from rotating addresses (lockout denial of service, blueprint §7.7);
+// with the second factor a password guess alone signs no one in, so the global bucket becomes a bounded DELAY
+// (globalMaxCooldownSeconds) instead of a lockout. The per-address bucket is unchanged. Without `policy` (teachers, students)
+// nothing changes.
+async function reserveLoginAttempt(container, identifier, clientId, deps = {}, policy = {}) {
   const lease = deps.withLoginLease || withLoginLease;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const up = deps.uploadJson || uploadJson;
@@ -129,7 +135,9 @@ async function reserveLoginAttempt(container, identifier, clientId, deps = {}) {
   const globalName = throttleName(identifier, "__global__");
   return lease(container, identifier, async () => {
     const p = evaluateBucket(await dl(container, perIpName), nowMs, PER_IP_FREE_ATTEMPTS);
-    const g = evaluateBucket(await dl(container, globalName), nowMs, GLOBAL_FREE_ATTEMPTS);
+    const globalFree = Number.isInteger(policy.globalFreeAttempts) && policy.globalFreeAttempts > 0 ? policy.globalFreeAttempts : GLOBAL_FREE_ATTEMPTS;
+    const globalMax = Number.isInteger(policy.globalMaxCooldownSeconds) && policy.globalMaxCooldownSeconds > 0 ? Math.min(policy.globalMaxCooldownSeconds, MAX_COOLDOWN_SECONDS) : MAX_COOLDOWN_SECONDS;
+    const g = evaluateBucket(await dl(container, globalName), nowMs, globalFree, globalMax);
     const bothAllow = p.allowed && g.allowed;
     // Commit a dimension unless it would allow while the OTHER blocks (that would waste its probe).
     if (bothAllow || !p.allowed) await up(container, perIpName, p.nextState);

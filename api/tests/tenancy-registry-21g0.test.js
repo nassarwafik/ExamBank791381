@@ -5,7 +5,8 @@
 //   classScoped   data bound to a class (students, assignments, submissions, messages, projects, reports …): the class decides
 //   teacherOwned  content the teacher authors (saved exams, templates, presets, simulators, assets, bank questions, imports …)
 //   sharedByDesign platform content every teacher reads (the official library, the governance workflow, course content)
-//   operator      platform-wide maintenance tools that rewrite shared state; they need an admin role (recorded in the phase doc)
+//   operator      platform-wide maintenance tools that rewrite shared state. Tadris+ P1-B: they call requireOperator (owner-only
+//                 once an owner exists, owner decision D9) and never requireBuilderAuth directly
 //   noData        stateless helpers (AI drafting, parsing, previews): nothing stored is read or returned
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -46,7 +47,7 @@ const source = file => readFileSync(join(FUNCTIONS, file), "utf8");
 
 describe("21G.0 tenancy registry", () => {
   it("every teacher-authenticated endpoint is classified exactly once", () => {
-    const teacherEndpoints = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireBuilderAuth/.test(source(f))).sort();
+    const teacherEndpoints = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireBuilderAuth|requireOperator/.test(source(f))).sort();
     const all = classified();
     expect(all.length).toBe(new Set(all).size);
     expect([...all].sort()).toEqual(teacherEndpoints);
@@ -55,6 +56,15 @@ describe("21G.0 tenancy registry", () => {
     for (const [file, evidence] of [...Object.entries(REGISTRY.classScoped), ...Object.entries(REGISTRY.teacherOwned)]) {
       expect({ file, guarded: evidence.test(source(file)) }).toEqual({ file, guarded: true });
     }
+  });
+  it("P1-B: every operator tool is gated by requireOperator, never by requireBuilderAuth directly; no other endpoint uses the gate", () => {
+    for (const file of REGISTRY.operator) {
+      const src = source(file);
+      expect({ file, gated: /await (requireOperator|authFn)\(request/.test(src) && /require\("\.\.\/lib\/identity\/operator-gate"\)/.test(src) }).toEqual({ file, gated: true });
+      expect({ file, teacherAuth: /requireBuilderAuth/.test(src) }).toEqual({ file, teacherAuth: false });
+    }
+    const users = readdirSync(FUNCTIONS).filter(f => f.endsWith(".js") && /requireOperator/.test(source(f))).sort();
+    expect(users).toEqual([...REGISTRY.operator].sort());
   });
   it("stateless endpoints read no stored teacher data", () => {
     const storage = /listJson\(|downloadJson[A-Za-z]*\(|mutateJson[A-Za-z]*\(|listBlobsFlat\(/;

@@ -12,7 +12,8 @@
 // epoch: each class index is then reconciled once (one scan started after activation) before it is trusted.
 // Deactivate BEFORE any rollback to pre-index code; re-activating afterwards forces a fresh reconcile of every class.
 const { app } = require("@azure/functions");
-const { requireBuilderAuth } = require("../lib/builder-auth");
+// Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
+const { requireOperator } = require("../lib/identity/operator-gate");
 const { getContainer, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { withObservability } = require("../lib/observability");
@@ -23,9 +24,9 @@ const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البي�
 const stateOf = control => (control.authoritative ? "authoritative" : "migrating");
 
 async function handler(request, deps = {}, obs = null) {
-  const authFn = deps.requireBuilderAuth || requireBuilderAuth, getC = deps.getContainer || getContainer, rec = deps.recordAuditEvent || recordAuditEvent;
+  const authFn = deps.requireOperator || requireOperator, getC = deps.getContainer || getContainer, rec = deps.recordAuditEvent || recordAuditEvent;
   try {
-    const auth = authFn(request); if (!auth.ok) return auth.response;
+    const auth = await authFn(request, deps); if (!auth.ok) return auth.response;
     const c = getC();
     if (request.method === "GET") return { status: 200, jsonBody: { ok: true, state: stateOf(await readIndexControl(c, deps)) } };
     let body = {}; try { body = (await request.json()) || {}; } catch { body = {}; }
