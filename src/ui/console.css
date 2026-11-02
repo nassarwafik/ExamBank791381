@@ -1,0 +1,37 @@
+/* Tadris+ P4-A — console primitives (Tabs, Switch, DataTable, Stepper, DiffView). Tokens only: Light / Dark follow the theme. */
+.eb-tabs-list { display: flex; gap: var(--eb-space-1, 4px); border-bottom: 1px solid var(--eb-line); flex-wrap: wrap; }
+.eb-tab { appearance: none; border: 0; background: transparent; color: var(--eb-muted); font: inherit; padding: var(--eb-space-2, 8px) var(--eb-space-3, 12px); border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; }
+.eb-tab[aria-selected="true"] { color: var(--eb-text-heading, var(--eb-ink)); border-bottom-color: var(--eb-primary, currentColor); font-weight: var(--eb-fw-semibold, 600); }
+.eb-tab:focus-visible, .eb-switch:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-tab-panel { padding-top: var(--eb-space-3, 12px); }
+
+.eb-switch { appearance: none; display: inline-flex; align-items: center; gap: var(--eb-space-2, 8px); border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+.eb-switch-track { width: 40px; height: 22px; border-radius: 999px; background: var(--eb-line); position: relative; flex: none; transition: background .15s; }
+.eb-switch-thumb { position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--eb-surface); box-shadow: var(--eb-chrome-shadow); transition: inset-inline-start .15s; }
+.eb-switch[aria-checked="true"] .eb-switch-track { background: var(--eb-primary); }
+.eb-switch[aria-checked="true"] .eb-switch-thumb { inset-inline-start: 21px; }
+.eb-switch-state { font-size: var(--eb-fs-13, 13px); color: var(--eb-muted); }
+.eb-switch:disabled { cursor: not-allowed; opacity: .55; }
+@media (prefers-reduced-motion: reduce) { .eb-switch-track, .eb-switch-thumb { transition: none; } }
+
+.eb-table-wrap { width: 100%; overflow-x: auto; }
+.eb-table { width: 100%; border-collapse: collapse; font-size: var(--eb-fs-14, 14px); }
+.eb-table caption { text-align: start; font-weight: var(--eb-fw-semibold, 600); padding-bottom: var(--eb-space-2, 8px); color: var(--eb-text-heading, var(--eb-ink)); }
+.eb-table th, .eb-table td { text-align: start; padding: var(--eb-space-2, 8px) var(--eb-space-3, 12px); border-bottom: 1px solid var(--eb-line); vertical-align: top; }
+.eb-table th { color: var(--eb-muted); font-weight: var(--eb-fw-semibold, 600); white-space: nowrap; }
+.eb-table-empty { color: var(--eb-muted); text-align: center; }
+
+.eb-stepper { list-style: none; margin: 0; padding: 0; display: flex; gap: var(--eb-space-2, 8px); flex-wrap: wrap; counter-reset: eb-step; }
+.eb-step { display: flex; align-items: center; gap: var(--eb-space-2, 8px); color: var(--eb-muted); counter-increment: eb-step; }
+.eb-step::before { content: counter(eb-step); width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--eb-line); display: inline-flex; align-items: center; justify-content: center; font-size: var(--eb-fs-12, 12px); }
+.eb-step.is-complete::before { background: var(--eb-success-bg); color: var(--eb-success-tx); border-color: transparent; }
+.eb-step.is-current { color: var(--eb-text-heading, var(--eb-ink)); font-weight: var(--eb-fw-semibold, 600); }
+.eb-step.is-current::before { border-color: var(--eb-primary, currentColor); color: var(--eb-primary, currentColor); }
+.eb-step + .eb-step::after { content: none; }
+
+.eb-diff { display: flex; flex-direction: column; gap: var(--eb-space-2, 8px); width: 100%; }
+.eb-diff-group { margin: 0; padding: var(--eb-space-2, 8px) var(--eb-space-3, 12px); border-radius: var(--eb-r, 8px); list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.eb-diff-group h4 { margin: 0 0 var(--eb-space-1, 4px); font-size: var(--eb-fs-13, 13px); }
+.eb-diff-added { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-diff-removed { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-diff-none { color: var(--eb-muted); margin: 0; }

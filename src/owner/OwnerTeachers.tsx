@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { IconCheck, IconCopy, IconKey, IconPlus, IconWarning } from "../icons";
 import { ownerApi, ownerTeachersApi, ownerAccessApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
 import OwnerQr from "./OwnerQr";
+import DiffView from "../ui/DiffView";
 
 /**
  * Tadris+ P2-A2b — «المعلمون» in the Owner Console (P2-A2a /api/owner-teachers; owner decisions §19.3).
@@ -45,6 +46,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   const [showImport, setShowImport] = useState(false);
   const [presets, setPresets] = useState<AccessPreset[]>([]);
   const [accessMode, setAccessMode] = useState<string>("legacy");
+  const [capabilityLabels, setCapabilityLabels] = useState<Record<string, string>>({});
   const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,7 +69,12 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   }, [token, onSignedOut]);
   useEffect(() => {
     let live = true;
-    void ownerAccessApi.get(token).then(r => { if (live && r.ok) { setPresets(r.data.presets); setAccessMode(r.data.mode); } });
+    void ownerAccessApi.get(token).then(r => {
+      if (!live || !r.ok) return;
+      setPresets(r.data.presets);
+      setAccessMode(r.data.mode);
+      setCapabilityLabels(Object.fromEntries((r.data.capabilities || []).map(c => [c.id, c.moduleLabel + " — " + c.label])));
+    });
     return () => { live = false; };
   }, [token]);
   useEffect(() => { if (stepUp) stepInput.current?.focus(); }, [stepUp]);
@@ -181,7 +188,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
               </div>
               <p className="eb-owner-hint eb-owner-access-line">الصلاحيات: <strong>{accessLabel(t, presets)}</strong></p>
               {choosing === t.accountId && (
-                <AccessChooser teacher={t} presets={presets} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
+                <AccessChooser teacher={t} presets={presets} labels={capabilityLabels} enforcing={accessMode === "enforce"} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
               )}
               <p className="eb-owner-hint">
                 {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : "لم يدخل بعد."}
@@ -224,10 +231,13 @@ function accessLabel(t: ManagedTeacher, presets: AccessPreset[]): string {
   return "لم تُحدَّد بعد";
 }
 
-function AccessChooser({ teacher, presets, busy, onSave, onCancel }: { teacher: ManagedTeacher; presets: AccessPreset[]; busy: boolean; onSave: (p: AccessPreset) => void; onCancel: () => void }) {
+function AccessChooser({ teacher, presets, labels, enforcing, busy, onSave, onCancel }: { teacher: ManagedTeacher; presets: AccessPreset[]; labels: Record<string, string>; enforcing: boolean; busy: boolean; onSave: (p: AccessPreset) => void; onCancel: () => void }) {
   const current = teacher.access ? teacher.access.preset.id : teacher.origin === "shared-password-workspace" ? "legacy-full" : "";
   const [picked, setPicked] = useState(current);
   const chosen = presets.find(p => p.id === picked);
+  // Tadris+ P4-A — what the change adds and removes, before it is saved (compared with the current preset; an account without
+  // one holds nothing). Custom grants / denies of the current access are not part of the comparison (P4-B shows them).
+  const before = presets.find(p => p.id === current)?.capabilities || [];
   return (
     <div className="eb-owner-confirm eb-owner-access" role="group" aria-label={"صلاحيات " + teacher.displayName}>
       <fieldset className="eb-owner-access-options">
@@ -239,7 +249,13 @@ function AccessChooser({ teacher, presets, busy, onSave, onCancel }: { teacher: 
           </label>
         ))}
       </fieldset>
-      <p className="eb-owner-hint">لن يتغير شيء الآن عند المعلم. تُطبَّق الصلاحيات حين يُفعَّل فرضها في مرحلة لاحقة.</p>
+      {chosen && picked !== current && (
+        <DiffView label={"تغيّر صلاحيات " + teacher.displayName} before={before} after={chosen.capabilities} labelOf={id => labels[id] || id}
+          addedTitle="صلاحيات ستُضاف" removedTitle="صلاحيات ستُزال" emptyText="الحزمتان تحويان الصلاحيات نفسها." />
+      )}
+      <p className="eb-owner-hint">{enforcing
+        ? "التطبيق مفعّل: يسري التغيير من الطلب التالي للمعلم."
+        : "لن يتغير شيء الآن عند المعلم: تُطبَّق الصلاحيات حين تفعّل «التطبيق» في قسم «الصلاحيات»."}</p>
       <div className="eb-owner-actions">
         <button type="button" className="eb-owner-secondary" disabled={busy || !chosen || picked === current} onClick={() => chosen && onSave(chosen)}>حفظ الصلاحيات</button>
         <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>

@@ -56,6 +56,12 @@
 .eb-owner-check input { margin-top: 3px; }
 
 .eb-owner-home { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--eb-space-4); }
+/* Tadris+ P4-A — the console: the side menu beside the section; one column on a narrow screen (the menu first). */
+.eb-owner-console { width: 100%; max-width: 1080px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--eb-space-4); align-items: start; }
+.eb-owner-console-nav { position: sticky; top: var(--eb-space-4); }
+.eb-owner-console-main { display: flex; flex-direction: column; gap: var(--eb-space-4); min-width: 0; }
+.eb-owner-console-main > .eb-owner-home { max-width: none; }
+@media (max-width: 860px) { .eb-owner-console { grid-template-columns: 1fr; } .eb-owner-console-nav { position: static; } }
 .eb-owner-panel { background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-xl); padding: var(--eb-space-5); display: flex; flex-direction: column; gap: var(--eb-space-3); align-items: flex-start; }
 .eb-owner-notice { width: 100%; padding: var(--eb-space-3); border: 1px solid var(--eb-warn); background: var(--eb-warn-bg); border-radius: var(--eb-r); color: var(--eb-warn-tx); display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .eb-owner-notice p { margin: 0; font-weight: var(--eb-fw-semibold); }
