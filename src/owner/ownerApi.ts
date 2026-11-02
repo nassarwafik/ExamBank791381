@@ -71,7 +71,12 @@ export type ManagedTeacher = {
   invitation: { purpose: "invite" | "reset"; expiresAt: string } | null; createdAt: string; updatedAt: string; lastLoginAt: string;
   /** P2-B — "shared-password-workspace" for the imported account of the old shared-password sign-in; "console" otherwise. */
   origin?: "console" | "shared-password-workspace";
+  /** P3-A — the access the owner assigned, or null (the account's default: none for a console account, today's for t_legacy). */
+  access?: TeacherAccess | null;
 };
+export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };
+export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[] };
+export type AccessMode = "legacy" | "observe" | "enforce" | "invalid";
 /** P2-B — whether the owner may import the shared-password workspace now (once), and if not, why. */
 export type LegacyImportState = { available: true } | { available: false; reason: "NOT_SHARED_PASSWORD_MODE" | "LEGACY_DATA_OWNER_SET" | "ALREADY_IMPORTED"; accountId?: string };
 export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
@@ -84,6 +89,13 @@ export const ownerTeachersApi = {
   importLegacy: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/import-legacy", { method: "POST", token, body: draft }),
   act: (token: string, action: TeacherAction, accountId: string) =>
     call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId } })
+};
+
+// Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
+export const ownerAccessApi = {
+  get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[] }>("/api/owner-access", { token }),
+  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null }) =>
+    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body })
 };
 
 /** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */

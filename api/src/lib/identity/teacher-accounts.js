@@ -129,6 +129,8 @@ function ownerView(a, nowMs = Date.now()) {
     accountId: a.accountId, username: a.username, displayName: a.displayName, fullName: a.fullName || "", email: a.email || "", phone: a.phone || "",
     subjects: Array.isArray(a.subjects) ? a.subjects : [], notes: a.adminNotes || "", organizationId: a.organizationId || "default",
     status: a.status, hasPassword: Boolean(a.credential), invitation: inv, origin: a.origin === "shared-password-workspace" ? a.origin : "console",
+    // P3-A — the access the owner assigned (display copy written with the revision pointer), or null = the default for the account.
+    access: a.accessRevisionId && a.accessPreset && typeof a.accessPreset === "object" ? { revisionId: a.accessRevisionId, preset: { id: String(a.accessPreset.id), version: Number(a.accessPreset.version) }, grants: Number(a.accessGrants) || 0, denies: Number(a.accessDenies) || 0 } : null,
     createdAt: a.createdAt || "", updatedAt: a.updatedAt || "", lastLoginAt: a.lastLoginAt || ""
   };
 }

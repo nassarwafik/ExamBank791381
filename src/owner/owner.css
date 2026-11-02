@@ -93,6 +93,12 @@
 .eb-owner-status--suspended { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
 .eb-owner-status--legacy { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
 .eb-owner-legacy { align-items: stretch; }
+.eb-owner-access { border-color: var(--eb-line); background: var(--eb-surface); color: var(--eb-ink); }
+.eb-owner-access-options { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-access-options legend { font-weight: var(--eb-fw-semibold); margin-bottom: var(--eb-space-2); }
+.eb-owner-access-option { display: flex; align-items: flex-start; gap: var(--eb-space-2); cursor: pointer; }
+.eb-owner-access-option span { display: flex; flex-direction: column; gap: 2px; }
+.eb-owner-access-option small { color: var(--eb-muted); font-weight: normal; }
 .eb-owner-confirm { width: 100%; padding: var(--eb-space-3); border: 1px solid var(--eb-danger); background: var(--eb-danger-bg); border-radius: var(--eb-r); color: var(--eb-danger-tx); display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .eb-owner-confirm p { margin: 0; font-weight: var(--eb-fw-semibold); }
 .eb-owner-invite { align-items: stretch; }

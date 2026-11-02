@@ -56,7 +56,9 @@ async function requireTeacherSession(request, deps = {}) {
   }
   if (!account || account.status !== "active" || !account.credential) return revoked();
   if (account.authVersion !== claim.av || sessionRevoked(account, claim.sid, nowMs)) return revoked();
-  return { ok: true, user: { ...claim, displayName: String(account.displayName || "") } };
+  // P3-A — the account's CURRENT access revision travels with the verified identity (read now, from the account), so the
+  // resolver sees an access change on the very next request. It is never taken from the token or the client.
+  return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null } };
 }
 
 module.exports = { requireTeacherSession, sharedPasswordSession, LEGACY_CLOSED_MESSAGE };
