@@ -68,7 +68,8 @@ import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation, IconAssignments, IconProjects } from "./icons";
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
-import type { TeacherNavId } from "./shell/teacherNav";
+import { parseTeacherAccess, navAllowed, firstAllowed, type TeacherAccessView } from "./shell/teacherAccess";
+import { PRIMARY_NAV, type TeacherNavId } from "./shell/teacherNav";
 import { NO_PROJECT_ATTENTION, projectAttentionOf, type ProjectAttention, type ProjectsSummaryResponse } from "./projects/projectAttention";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
 import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
@@ -601,6 +602,8 @@ function App() {
   const [sessionValidated, setSessionValidated] = useState(false);
   // Bumped by the manual "retry" action to re-run the boot validation probe below.
   const [sessionProbeNonce, setSessionProbeNonce] = useState(0);
+  const [teacherAccess, setTeacherAccess] = useState<TeacherAccessView | null>(null);   // Tadris+ P3-C
+  const [teacherAccessNonce, setTeacherAccessNonce] = useState(0);
   function retrySessionValidation() { setSessionChecking(true); setSessionProbeNonce(n => n + 1); }
 
   const [
@@ -781,6 +784,22 @@ function App() {
     teacherProfileApi.load(token).then(p => { if (!cancelled) setTeacherProfile(p); }).catch(() => { /* fallback name */ });
     return () => { cancelled = true; };
   }, [sessionValidated, sessionRole, token]);
+  // Tadris+ P3-C — the teacher's server-resolved access arrives with the sign-in answer and the boot probe (no extra request);
+  // «إعادة المحاولة» re-reads it from /api/platform-session. Presentation only: the shell hides tools the server would refuse
+  // (only while it enforces). Unknown → nothing hidden (every route is enforced on the server anyway); «unavailable» fails closed.
+  useEffect(() => {
+    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherAccess(null); return; }
+    if (teacherAccessNonce === 0) return;                                     // only a retry reads it again
+    let cancelled = false;
+    fetch("/api/platform-session", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-builder-token": token } })
+      .then(async response => {
+        if (cancelled || !response.ok) return;
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: string; access?: unknown } | null;
+        if (!cancelled && data && data.ok && data.role === "teacher") setTeacherAccess(parseTeacherAccess(data.access));
+      })
+      .catch(() => { /* unknown: nothing hidden */ });
+    return () => { cancelled = true; };
+  }, [sessionValidated, sessionRole, token, teacherAccessNonce]);
   // reintroduce the PR #56/#57 global-logout bug: only THIS authoritative check clears a session at boot.
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -801,7 +820,7 @@ function App() {
         // momentarily unavailable — this is NOT proof the session is invalid, so KEEP the stored session and let
         // ordinary API calls re-validate later. Never convert a temporary server problem into a logout.
         if (!response.ok) { return; }
-        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string } | null;
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string; access?: unknown } | null;
         // A 200 that is not a well-formed positive session is treated as transient (a working API only returns 200
         // with ok:true), never as an authoritative revocation — the retained session is left untouched and UNVALIDATED
         // (the retry state handles it) so we never enter the app on a stale role.
@@ -810,6 +829,7 @@ function App() {
         // session VALIDATED so role-specific UI and requests are now allowed to launch.
         setSessionRole(data.role);
         setSessionDisplayName(data.displayName || "");
+        setTeacherAccess(data.role === "teacher" ? parseTeacherAccess(data.access) : null);   // Tadris+ P3-C
         try {
           sessionStorage.setItem("examBankSessionRole", data.role);
           sessionStorage.setItem("examBankSessionDisplayName", data.displayName || "");
@@ -1214,6 +1234,7 @@ function App() {
           "student";
         displayName?: string;
         error?: string;
+        access?: unknown;
       };
 
       if (!response.ok || !data.token) {
@@ -1253,8 +1274,14 @@ function App() {
         ""
       );
 
+      // Tadris+ P3-C — the access the sign-in answer carries shapes the shell; a teacher limited away from the builder lands on
+      // their first enabled destination instead (unchanged for everyone else).
+      const signedInAccess = resolvedRole === "teacher" ? parseTeacherAccess(data.access) : null;
+      setTeacherAccess(signedInAccess);
       // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it.
-      setTeacherView(
+      const landing = !isLearningLocation() && !navAllowed("builder", signedInAccess) ? firstAllowed(PRIMARY_NAV, signedInAccess) : null;
+      if (landing) navigateTeacherNow(landing);
+      else setTeacherView(
         isLearningLocation() ? "learning" : "builder"
       );
 
@@ -5876,6 +5903,8 @@ function App() {
       identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
       onNavigate={navigateTeacher}
       onLogout={() => leavePlatformThen(() => { endTeacherServerSession(token); handleLogout(); })}
+      access={teacherAccess}
+      onRetryAccess={() => setTeacherAccessNonce(n => n + 1)}
     >
       {confirmDialog}
       {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>

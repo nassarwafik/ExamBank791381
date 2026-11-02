@@ -20,7 +20,6 @@ const MODE = "api/src/lib/access/access-mode.js";
 const AUTH = "api/src/lib/access/authorize.js";
 const API = "api/src/functions/owner-access.js";
 const SESSION = "api/src/lib/teacher-session.js";
-const PSESSION = "api/src/functions/platform-session.js";
 
 export const MUTANTS = [
   { id: "P3A-M1", what: "default deny broken: a console account without access gets today's full access", edits: [{ file: RES, find: "    return { source: \"unassigned\", revisionId: null, preset: null, capabilities: [] };", replace: "    return legacyFull(\"unassigned\");" }] },
@@ -42,7 +41,8 @@ export const MUTANTS = [
   { id: "P3A-M17", what: "the session does not carry the account's current revision (an access change is not seen)", edits: [{ file: SESSION, find: "accessRevisionId: typeof account.accessRevisionId === \"string\" && account.accessRevisionId ? account.accessRevisionId : null", replace: "accessRevisionId: null" }] },
   { id: "P3A-M18", what: "the imported workspace (t_legacy) loses today's access (D7 broken)", edits: [{ file: RES, find: "    if (user.sub === LEGACY_TEACHER_ACCOUNT_ID) return legacyFull(\"migrated-default\");\n", replace: "" }] },
   { id: "P3A-M19", what: "D18 broken: the teaching presets may create classes", edits: [{ file: PRESETS, find: "const NOT_IN_TEACHING = new Set([\"classes.class.create\", ", replace: "const NOT_IN_TEACHING = new Set([" }] },
-  { id: "P3A-M20", what: "an access problem invalidates the teacher's session probe", edits: [{ file: PSESSION, find: "      access = { status: \"unavailable\", capabilities: [] };", replace: "      throw e;" }] },
+  // P3-C: the session answer's access moved to lib/access/session-access.js (shared by sign-in and the session probe).
+  { id: "P3A-M20", what: "an access problem invalidates the teacher's session probe", edits: [{ file: "api/src/lib/access/session-access.js", find: "    return { status: \"unavailable\", capabilities: [] };", replace: "    throw e;" }] },
   { id: "P3A-M21", what: "a dependency is dropped from the registry", edits: [{ file: CAPS, find: "  [\"examLibrary.item.copy\", \"نسخ عنصر إلى امتحاناته\", [\"examBuilder.exam.create\"]],", replace: "  [\"examLibrary.item.copy\", \"نسخ عنصر إلى امتحاناته\"]," }] }
 ];
 

@@ -35,6 +35,7 @@ const { findTeacherByUsername, mutateTeacherAccount } = require("../lib/identity
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
 const { verifySecret } = require("../lib/identity/password-hash");
 const { ownerExists } = require("../lib/identity/owner-presence");
+const { sessionAccess } = require("../lib/access/session-access");
 // QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
 // login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
 // leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
@@ -111,7 +112,9 @@ async function handler(request, deps = {}, obs = null) {
       try { await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...a, lastLoginAt: new Date(nowMs).toISOString() })); } catch { /* the stamp is informational */ }
       obs?.logInfo("auth.login.succeeded", { role: "teacher", kind: "managed" });
       const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS } };
+      // Tadris+ P3-C — the access the UI shapes itself by (never an authority: every route checks it again on the server).
+      const access = await sessionAccess({ ver: 3, role: "teacher", am: "managed", sub: managed.accountId, accessRevisionId: managed.accessRevisionId || null }, { container, downloadJsonOrNull: dl }, obs);
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access } };
     }
 
     // Teacher credentials — the shared-password mode (BUILDER_USERS absent) only while no platform owner exists (D6). The owner's
@@ -130,7 +133,8 @@ async function handler(request, deps = {}, obs = null) {
       await throttleClear(container, throttleKey, clientId, deps);
       const token = mkBuilderToken(userCode);
       obs?.logInfo("auth.login.succeeded", { role: "teacher" });
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: await resolveTeacherDisplayName(container, userCode, deps), expiresInSeconds: TOKEN_TTL_SECONDS } };
+      const access = await sessionAccess({ ver: 2, role: "teacher", sub: userCode, am: authMode }, { container, downloadJsonOrNull: dl }, obs);   // P3-C
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: await resolveTeacherDisplayName(container, userCode, deps), expiresInSeconds: TOKEN_TTL_SECONDS, access } };
     }
 
     // Student credentials — bind password verification to the credential version (§3).

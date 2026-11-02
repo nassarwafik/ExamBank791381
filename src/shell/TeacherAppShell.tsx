@@ -9,10 +9,11 @@ import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
   IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck } from "../icons";
 import {
-  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
+  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
 import TeacherIdentity from "../teacher/TeacherIdentity";
+import { navAllowed, firstAllowed, type TeacherAccessView } from "./teacherAccess";
 import QuickNavSearch from "./QuickNavSearch";
 import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
@@ -52,10 +53,13 @@ type Props = {
   identity?: { token: string; profile: TeacherProfile | null; onProfileChange: (p: TeacherProfile) => void };
   onNavigate: (id: TeacherNavId) => void;
   onLogout: () => void;
+  /** Tadris+ P3-C — the server-resolved access (null = not known yet / not limited: everything shown, as before). */
+  access?: TeacherAccessView | null;
+  onRetryAccess?: () => void;
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, access = null, onRetryAccess, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -96,6 +100,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   function navigate(id: TeacherNavId) { onNavigate(id); setDrawerOpen(false); }
 
   function navButton(id: TeacherNavId, variant: "" | "group-head" | "child" = "") {
+    if (!navAllowed(id, access)) return null;                               // P3-C: a tool not enabled for this teacher is not offered
     const Icon = ICONS[id];
     const isActive = id === active;
     const badge = id === "projects" ? Math.max(0, projectReadyTotal) + Math.max(0, projectSelfReportedTotal) : 0;
@@ -130,6 +135,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   // Phase 21E main navigation — a labelled section: a visible label that also names the group for assistive technology (the
   // compact rail hides the label visually, never from the accessibility tree).
   function section(id: string, label: string, body: ReactNode, extraClass = "") {
+    if (Array.isArray(body) && body.every(b => !b)) return null;              // P3-C: a section with nothing to offer is not shown
     const labelId = "eb-nav-section-" + id;
     return (
       <div key={id} className={"eb-nav-section" + extraClass} role="group" aria-labelledby={labelId}>
@@ -139,7 +145,28 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
     );
   }
 
-  const destinations = (Object.keys(ICONS) as TeacherNavId[]).map(id => ({ id, label: NAV_LABELS[id] }));
+  const destinations = (Object.keys(ICONS) as TeacherNavId[]).filter(id => navAllowed(id, access)).map(id => ({ id, label: NAV_LABELS[id] }));
+  const examItems = [EXAM_BANK_HEAD, ...EXAM_BANK_NAV].filter(id => navAllowed(id, access));
+  const homeTarget = firstAllowed([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV], access);
+  // P3-C — a destination reached by a deep link, a reload or a stale state is guarded too (the server refuses it anyway).
+  let content: ReactNode = children;
+  if (access && access.status === "unavailable") {
+    content = (
+      <div className="eb-access-state" role="alert">
+        <h2>تعذر تحميل صلاحياتك</h2>
+        <p>لا تُعرض أدوات المنصة قبل التحقق من صلاحيات حسابك. حاول مرة أخرى بعد لحظات.</p>
+        {onRetryAccess && <button type="button" className="eb-button is-primary" onClick={onRetryAccess}>إعادة المحاولة</button>}
+      </div>
+    );
+  } else if (!navAllowed(active, access)) {
+    content = (
+      <div className="eb-access-state" role="status">
+        <h2>هذه الأداة غير مفعّلة لحسابك</h2>
+        <p>«{NAV_LABELS[active]}» ليست ضمن صلاحياتك. إن احتجتها فتواصل مع إدارة المنصة.</p>
+        {homeTarget && <button type="button" className="eb-button is-primary" onClick={() => navigate(homeTarget)}>الذهاب إلى «{NAV_LABELS[homeTarget]}»</button>}
+      </div>
+    );
+  }
   const crumbs = breadcrumbFor(nav).map(c => ({ label: c.label, onSelect: c.navId ? () => onNavigate(c.navId as TeacherNavId) : undefined }));
 
   return (
@@ -167,9 +194,11 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
         </div>
         {/* The home pill (the reference's «Projects» chip): a distinct name, so it never doubles the sidebar's «لوحة المتابعة». */}
-        <button type="button" className="eb-topbar-pill" title={NAV_LABELS.dashboard} onClick={() => navigate("dashboard")}>
-          الرئيسية
-        </button>
+        {navAllowed("dashboard", access) && (
+          <button type="button" className="eb-topbar-pill" title={NAV_LABELS.dashboard} onClick={() => navigate("dashboard")}>
+            الرئيسية
+          </button>
+        )}
         <QuickNavSearch destinations={destinations} onNavigate={id => navigate(id as TeacherNavId)} className="eb-topbar-search" />
         <div className="eb-topbar-actions">
           {/* UX-R18a — the dark-mode toggle (moon / sun), on this device; released in UX-R18c2. */}
@@ -197,7 +226,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
         <nav className="eb-nav" aria-label="الأقسام">
           {PRIMARY_SECTIONS.map(s => section(s.id, s.label, s.items.map(id => navButton(id))))}
           {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
-          {section("exams", EXAM_SECTION_LABEL, (
+          {examItems.length > 0 && section("exams", EXAM_SECTION_LABEL, (
             <div className="eb-nav-group" role="group" aria-label={EXAM_BANK_GROUP_LABEL}>
               {navButton(EXAM_BANK_HEAD, "group-head")}
               {EXAM_BANK_NAV.map(id => navButton(id, "child"))}
@@ -217,7 +246,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
       <div className="app-shell-main eb-shell-main">
         <PageHeader title={pageTitleFor(nav)} icon={pageIcon(active)} breadcrumb={crumbs} />
         <main id="eb-main" className="eb-shell-content" tabIndex={-1}>
-          {children}
+          {content}
         </main>
       </div>
     </div>
