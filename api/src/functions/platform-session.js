@@ -6,6 +6,7 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { requireTeacherSession, sharedPasswordSession } = require("../lib/teacher-session");
 const { ownerExists } = require("../lib/identity/owner-presence");
+const { resolveTeacherAccess } = require("../lib/access/resolver");
 
 // Roadmap #8 §12 — authoritative session introspection used by the frontend on startup/reload to validate
 // a stored session before rendering an authenticated app. Never returns secrets/hashes. Always no-store.
@@ -41,7 +42,18 @@ async function handler(request, deps = {}, obs = null) {
     const displayName = payload.am === "managed"
       ? await resolveManagedTeacherDisplayName(containerOf, payload.sub, payload.displayName, studentDeps)   // P2-A2: own profile, else the account's name
       : await resolveTeacherDisplayName(containerOf, payload.sub, studentDeps);
-    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp) } };
+    // Tadris+ P3-A — the teacher's effective capabilities (server-resolved, never from the token). Informational until P3-C
+    // shapes the UI from it; a resolution problem never invalidates the session: it reports `unavailable` (the UI must then
+    // treat every capability as absent — fail closed — once it consumes this).
+    let access;
+    try {
+      const a = await resolveTeacherAccess(payload, { getContainer: containerOf, downloadJsonOrNull: studentDeps.downloadJsonOrNull });
+      access = { status: "ok", source: a.source, preset: a.preset, capabilities: a.capabilities };
+    } catch (e) {
+      obs?.logWarn("access.resolve.unavailable", { reason: String(e && e.code || "error") });
+      access = { status: "unavailable", capabilities: [] };
+    }
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp), access } };
   };
   const studentResult = sess => ({
     status: 200, headers: NO_STORE,

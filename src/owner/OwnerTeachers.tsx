@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconCheck, IconCopy, IconKey, IconPlus, IconWarning } from "../icons";
-import { ownerApi, ownerTeachersApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft } from "./ownerApi";
+import { ownerApi, ownerTeachersApi, ownerAccessApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
 import OwnerQr from "./OwnerQr";
 
 /**
@@ -15,10 +15,13 @@ import OwnerQr from "./OwnerQr";
  *   - P2-B «استيراد مساحتي القديمة»: when the server says it is available (shared-password mode, not imported yet), the owner
  *     creates — once — the teacher account of the old shared-password workspace (username + display name → an invitation link).
  *     It then sees the old classes, exams and students exactly as before; nothing is moved or deleted.
+ *   - P3-A «الصلاحيات»: each teacher shows the access preset the owner assigned (or the account's default) and «تغيير الصلاحيات»
+ *     picks another preset (a new immutable revision on the server). Nothing is enforced yet: the change prepares P3-B.
  * The server decides everything; a 401 signs the owner out.
  */
 
-type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft: TeacherDraft } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher };
+type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft: TeacherDraft } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher }
+  | { kind: "access"; teacher: ManagedTeacher; preset: AccessPreset };
 type Issued = { teacher: ManagedTeacher; invitation: TeacherInvitationLink };
 
 const STATUS_LABEL: Record<ManagedTeacher["status"], string> = { invited: "بانتظار كلمة المرور", active: "نشط", suspended: "موقوف" };
@@ -40,6 +43,8 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
   const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [presets, setPresets] = useState<AccessPreset[]>([]);
+  const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -59,6 +64,11 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
     });
     return () => { live = false; };
   }, [token, onSignedOut]);
+  useEffect(() => {
+    let live = true;
+    void ownerAccessApi.get(token).then(r => { if (live && r.ok) setPresets(r.data.presets); });
+    return () => { live = false; };
+  }, [token]);
   useEffect(() => { if (stepUp) stepInput.current?.focus(); }, [stepUp]);
 
   const upsert = useCallback((t: ManagedTeacher) => {
@@ -71,6 +81,15 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   async function run(p: Pending): Promise<void> {
     setBusy(true);
     setError("");
+    if (p.kind === "access") {
+      const a = await ownerAccessApi.assign(token, { accountId: p.teacher.accountId, presetId: p.preset.id, presetVersion: p.preset.version, baseRevisionId: p.teacher.access ? p.teacher.access.revisionId : null });
+      setBusy(false);
+      if (a.ok) { setStepUp(null); setChoosing(null); upsert({ ...p.teacher, access: a.data.access }); return; }
+      if (a.status === 401) { onSignedOut(); return; }
+      if (a.code === "STEP_UP_REQUIRED") { setStepUp(p); return; }
+      setError(a.error);
+      return;
+    }
     const r: ApiResult<{ teacher: ManagedTeacher; invitation?: TeacherInvitationLink }> = p.kind === "create"
       ? await ownerTeachersApi.create(token, p.draft)
       : p.kind === "import"
@@ -159,6 +178,10 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
                 <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
                 {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
               </div>
+              <p className="eb-owner-hint eb-owner-access-line">الصلاحيات: <strong>{accessLabel(t, presets)}</strong></p>
+              {choosing === t.accountId && (
+                <AccessChooser teacher={t} presets={presets} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
+              )}
               <p className="eb-owner-hint">
                 {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : "لم يدخل بعد."}
                 {t.invitation && <> · رابط {t.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"} صالح حتى <bdi>{formatDate(t.invitation.expiresAt)}</bdi></>}
@@ -173,6 +196,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
                 </div>
               ) : (
                 <div className="eb-owner-actions">
+                  {presets.length > 0 && choosing !== t.accountId && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => { setChoosing(t.accountId); setConfirming(null); }}>تغيير الصلاحيات</button>}
                   {actionsFor(t).map(action => (
                     <button key={action} type="button" className={"eb-owner-secondary" + (action === "suspend" ? " eb-owner-danger" : "")} disabled={busy}
                       onClick={() => CONFIRM_TEXT[action] ? setConfirming({ action, teacher: t }) : run({ kind: "act", action, teacher: t })}>
@@ -186,6 +210,40 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
         </ul>
       )}
     </section>
+  );
+}
+
+function accessLabel(t: ManagedTeacher, presets: AccessPreset[]): string {
+  if (t.access) {
+    const p = presets.find(x => x.id === t.access!.preset.id && x.version === t.access!.preset.version);
+    const extra = t.access.grants || t.access.denies ? " (مع تعديلات)" : "";
+    return (p ? p.label : t.access.preset.id) + extra;
+  }
+  if (t.origin === "shared-password-workspace") return "الوصول الحالي (افتراضي)";
+  return "لم تُحدَّد بعد";
+}
+
+function AccessChooser({ teacher, presets, busy, onSave, onCancel }: { teacher: ManagedTeacher; presets: AccessPreset[]; busy: boolean; onSave: (p: AccessPreset) => void; onCancel: () => void }) {
+  const current = teacher.access ? teacher.access.preset.id : teacher.origin === "shared-password-workspace" ? "legacy-full" : "";
+  const [picked, setPicked] = useState(current);
+  const chosen = presets.find(p => p.id === picked);
+  return (
+    <div className="eb-owner-confirm eb-owner-access" role="group" aria-label={"صلاحيات " + teacher.displayName}>
+      <fieldset className="eb-owner-access-options">
+        <legend>اختر حزمة الصلاحيات</legend>
+        {presets.map(p => (
+          <label key={p.id + "@" + p.version} className="eb-owner-access-option">
+            <input type="radio" name={"access-" + teacher.accountId} value={p.id} checked={picked === p.id} onChange={() => setPicked(p.id)} />
+            <span><strong>{p.label}</strong><small>{p.description}</small></span>
+          </label>
+        ))}
+      </fieldset>
+      <p className="eb-owner-hint">لن يتغير شيء الآن عند المعلم. تُطبَّق الصلاحيات حين يُفعَّل فرضها في مرحلة لاحقة.</p>
+      <div className="eb-owner-actions">
+        <button type="button" className="eb-owner-secondary" disabled={busy || !chosen || picked === current} onClick={() => chosen && onSave(chosen)}>حفظ الصلاحيات</button>
+        <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
+      </div>
+    </div>
   );
 }
 
