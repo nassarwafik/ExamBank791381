@@ -14,7 +14,6 @@ const REQ = "api/src/lib/access/require-capability.js";
 const MAP = "api/src/lib/access/route-capabilities.js";
 const OBS = "api/src/lib/access/observations.js";
 const AUTH = "api/src/lib/access/authorize.js";
-const API = "api/src/functions/owner-access.js";
 const STUDENTS = "api/src/functions/manage-students.js";
 const CLASSES = "api/src/functions/manage-classrooms.js";
 const SAVED = "api/src/functions/manage-saved-exams.js";
@@ -31,8 +30,9 @@ export const MUTANTS = [
   { id: "P3B-M9", what: "observe no longer records what it would deny", edits: [{ file: REQ, find: "  if (r.decision === \"would-deny\") {", replace: "  if (false) {" }] },
   { id: "P3B-M10", what: "a recording failure breaks the request", edits: [{ file: REQ, find: "    try { await recordObservation(", replace: "    { await recordObservation(" }, { file: REQ, find: "Date.now(), deps); } catch { /* recording is secondary */ }", replace: "Date.now(), deps); }" }] },
   { id: "P3B-M11", what: "the observation throttle is lost (a write per request)", edits: [{ file: OBS, find: "  if (last !== undefined && nowMs - last < THROTTLE_MS) return false;\n", replace: "" }] },
-  { id: "P3B-M12", what: "readiness reports ready although a teacher has no access", edits: [{ file: API, find: "      const ready = teachers.every(", replace: "      const ready = true || teachers.every(" }] },
-  { id: "P3B-M13", what: "readiness counts the imported workspace (D7) as not ready", edits: [{ file: API, find: "t.status === \"suspended\" || t.access || t.defaultAccess === \"legacy-full\"", replace: "t.status === \"suspended\" || t.access" }] },
+  // P3-B2: readiness moved to lib/access/readiness.js (shared with the enforce gate).
+  { id: "P3B-M12", what: "readiness reports ready although a teacher has no access", edits: [{ file: "api/src/lib/access/readiness.js", find: "  return { ready: missing.length === 0,", replace: "  return { ready: true," }] },
+  { id: "P3B-M13", what: "readiness counts the imported workspace (D7) as not ready", edits: [{ file: "api/src/lib/access/readiness.js", find: " && t.defaultAccess !== \"legacy-full\");", replace: ");" }] },
   { id: "P3B-M14", what: "an any-of declaration requires ALL of its capabilities", edits: [{ file: AUTH, find: "  const granted = list.some(c => access.capabilities.includes(c));", replace: "  const granted = list.every(c => access.capabilities.includes(c));" }] },
   { id: "P3B-M15", what: "the route map falls back silently for an undeclared route", edits: [{ file: MAP, find: "  if (!route) throw new Error(\"No capability declared for route \" + file);", replace: "  if (!route) return \"classes.class.view\";" }] }
 ];

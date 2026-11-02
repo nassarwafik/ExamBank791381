@@ -12,11 +12,17 @@ const { builderAuthConfigurationStatus } = require("../lib/builder-auth");
 const { legacyDataOwner } = require("../lib/teacher-tenancy");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { profileDocName, normalizeDisplayName, VALID_AVATARS } = require("../lib/teacher-profile");
+const { AccessError, buildRevision, writeRevision } = require("../lib/access/revisions");
+const { readAccessMode } = require("../lib/access/access-mode");
+const { ACCESS_REFUSAL } = require("../lib/access/messages");
 
 // Tadris+ P2-A2 — the platform owner manages teacher accounts. Route: /api/owner-teachers/{action?}   (owner session only)
 //
 //   GET                                   → every managed teacher (owner view: never a credential or an invitation hash)
-//   POST create        { username, displayName, fullName?, email?, phone?, subjects?, notes? }   → invitation link (shown once)
+//   POST create        { username, displayName, fullName?, email?, phone?, subjects?, notes?, presetId?, presetVersion? }
+//                      → invitation link (shown once). P3-B2: with a preset, the teacher starts with that access (an immutable
+//                      revision, written BEFORE the account so the account never exists without it); while enforcement is on (or
+//                      its mode cannot be read) a preset is REQUIRED, so no new teacher lands with no access at all.
 //   POST reinvite      { accountId }      → a new invitation link; the previous one stops working
 //   POST reset         { accountId }      → the password is removed, every session ends, a reset link is issued
 //   POST suspend       { accountId }      → no access from the next request (status + authVersion + 1)
@@ -123,6 +129,22 @@ async function handler(request, deps = {}, obs = null) {
       const problem = validProfile(fields);
       if (problem) return bad(problem, problem === "EMAIL_INVALID" ? "البريد الإلكتروني غير صالح." : "اسم العرض مطلوب (60 حرفًا على الأكثر).");
       const accountId = importing ? LEGACY_TEACHER_ACCOUNT_ID : newTeacherAccountId();
+      let initialAccess = null;
+      if (!importing) {
+        const wantsPreset = body.presetId !== undefined && body.presetId !== null && body.presetId !== "";
+        if (!wantsPreset) {
+          let mode = "enforce";                                   // unreadable → treated as enforce (fail safe)
+          try { mode = (await readAccessMode(container)).mode; } catch { mode = "enforce"; }
+          if (mode === "enforce") return bad("PRESET_REQUIRED", ACCESS_REFUSAL.PRESET_REQUIRED);
+        } else {
+          try {
+            initialAccess = buildRevision({ accountId, parentRevisionId: null, presetId: body.presetId, presetVersion: body.presetVersion, reason: "initial access at creation", createdBy: actor, nowMs }).revision;
+          } catch (e) {
+            if (e instanceof AccessError) return bad(e.code, ACCESS_REFUSAL[e.code] || ACCESS_REFUSAL.REVISION_MALFORMED);
+            throw e;
+          }
+        }
+      }
       const inv = newInvitation("invite", nowMs);
       const account = {
         schemaVersion: 1, accountId, role: "teacher", organizationId: "default", username: name.username,
@@ -130,8 +152,10 @@ async function handler(request, deps = {}, obs = null) {
         subjects: fields.subjects || [], adminNotes: fields.adminNotes || "",
         status: "invited", credential: null, invitation: inv.record, authVersion: 1, revokedSessions: [],
         ...(importing ? { origin: "shared-password-workspace", importedAt: iso } : {}),
+        ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: 0, accessDenies: 0 } : {}),
         createdAt: iso, createdBy: actor, updatedAt: iso
       };
+      if (initialAccess) await writeRevision(container, initialAccess);   // an orphan if the account below is refused (harmless)
       const created = await createTeacherAccount(container, account);
       if (!created.ok) {
         // Create-only: a second (even concurrent) import finds the account already there and is refused.
@@ -143,7 +167,7 @@ async function handler(request, deps = {}, obs = null) {
       if (importing) { try { profileCopied = await copyLegacyProfile(container, env, iso); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
       await audit(container, {
         actor, action: importing ? "owner.teacher.legacy-imported" : "owner.teacher.created", targetType: "teacher-account", targetId: accountId, targetLabel: account.username,
-        ...(importing ? { details: { profileCopied } } : {})
+        ...(importing ? { details: { profileCopied } } : initialAccess ? { details: { revisionId: initialAccess.revisionId, preset: initialAccess.preset } } : {})
       });
       return reply(201, { ok: true, teacher: ownerView(account, nowMs), invitation: invitationOut(inv.token, inv.record) });
     }

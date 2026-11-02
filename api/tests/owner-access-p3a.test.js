@@ -131,12 +131,16 @@ describe("P3-A owner access API", () => {
     expect(ctx.mem.getJson(teacherAccountName(SARA)).accessRevisionId).toBe(winner);
   });
 
-  it("mode: observe can be chosen (audited); enforce cannot yet; nothing else", async () => {
+  it("mode: observe can be chosen (audited); enforce only when ready (P3-B2 — here a teacher has no access); nothing else", async () => {
     const r = await ownerAccess(req({ action: "mode", headers: ctx.owner, body: { mode: "observe" } }), ctx.deps);
     expect(r.status).toBe(200);
     expect(ctx.mem.getJson(ACCESS_CONTROL_DOC)).toMatchObject({ schemaVersion: 1, mode: "observe", updatedBy: "owner:" + OWNER_ID });
     expect(ctx.mem.names(OWNER_AUDIT_PREFIX).map(n => ctx.mem.getJson(n)).find(e => e.action === "owner.access.mode").details).toEqual({ from: "legacy", to: "observe" });
-    for (const mode of ["enforce", "", "admin"]) {
+    // Tadris+ P3-B2 — enforce became choosable behind the readiness gate: «سارة» has no access, so it is refused as not ready.
+    const notReady = await ownerAccess(req({ action: "mode", headers: ctx.owner, body: { mode: "enforce" } }), ctx.deps);
+    expect(notReady.status).toBe(409);
+    expect(notReady.jsonBody.code).toBe("ACCESS_NOT_READY");
+    for (const mode of ["", "admin"]) {
       const x = await ownerAccess(req({ action: "mode", headers: ctx.owner, body: { mode } }), ctx.deps);
       expect(x.status).toBe(409);
       expect(x.jsonBody.code).toBe("ACCESS_MODE_NOT_SETTABLE");

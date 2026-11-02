@@ -28,7 +28,7 @@ const CAPS = [{ id: "examBuilder.ai.use", module: "examBuilder", moduleLabel: "�
 const teacher = (over = {}) => ({ accountId: "t_000000000000000a", username: "t.a", displayName: "سارة", status: "active", access: { revisionId: "ar_x", preset: { id: "learning-only", version: 1 } }, defaultAccess: null, wouldDeny: [], ...over });
 
 describe("P3-B owner — access mode and readiness", () => {
-  it("legacy → switch observe on (with step-up) → the mode text changes; enforcement is never offered", async () => {
+  it("legacy → switch observe on (with step-up) → the mode text changes; enforcement is offered behind a confirmation (P3-B2)", async () => {
     let stepped = false;
     routes["GET /api/owner-access"] = () => ({ status: 200, body: { ok: true, mode: "legacy", presets: [], capabilities: CAPS } });
     routes["GET /api/owner-access/readiness"] = () => ({ status: 200, body: { ok: true, mode: "legacy", ready: true, teachers: [teacher()] } });
@@ -37,7 +37,8 @@ describe("P3-B owner — access mode and readiness", () => {
     render(<OwnerAccessMode token="owner-tok" onSignedOut={vi.fn()} />);
     expect(await screen.findByText(/عادي: الصلاحيات لا تُراقَب/)).toBeTruthy();
     expect(screen.getByText("كل معلم نشط له حزمة صلاحيات.")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /تطبيق/ })).toBeNull();
+    // Tadris+ P3-B2 — offered (everyone has access here), never applied without its inline confirmation.
+    expect((screen.getByRole("button", { name: "تفعيل التطبيق" }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "تشغيل المراقبة" }));
     fireEvent.change(await screen.findByLabelText(/هذا الإجراء حساس/), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "تأكيد" }));
