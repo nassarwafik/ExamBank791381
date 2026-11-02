@@ -25,8 +25,9 @@ const { ACCESS_REFUSAL } = require("../lib/access/messages");
 //                      its mode cannot be read) a preset is REQUIRED, so no new teacher lands with no access at all.
 //   POST reinvite      { accountId }      → a new invitation link; the previous one stops working
 //   POST reset         { accountId }      → the password is removed, every session ends, a reset link is issued
-//   POST suspend       { accountId }      → no access from the next request (status + authVersion + 1)
-//   POST reactivate    { accountId }
+//   POST suspend       { accountId, reason? } → no access from the next request (status + authVersion + 1). P4-B1: an optional
+//                      reason (≤ 200 characters) for the owner's own record — shown only in the Owner Console, never to the teacher.
+//   POST reactivate    { accountId }      → the reason is cleared
 //   POST end-sessions  { accountId }      → every session of that teacher ends (authVersion + 1)
 //   POST update        { accountId, displayName?, fullName?, email?, phone?, subjects?, notes? }
 //   POST import-legacy { username, displayName, fullName?, email?, phone?, subjects?, notes? }   (P2-B, owner decisions D6 / D7)
@@ -44,6 +45,7 @@ const bad = (code, error) => reply(400, { ok: false, code, error });
 const notFound = () => reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
 const unavailable = () => reply(503, { ok: false, code: "OWNER_TEACHERS_UNAVAILABLE", error: "تعذر تنفيذ الطلب حاليًا. حاول مرة أخرى." }, { "Retry-After": "5" });
 
+const MAX_SUSPEND_REASON = 200;
 const text = (v, max) => String(v ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 function profileFields(body) {
   const out = {};
@@ -197,13 +199,14 @@ async function handler(request, deps = {}, obs = null) {
         const problem = validProfile(fields);
         if (problem) return bad(problem, problem === "EMAIL_INVALID" ? "البريد الإلكتروني غير صالح." : "اسم العرض مطلوب (60 حرفًا على الأكثر).");
       }
+      const reason = action === "suspend" ? text(body.reason, MAX_SUSPEND_REASON) : "";
       const next = await mutateTeacherAccount(container, accountId, a => {
-        if (action === "suspend") return { ...a, status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, updatedAt: iso };
-        if (action === "reactivate") return { ...a, status: a.credential ? "active" : "invited", suspendedAt: null, updatedAt: iso };
+        if (action === "suspend") return { ...a, status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, suspendedReason: reason, updatedAt: iso };
+        if (action === "reactivate") return { ...a, status: a.credential ? "active" : "invited", suspendedAt: null, suspendedReason: null, updatedAt: iso };
         if (action === "end-sessions") return { ...a, authVersion: Number(a.authVersion) + 1, revokedSessions: [], updatedAt: iso };
         return { ...a, ...fields, updatedAt: iso };
       });
-      await audit(container, { actor, action: "owner.teacher." + action, targetType: "teacher-account", targetId: accountId, targetLabel: current.username });
+      await audit(container, { actor, action: "owner.teacher." + action, targetType: "teacher-account", targetId: accountId, targetLabel: current.username, ...(reason ? { details: { reason } } : {}) });
       return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
     }
 

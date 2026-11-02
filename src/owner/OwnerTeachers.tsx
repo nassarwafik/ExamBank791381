@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { IconCheck, IconCopy, IconKey, IconPlus, IconWarning } from "../icons";
-import { ownerApi, ownerTeachersApi, ownerAccessApi, invitationUrl, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
-import OwnerQr from "./OwnerQr";
+import { IconKey, IconPlus, IconWarning } from "../icons";
+import { ownerApi, ownerTeachersApi, ownerAccessApi, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
 import DiffView from "../ui/DiffView";
+import InvitationPanel, { type Issued } from "./InvitationPanel";
+import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId } from "./teacherShared";
 
 /**
  * Tadris+ P2-A2b — «المعلمون» in the Owner Console (P2-A2a /api/owner-teachers; owner decisions §19.3).
@@ -18,29 +19,15 @@ import DiffView from "../ui/DiffView";
  *     It then sees the old classes, exams and students exactly as before; nothing is moved or deleted.
  *   - P3-A «الصلاحيات»: each teacher shows the access preset the owner assigned (or the account's default) and «تغيير الصلاحيات»
  *     picks another preset (a new immutable revision on the server). Nothing is enforced yet: the change prepares P3-B.
+ *   - P4-B1 «صفحة المعلم»: opens the teacher's own page (#/owner/teachers/<id>) — details, individual capabilities, history,
+ *     security.
  * The server decides everything; a 401 signs the owner out.
  */
 
 type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft: TeacherDraft } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher }
   | { kind: "access"; teacher: ManagedTeacher; preset: AccessPreset };
-type Issued = { teacher: ManagedTeacher; invitation: TeacherInvitationLink };
 
-const STATUS_LABEL: Record<ManagedTeacher["status"], string> = { invited: "بانتظار كلمة المرور", active: "نشط", suspended: "موقوف" };
-const ACTION_LABEL: Record<TeacherAction, string> = {
-  reinvite: "رابط دعوة جديد", reset: "إعادة تعيين كلمة المرور", "end-sessions": "إنهاء الجلسات", suspend: "إيقاف الحساب", reactivate: "إعادة التفعيل"
-};
-const CONFIRM_TEXT: Partial<Record<TeacherAction, string>> = {
-  suspend: "سيفقد المعلم الوصول من طلبه التالي، حتى تعيد تفعيل الحساب.",
-  reset: "ستتوقف كلمة المرور الحالية وتنتهي كل جلساته، ويصدر رابط لإعادة التعيين.",
-  "end-sessions": "ستنتهي كل جلسات المعلم المفتوحة على كل الأجهزة."
-};
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" });
-}
-
-export default function OwnerTeachers({ token, onSignedOut }: { token: string; onSignedOut: () => void }) {
+export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void }) {
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
   const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -204,6 +191,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
                 </div>
               ) : (
                 <div className="eb-owner-actions">
+                  {onOpen && <button type="button" className="eb-owner-secondary" onClick={() => onOpen(t.accountId)} aria-label={"صفحة " + t.displayName}>صفحة المعلم</button>}
                   {presets.length > 0 && choosing !== t.accountId && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => { setChoosing(t.accountId); setConfirming(null); }}>تغيير الصلاحيات</button>}
                   {actionsFor(t).map(action => (
                     <button key={action} type="button" className={"eb-owner-secondary" + (action === "suspend" ? " eb-owner-danger" : "")} disabled={busy}
@@ -221,18 +209,8 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   );
 }
 
-function accessLabel(t: ManagedTeacher, presets: AccessPreset[]): string {
-  if (t.access) {
-    const p = presets.find(x => x.id === t.access!.preset.id && x.version === t.access!.preset.version);
-    const extra = t.access.grants || t.access.denies ? " (مع تعديلات)" : "";
-    return (p ? p.label : t.access.preset.id) + extra;
-  }
-  if (t.origin === "shared-password-workspace") return "الوصول الحالي (افتراضي)";
-  return "لم تُحدَّد بعد";
-}
-
 function AccessChooser({ teacher, presets, labels, enforcing, busy, onSave, onCancel }: { teacher: ManagedTeacher; presets: AccessPreset[]; labels: Record<string, string>; enforcing: boolean; busy: boolean; onSave: (p: AccessPreset) => void; onCancel: () => void }) {
-  const current = teacher.access ? teacher.access.preset.id : teacher.origin === "shared-password-workspace" ? "legacy-full" : "";
+  const current = startingPresetId(teacher);
   const [picked, setPicked] = useState(current);
   const chosen = presets.find(p => p.id === picked);
   // Tadris+ P4-A — what the change adds and removes, before it is saved (compared with the current preset; an account without
@@ -262,12 +240,6 @@ function AccessChooser({ teacher, presets, labels, enforcing, busy, onSave, onCa
       </div>
     </div>
   );
-}
-
-function actionsFor(t: ManagedTeacher): TeacherAction[] {
-  if (t.status === "suspended") return ["reactivate"];
-  if (!t.hasPassword) return ["reinvite", "suspend"];
-  return ["reset", "end-sessions", "suspend"];
 }
 
 function CreateTeacherForm({ busy, presets, presetRequired, onSubmit, onCancel }: { busy: boolean; presets: AccessPreset[]; presetRequired: boolean; onSubmit: (d: Parameters<typeof ownerTeachersApi.create>[1]) => void; onCancel: () => void }) {
@@ -369,29 +341,5 @@ function LegacyImportForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubmi
         <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
       </div>
     </form>
-  );
-}
-
-function InvitationPanel({ issued, onClose }: { issued: Issued; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const url = invitationUrl(issued.invitation.invitationPath);
-  const reset = issued.invitation.purpose === "reset";
-  async function copy() {
-    try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setCopied(false); }
-  }
-  return (
-    <div className="eb-owner-notice eb-owner-invite" role="region" aria-label={reset ? "رابط إعادة تعيين كلمة المرور" : "رابط الدعوة"}>
-      <p>{reset ? "رابط إعادة تعيين كلمة المرور لـ" : "رابط الدعوة لـ"} <bdi>{issued.teacher.displayName}</bdi> (<bdi dir="ltr">{issued.teacher.username}</bdi>). أرسله للمعلم بنفسك. صالح حتى <bdi>{formatDate(issued.invitation.expiresAt)}</bdi>، ويُستخدم مرة واحدة.</p>
-      <code className="eb-owner-link-text" dir="ltr">{url}</code>
-      <div className="eb-owner-actions">
-        <button type="button" className="eb-owner-secondary" onClick={copy}>
-          {copied ? <IconCheck size={16} aria-hidden="true" /> : <IconCopy size={16} aria-hidden="true" />}
-          {copied ? "تم نسخ الرابط" : "نسخ الرابط"}
-        </button>
-        <button type="button" className="eb-owner-secondary" onClick={onClose}>إغلاق</button>
-      </div>
-      <OwnerQr value={url} label={"رمز QR لرابط " + (reset ? "إعادة التعيين" : "الدعوة")} />
-      <p className="eb-owner-hint">لن يظهر هذا الرابط مرة أخرى. إذا ضاع، أصدر رابطًا جديدًا (الرابط السابق يتوقف تلقائيًا).</p>
-    </div>
   );
 }

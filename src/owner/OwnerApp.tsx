@@ -8,11 +8,12 @@ import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import { IconKey, IconLock, IconLogout, IconUser, IconWarning, IconRefresh } from "../icons";
 import { ownerApi, readOwnerToken, writeOwnerToken, clearOwnerToken, type BootstrapState, type OwnerSessionView } from "./ownerApi";
-import { ownerViewFromHash, ownerSectionHash, OWNER_HOME_HASH, OWNER_SETUP_HASH, type OwnerSection } from "./ownerRoute";
+import { ownerViewFromHash, ownerTeacherFromHash, ownerSectionHash, ownerTeacherHash, OWNER_HOME_HASH, OWNER_SETUP_HASH, type OwnerSection, type OwnerView } from "./ownerRoute";
 import SubNav from "../ui/SubNav";
 import OwnerSetup from "./OwnerSetup";
 import RecoveryCodes from "./RecoveryCodes";
 import OwnerTeachers from "./OwnerTeachers";
+import OwnerTeacherDetails from "./OwnerTeacherDetails";
 import OwnerAccessMode from "./OwnerAccessMode";
 
 /**
@@ -22,6 +23,7 @@ import OwnerAccessMode from "./OwnerAccessMode";
  *   - Home: who is signed in, session expiry, recovery codes left, sign out, end every session, new recovery codes.
  *   - Tadris+ P4-A — the Owner Console: a side menu of sections, each at its own address (#/owner, #/owner/teachers,
  *     #/owner/access), so a reload or a shared link opens the same section.
+ *   - Tadris+ P4-B1 — one teacher's page at #/owner/teachers/<accountId> (inside «المعلمون»).
  * The browser never decides access: every view comes from the server's answer, and a 401 always returns to sign-in.
  */
 type Boot = { kind: "loading" } | { kind: "error"; message: string } | { kind: "signed-out"; bootstrap: BootstrapState } | { kind: "signed-in"; token: string; view: OwnerSessionView };
@@ -42,10 +44,11 @@ async function resolveBoot(): Promise<Boot> {
 
 export default function OwnerApp() {
   const [boot, setBoot] = useState<Boot>({ kind: "loading" });
-  const [route, setRoute] = useState(() => ownerViewFromHash());
+  const [route, setRouteView] = useState<{ view: OwnerView; teacherId: string | null }>(() => ({ view: ownerViewFromHash(), teacherId: ownerTeacherFromHash() }));
+  const setRoute = (view: OwnerView, teacherId: string | null = null) => setRouteView({ view, teacherId });
 
   useEffect(() => {
-    const onHash = () => setRoute(ownerViewFromHash());
+    const onHash = () => setRouteView({ view: ownerViewFromHash(), teacherId: ownerTeacherFromHash() });
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -73,11 +76,13 @@ export default function OwnerApp() {
     </section>
   );
   else if (boot.kind === "signed-in") {
-    const section: OwnerSection = route === "teachers" || route === "access" ? route : "home";
-    body = <OwnerConsole token={boot.token} view={boot.view} section={section} onSection={next => { const h = ownerSectionHash(next); if (window.location.hash !== h) window.location.hash = h; setRoute(next); }}
+    const section: OwnerSection = route.view === "teachers" || route.view === "access" ? route.view : "home";
+    const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
+    body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
+      onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
       onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })} />;
   }
-  else if (route === "setup" && boot.bootstrap === "open") body = <OwnerSetup onDone={() => { goHome(); load(); }} />;
+  else if (route.view === "setup" && boot.bootstrap === "open") body = <OwnerSetup onDone={() => { goHome(); load(); }} />;
   else body = <OwnerLogin bootstrap={boot.bootstrap} onSignedIn={(token) => { writeOwnerToken(token); goHome(); load(); }} />;
 
   return (
@@ -158,7 +163,7 @@ const SECTIONS: { id: OwnerSection; label: string }[] = [
 ];
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
-function OwnerConsole({ token, view, section, onSection, onSignedOut, onView }: { token: string; view: OwnerSessionView; section: OwnerSection; onSection: (s: OwnerSection) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void }) {
+function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, onSignedOut, onView }: { token: string; view: OwnerSessionView; section: OwnerSection; teacherId: string | null; onSection: (s: OwnerSection) => void; onTeacher: (accountId: string) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void }) {
   return (
     <div className="eb-owner-console">
       <aside className="eb-owner-console-nav">
@@ -166,7 +171,8 @@ function OwnerConsole({ token, view, section, onSection, onSignedOut, onView }: 
       </aside>
       <div className="eb-owner-console-main">
         {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} />}
-        {section === "teachers" && <OwnerTeachers token={token} onSignedOut={onSignedOut} />}
+        {section === "teachers" && !teacherId && <OwnerTeachers token={token} onSignedOut={onSignedOut} onOpen={onTeacher} />}
+        {section === "teachers" && teacherId && <OwnerTeacherDetails key={teacherId} token={token} accountId={teacherId} onSignedOut={onSignedOut} onBack={() => onSection("teachers")} />}
         {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
       </div>
     </div>
