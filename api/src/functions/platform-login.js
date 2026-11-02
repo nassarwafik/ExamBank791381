@@ -31,7 +31,7 @@ const {
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");   // Tadris+ P2-A2: managed teachers
 const { normalizeIdentityNumber } = require("../lib/roster-input");
-const { findTeacherByUsername, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
+const { findTeacherByUsername, mutateTeacherAccount, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
 const { verifySecret } = require("../lib/identity/password-hash");
 const { ownerExists } = require("../lib/identity/owner-presence");
@@ -106,15 +106,20 @@ async function handler(request, deps = {}, obs = null) {
     // the answer is the same single generic error as before.
     const managed = await (deps.findTeacherByUsername || findTeacherByUsername)(container, userCode, { downloadJsonOrNull: dl });
     if (managed && managed.status === "active" && managed.credential && await verifySecret(password, managed.credential)) {
-      await throttleClear(container, throttleKey, clientId, deps);
       const nowMs = deps.now ? deps.now() : Date.now();
+      // A TRIAL account whose period is over: refused, with its own message (said only after the right password).
+      if (trialEnded(managed, nowMs)) {
+        obs?.logInfo("auth.login.refused", { role: "teacher", kind: "managed", reason: "trial_ended" });
+        return { status: 403, headers: NO_STORE, jsonBody: { ok: false, code: "TEACHER_TRIAL_ENDED", error: TRIAL_ENDED_MESSAGE } };
+      }
+      await throttleClear(container, throttleKey, clientId, deps);
       const { token } = createManagedTeacherToken({ accountId: managed.accountId, sid: newTeacherSessionId(), authVersion: managed.authVersion }, { nowMs });
       try { await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...a, lastLoginAt: new Date(nowMs).toISOString() })); } catch { /* the stamp is informational */ }
       obs?.logInfo("auth.login.succeeded", { role: "teacher", kind: "managed" });
       const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
       // Tadris+ P3-C — the access the UI shapes itself by (never an authority: every route checks it again on the server).
       const access = await sessionAccess({ ver: 3, role: "teacher", am: "managed", sub: managed.accountId, accessRevisionId: managed.accessRevisionId || null }, { container, downloadJsonOrNull: dl }, obs);
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access } };
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access, trial: teacherTrialView(managed, nowMs) } };
     }
 
     // Teacher credentials — the shared-password mode (BUILDER_USERS absent) only while no platform owner exists (D6). The owner's

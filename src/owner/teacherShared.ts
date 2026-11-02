@@ -12,6 +12,24 @@ export const CONFIRM_TEXT: Partial<Record<TeacherAction, string>> = {
   "end-sessions": "ستنتهي كل جلسات المعلم المفتوحة على كل الأجهزة."
 };
 
+/** Trial accounts — the trial's state in a few words for the owner, or "" for a permanent account. */
+export function trialLabel(t: ManagedTeacher, nowMs: number = Date.now()): string {
+  if (!t.trial) return "";
+  if (t.trial.ended) return "انتهت التجربة";
+  if (t.trial.endingSoon) return "ينتهي خلال " + trialDaysText(t.trial.endsAt, nowMs);
+  const date = formatDate(t.trial.endsAt);
+  return date ? "تجريبي حتى " + date : "تجريبي";
+}
+
+/** The days left of a running trial as words ("يوم واحد", "يومين", "3 أيام"), rounded up, never below one. */
+export function trialDaysText(endsAt: string, nowMs: number = Date.now()): string {
+  const n = Math.max(1, Math.ceil((new Date(endsAt).getTime() - nowMs) / (24 * 60 * 60 * 1000)));
+  return n === 1 ? "يوم واحد" : n === 2 ? "يومين" : n <= 10 ? n + " أيام" : n + " يومًا";
+}
+/** The badge class of a trial: running, ending soon, or ended. */
+export const trialBadgeClass = (t: ManagedTeacher): string =>
+  "eb-owner-status eb-owner-status--" + (!t.trial ? "" : t.trial.ended ? "trial-ended" : t.trial.endingSoon ? "trial-soon" : "trial");
+
 export function formatDate(iso: string): string {
   if (!iso) return "";
   const d = new Date(iso);

@@ -75,7 +75,13 @@ export type ManagedTeacher = {
   access?: TeacherAccess | null;
   /** P4-B1 — when and why the owner suspended the account (empty unless suspended; never shown to the teacher). */
   suspendedAt?: string; suspendedReason?: string;
+  /** Trial accounts — null for a permanent account; `ended` is decided by the server's clock. */
+  trial?: TeacherTrial | null;
 };
+/** `endingSoon`: a running trial in its last days (the server's clock and window, like `ended`). */
+export type TeacherTrial = { days: number; endsAt: string; ended: boolean; endingSoon?: boolean };
+/** The trial lengths the owner picks from (the server accepts any whole number of days from 1 to 90). */
+export const TRIAL_DAY_OPTIONS = [7, 14, 30, 60, 90] as const;
 export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };
 export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[] };
 export type AccessMode = "legacy" | "observe" | "enforce" | "invalid";
@@ -86,6 +92,8 @@ export type TeacherDraft = {
   username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number;
   /** P4-B2 — individual changes to the preset (the wizard's «copy from a teacher»), and a note kept with the first revision. */
   grants?: string[]; denies?: string[]; accessReason?: string;
+  /** Trial accounts — a trial of this many days (1–90); absent = a permanent account. */
+  trialDays?: number;
 };
 export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
 export type TeacherProfileFields = { displayName: string; fullName: string; email: string; phone: string; subjects: string[]; notes: string };
@@ -96,6 +104,9 @@ export const ownerTeachersApi = {
   importLegacy: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/import-legacy", { method: "POST", token, body: draft }),
   act: (token: string, action: TeacherAction, accountId: string, extra: { reason?: string } = {}) =>
     call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId, ...extra } }),
+  /** Trial accounts — `extend-trial` adds `days` to the trial; `end-trial` makes the account permanent. */
+  trial: (token: string, action: "extend-trial" | "end-trial", accountId: string, days?: number) =>
+    call<{ ok: true; teacher: ManagedTeacher }>("/api/owner-teachers/" + action, { method: "POST", token, body: action === "extend-trial" ? { accountId, days } : { accountId } }),
   /** P4-B1 — the teacher's details (never the username: it is the sign-in name and stays fixed). */
   update: (token: string, accountId: string, fields: TeacherProfileFields) =>
     call<{ ok: true; teacher: ManagedTeacher }>("/api/owner-teachers/update", { method: "POST", token, body: { accountId, ...fields } })

@@ -5,7 +5,8 @@ import { ownerApi, ownerTeachersApi, ownerAccessApi, type ManagedTeacher, type T
 import DiffView from "../ui/DiffView";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import TeacherWizard from "./TeacherWizard";
-import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId } from "./teacherShared";
+import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId, trialLabel, trialBadgeClass } from "./teacherShared";
+import TrialControls from "./TrialControls";
 
 /**
  * Tadris+ P2-A2b — «المعلمون» in the Owner Console (P2-A2a /api/owner-teachers; owner decisions §19.3).
@@ -23,11 +24,14 @@ import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, acces
  *     picks another preset (a new immutable revision on the server). Nothing is enforced yet: the change prepares P3-B.
  *   - P4-B1 «صفحة المعلم»: opens the teacher's own page (#/owner/teachers/<id>) — details, individual capabilities, history,
  *     security.
+ *   - Trial accounts «معلم تجريبي جديد»: the same wizard, starting as a TRIAL account that ends after the chosen number of days (the
+ *     server refuses its sign-in from then on); each trial teacher shows its end date, «تمديد التجربة» and «تحويل إلى حساب دائم».
  * The server decides everything; a 401 signs the owner out.
  */
 
 type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft: TeacherDraft } | { kind: "act"; action: TeacherAction; teacher: ManagedTeacher }
-  | { kind: "access"; teacher: ManagedTeacher; preset: AccessPreset };
+  | { kind: "access"; teacher: ManagedTeacher; preset: AccessPreset }
+  | { kind: "trial"; teacher: ManagedTeacher; action: "extend-trial" | "end-trial"; days?: number };
 
 export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void }) {
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
@@ -40,7 +44,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
   const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState<false | "permanent" | "trial">(false);
   const [issued, setIssued] = useState<Issued | null>(null);
   const [confirming, setConfirming] = useState<{ action: TeacherAction; teacher: ManagedTeacher } | null>(null);
   const [stepUp, setStepUp] = useState<Pending | null>(null);
@@ -89,6 +93,15 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
       setError(a.error);
       return;
     }
+    if (p.kind === "trial") {
+      const t = await ownerTeachersApi.trial(token, p.action, p.teacher.accountId, p.days);
+      setBusy(false);
+      if (t.ok) { setStepUp(null); upsert(t.data.teacher); return; }
+      if (t.status === 401) { onSignedOut(); return; }
+      if (t.code === "STEP_UP_REQUIRED") { setStepUp(p); return; }
+      setError(t.error);
+      return;
+    }
     const r: ApiResult<{ teacher: ManagedTeacher; invitation?: TeacherInvitationLink }> = p.kind === "create"
       ? await ownerTeachersApi.create(token, p.draft)
       : p.kind === "import"
@@ -128,7 +141,12 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
     <section className="eb-owner-panel eb-owner-teachers" aria-labelledby="eb-owner-teachers-title">
       <div className="eb-owner-panel-head">
         <h2 id="eb-owner-teachers-title" className="eb-owner-h2">المعلمون</h2>
-        {!showCreate && <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate(true); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>}
+        {!showCreate && (
+          <div className="eb-owner-actions">
+            <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate("permanent"); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>
+            <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate("trial"); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> معلم تجريبي جديد</button>
+          </div>
+        )}
       </div>
 
       {legacy && legacy.available && !showImport && (
@@ -144,7 +162,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
       )}
       {showImport && <LegacyImportForm busy={busy} onCancel={() => setShowImport(false)} onSubmit={draft => run({ kind: "import", draft })} />}
 
-      {showCreate && <TeacherWizard token={token} busy={busy} presets={presets} capabilities={capabilities} teachers={teachers || []} presetRequired={accessMode === "enforce" || accessMode === "invalid"}
+      {showCreate && <TeacherWizard key={showCreate} initialTrial={showCreate === "trial"} token={token} busy={busy} presets={presets} capabilities={capabilities} teachers={teachers || []} presetRequired={accessMode === "enforce" || accessMode === "invalid"}
         onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} onSignedOut={onSignedOut} />}
 
       {issued && <InvitationPanel issued={issued} onClose={() => setIssued(null)} />}
@@ -167,6 +185,8 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
 
       {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
 
+      {teachers && <TrialSummary teachers={teachers} />}
+
       {teachers === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل المعلمين…</p>}
       {teachers && teachers.length === 0 && <p className="eb-owner-hint">لا يوجد معلمون مُدارون بعد. أضف أول معلم، ثم أرسل له رابط الدعوة.</p>}
       {teachers && teachers.length > 0 && (
@@ -178,6 +198,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
                 <span className="eb-owner-teacher-user" dir="ltr">{t.username}</span>
                 <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
                 {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
+                {t.trial && <span className={trialBadgeClass(t)}>{trialLabel(t)}</span>}
               </div>
               <p className="eb-owner-hint eb-owner-access-line">الصلاحيات: <strong>{accessLabel(t, presets)}</strong></p>
               {choosing === t.accountId && (
@@ -187,6 +208,11 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
                 {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : "لم يدخل بعد."}
                 {t.invitation && <> · رابط {t.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"} صالح حتى <bdi>{formatDate(t.invitation.expiresAt)}</bdi></>}
               </p>
+              {t.trial && (
+                <TrialControls teacher={t} busy={busy}
+                  onExtend={days => run({ kind: "trial", teacher: t, action: "extend-trial", days })}
+                  onMakePermanent={() => run({ kind: "trial", teacher: t, action: "end-trial" })} />
+              )}
               {confirming && confirming.teacher.accountId === t.accountId ? (
                 <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + ACTION_LABEL[confirming.action]}>
                   <p>{CONFIRM_TEXT[confirming.action]}</p>
@@ -212,6 +238,20 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
         </ul>
       )}
     </section>
+  );
+}
+
+/** Trial accounts — the owner's alert: how many trials end within the warning window, and how many have ended (by name). */
+function TrialSummary({ teachers }: { teachers: ManagedTeacher[] }) {
+  const soon = teachers.filter(t => t.trial && !t.trial.ended && t.trial.endingSoon);
+  const ended = teachers.filter(t => t.trial && t.trial.ended && t.status !== "suspended");
+  if (!soon.length && !ended.length) return null;
+  const names = (list: ManagedTeacher[]) => list.map(t => t.displayName).join("، ");
+  return (
+    <div className="eb-owner-notice eb-owner-trial-summary" role="alert" aria-label="تنبيه الحسابات التجريبية">
+      {soon.length > 0 && <p><strong>{soon.length === 1 ? "حساب تجريبي ينتهي" : soon.length + " حسابات تجريبية تنتهي"} خلال أسبوع:</strong> <bdi>{names(soon)}</bdi>. مدّدها أو حوّلها إلى دائمة قبل أن يتوقف دخول أصحابها.</p>}
+      {ended.length > 0 && <p><strong>{ended.length === 1 ? "حساب تجريبي انتهى" : ended.length + " حسابات تجريبية انتهت"}:</strong> <bdi>{names(ended)}</bdi>. لا يستطيع أصحابها الدخول حتى تمدّدها.</p>}
+    </div>
   );
 }
 

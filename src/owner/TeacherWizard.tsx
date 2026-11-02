@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import Stepper from "../ui/Stepper";
-import { currentAccessOf, type AccessCapability, type AccessHistoryEntry, type AccessPreset, type ManagedTeacher, type TeacherDraft } from "./ownerApi";
+import { currentAccessOf, TRIAL_DAY_OPTIONS, type AccessCapability, type AccessHistoryEntry, type AccessPreset, type ManagedTeacher, type TeacherDraft } from "./ownerApi";
 
 /**
  * Tadris+ P4-B2 — «إضافة معلم» as a guided wizard (replaces the single form of P2-A2b; same fields, same rules, same request):
- *   1. الهوية          username + display name (required, checked before going on);
+ *   1. الهوية          username + display name (required, checked before going on); the account kind: permanent, or a TRIAL of
+ *                      7/14/30/60/90 days (trial accounts; «معلم تجريبي جديد» opens the wizard with «تجريبي» already chosen);
  *   2. بيانات إضافية   full name, email, phone, subjects, administrative notes (all optional);
  *   3. الصلاحيات       a preset, OR «نسخ من معلم»: the source teacher's CURRENT access as the server re-validated it (preset +
  *                      individual changes), OR later (only while enforcement is off — otherwise a choice is required);
@@ -24,11 +25,13 @@ const STEPS: { id: StepId; label: string }[] = [
 const PRESET_REQUIRED = "التطبيق الفعلي للصلاحيات مفعّل: اختر حزمة صلاحيات للمعلم الجديد.";
 const presetKey = (p: { id: string; version: number }) => p.id + "@" + p.version;
 
-export default function TeacherWizard({ token, busy, presets, capabilities, teachers, presetRequired, onSubmit, onCancel, onSignedOut }: {
-  token: string; busy: boolean; presets: AccessPreset[]; capabilities: AccessCapability[]; teachers: ManagedTeacher[]; presetRequired: boolean;
+export default function TeacherWizard({ initialTrial = false, token, busy, presets, capabilities, teachers, presetRequired, onSubmit, onCancel, onSignedOut }: {
+  initialTrial?: boolean; token: string; busy: boolean; presets: AccessPreset[]; capabilities: AccessCapability[]; teachers: ManagedTeacher[]; presetRequired: boolean;
   onSubmit: (d: TeacherDraft) => void; onCancel: () => void; onSignedOut: () => void;
 }) {
   const [step, setStep] = useState<StepId>("identity");
+  const [trial, setTrial] = useState(initialTrial);
+  const [trialDays, setTrialDays] = useState<number>(14);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [fullName, setFullName] = useState("");
@@ -81,7 +84,8 @@ export default function TeacherWizard({ token, busy, presets, capabilities, teac
   function draft(): TeacherDraft {
     const base: TeacherDraft = {
       username: username.trim(), displayName: displayName.trim(), fullName: fullName.trim(), email: email.trim(), phone: phone.trim(),
-      subjects: subjects.split(/[,،]/).map(s => s.trim()).filter(Boolean), notes: notes.trim()
+      subjects: subjects.split(/[,،]/).map(s => s.trim()).filter(Boolean), notes: notes.trim(),
+      ...(trial ? { trialDays } : {})
     };
     if (copied && copied.preset && sourceTeacher) {
       return { ...base, presetId: copied.preset.id, presetVersion: copied.preset.version, grants: [...copied.grants], denies: [...copied.denies], accessReason: "نسخ من " + sourceTeacher.username };
@@ -104,11 +108,33 @@ export default function TeacherWizard({ token, busy, presets, capabilities, teac
     : chosenPreset ? chosenPreset.label : "لاحقًا (بلا صلاحيات حتى تختار)";
 
   return (
-    <form className="auth-form eb-owner-create eb-owner-wizard" onSubmit={submit} noValidate aria-label="إضافة معلم">
+    <form className="auth-form eb-owner-create eb-owner-wizard" onSubmit={submit} noValidate aria-label={trial ? "معلم تجريبي جديد" : "إضافة معلم"}>
       <Stepper label="خطوات إضافة معلم" steps={STEPS} currentId={step} />
       <h3 ref={heading} tabIndex={-1} className="eb-owner-wizard-title">{STEPS[index].label} <small>(الخطوة {index + 1} من {STEPS.length})</small></h3>
 
       {step === "identity" && (
+        <>
+        <fieldset className="eb-owner-access-options">
+          <legend>نوع الحساب</legend>
+          <label className="eb-owner-access-option">
+            <input type="radio" name="eb-owner-account-kind" checked={!trial} onChange={() => setTrial(false)} />
+            <span><strong>دائم</strong><small>بلا تاريخ انتهاء.</small></span>
+          </label>
+          <label className="eb-owner-access-option">
+            <input type="radio" name="eb-owner-account-kind" checked={trial} onChange={() => setTrial(true)} />
+            <span><strong>تجريبي</strong><small>يتوقف دخول المعلم تلقائيًا بعد المدة، وتبقى بياناته محفوظة. يُنبَّه هو وأنت قبل الانتهاء بأسبوع، ويمكنك تمديدها أو تحويل الحساب إلى دائم في أي وقت.</small></span>
+          </label>
+        </fieldset>
+        {trial && (
+          <label className="auth-field"><span>مدة التجربة</span>
+            <div className="auth-input">
+              <select value={trialDays} onChange={e => setTrialDays(Number(e.target.value))}>
+                {TRIAL_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} يومًا</option>)}
+              </select>
+            </div>
+            <small className="eb-owner-hint">تبدأ المدة من إنشاء الحساب.</small>
+          </label>
+        )}
         <div className="eb-owner-grid">
           <label className="auth-field"><span>اسم المستخدم</span>
             <div className="auth-input"><input type="text" value={username} onChange={e => setUsername(e.target.value)} dir="ltr" spellCheck={false} autoComplete="off" placeholder="t.ahmad" /></div>
@@ -118,6 +144,7 @@ export default function TeacherWizard({ token, busy, presets, capabilities, teac
             <div className="auth-input"><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} /></div>
           </label>
         </div>
+        </>
       )}
 
       {step === "details" && (
@@ -174,6 +201,7 @@ export default function TeacherWizard({ token, busy, presets, capabilities, teac
         <section aria-label="مراجعة بيانات المعلم الجديد"><dl className="eb-owner-facts">
           <div><dt>اسم المستخدم</dt><dd><bdi dir="ltr">{username.trim()}</bdi></dd></div>
           <div><dt>اسم العرض</dt><dd><bdi>{displayName.trim()}</bdi></dd></div>
+          <div><dt>نوع الحساب</dt><dd>{trial ? "تجريبي — " + trialDays + " يومًا" : "دائم"}</dd></div>
           {fullName.trim() && <div><dt>الاسم الكامل</dt><dd><bdi>{fullName.trim()}</bdi></dd></div>}
           {email.trim() && <div><dt>البريد الإلكتروني</dt><dd><bdi dir="ltr">{email.trim()}</bdi></dd></div>}
           {phone.trim() && <div><dt>الهاتف</dt><dd><bdi dir="ltr">{phone.trim()}</bdi></dd></div>}
@@ -185,7 +213,7 @@ export default function TeacherWizard({ token, busy, presets, capabilities, teac
       {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
       <div className="eb-owner-actions">
         {step === "review"
-          ? <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الإنشاء…" : "إنشاء الحساب وإصدار رابط الدعوة"}</button>
+          ? <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الإنشاء…" : trial ? "إنشاء الحساب التجريبي وإصدار رابط الدعوة" : "إنشاء الحساب وإصدار رابط الدعوة"}</button>
           : <button type="submit" className="auth-submit" disabled={busy}>التالي</button>}
         {index > 0 && <button type="button" className="eb-owner-secondary" onClick={() => { setError(""); setStep(STEPS[index - 1].id); }}>السابق</button>}
         <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
