@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Trial teacher accounts — mutation proof for the end of a trial (an authority invariant): the per-request session check, the
 // sign-in, the invitation link (and its compare-and-set re-check), the fail-closed reading of a trial record, the extension rule,
-// the owner API and the console flow. Same engine and rules as scripts/mutate-p4b1.mjs (byte-for-byte, hash-verified restore
+// the owner API and the console flow; and the warnings a week before the end (the teacher's own notice, the owner's alert). Same engine and rules as scripts/mutate-p4b1.mjs (byte-for-byte, hash-verified restore
 // after every mutant).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
-const TESTS = ["api/tests/owner-teacher-trial.test.js", "api/tests/trial-reminder-sweep.test.js", "src/owner/OwnerTeachers.trial.test.tsx", "src/owner/OwnerTeacherDetails.trial.test.tsx", "src/shell/TrialNotice.trial.test.tsx", "src/AppShell.trial.test.tsx"];
+const TESTS = ["api/tests/owner-teacher-trial.test.js", "src/owner/OwnerTeachers.trial.test.tsx", "src/owner/OwnerTeacherDetails.trial.test.tsx", "src/shell/TrialNotice.trial.test.tsx", "src/AppShell.trial.test.tsx"];
 const ACCOUNTS = "api/src/lib/identity/teacher-accounts.js";
 const SESSION = "api/src/lib/teacher-session.js";
 const LOGIN = "api/src/functions/platform-login.js";
@@ -23,10 +23,7 @@ const PSESSION = "api/src/functions/platform-session.js";
 const NOTICE = "src/shell/TrialNotice.tsx";
 const APP = "src/App.tsx";
 const SHARED = "src/owner/teacherShared.ts";
-const SWEEP = "api/src/lib/trial-reminder-sweep.js";
-const PROTO = "api/src/lib/trial-reminder-protocol.js";
-const ROUTE = "api/src/functions/trial-reminder-sweep.js";
-const EMAILLIB = "api/src/lib/email/acs-email.js";
+
 
 export const MUTANTS = [
   { id: "TRIAL-M1", what: "an open session survives the end of the trial", edits: [{ file: SESSION, find: "  if (trialEnded(account, nowMs)) return trialOver();\n", replace: "" }] },
@@ -45,7 +42,7 @@ export const MUTANTS = [
   { id: "TRIAL-M14", what: "«تحويل إلى حساب دائم» converts without a confirmation", edits: [{ file: CONTROLS, find: "onClick={() => setMode(\"permanent\")}", replace: "onClick={() => onMakePermanent()}" }] },
   { id: "TRIAL-M15", what: "a step-up does not retry a trial change", edits: [{ file: LIST, find: "      if (t.code === \"STEP_UP_REQUIRED\") { setStepUp(p); return; }", replace: "      if (t.code === \"STEP_UP_REQUIRED\") { return; }" }] },
   // The teacher's own trial view and the alerts before the end.
-  { id: "TRIAL-M16", what: "the warning window is the last 7 days, not 3", edits: [{ file: ACCOUNTS, find: "const TRIAL_WARNING_DAYS = 3;", replace: "const TRIAL_WARNING_DAYS = 7;" }] },
+  { id: "TRIAL-M16", what: "the warning window is the last 3 days, not 7 (a week)", edits: [{ file: ACCOUNTS, find: "const TRIAL_WARNING_DAYS = 7;", replace: "const TRIAL_WARNING_DAYS = 3;" }] },
   { id: "TRIAL-M17", what: "an ended trial still counts as ending soon", edits: [{ file: ACCOUNTS, find: "  if (!isTrial(account) || trialEnded(account, nowMs)) return false;\n  return Number(account.trial.endsAtMs) - nowMs", replace: "  if (!isTrial(account)) return false;\n  return Number(account.trial.endsAtMs) - nowMs" }] },
   { id: "TRIAL-M18", what: "the session does not carry the teacher's trial", edits: [{ file: SESSION, find: ", trial: teacherTrialView(account, nowMs) } };", replace: " } };" }] },
   { id: "TRIAL-M19", what: "platform-session drops the trial", edits: [{ file: PSESSION, find: "access, trial } };", replace: "access, trial: null } };" }] },
@@ -55,22 +52,7 @@ export const MUTANTS = [
   { id: "TRIAL-M23", what: "the teacher's warning never shows (endingSoon ignored)", edits: [{ file: NOTICE, find: "  if (trial.endingSoon) {", replace: "  if (false) {" }] },
   { id: "TRIAL-M24", what: "days left round down", edits: [{ file: NOTICE, find: "Math.max(1, Math.ceil((new Date(endsAt).getTime() - nowMs) / DAY_MS))", replace: "Math.max(1, Math.floor((new Date(endsAt).getTime() - nowMs) / DAY_MS))" }] },
   { id: "TRIAL-M25", what: "the owner badge ignores ending soon", edits: [{ file: SHARED, find: "  if (t.trial.endingSoon) return \"ينتهي خلال \" + trialDaysText(t.trial.endsAt, nowMs);\n", replace: "" }] },
-  { id: "TRIAL-M26", what: "the owner alert leaves out the trials ending soon", edits: [{ file: LIST, find: "const soon = teachers.filter(t => t.trial && !t.trial.ended && t.trial.endingSoon);", replace: "const soon = teachers.filter(() => false);" }] },
-  // The reminder emails.
-  { id: "TRIAL-M27", what: "the sweep key is not separated from the assignment reminder key", edits: [{ file: PROTO, find: ", \"ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY\"]);", replace: "]);" }] },
-  { id: "TRIAL-M28", what: "the sweep signature is not checked", edits: [{ file: PROTO, find: "  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return { ok: false, reason: \"signature\" };\n", replace: "" }] },
-  { id: "TRIAL-M29", what: "the trigger window is not checked (stale timestamps accepted)", edits: [{ file: PROTO, find: "  if (Math.abs(nowMs / 1000 - Number(timestamp)) > TRIAL_MAX_SKEW_SECONDS) return { ok: false, reason: \"stale\" };\n", replace: "" }] },
-  { id: "TRIAL-M30", what: "the route runs the sweep for any body", edits: [{ file: ROUTE, find: " || body.version !== 1) return reply(400,", replace: ") return reply(400," }] },
-  { id: "TRIAL-M31", what: "an email is sent without reserving it (no exactly-once)", edits: [{ file: SWEEP, find: "      if (!reserved) { out.alreadySent += 1; continue; }\n", replace: "" }] },
-  { id: "TRIAL-M32", what: "a refused send keeps its marker (never retried)", edits: [{ file: SWEEP, find: "        try { await release(container, marker); } catch", replace: "        try { void release; } catch" }] },
-  { id: "TRIAL-M33", what: "markers ignore the end date (an extended trial is not reminded again)", edits: [{ file: SWEEP, find: "\"trial-reminder|\" + accountId + \"|\" + endsAtMs + \"|\" + stage", replace: "\"trial-reminder|\" + accountId + \"|\" + stage" }] },
-  { id: "TRIAL-M34", what: "not configured still reserves markers (emails lost once configured)", edits: [{ file: SWEEP, find: "      if (!cfg.ok) continue;                                                 // not configured: reserve nothing, send nothing\n", replace: "      if (!cfg.ok) { await reserve(container, markerName(account.accountId, Number(account.trial.endsAtMs), stage, r.kind), {}); continue; }\n" }] },
-  { id: "TRIAL-M35", what: "a suspended trial account is still written to", edits: [{ file: SWEEP, find: "  if (!isTrial(account) || account.status === \"suspended\") return \"\";", replace: "  if (!isTrial(account)) return \"\";" }] },
-  { id: "TRIAL-M36", what: "an old ended trial is written to (no grace bound)", edits: [{ file: SWEEP, find: " && nowMs - end <= ENDED_GRACE_MS) return \"ended\";", replace: ") return \"ended\";" }] },
-  { id: "TRIAL-M37", what: "the owner copy is never sent", edits: [{ file: SWEEP, find: "    if (cfg.ok && cfg.ownerEmail) recipients.push({ kind: \"owner\", to: cfg.ownerEmail });", replace: "    if (false) recipients.push({ kind: \"owner\", to: cfg.ownerEmail });" }] },
-  { id: "TRIAL-M38", what: "the per-run bound is not applied", edits: [{ file: SWEEP, find: "      if (out.sent + out.failed >= maxEmails) { out.truncated = true; continue; }\n", replace: "" }] },
-  { id: "TRIAL-M39", what: "names are not escaped in the HTML email", edits: [{ file: SWEEP, find: "lines.map(l => \"<p>\" + escapeHtml(l) + \"</p>\")", replace: "lines.map(l => \"<p>\" + l + \"</p>\")" }] },
-  { id: "TRIAL-M40", what: "a malformed sender address is accepted", edits: [{ file: EMAILLIB, find: "  if (!isEmail(sender)) return { ok: false, reason: \"sender-invalid\" };\n", replace: "" }] }
+  { id: "TRIAL-M26", what: "the owner alert leaves out the trials ending soon", edits: [{ file: LIST, find: "const soon = teachers.filter(t => t.trial && !t.trial.ended && t.trial.endingSoon);", replace: "const soon = teachers.filter(() => false);" }] }
 ];
 
 const originals = new Map();

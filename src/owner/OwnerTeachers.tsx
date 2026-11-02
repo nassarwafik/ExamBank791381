@@ -243,7 +243,7 @@ function TrialSummary({ teachers }: { teachers: ManagedTeacher[] }) {
   const names = (list: ManagedTeacher[]) => list.map(t => t.displayName).join("، ");
   return (
     <div className="eb-owner-notice eb-owner-trial-summary" role="alert" aria-label="تنبيه الحسابات التجريبية">
-      {soon.length > 0 && <p><strong>{soon.length === 1 ? "حساب تجريبي ينتهي" : soon.length + " حسابات تجريبية تنتهي"} خلال 3 أيام:</strong> <bdi>{names(soon)}</bdi>. مدّدها أو حوّلها إلى دائمة قبل أن يتوقف دخول أصحابها.</p>}
+      {soon.length > 0 && <p><strong>{soon.length === 1 ? "حساب تجريبي ينتهي" : soon.length + " حسابات تجريبية تنتهي"} خلال أسبوع:</strong> <bdi>{names(soon)}</bdi>. مدّدها أو حوّلها إلى دائمة قبل أن يتوقف دخول أصحابها.</p>}
       {ended.length > 0 && <p><strong>{ended.length === 1 ? "حساب تجريبي انتهى" : ended.length + " حسابات تجريبية انتهت"}:</strong> <bdi>{names(ended)}</bdi>. لا يستطيع أصحابها الدخول حتى تمدّدها.</p>}
     </div>
   );

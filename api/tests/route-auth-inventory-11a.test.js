@@ -58,10 +58,7 @@ const SIGNED = {
   codingGradingSweep: "coding grading recovery sweep trigger; requires an x-sa-sweep-* HMAC signature under CODING_GRADING_SWEEP_HMAC_KEY",
   // D4 (item 8) — scheduler → automatic assignment reminder sweep: no session; SA-REMINDER-SWEEP-1 HMAC under a FOURTH key (separated
   // from the three coding keys) over the exact body {"version":1} + timestamp (±300 s) + request id; unsigned → 401 before any storage.
-  assignmentReminderSweep: "automatic assignment reminder sweep trigger; requires an x-sa-reminder-* HMAC signature under ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY",
-  // Trial accounts — scheduler → trial reminder EMAIL sweep: no session; SA-TRIAL-REMINDER-1 HMAC under a FIFTH key (separated from the
-  // four others) over the exact body {"version":1} + timestamp (±300 s) + request id; unsigned → 401 before any storage.
-  trialReminderSweep: "trial reminder email sweep trigger; requires an x-sa-trial-* HMAC signature under TRIAL_REMINDER_SWEEP_HMAC_KEY"
+  assignmentReminderSweep: "automatic assignment reminder sweep trigger; requires an x-sa-reminder-* HMAC signature under ASSIGNMENT_REMINDER_SWEEP_HMAC_KEY"
 };
 
 const SECRETS = {

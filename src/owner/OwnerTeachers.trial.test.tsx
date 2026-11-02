@@ -138,7 +138,7 @@ describe("trial teacher accounts — owner console", () => {
     ] } });
     show();
     const alert = await screen.findByRole("alert", { name: "تنبيه الحسابات التجريبية" });
-    expect(alert.textContent).toContain("حساب تجريبي ينتهي خلال 3 أيام");
+    expect(alert.textContent).toContain("حساب تجريبي ينتهي خلال أسبوع");
     expect(alert.textContent).toContain("سارة");
     expect(alert.textContent).not.toContain("عمر");
     const items = within(screen.getByRole("list", { name: "المعلمون" })).getAllByRole("listitem");

@@ -25,7 +25,7 @@ const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
 const MAX_REVOKED_SESSIONS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_ENDED_MESSAGE = "انتهت الفترة التجريبية لحسابك. تواصل مع إدارة المنصة لتمديدها أو لتحويل الحساب إلى حساب دائم.";
-const TRIAL_WARNING_DAYS = 3;       // «ينتهي قريبًا»: the last 3 days of a trial (the in-app warnings and the first reminder email)
+const TRIAL_WARNING_DAYS = 7;       // «ينتهي قريبًا»: the last week of a trial (owner decision: the in-app warnings start a week before)
 const MIN_TRIAL_DAYS = 1;
 const MAX_TRIAL_DAYS = 90;
 
