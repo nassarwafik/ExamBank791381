@@ -7,6 +7,7 @@ const {
 } = require("@azure/storage-blob");
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { normalizeBankAssetsInQuestion } = require("../lib/bank-asset-hydrate");
 // Phase 14A — the ONE canonical exam content form (shared with the immutable governance revisions).
 const { canonicalizeExamContent } = require("../lib/exam-canonical");
@@ -130,6 +131,8 @@ async function handler(request, deps = {}) {
           ) {
             return auth.response;
           }
+          const capabilityDenial = await requireCapability(auth, "save-exam-artifact.js", "*", deps, null);   // Tadris+ P3-B
+          if (capabilityDenial) return capabilityDenial;
 
           let body = {};
 

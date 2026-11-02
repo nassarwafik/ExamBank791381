@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer } = require("../lib/platform-storage");
 const PRESETS = require("../lib/assessment-presets");
 
@@ -26,6 +27,8 @@ async function handler(request, deps = {}, obs = null) {
   let body = {};
   try { const b = await request.json(); body = b && typeof b === "object" ? b : {}; } catch { body = {}; }
   const action = String(body.action || "").trim().toLowerCase();
+  const capabilityDenial = await requireCapability(auth, "assessment-presets.js", action, deps, obs);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   if (!ACTIONS.has(action)) return { status: 400, headers: NO_STORE, jsonBody: { ok: false, code: "INVALID", error: "إجراء غير مدعوم." } };
   const libDeps = { now: deps.now, newId: deps.newId };
   try {

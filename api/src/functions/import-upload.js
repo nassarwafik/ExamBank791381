@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf, ownerStamp } = require("../lib/teacher-tenancy");
 const { detectAndValidateKind } = require("../lib/file-sniff");
 
@@ -53,6 +54,8 @@ app.http("importUpload", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "import-upload.js", "*", {}, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       obs?.logInfo("import.started", { operation: "upload" });
 
       const fileName = decodeFileNameHeader(request.headers.get("x-file-name"));

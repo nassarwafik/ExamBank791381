@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { withObservability } = require("../lib/observability");
 const { buildExamQuestion } = require("../lib/bank-question-exam");
 const { isBlobNotFound } = require("./question-bank-action");
@@ -58,6 +59,8 @@ async function handler(request, deps = {}, obs = null) {
   try {
     const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "bank-question-select.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     if (request.method !== "POST") return bad(405, "الطريقة غير مدعومة.");
     let body = {};
     try { body = await request.json(); } catch { body = {}; }

@@ -11,6 +11,7 @@ import { ownerViewFromHash, OWNER_HOME_HASH, OWNER_SETUP_HASH } from "./ownerRou
 import OwnerSetup from "./OwnerSetup";
 import RecoveryCodes from "./RecoveryCodes";
 import OwnerTeachers from "./OwnerTeachers";
+import OwnerAccessMode from "./OwnerAccessMode";
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -236,9 +237,11 @@ function OwnerHome({ token, view, onSignedOut, onView }: { token: string; view: 
 
       <OwnerTeachers token={token} onSignedOut={onSignedOut} />
 
+      <OwnerAccessMode token={token} onSignedOut={onSignedOut} />
+
       <div className="eb-owner-panel">
         <h2 className="eb-owner-h2">لوحة المالك</h2>
-        <p className="eb-owner-hint">الصلاحيات والمواد التعليمية ومكتبة الواجبات وهوية المدرسة تُضاف هنا في المراحل القادمة (P3–P4).</p>
+        <p className="eb-owner-hint">المواد التعليمية ومكتبة الواجبات وهوية المدرسة تُضاف هنا في المراحل القادمة.</p>
       </div>
     </section>
   );

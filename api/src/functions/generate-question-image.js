@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 
 async function loadOpenAI() {
   const module = await import("openai");
@@ -35,6 +36,8 @@ async function handler(request, deps = {}) {
   try {
     const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "generate-question-image.js", "*", deps, null);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
 
     let body = {};
     try { body = await request.json(); } catch { body = {}; }

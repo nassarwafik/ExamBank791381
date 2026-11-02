@@ -3,6 +3,7 @@ const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teache
 const fs = require("fs");
 const path = require("path");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 
 function loadConfig(fileName) {
   const candidates = [
@@ -505,6 +506,8 @@ app.http("interpretExamRequest", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "interpret-exam-request.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       let body = {};
 

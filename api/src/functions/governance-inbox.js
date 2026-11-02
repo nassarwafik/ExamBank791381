@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer } = require("../lib/platform-storage");
 const { listActorTasks, TASK_STAGES } = require("../lib/governance-inbox");
 
@@ -26,6 +27,8 @@ function parseArgs(request, body) {
 async function handler(request, deps = {}, obs = null) {
   const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) return auth.response;
+  const capabilityDenial = await requireCapability(auth, "governance-inbox.js", "*", deps, obs);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const actorId = String(auth.user.sub);                                   // the ONE source of the inbox identity
   let body = null;
   if (request.method !== "GET") { try { const b = await request.json(); body = b && typeof b === "object" ? b : {}; } catch { body = {}; } }

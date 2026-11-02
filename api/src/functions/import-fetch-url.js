@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf, ownerStamp } = require("../lib/teacher-tenancy");
 const { looksLikeText } = require("../lib/file-sniff");
 const { safeFetch, UnsafeUrlError } = require("../lib/url-fetch");
@@ -56,6 +57,8 @@ app.http("importFetchUrl", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "import-fetch-url.js", "*", {}, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       obs?.logInfo("import.started", { operation: "fetch-url" });
 
       let body = {};

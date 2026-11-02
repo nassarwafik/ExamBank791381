@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const {
   studentCodeHash,
   hashPassword,
@@ -884,6 +885,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       if (request.method === "GET") {
         const url = new URL(request.url);
+        const capabilityDenial = await requireCapability(auth, "manage-students.js", "GET", deps, obs);   // Tadris+ P3-B
+        if (capabilityDenial) return capabilityDenial;
         const profileUserId = String(url.searchParams.get("profileUserId") || "").trim();
 
         if (profileUserId) {
@@ -912,6 +915,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
       action = String(body?.action || "create").trim().toLowerCase();
+      const capabilityDenial = await requireCapability(auth, "manage-students.js", action === "bulkaction" ? "bulk:" + String(body?.operation || "").trim().toLowerCase() : action, deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       if (action === "create") {
         const classId = String(body?.classId || "").trim();

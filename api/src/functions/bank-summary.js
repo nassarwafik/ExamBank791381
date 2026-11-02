@@ -3,6 +3,7 @@ const {
   BlobServiceClient
 } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 
@@ -123,6 +124,8 @@ app.http("bankSummary", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "bank-summary.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
 
       // ----------------------------------------------------

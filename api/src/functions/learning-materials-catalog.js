@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { listLearningCourses } = require("../lib/learning-materials-registry");
 
 // GET /api/learning-materials-catalog — the teacher's PUBLISHABLE catalog (production-approved courses and their
@@ -12,6 +13,8 @@ async function handler(request, deps = {}, obs = null) {
   try {
     const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "learning-materials-catalog.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     return { status: 200, jsonBody: { ok: true, courses: listLearningCourses() } };
   } catch (e) {
     obs?.logError("learning-materials.catalog.error", e);

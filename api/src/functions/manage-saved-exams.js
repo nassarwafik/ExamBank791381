@@ -6,6 +6,7 @@ const {
 } = require("@azure/storage-blob");
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const {
   hydrateBankAssets
 } = require("../lib/bank-asset-hydrate");
@@ -286,6 +287,8 @@ async function handler(request, deps = {}) {
 
   try {
     if (request.method === "GET") {
+      const capabilityDenial = await requireCapability(auth, "manage-saved-exams.js", "GET", deps, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       const exams = await (deps.listSavedExams || listSavedExams)(container, owner);
       return { status: 200, jsonBody: { ok: true, exams } };
     }
@@ -299,6 +302,8 @@ async function handler(request, deps = {}) {
     }
 
     const action = String(body?.action || "").trim().toLowerCase();
+    const capabilityDenial = await requireCapability(auth, "manage-saved-exams.js", action, deps, null);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const blobName = String(body?.blobName || "");
 
     if (!isSafeExamBlob(blobName)) {

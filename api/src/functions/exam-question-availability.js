@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const fs = require("fs");
 const path = require("path");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { INDEX_BLOB, filterEligibleCandidates, presentationTypeFromIndex } = require("../lib/exam-question-selection");
 const { resolveSectionFromTopic } = require("../lib/section-resolver");
@@ -31,6 +32,8 @@ app.http("examQuestionAvailability", {
     try {
       const auth = await requireTeacherSession(request);
       if (!auth.ok) return auth.response;
+      const capabilityDenial = await requireCapability(auth, "exam-question-availability.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       let body = {};
       try { body = await request.json(); } catch { body = {}; }

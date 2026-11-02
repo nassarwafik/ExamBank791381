@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
 const { isValidBankSection } = require("../lib/section-resolver");
@@ -265,6 +266,8 @@ app.http("bankImportAction", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "bank-import-action.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       let body = {};
       try {

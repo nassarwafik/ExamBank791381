@@ -7,6 +7,7 @@ const {
   createSignedAssetParams
 } = require("../lib/builder-auth");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 const {
@@ -519,6 +520,8 @@ app.http("generateExam", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "generate-exam.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       let body = {};
 

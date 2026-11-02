@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull, uploadJson, listJson, deleteBlob } = require("../lib/platform-storage");
 const { teacherPrefix, challengeDocName, summaryOf, validateChallengeInput, storedDoc, challengeFromDoc } = require("../lib/live-challenge-store");
 
@@ -20,6 +21,8 @@ async function handler(request, deps = {}, obs = null) {
   try {
     const sess = (await requireTeacherSession(request, deps));
     if (!sess.ok) return sess.response;
+    const capabilityDenial = await requireCapability(sess, "game-live-challenge.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const teacherId = String(sess.user && sess.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     // Resolve storage only after auth (an unauthenticated caller never touches the container).
