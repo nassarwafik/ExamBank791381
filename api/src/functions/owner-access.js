@@ -2,9 +2,10 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordOwnerAuditEvent } = require("../lib/audit-log");
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
-const { isTeacherAccountId, LEGACY_TEACHER_ACCOUNT_ID } = require("../lib/identity/teacher-token");
-const { readTeacherAccount, mutateTeacherAccount, listTeacherAccounts } = require("../lib/identity/teacher-accounts");
-const { readObservations } = require("../lib/access/observations");
+const { isTeacherAccountId } = require("../lib/identity/teacher-token");
+const { readTeacherAccount, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
+const { computeReadiness } = require("../lib/access/readiness");
+const { ACCESS_REFUSAL: REFUSAL } = require("../lib/access/messages");
 const { CAPABILITIES } = require("../lib/access/capabilities");
 const { PRESETS } = require("../lib/access/presets");
 const { AccessError, buildRevision, writeRevision } = require("../lib/access/revisions");
@@ -20,22 +21,13 @@ const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode")
 //                        `baseRevisionId` (optional, null = "the account has none yet") refuses a stale screen (409).
 //                        Refused with its code, never corrected: unknown preset / capability, a platform.* grant, a
 //                        capability both granted and denied, a broken dependency.
-//   POST mode          { mode: "legacy" | "observe" }  ("enforce" arrives with P3-B, when every route is wired)
+//   POST mode          { mode: "legacy" | "observe" | "enforce" }. P3-B2: "enforce" only while every active or invited teacher has
+//                      access (readiness) — otherwise 409 ACCESS_NOT_READY naming them. Leaving enforce is always allowed.
 //
 // Every POST needs a recent second-factor check (step-up) and is written to the owner audit log. In P3-A nothing is enforced:
 // the default mode is legacy, so assigning access changes no teacher's behaviour yet — it prepares P3-B.
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
-const REFUSAL = {
-  PRESET_UNKNOWN: "الحزمة المختارة غير موجودة.",
-  CAPABILITY_UNKNOWN: "صلاحية غير معروفة.",
-  CAPABILITY_DUPLICATE: "صلاحية مكررة في القائمة.",
-  CAPABILITY_CONFLICT: "لا يمكن منح صلاحية ومنعها في الوقت نفسه.",
-  PLATFORM_CAPABILITY_FORBIDDEN: "صلاحيات المنصة للمالك وحده، ولا تُمنح لمعلم.",
-  DEPENDENCY_UNMET: "صلاحية تحتاج صلاحية أخرى غير ممنوحة.",
-  RESOURCES_NOT_SUPPORTED: "تخصيص الموارد يأتي في مرحلة لاحقة.",
-  REVISION_MALFORMED: "طلب غير صالح."
-};
 
 const publicCapabilities = () => CAPABILITIES.map(c => ({ id: c.id, module: c.module, moduleLabel: c.moduleLabel, label: c.label, ownerOnly: c.ownerOnly, requires: [...c.requires] }));
 const publicPresets = () => PRESETS.map(p => ({ id: p.id, version: p.version, label: p.label, description: p.description, capabilities: [...p.capabilities] }));
@@ -60,18 +52,8 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET" && action === "readiness") {
       let mode;
       try { mode = (await readAccessMode(container)).mode; } catch (e) { if (e instanceof AccessError) mode = "invalid"; else throw e; }
-      const accounts = await listTeacherAccounts(container);
-      const teachers = [];
-      for (const a of accounts) {
-        const assigned = a.accessRevisionId && a.accessPreset ? { revisionId: a.accessRevisionId, preset: { id: String(a.accessPreset.id), version: Number(a.accessPreset.version) } } : null;
-        const fallback = assigned ? null : a.accountId === LEGACY_TEACHER_ACCOUNT_ID ? "legacy-full" : "none";
-        const seen = await readObservations(container, a.accountId);
-        const wouldDeny = Object.entries(seen).map(([capability, v]) => ({ capability, count: Number(v && v.count) || 0, lastAt: String(v && v.lastAt || "") })).sort((x, y) => y.lastAt.localeCompare(x.lastAt));
-        teachers.push({ accountId: a.accountId, username: a.username, displayName: a.displayName, status: a.status, access: assigned, defaultAccess: fallback, wouldDeny });
-      }
-      teachers.sort((x, y) => String(x.displayName).localeCompare(String(y.displayName), "ar"));
-      const ready = teachers.every(t => t.status === "suspended" || t.access || t.defaultAccess === "legacy-full");
-      return reply(200, { ok: true, mode, ready, teachers });
+      const r = await computeReadiness(container);
+      return reply(200, { ok: true, mode, ready: r.ready, teachers: r.teachers });
     }
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
@@ -80,12 +62,19 @@ async function handler(request, deps = {}, obs = null) {
     try { const b = await request.json(); body = b && typeof b === "object" ? b : {}; } catch { body = {}; }
 
     if (action === "mode") {
+      const wanted = String(body.mode || "");
+      let enforceReady = false;
+      if (wanted === "enforce") {
+        const r = await computeReadiness(container);
+        if (!r.ready) return reply(409, { ok: false, code: "ACCESS_NOT_READY", error: "لا يمكن تفعيل التطبيق: معلمون بلا حزمة صلاحيات سيُمنعون من كل شيء. اختر لهم حزمة أولًا.", missing: r.missing });
+        enforceReady = true;
+      }
       try {
-        const r = await writeAccessMode(container, String(body.mode || ""), actor, nowMs);
+        const r = await writeAccessMode(container, wanted, actor, nowMs, {}, { enforceReady });
         await audit(container, { actor, action: "owner.access.mode", targetType: "platform", targetId: "access-control", details: { from: r.previous, to: r.mode } });
         return reply(200, { ok: true, mode: r.mode });
       } catch (e) {
-        if (e instanceof AccessError) return reply(409, { ok: false, code: e.code, error: "هذا الوضع غير متاح الآن. الفرض الكامل يأتي في مرحلة لاحقة." });
+        if (e instanceof AccessError) return reply(409, { ok: false, code: e.code, error: "هذا الوضع غير معروف." });
         throw e;
       }
     }

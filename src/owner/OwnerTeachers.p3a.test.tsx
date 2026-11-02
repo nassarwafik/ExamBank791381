@@ -94,3 +94,35 @@ describe("P3-A owner — teacher capabilities", () => {
     expect(screen.queryByRole("button", { name: "تغيير الصلاحيات" })).toBeNull();
   });
 });
+
+describe("P3-B2 owner — a new teacher with a preset", () => {
+  it("the add form offers the teaching presets (optional outside enforcement) and sends the choice", async () => {
+    routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [] } });
+    routes["GET /api/owner-access"] = () => ({ status: 200, body: { ok: true, mode: "observe", presets: PRESETS } });
+    routes["POST /api/owner-teachers/create"] = () => ({ status: 201, body: { ok: true, teacher: T({ status: "invited", hasPassword: false }), invitation: { invitationPath: "#/invite/" + "A".repeat(43), purpose: "invite", expiresAt: "2026-11-04T10:00:00Z" } } });
+    show();
+    await screen.findByText(/لا يوجد معلمون/);
+    fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
+    const select = await screen.findByLabelText("حزمة الصلاحيات (اختياري)") as HTMLSelectElement;
+    expect([...select.options].map(o => o.textContent)).toEqual(["لاحقًا (بلا صلاحيات حتى تختار)", "تدريس كامل", "التعلّم فقط"]);
+    fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.sara" } });
+    fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
+    fireEvent.change(select, { target: { value: "learning-only@1" } });
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
+    await screen.findByRole("region", { name: "رابط الدعوة" });
+    expect(calls.find(c => c.url === "/api/owner-teachers/create")!.body).toMatchObject({ username: "t.sara", presetId: "learning-only", presetVersion: 1 });
+  });
+  it("while enforcing the preset is required before anything is sent", async () => {
+    routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [] } });
+    routes["GET /api/owner-access"] = () => ({ status: 200, body: { ok: true, mode: "enforce", presets: PRESETS } });
+    show();
+    await screen.findByText(/لا يوجد معلمون/);
+    fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
+    await screen.findByLabelText("حزمة الصلاحيات");
+    fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.sara" } });
+    fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("اختر حزمة صلاحيات");
+    expect(calls.some(c => c.url === "/api/owner-teachers/create")).toBe(false);
+  });
+});

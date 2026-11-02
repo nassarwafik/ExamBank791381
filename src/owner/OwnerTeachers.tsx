@@ -44,6 +44,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [presets, setPresets] = useState<AccessPreset[]>([]);
+  const [accessMode, setAccessMode] = useState<string>("legacy");
   const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,7 +67,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
   }, [token, onSignedOut]);
   useEffect(() => {
     let live = true;
-    void ownerAccessApi.get(token).then(r => { if (live && r.ok) setPresets(r.data.presets); });
+    void ownerAccessApi.get(token).then(r => { if (live && r.ok) { setPresets(r.data.presets); setAccessMode(r.data.mode); } });
     return () => { live = false; };
   }, [token]);
   useEffect(() => { if (stepUp) stepInput.current?.focus(); }, [stepUp]);
@@ -145,7 +146,7 @@ export default function OwnerTeachers({ token, onSignedOut }: { token: string; o
       )}
       {showImport && <LegacyImportForm busy={busy} onCancel={() => setShowImport(false)} onSubmit={draft => run({ kind: "import", draft })} />}
 
-      {showCreate && <CreateTeacherForm busy={busy} onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} />}
+      {showCreate && <CreateTeacherForm busy={busy} presets={presets} presetRequired={accessMode === "enforce" || accessMode === "invalid"} onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} />}
 
       {issued && <InvitationPanel issued={issued} onClose={() => setIssued(null)} />}
 
@@ -253,7 +254,8 @@ function actionsFor(t: ManagedTeacher): TeacherAction[] {
   return ["reset", "end-sessions", "suspend"];
 }
 
-function CreateTeacherForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubmit: (d: Parameters<typeof ownerTeachersApi.create>[1]) => void; onCancel: () => void }) {
+function CreateTeacherForm({ busy, presets, presetRequired, onSubmit, onCancel }: { busy: boolean; presets: AccessPreset[]; presetRequired: boolean; onSubmit: (d: Parameters<typeof ownerTeachersApi.create>[1]) => void; onCancel: () => void }) {
+  const [presetKey, setPresetKey] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [fullName, setFullName] = useState("");
@@ -267,10 +269,13 @@ function CreateTeacherForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubm
     event.preventDefault();
     if (busy) return;
     if (!username.trim() || !displayName.trim()) { setError("اسم المستخدم واسم العرض مطلوبان."); return; }
+    const chosen = presets.find(p => p.id + "@" + p.version === presetKey);
+    if (presetRequired && !chosen) { setError("التطبيق الفعلي للصلاحيات مفعّل: اختر حزمة صلاحيات للمعلم الجديد."); return; }
     setError("");
     onSubmit({
       username: username.trim(), displayName: displayName.trim(), fullName: fullName.trim(), email: email.trim(), phone: phone.trim(),
-      subjects: subjects.split(/[,،]/).map(s => s.trim()).filter(Boolean), notes: notes.trim()
+      subjects: subjects.split(/[,،]/).map(s => s.trim()).filter(Boolean), notes: notes.trim(),
+      ...(chosen ? { presetId: chosen.id, presetVersion: chosen.version } : {})
     });
   }
 
@@ -296,6 +301,16 @@ function CreateTeacherForm({ busy, onSubmit, onCancel }: { busy: boolean; onSubm
         <label className="auth-field"><span>المواد (اختياري، افصل بفاصلة)</span>
           <div className="auth-input"><input type="text" value={subjects} onChange={e => setSubjects(e.target.value)} /></div>
         </label>
+        {presets.length > 0 && (
+          <label className="auth-field"><span>{presetRequired ? "حزمة الصلاحيات" : "حزمة الصلاحيات (اختياري)"}</span>
+            <div className="auth-input">
+              <select value={presetKey} onChange={e => setPresetKey(e.target.value)}>
+                <option value="">{presetRequired ? "اختر حزمة…" : "لاحقًا (بلا صلاحيات حتى تختار)"}</option>
+                {presets.filter(p => p.id !== "legacy-full").map(p => <option key={p.id + "@" + p.version} value={p.id + "@" + p.version}>{p.label}</option>)}
+              </select>
+            </div>
+          </label>
+        )}
       </div>
       <label className="auth-field"><span>ملاحظات إدارية (اختياري، لا يراها المعلم)</span>
         <textarea className="eb-owner-textarea" value={notes} onChange={e => setNotes(e.target.value)} maxLength={1000} rows={2} />

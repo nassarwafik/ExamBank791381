@@ -9,8 +9,10 @@ import { ownerApi, ownerAccessApi, type AccessCapability, type AccessMode, type 
  *     been refused is recorded, nothing is blocked); switching needs a recent second-factor check;
  *   - readiness: teachers left without an access preset (they would be refused everything once enforcement exists), and per
  *     teacher what the observe mode recorded.
- * Turning enforcement on is the next phase (P3-B2); this panel never offers it.
+ * P3-B2 — «تفعيل التطبيق»: an inline confirmation, a recent second-factor check, and the server's readiness gate (refused while a
+ * teacher is left without access, naming them). Leaving enforcement («إيقاف التطبيق») is always possible.
  */
+type Target = "legacy" | "observe" | "enforce";
 
 const MODE_TEXT: Record<AccessMode, string> = {
   legacy: "عادي: الصلاحيات لا تُراقَب ولا تُطبَّق. كل معلم يعمل كما اليوم.",
@@ -32,7 +34,8 @@ export default function OwnerAccessMode({ token, onSignedOut }: { token: string;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [stepUpFor, setStepUpFor] = useState<"legacy" | "observe" | null>(null);
+  const [stepUpFor, setStepUpFor] = useState<Target | null>(null);
+  const [confirmEnforce, setConfirmEnforce] = useState(false);
   const [stepCode, setStepCode] = useState("");
   const stepInput = useRef<HTMLInputElement>(null);
 
@@ -49,12 +52,12 @@ export default function OwnerAccessMode({ token, onSignedOut }: { token: string;
   }, [token, onSignedOut]);
   useEffect(() => { if (stepUpFor) stepInput.current?.focus(); }, [stepUpFor]);
 
-  async function switchTo(next: "legacy" | "observe") {
+  async function switchTo(next: Target) {
     setBusy(true);
     setError("");
     const r = await ownerAccessApi.setMode(token, next);
     setBusy(false);
-    if (r.ok) { setStepUpFor(null); setMode(r.data.mode); return; }
+    if (r.ok) { setStepUpFor(null); setConfirmEnforce(false); setMode(r.data.mode); return; }
     if (r.status === 401) { onSignedOut(); return; }
     if (r.code === "STEP_UP_REQUIRED") { setStepUpFor(next); return; }
     setError(r.error);
@@ -83,7 +86,20 @@ export default function OwnerAccessMode({ token, onSignedOut }: { token: string;
         <h2 id="eb-owner-access-mode-title" className="eb-owner-h2">وضع الصلاحيات</h2>
         {mode === "legacy" && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => switchTo("observe")}>تشغيل المراقبة</button>}
         {mode === "observe" && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => switchTo("legacy")}>إيقاف المراقبة</button>}
+        {(mode === "legacy" || mode === "observe") && !confirmEnforce && (
+          <button type="button" className="eb-owner-secondary eb-owner-danger" disabled={busy || !ready} onClick={() => setConfirmEnforce(true)}>تفعيل التطبيق</button>
+        )}
+        {mode === "enforce" && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => switchTo("observe")}>إيقاف التطبيق (العودة إلى المراقبة)</button>}
       </div>
+      {confirmEnforce && (
+        <div className="eb-owner-confirm" role="group" aria-label="تأكيد تفعيل التطبيق">
+          <p>من الطلب التالي يُمنع كل معلم من أي أداة خارج حزمة صلاحياته. حسابك المستورد يبقى على «الوصول الحالي» ما لم تغيّره. تستطيع الإيقاف في أي وقت.</p>
+          <div className="eb-owner-actions">
+            <button type="button" className="eb-owner-secondary eb-owner-danger" disabled={busy} onClick={() => switchTo("enforce")}>تأكيد: تفعيل التطبيق</button>
+            <button type="button" className="eb-owner-secondary" onClick={() => setConfirmEnforce(false)}>إلغاء</button>
+          </div>
+        </div>
+      )}
       {mode === null && !loadError && <p className="eb-owner-hint" role="status">جارٍ التحميل…</p>}
       {loadError && <p className="eb-owner-hint" role="status">تعذر تحميل وضع الصلاحيات: {loadError}</p>}
       {mode && <p className="eb-owner-hint" data-mode={mode}><strong>{MODE_TEXT[mode]}</strong></p>}
@@ -124,7 +140,7 @@ export default function OwnerAccessMode({ token, onSignedOut }: { token: string;
             </ul>
           )}
           {mode === "observe" && observed.length === 0 && <p className="eb-owner-hint">لم يُسجَّل أي منع محتمل حتى الآن.</p>}
-          <p className="eb-owner-hint">التطبيق الفعلي للصلاحيات يأتي في المرحلة التالية، ولا يبدأ إلا بقرارك.</p>
+          {mode !== "enforce" && !ready && <p className="eb-owner-hint">«تفعيل التطبيق» متاح حين يكون لكل معلم نشط حزمة صلاحيات.</p>}
         </div>
       )}
     </section>

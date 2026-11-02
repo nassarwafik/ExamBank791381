@@ -80,7 +80,7 @@ export type AccessMode = "legacy" | "observe" | "enforce" | "invalid";
 /** P2-B — whether the owner may import the shared-password workspace now (once), and if not, why. */
 export type LegacyImportState = { available: true } | { available: false; reason: "NOT_SHARED_PASSWORD_MODE" | "LEGACY_DATA_OWNER_SET" | "ALREADY_IMPORTED"; accountId?: string };
 export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
-export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string };
+export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number };
 export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
 
 export const ownerTeachersApi = {
@@ -101,7 +101,7 @@ export type ReadinessTeacher = {
 export const ownerAccessApi = {
   get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[] }>("/api/owner-access", { token }),
   readiness: (token: string) => call<{ ok: true; mode: AccessMode; ready: boolean; teachers: ReadinessTeacher[] }>("/api/owner-access/readiness", { token }),
-  setMode: (token: string, mode: "legacy" | "observe") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
+  setMode: (token: string, mode: "legacy" | "observe" | "enforce") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
   assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null }) =>
     call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body })
 };
