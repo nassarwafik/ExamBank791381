@@ -37,7 +37,9 @@ const REGISTRY = {
     "learning-exam-item.js"],
   // Tadris+ P2-A2 — a teacher ends their OWN session (the verified token subject and session id; nothing else is read or written).
   // platform-session describes the caller's OWN session (role, display name, expiry) and reads only that account.
-  ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/ },
+  ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/,
+    // Tadris+ P4-C — the logo of the caller's OWN school (resolved from the verified session; no parameter selects a school).
+    "school-logo.js": /schoolForTeacher\(containerOf\(\), teacher\.user, deps\)/ },
   operator: ["assignment-index-control.js", "build-bank-2025.js", "classify-bank-batch.js", "classify-question-preview.js", "import-html-exam.js", "inspect-html.js", "storage-status.js"],
   noData: ["ai-exam-composer.js", "ai-question-author.js", "ai-scenario-author.js", "analyze-global-exam-instruction.js", "exam-quality-fix.js",
     "game-number-conversion-preview.js", "generate-question-image.js", "interpret-exam-request.js", "question-ai-action.js",

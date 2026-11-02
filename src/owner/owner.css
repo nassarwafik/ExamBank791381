@@ -134,3 +134,11 @@
 .eb-owner-wizard-title { margin: 0; font-size: var(--eb-fs-16); color: var(--eb-text-heading); }
 .eb-owner-wizard-title small { color: var(--eb-muted); font-weight: normal; }
 .eb-owner-wizard-title:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+
+/* Tadris+ P4-C — «المدارس». Tokens only. */
+.eb-owner-schools { gap: var(--eb-space-4); }
+.eb-owner-school-preview { display: flex; align-items: center; gap: var(--eb-space-3); flex-wrap: wrap; padding: var(--eb-space-2) var(--eb-space-3); border: 1px dashed var(--eb-line); border-radius: var(--eb-r); background: var(--eb-surface); }
+.eb-owner-file { position: relative; cursor: pointer; }
+.eb-owner-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.eb-owner-file.is-disabled { opacity: 0.6; cursor: not-allowed; }
+.eb-owner-file:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }

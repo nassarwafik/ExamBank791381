@@ -75,6 +75,8 @@ export type ManagedTeacher = {
   access?: TeacherAccess | null;
   /** P4-B1 — when and why the owner suspended the account (empty unless suspended; never shown to the teacher). */
   suspendedAt?: string; suspendedReason?: string;
+  /** P4-C — the school the owner linked the teacher to (null = none). */
+  schoolId?: string | null;
 };
 export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };
 export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[] };
@@ -145,6 +147,18 @@ export async function currentAccessOf(token: string, accountId: string): Promise
   if (!head.valid || !head.preset) return { ok: false, status: 409, code: "COPY_SOURCE_INVALID", error: "صلاحيات هذا المعلم الحالية غير صالحة، فلا يمكن نسخها." };
   return { ok: true, status: 200, data: head };
 }
+
+// Tadris+ P4-C — school identities (/api/owner-schools). Every change needs a recent step-up.
+export type ManagedSchool = { schoolId: string; name: string; logo: { version: number; updatedAt: string } | null; teachers: number };
+export const ownerSchoolsApi = {
+  list: (token: string) => call<{ ok: true; schools: ManagedSchool[] }>("/api/owner-schools", { token }),
+  create: (token: string, name: string) => call<{ ok: true; school: ManagedSchool }>("/api/owner-schools/create", { method: "POST", token, body: { name } }),
+  rename: (token: string, schoolId: string, name: string) => call<{ ok: true; school: Omit<ManagedSchool, "teachers"> }>("/api/owner-schools/rename", { method: "POST", token, body: { schoolId, name } }),
+  uploadLogo: (token: string, schoolId: string, dataUrl: string) => call<{ ok: true; school: Omit<ManagedSchool, "teachers"> }>("/api/owner-schools/logo", { method: "POST", token, body: { schoolId, dataUrl } }),
+  removeLogo: (token: string, schoolId: string) => call<{ ok: true; school: Omit<ManagedSchool, "teachers"> }>("/api/owner-schools/remove-logo", { method: "POST", token, body: { schoolId } }),
+  link: (token: string, accountId: string, schoolId: string | null) => call<{ ok: true; accountId: string; schoolId: string | null }>("/api/owner-schools/link", { method: "POST", token, body: { accountId, schoolId } })
+};
+export const ownerSchoolLogoUrl = (schoolId: string) => "/api/owner-schools/logo?schoolId=" + encodeURIComponent(schoolId);
 
 /** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */
 export function invitationUrl(invitationPath: string, location: { origin: string; pathname: string } = window.location): string {

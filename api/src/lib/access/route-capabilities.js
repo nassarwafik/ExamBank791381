@@ -116,6 +116,7 @@ const EXEMPT = Object.freeze({
   "platform-session.js": "the teacher's own session probe",
   "teacher-session-end.js": "the teacher's own sign-out",
   "teacher-profile.js": "the teacher's own display name / avatar / photo",
+  "school-logo.js": "the logo of the caller's own school (P4-C, presentation only)",
   "client-error-report.js": "a content-free diagnostic report (one log line, nothing stored is read)"
 });
 

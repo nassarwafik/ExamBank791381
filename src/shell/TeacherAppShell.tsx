@@ -16,6 +16,8 @@ import TeacherIdentity from "../teacher/TeacherIdentity";
 import { navAllowed, firstAllowed, type TeacherAccessView } from "./teacherAccess";
 import QuickNavSearch from "./QuickNavSearch";
 import ThemeSwitch from "../ui/ThemeSwitch";
+import SchoolBadge from "../ui/SchoolBadge";
+import type { SchoolBadgeView } from "./schoolIdentity";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import type { TeacherProfile } from "../teacher/teacherProfile";
 import "../ui/ui.css";
@@ -56,10 +58,12 @@ type Props = {
   /** Tadris+ P3-C — the server-resolved access (null = not known yet / not limited: everything shown, as before). */
   access?: TeacherAccessView | null;
   onRetryAccess?: () => void;
+  /** Tadris+ P4-C — the teacher's school (name + loaded logo), shown beside the brand; null / absent = nothing (as before). */
+  school?: SchoolBadgeView | null;
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, access = null, onRetryAccess, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, access = null, onRetryAccess, school = null, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -193,6 +197,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={32} /></span>
           <span className="eb-brand-text"><bdi dir="ltr">{BRAND_NAME}</bdi><small>{BRAND_TAGLINE}</small></span>
         </div>
+        {school && <SchoolBadge name={school.name} logoUrl={school.logoUrl} />}
         {/* The home pill (the reference's «Projects» chip): a distinct name, so it never doubles the sidebar's «لوحة المتابعة». */}
         {navAllowed("dashboard", access) && (
           <button type="button" className="eb-topbar-pill" title={NAV_LABELS.dashboard} onClick={() => navigate("dashboard")}>

@@ -5,10 +5,12 @@
 // Tadris+ P4-B1 — one teacher's page: `#/owner/teachers/<accountId>` (a managed id `t_` + 16 hex, or the imported `t_legacy`).
 // Only `teachers` takes an id; `setup` and `access` never do. The id only chooses what to load — the server decides access.
 
-export type OwnerView = "home" | "setup" | "teachers" | "access";
-export type OwnerSection = "home" | "teachers" | "access";
+// Tadris+ P4-C — `#/owner/schools`: the school identities (name + logo) and which teachers belong to each.
 
-const OWNER_HASH = /^#\/owner(?:\/(setup|access)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy))?)?\/?$/;
+export type OwnerView = "home" | "setup" | "teachers" | "access" | "schools";
+export type OwnerSection = "home" | "teachers" | "access" | "schools";
+
+const OWNER_HASH = /^#\/owner(?:\/(setup|access|schools)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy))?)?\/?$/;
 
 export function isOwnerLocation(hash: string = typeof window === "undefined" ? "" : window.location.hash): boolean {
   return OWNER_HASH.test(String(hash || ""));

@@ -1,0 +1,12 @@
+/* Tadris+ P4-C — the school badge (logo + name). Tokens only; RTL by the page; light / dark through the tokens. */
+.eb-school-badge { display: inline-flex; align-items: center; gap: var(--eb-space-2); min-width: 0; max-width: 260px; padding: 2px var(--eb-space-2); border-inline-start: 1px solid var(--eb-line); color: var(--eb-text-heading); }
+.eb-school-logo { display: block; flex: none; width: auto; height: 32px; max-width: 96px; object-fit: contain; border-radius: var(--eb-r); }
+.eb-school-badge--lg .eb-school-logo { height: 40px; max-width: 120px; }
+.eb-school-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+@media (max-width: 600px) {
+  .eb-school-badge { max-width: 160px; }
+  .eb-school-name { font-size: var(--eb-fs-13); }
+}
+@media (max-width: 420px) {
+  .eb-school-badge .eb-school-logo + .eb-school-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
