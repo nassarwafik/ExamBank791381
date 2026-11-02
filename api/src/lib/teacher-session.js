@@ -1,7 +1,7 @@
 const storage = require("./platform-storage");
 const { requireBuilderAuth } = require("./builder-auth");
 const { managedTeacherClaim } = require("./identity/teacher-token");
-const { readTeacherAccount, sessionRevoked } = require("./identity/teacher-accounts");
+const { readTeacherAccount, sessionRevoked, trialEnded, TRIAL_ENDED_MESSAGE } = require("./identity/teacher-accounts");
 const { ownerExists } = require("./identity/owner-presence");
 
 // Tadris+ P2-A1/P2-A2 — the ONE asynchronous teacher-session check every teacher route awaits (owner decision 2026-11-01: a
@@ -14,7 +14,8 @@ const { ownerExists } = require("./identity/owner-presence");
 //      password choose any `sub`). The owner's existence cannot be read → 503, never allowed.
 //   2. Otherwise a MANAGED teacher session (token v3, accounts created by the owner): its signature and lifetime, then the stored
 //      account on EVERY request — status "active", authVersion equal to the token's, the session id not ended by logout.
-//      Suspension, a password reset or «end sessions» therefore take effect on the very next request.
+//      Suspension, a password reset or «end sessions» therefore take effect on the very next request. A TRIAL account whose
+//      period is over (or whose trial record cannot be read) is refused the same way (401 TEACHER_TRIAL_ENDED).
 //      Storage unavailable → 503 (fail closed), never allowed.
 // The tenancy registry pins that every teacher route awaits this function and none calls requireBuilderAuth directly.
 
@@ -34,6 +35,7 @@ function sharedPasswordSession(user) {
   return user.am === "legacy" || user.legacy === true || (user.ver === 2 && user.am === undefined);
 }
 
+const trialOver = () => ({ ok: false, response: { status: 401, headers: NO_STORE, jsonBody: { ok: false, code: "TEACHER_TRIAL_ENDED", error: TRIAL_ENDED_MESSAGE } } });
 const revoked = () => ({ ok: false, response: { status: 401, headers: NO_STORE, jsonBody: { ok: false, code: "TEACHER_SESSION_REVOKED", error: "انتهت الجلسة. سجّل الدخول مرة أخرى." } } });
 
 async function requireTeacherSession(request, deps = {}) {
@@ -56,6 +58,7 @@ async function requireTeacherSession(request, deps = {}) {
   }
   if (!account || account.status !== "active" || !account.credential) return revoked();
   if (account.authVersion !== claim.av || sessionRevoked(account, claim.sid, nowMs)) return revoked();
+  if (trialEnded(account, nowMs)) return trialOver();
   // P3-A — the account's CURRENT access revision travels with the verified identity (read now, from the account), so the
   // resolver sees an access change on the very next request. It is never taken from the token or the client.
   return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null } };

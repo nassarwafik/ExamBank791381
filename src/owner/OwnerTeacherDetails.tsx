@@ -6,12 +6,13 @@ import {
   type AccessHistoryEntry, type EffectiveAccess, type TeacherAction, type TeacherProfileFields
 } from "./ownerApi";
 import Tabs from "../ui/Tabs";
+import TrialControls from "./TrialControls";
 import DataTable, { type DataColumn } from "../ui/DataTable";
 import DiffView from "../ui/DiffView";
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import {
-  STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId, withCapability, withoutCapability,
+  STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, accessLabel, startingPresetId, withCapability, withoutCapability,
   grantsAndDenies, actorLabel
 } from "./teacherShared";
 
@@ -130,6 +131,10 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     ) },
     { id: "security", label: "الأمان", content: (
       <SecurityPanel teacher={teacher} busy={busy}
+        onTrial={(action, days) => send(() => ownerTeachersApi.trial(token, action, accountId, days), d => {
+          setTeacher(d.teacher);
+          setNotice(action === "end-trial" ? "أصبح الحساب دائمًا." : "مُدّدت الفترة التجريبية.");
+        })}
         onAct={(action, reason) => send(() => ownerTeachersApi.act(token, action, accountId, reason ? { reason } : {}), d => {
           setTeacher(d.teacher);
           if (d.invitation) setIssued({ teacher: d.teacher, invitation: d.invitation });
@@ -147,6 +152,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
           <span className="eb-owner-teacher-user" dir="ltr">{teacher.username}</span>
           <span className={"eb-owner-status eb-owner-status--" + teacher.status}>{STATUS_LABEL[teacher.status]}</span>
           {teacher.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
+          {teacher.trial && <span className={"eb-owner-status eb-owner-status--" + (teacher.trial.ended ? "trial-ended" : "trial")}>{trialLabel(teacher)}</span>}
         </div>
         {back}
       </div>
@@ -340,7 +346,7 @@ function AccessHistory({ history, effective, presets, labels, busy, onRestore }:
   );
 }
 
-function SecurityPanel({ teacher, busy, onAct }: { teacher: ManagedTeacher; busy: boolean; onAct: (a: TeacherAction, reason?: string) => void }) {
+function SecurityPanel({ teacher, busy, onAct, onTrial }: { teacher: ManagedTeacher; busy: boolean; onAct: (a: TeacherAction, reason?: string) => void; onTrial: (a: "extend-trial" | "end-trial", days?: number) => void }) {
   const [confirming, setConfirming] = useState<TeacherAction | null>(null);
   const [reason, setReason] = useState("");
   return (
@@ -352,7 +358,9 @@ function SecurityPanel({ teacher, busy, onAct }: { teacher: ManagedTeacher; busy
         {teacher.invitation && <div><dt>رابط {teacher.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"}</dt><dd>صالح حتى <bdi>{formatDate(teacher.invitation.expiresAt)}</bdi></dd></div>}
         {teacher.status === "suspended" && <div><dt>أوقف في</dt><dd><bdi>{formatDate(teacher.suspendedAt || "") || "—"}</bdi></dd></div>}
         {teacher.status === "suspended" && <div><dt>سبب الإيقاف</dt><dd>{teacher.suspendedReason || "لم يُذكر"}</dd></div>}
+        <div><dt>نوع الحساب</dt><dd>{teacher.trial ? (teacher.trial.ended ? "تجريبي (انتهت التجربة)" : "تجريبي") : "دائم"}</dd></div>
       </dl>
+      {teacher.trial && <TrialControls teacher={teacher} busy={busy} onExtend={days => onTrial("extend-trial", days)} onMakePermanent={() => onTrial("end-trial")} />}
       {confirming ? (
         <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + ACTION_LABEL[confirming]}>
           <p>{CONFIRM_TEXT[confirming]}</p>

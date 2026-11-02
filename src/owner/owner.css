@@ -128,3 +128,9 @@
 .eb-owner-facts div { display: flex; flex-direction: column; gap: 2px; }
 .eb-owner-facts dt { color: var(--eb-muted); font-size: var(--eb-fs-13); }
 .eb-owner-facts dd { margin: 0; color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
+
+/* Trial accounts — the trial badge (running / ended) and the trial controls. */
+.eb-owner-status--trial { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-owner-status--trial-ended { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-owner-trial { display: flex; flex-direction: column; gap: var(--eb-space-2); }
+.eb-owner-trial-ended { color: var(--eb-danger-tx); }

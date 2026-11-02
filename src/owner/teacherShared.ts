@@ -12,6 +12,14 @@ export const CONFIRM_TEXT: Partial<Record<TeacherAction, string>> = {
   "end-sessions": "ستنتهي كل جلسات المعلم المفتوحة على كل الأجهزة."
 };
 
+/** Trial accounts — the trial's state in a few words for the owner, or "" for a permanent account. */
+export function trialLabel(t: ManagedTeacher): string {
+  if (!t.trial) return "";
+  if (t.trial.ended) return "انتهت التجربة";
+  const date = formatDate(t.trial.endsAt);
+  return date ? "تجريبي حتى " + date : "تجريبي";
+}
+
 export function formatDate(iso: string): string {
   if (!iso) return "";
   const d = new Date(iso);
