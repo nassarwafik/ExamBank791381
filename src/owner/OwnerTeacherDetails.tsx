@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
-  ownerTeachersApi, ownerAccessApi, type ApiResult, type ManagedTeacher, type AccessPreset, type AccessCapability, type AccessMode,
+  ownerTeachersApi, ownerAccessApi, currentAccessOf, type ApiResult, type ManagedTeacher, type AccessPreset, type AccessCapability, type AccessMode,
   type AccessHistoryEntry, type EffectiveAccess, type TeacherAction, type TeacherProfileFields
 } from "./ownerApi";
 import Tabs from "../ui/Tabs";
@@ -29,7 +29,7 @@ import {
 type TabId = "profile" | "access" | "history" | "security";
 type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
-type Loaded = { teacher: ManagedTeacher; catalog: Catalog; history: History; effective: EffectiveAccess };
+type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
 type State = { kind: "loading" } | { kind: "error"; message: string } | { kind: "missing" } | ({ kind: "ready" } & Loaded);
 export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string };
 
@@ -49,7 +49,7 @@ async function loadAll(token: string, accountId: string): Promise<{ state: State
   return {
     signedOut: false,
     state: {
-      kind: "ready", teacher,
+      kind: "ready", teacher, others: list.data.teachers.filter(t => t.accountId !== accountId),
       catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode },
       history: { currentRevisionId: history.data.currentRevisionId, entries: history.data.entries, truncated: history.data.truncated },
       effective: { accountStatus: effective.data.accountStatus, mode: effective.data.mode, enforced: effective.data.enforced, access: effective.data.access }
@@ -111,7 +111,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     </section>
   );
 
-  const { teacher, catalog, history, effective } = state;
+  const { teacher, others, catalog, history, effective } = state;
   const labels: Record<string, string> = Object.fromEntries(catalog.capabilities.map(c => [c.id, c.moduleLabel + " — " + c.label]));
   const setTeacher = (t: ManagedTeacher) => setState(s => (s.kind === "ready" ? { ...s, teacher: t } : s));
 
@@ -122,6 +122,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     ) },
     { id: "access", label: "الصلاحيات", content: (
       <AccessEditor key={history.currentRevisionId || "none"} teacher={teacher} catalog={catalog} history={history} effective={effective} labels={labels} busy={busy}
+        others={others} onSignedOut={onSignedOut} loadSource={id => currentAccessOf(token, id)}
         onSave={draft => send(() => ownerAccessApi.assign(token, { accountId, ...draft, baseRevisionId: history.currentRevisionId }), () => { setNotice("حُفظت الصلاحيات (نسخة جديدة في السجل)."); reload(); }, true)} />
     ) },
     { id: "history", label: "السجل", content: (
@@ -221,8 +222,9 @@ function modeNote(effective: EffectiveAccess): string {
     : "لن يتغير شيء الآن عند المعلم: تُطبَّق الصلاحيات حين تفعّل «التطبيق» في قسم «الصلاحيات».";
 }
 
-function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSave }: {
+function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSave, others, loadSource, onSignedOut }: {
   teacher: ManagedTeacher; catalog: Catalog; history: History; effective: EffectiveAccess; labels: Record<string, string>; busy: boolean; onSave: (d: AccessDraft) => void;
+  others: ManagedTeacher[]; loadSource: (accountId: string) => Promise<ApiResult<AccessHistoryEntry>>; onSignedOut: () => void;
 }) {
   const head = history.currentRevisionId ? history.entries.find(e => e.revisionId === history.currentRevisionId) : undefined;
   const headBroken = Boolean(history.currentRevisionId) && (!head || !head.valid);
@@ -235,7 +237,27 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const [key, setKey] = useState(initialKey);
   const [chosen, setChosen] = useState<Set<string>>(initialSet);
   const [reason, setReason] = useState("");
+  const [copyFrom, setCopyFrom] = useState("");
+  const [copyNote, setCopyNote] = useState<{ error: boolean; text: string } | null>(null);
   const picked = catalog.presets.find(p => presetKey(p) === key);
+  const copyable = others.filter(t => t.access);
+
+  // P4-B2 — «ابدأ من صلاحيات معلم آخر»: loads that teacher's CURRENT access (re-validated by the server) into this editor; the
+  // owner can adjust it, and nothing is saved until «حفظ الصلاحيات» (validated again by the server like any assignment).
+  async function copyFromTeacher(id: string) {
+    setCopyFrom(id);
+    setCopyNote(null);
+    if (!id) return;
+    const source = others.find(t => t.accountId === id);
+    const r = await loadSource(id);
+    if (!r.ok) { if (r.status === 401) { onSignedOut(); return; } setCopyNote({ error: true, text: r.error }); return; }
+    const p = r.data.preset ? catalog.presets.find(x => x.id === r.data.preset!.id && x.version === r.data.preset!.version) : undefined;
+    if (!p) { setCopyNote({ error: true, text: "حزمة ذلك المعلم غير معروفة هنا، فلا يمكن نسخها." }); return; }
+    setKey(presetKey(p));
+    setChosen(new Set(r.data.capabilities));
+    if (source) setReason("نسخ من " + source.username);
+    setCopyNote({ error: false, text: "حُمّلت صلاحيات " + (source ? source.displayName : "") + ". راجعها ثم احفظ." });
+  }
   const modules = useMemo(() => {
     const out: { module: string; label: string; caps: AccessCapability[] }[] = [];
     for (const c of catalog.capabilities.filter(x => !x.ownerOnly)) {
@@ -252,6 +274,19 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   return (
     <div className="eb-owner-access-editor">
       {headBroken && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />نسخة الصلاحيات الحالية غير صالحة، فالخادم يمنع هذا المعلم أثناء التطبيق. اختر حزمة واحفظ لإصلاحها.</div>}
+      {copyable.length > 0 && (
+        <label className="auth-field"><span>ابدأ من صلاحيات معلم آخر</span>
+          <div className="auth-input">
+            <select value={copyFrom} onChange={e => void copyFromTeacher(e.target.value)}>
+              <option value="">—</option>
+              {copyable.map(t => <option key={t.accountId} value={t.accountId}>{t.displayName + " (" + t.username + ")"}</option>)}
+            </select>
+          </div>
+        </label>
+      )}
+      {copyNote && (copyNote.error
+        ? <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{copyNote.text}</div>
+        : <p className="eb-owner-hint" role="status">{copyNote.text}</p>)}
       <fieldset className="eb-owner-access-options">
         <legend>الحزمة الأساسية</legend>
         {catalog.presets.map(p => (

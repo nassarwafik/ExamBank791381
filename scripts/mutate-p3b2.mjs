@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Tadris+ P3-B2 — mutation proof for the enforcement switch: the readiness gate, leaving enforcement, and the preset required when
 // a teacher is created while enforcing. Same engine and rules as scripts/mutate-p1a.mjs.
+// P4-B2 updated P3B2-M8 to the current code (the new account now counts the initial grants / denies instead of a fixed 0).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -23,7 +24,7 @@ export const MUTANTS = [
   { id: "P3B2-M5", what: "readiness always answers ready", edits: [{ file: READY, find: "  return { ready: missing.length === 0,", replace: "  return { ready: true," }] },
   { id: "P3B2-M6", what: "a teacher can be created without access while enforcing", edits: [{ file: TEACHERS, find: "          if (mode === \"enforce\") return bad(\"PRESET_REQUIRED\"", replace: "          if (false) return bad(\"PRESET_REQUIRED\"" }] },
   { id: "P3B2-M7", what: "an unreadable mode lets a teacher be created without access", edits: [{ file: TEACHERS, find: "          try { mode = (await readAccessMode(container)).mode; } catch { mode = \"enforce\"; }", replace: "          try { mode = (await readAccessMode(container)).mode; } catch { mode = \"legacy\"; }" }] },
-  { id: "P3B2-M8", what: "the new account does not point at its initial revision", edits: [{ file: TEACHERS, find: "        ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: 0, accessDenies: 0 } : {}),\n", replace: "" }] },
+  { id: "P3B2-M8", what: "the new account does not point at its initial revision", edits: [{ file: TEACHERS, find: "        ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length } : {}),\n", replace: "" }] },
   { id: "P3B2-M9", what: "leaving enforcement is refused when not ready", edits: [{ file: API, find: "      if (wanted === \"enforce\") {", replace: "      if (true) {" }] }
 ];
 
