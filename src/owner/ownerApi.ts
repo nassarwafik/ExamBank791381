@@ -88,7 +88,13 @@ export type AccessMode = "legacy" | "observe" | "enforce" | "invalid";
 /** P2-B — whether the owner may import the shared-password workspace now (once), and if not, why. */
 export type LegacyImportState = { available: true } | { available: false; reason: "NOT_SHARED_PASSWORD_MODE" | "LEGACY_DATA_OWNER_SET" | "ALREADY_IMPORTED"; accountId?: string };
 export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
-export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number; trialDays?: number };
+export type TeacherDraft = {
+  username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number;
+  /** P4-B2 — individual changes to the preset (the wizard's «copy from a teacher»), and a note kept with the first revision. */
+  grants?: string[]; denies?: string[]; accessReason?: string;
+  /** Trial accounts — a trial of this many days (1–90); absent = a permanent account. */
+  trialDays?: number;
+};
 export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
 export type TeacherProfileFields = { displayName: string; fullName: string; email: string; phone: string; subjects: string[]; notes: string };
 
@@ -136,6 +142,20 @@ export const ownerAccessApi = {
   rollback: (token: string, body: { accountId: string; revisionId: string; baseRevisionId: string | null; reason?: string }) =>
     call<{ ok: true; accountId: string; restoredFrom: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/rollback", { method: "POST", token, body })
 };
+
+/**
+ * Tadris+ P4-B2 — a teacher's CURRENT access as the server re-validated it (the head of their history), to copy to another
+ * teacher. Refused when the teacher has no assigned access yet, or when it cannot be trusted. The copy is then saved like any
+ * assignment, so the server validates it again.
+ */
+export async function currentAccessOf(token: string, accountId: string): Promise<ApiResult<AccessHistoryEntry>> {
+  const r = await ownerAccessApi.history(token, accountId);
+  if (!r.ok) return r;
+  const head = r.data.currentRevisionId ? r.data.entries.find(e => e.revisionId === r.data.currentRevisionId) : undefined;
+  if (!head) return { ok: false, status: 409, code: "COPY_SOURCE_NO_ACCESS", error: "لم تُحدَّد صلاحيات لهذا المعلم بعد، فلا شيء يُنسخ." };
+  if (!head.valid || !head.preset) return { ok: false, status: 409, code: "COPY_SOURCE_INVALID", error: "صلاحيات هذا المعلم الحالية غير صالحة، فلا يمكن نسخها." };
+  return { ok: true, status: 200, data: head };
+}
 
 /** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */
 export function invitationUrl(invitationPath: string, location: { origin: string; pathname: string } = window.location): string {

@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
-const TESTS = ["api/tests/owner-teacher-trial.test.js", "src/owner/OwnerTeachers.trial.test.tsx", "src/owner/OwnerTeacherDetails.trial.test.tsx", "src/shell/TrialNotice.trial.test.tsx", "src/AppShell.trial.test.tsx"];
+const TESTS = ["api/tests/owner-teacher-trial.test.js", "src/owner/TeacherWizard.p4b2.test.tsx", "src/owner/OwnerTeachers.trial.test.tsx", "src/owner/OwnerTeacherDetails.trial.test.tsx", "src/shell/TrialNotice.trial.test.tsx", "src/AppShell.trial.test.tsx"];
 const ACCOUNTS = "api/src/lib/identity/teacher-accounts.js";
 const SESSION = "api/src/lib/teacher-session.js";
 const LOGIN = "api/src/functions/platform-login.js";
@@ -19,6 +19,7 @@ const INVITE = "api/src/functions/teacher-invitation.js";
 const TEACHERS = "api/src/functions/owner-teachers.js";
 const LIST = "src/owner/OwnerTeachers.tsx";
 const CONTROLS = "src/owner/TrialControls.tsx";
+const WIZARD = "src/owner/TeacherWizard.tsx";
 const PSESSION = "api/src/functions/platform-session.js";
 const NOTICE = "src/shell/TrialNotice.tsx";
 const APP = "src/App.tsx";
@@ -37,8 +38,8 @@ export const MUTANTS = [
   { id: "TRIAL-M9", what: "create ignores trialDays (a trial becomes permanent)", edits: [{ file: TEACHERS, find: "        ...(trialDays ? { trial: newTrial(trialDays, nowMs) } : {}),\n", replace: "" }] },
   { id: "TRIAL-M10", what: "end-trial leaves the trial in place", edits: [{ file: TEACHERS, find: "? { ...a, trial: null, trialConvertedAt: iso, updatedAt: iso }", replace: "? { ...a, trialConvertedAt: iso, updatedAt: iso }" }] },
   { id: "TRIAL-M11", what: "trial actions accept a permanent account", edits: [{ file: TEACHERS, find: "      if (!isTrial(current)) return reply(409,", replace: "      if (false) return reply(409," }, { file: TEACHERS, find: "        if (!isTrial(a)) { const e = new Error(\"not a trial\");", replace: "        if (false) { const e = new Error(\"not a trial\");" }] },
-  { id: "TRIAL-M12", what: "the owner view never says the trial ended", edits: [{ file: ACCOUNTS, find: "ended: trialEnded(a, nowMs) }", replace: "ended: false }" }] },
-  { id: "TRIAL-M13", what: "the console form does not send trialDays", edits: [{ file: LIST, find: "      ...(trial ? { trialDays } : {})\n", replace: "" }] },
+  { id: "TRIAL-M12", what: "the owner view never says the trial ended", edits: [{ file: ACCOUNTS, find: "ended: trialEnded(a, nowMs), endingSoon", replace: "ended: false, endingSoon" }] },
+  { id: "TRIAL-M13", what: "the add-teacher wizard does not send trialDays", edits: [{ file: WIZARD, find: "      ...(trial ? { trialDays } : {})\n", replace: "" }] },
   { id: "TRIAL-M14", what: "«تحويل إلى حساب دائم» converts without a confirmation", edits: [{ file: CONTROLS, find: "onClick={() => setMode(\"permanent\")}", replace: "onClick={() => onMakePermanent()}" }] },
   { id: "TRIAL-M15", what: "a step-up does not retry a trial change", edits: [{ file: LIST, find: "      if (t.code === \"STEP_UP_REQUIRED\") { setStepUp(p); return; }", replace: "      if (t.code === \"STEP_UP_REQUIRED\") { return; }" }] },
   // The teacher's own trial view and the alerts before the end.

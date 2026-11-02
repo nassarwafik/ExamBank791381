@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // Trial teacher accounts — «معلم تجريبي جديد» in the Owner Console against a mocked /api/owner-teachers (test data only):
-//   the trial form sends trialDays → the list shows the trial badge and its end → «تمديد التجربة» sends extend-trial with the
+//   the add-teacher wizard (P4-B2) as a trial sends trialDays → the list shows the trial badge and its end → «تمديد التجربة» sends extend-trial with the
 //   chosen days → «تحويل إلى حساب دائم» asks first, then sends end-trial → an ended trial says so → a permanent account shows no
 //   trial controls → STEP_UP_REQUIRED asks for the code and retries the same trial change.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
@@ -36,7 +36,7 @@ const show = () => render(<OwnerTeachers token="owner-tok" onSignedOut={vi.fn()}
 const listItem = async () => within(await screen.findByRole("list", { name: "المعلمون" })).getAllByRole("listitem")[0];
 
 describe("trial teacher accounts — owner console", () => {
-  it("«معلم تجريبي جديد» opens the form as a trial with a duration; the request carries trialDays", async () => {
+  it("«معلم تجريبي جديد» opens the add-teacher wizard as a trial with a duration; the review says so; the request carries trialDays", async () => {
     routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [] } });
     routes["POST /api/owner-teachers/create"] = () => ({ status: 201, body: { ok: true, teacher: T({ status: "invited", hasPassword: false, trial: { days: 30, endsAt: "2026-12-01T10:00:00Z", ended: false } }), invitation: LINK } });
     show();
@@ -47,6 +47,8 @@ describe("trial teacher accounts — owner console", () => {
     fireEvent.change(within(form).getByLabelText(/^اسم المستخدم/), { target: { value: "t.trial" } });
     fireEvent.change(within(form).getByLabelText("اسم العرض"), { target: { value: "معلم تجريبي" } });
     fireEvent.change(within(form).getByLabelText(/^مدة التجربة/), { target: { value: "30" } });
+    for (let i = 0; i < 3; i++) fireEvent.click(within(form).getByRole("button", { name: "التالي" }));   // details → access → review
+    expect(within(form).getByText("تجريبي — 30 يومًا")).toBeTruthy();
     fireEvent.click(within(form).getByRole("button", { name: "إنشاء الحساب التجريبي وإصدار رابط الدعوة" }));
     await screen.findByRole("region", { name: "رابط الدعوة" });
     const create = calls.find(c => c.url === "/api/owner-teachers/create")!;
@@ -54,16 +56,23 @@ describe("trial teacher accounts — owner console", () => {
     expect(within(await listItem()).getByText(/^تجريبي حتى/)).toBeTruthy();
   });
 
-  it("«إضافة معلم» stays a permanent account; switching the form to permanent sends no trialDays", async () => {
+  it("«إضافة معلم» stays a permanent account (review: «دائم»), and switching the wizard to permanent sends no trialDays", async () => {
     routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [] } });
     routes["POST /api/owner-teachers/create"] = () => ({ status: 201, body: { ok: true, teacher: T({ status: "invited", hasPassword: false }), invitation: LINK } });
     show();
     await screen.findByText(/لا يوجد معلمون/);
-    fireEvent.click(screen.getByRole("button", { name: "معلم تجريبي جديد" }));
+    fireEvent.click(screen.getByRole("button", { name: "إضافة معلم" }));
+    expect((screen.getByRole("radio", { name: /^دائم/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.queryByLabelText(/^مدة التجربة/)).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: /^تجريبي/ }));
+    expect(screen.getByLabelText(/^مدة التجربة/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: /^دائم/ }));
     expect(screen.queryByLabelText(/^مدة التجربة/)).toBeNull();
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.perm" } });
     fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "دائم" } });
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    const review = screen.getByRole("region", { name: "مراجعة بيانات المعلم الجديد" });
+    expect(within(review).getByText("نوع الحساب").nextElementSibling?.textContent).toBe("دائم");
     fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
     await screen.findByRole("region", { name: "رابط الدعوة" });
     expect(calls.find(c => c.url === "/api/owner-teachers/create")!.body).not.toHaveProperty("trialDays");

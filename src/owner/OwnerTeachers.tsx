@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconKey, IconPlus, IconWarning } from "../icons";
-import { ownerApi, ownerTeachersApi, ownerAccessApi, TRIAL_DAY_OPTIONS, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
+import { ownerApi, ownerTeachersApi, ownerAccessApi, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset, type AccessCapability } from "./ownerApi";
 import DiffView from "../ui/DiffView";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
+import TeacherWizard from "./TeacherWizard";
 import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId, trialLabel, trialBadgeClass } from "./teacherShared";
 import TrialControls from "./TrialControls";
 
 /**
  * Tadris+ P2-A2b — «المعلمون» in the Owner Console (P2-A2a /api/owner-teachers; owner decisions §19.3).
  *   - the list of managed teachers with their state (invited / active / suspended) and last sign-in;
- *   - «إضافة معلم»: username + display name (+ optional details) → the invitation link, shown ONCE with a QR code and a copy
+ *   - «إضافة معلم» (P4-B2: a four-step wizard, TeacherWizard.tsx — identity, details, access incl. «copy from a teacher», review):
+ *     username + display name (+ optional details) → the invitation link, shown ONCE with a QR code and a copy
  *     button; the owner sends it themselves; the teacher sets their own password (the owner never sees it);
  *   - per teacher: new invitation link, password reset (new link), end sessions, suspend / reactivate — each takes effect on the
  *     teacher's next request; the disruptive ones ask for an inline confirmation (no browser dialogs);
@@ -22,7 +24,7 @@ import TrialControls from "./TrialControls";
  *     picks another preset (a new immutable revision on the server). Nothing is enforced yet: the change prepares P3-B.
  *   - P4-B1 «صفحة المعلم»: opens the teacher's own page (#/owner/teachers/<id>) — details, individual capabilities, history,
  *     security.
- *   - Trial accounts «معلم تجريبي جديد»: the same form, as a TRIAL account that ends after the chosen number of days (the
+ *   - Trial accounts «معلم تجريبي جديد»: the same wizard, starting as a TRIAL account that ends after the chosen number of days (the
  *     server refuses its sign-in from then on); each trial teacher shows its end date, «تمديد التجربة» and «تحويل إلى حساب دائم».
  * The server decides everything; a 401 signs the owner out.
  */
@@ -38,6 +40,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
   const [presets, setPresets] = useState<AccessPreset[]>([]);
   const [accessMode, setAccessMode] = useState<string>("legacy");
   const [capabilityLabels, setCapabilityLabels] = useState<Record<string, string>>({});
+  const [capabilities, setCapabilities] = useState<AccessCapability[]>([]);
   const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,6 +68,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
       setPresets(r.data.presets);
       setAccessMode(r.data.mode);
       setCapabilityLabels(Object.fromEntries((r.data.capabilities || []).map(c => [c.id, c.moduleLabel + " — " + c.label])));
+      setCapabilities(r.data.capabilities || []);
     });
     return () => { live = false; };
   }, [token]);
@@ -158,9 +162,11 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
       )}
       {showImport && <LegacyImportForm busy={busy} onCancel={() => setShowImport(false)} onSubmit={draft => run({ kind: "import", draft })} />}
 
-      {showCreate && <CreateTeacherForm key={showCreate} initialTrial={showCreate === "trial"} busy={busy} presets={presets} presetRequired={accessMode === "enforce" || accessMode === "invalid"} onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} />}
+      {showCreate && <TeacherWizard key={showCreate} initialTrial={showCreate === "trial"} token={token} busy={busy} presets={presets} capabilities={capabilities} teachers={teachers || []} presetRequired={accessMode === "enforce" || accessMode === "invalid"}
+        onCancel={() => setShowCreate(false)} onSubmit={draft => run({ kind: "create", draft })} onSignedOut={onSignedOut} />}
 
       {issued && <InvitationPanel issued={issued} onClose={() => setIssued(null)} />}
+      {issued && onOpen && <div className="eb-owner-actions"><button type="button" className="eb-owner-secondary" onClick={() => onOpen(issued.teacher.accountId)}>فتح صفحة {issued.teacher.displayName}</button></div>}
 
       {stepUp && (
         <form className="eb-owner-stepup" onSubmit={confirmStepUp} noValidate>
@@ -279,100 +285,6 @@ function AccessChooser({ teacher, presets, labels, enforcing, busy, onSave, onCa
         <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
       </div>
     </div>
-  );
-}
-
-function CreateTeacherForm({ initialTrial = false, busy, presets, presetRequired, onSubmit, onCancel }: { initialTrial?: boolean; busy: boolean; presets: AccessPreset[]; presetRequired: boolean; onSubmit: (d: Parameters<typeof ownerTeachersApi.create>[1]) => void; onCancel: () => void }) {
-  const [presetKey, setPresetKey] = useState("");
-  const [trial, setTrial] = useState(initialTrial);
-  const [trialDays, setTrialDays] = useState<number>(14);
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [subjects, setSubjects] = useState("");
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState("");
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    if (!username.trim() || !displayName.trim()) { setError("اسم المستخدم واسم العرض مطلوبان."); return; }
-    const chosen = presets.find(p => p.id + "@" + p.version === presetKey);
-    if (presetRequired && !chosen) { setError("التطبيق الفعلي للصلاحيات مفعّل: اختر حزمة صلاحيات للمعلم الجديد."); return; }
-    setError("");
-    onSubmit({
-      username: username.trim(), displayName: displayName.trim(), fullName: fullName.trim(), email: email.trim(), phone: phone.trim(),
-      subjects: subjects.split(/[,،]/).map(s => s.trim()).filter(Boolean), notes: notes.trim(),
-      ...(chosen ? { presetId: chosen.id, presetVersion: chosen.version } : {}),
-      ...(trial ? { trialDays } : {})
-    });
-  }
-
-  return (
-    <form className="auth-form eb-owner-create" onSubmit={submit} noValidate aria-label={trial ? "معلم تجريبي جديد" : "إضافة معلم"}>
-      <fieldset className="eb-owner-access-options">
-        <legend>نوع الحساب</legend>
-        <label className="eb-owner-access-option">
-          <input type="radio" name="eb-owner-account-kind" checked={!trial} onChange={() => setTrial(false)} />
-          <span><strong>دائم</strong><small>بلا تاريخ انتهاء.</small></span>
-        </label>
-        <label className="eb-owner-access-option">
-          <input type="radio" name="eb-owner-account-kind" checked={trial} onChange={() => setTrial(true)} />
-          <span><strong>تجريبي</strong><small>يتوقف دخول المعلم تلقائيًا بعد المدة، وتبقى بياناته محفوظة. يمكنك تمديدها أو تحويل الحساب إلى دائم في أي وقت.</small></span>
-        </label>
-      </fieldset>
-      {trial && (
-        <label className="auth-field"><span>مدة التجربة</span>
-          <div className="auth-input">
-            <select value={trialDays} onChange={e => setTrialDays(Number(e.target.value))}>
-              {TRIAL_DAY_OPTIONS.map(d => <option key={d} value={d}>{d} يومًا</option>)}
-            </select>
-          </div>
-          <small className="eb-owner-hint">تبدأ المدة من إنشاء الحساب الآن.</small>
-        </label>
-      )}
-      <div className="eb-owner-grid">
-        <label className="auth-field"><span>اسم المستخدم</span>
-          <div className="auth-input"><input type="text" value={username} onChange={e => setUsername(e.target.value)} dir="ltr" spellCheck={false} autoComplete="off" placeholder="t.ahmad" /></div>
-          <small className="eb-owner-hint">أحرف إنجليزية صغيرة وأرقام و . _ - ، وليس أرقامًا فقط. لا يُستخدم رقم الهوية.</small>
-        </label>
-        <label className="auth-field"><span>اسم العرض</span>
-          <div className="auth-input"><input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60} /></div>
-        </label>
-        <label className="auth-field"><span>الاسم الكامل (اختياري)</span>
-          <div className="auth-input"><input type="text" value={fullName} onChange={e => setFullName(e.target.value)} maxLength={120} /></div>
-        </label>
-        <label className="auth-field"><span>البريد الإلكتروني (اختياري)</span>
-          <div className="auth-input"><input type="email" value={email} onChange={e => setEmail(e.target.value)} dir="ltr" maxLength={160} /></div>
-        </label>
-        <label className="auth-field"><span>الهاتف (اختياري)</span>
-          <div className="auth-input"><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} dir="ltr" maxLength={40} /></div>
-        </label>
-        <label className="auth-field"><span>المواد (اختياري، افصل بفاصلة)</span>
-          <div className="auth-input"><input type="text" value={subjects} onChange={e => setSubjects(e.target.value)} /></div>
-        </label>
-        {presets.length > 0 && (
-          <label className="auth-field"><span>{presetRequired ? "حزمة الصلاحيات" : "حزمة الصلاحيات (اختياري)"}</span>
-            <div className="auth-input">
-              <select value={presetKey} onChange={e => setPresetKey(e.target.value)}>
-                <option value="">{presetRequired ? "اختر حزمة…" : "لاحقًا (بلا صلاحيات حتى تختار)"}</option>
-                {presets.filter(p => p.id !== "legacy-full").map(p => <option key={p.id + "@" + p.version} value={p.id + "@" + p.version}>{p.label}</option>)}
-              </select>
-            </div>
-          </label>
-        )}
-      </div>
-      <label className="auth-field"><span>ملاحظات إدارية (اختياري، لا يراها المعلم)</span>
-        <textarea className="eb-owner-textarea" value={notes} onChange={e => setNotes(e.target.value)} maxLength={1000} rows={2} />
-      </label>
-      {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
-      <div className="eb-owner-actions">
-        <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الإنشاء…" : trial ? "إنشاء الحساب التجريبي وإصدار رابط الدعوة" : "إنشاء الحساب وإصدار رابط الدعوة"}</button>
-        <button type="button" className="eb-owner-secondary" onClick={onCancel}>إلغاء</button>
-      </div>
-    </form>
   );
 }
 

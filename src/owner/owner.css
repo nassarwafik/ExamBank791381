@@ -129,6 +129,12 @@
 .eb-owner-facts dt { color: var(--eb-muted); font-size: var(--eb-fs-13); }
 .eb-owner-facts dd { margin: 0; color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
 
+/* Tadris+ P4-B2 — the add-teacher wizard. Tokens only. */
+.eb-owner-wizard { gap: var(--eb-space-3); }
+.eb-owner-wizard-title { margin: 0; font-size: var(--eb-fs-16); color: var(--eb-text-heading); }
+.eb-owner-wizard-title small { color: var(--eb-muted); font-weight: normal; }
+.eb-owner-wizard-title:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+
 /* Trial accounts — the trial badge (running / ended) and the trial controls. */
 .eb-owner-status--trial { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
 .eb-owner-status--trial-soon { background: var(--eb-danger-bg); color: var(--eb-danger-tx); outline: 1px solid currentColor; }

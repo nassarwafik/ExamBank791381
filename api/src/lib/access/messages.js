@@ -8,6 +8,7 @@ const ACCESS_REFUSAL = Object.freeze({
   PLATFORM_CAPABILITY_FORBIDDEN: "صلاحيات المنصة للمالك وحده، ولا تُمنح لمعلم.",
   DEPENDENCY_UNMET: "صلاحية تحتاج صلاحية أخرى غير ممنوحة.",
   RESOURCES_NOT_SUPPORTED: "تخصيص الموارد يأتي في مرحلة لاحقة.",
-  REVISION_MALFORMED: "طلب غير صالح."
+  REVISION_MALFORMED: "طلب غير صالح.",
+  ACCESS_PRESET_MISSING: "الإضافات والحجب تحتاج حزمة أساسية."
 });
 module.exports = { ACCESS_REFUSAL };
