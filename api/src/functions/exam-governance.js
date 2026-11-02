@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
 const { isSafeExamId } = require("../lib/exam-governance-model");
@@ -50,6 +51,8 @@ async function handler(request, deps = {}, obs = null) {
   const container = (deps.getContainer || getContainer)();
   const body = await readBody(request);
   const action = String(body.action || "status").trim().toLowerCase();
+  const capabilityDenial = await requireCapability(auth, "exam-governance.js", action, deps, obs);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const env = process.env;
   const capabilities = resolveGovernanceCapabilities(auth.user, process.env);
   const capabilitySource = describeCapabilitySource(process.env);

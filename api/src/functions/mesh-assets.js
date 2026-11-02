@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer } = require("../lib/platform-storage");
 const { inspectGlbAsset, MESH_ASSET_LIMITS } = require("../lib/shared-finalization/meshModels/glbAsset");
 const store = require("../lib/mesh-assets/store");
@@ -35,6 +36,8 @@ const fail = (status, error, extra = {}) => ({ status, headers: ERROR_HEADERS, j
 async function uploadHandler(request, deps = DEFAULT_DEPS, obs) {
   const auth = await requireTeacherSession(request, deps);
   if (!auth || !auth.ok) return auth && auth.response ? auth.response : fail(401, "Unauthorized");
+  const capabilityDenial = await requireCapability(auth, "mesh-assets.js", "*", deps, null);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const declared = Number(request.headers && typeof request.headers.get === "function" ? request.headers.get("content-length") : 0);
   if (Number.isFinite(declared) && declared > MESH_ASSET_LIMITS.maxBytes) return fail(413, "حجم النموذج يتجاوز الحد المسموح (" + Math.floor(MESH_ASSET_LIMITS.maxBytes / (1024 * 1024)) + " MB).");
   const fileName = decodeFileName(request);
@@ -56,6 +59,8 @@ async function uploadHandler(request, deps = DEFAULT_DEPS, obs) {
 async function listHandler(request, deps = DEFAULT_DEPS) {
   const auth = await requireTeacherSession(request, deps);
   if (!auth || !auth.ok) return auth && auth.response ? auth.response : fail(401, "Unauthorized");
+  const capabilityDenial = await requireCapability(auth, "mesh-assets.js", "*", deps, null);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const container = await deps.getContainer();
   return { status: 200, headers: ERROR_HEADERS, jsonBody: { ok: true, assets: await store.listOwnerAssets(container, store.ownerHashOf(auth.user.sub)) } };
 }

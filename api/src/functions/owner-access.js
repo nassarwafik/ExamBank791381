@@ -2,8 +2,9 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordOwnerAuditEvent } = require("../lib/audit-log");
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
-const { isTeacherAccountId } = require("../lib/identity/teacher-token");
-const { readTeacherAccount, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
+const { isTeacherAccountId, LEGACY_TEACHER_ACCOUNT_ID } = require("../lib/identity/teacher-token");
+const { readTeacherAccount, mutateTeacherAccount, listTeacherAccounts } = require("../lib/identity/teacher-accounts");
+const { readObservations } = require("../lib/access/observations");
 const { CAPABILITIES } = require("../lib/access/capabilities");
 const { PRESETS } = require("../lib/access/presets");
 const { AccessError, buildRevision, writeRevision } = require("../lib/access/revisions");
@@ -12,6 +13,8 @@ const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode")
 // Tadris+ P3-A — the owner manages teacher capabilities. Route: /api/owner-access/{action?}   (owner session only)
 //
 //   GET                → { mode, capabilities (the registry), presets }
+//   GET readiness      → P3-B: per teacher — the access in force (assigned, or the account's default) and what the OBSERVE mode
+//                        recorded as «would have been refused»; `ready` = no active or invited teacher is left without access.
 //   POST assign        { accountId, presetId, presetVersion, grants?, denies?, reason?, baseRevisionId? }
 //                      → a NEW immutable revision (create-only), then a compare-and-set of the account's accessRevisionId.
 //                        `baseRevisionId` (optional, null = "the account has none yet") refuses a stale screen (409).
@@ -53,6 +56,22 @@ async function handler(request, deps = {}, obs = null) {
       let mode;
       try { mode = (await readAccessMode(container)).mode; } catch (e) { if (e instanceof AccessError) mode = "invalid"; else throw e; }
       return reply(200, { ok: true, mode, capabilities: publicCapabilities(), presets: publicPresets() });
+    }
+    if (method === "GET" && action === "readiness") {
+      let mode;
+      try { mode = (await readAccessMode(container)).mode; } catch (e) { if (e instanceof AccessError) mode = "invalid"; else throw e; }
+      const accounts = await listTeacherAccounts(container);
+      const teachers = [];
+      for (const a of accounts) {
+        const assigned = a.accessRevisionId && a.accessPreset ? { revisionId: a.accessRevisionId, preset: { id: String(a.accessPreset.id), version: Number(a.accessPreset.version) } } : null;
+        const fallback = assigned ? null : a.accountId === LEGACY_TEACHER_ACCOUNT_ID ? "legacy-full" : "none";
+        const seen = await readObservations(container, a.accountId);
+        const wouldDeny = Object.entries(seen).map(([capability, v]) => ({ capability, count: Number(v && v.count) || 0, lastAt: String(v && v.lastAt || "") })).sort((x, y) => y.lastAt.localeCompare(x.lastAt));
+        teachers.push({ accountId: a.accountId, username: a.username, displayName: a.displayName, status: a.status, access: assigned, defaultAccess: fallback, wouldDeny });
+      }
+      teachers.sort((x, y) => String(x.displayName).localeCompare(String(y.displayName), "ar"));
+      const ready = teachers.every(t => t.status === "suspended" || t.access || t.defaultAccess === "legacy-full");
+      return reply(200, { ok: true, mode, ready, teachers });
     }
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);

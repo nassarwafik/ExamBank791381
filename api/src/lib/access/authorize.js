@@ -18,9 +18,14 @@ const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const denied = capability => ({ status: 403, headers: NO_STORE, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذه الأداة غير مفعّلة لحسابك. تواصل مع إدارة المنصة.", capability } });
 const unavailable = () => ({ status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, code: "ACCESS_UNAVAILABLE", error: "تعذر التحقق من الصلاحيات حاليًا. حاول مرة أخرى." } });
 
-async function authorize(user, capabilityId, deps = {}, obs = null) {
-  if (!isCapability(capabilityId)) throw new Error("authorize(): unknown capability " + String(capabilityId));
-  if (isOwnerOnly(capabilityId)) return { allowed: false, mode: "any", decision: "deny", response: denied(capabilityId) };
+// P3-B — `capabilityId` may also be a non-empty list: allowed when ANY of them is granted (e.g. a governance inbox that a
+// reviewer, an approver or a publisher may read). Every entry must be a known teacher capability.
+async function authorize(user, capabilityIdOrList, deps = {}, obs = null) {
+  const list = Array.isArray(capabilityIdOrList) ? capabilityIdOrList : [capabilityIdOrList];
+  if (!list.length) throw new Error("authorize(): no capability");
+  for (const c of list) if (!isCapability(c)) throw new Error("authorize(): unknown capability " + String(c));
+  const capabilityId = list.join("|");
+  if (list.some(isOwnerOnly)) return { allowed: false, mode: "any", decision: "deny", response: denied(capabilityId) };
   const containerOf = () => deps.container || (deps.getContainer || storage.getContainer)();
   let mode;
   try { mode = (await readAccessMode(containerOf(), deps)).mode; } catch {
@@ -35,7 +40,7 @@ async function authorize(user, capabilityId, deps = {}, obs = null) {
     if (mode === "observe") return { allowed: true, mode, decision: "unavailable" };
     return { allowed: false, mode, decision: "unavailable", response: unavailable() };
   }
-  const granted = access.capabilities.includes(capabilityId);
+  const granted = list.some(c => access.capabilities.includes(c));
   if (granted) return { allowed: true, mode, decision: "allow", access };
   if (mode === "observe") {
     obs?.logWarn?.("access.observe.would_deny", { capability: capabilityId, source: access.source, preset: access.preset ? access.preset.id : "none" });

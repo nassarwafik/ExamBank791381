@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
@@ -62,6 +63,8 @@ async function handler(request, deps = {}, obs = null) {
     try {
       const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
+      const capabilityDenial = await requireCapability(auth, "teacher-achievement-feed.js", request.method === "GET" ? "GET" : "*", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       const container = deps.container || (deps.getContainer || getContainer)();
 
       const tenant = tenantOf(auth.user);

@@ -3,6 +3,7 @@ const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { callTextJson } = require("../lib/quality-fix-ai-client");
 
 // Phase 20G.3 — the ONE legacy table authority (shared build): the rows the student card draws and the legacy table grader grades,
@@ -191,6 +192,8 @@ app.http("examQualityFix", {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "exam-quality-fix.js", "*", {}, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       let body = {};
       try {

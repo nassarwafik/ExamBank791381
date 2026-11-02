@@ -31,6 +31,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -125,6 +126,8 @@ async function handle(request, deps = {}, obs = null) {
     const actionsFor = canSend => doc => messageActions(doc, actor, { canSend, now: deps.now ? deps.now() : Date.now() });
 
     if (request.method === "GET") {
+      const capabilityDenial = await requireCapability(auth, "messages.js", "GET", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       const url = new URL(request.url);
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
@@ -186,6 +189,8 @@ async function handle(request, deps = {}, obs = null) {
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body && body.action || "").trim();
+    const capabilityDenial = await requireCapability(auth, "messages.js", action, deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     if (tenant && body && typeof body === "object") {
       if (body.studentId !== undefined && !(await ownStudent(String(body.studentId || "").trim()))) return notFound(MSG.studentNotFound);
       if (body.classId !== undefined && !(await ownClass(String(body.classId || "").trim()))) return notFound(MSG.classNotFound);

@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { isStudentClassMember } = require("../lib/class-membership");
@@ -24,6 +25,8 @@ async function handler(request, deps = {}, obs = null) {
   try {
     const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "learning-class-progress.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const classId = String(request.params?.classId || "").trim();
     const courseId = String(request.params?.courseId || "").trim();
     if (!ID.test(classId) || !ID.test(courseId)) return NOT_FOUND;

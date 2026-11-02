@@ -18,6 +18,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf, studentAccessible } = require("../lib/teacher-tenancy");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
@@ -39,7 +40,11 @@ const userDocName = studentId => USER_PREFIX + String(studentId) + ".json";
  */
 async function resolveActor(request, deps) {
   const builder = (await requireTeacherSession(request, deps));
-  if (builder.ok) return { kind: "teacher", user: builder.user };
+  if (builder.ok) {
+    const capabilityDenial = await requireCapability(builder, "student-profile-photo.js", request.method === "GET" ? "GET" : "*", deps);   // Tadris+ P3-B
+    if (capabilityDenial) return { kind: "denied", response: capabilityDenial };
+    return { kind: "teacher", user: builder.user };
+  }
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (sess.ok) return { kind: "student", user: sess.user, student: sess.student, container: sess.container };
   return { kind: "denied", response: sess.response || { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } };

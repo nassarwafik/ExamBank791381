@@ -14,6 +14,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: only the teacher of the assignment's class may re-grade its attempts.
 const { tenantOf, classAccessible } = require("../lib/teacher-tenancy");
@@ -74,6 +75,8 @@ async function bulkRetryHandler(request, deps = {}, obs = null) {
   try {
     const auth = (await requireTeacherSession(request, deps));
     if (!auth.ok) return auth.response;
+    const capabilityDenial = await requireCapability(auth, "coding-grading-recovery.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const text = await readText(request, BULK_MAX_CHARS);
     let b = null;
     try { b = text === null ? null : JSON.parse(text); } catch { b = null; }

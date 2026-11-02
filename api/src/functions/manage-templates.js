@@ -6,6 +6,7 @@ const {
 } = require("@azure/storage-blob");
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 
 const BANK_CONTAINER = "bank";
@@ -137,11 +138,15 @@ async function handler(request, deps = {}) {
     const read = deps.downloadJson || downloadJson;
     const tenant = tenantOf(auth.user);
     if (request.method === "GET") {
+      const capabilityDenial = await requireCapability(auth, "manage-templates.js", "GET", deps, null);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       return { status: 200, jsonBody: { ok: true, templates: await listTemplates(container, tenant, read) } };
     }
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body?.action || "").trim().toLowerCase();
+    const capabilityDenial = await requireCapability(auth, "manage-templates.js", action, deps, null);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const blobName = String(body?.blobName || "");
     if (!isSafeTemplateBlob(blobName)) return { status: 400, jsonBody: { ok: false, error: "Invalid template." } };
     if (action === "load") {

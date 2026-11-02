@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -36,7 +37,11 @@ const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذا الت�
 /** Teacher (builder token) or active student (persisted document); 401 otherwise. */
 async function resolveActor(request, deps) {
   const builder = (await requireTeacherSession(request, deps));
-  if (builder.ok) return { kind: "teacher", user: builder.user, container: deps.container || (deps.getContainer || getContainer)() };
+  if (builder.ok) {
+    const capabilityDenial = await requireCapability(builder, "learning-training.js", "*", deps);   // Tadris+ P3-B
+    if (capabilityDenial) return { kind: "denied", response: capabilityDenial };
+    return { kind: "teacher", user: builder.user, container: deps.container || (deps.getContainer || getContainer)() };
+  }
   const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
   if (!sess.ok) return { kind: "denied", response: sess.response };
   return { kind: "student", user: sess.user, student: sess.student, container: sess.container };

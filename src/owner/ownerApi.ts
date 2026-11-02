@@ -92,8 +92,16 @@ export const ownerTeachersApi = {
 };
 
 // Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
+export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean };
+export type ReadinessTeacher = {
+  accountId: string; username: string; displayName: string; status: TeacherStatus;
+  access: { revisionId: string; preset: { id: string; version: number } } | null; defaultAccess: "legacy-full" | "none" | null;
+  wouldDeny: { capability: string; count: number; lastAt: string }[];
+};
 export const ownerAccessApi = {
-  get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[] }>("/api/owner-access", { token }),
+  get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[] }>("/api/owner-access", { token }),
+  readiness: (token: string) => call<{ ok: true; mode: AccessMode; ready: boolean; teachers: ReadinessTeacher[] }>("/api/owner-access/readiness", { token }),
+  setMode: (token: string, mode: "legacy" | "observe") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
   assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null }) =>
     call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body })
 };

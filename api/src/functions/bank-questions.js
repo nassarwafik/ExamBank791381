@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { VALID_SECTIONS } = require("../lib/section-resolver");
 const { downloadJsonOrNull, listJson, mutateJsonWithRetry, isConcurrencyConflict, getContainer: getPlatformContainer } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -281,6 +282,8 @@ async function handler(request, deps = {}, obs = null) {
     };
 
     if (request.method === "GET") {
+      const capabilityDenial = await requireCapability(auth, "bank-questions.js", "GET", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       const [entries, sources] = await Promise.all([readIndex(), ls(bank, SOURCES_PREFIX)]);
       const byId = new Map(entries.map(e => [String(e.id), e]));
       const rows = [];
@@ -300,6 +303,8 @@ async function handler(request, deps = {}, obs = null) {
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body?.action || "").trim().toLowerCase();
+    const capabilityDenial = await requireCapability(auth, "bank-questions.js", action, deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     if (!["create", "update", "delete"].includes(action)) return bad(400, "الإجراء غير معروف (create / update / delete).");
 
     // Where does the question live? The source document is the authority; the index only points at it. An index

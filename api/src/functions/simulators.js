@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer } = require("../lib/platform-storage");
 const { validateSmartSimPackage, publicReport, SMARTSIM_LIMITS } = require("../lib/smartsim/package-validator");
 const store = require("../lib/smartsim/package-store");
@@ -31,6 +32,8 @@ const fail = (status, error, extra = {}) => ({ status, jsonBody: { ok: false, er
 async function uploadHandler(request, deps = DEFAULT_DEPS, obs) {
   const auth = await requireTeacherSession(request, deps);
   if (!auth || !auth.ok) return auth && auth.response ? auth.response : fail(401, "Unauthorized");
+  const capabilityDenial = await requireCapability(auth, "simulators.js", "*", deps, null);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const declared = Number(request.headers && typeof request.headers.get === "function" ? request.headers.get("content-length") : 0);
   if (Number.isFinite(declared) && declared > SMARTSIM_LIMITS.maxArchiveBytes) return fail(413, "حجم الحزمة يتجاوز الحد المسموح (" + Math.floor(SMARTSIM_LIMITS.maxArchiveBytes / (1024 * 1024)) + " MB).");
   const fileName = decodeFileName(request);
@@ -59,6 +62,8 @@ async function uploadHandler(request, deps = DEFAULT_DEPS, obs) {
 async function listHandler(request, deps = DEFAULT_DEPS) {
   const auth = await requireTeacherSession(request, deps);
   if (!auth || !auth.ok) return auth && auth.response ? auth.response : fail(401, "Unauthorized");
+  const capabilityDenial = await requireCapability(auth, "simulators.js", "*", deps, null);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const container = await deps.getContainer();
   const packages = await store.listOwnerPackages(container, store.ownerHashOf(auth.user.sub));
   return { status: 200, jsonBody: { ok: true, packages } };
@@ -67,6 +72,8 @@ async function listHandler(request, deps = DEFAULT_DEPS) {
 async function versionsHandler(request, deps = DEFAULT_DEPS) {
   const auth = await requireTeacherSession(request, deps);
   if (!auth || !auth.ok) return auth && auth.response ? auth.response : fail(401, "Unauthorized");
+  const capabilityDenial = await requireCapability(auth, "simulators.js", "*", deps, null);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const packageId = String((request.params && request.params.packageId) || "");
   if (!SMARTSIM_PACKAGE_ID_PATTERN.test(packageId)) return fail(404, "المحاكي غير موجود.");
   const container = await deps.getContainer();

@@ -25,6 +25,7 @@
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const {getContainer,listJson,listBlobNames,downloadManyJson,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
@@ -155,6 +156,8 @@ async function handler(request,deps={},obs=null){
  try{
   const auth=(await requireTeacherSession(request, deps));
   if(!auth.ok)return auth.response;
+  const capabilityDenial = await requireCapability(auth, "teacher-today.js", "*", deps, obs);   // Tadris+ P3-B
+  if (capabilityDenial) return capabilityDenial;
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();

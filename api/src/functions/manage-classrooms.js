@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { mutateJsonWithRetry, StorageConflictError, uploadJsonConditional, isConcurrencyConflict } = require("../lib/platform-storage");
 // Roadmap #25 — explicit, teacher-triggered roster-index repair (the only O(all-users) path in this function;
 // the normal class list stays O(classes) and reads the cheap studentIds count).
@@ -187,12 +188,16 @@ async function handler(request, deps = {}, obs = null) {
     const tenant = tenantOf(auth.user);
 
     if (request.method === "GET") {
+      const capabilityDenial = await requireCapability(auth, "manage-classrooms.js", "GET", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       return { status: 200, jsonBody: { ok: true, classes: await listClasses(container, deps.downloadJsonOrNull ? dl : null, tenant) } };
     }
 
     let body = {};
     try { body = await request.json(); } catch { body = {}; }
     const action = String(body?.action || "create").trim().toLowerCase();
+    const capabilityDenial = await requireCapability(auth, "manage-classrooms.js", action, deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
 
     // Every action on an existing class names it by a SAFE id (checked before any storage read).
     if (action !== "create" && body?.classId !== undefined && body?.classId !== null && String(body.classId).trim() !== "" && !isSafeId(String(body.classId).trim())) {

@@ -8,6 +8,7 @@ const {
 const crypto = require("crypto");
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { visibleBankEntries } = require("../lib/bank-tenancy");
 
@@ -195,6 +196,8 @@ async function handler(request, deps = {}) {
     if (!auth.ok) {
       return auth.response;
     }
+    const capabilityDenial = await requireCapability(auth, "question-bank-action.js", "*", deps, null);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
 
     let body = {};
     try {

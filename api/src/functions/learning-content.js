@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -30,6 +31,10 @@ async function handler(request, deps = {}, obs = null) {
 
     // Who is asking: a teacher, else an active student session, else refused.
     const builder = (await requireTeacherSession(request, deps));
+    if (builder.ok) {
+      const capabilityDenial = await requireCapability(builder, "learning-content.js", "*", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
+    }
     let classDocs = 0;
     if (!builder.ok) {
       const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);

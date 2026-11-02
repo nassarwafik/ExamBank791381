@@ -2,6 +2,7 @@
 const {app}=require("@azure/functions"),crypto=require("crypto");
 const {withObservability}=require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
@@ -71,10 +72,11 @@ async function handler(request,deps={},obs=null){
   const auth=await authFn(request, deps);if(!auth.ok)return auth.response;const c=getC();
   const tenant=tenantOf(auth.user);
   // Phase 21G.2 — the LIGHT list: summaries from the ETag-verified cache; only new / changed documents are downloaded.
-  if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");const loaded=await (deps.loadAssignmentSummaries||loadAssignmentSummaries)(c,{prefix:PREFIX,summarize:summary,summaryVersion:SUMMARY_VERSION},{...(deps.summaryCacheDeps||{}),onCacheError:()=>obs?.logWarn?.("assignment.summary_cache.failed",{retryable:true})});let list=loaded.summaries;if(classId)list=list.filter(x=>x.classId===classId);
+  if(request.method==="GET"){const capabilityDenial=await requireCapability(auth,"manage-assignments.js","GET",deps,obs);if(capabilityDenial)return capabilityDenial;const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");const loaded=await (deps.loadAssignmentSummaries||loadAssignmentSummaries)(c,{prefix:PREFIX,summarize:summary,summaryVersion:SUMMARY_VERSION},{...(deps.summaryCacheDeps||{}),onCacheError:()=>obs?.logWarn?.("assignment.summary_cache.failed",{retryable:true})});let list=loaded.summaries;if(classId)list=list.filter(x=>x.classId===classId);
    if(tenant){const allowed=accessibleClassIds(await ls(c,CLASS_PREFIX),tenant);list=list.filter(x=>classIdAllowed(allowed,x.classId))}list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
   let b={};try{b=await request.json()}catch{}
   const action=String(b.action||"create").toLowerCase();
+  const capabilityDenial=await requireCapability(auth,"manage-assignments.js",action,deps,obs);if(capabilityDenial)return capabilityDenial;   // Tadris+ P3-B
   // Phase 21G.0 — an action on an existing assignment acts only on one of the teacher's own classes; another teacher's assignment
   // is reported exactly like a missing one. (The class of an assignment never changes, so one check suffices.)
   if(action!=="create"&&tenant&&b.assignmentId){

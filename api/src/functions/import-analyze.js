@@ -3,6 +3,7 @@ const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teache
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
 const { chunkPages } = require("../lib/import-chunking");
 const {
@@ -236,6 +237,8 @@ async function importAnalyzeInner(request, _ctx, obs) {
       if (!auth.ok) {
         return auth.response;
       }
+      const capabilityDenial = await requireCapability(auth, "import-analyze.js", "*", {}, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       obs?.logInfo("import.started", { operation: "analyze" });
 
       let body = {};

@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
@@ -19,6 +20,8 @@ async function handler(request, deps = {}, obs = null) {
     try {
       const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
+      const capabilityDenial = await requireCapability(auth, "teacher-analytics.js", "*", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
 
       const url = new URL(request.url);
       const requestedClassId = String(url.searchParams.get("classId") || "").trim();

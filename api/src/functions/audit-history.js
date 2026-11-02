@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listBlobNames } = require("../lib/platform-storage");
 const { AUDIT_PREFIX } = require("../lib/audit-log");
@@ -74,6 +75,8 @@ async function handler(request, deps = {}, obs = null) {
   try {
     const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;               // 401, no student access
+    const capabilityDenial = await requireCapability(auth, "audit-history.js", "*", deps, obs);   // Tadris+ P3-B
+    if (capabilityDenial) return capabilityDenial;
     const container = deps.container || getC();
     const tenant = tenantOf(auth.user);
 

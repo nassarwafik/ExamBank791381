@@ -3,6 +3,7 @@ const { app } = require("@azure/functions");
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 
 async function loadOpenAI() {
   const module =
@@ -722,6 +723,8 @@ app.http(
           if (!auth.ok) {
             return auth.response;
           }
+          const capabilityDenial = await requireCapability(auth, "question-ai-action.js", "*", {}, null);   // Tadris+ P3-B
+          if (capabilityDenial) return capabilityDenial;
 
           let body = {};
 

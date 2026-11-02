@@ -10,6 +10,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 // Phase 21G.0 — teacher tenancy: project tracking covers only the teacher's own classes.
 const { tenantOf, canAccessDocument, accessibleClassIds, classIdAllowed } = require("../lib/teacher-tenancy");
 const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
@@ -180,6 +181,8 @@ async function handler(request, deps = {}, obs = null) {
     try {
       const auth = (await requireTeacherSession(request, deps));
       if (!auth.ok) return auth.response;
+      const capabilityDenial = await requireCapability(auth, "project-tracker.js", request.method === "GET" ? "GET" : "*", deps, obs);   // Tadris+ P3-B
+      if (capabilityDenial) return capabilityDenial;
       const container = deps.container || (deps.getContainer || getContainer)();
       const tenant = tenantOf(auth.user);
       const ownClassroom = classroom => !!classroom && canAccessDocument(classroom, tenant);
