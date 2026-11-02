@@ -61,12 +61,16 @@ describe("P2-A2b owner — teachers", () => {
     show();
     await screen.findByText(/لا يوجد معلمون/);
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
-    fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
+    // P4-B2: the add form is a wizard — the required fields are checked when leaving the first step.
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
     expect((await screen.findByRole("alert")).textContent).toContain("مطلوبان");
     expect(calls.some(c => c.url === "/api/owner-teachers/create")).toBe(false);
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: " t.sara " } });
     fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
     fireEvent.change(screen.getByLabelText(/المواد/), { target: { value: "شبكات، برمجة" } });
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
     fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
     const panel = await screen.findByRole("region", { name: "رابط الدعوة" });
     const create = calls.find(c => c.url === "/api/owner-teachers/create")!;
@@ -132,6 +136,7 @@ describe("P2-A2b owner — teachers", () => {
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.sara" } });
     fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "التالي" }));     // P4-B2 wizard: identity → details → access → review
     fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
     expect((await screen.findByRole("alert")).textContent).toContain("اسم المستخدم مستخدم");
     routes["POST /api/owner-teachers/create"] = () => ({ status: 401, body: { ok: false, code: "OWNER_SESSION_REVOKED", error: "انتهت الجلسة." } });

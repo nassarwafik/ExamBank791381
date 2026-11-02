@@ -103,11 +103,15 @@ describe("P3-B2 owner — a new teacher with a preset", () => {
     show();
     await screen.findByText(/لا يوجد معلمون/);
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
-    const select = await screen.findByLabelText("حزمة الصلاحيات (اختياري)") as HTMLSelectElement;
-    expect([...select.options].map(o => o.textContent)).toEqual(["لاحقًا (بلا صلاحيات حتى تختار)", "تدريس كامل", "التعلّم فقط"]);
+    // P4-B2: the add form is a wizard — identity, details, then the access step offers the presets, then review.
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.sara" } });
     fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    const select = await screen.findByLabelText("حزمة الصلاحيات (اختياري)") as HTMLSelectElement;
+    expect([...select.options].map(o => o.textContent)).toEqual(["لاحقًا (بلا صلاحيات حتى تختار)", "تدريس كامل", "التعلّم فقط"]);
     fireEvent.change(select, { target: { value: "learning-only@1" } });
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
     fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
     await screen.findByRole("region", { name: "رابط الدعوة" });
     expect(calls.find(c => c.url === "/api/owner-teachers/create")!.body).toMatchObject({ username: "t.sara", presetId: "learning-only", presetVersion: 1 });
@@ -118,10 +122,13 @@ describe("P3-B2 owner — a new teacher with a preset", () => {
     show();
     await screen.findByText(/لا يوجد معلمون/);
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
-    await screen.findByLabelText("حزمة الصلاحيات");
+    // P4-B2 wizard: the required preset is checked when leaving the access step (nothing is sent).
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.sara" } });
     fireEvent.change(screen.getByLabelText("اسم العرض"), { target: { value: "سارة" } });
-    fireEvent.click(screen.getByRole("button", { name: "إنشاء الحساب وإصدار رابط الدعوة" }));
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+    await screen.findByLabelText("حزمة الصلاحيات");
+    fireEvent.click(screen.getByRole("button", { name: "التالي" }));
     expect((await screen.findByRole("alert")).textContent).toContain("اختر حزمة صلاحيات");
     expect(calls.some(c => c.url === "/api/owner-teachers/create")).toBe(false);
   });

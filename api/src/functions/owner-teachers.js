@@ -23,6 +23,9 @@ const { ACCESS_REFUSAL } = require("../lib/access/messages");
 //                      → invitation link (shown once). P3-B2: with a preset, the teacher starts with that access (an immutable
 //                      revision, written BEFORE the account so the account never exists without it); while enforcement is on (or
 //                      its mode cannot be read) a preset is REQUIRED, so no new teacher lands with no access at all.
+//                      P4-B2: `grants?` / `denies?` (with a preset only) and `accessReason?` — the wizard's «copy from a teacher»
+//                      sends the source's current preset / grants / denies; they are validated exactly like an assignment
+//                      (refused with their code, never corrected).
 //   POST reinvite      { accountId }      → a new invitation link; the previous one stops working
 //   POST reset         { accountId }      → the password is removed, every session ends, a reset link is issued
 //   POST suspend       { accountId, reason? } → no access from the next request (status + authVersion + 1). P4-B1: an optional
@@ -134,13 +137,20 @@ async function handler(request, deps = {}, obs = null) {
       let initialAccess = null;
       if (!importing) {
         const wantsPreset = body.presetId !== undefined && body.presetId !== null && body.presetId !== "";
+        const hasLists = (Array.isArray(body.grants) && body.grants.length > 0) || (Array.isArray(body.denies) && body.denies.length > 0);
+        if (!wantsPreset && hasLists) return bad("ACCESS_PRESET_MISSING", ACCESS_REFUSAL.ACCESS_PRESET_MISSING);
         if (!wantsPreset) {
           let mode = "enforce";                                   // unreadable → treated as enforce (fail safe)
           try { mode = (await readAccessMode(container)).mode; } catch { mode = "enforce"; }
           if (mode === "enforce") return bad("PRESET_REQUIRED", ACCESS_REFUSAL.PRESET_REQUIRED);
         } else {
           try {
-            initialAccess = buildRevision({ accountId, parentRevisionId: null, presetId: body.presetId, presetVersion: body.presetVersion, reason: "initial access at creation", createdBy: actor, nowMs }).revision;
+            const note = text(body.accessReason, 200);
+            initialAccess = buildRevision({
+              accountId, parentRevisionId: null, presetId: body.presetId, presetVersion: body.presetVersion,
+              grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies,
+              reason: "initial access at creation" + (note ? " — " + note : ""), createdBy: actor, nowMs
+            }).revision;
           } catch (e) {
             if (e instanceof AccessError) return bad(e.code, ACCESS_REFUSAL[e.code] || ACCESS_REFUSAL.REVISION_MALFORMED);
             throw e;
@@ -154,7 +164,7 @@ async function handler(request, deps = {}, obs = null) {
         subjects: fields.subjects || [], adminNotes: fields.adminNotes || "",
         status: "invited", credential: null, invitation: inv.record, authVersion: 1, revokedSessions: [],
         ...(importing ? { origin: "shared-password-workspace", importedAt: iso } : {}),
-        ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: 0, accessDenies: 0 } : {}),
+        ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length } : {}),
         createdAt: iso, createdBy: actor, updatedAt: iso
       };
       if (initialAccess) await writeRevision(container, initialAccess);   // an orphan if the account below is refused (harmless)
@@ -169,7 +179,7 @@ async function handler(request, deps = {}, obs = null) {
       if (importing) { try { profileCopied = await copyLegacyProfile(container, env, iso); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
       await audit(container, {
         actor, action: importing ? "owner.teacher.legacy-imported" : "owner.teacher.created", targetType: "teacher-account", targetId: accountId, targetLabel: account.username,
-        ...(importing ? { details: { profileCopied } } : initialAccess ? { details: { revisionId: initialAccess.revisionId, preset: initialAccess.preset } } : {})
+        ...(importing ? { details: { profileCopied } } : initialAccess ? { details: { revisionId: initialAccess.revisionId, preset: initialAccess.preset, ...(initialAccess.grants.length || initialAccess.denies.length ? { grants: initialAccess.grants, denies: initialAccess.denies } : {}) } } : {})
       });
       return reply(201, { ok: true, teacher: ownerView(account, nowMs), invitation: invitationOut(inv.token, inv.record) });
     }
