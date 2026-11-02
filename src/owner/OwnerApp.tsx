@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import "../ui/kit.css";
 import "./owner.css";
 import { BRAND_NAME } from "../brand";
 import BrandMark from "../ui/BrandMark";
@@ -7,7 +8,8 @@ import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import { IconKey, IconLock, IconLogout, IconUser, IconWarning, IconRefresh } from "../icons";
 import { ownerApi, readOwnerToken, writeOwnerToken, clearOwnerToken, type BootstrapState, type OwnerSessionView } from "./ownerApi";
-import { ownerViewFromHash, OWNER_HOME_HASH, OWNER_SETUP_HASH } from "./ownerRoute";
+import { ownerViewFromHash, ownerSectionHash, OWNER_HOME_HASH, OWNER_SETUP_HASH, type OwnerSection } from "./ownerRoute";
+import SubNav from "../ui/SubNav";
 import OwnerSetup from "./OwnerSetup";
 import RecoveryCodes from "./RecoveryCodes";
 import OwnerTeachers from "./OwnerTeachers";
@@ -18,7 +20,8 @@ import OwnerAccessMode from "./OwnerAccessMode";
  *   - Sign-in: username + password + the authenticator code (or a recovery code) → a 2-hour owner session.
  *   - Setup (`#/owner/setup`): offered only while the server says the one-time bootstrap is open.
  *   - Home: who is signed in, session expiry, recovery codes left, sign out, end every session, new recovery codes.
- *     The Owner Console (teacher management …) arrives in P4; this page is its entry point.
+ *   - Tadris+ P4-A — the Owner Console: a side menu of sections, each at its own address (#/owner, #/owner/teachers,
+ *     #/owner/access), so a reload or a shared link opens the same section.
  * The browser never decides access: every view comes from the server's answer, and a 401 always returns to sign-in.
  */
 type Boot = { kind: "loading" } | { kind: "error"; message: string } | { kind: "signed-out"; bootstrap: BootstrapState } | { kind: "signed-in"; token: string; view: OwnerSessionView };
@@ -69,7 +72,11 @@ export default function OwnerApp() {
       <button type="button" className="auth-submit" onClick={load}><IconRefresh size={16} aria-hidden="true" /> إعادة المحاولة</button>
     </section>
   );
-  else if (boot.kind === "signed-in") body = <OwnerHome token={boot.token} view={boot.view} onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })} />;
+  else if (boot.kind === "signed-in") {
+    const section: OwnerSection = route === "teachers" || route === "access" ? route : "home";
+    body = <OwnerConsole token={boot.token} view={boot.view} section={section} onSection={next => { const h = ownerSectionHash(next); if (window.location.hash !== h) window.location.hash = h; setRoute(next); }}
+      onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })} />;
+  }
   else if (route === "setup" && boot.bootstrap === "open") body = <OwnerSetup onDone={() => { goHome(); load(); }} />;
   else body = <OwnerLogin bootstrap={boot.bootstrap} onSignedIn={(token) => { writeOwnerToken(token); goHome(); load(); }} />;
 
@@ -144,7 +151,29 @@ function OwnerLogin({ bootstrap, onSignedIn }: { bootstrap: BootstrapState; onSi
 
 type Pending = "revoke-all" | "recovery-codes" | null;
 
-function OwnerHome({ token, view, onSignedOut, onView }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void }) {
+const SECTIONS: { id: OwnerSection; label: string }[] = [
+  { id: "home", label: "نظرة عامة" },
+  { id: "teachers", label: "المعلمون" },
+  { id: "access", label: "الصلاحيات" }
+];
+
+/** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
+function OwnerConsole({ token, view, section, onSection, onSignedOut, onView }: { token: string; view: OwnerSessionView; section: OwnerSection; onSection: (s: OwnerSection) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void }) {
+  return (
+    <div className="eb-owner-console">
+      <aside className="eb-owner-console-nav">
+        <SubNav label="أقسام لوحة المالك" groups={[{ items: SECTIONS.map(s => ({ id: s.id, label: s.label })) }]} currentId={section} onSelect={id => onSection(id as OwnerSection)} />
+      </aside>
+      <div className="eb-owner-console-main">
+        {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} />}
+        {section === "teachers" && <OwnerTeachers token={token} onSignedOut={onSignedOut} />}
+        {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
+      </div>
+    </div>
+  );
+}
+
+function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onSection: (s: OwnerSection) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [stepUpFor, setStepUpFor] = useState<Pending>(null);
@@ -235,12 +264,12 @@ function OwnerHome({ token, view, onSignedOut, onView }: { token: string; view: 
         {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
       </div>
 
-      <OwnerTeachers token={token} onSignedOut={onSignedOut} />
-
-      <OwnerAccessMode token={token} onSignedOut={onSignedOut} />
-
       <div className="eb-owner-panel">
         <h2 className="eb-owner-h2">لوحة المالك</h2>
+        <div className="eb-owner-actions">
+          <button type="button" className="eb-owner-secondary" onClick={() => onSection("teachers")}>المعلمون</button>
+          <button type="button" className="eb-owner-secondary" onClick={() => onSection("access")}>الصلاحيات</button>
+        </div>
         <p className="eb-owner-hint">المواد التعليمية ومكتبة الواجبات وهوية المدرسة تُضاف هنا في المراحل القادمة.</p>
       </div>
     </section>
