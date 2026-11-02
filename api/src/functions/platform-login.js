@@ -31,7 +31,7 @@ const {
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");   // Tadris+ P2-A2: managed teachers
 const { normalizeIdentityNumber } = require("../lib/roster-input");
-const { findTeacherByUsername, mutateTeacherAccount, trialEnded, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
+const { findTeacherByUsername, mutateTeacherAccount, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
 const { verifySecret } = require("../lib/identity/password-hash");
 const { ownerExists } = require("../lib/identity/owner-presence");
@@ -119,7 +119,7 @@ async function handler(request, deps = {}, obs = null) {
       const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
       // Tadris+ P3-C — the access the UI shapes itself by (never an authority: every route checks it again on the server).
       const access = await sessionAccess({ ver: 3, role: "teacher", am: "managed", sub: managed.accountId, accessRevisionId: managed.accessRevisionId || null }, { container, downloadJsonOrNull: dl }, obs);
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access } };
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access, trial: teacherTrialView(managed, nowMs) } };
     }
 
     // Teacher credentials — the shared-password mode (BUILDER_USERS absent) only while no platform owner exists (D6). The owner's

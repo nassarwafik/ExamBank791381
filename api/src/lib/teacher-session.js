@@ -1,7 +1,7 @@
 const storage = require("./platform-storage");
 const { requireBuilderAuth } = require("./builder-auth");
 const { managedTeacherClaim } = require("./identity/teacher-token");
-const { readTeacherAccount, sessionRevoked, trialEnded, TRIAL_ENDED_MESSAGE } = require("./identity/teacher-accounts");
+const { readTeacherAccount, sessionRevoked, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("./identity/teacher-accounts");
 const { ownerExists } = require("./identity/owner-presence");
 
 // Tadris+ P2-A1/P2-A2 — the ONE asynchronous teacher-session check every teacher route awaits (owner decision 2026-11-01: a
@@ -61,7 +61,7 @@ async function requireTeacherSession(request, deps = {}) {
   if (trialEnded(account, nowMs)) return trialOver();
   // P3-A — the account's CURRENT access revision travels with the verified identity (read now, from the account), so the
   // resolver sees an access change on the very next request. It is never taken from the token or the client.
-  return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null } };
+  return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null, trial: teacherTrialView(account, nowMs) } };
 }
 
 module.exports = { requireTeacherSession, sharedPasswordSession, LEGACY_CLOSED_MESSAGE };

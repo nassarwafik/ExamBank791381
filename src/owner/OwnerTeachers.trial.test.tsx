@@ -129,4 +129,32 @@ describe("trial teacher accounts — owner console", () => {
     await vi.waitFor(() => expect(attempts).toBe(2));
     expect(calls.filter(c => c.url === "/api/owner-teachers/end-trial").map(c => c.body)).toEqual([{ accountId: "t_00112233445566aa" }, { accountId: "t_00112233445566aa" }]);
   });
+
+  it("a trial ending soon: a «ينتهي خلال …» badge and the alert at the top of the list names it", async () => {
+    const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 - 60_000).toISOString();
+    routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [
+      T({ trial: { days: 7, endsAt: soon, ended: false, endingSoon: true } }),
+      T({ accountId: "t_00112233445566bb", username: "t.omar", displayName: "عمر", trial: { days: 30, endsAt: "2027-01-01T10:00:00Z", ended: false, endingSoon: false } })
+    ] } });
+    show();
+    const alert = await screen.findByRole("alert", { name: "تنبيه الحسابات التجريبية" });
+    expect(alert.textContent).toContain("حساب تجريبي ينتهي خلال 3 أيام");
+    expect(alert.textContent).toContain("سارة");
+    expect(alert.textContent).not.toContain("عمر");
+    const items = within(screen.getByRole("list", { name: "المعلمون" })).getAllByRole("listitem");
+    const sara = items.find(i => i.textContent?.includes("سارة"))!;
+    expect(within(sara).getByText("ينتهي خلال يومين").className).toContain("eb-owner-status--trial-soon");
+    expect(within(sara).getByText(/ينتهي قريبًا/)).toBeTruthy();
+  });
+
+  it("ended trials are named in the alert; no trial ending or ended → no alert", async () => {
+    routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [T({ trial: { days: 7, endsAt: "2026-10-20T10:00:00Z", ended: true, endingSoon: false } })] } });
+    show();
+    expect((await screen.findByRole("alert", { name: "تنبيه الحسابات التجريبية" })).textContent).toContain("حساب تجريبي انتهى");
+    cleanup();
+    routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [T({ trial: RUNNING }), T({ accountId: "t_00112233445566bb", username: "t.omar", displayName: "عمر" })] } });
+    show();
+    await listItem();
+    expect(screen.queryByRole("alert", { name: "تنبيه الحسابات التجريبية" })).toBeNull();
+  });
 });

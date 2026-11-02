@@ -131,6 +131,9 @@
 
 /* Trial accounts — the trial badge (running / ended) and the trial controls. */
 .eb-owner-status--trial { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-owner-status--trial-soon { background: var(--eb-danger-bg); color: var(--eb-danger-tx); outline: 1px solid currentColor; }
 .eb-owner-status--trial-ended { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
 .eb-owner-trial { display: flex; flex-direction: column; gap: var(--eb-space-2); }
 .eb-owner-trial-ended { color: var(--eb-danger-tx); }
+.eb-owner-trial-summary { align-items: stretch; flex-direction: column; }
+.eb-owner-trial-summary p { margin: 0; }

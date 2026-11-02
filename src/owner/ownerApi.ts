@@ -78,7 +78,8 @@ export type ManagedTeacher = {
   /** Trial accounts — null for a permanent account; `ended` is decided by the server's clock. */
   trial?: TeacherTrial | null;
 };
-export type TeacherTrial = { days: number; endsAt: string; ended: boolean };
+/** `endingSoon`: a running trial in its last days (the server's clock and window, like `ended`). */
+export type TeacherTrial = { days: number; endsAt: string; ended: boolean; endingSoon?: boolean };
 /** The trial lengths the owner picks from (the server accepts any whole number of days from 1 to 90). */
 export const TRIAL_DAY_OPTIONS = [7, 14, 30, 60, 90] as const;
 export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };

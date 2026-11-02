@@ -134,3 +134,9 @@
 .eb-access-state { max-width: 560px; margin: var(--eb-space-6, 32px) auto; padding: var(--eb-space-5, 24px); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg, 12px); background: var(--eb-surface); color: var(--eb-ink); text-align: center; display: flex; flex-direction: column; gap: var(--eb-space-3, 12px); align-items: center; }
 .eb-access-state h2 { margin: 0; font-size: var(--eb-fs-18, 18px); color: var(--eb-text-heading, inherit); }
 .eb-access-state p { margin: 0; color: var(--eb-muted); }
+
+/* Trial accounts — the teacher's own trial notice (the end date; a warning in the last days). */
+.eb-trial-notice { display: flex; align-items: flex-start; gap: var(--eb-space-2, 8px); margin: 0 0 var(--eb-space-3, 12px); padding: var(--eb-space-2, 8px) var(--eb-space-3, 12px); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg, 12px); background: var(--eb-info-bg); color: var(--eb-info-tx); }
+.eb-trial-notice p { margin: 0; }
+.eb-trial-notice.is-warning { background: var(--eb-warn-bg); color: var(--eb-warn-tx); border-color: currentColor; }
+.eb-trial-notice svg { flex: none; margin-top: 2px; }

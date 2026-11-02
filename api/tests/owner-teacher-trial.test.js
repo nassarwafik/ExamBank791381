@@ -14,10 +14,11 @@ delete process.env.BUILDER_SESSION_VERSION;
 const { handler: ownerTeachers } = await import("../src/functions/owner-teachers.js");
 const { handler: invitation } = await import("../src/functions/teacher-invitation.js");
 const { handler: login } = await import("../src/functions/platform-login.js");
+const { handler: platformSession } = await import("../src/functions/platform-session.js");
 const { requireTeacherSession } = await import("../src/lib/teacher-session.js");
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
-const { teacherAccountName, trialEnded, validTrialDays, extendedTrial, DAY_MS } = await import("../src/lib/identity/teacher-accounts.js");
+const { teacherAccountName, trialEnded, trialEndingSoon, teacherTrialView, validTrialDays, extendedTrial, DAY_MS, TRIAL_WARNING_DAYS } = await import("../src/lib/identity/teacher-accounts.js");
 const { OWNER_AUDIT_PREFIX } = await import("../src/lib/audit-log.js");
 
 const FAST = { N: 16384, r: 8, p: 1, keyLen: 64 };
@@ -88,12 +89,12 @@ describe("trial teacher accounts — the owner API", () => {
   it("create with trialDays → a trial account that ends that many days after creation; the owner view and audit say so", async () => {
     const out = await createTrial(ctx, 14);
     const endsAt = new Date(ctx.clock.now + 14 * DAY_MS).toISOString();
-    expect(out.teacher.trial).toEqual({ days: 14, endsAt, ended: false });
+    expect(out.teacher.trial).toEqual({ days: 14, endsAt, ended: false, endingSoon: false });
     expect(accountOf(ctx, out.teacher.accountId).trial).toEqual({ days: 14, startedAtMs: ctx.clock.now, endsAtMs: ctx.clock.now + 14 * DAY_MS });
     const audit = ctx.mem.names(OWNER_AUDIT_PREFIX).map(n => ctx.mem.getJson(n)).find(e => e.action === "owner.teacher.created");
     expect(audit.details).toMatchObject({ trialDays: 14, trialEndsAt: endsAt });
     const list = await ownerTeachers(req({ method: "GET", headers: ctx.owner }), ctx.deps);
-    expect(list.jsonBody.teachers[0].trial).toEqual({ days: 14, endsAt, ended: false });
+    expect(list.jsonBody.teachers[0].trial).toEqual({ days: 14, endsAt, ended: false, endingSoon: false });
   });
 
   it("a permanent account (no trialDays) has no trial; invalid trialDays are refused and nothing is created", async () => {
@@ -241,3 +242,51 @@ describe("trial teacher accounts — the end of the trial is enforced", () => {
     expect(after.credential).toEqual(before.credential);
   });
 });
+
+describe("trial teacher accounts — what the teacher and the owner are told before the end", () => {
+  let ctx;
+  beforeEach(() => { ctx = setup(); });
+
+  it("ending soon = a running trial in its last 3 days; never a permanent or an ended one", () => {
+    const now = 1_800_000_000_000;
+    expect(TRIAL_WARNING_DAYS).toBe(3);
+    expect(trialEndingSoon({ trial: { endsAtMs: now + 3 * DAY_MS } }, now)).toBe(true);
+    expect(trialEndingSoon({ trial: { endsAtMs: now + 3 * DAY_MS + 1 } }, now)).toBe(false);
+    expect(trialEndingSoon({ trial: { endsAtMs: now + 1 } }, now)).toBe(true);
+    expect(trialEndingSoon({ trial: { endsAtMs: now } }, now)).toBe(false);
+    expect(trialEndingSoon({ trial: null }, now)).toBe(false);
+    expect(teacherTrialView({ trial: { endsAtMs: now + DAY_MS } }, now)).toEqual({ endsAt: new Date(now + DAY_MS).toISOString(), endingSoon: true });
+    expect(teacherTrialView({ trial: { endsAtMs: now - 1 } }, now)).toBeNull();
+    expect(teacherTrialView({}, now)).toBeNull();
+  });
+
+  it("sign-in and platform-session tell a trial teacher their end date (and when it is near); a permanent teacher gets null", async () => {
+    const id = await activateTrial(ctx, 14);
+    const signed = await signIn(ctx);
+    const endsAt = new Date(ctx.clock.now + 14 * DAY_MS).toISOString();
+    expect(signed.jsonBody.trial).toEqual({ endsAt, endingSoon: false });
+    const session = await platformSession(req({ method: "GET", headers: { authorization: "Bearer " + signed.jsonBody.token } }), ctx.deps);
+    expect(session.status).toBe(200);
+    expect(session.jsonBody.trial).toEqual({ endsAt, endingSoon: false });
+    ctx.clock.now += 12 * DAY_MS;
+    const near = await signIn(ctx);
+    expect(near.jsonBody.trial).toEqual({ endsAt, endingSoon: true });
+    const nearSession = await platformSession(req({ method: "GET", headers: { authorization: "Bearer " + near.jsonBody.token } }), ctx.deps);
+    expect(nearSession.jsonBody.trial).toEqual({ endsAt, endingSoon: true });
+    expect((await owner(ctx, "end-trial", { accountId: id })).status).toBe(200);
+    const permanent = await signIn(ctx);
+    expect(permanent.jsonBody.trial).toBeNull();
+    expect((await platformSession(req({ method: "GET", headers: { authorization: "Bearer " + permanent.jsonBody.token } }), ctx.deps)).jsonBody.trial).toBeNull();
+  });
+
+  it("the owner view says when a trial is ending soon", async () => {
+    const id = (await createTrial(ctx, 7)).teacher.accountId;
+    const view = async () => (await ownerTeachers(req({ method: "GET", headers: ctx.ownerSession() }), ctx.deps)).jsonBody.teachers.find(t => t.accountId === id).trial;
+    expect(await view()).toMatchObject({ ended: false, endingSoon: false });
+    ctx.clock.now += 5 * DAY_MS;
+    expect(await view()).toMatchObject({ ended: false, endingSoon: true });
+    ctx.clock.now += 2 * DAY_MS;
+    expect(await view()).toMatchObject({ ended: true, endingSoon: false });
+  });
+});
+

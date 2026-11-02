@@ -4,7 +4,7 @@ import { IconKey, IconPlus, IconWarning } from "../icons";
 import { ownerApi, ownerTeachersApi, ownerAccessApi, TRIAL_DAY_OPTIONS, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset } from "./ownerApi";
 import DiffView from "../ui/DiffView";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
-import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId, trialLabel } from "./teacherShared";
+import { STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, accessLabel, startingPresetId, trialLabel, trialBadgeClass } from "./teacherShared";
 import TrialControls from "./TrialControls";
 
 /**
@@ -179,6 +179,8 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
 
       {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
 
+      {teachers && <TrialSummary teachers={teachers} />}
+
       {teachers === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل المعلمين…</p>}
       {teachers && teachers.length === 0 && <p className="eb-owner-hint">لا يوجد معلمون مُدارون بعد. أضف أول معلم، ثم أرسل له رابط الدعوة.</p>}
       {teachers && teachers.length > 0 && (
@@ -190,7 +192,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
                 <span className="eb-owner-teacher-user" dir="ltr">{t.username}</span>
                 <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
                 {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
-                {t.trial && <span className={"eb-owner-status eb-owner-status--" + (t.trial.ended ? "trial-ended" : "trial")}>{trialLabel(t)}</span>}
+                {t.trial && <span className={trialBadgeClass(t)}>{trialLabel(t)}</span>}
               </div>
               <p className="eb-owner-hint eb-owner-access-line">الصلاحيات: <strong>{accessLabel(t, presets)}</strong></p>
               {choosing === t.accountId && (
@@ -230,6 +232,20 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
         </ul>
       )}
     </section>
+  );
+}
+
+/** Trial accounts — the owner's alert: how many trials end within the warning window, and how many have ended (by name). */
+function TrialSummary({ teachers }: { teachers: ManagedTeacher[] }) {
+  const soon = teachers.filter(t => t.trial && !t.trial.ended && t.trial.endingSoon);
+  const ended = teachers.filter(t => t.trial && t.trial.ended && t.status !== "suspended");
+  if (!soon.length && !ended.length) return null;
+  const names = (list: ManagedTeacher[]) => list.map(t => t.displayName).join("، ");
+  return (
+    <div className="eb-owner-notice eb-owner-trial-summary" role="alert" aria-label="تنبيه الحسابات التجريبية">
+      {soon.length > 0 && <p><strong>{soon.length === 1 ? "حساب تجريبي ينتهي" : soon.length + " حسابات تجريبية تنتهي"} خلال 3 أيام:</strong> <bdi>{names(soon)}</bdi>. مدّدها أو حوّلها إلى دائمة قبل أن يتوقف دخول أصحابها.</p>}
+      {ended.length > 0 && <p><strong>{ended.length === 1 ? "حساب تجريبي انتهى" : ended.length + " حسابات تجريبية انتهت"}:</strong> <bdi>{names(ended)}</bdi>. لا يستطيع أصحابها الدخول حتى تمدّدها.</p>}
+    </div>
   );
 }
 

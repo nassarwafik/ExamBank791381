@@ -69,6 +69,7 @@ import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkl
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import { parseTeacherAccess, navAllowed, firstAllowed, type TeacherAccessView } from "./shell/teacherAccess";
+import { parseTeacherTrial, type TeacherTrialView } from "./shell/TrialNotice";
 import { PRIMARY_NAV, type TeacherNavId } from "./shell/teacherNav";
 import { NO_PROJECT_ATTENTION, projectAttentionOf, type ProjectAttention, type ProjectsSummaryResponse } from "./projects/projectAttention";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
@@ -604,6 +605,7 @@ function App() {
   const [sessionProbeNonce, setSessionProbeNonce] = useState(0);
   const [teacherAccess, setTeacherAccess] = useState<TeacherAccessView | null>(null);   // Tadris+ P3-C
   const [teacherAccessNonce, setTeacherAccessNonce] = useState(0);
+  const [teacherTrial, setTeacherTrial] = useState<TeacherTrialView | null>(null);   // Trial accounts (display only)
   function retrySessionValidation() { setSessionChecking(true); setSessionProbeNonce(n => n + 1); }
 
   const [
@@ -788,14 +790,14 @@ function App() {
   // «إعادة المحاولة» re-reads it from /api/platform-session. Presentation only: the shell hides tools the server would refuse
   // (only while it enforces). Unknown → nothing hidden (every route is enforced on the server anyway); «unavailable» fails closed.
   useEffect(() => {
-    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherAccess(null); return; }
+    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherAccess(null); setTeacherTrial(null); return; }
     if (teacherAccessNonce === 0) return;                                     // only a retry reads it again
     let cancelled = false;
     fetch("/api/platform-session", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-builder-token": token } })
       .then(async response => {
         if (cancelled || !response.ok) return;
-        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: string; access?: unknown } | null;
-        if (!cancelled && data && data.ok && data.role === "teacher") setTeacherAccess(parseTeacherAccess(data.access));
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: string; access?: unknown; trial?: unknown } | null;
+        if (!cancelled && data && data.ok && data.role === "teacher") { setTeacherAccess(parseTeacherAccess(data.access)); setTeacherTrial(parseTeacherTrial(data.trial)); }
       })
       .catch(() => { /* unknown: nothing hidden */ });
     return () => { cancelled = true; };
@@ -820,7 +822,7 @@ function App() {
         // momentarily unavailable — this is NOT proof the session is invalid, so KEEP the stored session and let
         // ordinary API calls re-validate later. Never convert a temporary server problem into a logout.
         if (!response.ok) { return; }
-        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string; access?: unknown } | null;
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string; access?: unknown; trial?: unknown } | null;
         // A 200 that is not a well-formed positive session is treated as transient (a working API only returns 200
         // with ok:true), never as an authoritative revocation — the retained session is left untouched and UNVALIDATED
         // (the retry state handles it) so we never enter the app on a stale role.
@@ -830,6 +832,7 @@ function App() {
         setSessionRole(data.role);
         setSessionDisplayName(data.displayName || "");
         setTeacherAccess(data.role === "teacher" ? parseTeacherAccess(data.access) : null);   // Tadris+ P3-C
+        setTeacherTrial(data.role === "teacher" ? parseTeacherTrial(data.trial) : null);       // Trial accounts
         try {
           sessionStorage.setItem("examBankSessionRole", data.role);
           sessionStorage.setItem("examBankSessionDisplayName", data.displayName || "");
@@ -1235,6 +1238,7 @@ function App() {
         displayName?: string;
         error?: string;
         access?: unknown;
+        trial?: unknown;
       };
 
       if (!response.ok || !data.token) {
@@ -1278,6 +1282,7 @@ function App() {
       // their first enabled destination instead (unchanged for everyone else).
       const signedInAccess = resolvedRole === "teacher" ? parseTeacherAccess(data.access) : null;
       setTeacherAccess(signedInAccess);
+      setTeacherTrial(resolvedRole === "teacher" ? parseTeacherTrial(data.trial) : null);   // Trial accounts
       // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it.
       const landing = !isLearningLocation() && !navAllowed("builder", signedInAccess) ? firstAllowed(PRIMARY_NAV, signedInAccess) : null;
       if (landing) navigateTeacherNow(landing);
@@ -5905,6 +5910,7 @@ function App() {
       onLogout={() => leavePlatformThen(() => { endTeacherServerSession(token); handleLogout(); })}
       access={teacherAccess}
       onRetryAccess={() => setTeacherAccessNonce(n => n + 1)}
+      trial={teacherTrial}
     >
       {confirmDialog}
       {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>

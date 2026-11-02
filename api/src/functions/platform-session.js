@@ -45,7 +45,9 @@ async function handler(request, deps = {}, obs = null) {
     // Tadris+ P3-A / P3-C — the teacher's effective capabilities and whether the server limits this session right now
     // (lib/access/session-access.js). A resolution problem never invalidates the session: it reports «unavailable».
     const access = await sessionAccess(payload, { getContainer: containerOf, downloadJsonOrNull: studentDeps.downloadJsonOrNull }, obs);
-    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp), access } };
+    // Trial accounts — the teacher's own trial end (display only), read from the account by requireTeacherSession; null otherwise.
+    const trial = payload.am === "managed" && payload.trial && typeof payload.trial === "object" ? payload.trial : null;
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp), access, trial } };
   };
   const studentResult = sess => ({
     status: 200, headers: NO_STORE,

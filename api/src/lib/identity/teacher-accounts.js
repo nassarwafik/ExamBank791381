@@ -25,6 +25,7 @@ const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
 const MAX_REVOKED_SESSIONS = 50;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_ENDED_MESSAGE = "انتهت الفترة التجريبية لحسابك. تواصل مع إدارة المنصة لتمديدها أو لتحويل الحساب إلى حساب دائم.";
+const TRIAL_WARNING_DAYS = 3;       // «ينتهي قريبًا»: the last 3 days of a trial (the in-app warnings and the first reminder email)
 const MIN_TRIAL_DAYS = 1;
 const MAX_TRIAL_DAYS = 90;
 
@@ -44,6 +45,19 @@ function trialEnded(account, nowMs) {
   const t = account.trial;
   if (typeof t !== "object" || !Number.isFinite(Number(t.endsAtMs))) return true;
   return !(Number(t.endsAtMs) > nowMs);
+}
+/** Whether a RUNNING trial ends within the warning window (its last TRIAL_WARNING_DAYS days). An ended trial is not "soon". */
+function trialEndingSoon(account, nowMs) {
+  if (!isTrial(account) || trialEnded(account, nowMs)) return false;
+  return Number(account.trial.endsAtMs) - nowMs <= TRIAL_WARNING_DAYS * DAY_MS;
+}
+/**
+ * What the TEACHER is told about their own trial (display only; the server enforces the end on every request): the end date and
+ * whether it is near, or null for a permanent account. Read from the stored account, never from the token or the client.
+ */
+function teacherTrialView(account, nowMs) {
+  if (!isTrial(account) || trialEnded(account, nowMs)) return null;
+  return { endsAt: new Date(Number(account.trial.endsAtMs)).toISOString(), endingSoon: trialEndingSoon(account, nowMs) };
 }
 /** The trial after `days` more days: counted from its end, or from now when it has already ended. */
 function extendedTrial(trial, days, nowMs) {
@@ -165,7 +179,7 @@ function ownerView(a, nowMs = Date.now()) {
     // P4-B1 — when and why the owner suspended the account (the owner's own record; empty unless suspended).
     suspendedAt: a.status === "suspended" ? String(a.suspendedAt || "") : "", suspendedReason: a.status === "suspended" ? String(a.suspendedReason || "") : "",
     // Trial accounts — null for a permanent account; `ended` is decided here, on the server clock.
-    trial: isTrial(a) ? { days: Number(a.trial && a.trial.days) || 0, endsAt: Number.isFinite(Number(a.trial && a.trial.endsAtMs)) ? new Date(Number(a.trial.endsAtMs)).toISOString() : "", ended: trialEnded(a, nowMs) } : null,
+    trial: isTrial(a) ? { days: Number(a.trial && a.trial.days) || 0, endsAt: Number.isFinite(Number(a.trial && a.trial.endsAtMs)) ? new Date(Number(a.trial.endsAtMs)).toISOString() : "", ended: trialEnded(a, nowMs), endingSoon: trialEndingSoon(a, nowMs) } : null,
     // P3-A — the access the owner assigned (display copy written with the revision pointer), or null = the default for the account.
     access: a.accessRevisionId && a.accessPreset && typeof a.accessPreset === "object" ? { revisionId: a.accessRevisionId, preset: { id: String(a.accessPreset.id), version: Number(a.accessPreset.version) }, grants: Number(a.accessGrants) || 0, denies: Number(a.accessDenies) || 0 } : null,
     createdAt: a.createdAt || "", updatedAt: a.updatedAt || "", lastLoginAt: a.lastLoginAt || ""
@@ -174,7 +188,7 @@ function ownerView(a, nowMs = Date.now()) {
 
 module.exports = {
   TEACHER_PREFIX, INVITATION_PREFIX, INVITATION_TTL_MS, MAX_REVOKED_SESSIONS, DAY_MS, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS,
-  TRIAL_ENDED_MESSAGE, validTrialDays, newTrial, isTrial, trialEnded, extendedTrial,
+  TRIAL_ENDED_MESSAGE, TRIAL_WARNING_DAYS, validTrialDays, newTrial, isTrial, trialEnded, trialEndingSoon, teacherTrialView, extendedTrial,
   teacherAccountName, invitationName, newTeacherAccountId, readTeacherAccount, findTeacherByUsername, listTeacherAccounts,
   mutateTeacherAccount, newInvitation, writeInvitationPointer, resolveInvitation, deleteInvitationPointer, usernameAvailable,
   createTeacherAccount, sessionRevoked, withRevokedSession, ownerView, sha256Hex

@@ -12,7 +12,7 @@ import DiffView from "../ui/DiffView";
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import {
-  STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, accessLabel, startingPresetId, withCapability, withoutCapability,
+  STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
   grantsAndDenies, actorLabel
 } from "./teacherShared";
 
@@ -152,7 +152,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
           <span className="eb-owner-teacher-user" dir="ltr">{teacher.username}</span>
           <span className={"eb-owner-status eb-owner-status--" + teacher.status}>{STATUS_LABEL[teacher.status]}</span>
           {teacher.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
-          {teacher.trial && <span className={"eb-owner-status eb-owner-status--" + (teacher.trial.ended ? "trial-ended" : "trial")}>{trialLabel(teacher)}</span>}
+          {teacher.trial && <span className={trialBadgeClass(teacher)}>{trialLabel(teacher)}</span>}
         </div>
         {back}
       </div>

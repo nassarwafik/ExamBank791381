@@ -16,6 +16,7 @@ export default function TrialControls({ teacher, busy, onExtend, onMakePermanent
   return (
     <div className="eb-owner-trial" role="group" aria-label={"الفترة التجريبية لـ" + teacher.displayName}>
       <p className={"eb-owner-hint" + (trial.ended ? " eb-owner-trial-ended" : "")}>
+        {trial.endingSoon && !trial.ended && <><strong>ينتهي قريبًا.</strong> </>}
         {trial.ended
           ? <>انتهت الفترة التجريبية في <bdi>{formatDate(trial.endsAt)}</bdi>. لا يستطيع المعلم الدخول حتى تمدّدها أو تحوّل الحساب إلى دائم. بياناته محفوظة كما هي.</>
           : <>حساب تجريبي: ينتهي في <bdi>{formatDate(trial.endsAt)}</bdi>. بعدها يتوقف دخول المعلم تلقائيًا، وتبقى بياناته محفوظة.</>}
