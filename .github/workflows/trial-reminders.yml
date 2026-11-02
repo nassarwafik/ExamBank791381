@@ -1,0 +1,41 @@
+# Trial accounts — scheduler of the trial reminder EMAILS (docs/enterprise-trial-teacher-accounts.md §5).
+# The managed API Functions host is HTTP-only (no timer triggers), so the schedule lives here: every hour this job sends ONE signed
+# POST {"version":1} to /api/trial-reminder-sweep (SA-TRIAL-REMINDER-1). The server does the work: an email to the trial teacher and
+# to the owner 3 days before the trial ends and again when it ends, exactly once per recipient and end date (Azure Communication
+# Services; until its settings exist nothing is sent).
+# Configuration (both needed; until then the job succeeds with a notice and the reminders stay inactive):
+#   repository variable  TRIAL_REMINDER_SWEEP_URL        https://<host>/api/trial-reminder-sweep
+#   repository secret    TRIAL_REMINDER_SWEEP_HMAC_KEY   a FIFTH key (never the runner, callback, recovery-sweep or assignment reminder
+#                        key); the same value is set as the Static Web App application setting of the same name
+# No cloud credentials and no other secrets are available to this job; the key and the signature are never printed.
+name: Trial Reminders
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-reminders
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: Trial reminder emails — one signed sweep
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Trigger one signed trial reminder sweep
+        env:
+          TRIAL_REMINDER_SWEEP_URL: ${{ vars.TRIAL_REMINDER_SWEEP_URL }}
+          TRIAL_REMINDER_SWEEP_HMAC_KEY: ${{ secrets.TRIAL_REMINDER_SWEEP_HMAC_KEY }}
+        run: node scripts/trial-reminder-sweep.mjs

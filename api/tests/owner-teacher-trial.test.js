@@ -289,4 +289,3 @@ describe("trial teacher accounts — what the teacher and the owner are told bef
     expect(await view()).toMatchObject({ ended: true, endingSoon: false });
   });
 });
-
