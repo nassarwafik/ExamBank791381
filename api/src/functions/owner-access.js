@@ -8,8 +8,10 @@ const { computeReadiness } = require("../lib/access/readiness");
 const { ACCESS_REFUSAL: REFUSAL } = require("../lib/access/messages");
 const { CAPABILITIES } = require("../lib/access/capabilities");
 const { PRESETS } = require("../lib/access/presets");
-const { AccessError, buildRevision, writeRevision } = require("../lib/access/revisions");
+const { AccessError, REVISION_ID_RE, buildRevision, writeRevision, readRevision } = require("../lib/access/revisions");
 const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode");
+const { readAccessHistory, MAX_HISTORY } = require("../lib/access/history");
+const { resolveTeacherAccess } = require("../lib/access/resolver");
 
 // Tadris+ P3-A — the owner manages teacher capabilities. Route: /api/owner-access/{action?}   (owner session only)
 //
@@ -21,6 +23,13 @@ const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode")
 //                        `baseRevisionId` (optional, null = "the account has none yet") refuses a stale screen (409).
 //                        Refused with its code, never corrected: unknown preset / capability, a platform.* grant, a
 //                        capability both granted and denied, a broken dependency.
+//   GET history?accountId=   P4-B1 → the teacher's revisions, newest first (current pointer → parentRevisionId, ≤ 50), each
+//                            re-validated with its effective capabilities; an untrusted link is shown invalid and ends the walk.
+//   GET effective?accountId= P4-B1 → what the resolver gives that account right now (the same code every teacher request uses)
+//                            and the mode, so the owner sees whether it is enforced; a revision that cannot be trusted → unavailable.
+//   POST rollback      { accountId, revisionId, baseRevisionId?, reason? }   P4-B1
+//                      → restores an earlier revision ON THIS ACCOUNT'S HISTORY as a NEW revision (same preset / grants / denies,
+//                        parent = the current one), then the same compare-and-set as assign. History is never rewritten.
 //   POST mode          { mode: "legacy" | "observe" | "enforce" }. P3-B2: "enforce" only while every active or invited teacher has
 //                      access (readiness) — otherwise 409 ACCESS_NOT_READY naming them. Leaving enforce is always allowed.
 //
@@ -31,6 +40,31 @@ const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, .
 
 const publicCapabilities = () => CAPABILITIES.map(c => ({ id: c.id, module: c.module, moduleLabel: c.moduleLabel, label: c.label, ownerOnly: c.ownerOnly, requires: [...c.requires] }));
 const publicPresets = () => PRESETS.map(p => ({ id: p.id, version: p.version, label: p.label, description: p.description, capabilities: [...p.capabilities] }));
+
+/** A query parameter (Azure Functions `request.query`, or parsed from the URL). */
+function queryParam(request, name) {
+  try { if (request.query && typeof request.query.get === "function") return request.query.get(name) || ""; } catch { /* fall through */ }
+  try { return new URL(String(request.url || ""), "http://localhost").searchParams.get(name) || ""; } catch { return ""; }
+}
+
+const CONFLICT = error => reply(409, { ok: false, code: "ACCESS_CONFLICT", error });
+const STALE_SCREEN = "تغيّرت صلاحيات هذا المعلم منذ فتحت الصفحة. حدّث الصفحة وأعد المحاولة.";
+
+/**
+ * Stores a built revision (create-only) and moves the account's pointer to it with a compare-and-set against `currentRevision`.
+ * → { ok: true, next } | { ok: false, response }   (a concurrent change → 409; the new revision then stays an orphan)
+ */
+async function applyRevision(container, accountId, currentRevision, rev) {
+  await writeRevision(container, rev);                                    // 1. immutable, create-only
+  let conflict = false;
+  const next = await mutateTeacherAccount(container, accountId, a => {      // 2. compare-and-set the pointer
+    if ((a.accessRevisionId || null) !== currentRevision) { conflict = true; return a; }
+    return { ...a, accessRevisionId: rev.revisionId, accessPreset: { ...rev.preset }, accessGrants: rev.grants.length, accessDenies: rev.denies.length, updatedAt: rev.createdAt };
+  });
+  if (conflict) return { ok: false, response: CONFLICT("تغيّرت صلاحيات هذا المعلم في اللحظة نفسها. حدّث الصفحة وأعد المحاولة.") };
+  return { ok: true, next };
+}
+const accessOut = rev => ({ revisionId: rev.revisionId, preset: rev.preset, grants: rev.grants.length, denies: rev.denies.length });
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
@@ -54,6 +88,28 @@ async function handler(request, deps = {}, obs = null) {
       try { mode = (await readAccessMode(container)).mode; } catch (e) { if (e instanceof AccessError) mode = "invalid"; else throw e; }
       const r = await computeReadiness(container);
       return reply(200, { ok: true, mode, ready: r.ready, teachers: r.teachers });
+    }
+    if (method === "GET" && (action === "history" || action === "effective")) {
+      const accountId = queryParam(request, "accountId");
+      if (!isTeacherAccountId(accountId)) return reply(400, { ok: false, code: "ACCOUNT_ID_INVALID", error: "معرّف الحساب غير صالح." });
+      const account = await readTeacherAccount(container, accountId);
+      if (!account) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
+      const current = account.accessRevisionId || null;
+      if (action === "history") {
+        const h = await readAccessHistory(container, accountId, current);
+        return reply(200, { ok: true, accountId, currentRevisionId: current, entries: h.entries, truncated: h.truncated, limit: MAX_HISTORY });
+      }
+      let mode;
+      try { mode = (await readAccessMode(container)).mode; } catch (e) { if (e instanceof AccessError) mode = "invalid"; else throw e; }
+      let access;
+      try {
+        const r = await resolveTeacherAccess({ am: "managed", sub: accountId, accessRevisionId: current }, { container });
+        access = { status: "ok", source: r.source, revisionId: r.revisionId, preset: r.preset, capabilities: r.capabilities };
+      } catch (e) {
+        if (!(e instanceof AccessError)) throw e;
+        access = { status: "unavailable", code: e.code, revisionId: current, preset: null, capabilities: [] };
+      }
+      return reply(200, { ok: true, accountId, accountStatus: account.status, mode, enforced: mode === "enforce" || mode === "invalid", access });
     }
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
@@ -86,7 +142,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!current) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
       const currentRevision = current.accessRevisionId || null;
       const hasBase = Object.prototype.hasOwnProperty.call(body, "baseRevisionId");
-      if (hasBase && (body.baseRevisionId || null) !== currentRevision) return reply(409, { ok: false, code: "ACCESS_CONFLICT", error: "تغيّرت صلاحيات هذا المعلم منذ فتحت الصفحة. حدّث الصفحة وأعد المحاولة." });
+      if (hasBase && (body.baseRevisionId || null) !== currentRevision) return CONFLICT(STALE_SCREEN);
       let built;
       try {
         built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: body.presetId, presetVersion: body.presetVersion, grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies, reason: body.reason, createdBy: actor, nowMs });
@@ -95,18 +151,51 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const rev = built.revision;
-      await writeRevision(container, rev);                                    // 1. immutable, create-only
-      let conflict = false;
-      const next = await mutateTeacherAccount(container, accountId, a => {      // 2. compare-and-set the pointer
-        if ((a.accessRevisionId || null) !== currentRevision) { conflict = true; return a; }
-        return { ...a, accessRevisionId: rev.revisionId, accessPreset: { ...rev.preset }, accessGrants: rev.grants.length, accessDenies: rev.denies.length, updatedAt: rev.createdAt };
-      });
-      if (conflict) return reply(409, { ok: false, code: "ACCESS_CONFLICT", error: "تغيّرت صلاحيات هذا المعلم في اللحظة نفسها. حدّث الصفحة وأعد المحاولة." });
+      const applied = await applyRevision(container, accountId, currentRevision, rev);
+      if (!applied.ok) return applied.response;
       await audit(container, {
-        actor, action: "owner.access.assigned", targetType: "teacher-account", targetId: accountId, targetLabel: next.username,
+        actor, action: "owner.access.assigned", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
         details: { revisionId: rev.revisionId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies }
       });
-      return reply(200, { ok: true, accountId, access: { revisionId: rev.revisionId, preset: rev.preset, grants: rev.grants.length, denies: rev.denies.length }, capabilities: built.capabilities });
+      return reply(200, { ok: true, accountId, access: accessOut(rev), capabilities: built.capabilities });
+    }
+
+    if (action === "rollback") {
+      const accountId = String(body.accountId || "");
+      if (!isTeacherAccountId(accountId)) return reply(400, { ok: false, code: "ACCOUNT_ID_INVALID", error: "معرّف الحساب غير صالح." });
+      const targetId = String(body.revisionId || "");
+      if (!REVISION_ID_RE.test(targetId)) return reply(400, { ok: false, code: "REVISION_ID_INVALID", error: "معرّف النسخة غير صالح." });
+      const current = await readTeacherAccount(container, accountId);
+      if (!current) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
+      const currentRevision = current.accessRevisionId || null;
+      const hasBase = Object.prototype.hasOwnProperty.call(body, "baseRevisionId");
+      if (hasBase && (body.baseRevisionId || null) !== currentRevision) return CONFLICT(STALE_SCREEN);
+      if (targetId === currentRevision) return reply(409, { ok: false, code: "ROLLBACK_ALREADY_CURRENT", error: "هذه النسخة هي المطبّقة حاليًا." });
+      // Only a revision on THIS account's own chain (never an orphan, never another teacher's), re-validated (fail closed).
+      const history = await readAccessHistory(container, accountId, currentRevision);
+      const onChain = history.entries.find(e => e.revisionId === targetId);
+      if (!onChain) return reply(409, { ok: false, code: "ROLLBACK_NOT_IN_HISTORY", error: "هذه النسخة ليست في سجل صلاحيات هذا المعلم." });
+      let target;
+      try { target = (await readRevision(container, targetId, accountId)).revision; } catch (e) {
+        if (e instanceof AccessError) return reply(409, { ok: false, code: "ROLLBACK_TARGET_INVALID", error: "لا يمكن استعادة هذه النسخة: محتواها غير صالح." });
+        throw e;
+      }
+      const note = String(body.reason || "").trim();
+      let built;
+      try {
+        built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: target.preset.id, presetVersion: target.preset.version, grants: [...(target.grants || [])], denies: [...(target.denies || [])], reason: "استعادة " + targetId + (note ? " — " + note : ""), createdBy: actor, nowMs });
+      } catch (e) {
+        if (e instanceof AccessError) return reply(409, { ok: false, code: "ROLLBACK_TARGET_INVALID", error: "لا يمكن استعادة هذه النسخة: محتواها غير صالح." });
+        throw e;
+      }
+      const rev = built.revision;
+      const applied = await applyRevision(container, accountId, currentRevision, rev);
+      if (!applied.ok) return applied.response;
+      await audit(container, {
+        actor, action: "owner.access.rolled-back", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
+        details: { revisionId: rev.revisionId, restoredFrom: targetId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies }
+      });
+      return reply(200, { ok: true, accountId, restoredFrom: targetId, access: accessOut(rev), capabilities: built.capabilities });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });

@@ -73,6 +73,8 @@ export type ManagedTeacher = {
   origin?: "console" | "shared-password-workspace";
   /** P3-A — the access the owner assigned, or null (the account's default: none for a console account, today's for t_legacy). */
   access?: TeacherAccess | null;
+  /** P4-B1 — when and why the owner suspended the account (empty unless suspended; never shown to the teacher). */
+  suspendedAt?: string; suspendedReason?: string;
 };
 export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };
 export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[] };
@@ -82,17 +84,31 @@ export type LegacyImportState = { available: true } | { available: false; reason
 export type TeacherInvitationLink = { invitationPath: string; purpose: "invite" | "reset"; expiresAt: string };
 export type TeacherDraft = { username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number };
 export type TeacherAction = "reinvite" | "reset" | "suspend" | "reactivate" | "end-sessions";
+export type TeacherProfileFields = { displayName: string; fullName: string; email: string; phone: string; subjects: string[]; notes: string };
 
 export const ownerTeachersApi = {
   list: (token: string) => call<{ ok: true; teachers: ManagedTeacher[]; legacyImport?: LegacyImportState }>("/api/owner-teachers", { token }),
   create: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/create", { method: "POST", token, body: draft }),
   importLegacy: (token: string, draft: TeacherDraft) => call<{ ok: true; teacher: ManagedTeacher; invitation: TeacherInvitationLink }>("/api/owner-teachers/import-legacy", { method: "POST", token, body: draft }),
-  act: (token: string, action: TeacherAction, accountId: string) =>
-    call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId } })
+  act: (token: string, action: TeacherAction, accountId: string, extra: { reason?: string } = {}) =>
+    call<{ ok: true; teacher: ManagedTeacher; invitation?: TeacherInvitationLink }>("/api/owner-teachers/" + action, { method: "POST", token, body: { accountId, ...extra } }),
+  /** P4-B1 — the teacher's details (never the username: it is the sign-in name and stays fixed). */
+  update: (token: string, accountId: string, fields: TeacherProfileFields) =>
+    call<{ ok: true; teacher: ManagedTeacher }>("/api/owner-teachers/update", { method: "POST", token, body: { accountId, ...fields } })
 };
 
 // Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
-export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean };
+export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean; requires?: string[] };
+/** P4-B1 — one immutable revision of a teacher's access, re-validated by the server (newest first). */
+export type AccessHistoryEntry = {
+  revisionId: string; parentRevisionId: string | null; preset: { id: string; version: number } | null; grants: string[]; denies: string[];
+  reason: string; createdAt: string; createdBy: string; valid: boolean; code?: string; capabilities: string[];
+};
+/** P4-B1 — what the server's resolver gives the account right now, and whether the owner's mode enforces it. */
+export type EffectiveAccess = {
+  accountStatus: TeacherStatus; mode: AccessMode; enforced: boolean;
+  access: { status: "ok" | "unavailable"; source?: string; code?: string; revisionId: string | null; preset: { id: string; version: number } | null; capabilities: string[] };
+};
 export type ReadinessTeacher = {
   accountId: string; username: string; displayName: string; status: TeacherStatus;
   access: { revisionId: string; preset: { id: string; version: number } } | null; defaultAccess: "legacy-full" | "none" | null;
@@ -102,8 +118,14 @@ export const ownerAccessApi = {
   get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[] }>("/api/owner-access", { token }),
   readiness: (token: string) => call<{ ok: true; mode: AccessMode; ready: boolean; teachers: ReadinessTeacher[] }>("/api/owner-access/readiness", { token }),
   setMode: (token: string, mode: "legacy" | "observe" | "enforce") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
-  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null }) =>
-    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body })
+  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null; grants?: string[]; denies?: string[]; reason?: string }) =>
+    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body }),
+  history: (token: string, accountId: string) =>
+    call<{ ok: true; accountId: string; currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean; limit: number }>("/api/owner-access/history?accountId=" + encodeURIComponent(accountId), { token }),
+  effective: (token: string, accountId: string) =>
+    call<EffectiveAccess & { ok: true; accountId: string }>("/api/owner-access/effective?accountId=" + encodeURIComponent(accountId), { token }),
+  rollback: (token: string, body: { accountId: string; revisionId: string; baseRevisionId: string | null; reason?: string }) =>
+    call<{ ok: true; accountId: string; restoredFrom: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/rollback", { method: "POST", token, body })
 };
 
 /** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */

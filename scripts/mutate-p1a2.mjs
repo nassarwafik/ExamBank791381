@@ -22,7 +22,7 @@ export const MUTANTS = [
   { id: "P1A2-M2", what: "the owner token is also sent as a Bearer Authorization header", edits: [{ file: API, find: 'if (init.token) headers["x-owner-token"] = init.token;', replace: 'if (init.token) { headers["x-owner-token"] = init.token; headers["Authorization"] = "Bearer " + init.token; }' }] },
   { id: "P1A2-M3", what: "a 401 on the stored session keeps the token", edits: [{ file: APP, find: "if (s.status === 401) clearOwnerToken();", replace: "if (s.status === 401) { /* kept */ }" }] },
   { id: "P1A2-M4", what: "a server outage on load shows the sign-in instead of an error", edits: [{ file: APP, find: "    else return { kind: \"error\", message: s.error };\n", replace: "" }] },
-  { id: "P1A2-M5", what: "the setup screen is offered while the bootstrap is closed", edits: [{ file: APP, find: 'route === "setup" && boot.bootstrap === "open"', replace: 'route === "setup"' }] },
+  { id: "P1A2-M5", what: "the setup screen is offered while the bootstrap is closed", edits: [{ file: APP, find: 'route.view === "setup" && boot.bootstrap === "open"', replace: 'route.view === "setup"' }] },
   { id: "P1A2-M6", what: "continuing past the recovery codes no longer requires «حفظت الرموز»", edits: [{ file: SETUP, find: "disabled={!saved} onClick={onDone}", replace: "disabled={false} onClick={onDone}" }] },
   { id: "P1A2-M7", what: "the password confirmation is not compared", edits: [{ file: SETUP, find: 'if (password !== confirm) { setError("تأكيد كلمة المرور لا يطابقها."); return; }', replace: "" }] },
   { id: "P1A2-M8", what: "after a step-up the sensitive action is not retried", edits: [{ file: APP, find: "    onView(r.data);\n    await run(stepUpFor);", replace: "    onView(r.data);" }] },
@@ -32,7 +32,7 @@ export const MUTANTS = [
   { id: "P1A2-M11", what: "the QR format information is not masked (0x5412 dropped)", edits: [{ file: QR, find: "const bits = ((data << 10) | rem) ^ 0x5412;", replace: "const bits = ((data << 10) | rem);" }] },
   { id: "P1A2-M12", what: "the Reed–Solomon error correction is wrong (generator root step)", edits: [{ file: QR, find: "root = gfMultiply(root, 0x02);", replace: "root = gfMultiply(root, 0x03);" }] },
   // P4-A: the route now also names the console sections (teachers, access).
-  { id: "P1A2-M13", what: "any hash under #/owner… is the owner surface", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|teachers|access))?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|teachers|access))?/;" }] }
+  { id: "P1A2-M13", what: "any hash under #/owner… is the owner surface", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?/;" }] }
 ];
 
 const originals = new Map();
