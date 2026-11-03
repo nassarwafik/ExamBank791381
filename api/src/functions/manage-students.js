@@ -1110,6 +1110,17 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
         const newPassword = String(body?.password || "");
+        // Tadris+ P5-B1 — an edit that MOVES the student (another class) or SETS a password does what two other capabilities gate
+        // (bulk move: students.student.move; reset: students.credential.reset): each needs that capability too, before anything is
+        // written. A plain edit needs only students.student.edit, as before. Evaluated like every capability (requireCapability).
+        if (newClassId !== String(student.classId || "")) {
+          const capabilityDenial = await requireCapability(auth, "manage-students.js", "bulk:move", deps, obs);
+          if (capabilityDenial) return capabilityDenial;
+        }
+        if (newPassword) {
+          const capabilityDenial = await requireCapability(auth, "manage-students.js", "resetpassword", deps, obs);
+          if (capabilityDenial) return capabilityDenial;
+        }
 
         if (!firstName || !familyName) {
           return { status: 400, jsonBody: { ok: false, error: "يجب إدخال الاسم الشخصي واسم العائلة." } };
