@@ -4,6 +4,7 @@ const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
+const { tenantOf, canAccessDocument, CONSOLE_ACCOUNT_RE } = require("../lib/teacher-tenancy");   // Tadris+ P6-B
 const { isSafeExamId } = require("../lib/exam-governance-model");
 const { resolveGovernanceCapabilities, describeCapabilitySource, isCapabilityConfigurationBroken, governanceWorkflowMode, governanceIdentityStatus, governanceDirectorySnapshot } = require("../lib/exam-governance-capabilities");
 const { listGovernanceActors } = require("../lib/governance-directory");
@@ -45,6 +46,15 @@ function assignmentsOf(body) {
   return { reviewerId: id(a.reviewerId), approverId: id(a.approverId), publisherId: id(a.publisherId) };
 }
 
+// Tadris+ P6-B (risk S6) — whether a tenant may reach the governance records of `examId`: the tenancy rule of its saved exam,
+// else of its manifest's creator; an id with neither (nothing exists yet) is free, as before.
+async function governedExamAccessible(container, examId, tenant, deps, libDeps) {
+  const saved = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, "exams/" + examId + ".json");
+  if (saved) return canAccessDocument(saved, tenant);
+  const s = await GOV.getGovernanceStatus(container, examId, libDeps);
+  return !s.manifest || canAccessDocument({ ownerId: s.manifest.createdBy }, tenant);
+}
+
 async function handler(request, deps = {}, obs = null) {
   const auth = (await requireTeacherSession(request, deps));
   if (!auth.ok) return auth.response;
@@ -68,6 +78,15 @@ async function handler(request, deps = {}, obs = null) {
     }
     const examId = String(body.examId || "");
     if (!isSafeExamId(examId)) return { status: 400, jsonBody: { ok: false, code: "INVALID", error: "معرّف الامتحان غير صالح." } };
+    // Tadris+ P6-B (risk S6): a console account is an isolated tenant — it reads or changes the governance of an exam (its revisions,
+    // their answer keys, the published one) ONLY when it may access that exam; otherwise it is answered exactly like an exam that
+    // does not exist (§7.9). Governance between BUILDER_USERS colleagues stays shared by design (21G §3), and single mode is unchanged.
+    const tenant = tenantOf(auth.user);
+    if (tenant && CONSOLE_ACCOUNT_RE.test(tenant) && !(await governedExamAccessible(container, examId, tenant, deps, libDeps))) {
+      if (action === "status") return { status: 200, jsonBody: { ok: true, governed: false, manifest: null, ...common } };
+      if (action === "enable") return { status: 404, jsonBody: { ok: false, code: "NOT_FOUND", error: "الامتحان غير موجود." } };
+      return { status: 404, jsonBody: { ok: false, code: "NOT_GOVERNED", error: "هذا الامتحان غير مسجّل في إدارة النشر." } };
+    }
     if (action === "status") {
       const s = await GOV.getGovernanceStatus(container, examId, libDeps);
       return { status: 200, jsonBody: { ok: true, governed: s.governed, manifest: GOV.publicManifest(s.manifest), ...common } };

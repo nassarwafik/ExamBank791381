@@ -107,7 +107,12 @@ async function handler(request,deps={},obs=null){
    if(!source&&exam.examId){
     try{
      const gov=await (deps.resolveGovernedExamSource||resolveGovernedExamSource)(c,String(exam.examId),{downloadJsonOrNull:dl});
-     if(gov.governed){exam=cleanExam(gov.revision.exam);source={kind:"governed-revision",examId:String(gov.revision.examId),revisionId:String(gov.revision.revisionId),revisionNumber:Number(gov.revision.revisionNumber),contentHash:String(gov.revision.contentHash)}}
+     if(gov.governed){
+      // Tadris+ P6-B (risk S6): the published revision — content AND answer keys — is bound only by a teacher who may access that
+      // exam: the tenancy rule of its saved exam (as enabling governance, QA2-7), else of its manifest's creator. Anyone else is
+      // answered exactly like a missing exam (404, §7.9). No tenant (single workspace) → unchanged.
+      if(tenant){const saved=await dl(c,"exams/"+String(exam.examId)+".json");if(!canAccessDocument(saved||{ownerId:gov.manifest&&gov.manifest.createdBy},tenant))return {status:404,jsonBody:{ok:false,code:"EXAM_NOT_FOUND",error:"الامتحان غير موجود."}}}
+      exam=cleanExam(gov.revision.exam);source={kind:"governed-revision",examId:String(gov.revision.examId),revisionId:String(gov.revision.revisionId),revisionNumber:Number(gov.revision.revisionNumber),contentHash:String(gov.revision.contentHash)}}
     }catch(e){if(e instanceof GovernanceError)return {status:e.status===404?409:e.status,jsonBody:{ok:false,code:e.code,error:e.message}};throw e}
    }
    // AUTHORITATIVE structural stats — the CURRENT exam structure is the single source of truth for
