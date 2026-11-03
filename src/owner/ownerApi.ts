@@ -217,3 +217,19 @@ export const ownerClassesApi = {
   lifecycle: (token: string, action: OwnerClassLifecycle, classId: string) =>
     call<{ ok: true; status: OwnerClassStatus }>("/api/owner-classes/" + action, { method: "POST", token, body: { classId } })
 };
+
+// Tadris+ P6-D — each teacher's own exam bank (/api/owner-library). Every library exam has an audience: «all» (every teacher's bank)
+// or «selected» (only the teachers listed). Every change needs a recent step-up.
+export type LibraryAudience = "all" | "selected";
+export type OwnerLibraryItem = {
+  libraryItemId: string; title: string; category: string; questionCount: number; totalMarks: number;
+  audience: LibraryAudience; teachers: string[]; decided: boolean;
+};
+export type OwnerLibraryTeacher = { accountId: string; displayName: string; username: string; status: string };
+export const ownerLibraryApi = {
+  list: (token: string) => call<{ ok: true; items: OwnerLibraryItem[]; teachers: OwnerLibraryTeacher[] }>("/api/owner-library", { token }),
+  setAudience: (token: string, itemId: string, audience: LibraryAudience, teachers: string[]) =>
+    call<{ ok: true; item: Pick<OwnerLibraryItem, "libraryItemId" | "audience" | "teachers" | "decided"> }>("/api/owner-library/set-audience", { method: "POST", token, body: { itemId, audience, teachers } }),
+  setTeacher: (token: string, accountId: string, include: string[], exclude: string[]) =>
+    call<{ ok: true; accountId: string; added: string[]; removed: string[] }>("/api/owner-library/set-teacher", { method: "POST", token, body: { accountId, include, exclude } })
+};
