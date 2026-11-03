@@ -5,6 +5,7 @@
 // scripts/mutate-p1a.mjs.
 //
 //   node scripts/mutate-p2a2a.mjs [ids]
+// P4-C reconciliation updated P2A2a-M9 / M10 to the current code (main's #514 added the trial-ended check to the same lines).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -26,8 +27,8 @@ export const MUTANTS = [
   { id: "P2A2a-M6", what: "BUILDER_SESSION_VERSION no longer revokes managed sessions", edits: [{ file: TOKEN, find: '    if (String(p.sv || "") !== getBuilderSessionVersion()) return null;\n', replace: "" }] },
   { id: "P2A2a-M7", what: "the v3 token signature is not checked", edits: [{ file: TOKEN, find: "    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return null;\n", replace: "" }] },
   { id: "P2A2a-M8", what: "an older invitation link still works after a newer one (hash not compared)", edits: [{ file: ACC, find: "  if (a.length !== 32 || a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;\n", replace: "" }] },
-  { id: "P2A2a-M9", what: "an expired invitation link can still be inspected", edits: [{ file: ACC, find: '  if (!inv || !(Number(inv.expiresAtMs) > nowMs) || account.status === "suspended") return null;', replace: '  if (!inv || account.status === "suspended") return null;' }] },
-  { id: "P2A2a-M10", what: "accept does not re-check the link under compare-and-set (double use)", edits: [{ file: INV, find: "        if (!a.invitation || a.invitation.tokenHash !== tokenHash || !(Number(a.invitation.expiresAtMs) > nowMs) || a.status === \"suspended\") {", replace: "        if (false) {" }] },
+  { id: "P2A2a-M9", what: "an expired invitation link can still be inspected", edits: [{ file: ACC, find: '  if (!inv || !(Number(inv.expiresAtMs) > nowMs) || account.status === "suspended" || trialEnded(account, nowMs)) return null;', replace: '  if (!inv || account.status === "suspended" || trialEnded(account, nowMs)) return null;' }] },
+  { id: "P2A2a-M10", what: "accept does not re-check the link under compare-and-set (double use)", edits: [{ file: INV, find: "        if (!a.invitation || a.invitation.tokenHash !== tokenHash || !(Number(a.invitation.expiresAtMs) > nowMs) || a.status === \"suspended\" || trialEnded(a, nowMs)) {", replace: "        if (false) {" }] },
   { id: "P2A2a-M11", what: "owner changes run without a recent step-up", edits: [{ file: OT, find: "    const denial = stepUpDenial(session, nowMs);\n    if (denial) return denial;\n", replace: "" }] },
   { id: "P2A2a-M12", what: "a username equal to a BUILDER_USERS id is accepted", edits: [{ file: ACC, find: '  if (cfg.kind === "configured" && Object.keys(cfg.users || {}).some(id => String(id).toLowerCase() === u)) return { ok: false, code: "USERNAME_TAKEN" };', replace: "" }] },
   { id: "P2A2a-M13", what: "a suspended managed teacher can sign in", edits: [{ file: LOGIN, find: 'if (managed && managed.status === "active" && managed.credential', replace: "if (managed && managed.credential" }] },

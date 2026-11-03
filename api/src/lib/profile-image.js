@@ -47,6 +47,18 @@ function decodeImageDataUrl(dataUrl) {
 
 /** Decode → resize → re-encode. Returns { buffer, contentType, width, height, sourceKind }. */
 async function normalizeProfileImage(input) {
+  return normalizeRaster(input, { fit: "cover" });
+}
+
+/**
+ * Tadris+ P4-C — a school logo: the SAME pipeline (bounded upload, sniffed bytes, decoded, metadata stripped, re-encoded
+ * to WebP) but fitted INSIDE the bounded box instead of cover-cropped, so a wide logo is never cut. Transparency is kept.
+ */
+async function normalizeLogoImage(input) {
+  return normalizeRaster(input, { fit: "inside" });
+}
+
+async function normalizeRaster(input, { fit }) {
   if (!Buffer.isBuffer(input) || !input.length) throw new ProfileImageError(MESSAGES.EMPTY, "EMPTY");
   if (input.length > MAX_UPLOAD_BYTES) throw new ProfileImageError(MESSAGES.TOO_LARGE, "TOO_LARGE", 413);
   const kind = sniffRasterKind(input);
@@ -59,7 +71,7 @@ async function normalizeProfileImage(input) {
     if (!meta || !["jpeg", "png", "webp"].includes(String(meta.format)) || !meta.width || !meta.height) throw new Error("not a raster");
     const buffer = await pipeline
       .rotate()                                                              // apply EXIF orientation, then drop the tag
-      .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit: "cover", withoutEnlargement: true })
+      .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit, withoutEnlargement: true })
       .webp({ quality: 82, effort: 4 })                                      // no withMetadata → EXIF/ICC/XMP stripped
       .toBuffer();
     const out = await sharp(buffer).metadata();
@@ -70,4 +82,4 @@ async function normalizeProfileImage(input) {
   }
 }
 
-module.exports = { MAX_UPLOAD_BYTES, OUTPUT_SIZE, OUTPUT_CONTENT_TYPE, ProfileImageError, MESSAGES, sniffRasterKind, decodeImageDataUrl, normalizeProfileImage };
+module.exports = { MAX_UPLOAD_BYTES, OUTPUT_SIZE, OUTPUT_CONTENT_TYPE, ProfileImageError, MESSAGES, sniffRasterKind, decodeImageDataUrl, normalizeProfileImage, normalizeLogoImage };

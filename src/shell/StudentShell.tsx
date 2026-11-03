@@ -11,6 +11,8 @@ import { clearAllJournals } from "../student/exam/answerJournal";
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
+import SchoolBadge from "../ui/SchoolBadge";
+import type { SchoolBadgeView } from "./schoolIdentity";
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps
 // styling it) plus a small identity area (name · class) and the main content container. The top bar is the
@@ -25,9 +27,9 @@ import "../shell.css";
 // installed; it is independent of the dashboard install card and of that card's temporary dismissal.
 // Phase 12C — `quickNav` (the phone bottom bar, StudentMobileNav) is placed after the content ONLY when StudentPortal
 // hands it over (the ordinary main portal); `has-quick-nav` then gives the content its phone-only bottom clearance.
-type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; quickNav?: ReactNode; children: ReactNode };
+type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; quickNav?: ReactNode; school?: SchoolBadgeView | null; children: ReactNode };
 
-export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, quickNav, children }: Props) {
+export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, quickNav, school = null, children }: Props) {
   return (
     <main className={"student-portal eb-student-shell" + (quickNav ? " has-quick-nav" : "")} dir="rtl">
       <header className="student-topbar">
@@ -35,6 +37,8 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           <span className="student-logo" aria-hidden="true"><BrandMark size={43} /></span>
           <div><h1><bdi dir="ltr">{BRAND_NAME}</bdi></h1><p>{BRAND_TAGLINE} — بوابة الطالب للتدريب والواجبات</p></div>
         </div>
+        {/* Tadris+ P4-C — the school of the student's teacher (owner decision §19.8); absent = nothing, as before. */}
+        {school && <SchoolBadge name={school.name} logoUrl={school.logoUrl} size="lg" />}
         {studentName && (
           <div className="eb-student-identity" aria-label="الطالب الحالي">
             <strong>{studentName}</strong>

@@ -61,7 +61,8 @@ async function requireTeacherSession(request, deps = {}) {
   if (trialEnded(account, nowMs)) return trialOver();
   // P3-A — the account's CURRENT access revision travels with the verified identity (read now, from the account), so the
   // resolver sees an access change on the very next request. It is never taken from the token or the client.
-  return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null, trial: teacherTrialView(account, nowMs) } };
+  // P4-C — and the account's school link (presentation only: the identity shown at the top of the page; never an authority).
+  return { ok: true, user: { ...claim, displayName: String(account.displayName || ""), accessRevisionId: typeof account.accessRevisionId === "string" && account.accessRevisionId ? account.accessRevisionId : null, trial: teacherTrialView(account, nowMs), schoolId: typeof account.schoolId === "string" && account.schoolId ? account.schoolId : null } };
 }
 
 module.exports = { requireTeacherSession, sharedPasswordSession, LEGACY_CLOSED_MESSAGE };

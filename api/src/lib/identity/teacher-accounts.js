@@ -182,6 +182,8 @@ function ownerView(a, nowMs = Date.now()) {
     trial: isTrial(a) ? { days: Number(a.trial && a.trial.days) || 0, endsAt: Number.isFinite(Number(a.trial && a.trial.endsAtMs)) ? new Date(Number(a.trial.endsAtMs)).toISOString() : "", ended: trialEnded(a, nowMs), endingSoon: trialEndingSoon(a, nowMs) } : null,
     // P3-A — the access the owner assigned (display copy written with the revision pointer), or null = the default for the account.
     access: a.accessRevisionId && a.accessPreset && typeof a.accessPreset === "object" ? { revisionId: a.accessRevisionId, preset: { id: String(a.accessPreset.id), version: Number(a.accessPreset.version) }, grants: Number(a.accessGrants) || 0, denies: Number(a.accessDenies) || 0 } : null,
+    // P4-C — the school the owner linked the teacher to (null = none).
+    schoolId: typeof a.schoolId === "string" && /^sch_[a-f0-9]{16}$/.test(a.schoolId) ? a.schoolId : null,
     createdAt: a.createdAt || "", updatedAt: a.updatedAt || "", lastLoginAt: a.lastLoginAt || ""
   };
 }

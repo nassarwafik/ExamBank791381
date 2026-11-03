@@ -15,6 +15,7 @@ import RecoveryCodes from "./RecoveryCodes";
 import OwnerTeachers from "./OwnerTeachers";
 import OwnerTeacherDetails from "./OwnerTeacherDetails";
 import OwnerAccessMode from "./OwnerAccessMode";
+import OwnerSchools from "./OwnerSchools";
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -24,6 +25,7 @@ import OwnerAccessMode from "./OwnerAccessMode";
  *   - Tadris+ P4-A — the Owner Console: a side menu of sections, each at its own address (#/owner, #/owner/teachers,
  *     #/owner/access), so a reload or a shared link opens the same section.
  *   - Tadris+ P4-B1 — one teacher's page at #/owner/teachers/<accountId> (inside «المعلمون»).
+ *   - Tadris+ P4-C — «المدارس» at #/owner/schools: school identities (name + logo) and which teachers belong to each.
  * The browser never decides access: every view comes from the server's answer, and a 401 always returns to sign-in.
  */
 type Boot = { kind: "loading" } | { kind: "error"; message: string } | { kind: "signed-out"; bootstrap: BootstrapState } | { kind: "signed-in"; token: string; view: OwnerSessionView };
@@ -76,7 +78,7 @@ export default function OwnerApp() {
     </section>
   );
   else if (boot.kind === "signed-in") {
-    const section: OwnerSection = route.view === "teachers" || route.view === "access" ? route.view : "home";
+    const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" ? route.view : "home";
     const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
     body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
       onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
@@ -159,7 +161,8 @@ type Pending = "revoke-all" | "recovery-codes" | null;
 const SECTIONS: { id: OwnerSection; label: string }[] = [
   { id: "home", label: "نظرة عامة" },
   { id: "teachers", label: "المعلمون" },
-  { id: "access", label: "الصلاحيات" }
+  { id: "access", label: "الصلاحيات" },
+  { id: "schools", label: "المدارس" }
 ];
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
@@ -174,6 +177,7 @@ function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, o
         {section === "teachers" && !teacherId && <OwnerTeachers token={token} onSignedOut={onSignedOut} onOpen={onTeacher} />}
         {section === "teachers" && teacherId && <OwnerTeacherDetails key={teacherId} token={token} accountId={teacherId} onSignedOut={onSignedOut} onBack={() => onSection("teachers")} />}
         {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
+        {section === "schools" && <OwnerSchools token={token} onSignedOut={onSignedOut} />}
       </div>
     </div>
   );

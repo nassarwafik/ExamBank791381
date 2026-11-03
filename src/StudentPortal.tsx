@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useContext, useEffect, useRef, useState } from "react";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
@@ -36,6 +36,7 @@ import StudentTodayHub from "./student/today/StudentTodayHub";
 import { selectTodayContinue, type TodayContinue } from "./student/today/todayPriority";
 import { loadReaderPosition, saveReaderPosition } from "./student/today/readerPosition";
 import { NETWORK_ERROR_TEXT, errorText, safeJson, userFacingMessage } from "./userFacingErrors";
+import { SchoolBadgeContext } from "./shell/schoolContext";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
 
@@ -52,6 +53,8 @@ const StudentReader = lazy(lazyWithRetry(() => import("./student/StudentReader")
  * average, medals, personal rank) is derived from the server payload — never from a raw score.
  */
 export default function StudentPortal({ token, displayName, onLogout }: Props) {
+  // Tadris+ P4-C — the school of the student's teacher (owner decision §19.8), provided by App; null = nothing shown.
+  const school = useContext(SchoolBadgeContext);
   const [data, setData] = useState<Dashboard | null>(null), [loading, setLoading] = useState(true), [error, setError] = useState(""), [detail, setDetail] = useState<Detail | null>(null), [busy, setBusy] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false), [avatarSaving, setAvatarSaving] = useState(false);
@@ -423,7 +426,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const quickNav = !loading && data && stats ? <StudentMobileNav reducedMotion={reducedMotion} hidden={avatarPickerOpen} /> : undefined;
 
   return (
-    <StudentShell quickNav={quickNav} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
+    <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
       items: notif.items, counts: bellCounts, loading: notif.loading, error: notif.error,
       onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
       onSelect: selectNotification,

@@ -7,6 +7,7 @@ const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { requireTeacherSession, sharedPasswordSession } = require("../lib/teacher-session");
 const { ownerExists } = require("../lib/identity/owner-presence");
 const { sessionAccess } = require("../lib/access/session-access");
+const { schoolField, schoolForTeacher, schoolForStudent } = require("../lib/schools");
 
 // Roadmap #8 §12 — authoritative session introspection used by the frontend on startup/reload to validate
 // a stored session before rendering an authenticated app. Never returns secrets/hashes. Always no-store.
@@ -47,12 +48,18 @@ async function handler(request, deps = {}, obs = null) {
     const access = await sessionAccess(payload, { getContainer: containerOf, downloadJsonOrNull: studentDeps.downloadJsonOrNull }, obs);
     // Trial accounts — the teacher's own trial end (display only), read from the account by requireTeacherSession; null otherwise.
     const trial = payload.am === "managed" && payload.trial && typeof payload.trial === "object" ? payload.trial : null;
-    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp), access, trial } };
+    // Tadris+ P4-C — the teacher's school (name + logo version), only when there is one: no school = the same answer as before.
+    const school = await schoolField(() => schoolForTeacher(containerOf(), payload, { downloadJsonOrNull: studentDeps.downloadJsonOrNull }), obs);
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName, expiresAt: isoFromExp(payload.exp), access, trial, ...school } };
   };
-  const studentResult = sess => ({
-    status: 200, headers: NO_STORE,
-    jsonBody: { ok: true, role: "student", displayName: String(sess.student.displayName || ""), userCode: String(sess.student.code || ""), classId: String(sess.student.classId || ""), expiresAt: isoFromExp(sess.user.exp) }
-  });
+  const studentResult = async sess => {
+    // Tadris+ P4-C — the school of the student's teacher (owner decision §19.8), only when there is one.
+    const school = await schoolField(() => schoolForStudent(sess.container || studentDeps.container || studentDeps.getContainer(), sess.student, { downloadJsonOrNull: studentDeps.downloadJsonOrNull }), obs);
+    return {
+      status: 200, headers: NO_STORE,
+      jsonBody: { ok: true, role: "student", displayName: String(sess.student.displayName || ""), userCode: String(sess.student.code || ""), classId: String(sess.student.classId || ""), expiresAt: isoFromExp(sess.user.exp), ...school }
+    };
+  };
 
   // Tadris+ P2-A2 — a MANAGED teacher session (token v3) is valid only while its stored account is active and the session was
   // not ended: the same per-request check every teacher route uses. 401 = definitively ended; 503 = could not check (kept).

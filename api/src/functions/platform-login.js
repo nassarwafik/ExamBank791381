@@ -36,6 +36,7 @@ const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/ident
 const { verifySecret } = require("../lib/identity/password-hash");
 const { ownerExists } = require("../lib/identity/owner-presence");
 const { sessionAccess } = require("../lib/access/session-access");
+const { schoolField, schoolOfAccount, schoolForStudent } = require("../lib/schools");
 // QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
 // login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
 // leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
@@ -119,7 +120,8 @@ async function handler(request, deps = {}, obs = null) {
       const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
       // Tadris+ P3-C — the access the UI shapes itself by (never an authority: every route checks it again on the server).
       const access = await sessionAccess({ ver: 3, role: "teacher", am: "managed", sub: managed.accountId, accessRevisionId: managed.accessRevisionId || null }, { container, downloadJsonOrNull: dl }, obs);
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access, trial: teacherTrialView(managed, nowMs) } };
+      const school = await schoolField(() => schoolOfAccount(container, managed, { downloadJsonOrNull: dl }), obs);   // P4-C (only when set)
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode: managed.username, displayName, expiresInSeconds: TOKEN_TTL_SECONDS, access, trial: teacherTrialView(managed, nowMs), ...school } };
     }
 
     // Teacher credentials — the shared-password mode (BUILDER_USERS absent) only while no platform owner exists (D6). The owner's
@@ -215,7 +217,8 @@ async function handler(request, deps = {}, obs = null) {
     await throttleClear(container, throttleKey, clientId, deps);
     const token = mkStudentToken(fresh);            // sv = fresh.authVersion === boundVersion (verified)
     obs?.logInfo("auth.login.succeeded", { role: "student" });
-    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS } };
+    const school = await schoolField(() => schoolForStudent(container, fresh, { downloadJsonOrNull: dl }), obs);   // P4-C (only when set)
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS, ...school } };
   } catch (e) {
     obs?.logError("auth.login.error", e);
     return { status: 500, headers: NO_STORE, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا." } };
