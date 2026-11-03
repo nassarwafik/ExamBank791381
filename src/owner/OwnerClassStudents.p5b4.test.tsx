@@ -87,9 +87,9 @@ describe("P5-B4 the owner adds students to a teacher's class", () => {
   });
 
   it("a list: parsed locally, previewed by the server; only the valid rows are imported, with ONE retry key kept on the step-up retry", async () => {
-    routes["POST /api/owner-classes/preview-import"] = c => ({ status: 200, body: { ok: true, preview: (c.body?.students as Array<Record<string, string>>).map((r, i) => ({ ...r, index: i, status: i === 2 ? "duplicate" : "valid", ...(i === 2 ? { error: "رقم الهوية موجود مسبقًا." } : {}) })), valid: 2, duplicates: 1, invalid: 0 } });
+    routes["POST /api/owner-classes/preview-import"] = c => ({ status: 200, body: { ok: true, preview: ((c.body ?? {}).students as Array<Record<string, string>>).map((r, i) => ({ ...r, index: i, status: i === 2 ? "duplicate" : "valid", ...(i === 2 ? { error: "رقم الهوية موجود مسبقًا." } : {}) })), valid: 2, duplicates: 1, invalid: 0 } });
     let n = 0;
-    routes["POST /api/owner-classes/import-students"] = c => (++n === 1 ? { status: 403, body: { ok: false, code: "STEP_UP_REQUIRED", error: "تحقق" } } : { status: 200, body: { ok: true, imported: 2, failed: 0, duplicates: 0, recovered: 0, errors: [], credentials: (c.body?.students as Array<Record<string, string>>).map((r, i) => ({ ...r, code: r.identityNumber, password: "P-" + i })) } });
+    routes["POST /api/owner-classes/import-students"] = c => (++n === 1 ? { status: 403, body: { ok: false, code: "STEP_UP_REQUIRED", error: "تحقق" } } : { status: 200, body: { ok: true, imported: 2, failed: 0, duplicates: 0, recovered: 0, errors: [], credentials: ((c.body ?? {}).students as Array<Record<string, string>>).map((r, i) => ({ ...r, code: r.identityNumber, password: "P-" + i })) } });
     routes["POST /api/owner-session/step-up"] = () => ({ status: 200, body: VIEW });
     const panel = await openStudents();
     const csv = "﻿الاسم,اسم العائلة,رقم الهوية\r\nليان,سعيد,300000001\r\nآدم,ناصر,300000002\r\nسما,حداد,300000003\r\n";
@@ -97,7 +97,7 @@ describe("P5-B4 the owner adds students to a teacher's class", () => {
     fireEvent.change(within(panel).getByLabelText("ملف الطلاب"), { target: { files: [file] } });
     expect(await within(panel).findByText(/المعاينة: 2 صالح، 1 مكرر، 0 غير صالح \(من 3\)/)).toBeTruthy();
     expect(posted("/api/owner-classes/import-students")).toHaveLength(0);
-    expect((posted("/api/owner-classes/preview-import")[0].body?.students as unknown[]).length).toBe(3);
+    expect(((posted("/api/owner-classes/preview-import")[0].body ?? {}).students as unknown[]).length).toBe(3);
     fireEvent.click(within(panel).getByRole("button", { name: "استيراد 2 طالبًا" }));
     const stepUp = await screen.findByRole("form", { name: "التحقق بخطوتين" });
     fireEvent.change(within(stepUp).getByRole("textbox"), { target: { value: "123456" } });
@@ -106,7 +106,7 @@ describe("P5-B4 the owner adds students to a teacher's class", () => {
     expect(creds.textContent).toContain("P-0");
     const sent = posted("/api/owner-classes/import-students");
     expect(sent).toHaveLength(2);
-    expect((sent[0].body?.students as Array<{ identityNumber: string }>).map(s => s.identityNumber)).toEqual(["300000001", "300000002"]);
+    expect(((sent[0].body ?? {}).students as Array<{ identityNumber: string }>).map(s => s.identityNumber)).toEqual(["300000001", "300000002"]);
     expect(String(sent[0].body?.importId)).toMatch(/^[A-Za-z0-9-]{16,64}$/);
     expect(sent[1].body).toEqual(sent[0].body);
   });
