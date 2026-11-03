@@ -15,12 +15,15 @@ import { isOwnerLocation } from './owner/ownerRoute'
 import OwnerEntry from './owner/OwnerEntry'
 import { isInviteLocation } from './invite/inviteRoute'
 import InviteEntry from './invite/InviteEntry'
+import { isHandoffLocation } from './handoff/handoffRoute'
+import HandoffEntry from './handoff/HandoffEntry'
 
 // Tadris+ P1-A2 — the platform owner's area (#/owner) is its own surface and its own LAZY chunk: the teacher / student app is not
 // mounted there, and teachers / students never download the owner screens (bundle guard). Crossing the boundary reloads, so the
 // two surfaces never share state in one page.
 // Tadris+ P2-A2b — the teacher invitation / reset page (#/invite/<token>) is a third surface with its own lazy chunk.
-const surfaceOf = () => (isOwnerLocation() ? 'owner' : isInviteLocation() ? 'invite' : 'app')
+// Tadris+ P4-D — the owner → own-teacher-workspace handoff page (#/handoff/<ticket>) is a fourth, also its own lazy chunk.
+const surfaceOf = () => (isOwnerLocation() ? 'owner' : isInviteLocation() ? 'invite' : isHandoffLocation() ? 'handoff' : 'app')
 const surface = surfaceOf()
 window.addEventListener('hashchange', () => { if (surfaceOf() !== surface) window.location.reload() })
 
@@ -39,7 +42,7 @@ installClientErrorReporting()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      {surface === 'owner' ? <OwnerEntry /> : surface === 'invite' ? <InviteEntry /> : <App />}
+      {surface === 'owner' ? <OwnerEntry /> : surface === 'invite' ? <InviteEntry /> : surface === 'handoff' ? <HandoffEntry /> : <App />}
     </ErrorBoundary>
   </StrictMode>,
 )

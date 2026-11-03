@@ -171,6 +171,14 @@ export const ownerSchoolsApi = {
 };
 export const ownerSchoolLogoUrl = (schoolId: string) => "/api/owner-schools/logo?schoolId=" + encodeURIComponent(schoolId);
 
+// Tadris+ P4-D — owner decision D19: the owner's own teacher account (/api/owner-handoff). Linking and opening need a step-up.
+export type LinkedTeacher = { accountId: string; username: string; displayName: string; status: string; usable: boolean; reason: string | null };
+export const ownerHandoffApi = {
+  get: (token: string) => call<{ ok: true; linked: LinkedTeacher | null }>("/api/owner-handoff", { token }),
+  link: (token: string, accountId: string | null) => call<{ ok: true; linked: LinkedTeacher | null }>("/api/owner-handoff/link", { method: "POST", token, body: { accountId } }),
+  issue: (token: string) => call<{ ok: true; handoffPath: string; expiresAt: string }>("/api/owner-handoff/issue", { method: "POST", token, body: {} })
+};
+
 /** The full link the owner sends: this site + the invitation path (the token stays in the URL fragment). */
 export function invitationUrl(invitationPath: string, location: { origin: string; pathname: string } = window.location): string {
   return location.origin + location.pathname + invitationPath;
