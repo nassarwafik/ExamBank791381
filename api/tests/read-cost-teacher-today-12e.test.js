@@ -184,7 +184,7 @@ describe("12E-B teacher today — count-only observability + response parity", (
     expect(broken.status).toBe(200);
     expect(noObs.jsonBody).toEqual(withObs.jsonBody);
     expect(broken.jsonBody).toEqual(withObs.jsonBody);
-    expect(Object.keys(withObs.jsonBody).sort()).toEqual(["attention", "generatedAt", "ok", "partial", "projectEvaluation", "recent", "scope"]);
+    expect(Object.keys(withObs.jsonBody).sort()).toEqual(["attention", "generatedAt", "ok", "partial", "projectEvaluation", "recent", "scope", "widgets"]);   // Tadris+ P7-A1 adds widgets
     for (const k of ["readCost", "read_cost", "debug", "metrics", "submissionDocsLoaded", "assignment-index", "publishedAssignmentIds"]) expect(JSON.stringify(withObs.jsonBody)).not.toContain(k);
   });
 });

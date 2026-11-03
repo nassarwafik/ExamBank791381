@@ -100,6 +100,8 @@ export default function StudentDialog(p: StudentDialogProps) {
   const summaryRef = useRef<HTMLHeadingElement>(null);
   const { profile } = p;
   const medals = medalItemsFor(profile.assignments);
+  // Tadris+ P7-A1 — without assignments in the teacher's access the server sends no assignment part: no «0 واجبات», no empty table.
+  const withAssignments = !(profile.withheld || []).includes("assignments");
   const jump = (id: string) => () => { const el = document.getElementById(id); if (el) { if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "start" }); (el as HTMLElement).focus(); } };
   return (
     <Dialog open title={profile.student.displayName} onClose={p.onClose} size="lg" placement="end" suspended={p.suspended} initialFocusRef={p.section === "history" ? historyRef : summaryRef} className="eb-student-dialog">
@@ -109,17 +111,17 @@ export default function StudentDialog(p: StudentDialogProps) {
         <button type="button" onClick={jump("eb-student-summary")}>ملخص</button>
         <button type="button" onClick={jump("eb-student-info")}>بيانات الطالب</button>
         <button type="button" onClick={jump("eb-student-medals")}>الميداليات</button>
-        <button type="button" onClick={jump("eb-student-history")}>الواجبات وسجل التسليم</button>
+        {withAssignments && <button type="button" onClick={jump("eb-student-history")}>الواجبات وسجل التسليم</button>}
       </nav>
 
       <section className="eb-dialog-section" aria-labelledby="eb-student-summary">
         <h3 id="eb-student-summary" ref={summaryRef} tabIndex={-1}>ملخص</h3>
-        <div className="student-profile-stats eb-profile-stats">
+        {withAssignments && <div className="student-profile-stats eb-profile-stats">
           <article><strong>{profile.stats.assigned}</strong><span>واجبات</span></article>
           <article><strong>{profile.stats.completed}</strong><span>مكتملة</span></article>
           <article><strong>{profile.stats.pending}</strong><span>لم تُحل</span></article>
           <article><strong>{profile.stats.average === null ? "—" : profile.stats.average + "%"}</strong><span>المعدل</span></article>
-        </div>
+        </div>}
         <StrengthSummary profile={profile} />
       </section>
 
@@ -144,7 +146,7 @@ export default function StudentDialog(p: StudentDialogProps) {
           : <p className="medal-badge-empty">لم يحصل الطالب على ميداليات بعد.</p>}
       </section>
 
-      <section className="eb-dialog-section" aria-labelledby="eb-student-history">
+      {withAssignments && <section className="eb-dialog-section" aria-labelledby="eb-student-history">
         <h3 id="eb-student-history" ref={historyRef} tabIndex={-1}>الواجبات وسجل التسليم</h3>
         <h4 className="eb-subheading">واجبات الصف الحالي</h4>
         <div className="students-table-wrap" role="region" aria-label="جدول واجبات الصف الحالي" tabIndex={0}><table className="students-table">
@@ -184,7 +186,7 @@ export default function StudentDialog(p: StudentDialogProps) {
           </Fragment>)}
           {!profile.submittedAssignments.length && <tr><td colSpan={6}>لا توجد وظائف مسلّمة.</td></tr>}</tbody>
         </table></div>
-      </section>
+      </section>}
     </Dialog>
   );
 }

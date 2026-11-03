@@ -96,7 +96,7 @@ function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level
 }
 
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number }; projects: ClassProjectSection[] };
+  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; projects: ClassProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -106,21 +106,27 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
   const csvKpis: csvRows.Kpi[] = [
     { label: "الحالة", value: archived ? "مؤرشف" : "نشط" },
     { label: "عدد الطلاب", value: data.class.studentCount },
-    { label: "عدد الواجبات", value: data.kpis.assignments },
-    { label: "متوسط العلامات", value: pct(data.kpis.averageScore) },
-    { label: "نسبة التسليم", value: pct(data.kpis.submissionRate) }
+    // Tadris+ P7-A1 — `kpis: null`: the teacher's access does not include assignments, so the server did not compute them.
+    ...(data.kpis ? [
+      { label: "عدد الواجبات", value: data.kpis.assignments },
+      { label: "متوسط العلامات", value: pct(data.kpis.averageScore) },
+      { label: "نسبة التسليم", value: pct(data.kpis.submissionRate) }
+    ] : [])
   ];
+  const kpis = data.kpis;
   return (
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={archived ? "neutral" : "success"}>{archived ? "مؤرشف" : "نشط"}</StatusBadge></>} description={data.class.schoolYear}
         onExportCsv={() => downloadCsv(csvRows.classReportFilename(data), csvRows.classReportRows(csvKpis, data))} />
       <div className="eb-stat-grid is-primary eb-report-stats">
         <StatCard primary label="الطلاب" value={data.class.studentCount} />
-        <StatCard primary label="التقييمات" value={data.kpis.assignments} hint="ضمن الفترة المختارة" />
-        <StatCard primary label="متوسط النتائج" value={pct(data.kpis.averageScore)} hint={averageHint(data.kpis.pendingReview)} />
-        <StatCard primary label="نسبة التسليم" value={pct(data.kpis.submissionRate)} tone="info" />
+        {kpis && <>
+          <StatCard primary label="التقييمات" value={kpis.assignments} hint="ضمن الفترة المختارة" />
+          <StatCard primary label="متوسط النتائج" value={pct(kpis.averageScore)} hint={averageHint(kpis.pendingReview)} />
+          <StatCard primary label="نسبة التسليم" value={pct(kpis.submissionRate)} tone="info" />
+        </>}
       </div>
-      <ReportNote>{AVERAGE_NOTE}</ReportNote>
+      {kpis && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
       {data.projects.length > 0 && (
         <section className="eb-report-projects" aria-labelledby="eb-report-class-projects">
           <h3 id="eb-report-class-projects" className="eb-subheading">مشاريع الصف</h3>
@@ -138,28 +144,34 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
 type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; nextStages?: Record<string, { stageId: string; title: string } | null>; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number }; projects: StudentProjectSection[] };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; projects: StudentProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const csvKpis: csvRows.Kpi[] = [
     { label: "الصف", value: data.student.className || "—" },
-    { label: "متوسط التقييمات", value: pct(data.academic.average) },
-    { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
-    { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
+    // Tadris+ P7-A1 — `academic: null`: not part of this teacher's access (the server did not compute it).
+    ...(data.academic ? [
+      { label: "متوسط التقييمات", value: pct(data.academic.average) },
+      { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
+      { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
+    ] : [])
   ];
+  const academic = data.academic, projectsWithheld = (data.withheld || []).includes("projects");
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.student.displayName} description={(data.student.className || "—") + " · " + data.student.schoolYear}
         onExportCsv={() => downloadCsv(csvRows.studentReportFilename(data), csvRows.studentReportRows(csvKpis, data))} />
       <div className="eb-stat-grid is-primary eb-report-stats">
-        <StatCard primary label="متوسط التقييمات" value={pct(data.academic.average)} hint={averageHint(data.academic.pendingCount)} />
-        <StatCard primary label="المسلَّمة" value={data.academic.submittedCount + " / " + data.academic.assessmentCount} hint="من تقييمات الفترة المختارة" />
-        <StatCard primary label="نسبة التسليم" value={pct(data.academic.submissionRate)} tone="info" />
-        <StatCard primary label="مشاريع الصف" value={data.projects.length} />
+        {academic && <>
+          <StatCard primary label="متوسط التقييمات" value={pct(academic.average)} hint={averageHint(academic.pendingCount)} />
+          <StatCard primary label="المسلَّمة" value={academic.submittedCount + " / " + academic.assessmentCount} hint="من تقييمات الفترة المختارة" />
+          <StatCard primary label="نسبة التسليم" value={pct(academic.submissionRate)} tone="info" />
+        </>}
+        {!projectsWithheld && <StatCard primary label="مشاريع الصف" value={data.projects.length} />}
       </div>
-      <ReportNote>{AVERAGE_NOTE}</ReportNote>
+      {academic && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
       {data.projects.length > 0 && (
         <section className="eb-report-projects" aria-labelledby="eb-report-student-projects">
           <h3 id="eb-report-student-projects" className="eb-subheading">المشاريع</h3>

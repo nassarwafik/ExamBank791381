@@ -50,4 +50,4 @@ async function authorize(user, capabilityIdOrList, deps = {}, obs = null) {
   return { allowed: false, mode, decision: "deny", access, response: denied(capabilityId) };
 }
 
-module.exports = { authorize };
+module.exports = { authorize, accessUnavailableResponse: unavailable };

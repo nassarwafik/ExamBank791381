@@ -5,6 +5,14 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+// Tadris+ P7-A1 — a report's ACADEMIC part (assignment marks and submissions) needs assignments.assignment.view and its PROJECT part
+// projects.tracker.view, on top of the route's reports.widget.view (a learning-only teacher holds only that one). A part the session
+// may not see is not read: the class / student report answers it null / [] and names it in `withheld`; a report that is nothing
+// but that part (assessments, project reports) is refused (403 CAPABILITY_DENIED).
+const { sessionGrants } = require("../lib/access/session-grants");
+const { ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
+const PROJECTS_CAPABILITY = "projects.tracker.view";
+const notGranted = capability => ({ status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذه الأداة غير مفعّلة لحسابك. تواصل مع إدارة المنصة.", capability } });
 const { getContainer, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 // Phase R-3 — every listing a report reads (users, classes, assignments, submissions) goes through the shared ETag-verified
 // document cache: the listing is still made on every request (so nothing can be stale) and a document is downloaded again only
@@ -87,6 +95,10 @@ async function handler(request, deps = {}, obs = null) {
       if (!auth.ok) return auth.response;
       const capabilityDenial = await requireCapability(auth, "reports.js", "*", deps, obs);   // Tadris+ P3-B
       if (capabilityDenial) return capabilityDenial;
+      const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
+      if (!grants.ok) return grants.response;
+      const academic = grants.has(ASSIGNMENTS_CAPABILITY), projectsAllowed = grants.has(PROJECTS_CAPABILITY);
+      const withheld = [...(academic ? [] : ["academic"]), ...(projectsAllowed ? [] : ["projects"])];
       const container = deps.container || (deps.getContainer || getContainer)();
       const reads = requestReads(container);
       const now = new Date().toISOString();
@@ -116,7 +128,7 @@ async function handler(request, deps = {}, obs = null) {
         const classes = (await loadDocs(container, CLASS_PREFIX)).filter(c => c && canAccessDocument(c, tenant)).map(classMeta)
           .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
         const schoolYears = [...new Set(classes.map(c => c.schoolYear).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
-        const projects = getSupportedProjects().map(getProjectMeta);
+        const projects = projectsAllowed ? getSupportedProjects().map(getProjectMeta) : [];
         return { status: 200, jsonBody: { ok: true, schoolYears, classes, projects } };
       }
 
@@ -131,8 +143,8 @@ async function handler(request, deps = {}, obs = null) {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        const students = await classStudents(container, classId, reads);
-        const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
+        const students = academic ? await classStudents(container, classId, reads) : [];
+        const assignments = academic ? (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range)) : [];
         const allPcts = [];
         let submittedCells = 0, pendingCells = 0;
         const subsByAssignment = await submissionsForAll(container, assignments);
@@ -149,18 +161,18 @@ async function handler(request, deps = {}, obs = null) {
         const meta = classMeta(c);
         // A class may be in several projects — report each independently (never combine their %).
         const projects = [];
-        for (const pCode of getSupportedClassProgramCodes(c)) {
+        if (projectsAllowed) for (const pCode of getSupportedClassProgramCodes(c)) {
           const ctx = await projectContext(container, pCode, c, reads);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
           // Phase P-5d — «لم يبدأوا» (P-5c count) only when some students have not started; every other section is unchanged.
           projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}) });
         }
-        return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: {
+        return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: academic ? {
           assignments: assignments.length,
           averageScore: agg.average(allPcts),
           submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0,
           pendingReview: pendingCells
-        }, projects } };
+        } : null, projects, withheld } };
       }
 
       if (type === "student") {
@@ -169,14 +181,14 @@ async function handler(request, deps = {}, obs = null) {
         if (!u || u.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         const sClassId = String(u.classId || "");
         const c = sClassId ? await loadClass(container, sClassId) : null;
-        const assignments = c ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
+        const assignments = c && academic ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
         // Roadmap #27: the student's per-assignment submissions are independent reads → bounded concurrency, aligned.
         const mySubs = await mapConcurrent(assignments, getReadConcurrency(), a => downloadJsonOrNull(container, SUB_PREFIX + a.assignmentId + "/" + studentId + ".json"));
         const acad = agg.studentAcademicAverage(mySubs);
         const submittedCount = acad.submittedCount;                    // handed in — a pending result included (R-1 / D-1)
         // One entry per project of the student's class — each independent.
         const projects = [];
-        if (c) for (const pCode of getSupportedClassProgramCodes(c)) {
+        if (c && projectsAllowed) for (const pCode of getSupportedClassProgramCodes(c)) {
           const ns = getStorageNamespace(pCode);
           const { config, view } = await svc.readClassView(container, pCode, c);
           const workDef = svc.workingDefinition(pCode, config);
@@ -193,13 +205,14 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, type,
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
           // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
-          academic: { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0, pendingCount: acad.pendingCount },
-          projects } };
+          academic: academic ? { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0, pendingCount: acad.pendingCount } : null,
+          projects, withheld } };
       }
 
       // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a
       // single report covers every published assessment (no duplicate exam/assignment reports).
       if (type === "assignments") {
+        if (!academic) return notGranted(ASSIGNMENTS_CAPABILITY);
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
@@ -234,6 +247,7 @@ async function handler(request, deps = {}, obs = null) {
 
       // ---------- Project reports (generic) ----------
       if (["project", "track", "ready", "delayed", "timeline"].includes(type)) {
+        if (!projectsAllowed) return notGranted(PROJECTS_CAPABILITY);
         if (!isSupportedProject(projectCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);

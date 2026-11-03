@@ -3,6 +3,8 @@ const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teache
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+const { sessionGrants } = require("../lib/access/session-grants");             // Tadris+ P7-A1
+const { ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
@@ -99,6 +101,11 @@ async function handler(request, deps = {}, obs = null) {
       if (!auth.ok) return auth.response;
       const capabilityDenial = await requireCapability(auth, "teacher-analytics-ai.js", "*", deps, obs);   // Tadris+ P3-B
       if (capabilityDenial) return capabilityDenial;
+      // Tadris+ P7-A1 — the analysis describes assignment results: without assignments.assignment.view (while the owner enforces
+      // access) there is nothing the teacher may see to analyse, so it is refused before any read and before the model is called.
+      const grants = await sessionGrants(auth.user, deps, obs);
+      if (!grants.ok) return grants.response;
+      if (!grants.has(ASSIGNMENTS_CAPABILITY)) return { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذه الأداة غير مفعّلة لحسابك. تواصل مع إدارة المنصة.", capability: ASSIGNMENTS_CAPABILITY } };
 
       let body = {};
       try { body = await request.json(); } catch { body = {}; }

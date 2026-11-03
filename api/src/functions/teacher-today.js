@@ -26,6 +26,11 @@ const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+// Tadris+ P7-A1 — each section is served only with the capability behind it (the route's own gate is classes.class.view): the
+// assignment figures need assignments.assignment.view, the unread count messages.inbox.read, the project block projects.tracker.view.
+// A withheld section's source is not read at all; `widgets` names what this answer carries (lib/dashboard-widgets.js).
+const { sessionGrants } = require("../lib/access/session-grants");
+const { visibleWidgets } = require("../lib/dashboard-widgets");
 const {getContainer,listJson,listBlobNames,downloadManyJson,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
@@ -57,6 +62,11 @@ const LIVE_WINDOW_MS=15*60e3;
 // Phase 21H.3 — time windows of the new categories: closing soon (the deadline within the next 48 hours, still open) and
 // opening soon (a published assignment whose openAt falls within the next 24 hours).
 const DUE_SOON_MS=48*3600e3,OPENING_MS=24*3600e3;
+// Tadris+ P7-A1 — the widgets computed from the assignments (all need assignments.assignment.view). Without any of them no assignment
+// index, document or submission folder is read, so every attention block is EMPTY by construction (the same shape: an older client
+// never breaks) and `recent` is empty.
+const ASSIGNMENT_WIDGETS=["grading.pending","assignments.deadlines","assignments.notStarted","results.unreleased","attempts.live","activity.recent"];
+const NO_INDEX_STATS={assignmentDocsLoaded:0,indexReads:0,bootstrapped:0,globalScans:0,authoritative:0,authorityChanges:0};
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
@@ -158,6 +168,10 @@ async function handler(request,deps={},obs=null){
   if(!auth.ok)return auth.response;
   const capabilityDenial = await requireCapability(auth, "teacher-today.js", "*", deps, obs);   // Tadris+ P3-B
   if (capabilityDenial) return capabilityDenial;
+  const grants=await sessionGrants(auth.user,deps,obs);   // Tadris+ P7-A1
+  if(!grants.ok)return grants.response;
+  const widgets=visibleWidgets("today",grants.has),shows=id=>widgets.includes(id);
+  const withAssignments=ASSIGNMENT_WIDGETS.some(shows),withMessages=shows("messages.unread"),withProjects=shows("projects.evaluation");
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();
@@ -175,7 +189,7 @@ async function handler(request,deps={},obs=null){
   const activeIds=new Set(classes.filter(c=>c&&c.classId&&normalizeClassStatus(c)==="active").map(c=>String(c.classId)));
   // Phase 12E-B — the published assignments of the ACTIVE classes through the per-class index: no global assignment
   // listing in steady state; classes not yet bootstrapped share AT MOST ONE legacy scan for this whole request.
-  const idx=await loadPublishedAssignmentsForClasses(container,[...activeIds],{...deps,listJson:lj},obs);
+  const idx=withAssignments?await loadPublishedAssignmentsForClasses(container,[...activeIds],{...deps,listJson:lj},obs):{byClass:new Map(),stats:NO_INDEX_STATS};
   const assignments=[...idx.byClass.values()].flat().sort((x,y)=>{const a=String(x.assignmentId)+".json",b=String(y.assignmentId)+".json";return a<b?-1:a>b?1:0});
   const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeIds.has(String(a.classId||"")));
   // One folder listing + its blobs per published assignment of an active class — the SAME scoped read shape as the
@@ -183,7 +197,7 @@ async function handler(request,deps={},obs=null){
   // The submission folders and the project-evaluation sources are independent reads → issued together (each bounded).
   const [folders,projectSources]=await Promise.all([
    Promise.all(published.map(a=>loadFolder(container,String(a.assignmentId),deps,tally))),
-   (deps.loadProjectEvaluationSources||loadProjectEvaluationSources)(container,classes,deps).then(v=>({ok:true,value:v}),e=>({ok:false,error:e}))
+   withProjects?(deps.loadProjectEvaluationSources||loadProjectEvaluationSources)(container,classes,deps).then(v=>({ok:true,value:v}),e=>({ok:false,error:e})):null
   ]);
   const submissionsByAssignment=new Map(published.map((a,i)=>[String(a.assignmentId),folders[i]]));
   const derived=deriveTeacherToday({assignments,classes,users,submissionsByAssignment,nowMs});
@@ -193,14 +207,17 @@ async function handler(request,deps={},obs=null){
   // the classes come from the listing above, so the predicate reads nothing more.
   const tenant=tenantOf(auth.user),classByName=new Map(allClasses.filter(c=>c&&c.classId).map(c=>[CP+String(c.classId)+".json",c]));
   const canSee=tenant?user=>studentAccessible(async name=>classByName.get(name)||null,user,tenant):null;
-  try{const u=await (deps.teacherDirectUnread||teacherDirectUnread)(container,teacherId,{canSee},deps);unreadMessages={total:Math.max(0,Number(u.totalUnread)||0),capped:u.capped===true}}
-  catch(e){partial.push("messages");obs?.logError("teacher.today.messages",e)}
+  if(withMessages){
+   try{const u=await (deps.teacherDirectUnread||teacherDirectUnread)(container,teacherId,{canSee},deps);unreadMessages={total:Math.max(0,Number(u.totalUnread)||0),capped:u.capped===true}}
+   catch(e){partial.push("messages");obs?.logError("teacher.today.messages",e)}
+  }
   // Phase 9C — additive block: students with ungraded project stages (Phase 9B evaluation semantics, one authority).
-  if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
+  if(!projectSources){/* P7-A1: withheld — the block is absent (no card), never null («could not be read») */}
+  else if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
   // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
   logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative,assignmentIndexAuthorityChanges:idx.stats.authorityChanges,docCacheHits:tally.cachedDocs,docsDownloaded:tally.downloadedDocs});
-  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...(scopeClassId?{scopeClassId}:{}),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
+  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...(scopeClassId?{scopeClassId}:{}),...derived,attention:{...derived.attention,unreadMessages},...(withProjects?{projectEvaluation}:{}),partial,widgets}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
 app.http("teacherToday",{methods:["GET"],authLevel:"anonymous",route:"teacher-today",handler:withObservability("teacher-today",handler)});
