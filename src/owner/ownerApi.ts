@@ -247,3 +247,16 @@ export const ownerStudentsApi = {
   import: (token: string, classId: string, students: OwnerStudentRow[], importId: string) =>
     call<{ ok: true; imported: number; failed: number; duplicates: number; recovered: number; credentials: OwnerCredential[]; errors: Array<OwnerStudentRow & { error: string }> }>("/api/owner-classes/import-students", { method: "POST", token, body: { classId, students, importId } })
 };
+
+// Tadris+ P5-B3a — moving a whole class to another teacher (/api/owner-classes): preview first, then the transfer (step-up).
+export type ClassTransferPreview = {
+  classId: string; className: string; status: OwnerClassStatus; from: string; to: string;
+  students: { total: number; archived: number; foreign: number }; assignments: { total: number; byStatus: Record<string, number> }; pendingGrading: number;
+};
+export type ClassTransferLedger = { transferId: string; complete: boolean; resumed: boolean; students: { moved: number; skipped: number; failed: number } };
+export const ownerTransferApi = {
+  preview: (token: string, classId: string, toAccountId: string) =>
+    call<{ ok: true; preview: ClassTransferPreview }>("/api/owner-classes/transfer-preview?classId=" + encodeURIComponent(classId) + "&toAccountId=" + encodeURIComponent(toAccountId), { token }),
+  transfer: (token: string, classId: string, toAccountId: string, expectedFromAccountId: string, reason: string) =>
+    call<{ ok: true; ledger: ClassTransferLedger }>("/api/owner-classes/transfer", { method: "POST", token, body: { classId, toAccountId, expectedFromAccountId, reason } })
+};

@@ -4,6 +4,7 @@ import { IconPlus, IconWarning } from "../icons";
 import { ownerClassesApi, type ApiResult, type OwnerClass, type OwnerClassFields, type OwnerClassLifecycle } from "./ownerApi";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 import OwnerClassStudents from "./OwnerClassStudents";   // Tadris+ P5-B4
+import OwnerClassTransfer from "./OwnerClassTransfer";   // Tadris+ P5-B3a
 
 /**
  * Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The «الصفوف» tab of a teacher's page in the Owner Console:
@@ -65,14 +66,14 @@ export default function OwnerTeacherClasses({ token, accountId, teacherName, bus
       {classes && classes.length === 0 && <p className="eb-owner-hint">لا توجد صفوف لهذا المعلم بعد.</p>}
       {active.length > 0 && (
         <ul className="eb-owner-teacher-list" aria-label="الصفوف النشطة">
-          {active.map(c => <ClassCard key={c.classId} c={c} busy={busy} token={token} send={send} done={done} />)}
+          {active.map(c => <ClassCard key={c.classId} c={c} accountId={accountId} busy={busy} token={token} send={send} done={done} />)}
         </ul>
       )}
       {archived.length > 0 && (
         <>
           <h3 className="eb-owner-h3">الصفوف المؤرشفة</h3>
           <ul className="eb-owner-teacher-list" aria-label="الصفوف المؤرشفة">
-            {archived.map(c => <ClassCard key={c.classId} c={c} busy={busy} token={token} send={send} done={done} />)}
+            {archived.map(c => <ClassCard key={c.classId} c={c} accountId={accountId} busy={busy} token={token} send={send} done={done} />)}
           </ul>
         </>
       )}
@@ -80,10 +81,11 @@ export default function OwnerTeacherClasses({ token, accountId, teacherName, bus
   );
 }
 
-function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolean; token: string; send: Send; done: (text: string) => void }) {
+function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; accountId: string; busy: boolean; token: string; send: Send; done: (text: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<OwnerClassLifecycle | null>(null);
   const [studentsOpen, setStudentsOpen] = useState(false);
+  const [transferring, setTransferring] = useState(false);
   const act = (action: OwnerClassLifecycle) => send(() => ownerClassesApi.lifecycle(token, action, c.classId), () => { setConfirm(null); done(LIFECYCLE_DONE[action]); });
   return (
     <li className="eb-owner-teacher" aria-label={c.name}>
@@ -96,6 +98,8 @@ function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolea
       {editing ? (
         <ClassForm label={"تعديل " + c.name} submitText={SAVE_LABELS.saveChanges} initial={{ name: c.name, grade: c.grade, schoolYear: c.schoolYear }} busy={busy} onCancel={() => setEditing(false)}
           onSubmit={fields => send(() => ownerClassesApi.update(token, c.classId, fields), d => { setEditing(false); done(d.changed ? "حُفظت بيانات الصف." : "لا تغيير."); })} />
+      ) : transferring ? (
+        <OwnerClassTransfer token={token} c={c} fromAccountId={accountId} busy={busy} send={send} onCancel={() => setTransferring(false)} onDone={text => { setTransferring(false); done(text); }} />
       ) : confirm ? (
         <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + c.name}>
           <p>{confirm === "graduate" ? "سيُؤرشف الصف كصف متخرج. يبقى كل شيء محفوظًا: الطلاب ونتائجهم." : "سيُؤرشف الصف. يبقى كل شيء محفوظًا، ويمكن استعادته."} لا تُؤرشف الصفوف التي لديها تصحيح معلّق.</p>
@@ -116,6 +120,7 @@ function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolea
           ) : (
             <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void act("unarchive")}>استعادة</button>
           )}
+          <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setTransferring(true)}>نقل إلى معلم آخر</button>
         </div>
       )}
       {studentsOpen && c.status === "active" && <OwnerClassStudents token={token} classId={c.classId} className={c.name} busy={busy} send={send} onChanged={() => done("")} />}
