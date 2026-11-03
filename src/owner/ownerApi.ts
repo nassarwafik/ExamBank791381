@@ -85,7 +85,7 @@ export type TeacherTrial = { days: number; endsAt: string; ended: boolean; endin
 /** The trial lengths the owner picks from (the server accepts any whole number of days from 1 to 90). */
 export const TRIAL_DAY_OPTIONS = [7, 14, 30, 60, 90] as const;
 export type TeacherAccess = { revisionId: string; preset: { id: string; version: number }; grants: number; denies: number };
-export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[] };
+export type AccessPreset = { id: string; version: number; label: string; description: string; capabilities: string[]; /** P5-B4: false = superseded by a newer version of the same preset */ current?: boolean };
 export type AccessMode = "legacy" | "observe" | "enforce" | "invalid";
 /** P2-B — whether the owner may import the shared-password workspace now (once), and if not, why. */
 export type LegacyImportState = { available: true } | { available: false; reason: "NOT_SHARED_PASSWORD_MODE" | "LEGACY_DATA_OWNER_SET" | "ALREADY_IMPORTED"; accountId?: string };

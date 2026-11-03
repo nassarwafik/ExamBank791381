@@ -71,7 +71,8 @@ describe("P3-A owner access API", () => {
     expect(r.status).toBe(200);
     expect(r.jsonBody.mode).toBe("legacy");
     expect(r.jsonBody.capabilities.find(c => c.id === "platform.operations.run")).toMatchObject({ ownerOnly: true });
-    expect(r.jsonBody.presets.map(p => p.id)).toEqual(["legacy-full", "full-teaching", "learning-ready-assignments", "learning-only"]);
+    // Tadris+ P5-B4 added full-teaching v2 (the teacher may also create / manage classes); v1 stays published, marked superseded
+    expect(r.jsonBody.presets.map(p => p.id + "@" + p.version + (p.current ? "" : " (superseded)"))).toEqual(["legacy-full@1", "full-teaching@1 (superseded)", "full-teaching@2", "learning-ready-assignments@1", "learning-only@1"]);
   });
 
   it("assign needs a recent step-up", async () => {
