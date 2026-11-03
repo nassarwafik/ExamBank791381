@@ -5,6 +5,7 @@ import { ownerClassesApi, type ApiResult, type OwnerClass, type OwnerClassFields
 import { SAVE_LABELS } from "../teacher/saveLabels";
 import OwnerClassStudents from "./OwnerClassStudents";   // Tadris+ P5-B4
 import OwnerClassTransfer from "./OwnerClassTransfer";   // Tadris+ P5-B3a
+import OwnerClassRoster from "./OwnerClassRoster";   // Tadris+ P5-B3b
 
 /**
  * Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The «الصفوف» tab of a teacher's page in the Owner Console:
@@ -86,6 +87,7 @@ function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; a
   const [confirm, setConfirm] = useState<OwnerClassLifecycle | null>(null);
   const [studentsOpen, setStudentsOpen] = useState(false);
   const [transferring, setTransferring] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const act = (action: OwnerClassLifecycle) => send(() => ownerClassesApi.lifecycle(token, action, c.classId), () => { setConfirm(null); done(LIFECYCLE_DONE[action]); });
   return (
     <li className="eb-owner-teacher" aria-label={c.name}>
@@ -120,9 +122,11 @@ function ClassCard({ c, accountId, busy, token, send, done }: { c: OwnerClass; a
           ) : (
             <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void act("unarchive")}>استعادة</button>
           )}
+          <button type="button" className="eb-owner-secondary" aria-expanded={rosterOpen} onClick={() => setRosterOpen(o => !o)}>{rosterOpen ? "إخفاء الطلاب" : "الطلاب"}</button>
           <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setTransferring(true)}>نقل إلى معلم آخر</button>
         </div>
       )}
+      {rosterOpen && <OwnerClassRoster token={token} classId={c.classId} className={c.name} ownerAccountId={accountId} busy={busy} send={send} onChanged={text => done(text)} />}
       {studentsOpen && c.status === "active" && <OwnerClassStudents token={token} classId={c.classId} className={c.name} busy={busy} send={send} onChanged={() => done("")} />}
     </li>
   );

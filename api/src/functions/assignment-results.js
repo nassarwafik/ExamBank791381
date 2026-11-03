@@ -94,7 +94,8 @@ async function handler(request,deps={},obs=null){
    }
    // Roadmap #24: the gradebook population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled
    // (active:false, non-archived) student keeps their row, results and pending-review visibility.
-   const users=scopedStudent?[scopedStudent]:(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)),out=[];
+   const allUsers=scopedStudent?null:await ls(c,UP);
+   const users=scopedStudent?[scopedStudent]:allUsers.filter(x=>isStudentClassMember(x,a.classId)),out=[];
    let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;const codingSummary={pending:0,retryable:0,stale:0},codingEvidenceTotals={open:0,delayed:0,superseded:0},nowMs=Date.now();
    // Roadmap #27: fetch every member's submission with bounded concurrency (aligned with `users`), then aggregate in order.
    const submissionsByIndex=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
@@ -107,7 +108,18 @@ async function handler(request,deps={},obs=null){
     else notSubmitted++;
     if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
     out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),...rf})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a),latePolicy:latePolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:finalizedCount?Number((sum/finalizedCount).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));
+   // Tadris+ P5-B3b (owner decision §19.21, D16) — students the owner MOVED to another teacher keep their results here as an archive:
+   // «منقول», read-only (every write still requires class membership, loadTarget), outside the class statistics above. Only a
+   // student whose transfer history names THIS class and who has a submission to it is listed; nothing about the new class is shown.
+   const movedStudents=[];
+   if(!scopedStudent){
+    const movedOut=allUsers.filter(x=>x&&x.role==="student"&&!isStudentClassMember(x,a.classId)&&Array.isArray(x.transferHistory)&&x.transferHistory.some(t=>t&&t.fromClassId===String(a.classId)));
+    const movedSubs=await mapConcurrent(movedOut,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
+    for(let i=0;i<movedOut.length;i++){const sub=movedSubs[i];if(!sub||!Array.isArray(sub.attempts)||!sub.attempts.length)continue;const t=movedOut[i].transferHistory.filter(x=>x&&x.fromClassId===String(a.classId)).pop();const rf=resultFields(sub,nowMs);movedStudents.push({studentId:movedOut[i].userId,studentName:movedOut[i].displayName,studentCode:movedOut[i].code,movedOut:true,movedAt:String(t.at||""),gradingStatus:rf.gradingStatus,latestResult:rf.latestResult,attemptsUsed:rf.attempts.length})}
+    movedStudents.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));
+   }
+   return {status:200,jsonBody:{ok:true,movedStudents,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a),latePolicy:latePolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:finalizedCount?Number((sum/finalizedCount).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
   {const tenant=tenantOf(auth.user);if(tenant){const target=await dl(c,AP+String(b.assignmentId||"")+".json");if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}}}}

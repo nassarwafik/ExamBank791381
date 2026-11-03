@@ -2,7 +2,10 @@ const crypto = require("crypto");
 const storage = require("./platform-storage");
 const { loadDocs } = require("./classes-students-read-cache");
 const { normalizeClassStatus } = require("./class-lifecycle");
-const { createPendingGradingReader, pendingForClassMembers } = require("./pending-grading");
+const { createPendingGradingReader, pendingForClassMembers, pendingGradingMessage } = require("./pending-grading");
+const { addToRosterIndex, removeFromRosterIndex } = require("./class-roster-index");
+const { directPrefix } = require("./message-store");
+const { listStreamIds, messageIdMs, keyDomain, normalizeMarker, advanceMarker, teacherDirectStateName } = require("./message-read-state");
 
 // Tadris+ P5-B3a — moving a WHOLE class to another teacher (owner only; blueprint §11.6, owner decisions §19.21: «كل تاريخ الصف»).
 //
@@ -107,4 +110,105 @@ async function transferClass(container, { classId, from, to, actor, reason = "",
   return { ledger };
 }
 
-module.exports = { LEDGER_PREFIX, MAX_REASON, TransferRefusal, classStudents, previewClassTransfer, transferClass };
+// ── Tadris+ P5-B3b — moving ONE student into another teacher's class (owner decisions §19.21, D16) ───────────────────────────
+// The student's document is the authority: classId → the new class, ownerId → the new teacher, `directSince` = the transfer moment,
+// a transferHistory entry. Everything the student DID stays where it was: submissions keep their classId (the former teacher keeps
+// them as «منقول» in the gradebook, read-only — assignment-results movedStudents); the new teacher sees the student's learning
+// progress (per-student documents) but neither the old class's grades (buildStudentProfile filters by the viewer's classes) nor the
+// conversation before the transfer (messages.js hides direct messages older than directSince; the new teacher's read marker starts
+// at the transfer, so nothing old is ever counted as unread). Refused while the student has work awaiting the former teacher (an open
+// attempt or a result to review — PENDING_GRADING), re-checked AFTER the write (an attempt started meanwhile reverts the move).
+
+/** The newest message of a student's direct stream, per read domain — the new teacher's starting read marker. */
+async function boundaryMarker(container, studentId, deps = {}) {
+  const ids = await (deps.listStreamIds || listStreamIds)(container, directPrefix(studentId), deps);
+  const marker = {};
+  for (const id of ids) {
+    const key = messageIdMs(id);
+    if (!Number.isFinite(key)) continue;
+    const domain = keyDomain(key);
+    const cur = marker[domain];
+    if (!cur || key > cur.boundaryMs) marker[domain] = { boundaryMs: key, seenIdsAtBoundary: [id] };
+    else if (key === cur.boundaryMs) cur.seenIdsAtBoundary.push(id);
+  }
+  return marker;
+}
+async function startReadMarker(container, teacherId, studentId, deps = {}) {
+  const incoming = await boundaryMarker(container, studentId, deps);
+  if (!incoming.legacy && !incoming.sequenced) return false;                       // no message yet: nothing to mark
+  const mut = deps.mutateJsonWithRetry || storage.mutateJsonWithRetry;
+  await mut(container, teacherDirectStateName(teacherId, studentId), current => {
+    const r = advanceMarker(normalizeMarker(current), incoming);
+    return { schemaVersion: 2, principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId, legacy: r.marker.legacy || null, sequenced: r.marker.sequenced || null, updatedAt: new Date().toISOString() };
+  });
+  return true;
+}
+
+const pendingOf = (container, classId, userId, deps) => pendingForClassMembers((deps.createPendingGradingReader || createPendingGradingReader)(container), classId, [userId]);
+
+/** What moving `student` into `target` would do (no write). */
+async function previewStudentTransfer(container, student, fromClass, target, deps = {}) {
+  return {
+    userId: String(student.userId), displayName: String(student.displayName || ""), archived: student.archived === true,
+    fromClassId: String(fromClass.classId), fromClassName: String(fromClass.name || ""), from: ownerOfStudent(student, fromClass),
+    toClassId: String(target.classId), toClassName: String(target.name || ""), to: String(target.ownerId || ""),
+    pendingGrading: await pendingOf(container, String(fromClass.classId), String(student.userId), deps)
+  };
+}
+/** The teacher a student belongs to: its own stamp, else its class's owner. */
+function ownerOfStudent(student, cls) {
+  return typeof student.ownerId === "string" && student.ownerId ? student.ownerId : String((cls && cls.ownerId) || "");
+}
+
+async function transferStudent(container, { userId, fromClassId, toClassId, from, to, actor, reason = "", nowMs = Date.now() }, deps = {}) {
+  const mut = deps.mutateJsonWithRetry || storage.mutateJsonWithRetry;
+  const at = new Date(nowMs).toISOString();
+  const note = String(reason || "").trim().slice(0, MAX_REASON);
+  if (!from || !to || from === to) throw new TransferRefusal(400, "SAME_TEACHER", "اختر صفًا لمعلم آخر غير المعلم الحالي.");
+  const blob = USER_PREFIX + userId + ".json";
+
+  const before = await pendingOf(container, fromClassId, userId, deps);
+  if (before > 0) throw new TransferRefusal(409, "PENDING_GRADING", pendingGradingMessage ? pendingGradingMessage("move", before) : "لدى الطالب عمل بانتظار التصحيح.");
+
+  let previous = null;
+  await mut(container, blob, cur => {
+    if (!cur || cur.role !== "student") throw new TransferRefusal(404, "STUDENT_NOT_FOUND", "الطالب غير موجود.");
+    if (String(cur.classId || "") !== fromClassId) throw new TransferRefusal(409, "TRANSFER_STALE", "نُقل الطالب أو تغيّر صفه منذ المعاينة. أعد فتح النقل.");
+    const owner = typeof cur.ownerId === "string" && cur.ownerId ? cur.ownerId : null;
+    if (owner && owner !== from) throw new TransferRefusal(409, "TRANSFER_STALE", "تغيّر معلم الطالب منذ المعاينة. أعد فتح النقل.");
+    previous = { ownerId: owner, directSince: cur.directSince, profileRevision: Number(cur.profileRevision || 0) };
+    const history = Array.isArray(cur.transferHistory) ? cur.transferHistory : [];
+    return { ...cur, classId: toClassId, ownerId: to, directSince: at, transferHistory: [...history, { fromClassId, toClassId, from, to, at, by: actor, ...(note ? { reason: note } : {}) }], profileRevision: previous.profileRevision + 1, updatedAt: at };
+  });
+
+  // QA2-8 pattern: an attempt started in the old class between the check and the write is seen now → the move is withdrawn
+  const after = await pendingOf(container, fromClassId, userId, deps);
+  if (after > 0) {
+    await mut(container, blob, cur => {
+      const history = Array.isArray(cur && cur.transferHistory) ? cur.transferHistory : [];
+      const last = history[history.length - 1];
+      if (!cur || !last || last.at !== at || String(cur.classId || "") !== toClassId) return cur;   // changed since: leave it
+      const next = { ...cur, classId: fromClassId, transferHistory: history.slice(0, -1), profileRevision: Number(cur.profileRevision || 0) + 1, updatedAt: new Date().toISOString() };
+      if (previous.ownerId) next.ownerId = previous.ownerId; else delete next.ownerId;
+      if (previous.directSince !== undefined) next.directSince = previous.directSince; else delete next.directSince;
+      return next;
+    });
+    throw new TransferRefusal(409, "PENDING_GRADING", pendingGradingMessage ? pendingGradingMessage("move", after) : "لدى الطالب عمل بانتظار التصحيح.");
+  }
+
+  const roster = { removed: true, added: true };
+  try { await (deps.removeFromRosterIndex || removeFromRosterIndex)(container, fromClassId, [userId], { obs: deps.obs, operation: "transfer" }); } catch { roster.removed = false; }
+  try { await (deps.addToRosterIndex || addToRosterIndex)(container, toClassId, [userId], { obs: deps.obs, operation: "transfer" }); } catch { roster.added = false; }
+  let readMarker = true;
+  try { await startReadMarker(container, to, userId, deps); } catch (e) { readMarker = false; deps.obs?.logError?.("transfer.marker.error", e); }
+
+  const transferId = "tr-" + nowMs.toString(36) + "-" + crypto.randomBytes(6).toString("hex");
+  const ledger = { schemaVersion: 1, transferId, kind: "student", userId, fromClassId, toClassId, from, to, at, by: actor, ...(note ? { reason: note } : {}), rosterSynced: roster.removed && roster.added, readMarker, complete: true };
+  await (deps.uploadJsonConditional || storage.uploadJsonConditional)(container, LEDGER_PREFIX + transferId + ".json", ledger, null);
+  return { ledger };
+}
+
+module.exports = {
+  LEDGER_PREFIX, MAX_REASON, TransferRefusal, classStudents, previewClassTransfer, transferClass,
+  previewStudentTransfer, transferStudent, ownerOfStudent, boundaryMarker
+};

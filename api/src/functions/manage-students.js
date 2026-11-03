@@ -681,7 +681,7 @@ async function buildImportPreview(container, items, visible = null) {
   return rows;
 }
 
-async function buildStudentProfile(container, userId) {
+async function buildStudentProfile(container, userId, { visibleClass = null } = {}) {   // Tadris+ P5-B3b: visibleClass(classId) — the viewer's classes
   const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
   if (!student || student.role !== "student") return null;
 
@@ -754,7 +754,9 @@ async function buildStudentProfile(container, userId) {
     // Submitted-history entry: independent of the student's CURRENT class, so a class change
     // never hides a real historical submission (only a fully-deleted assignment document can —
     // see the report note on that limitation).
-    if (latest) {
+    // Tadris+ P5-B3b (D16) — a student moved from another teacher: that teacher's assignments and grades stay with the old class;
+    // the viewer sees only the submissions of classes THEY may see (their learning progress below is the student's own and stays).
+    if (latest && (!visibleClass || visibleClass(String(assignment.classId || "")))) {
       const base = Math.max(1, Number(assignment.maxAttempts || 1));
       submittedAssignments.push({
         assignmentId,
@@ -1029,7 +1031,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             const subject = await downloadJsonOrNull(container, USER_PREFIX + profileUserId + ".json");
             if (!subject || subject.role !== "student" || !(await studentOk(subject))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           }
-          const profile = await buildStudentProfile(container, profileUserId);
+          if (tenant) await classOk("");                // the viewer's classes, loaded once
+          const profile = await buildStudentProfile(container, profileUserId, { visibleClass: tenant ? id => classIdAllowed(allowedClasses, id) : null });
           if (!profile) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           return { status: 200, headers: NO_STORE, jsonBody: { ok: true, profile } };
         }
