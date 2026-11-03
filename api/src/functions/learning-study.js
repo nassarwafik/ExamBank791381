@@ -9,6 +9,7 @@ const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/cl
 const { STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT } = require("../lib/student-strength");
 const { studyDocName, loadStudyIndex, findStudyActivity, pageEligibleCount, normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, studyStateOf } = require("../lib/learning-study");
 const { listLearningModules } = require("../lib/learning-materials-registry");
+const { teacherCourseDecision, classCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 const { loadCheckIndex, findCheckActivity, checkResponse } = require("../lib/learning-check");
 const { SMART_SIM_LIMITS } = require("../lib/shared-finalization/trustedSimRegistry");
 
@@ -86,6 +87,11 @@ async function handler(request, deps = {}, obs = null) {
     if (!ID.test(courseId)) return NOT_FOUND;
     const index = loadIndex(courseId);
     if (!index) return NOT_FOUND;
+    // Tadris+ P5-A — the course must be published and within the teacher's entitlement (for a student: their class's teacher's).
+    if (actor.kind === "teacher") {
+      const course = await teacherCourseDecision(actor.container, actor.user, courseId, deps);
+      if (!course.ok) return course.code === "COURSE_UNKNOWN" ? NOT_FOUND : courseRefusal(course, { teacher: true });
+    }
 
     // Student context: persisted class → lifecycle → course attached (ONE class read, ONE study read).
     let classroom = null, studyDoc = null;
@@ -94,6 +100,8 @@ async function handler(request, deps = {}, obs = null) {
       classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       if (!classroom || !classHasLearningCourse(classroom, courseId)) return UNAVAILABLE;
+      const course = await classCourseDecision(actor.container, classroom, courseId, deps);   // Tadris+ P5-A
+      if (!course.ok) return courseRefusal(course);
       studyDoc = normalizeStudyDoc(await dl(actor.container, studyDocName(actor.student.userId)));
     }
 

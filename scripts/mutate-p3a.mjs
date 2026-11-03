@@ -3,6 +3,7 @@
 // Same engine and rules as scripts/mutate-p1a.mjs (sha256-verified restore after every mutant, also on interruption).
 // Not run as a separate mutant: removing ONLY the resolver's platform.* strip in evaluateRevision is equivalent by construction
 // (a platform.* grant is refused just before it, and no preset contains one); P3A-M3 removes both guards and must be killed.
+// P5-A updated P3A-M1 and P3A-M5 to the current code (the resolver answer gained `courses`; the course check reuses `unknown.length`).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -22,11 +23,11 @@ const API = "api/src/functions/owner-access.js";
 const SESSION = "api/src/lib/teacher-session.js";
 
 export const MUTANTS = [
-  { id: "P3A-M1", what: "default deny broken: a console account without access gets today's full access", edits: [{ file: RES, find: "    return { source: \"unassigned\", revisionId: null, preset: null, capabilities: [] };", replace: "    return legacyFull(\"unassigned\");" }] },
+  { id: "P3A-M1", what: "default deny broken: a console account without access gets today's full access", edits: [{ file: RES, find: "    return { source: \"unassigned\", revisionId: null, preset: null, capabilities: [], courses: null };", replace: "    return legacyFull(\"unassigned\");" }] },
   { id: "P3A-M2", what: "a platform.* grant is accepted (the strip still removes it from the effective set)", edits: [{ file: REV, find: "  if (forbidden.length) return", replace: "  if (false) return" }] },
   { id: "P3A-M3", what: "both platform.* guards removed: a teacher can hold an owner capability", edits: [{ file: REV, find: "  if (forbidden.length) return", replace: "  if (false) return" }, { file: REV, find: "  for (const c of [...set]) if (isOwnerOnly(c)) set.delete(c);", replace: "" }] },
   { id: "P3A-M4", what: "a broken dependency is accepted", edits: [{ file: REV, find: "  if (unmet.length) return", replace: "  if (false) return" }] },
-  { id: "P3A-M5", what: "an unknown capability is accepted", edits: [{ file: REV, find: "    if (unknown.length) return", replace: "    if (false) return" }] },
+  { id: "P3A-M5", what: "an unknown capability is accepted", edits: [{ file: REV, find: "    if (unknown.length) return { ok: false, code: \"CAPABILITY_UNKNOWN\"", replace: "    if (false) return { ok: false, code: \"CAPABILITY_UNKNOWN\"" }] },
   { id: "P3A-M6", what: "a capability both granted and denied is accepted", edits: [{ file: REV, find: "  if (both.length) return", replace: "  if (false) return" }] },
   { id: "P3A-M7", what: "another account's revision is accepted on read", edits: [{ file: REV, find: "  if (doc.accountId !== accountId) throw new AccessError(\"REVISION_INVALID\", { reason: \"account\" });\n", replace: "" }] },
   { id: "P3A-M8", what: "a stored revision is trusted without re-validation (tampering accepted)", edits: [{ file: REV, find: "  if (!verdict.ok) throw new AccessError(\"REVISION_INVALID\", { reason: verdict.code });", replace: "" }] },

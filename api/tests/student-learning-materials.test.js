@@ -62,7 +62,9 @@ describe("student-learning-materials — safe catalog from the class's publicati
     });
     const { r, reads } = await call(ctx, "cA");
     expect(r.jsonBody.materials[0].modules.map(m => m.moduleId)).toEqual([M01]);
-    expect(reads).toEqual([USR("u1"), CLS("cB")]);   // class A is never even read; the browser's ?classId is ignored
+    // class A is never even read; the browser's ?classId is ignored. P5-A: + the access mode (the class's teacher's entitlement) and
+    // the catalog status of the ONE course shown — still no scan, no other class or student.
+    expect(reads).toEqual([USR("u1"), CLS("cB"), "platform/system/access-control.json", "platform/catalog/courses/791381.json"]);
   });
   it("Case 6: student moved A→B between two calls → the next read reflects B immediately", async () => {
     const ctx = createMemoryContainer({
@@ -107,7 +109,8 @@ describe("student-learning-materials — storage read path + safety", () => {
     const namesBefore = ctx.names("").sort(); const etags = ctx.names("").map(n => ctx.store.get(n).etag);
     const { r, reads } = await call(ctx);
     expect(r.status).toBe(200);
-    expect(reads).toEqual([USR("u1"), CLS("cA")]);
+    // P5-A: + the access mode and the catalog status of the course shown (bounded: one per course of the class) — no scan.
+    expect(reads).toEqual([USR("u1"), CLS("cA"), "platform/system/access-control.json", "platform/catalog/courses/791381.json"]);
     expect(ctx.names("").sort()).toEqual(namesBefore); expect(ctx.names("").map(n => ctx.store.get(n).etag)).toEqual(etags);
   });
   it("the response never carries page/lesson bodies, PDF text, answer keys or student PII", async () => {
@@ -134,7 +137,8 @@ describe("student-learning-materials — storage read path + safety", () => {
 describe("learning-materials-catalog — teacher catalog endpoint", () => {
   const breq = () => ({ method: "GET", url: "https://x/api/learning-materials-catalog", headers: { get: () => null } });
   it("builder-authenticated → the exact publishable catalog (metadata only)", async () => {
-    const r = await catalog(breq(), { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) });
+    const mem = createMemoryContainer();     // P5-A: the catalog status is read (empty storage = every course published)
+    const r = await catalog(breq(), { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), container: mem.container });
     expect(r.status).toBe(200);
     expect(r.jsonBody).toEqual({ ok: true, courses: [{ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة", modules: [
       { moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: M02, title: "الأعداد والموازين", order: 2 }, { moduleId: M07, title: "عناوين IP", order: 3 },

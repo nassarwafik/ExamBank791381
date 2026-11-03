@@ -25,7 +25,7 @@ const { ACCESS_REFUSAL } = require("../lib/access/messages");
 //                      its mode cannot be read) a preset is REQUIRED, so no new teacher lands with no access at all.
 //                      P4-B2: `grants?` / `denies?` (with a preset only) and `accessReason?` — the wizard's «copy from a teacher»
 //                      sends the source's current preset / grants / denies; they are validated exactly like an assignment
-//                      (refused with their code, never corrected).
+//                      (refused with their code, never corrected). P5-A: `courses?` (with a preset) — the course entitlement.
 //                      Trial accounts: `trialDays` (a whole number 1–90) makes it a TRIAL account that ends that many days after
 //                      its creation; from then on it is refused like a suspended one (lib/identity/teacher-accounts.js).
 //   POST extend-trial  { accountId, days } → the trial ends `days` (1–90) later, counted from its end (or from now if it ended)
@@ -147,7 +147,7 @@ async function handler(request, deps = {}, obs = null) {
       let initialAccess = null;
       if (!importing) {
         const wantsPreset = body.presetId !== undefined && body.presetId !== null && body.presetId !== "";
-        const hasLists = (Array.isArray(body.grants) && body.grants.length > 0) || (Array.isArray(body.denies) && body.denies.length > 0);
+        const hasLists = (Array.isArray(body.grants) && body.grants.length > 0) || (Array.isArray(body.denies) && body.denies.length > 0) || Array.isArray(body.courses);
         if (!wantsPreset && hasLists) return bad("ACCESS_PRESET_MISSING", ACCESS_REFUSAL.ACCESS_PRESET_MISSING);
         if (!wantsPreset) {
           let mode = "enforce";                                   // unreadable → treated as enforce (fail safe)
@@ -159,6 +159,7 @@ async function handler(request, deps = {}, obs = null) {
             initialAccess = buildRevision({
               accountId, parentRevisionId: null, presetId: body.presetId, presetVersion: body.presetVersion,
               grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies,
+              resources: body.courses === undefined || body.courses === null ? {} : { courses: body.courses },   // P5-A
               reason: "initial access at creation" + (note ? " — " + note : ""), createdBy: actor, nowMs
             }).revision;
           } catch (e) {

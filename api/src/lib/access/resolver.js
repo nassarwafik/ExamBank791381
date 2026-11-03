@@ -12,6 +12,7 @@ const { AccessError, readRevision } = require("./revisions");
 //   BUILDER_USERS session               → legacy-full (an identity that predates the Owner Console, D7)
 //   shared-password session (no owner)  → legacy-full (today's behaviour; that mode closes once an owner exists, D6)
 //   anything else                       → AccessError PRINCIPAL_UNKNOWN (fail closed)
+// P5-A — `courses`: the course entitlement (null = every published course; an array = only those). Owner decisions §19.13.
 // A revision that cannot be trusted (missing, another account's, unknown preset / capability, broken dependency) is an
 // AccessError; a storage error propagates. Callers fail closed on both. Capabilities never come from the token or the client.
 //
@@ -20,7 +21,7 @@ const { AccessError, readRevision } = require("./revisions");
 
 const legacyFull = source => {
   const p = preset(LEGACY_FULL.id, LEGACY_FULL.version);
-  return { source, revisionId: null, preset: { id: p.id, version: p.version }, capabilities: [...p.capabilities].sort() };
+  return { source, revisionId: null, preset: { id: p.id, version: p.version }, capabilities: [...p.capabilities].sort(), courses: null };
 };
 
 async function resolveTeacherAccess(user, deps = {}) {
@@ -29,10 +30,10 @@ async function resolveTeacherAccess(user, deps = {}) {
     if (user.accessRevisionId) {
       const container = deps.container || (deps.getContainer || storage.getContainer)();
       const entry = await readRevision(container, user.accessRevisionId, user.sub, deps);
-      return { source: "revision", revisionId: entry.revision.revisionId, preset: { ...entry.preset }, capabilities: [...entry.capabilities] };
+      return { source: "revision", revisionId: entry.revision.revisionId, preset: { ...entry.preset }, capabilities: [...entry.capabilities], courses: entry.courses ? [...entry.courses] : null };
     }
     if (user.sub === LEGACY_TEACHER_ACCOUNT_ID) return legacyFull("migrated-default");
-    return { source: "unassigned", revisionId: null, preset: null, capabilities: [] };
+    return { source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null };
   }
   if (user.am === "multi-user") return legacyFull("migrated-default");
   if (sharedPasswordSession(user)) return legacyFull("shared-password");

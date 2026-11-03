@@ -2,6 +2,7 @@
 // Tadris+ P4-B2 — mutation proof for the add-teacher wizard (steps, the identity / access checks, the copy from a teacher) and
 // for «ابدأ من صلاحيات معلم آخر», plus create's individual changes on the server. Same engine and rules as
 // scripts/mutate-p1a.mjs (byte-for-byte, hash-verified restore after every mutant).
+// P5-A updated P4B2-M1 to the current code (create now also passes the course entitlement on the next line).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -17,7 +18,7 @@ const WIZARD = "src/owner/TeacherWizard.tsx";
 const DETAILS = "src/owner/OwnerTeacherDetails.tsx";
 
 export const MUTANTS = [
-  { id: "P4B2-M1", what: "create ignores the grants / denies", edits: [{ file: TEACHERS, find: "grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies,\n              reason: \"initial access at creation\"", replace: "grants: [], denies: [],\n              reason: \"initial access at creation\"" }] },
+  { id: "P4B2-M1", what: "create ignores the grants / denies", edits: [{ file: TEACHERS, find: "grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies,\n              resources:", replace: "grants: [], denies: [],\n              resources:" }] },
   { id: "P4B2-M2", what: "grants / denies without a preset are accepted", edits: [{ file: TEACHERS, find: "        if (!wantsPreset && hasLists) return bad(\"ACCESS_PRESET_MISSING\", ACCESS_REFUSAL.ACCESS_PRESET_MISSING);\n", replace: "" }] },
   { id: "P4B2-M3", what: "the new account counts no individual changes", edits: [{ file: TEACHERS, find: "accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length", replace: "accessGrants: 0, accessDenies: 0" }] },
   { id: "P4B2-M4", what: "the first revision drops the note", edits: [{ file: TEACHERS, find: "reason: \"initial access at creation\" + (note ? \" — \" + note : \"\")", replace: "reason: \"initial access at creation\"" }] },

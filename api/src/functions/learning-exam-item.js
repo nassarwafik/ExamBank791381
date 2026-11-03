@@ -8,6 +8,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { loadExamItems, findExamItem, examItemContext, studentItemView, checkExamItem } = require("../lib/learning-exam-items");
 const { studyDocName, loadStudyIndex, normalizeStudyDoc, applyStudyCompletion, applyStudyReveal, wasRevealed, studyStateOf } = require("../lib/learning-study");
+const { teacherCourseDecision, classCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 
 // 791381s Phase 8C-1 (docs/enterprise-791381s-enrichment-plan.md §11.4) — the learning book's ADVANCED exam items, as PRACTICE:
 //   GET  /api/learning-exam-item/{courseId}/{itemId}        → the card metadata + the SANITIZED exam (the platform's student
@@ -70,6 +71,11 @@ async function handler(request, deps = {}, obs = null) {
     if (!ID.test(courseId) || !ID.test(itemId)) return NOT_FOUND;
     const found = findExamItem(loadExamItems(courseId, deps), itemId);
     if (found.status === "missing") return NOT_FOUND;
+    // Tadris+ P5-A — the course must be published and within the teacher's entitlement (a student: their class's teacher's).
+    if (actor.kind === "teacher") {
+      const course = await teacherCourseDecision(actor.container, actor.user, courseId, deps);
+      if (!course.ok) return course.code === "COURSE_UNKNOWN" ? NOT_FOUND : courseRefusal(course, { teacher: true });
+    }
 
     // The gate comes before anything about the item (its validity included) reaches a student.
     let learnerId = "teacher-preview";
@@ -79,6 +85,8 @@ async function handler(request, deps = {}, obs = null) {
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       const moduleId = typeof found.item?.moduleId === "string" ? found.item.moduleId : "";
       if (!classroom || !classHasLearningCourse(classroom, courseId) || !moduleId || !classCanSeeLearningModule(classroom, courseId, moduleId)) return UNAVAILABLE;
+      const course = await classCourseDecision(actor.container, classroom, courseId, deps);   // Tadris+ P5-A
+      if (!course.ok) return courseRefusal(course);
       learnerId = String(actor.student.userId);
     }
     if (found.status !== "ok") { obs?.logError?.("learning.examItem.invalid", new Error(courseId + "/" + itemId)); return ITEM_BROKEN; }
