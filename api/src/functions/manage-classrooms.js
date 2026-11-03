@@ -167,6 +167,100 @@ function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now
   return doc;
 }
 
+// Tadris+ P5-B2 — the class edit and the class lifecycle are shared by the teacher's route (below) and the owner's
+// (owner-classes.js): the SAME CAS write, the SAME archived-class rule and the SAME pending-grading guards (Phase S.1, QA2-8).
+// `record(event)` receives the audit event without its actor (each route adds its own); every other effect is identical.
+async function updateClassLabels(container, classId, input, { mut, record }) {
+  const fields = normalizeClassFields(input);
+  if (!fields.ok) return { status: 400, jsonBody: { ok: false, error: fields.error } };
+  let before = null;
+  let updated = null;
+  try {
+    updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+      if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+      if (normalizeClassStatus(current) === "archived") { const blocked = new Error("الصف مؤرشف — فعّله أولًا لتعديل بياناته."); blocked.httpStatus = 403; throw blocked; }
+      before = { name: String(current.name || ""), grade: String(current.grade || ""), schoolYear: String(current.schoolYear || "") };
+      const next = fields.value;
+      if (before.name === next.name && before.grade === next.grade && before.schoolYear === next.schoolYear) throw new NoChange(current);
+      return { ...current, ...next, updatedAt: new Date().toISOString() };
+    });
+  } catch (mutateError) {
+    if (mutateError instanceof NoChange) updated = null;
+    else if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+    else if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+    else throw mutateError;
+  }
+  if (updated) {
+    const changed = ["name", "grade", "schoolYear"].filter(k => before[k] !== String(updated[k] || ""));
+    await record({ action: "class.update", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { fields: changed, previousName: before.name } });
+  }
+  return { status: 200, jsonBody: { ok: true, classId, changed: Boolean(updated), ...fields.value } };
+}
+
+async function changeClassLifecycle(container, classId, action, { mut, ls, record, actor }) {
+  const blobName = CLASS_PREFIX + classId + ".json";
+
+  // Phase S.1 (AGENTS.md §10) — an archived class takes its members' open attempts out of reach (submissions are
+  // refused) and its pending results out of the day's follow-up: refused while a CURRENT member has such work.
+  if (action !== "unarchive" && isSafeId(classId)) {
+    const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
+    const pending = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
+    if (pending > 0) return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pending, error: pendingClassMessage(action, pending) } };
+  }
+
+  let updatedClassroom = null, beforeLifecycle = null;
+  const lifecycleNow = new Date().toISOString();
+  try {
+    updatedClassroom = await mut(container, blobName, current => {
+      if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+      beforeLifecycle = current;
+      return applyClassLifecycleAction(current, action, { actor, now: lifecycleNow });
+    });
+  } catch (mutateError) {
+    if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+    if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+    throw mutateError;
+  }
+  // QA2-8 — the archive and a student's startAttempt write different documents: re-check pending work AFTER the archive committed.
+  // An attempt started in the meantime is now visible here: the archive is withdrawn (its own lifecycle fields restored, only if
+  // nothing changed them since) and refused like the pre-check. The start side re-reads the class after it commits, so at least one
+  // side sees the other.
+  if (action !== "unarchive" && isSafeId(classId) && beforeLifecycle) {
+    const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
+    const pendingAfter = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
+    if (pendingAfter > 0) {
+      const LIFECYCLE = ["status", "active", "archivedAt", "archivedBy", "archiveReason", "graduationYear", "updatedAt"];
+      await mut(container, blobName, cur => {
+        if (!cur || cur.archivedAt !== lifecycleNow) return cur;
+        const next = { ...cur };
+        for (const k of LIFECYCLE) { if (Object.prototype.hasOwnProperty.call(beforeLifecycle, k)) next[k] = beforeLifecycle[k]; else delete next[k]; }
+        return next;
+      });
+      return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pendingAfter, error: pendingClassMessage(action, pendingAfter) } };
+    }
+  }
+
+  await record({
+    action: action === "unarchive" ? "class.unarchive" : action === "graduateandarchive" ? "class.graduate" : "class.archive",
+    targetType: "class",
+    targetId: classId,
+    targetLabel: updatedClassroom.name || "",
+    ...(updatedClassroom.graduationYear ? { details: { graduationYear: updatedClassroom.graduationYear } } : {})
+  });
+
+  return {
+    status: 200,
+    jsonBody: {
+      ok: true,
+      active: updatedClassroom.active,
+      status: normalizeClassStatus(updatedClassroom),
+      archivedAt: updatedClassroom.archivedAt || "",
+      archiveReason: updatedClassroom.archiveReason || "",
+      graduationYear: updatedClassroom.graduationYear || ""
+    }
+  };
+}
+
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request, deps = {}, obs = null) {
@@ -258,30 +352,7 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "update") {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
-      const fields = normalizeClassFields(body);
-      if (!fields.ok) return { status: 400, jsonBody: { ok: false, error: fields.error } };
-      let before = null;
-      let updated = null;
-      try {
-        updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
-          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
-          if (normalizeClassStatus(current) === "archived") { const blocked = new Error("الصف مؤرشف — فعّله أولًا لتعديل بياناته."); blocked.httpStatus = 403; throw blocked; }
-          before = { name: String(current.name || ""), grade: String(current.grade || ""), schoolYear: String(current.schoolYear || "") };
-          const next = fields.value;
-          if (before.name === next.name && before.grade === next.grade && before.schoolYear === next.schoolYear) throw new NoChange(current);
-          return { ...current, ...next, updatedAt: new Date().toISOString() };
-        });
-      } catch (mutateError) {
-        if (mutateError instanceof NoChange) updated = null;
-        else if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
-        else if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
-        else throw mutateError;
-      }
-      if (updated) {
-        const changed = ["name", "grade", "schoolYear"].filter(k => before[k] !== String(updated[k] || ""));
-        await rec(container, { actor: auth.user?.sub, action: "class.update", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { fields: changed, previousName: before.name } });
-      }
-      return { status: 200, jsonBody: { ok: true, classId, changed: Boolean(updated), ...fields.value } };
+      return updateClassLabels(container, classId, body, { mut, record: ev => rec(container, { actor: auth.user?.sub, ...ev }) });
     }
 
     // Modern multi-project action, and the legacy single-project setProgram kept as a thin wrapper
@@ -434,68 +505,7 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "archive" || action === "unarchive" || action === "graduateandarchive") {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
-      const blobName = CLASS_PREFIX + classId + ".json";
-
-      // Phase S.1 (AGENTS.md §10) — an archived class takes its members' open attempts out of reach (submissions are
-      // refused) and its pending results out of the day's follow-up: refused while a CURRENT member has such work.
-      if (action !== "unarchive" && isSafeId(classId)) {
-        const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
-        const pending = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
-        if (pending > 0) return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pending, error: pendingClassMessage(action, pending) } };
-      }
-
-      let updatedClassroom = null, beforeLifecycle = null;
-      const lifecycleNow = new Date().toISOString();
-      try {
-        updatedClassroom = await mut(container, blobName, current => {
-          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
-          beforeLifecycle = current;
-          return applyClassLifecycleAction(current, action, { actor: auth.user?.sub, now: lifecycleNow });
-        });
-      } catch (mutateError) {
-        if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
-        if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
-        throw mutateError;
-      }
-      // QA2-8 — the archive and a student's startAttempt write different documents: re-check pending work AFTER the archive committed.
-      // An attempt started in the meantime is now visible here: the archive is withdrawn (its own lifecycle fields restored, only if
-      // nothing changed them since) and refused like the pre-check. The start side re-reads the class after it commits, so at least one
-      // side sees the other.
-      if (action !== "unarchive" && isSafeId(classId) && beforeLifecycle) {
-        const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
-        const pendingAfter = memberIds.length ? await pendingForClassMembers(createPendingGradingReader(container), classId, memberIds) : 0;
-        if (pendingAfter > 0) {
-          const LIFECYCLE = ["status", "active", "archivedAt", "archivedBy", "archiveReason", "graduationYear", "updatedAt"];
-          await mut(container, blobName, cur => {
-            if (!cur || cur.archivedAt !== lifecycleNow) return cur;
-            const next = { ...cur };
-            for (const k of LIFECYCLE) { if (Object.prototype.hasOwnProperty.call(beforeLifecycle, k)) next[k] = beforeLifecycle[k]; else delete next[k]; }
-            return next;
-          });
-          return { status: 409, jsonBody: { ok: false, code: "PENDING_GRADING", pendingCount: pendingAfter, error: pendingClassMessage(action, pendingAfter) } };
-        }
-      }
-
-      await rec(container, {
-        actor: auth.user?.sub,
-        action: action === "unarchive" ? "class.unarchive" : action === "graduateandarchive" ? "class.graduate" : "class.archive",
-        targetType: "class",
-        targetId: classId,
-        targetLabel: updatedClassroom.name || "",
-        ...(updatedClassroom.graduationYear ? { details: { graduationYear: updatedClassroom.graduationYear } } : {})
-      });
-
-      return {
-        status: 200,
-        jsonBody: {
-          ok: true,
-          active: updatedClassroom.active,
-          status: normalizeClassStatus(updatedClassroom),
-          archivedAt: updatedClassroom.archivedAt || "",
-          archiveReason: updatedClassroom.archiveReason || "",
-          graduationYear: updatedClassroom.graduationYear || ""
-        }
-      };
+      return changeClassLifecycle(container, classId, action, { mut, ls, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), actor: auth.user?.sub });
     }
 
     return { status: 400, jsonBody: { ok: false, error: "Unsupported classroom action." } };
@@ -507,4 +517,4 @@ async function handler(request, deps = {}, obs = null) {
 
 app.http("manageClassrooms", { methods: ["GET", "POST"], authLevel: "anonymous", route: "classrooms", handler: withObservability("classrooms", handler) });
 
-module.exports = { handler, buildNewClassroomDocument, classIdForRequestKey, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed, normalizeClassFields };
+module.exports = { handler, buildNewClassroomDocument, classIdForRequestKey, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed, normalizeClassFields, updateClassLabels, changeClassLifecycle, CLASS_PREFIX };

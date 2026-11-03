@@ -11,14 +11,16 @@ import DataTable, { type DataColumn } from "../ui/DataTable";
 import DiffView from "../ui/DiffView";
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
+import OwnerTeacherClasses from "./OwnerTeacherClasses";   // Tadris+ P5-B2
 import {
   STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
   grantsAndDenies, actorLabel
 } from "./teacherShared";
 
 /**
- * Tadris+ P4-B1 — one teacher's page in the Owner Console (#/owner/teachers/<accountId>), in four tabs:
+ * Tadris+ P4-B1 — one teacher's page in the Owner Console (#/owner/teachers/<accountId>), in five tabs (four since P4-B1, «الصفوف» since P5-B2):
  *   «البيانات»   the teacher's details (the username is the sign-in name and stays fixed);
+ *   «الصفوف»     the teacher's classes: the owner creates them and edits / archives / restores / graduates them (P5-B2, D18 revised);
  *   «الصلاحيات» a preset, then individual capabilities on or off (turning one on also turns on what it needs; turning one off also
  *                turns off what needs it), the difference from what the server gives the teacher NOW, and what the teacher will be
  *                able to do; saved as a new immutable revision against the revision this page was opened on (a stale page → 409);
@@ -27,7 +29,7 @@ import {
  * Every change needs a recent second-factor check (asked inline, then retried). The server decides everything; a 401 signs out.
  */
 
-type TabId = "profile" | "access" | "history" | "security";
+type TabId = "profile" | "classes" | "access" | "history" | "security";
 type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
 type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
@@ -121,6 +123,9 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     { id: "profile", label: "البيانات", content: (
       <ProfileForm key={teacher.updatedAt} teacher={teacher} busy={busy}
         onSave={fields => send(() => ownerTeachersApi.update(token, accountId, fields), d => { setTeacher(d.teacher); setNotice("حُفظت بيانات المعلم."); })} />
+    ) },
+    { id: "classes", label: "الصفوف", content: (
+      <OwnerTeacherClasses token={token} accountId={accountId} teacherName={teacher.displayName} busy={busy} send={send} onSignedOut={onSignedOut} />
     ) },
     { id: "access", label: "الصلاحيات", content: (
       <AccessEditor key={history.currentRevisionId || "none"} teacher={teacher} catalog={catalog} history={history} effective={effective} labels={labels} busy={busy}

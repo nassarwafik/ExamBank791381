@@ -86,7 +86,7 @@ describe("P4-B1 the teacher's address", () => {
     fireEvent.click(await screen.findByRole("button", { name: "صفحة سارة" }));
     expect(await screen.findByRole("heading", { name: "سارة" })).toBeTruthy();
     expect(window.location.hash).toBe(ownerTeacherHash(SARA));
-    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["البيانات", "الصلاحيات", "السجل", "الأمان"]);
+    expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["البيانات", "الصفوف", "الصلاحيات", "السجل", "الأمان"]);   // Tadris+ P5-B2 added «الصفوف»
     fireEvent.click(screen.getByRole("button", { name: "→ كل المعلمين" }));
     expect(await screen.findByRole("heading", { name: "المعلمون" })).toBeTruthy();
     expect(window.location.hash).toBe("#/owner/teachers");

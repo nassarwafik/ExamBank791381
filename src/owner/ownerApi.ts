@@ -198,3 +198,22 @@ export function invitationUrl(invitationPath: string, location: { origin: string
 export function groupSecret(secret: string): string {
   return String(secret || "").replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
 }
+
+// Tadris+ P5-B2 — owner decision D18 (revised): the owner creates and manages a teacher's classes (/api/owner-classes). Every change
+// needs a recent step-up. A class created here is the teacher's own (they see it and add their students to it).
+export type OwnerClassStatus = "active" | "archived";
+export type OwnerClass = {
+  classId: string; name: string; grade: string; schoolYear: string; status: OwnerClassStatus; studentCount: number;
+  programCodes: string[]; createdAt: string; archivedAt: string;
+};
+export type OwnerClassFields = { name: string; grade: string; schoolYear: string };
+export type OwnerClassLifecycle = "archive" | "unarchive" | "graduate";
+export const ownerClassesApi = {
+  list: (token: string, accountId: string) => call<{ ok: true; accountId: string; classes: OwnerClass[] }>("/api/owner-classes?accountId=" + encodeURIComponent(accountId), { token }),
+  create: (token: string, accountId: string, fields: OwnerClassFields, requestKey: string) =>
+    call<{ ok: true; classroom: OwnerClass; duplicate?: boolean }>("/api/owner-classes/create", { method: "POST", token, body: { accountId, ...fields, requestKey } }),
+  update: (token: string, classId: string, fields: OwnerClassFields) =>
+    call<{ ok: true; classId: string; changed: boolean }>("/api/owner-classes/update", { method: "POST", token, body: { classId, ...fields } }),
+  lifecycle: (token: string, action: OwnerClassLifecycle, classId: string) =>
+    call<{ ok: true; status: OwnerClassStatus }>("/api/owner-classes/" + action, { method: "POST", token, body: { classId } })
+};

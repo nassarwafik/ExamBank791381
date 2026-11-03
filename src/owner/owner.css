@@ -23,6 +23,8 @@
 .eb-owner-hint { margin: 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
 .eb-owner-hint code { font-family: var(--eb-font-mono); font-size: var(--eb-fs-12); overflow-wrap: anywhere; }
 .eb-owner-h2 { margin: 0 0 var(--eb-space-2); font-size: var(--eb-fs-17); color: var(--eb-text-heading); }
+/* Tadris+ P5-B2 — a sub-heading inside a panel (the teacher's archived classes). */
+.eb-owner-h3 { margin: var(--eb-space-4) 0 var(--eb-space-2); font-size: var(--eb-fs-15); color: var(--eb-text-heading); }
 
 .eb-owner-qr { margin: 0 auto; width: min(240px, 100%); padding: var(--eb-space-2); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); }
 .eb-owner-qr svg { display: block; width: 100%; height: auto; }
