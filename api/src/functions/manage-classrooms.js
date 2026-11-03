@@ -25,6 +25,7 @@ const { validateLearningModuleIds, findLearningCourse } = require("../lib/learni
 const { isSafeId, cleanText, LIMITS } = require("../lib/roster-input");
 const { createPendingGradingReader, pendingForClassMembers, pendingClassMessage } = require("../lib/pending-grading");
 const { loadDocs } = require("../lib/classes-students-read-cache");
+const { teacherCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 
 /**
  * Validates + normalizes the teacher-typed class labels (NFC, invisible/bidi characters removed, whitespace
@@ -346,6 +347,10 @@ async function handler(request, deps = {}, obs = null) {
       } catch (e) {
         return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
       }
+      // Tadris+ P5-A — releasing a course to a class needs the course published and within this teacher's entitlement.
+      // (Removing a course from a class is always allowed.)
+      const courseDecision = await teacherCourseDecision(container, auth.user, courseId, deps);
+      if (!courseDecision.ok) return courseRefusal(courseDecision, { teacher: true });
       try {
         let newlyPublished = [];
         const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {

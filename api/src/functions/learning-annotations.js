@@ -7,6 +7,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { loadPageIndex, moduleOfPage } = require("../lib/learning-progress");
 const { annotationsDocName, applyAnnotation, annotationsView, normalizeAnnotationsDoc } = require("../lib/learning-annotations");
+const { classCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 
 // Phase L.5 — the student's PRIVATE reading annotations (students only; no teacher route reads them). Routes (one function):
 //   GET  /api/learning-annotations/{courseId}            → { bookmarks[], notes[], highlights[] } over the units the class sees now
@@ -53,6 +54,12 @@ async function handler(request, deps = {}, obs = null) {
     const classroom = classId ? await dl(sess.container, CLASS_PREFIX + classId + ".json") : null;
     if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
     if (!classroom || !classHasLearningCourse(classroom, courseId)) return UNAVAILABLE;
+    // Tadris+ P5-A — NEW writes need the course published and within the class's teacher's entitlement. Reading the student's OWN
+    // history stays possible (owner policy: progress and notes are never deleted and stay readable as the student's archive).
+    if (method !== "GET") {
+      const course = await classCourseDecision(sess.container, classroom, courseId, deps);
+      if (!course.ok) return courseRefusal(course);
+    }
     const canSee = moduleId => classCanSeeLearningModule(classroom, courseId, moduleId);
     const docName = annotationsDocName(sess.student.userId);
 

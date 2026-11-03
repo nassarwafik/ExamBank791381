@@ -12,6 +12,10 @@ const { gradeExam } = require("../lib/assignment-grading");
 const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } = require("../lib/learning-training-registry");
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
 const { isLearningPracticeItem, trainingMaxStrengthPoints } = require("../lib/student-strength");
+const { teacherAllowedCourses, classAllowedCourses } = require("../lib/access/course-access");   // Tadris+ P5-A
+const { listLearningCourses } = require("../lib/learning-materials-registry");
+const { trainingReleases } = require("../lib/learning-training-registry");
+const { classCanSeeLearningModule } = require("../lib/class-learning-materials");
 
 // Learning Practice API — the SAFE delivery of the book's 36 Learning-Practice items (the T-series trainings T01–T30
 // and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading.
@@ -94,7 +98,12 @@ async function handler(request, deps = {}, obs = null) {
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       practiceDoc = normalizePracticeDoc(await dl(actor.container, practiceDocName(actor.student.userId)));
     }
-    const allowed = t => actor.kind === "teacher" || trainingAllowedForClass(classroom, t);
+    // Tadris+ P5-A — a training is available only through a release point whose COURSE may be used now (published, within the
+    // teacher's entitlement — for a student, their class's teacher's); for a student that point must also be released to the class.
+    const courseIds = listLearningCourses().map(c => c.courseId);
+    const okCourses = actor.kind === "teacher" ? await teacherAllowedCourses(actor.container, actor.user, courseIds, deps) : await classAllowedCourses(actor.container, classroom, courseIds, deps);
+    const allowed = t => (actor.kind === "teacher" || trainingAllowedForClass(classroom, t))
+      && trainingReleases(t).some(r => okCourses.includes(r.courseId) && (actor.kind === "teacher" || classCanSeeLearningModule(classroom, r.courseId, r.requiredModuleId)));
 
     // ── list ──
     if (!trainingId) {

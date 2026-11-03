@@ -12,6 +12,8 @@ const { AccessError, REVISION_ID_RE, buildRevision, writeRevision, readRevision 
 const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode");
 const { readAccessHistory, MAX_HISTORY } = require("../lib/access/history");
 const { resolveTeacherAccess } = require("../lib/access/resolver");
+const { listCatalog, writeCourseStatus, STATUSES } = require("../lib/access/course-access");
+const { findLearningCourse } = require("../lib/learning-materials-registry");
 
 // Tadris+ P3-A — the owner manages teacher capabilities. Route: /api/owner-access/{action?}   (owner session only)
 //
@@ -30,6 +32,9 @@ const { resolveTeacherAccess } = require("../lib/access/resolver");
 //   POST rollback      { accountId, revisionId, baseRevisionId?, reason? }   P4-B1
 //                      → restores an earlier revision ON THIS ACCOUNT'S HISTORY as a NEW revision (same preset / grants / denies,
 //                        parent = the current one), then the same compare-and-set as assign. History is never rewritten.
+//   GET catalog              P5-A → every course with its catalog status (published / archived)
+//   POST course-status { courseId, status: "published" | "archived" }   P5-A (owner decision D12) → for every teacher and student
+//   assign / rollback  P5-A: `courses` (null / absent = every published course; an array = only those) is part of the revision.
 //   POST mode          { mode: "legacy" | "observe" | "enforce" }. P3-B2: "enforce" only while every active or invited teacher has
 //                      access (readiness) — otherwise 409 ACCESS_NOT_READY naming them. Leaving enforce is always allowed.
 //
@@ -65,6 +70,9 @@ async function applyRevision(container, accountId, currentRevision, rev) {
   return { ok: true, next };
 }
 const accessOut = rev => ({ revisionId: rev.revisionId, preset: rev.preset, grants: rev.grants.length, denies: rev.denies.length });
+// Tadris+ P5-A — the course entitlement of a request: `courses` absent / null = every published course; an array = only those.
+const resourcesOf = courses => (courses === undefined || courses === null ? {} : { courses });
+const coursesOf = rev => (rev.resources && Array.isArray(rev.resources.courses) ? [...rev.resources.courses] : null);
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
@@ -104,13 +112,14 @@ async function handler(request, deps = {}, obs = null) {
       let access;
       try {
         const r = await resolveTeacherAccess({ am: "managed", sub: accountId, accessRevisionId: current }, { container });
-        access = { status: "ok", source: r.source, revisionId: r.revisionId, preset: r.preset, capabilities: r.capabilities };
+        access = { status: "ok", source: r.source, revisionId: r.revisionId, preset: r.preset, capabilities: r.capabilities, courses: r.courses };
       } catch (e) {
         if (!(e instanceof AccessError)) throw e;
         access = { status: "unavailable", code: e.code, revisionId: current, preset: null, capabilities: [] };
       }
       return reply(200, { ok: true, accountId, accountStatus: account.status, mode, enforced: mode === "enforce" || mode === "invalid", access });
     }
+    if (method === "GET" && action === "catalog") return reply(200, { ok: true, courses: await listCatalog(container) });   // Tadris+ P5-A
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
     if (denial) return denial;
@@ -135,6 +144,17 @@ async function handler(request, deps = {}, obs = null) {
       }
     }
 
+    // Tadris+ P5-A — the course catalog (owner decision D12): publish / archive a course for every teacher and student at once.
+    if (action === "course-status") {
+      const courseId = String(body.courseId || "");
+      if (!findLearningCourse(courseId) || findLearningCourse(courseId).courseId !== courseId) return reply(404, { ok: false, code: "COURSE_UNKNOWN", error: "المقرر غير موجود." });
+      const status = String(body.status || "");
+      if (!STATUSES.includes(status)) return reply(400, { ok: false, code: "COURSE_STATUS_INVALID", error: "الحالة غير صالحة." });
+      const r = await writeCourseStatus(container, courseId, status, actor, nowMs);
+      await audit(container, { actor, action: "owner.catalog.course-status", targetType: "course", targetId: courseId, targetLabel: findLearningCourse(courseId).title, details: { from: r.previous, to: r.status } });
+      return reply(200, { ok: true, courseId, status: r.status });
+    }
+
     if (action === "assign") {
       const accountId = String(body.accountId || "");
       if (!isTeacherAccountId(accountId)) return reply(400, { ok: false, code: "ACCOUNT_ID_INVALID", error: "معرّف الحساب غير صالح." });
@@ -145,7 +165,7 @@ async function handler(request, deps = {}, obs = null) {
       if (hasBase && (body.baseRevisionId || null) !== currentRevision) return CONFLICT(STALE_SCREEN);
       let built;
       try {
-        built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: body.presetId, presetVersion: body.presetVersion, grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies, reason: body.reason, createdBy: actor, nowMs });
+        built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: body.presetId, presetVersion: body.presetVersion, grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies, resources: resourcesOf(body.courses), reason: body.reason, createdBy: actor, nowMs });
       } catch (e) {
         if (e instanceof AccessError) return reply(400, { ok: false, code: e.code, error: REFUSAL[e.code] || REFUSAL.REVISION_MALFORMED, details: e.details });
         throw e;
@@ -155,9 +175,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!applied.ok) return applied.response;
       await audit(container, {
         actor, action: "owner.access.assigned", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
-        details: { revisionId: rev.revisionId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies }
+        details: { revisionId: rev.revisionId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies, courses: coursesOf(rev) }
       });
-      return reply(200, { ok: true, accountId, access: accessOut(rev), capabilities: built.capabilities });
+      return reply(200, { ok: true, accountId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev) });
     }
 
     if (action === "rollback") {
@@ -183,7 +203,7 @@ async function handler(request, deps = {}, obs = null) {
       const note = String(body.reason || "").trim();
       let built;
       try {
-        built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: target.preset.id, presetVersion: target.preset.version, grants: [...(target.grants || [])], denies: [...(target.denies || [])], reason: "استعادة " + targetId + (note ? " — " + note : ""), createdBy: actor, nowMs });
+        built = buildRevision({ accountId, parentRevisionId: currentRevision, presetId: target.preset.id, presetVersion: target.preset.version, grants: [...(target.grants || [])], denies: [...(target.denies || [])], resources: resourcesOf(coursesOf(target)), reason: "استعادة " + targetId + (note ? " — " + note : ""), createdBy: actor, nowMs });
       } catch (e) {
         if (e instanceof AccessError) return reply(409, { ok: false, code: "ROLLBACK_TARGET_INVALID", error: "لا يمكن استعادة هذه النسخة: محتواها غير صالح." });
         throw e;
@@ -193,9 +213,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!applied.ok) return applied.response;
       await audit(container, {
         actor, action: "owner.access.rolled-back", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
-        details: { revisionId: rev.revisionId, restoredFrom: targetId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies }
+        details: { revisionId: rev.revisionId, restoredFrom: targetId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies, courses: coursesOf(rev) }
       });
-      return reply(200, { ok: true, accountId, restoredFrom: targetId, access: accessOut(rev), capabilities: built.capabilities });
+      return reply(200, { ok: true, accountId, restoredFrom: targetId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev) });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });

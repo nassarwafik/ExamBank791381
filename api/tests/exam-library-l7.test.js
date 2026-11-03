@@ -1,3 +1,4 @@
+import { createMemoryContainer } from "./fixtures/memory-container.js";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "fs";
 import { createRequire } from "module";
@@ -116,7 +117,10 @@ describe("L.7 — GET /api/exam-library: ETag, private revalidation, 304 after t
 });
 
 describe("L.7 — Learning Practice computes the student form of a training once", () => {
-  const tdeps = { ...BUILDER_OK, container: {}, getContainer: () => ({}) };
+  // P5-A: a training is available through a course that may be used (the catalog status is read): a real, empty storage
+  // (every course published) instead of a placeholder object.
+  const tmem = createMemoryContainer();
+  const tdeps = { ...BUILDER_OK, container: tmem.container, getContainer: () => tmem.container };
   const getTraining = (id, deps = tdeps) => training({ method: "GET", headers: { get: () => null }, params: { trainingId: id } }, deps);
   it("the same frozen exam for every request, equal to sanitizing the item afresh, with no answer key", async () => {
     const a = await getTraining("T15"), b = await getTraining("T15");

@@ -3,6 +3,7 @@ const storage = require("../platform-storage");
 const { createOnly } = require("../identity/owner-store");
 const { isCapability, isOwnerOnly, unmetDependencies } = require("./capabilities");
 const { preset } = require("./presets");
+const { findLearningCourse } = require("../learning-materials-registry");
 
 // Tadris+ P3-A — access revisions (blueprint §6.3). A revision is IMMUTABLE: written once (create-only), never changed. A teacher
 // account points at its current revision (`accessRevisionId`); changing access = a NEW revision, then a compare-and-set on the
@@ -15,7 +16,9 @@ const { preset } = require("./presets");
 //
 // Validation (on save, and again whenever a stored revision is read — fail closed):
 //   the preset version exists; grants / denies are known capabilities, without duplicates and never both; no platform.* grant;
-//   the effective set meets every dependency; `resources` is reserved (entitlements arrive in P5) and must be empty.
+//   the effective set meets every dependency.
+//   Tadris+ P5-A — `resources.courses` (optional): the ONLY courses this teacher may use, as known course ids, without duplicates
+//   (owner decisions §19.13: an entitlement only NARROWS — absent = every published course). Any other key is refused.
 // A problem is REFUSED with its code — never corrected silently.
 
 const REVISION_PREFIX = "platform/access/revisions/";
@@ -54,8 +57,17 @@ function evaluateRevision(rev) {
   if (forbidden.length) return { ok: false, code: "PLATFORM_CAPABILITY_FORBIDDEN", details: { capabilities: forbidden } };
   const both = lists.grants.filter(c => lists.denies.includes(c));
   if (both.length) return { ok: false, code: "CAPABILITY_CONFLICT", details: { capabilities: both } };
-  if (rev.resources !== undefined && (typeof rev.resources !== "object" || rev.resources === null || Array.isArray(rev.resources) || Object.keys(rev.resources).length)) {
-    return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
+  let courses = null;
+  if (rev.resources !== undefined) {
+    const r = rev.resources;
+    if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => k !== "courses")) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
+    if (r.courses !== undefined) {
+      if (!Array.isArray(r.courses) || r.courses.length > MAX_LIST) return { ok: false, code: "REVISION_MALFORMED", details: { field: "resources.courses" } };
+      const unknown = r.courses.filter(c => typeof c !== "string" || !findLearningCourse(c) || findLearningCourse(c).courseId !== c);
+      if (unknown.length) return { ok: false, code: "COURSE_UNKNOWN", details: { courses: unknown.map(String).slice(0, 10) } };
+      if (new Set(r.courses).size !== r.courses.length) return { ok: false, code: "COURSE_DUPLICATE" };
+      courses = [...r.courses].sort();
+    }
   }
   const set = new Set(p.capabilities);
   for (const c of lists.grants) set.add(c);
@@ -63,14 +75,14 @@ function evaluateRevision(rev) {
   for (const c of [...set]) if (isOwnerOnly(c)) set.delete(c);      // defence in depth: platform.* never reaches a teacher
   const unmet = unmetDependencies(set);
   if (unmet.length) return { ok: false, code: "DEPENDENCY_UNMET", details: { unmet } };
-  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version } };
+  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses };
 }
 
 /** Builds and validates a new revision for `accountId` (not stored yet). Throws AccessError on a refusal. */
-function buildRevision({ accountId, parentRevisionId = null, presetId, presetVersion, grants = [], denies = [], reason = "", createdBy, nowMs = Date.now() }) {
+function buildRevision({ accountId, parentRevisionId = null, presetId, presetVersion, grants = [], denies = [], resources = {}, reason = "", createdBy, nowMs = Date.now() }) {
   const rev = {
     schemaVersion: 1, revisionId: newRevisionId(nowMs), accountId: String(accountId), parentRevisionId: parentRevisionId || null,
-    preset: { id: String(presetId || ""), version: Number(presetVersion) }, grants, denies, resources: {},
+    preset: { id: String(presetId || ""), version: Number(presetVersion) }, grants, denies, resources: resources && typeof resources === "object" && !Array.isArray(resources) && resources.courses !== undefined ? { courses: resources.courses } : resources,
     reason: String(reason || "").trim().slice(0, MAX_REASON), createdAt: new Date(nowMs).toISOString(), createdBy: String(createdBy || "")
   };
   const verdict = evaluateRevision(rev);
@@ -105,7 +117,7 @@ async function readRevision(container, revisionId, accountId, deps = {}) {
   if (doc.accountId !== accountId) throw new AccessError("REVISION_INVALID", { reason: "account" });
   const verdict = evaluateRevision(doc);
   if (!verdict.ok) throw new AccessError("REVISION_INVALID", { reason: verdict.code });
-  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset });
+  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null });
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(revisionId, entry);
   return entry;

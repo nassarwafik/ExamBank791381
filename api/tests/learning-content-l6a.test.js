@@ -17,7 +17,8 @@ const room = (id, visible, extra = {}) => ({ classId: id, name: "صف", active: 
 const seed = (visible = [M01], extra = {}) => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", visible), ...extra });
 const noTeacher = () => ({ ok: false, response: { status: 401, jsonBody: { ok: false } } });
 const asStudent = (ctx, id = "u1") => ({ requireBuilderAuth: noTeacher, requireStudentAuth: () => ({ ok: true, user: { sub: id, sv: 1, role: "student", classId: "STALE" } }), container: ctx.container, getContainer: () => ctx.container });
-const asTeacher = () => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1", am: "multi-user" } }) });
+// P5-A: the course decision reads the catalog, so the teacher stub carries a storage container (empty = every course published).
+const asTeacher = (mem = createMemoryContainer()) => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1", am: "multi-user" } }), container: mem.container, getContainer: () => mem.container });
 const get = (deps, moduleId = M01, courseId = C, headers = {}) => handler({ method: "GET", url: "https://x", headers: { get: k => headers[k.toLowerCase()] ?? null }, params: { courseId, moduleId } }, deps);
 
 describe("GET /api/learning-content/{courseId}/{moduleId}", () => {
