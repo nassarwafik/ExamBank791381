@@ -300,7 +300,7 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     // Phase 21G.0 — every action on an existing class acts only on the teacher's own (or a shared pre-tenancy) class; another
-    // teacher's class is reported exactly like a missing one. ownerId never changes after creation, so one check suffices.
+    // teacher's class is reported exactly like a missing one. (ownerId changes only through the owner's class transfer, P5-B3a.)
     if (action !== "create" && tenant) {
       const targetId = String(body?.classId || "").trim();
       const target = targetId ? await dl(container, CLASS_PREFIX + targetId + ".json") : null;

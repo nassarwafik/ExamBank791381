@@ -16,6 +16,7 @@ const {
   addStudentToClass, importStudentsToClass, studentErrorReply, normalizeBulkStudents, buildImportPreview, MAX_IMPORT_ROWS
 } = require("./manage-students");   // Tadris+ P5-B4
 const { recordAuditEvent } = require("../lib/audit-log");
+const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON } = require("../lib/teacher-transfer");   // Tadris+ P5-B3a
 
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The owner creates and manages a teacher's classes.
 // Route: /api/owner-classes/{action?}   (owner session only)
@@ -27,6 +28,9 @@ const { recordAuditEvent } = require("../lib/audit-log");
 //   POST add-student      { classId, firstName, familyName, identityNumber, password? }   (P5-B4)
 //   POST preview-import   { classId, students: [...] }      → the SAME server preview as the teacher's (validation only)
 //   POST import-students  { classId, students: [...], importId? } → the SAME import as the teacher's (credentials shown ONCE)
+//   GET  transfer-preview?classId=&toAccountId=          (P5-B3a) what moving the WHOLE class to that teacher would move
+//   POST transfer        { classId, toAccountId, expectedFromAccountId, reason? }  → the class and every one of its students move
+//                          to that teacher, with the class's whole history (owner decision §19.21); resumable; one ledger record
 //
 // A class is created EXACTLY as the teacher's own «إنشاء الصف» creates it (same document, same request-key idempotency), stamped
 // with the teacher as its owner; edit and lifecycle are the SAME shared functions as the teacher's route (same CAS write, archived
@@ -86,6 +90,14 @@ async function handler(request, deps = {}, obs = null) {
       classes.sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")) || String(a.name || "").localeCompare(String(b.name || ""), "ar"));
       return reply(200, { ok: true, accountId, classes: classes.map(ownerClassView) });
     }
+    if (method === "GET" && action === "transfer-preview") {
+      const classId = queryParam(request, "classId"), toAccountId = queryParam(request, "toAccountId");
+      const current = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
+      if (!current || String(current.classId || classId) !== classId || !(await teacherOf(container, String(current.ownerId || ""), deps))) return CLASS_NOT_FOUND();
+      if (!(await teacherOf(container, toAccountId, deps))) return TEACHER_NOT_FOUND();
+      if (toAccountId === current.ownerId) return bad("SAME_TEACHER", "اختر معلمًا آخر غير المعلم الحالي.");
+      return reply(200, { ok: true, preview: await previewClassTransfer(container, { ...current, classId }, toAccountId, deps) });
+    }
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
     if (denial) return denial;
@@ -126,6 +138,25 @@ async function handler(request, deps = {}, obs = null) {
         ? await updateClassLabels(container, classId, body, { mut, record })
         : await changeClassLifecycle(container, classId, LIFECYCLE[action], { mut, ls, record, actor });
       return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+    }
+
+    if (action === "transfer") {
+      const classId = String(body.classId || "").trim();
+      const toAccountId = String(body.toAccountId || ""), from = String(body.expectedFromAccountId || "");
+      if (!isSafeId(classId)) return CLASS_NOT_FOUND();
+      if (!(await teacherOf(container, toAccountId, deps))) return TEACHER_NOT_FOUND();
+      if (!(await teacherOf(container, from, deps))) return reply(409, { ok: false, code: "TRANSFER_STALE", error: "تغيّر مالك الصف منذ المعاينة. أعد فتح النقل." });
+      if (typeof body.reason === "string" && body.reason.length > MAX_REASON) return bad("REASON_TOO_LONG", "سبب النقل طويل جدًا.");
+      let result;
+      try {
+        result = await transferClass(container, { classId, from, to: toAccountId, actor, reason: body.reason, nowMs }, { ...deps, mutateJsonWithRetry: mut, listJson: deps.listJson, obs });
+      } catch (e) {
+        if (e instanceof TransferRefusal) return reply(e.status, { ok: false, code: e.code, error: e.message });
+        throw e;
+      }
+      const { ledger } = result;
+      await audit(container, { actor, action: "owner.class.transferred", targetType: "class", targetId: classId, targetLabel: classId, details: { from, to: toAccountId, transferId: ledger.transferId, moved: ledger.students.moved, failed: ledger.students.failed, resumed: ledger.resumed } });
+      return reply(200, { ok: true, ledger });
     }
 
     if (action === "add-student" || action === "preview-import" || action === "import-students") {

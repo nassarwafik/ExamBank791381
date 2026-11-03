@@ -82,7 +82,8 @@ async function handler(request,deps={},obs=null){
   const action=String(b.action||"create").toLowerCase();
   const capabilityDenial=await requireCapability(auth,"manage-assignments.js",action,deps,obs);if(capabilityDenial)return capabilityDenial;   // Tadris+ P3-B
   // Phase 21G.0 — an action on an existing assignment acts only on one of the teacher's own classes; another teacher's assignment
-  // is reported exactly like a missing one. (The class of an assignment never changes, so one check suffices.)
+  // is reported exactly like a missing one. (The class of an assignment never changes; the class's owner may — P5-B3a — and then
+  // its assignments follow the class to the new teacher.)
   if(action!=="create"&&tenant&&b.assignmentId){
    const target=await dl(c,PREFIX+String(b.assignmentId)+".json");
    if(target&&!(await classAccessible(n=>dl(c,n),target.classId,tenant)))return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
