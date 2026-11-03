@@ -169,7 +169,9 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   async function openLibraryCopy(item: LibraryCatalogItem) {
     setBusy(true); setActionError("");
     try {
-      const r = await api<{ item: { examSnapshot: { questions?: unknown[]; title?: string } } }>("/api/exam-library/" + encodeURIComponent(item.libraryItemId));
+      const r = await api<{ item: { examSnapshot: { questions?: unknown[]; title?: string }; answerKeys?: boolean } }>("/api/exam-library/" + encodeURIComponent(item.libraryItemId));
+      // Tadris+ P6-A — an item served WITHOUT its answer keys (no examLibrary.item.viewKeys) is never copied into the builder.
+      if (r.item?.answerKeys === false) { setActionError("نسخ امتحان المكتبة إلى الباني يحتاج صلاحية «رؤية مفاتيح الإجابة». تواصل مع إدارة المنصة."); return; }
       onCopyLibraryExamToBuilder(r.item?.examSnapshot || null, item.title);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "تعذر فتح عنصر المكتبة.");

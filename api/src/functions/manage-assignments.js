@@ -24,6 +24,9 @@ const {releaseMode,normalizeReleaseMode}=require("../lib/results-release");
 const {latePolicyOf,parseLatePolicyInput}=require("../lib/late-policy");   // D5 (item 10)
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
+// Tadris+ P6-C (owner decision D8) — a library assignment is built from the SERVER's frozen library item (never from the browser).
+const {libraryItemEntry,VALID_ID:LIBRARY_ID}=require("../lib/exam-library-store");
+const {authorize}=require("../lib/access/authorize");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
 // publishedRevisionId → revision, fail closed); the browser's exam body is never the source for a governed exam. Legacy
 // (non-governed) exams keep the historical behaviour byte-for-byte: no governance blob is read into existence, the posted
@@ -86,8 +89,22 @@ async function handler(request,deps={},obs=null){
   if(action==="create"){
    const classId=String(b.classId||"").trim(),title=String(b.title||"").trim(),instructions=String(b.instructions||"").trim();let exam=cleanExam(b.examSnapshot),source=null;
    if(!classId||!title)return {status:400,jsonBody:{ok:false,error:"الصف وعنوان الواجب مطلوبان."}};
+   // Tadris+ P6-C — `libraryRef: { itemId }` (owner decision D8): the snapshot is the SERVER's frozen library item, answer keys
+   // included, so a teacher never needs (or sees) the keys to assign it and grading is exactly what it was. Any examSnapshot the
+   // browser sends alongside is ignored. Without it, a teacher who may only assign READY assignments (assignments.ready.assign,
+   // no assignments.assignment.create — evaluated like every capability: only while enforcing) cannot send a snapshot of their own.
+   if(b.libraryRef!==undefined&&b.libraryRef!==null){
+    const itemId=String(b.libraryRef&&b.libraryRef.itemId||"").trim();
+    const entry=LIBRARY_ID.test(itemId)?libraryItemEntry(itemId):null;
+    if(!entry||!entry.value||!entry.value.examSnapshot)return {status:404,jsonBody:{ok:false,code:"LIBRARY_ITEM_NOT_FOUND",error:"العنصر غير موجود في المكتبة."}};
+    exam=cleanExam(entry.value.examSnapshot);source={kind:"library",itemId,etag:String(entry.etag||"")};
+   }else if(auth.user&&auth.user.am==="managed"){   // like requireCapability: only a managed session is evaluated
+    const own=await authorize(auth.user,"assignments.assignment.create",{...deps,container:c},obs);
+    if(!own.allowed&&own.decision!=="unavailable")return {status:403,headers:{"Cache-Control":"no-store"},jsonBody:{ok:false,code:"READY_ASSIGNMENTS_ONLY",error:"حسابك يسمح بإسناد الواجبات الجاهزة من المكتبة فقط."}};
+    if(!own.allowed)return own.response;
+   }
    // Phase 14A — governed exam ⇒ the server's published revision is the ONLY snapshot source (P15/P16/P17).
-   if(exam.examId){
+   if(!source&&exam.examId){
     try{
      const gov=await (deps.resolveGovernedExamSource||resolveGovernedExamSource)(c,String(exam.examId),{downloadJsonOrNull:dl});
      if(gov.governed){exam=cleanExam(gov.revision.exam);source={kind:"governed-revision",examId:String(gov.revision.examId),revisionId:String(gov.revision.revisionId),revisionNumber:Number(gov.revision.revisionNumber),contentHash:String(gov.revision.contentHash)}}
