@@ -99,10 +99,26 @@ describe("UX-R17c — dead CSS", () => {
 
   it("every custom property a stylesheet defines is read somewhere (the dark rail's accent and 23 unused aliases are gone)", () => {
     const all = SOURCES.map(s => s.text).join("\n");
+    // Reads = occurrences of the name that end a [\w-] run (what `name(?![\w-])` matched) minus those followed by `\s*:` (what
+    // `name\s*:` matched, its definitions). Counted for every name in ONE pass over the sources: the name is a suffix, starting at a
+    // "--", of the run it ends. The former loop built two regexes per defined property and scanned all of src with each (~700 scans of
+    // ~11 MB), which ran at ~95% of the 5 s test timeout on its own and timed out under load.
+    const occurrences = new Map<string, number>(), definitions = new Map<string, number>();
+    const add = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) || 0) + 1);
+    const followedByColon = /\s*:/y;
+    for (const m of all.matchAll(/[\w-]+/g)) {
+      const run = m[0];
+      if (!run.includes("--")) continue;
+      followedByColon.lastIndex = m.index! + run.length;
+      const isDefinition = followedByColon.test(all);
+      for (let i = run.indexOf("--"); i !== -1; i = run.indexOf("--", i + 1)) {
+        add(occurrences, run.slice(i));
+        if (isDefinition) add(definitions, run.slice(i));
+      }
+    }
     const unread: string[] = [];
     for (const name of new Set(CSS.flatMap(s => [...s.text.matchAll(/(?:^|[;{\s])(--[\w-]+)\s*:/g)].map(m => m[1])))) {
-      const esc = name.replace(/[-]/g, "\\-");
-      const reads = (all.match(new RegExp(esc + "(?![\\w-])", "g")) || []).length - (all.match(new RegExp(esc + "\\s*:", "g")) || []).length;
+      const reads = (occurrences.get(name) || 0) - (definitions.get(name) || 0);
       if (reads <= 0) unread.push(name);
     }
     expect(unread).toEqual([]);
