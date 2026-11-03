@@ -14,6 +14,25 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 // `private, no-cache` — a teacher's browser keeps the catalog / an item and revalidates it, and a 304 is answered only after
 // the builder check passed. The library carries answer keys, so it is never cacheable by a shared cache.
 const { VALID_ID, libraryCatalogEntry, libraryItemEntry } = require("../lib/exam-library-store");
+const { authorize } = require("../lib/access/authorize");
+const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
+const { getContainer } = require("../lib/platform-storage");
+
+// Tadris+ P6-A (risk S2, owner decision D8) — the library carries ANSWER KEYS. The catalog needs examLibrary.item.view; one item
+// needs examLibrary.item.preview or examLibrary.item.viewKeys; the KEYS are sent only with examLibrary.item.viewKeys — otherwise
+// the item is the same exam sanitized exactly like a student's view (no correct answers, hints or explanations), marked
+// `answerKeys: false`, with its own ETag (a browser never mixes the two). Evaluated like every capability: a managed session while
+// enforcing (legacy-full identities and the other modes: unchanged). Assigning a library item never needs the keys: the server
+// builds the assignment from its own frozen copy (manage-assignments `libraryRef`).
+const keylessCache = new Map();
+function keylessEntry(entry) {
+  const hit = keylessCache.get(entry.etag);
+  if (hit) return hit;
+  const value = Object.freeze({ ...entry.value, examSnapshot: sanitizeExamForStudent(entry.value.examSnapshot), answerKeys: false });
+  const out = Object.freeze({ value, etag: String(entry.etag).replace(/"$/, "-nokeys\"") });
+  keylessCache.set(entry.etag, out);
+  return out;
+}
 
 const CACHE_HEADERS = { "Cache-Control": "private, no-cache", Vary: "Authorization, x-builder-token" };
 const notModified = (request, etag) => {
@@ -32,8 +51,15 @@ async function handler(request, deps = {}, obs = null) {
     // Small metadata-only catalog (no examSnapshot) when no id is given; the frontend decides how to present each item's
     // publishable flag. Full item JSON is fetched separately only when one is selected.
     if (id && !VALID_ID.test(id)) return { status: 400, jsonBody: { ok: false, error: "معرّف غير صالح." } };
-    const entry = id ? libraryItemEntry(id) : libraryCatalogEntry();
+    let entry = id ? libraryItemEntry(id) : libraryCatalogEntry();
     if (!entry) return { status: 404, jsonBody: { ok: false, error: "العنصر غير موجود في المكتبة." } };
+    if (id && auth.user && auth.user.am === "managed") {
+      const authDeps = { ...deps, container: deps.container || (deps.getContainer || getContainer)() };
+      const item = await authorize(auth.user, ["examLibrary.item.preview", "examLibrary.item.viewKeys"], authDeps, obs);
+      if (!item.allowed) return item.response;
+      const keys = await authorize(auth.user, "examLibrary.item.viewKeys", authDeps, obs);
+      if (!keys.allowed) entry = keylessEntry(entry);
+    }
     const headers = { ...CACHE_HEADERS, ETag: entry.etag };
     if (notModified(request, entry.etag)) return { status: 304, headers };
     return { status: 200, headers, jsonBody: id ? { ok: true, item: entry.value } : { ok: true, catalog: entry.value } };

@@ -27,6 +27,7 @@ let calls: Call[] = [];
 let bankResponder: (() => Promise<Response>) | null = null;
 let mutationFail = false;
 const json = (data: unknown, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => data } as Response);
+let libraryKeyless = false;   // Tadris+ P6-A — the server sent the item WITHOUT its answer keys
 function routed(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = String(input); const method = (init?.method || "GET").toUpperCase();
   let body: Record<string, unknown> = {}; if (init?.body) { try { body = JSON.parse(String(init.body)); } catch { /* ignore */ } }
@@ -42,7 +43,7 @@ function routed(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   if (url === "/api/saved-exams" && method === "GET") return json({ ok: true, exams: EXAMS });
   if (url === "/api/saved-exams") return mutationFail ? json({ ok: false, error: "تعذر" }, 500) : json({ ok: true, deleted: true });
   if (url === "/api/exam-library") return json({ ok: true, catalog: CATALOG });
-  if (url.startsWith("/api/exam-library/")) return json({ ok: true, item: { examSnapshot: { title: "شبكات VLAN", questions: [{ examQuestionId: "lq1", text: "س", marks: 10 }] } } });
+  if (url.startsWith("/api/exam-library/")) return json({ ok: true, item: { examSnapshot: { title: "شبكات VLAN", questions: [{ examQuestionId: "lq1", text: "س", marks: 10 }] }, ...(libraryKeyless ? { answerKeys: false } : {}) } });
   return json({ ok: true });
 }
 const gets = (path: string) => calls.filter(c => c.method === "GET" && c.url === path).length;
@@ -50,7 +51,7 @@ const posts = () => calls.filter(c => c.method === "POST");
 let props: { onOpenBuilder: ReturnType<typeof vi.fn<() => void>>; onOpenImport: ReturnType<typeof vi.fn<() => void>>; onOpenSavedExam: ReturnType<typeof vi.fn<(item: unknown) => void>>; onCopyLibraryExamToBuilder: ReturnType<typeof vi.fn<(snapshot: unknown, title: string) => void>> };
 
 beforeEach(() => {
-  calls = []; bankResponder = null; mutationFail = false;
+  calls = []; bankResponder = null; mutationFail = false; libraryKeyless = false;
   globalThis.fetch = vi.fn(routed) as unknown as typeof fetch;
   props = { onOpenBuilder: vi.fn<() => void>(), onOpenImport: vi.fn<() => void>(), onOpenSavedExam: vi.fn<(item: unknown) => void>(), onCopyLibraryExamToBuilder: vi.fn<(snapshot: unknown, title: string) => void>() };
 });
@@ -397,6 +398,15 @@ describe("saved exams and official library", () => {
     expect(props.onCopyLibraryExamToBuilder.mock.calls[0][1]).toBe("شبكات VLAN");
     expect(calls.filter(c => c.url.startsWith("/api/exam-library/") && c.method === "GET")).toHaveLength(1);
     expect(posts()).toHaveLength(0);
+  });
+  it("P6-A — an item sent WITHOUT its answer keys is never opened in the builder (a clear message instead)", async () => {
+    libraryKeyless = true;
+    await mount();
+    openTab("المكتبة الرسمية");
+    await screen.findByText("شبكات VLAN");
+    fireEvent.click(within(screen.getByText("شبكات VLAN").closest("li") as HTMLElement).getByRole("button", { name: "فتح نسخة في الباني" }));
+    expect(await screen.findByText(/يحتاج صلاحية «رؤية مفاتيح الإجابة»/)).toBeTruthy();
+    expect(props.onCopyLibraryExamToBuilder).not.toHaveBeenCalled();
   });
   it("a failed bank load shows an alert with retry and no table; retry issues one more load", async () => {
     let fail = true;

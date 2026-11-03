@@ -93,7 +93,9 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
     if (!onCopyLibraryExamToBuilder || copyBusyId) return;
     setCopyBusyId(it.libraryItemId); setError(""); setNotice("");
     try {
-      const r = await api<{ item: { examSnapshot: Exam } }>("/api/exam-library/" + encodeURIComponent(it.libraryItemId));
+      const r = await api<{ item: { examSnapshot: Exam; answerKeys?: boolean } }>("/api/exam-library/" + encodeURIComponent(it.libraryItemId));
+      // Tadris+ P6-A — an item served WITHOUT its answer keys is never copied into the builder (it would lose its answers).
+      if (r.item?.answerKeys === false) { setError("نسخ امتحان المكتبة إلى الباني يحتاج صلاحية «رؤية مفاتيح الإجابة». تواصل مع إدارة المنصة."); return; }
       if (r.item?.examSnapshot) onCopyLibraryExamToBuilder(r.item.examSnapshot, it.title);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر نسخ العنصر إلى الباني."); } finally { setCopyBusyId(""); }
   }

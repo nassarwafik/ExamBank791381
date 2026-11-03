@@ -127,7 +127,10 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     const f = composer.fields, sourceExam = composer.source.sourceExam, ids = [...f.classIds];
     if (busy || !ids.length || !f.title.trim() || !sourceExam || !examHasQuestions(sourceExam) || windowBlocks(assignmentWindowIssues(f.openAt, f.dueAt))) return;
     const nameOf = (id: string) => active.find(c => c.classId === id)?.name || id;
-    const body = (classId: string) => JSON.stringify({ action: "create", classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, ...(f.latePolicy && f.dueAt ? { latePolicy: f.latePolicy } : {}), publish: f.publish, examSnapshot: sourceExam });
+    // Tadris+ P6-C (owner decision D8) — a library item is assigned BY REFERENCE: the server builds the snapshot from its own frozen
+    // copy (with the answer keys a preview-only teacher never receives); any other source sends the exam as before.
+    const libraryOrSnapshot = composer.source.sourceMode === "library" && composer.library.librarySelectedId ? { libraryRef: { itemId: composer.library.librarySelectedId } } : { examSnapshot: sourceExam };
+    const body = (classId: string) => JSON.stringify({ action: "create", classId, title: f.title.trim(), instructions: f.instructions.trim(), openAt: f.openAt ? new Date(f.openAt).toISOString() : "", dueAt: f.dueAt ? new Date(f.dueAt).toISOString() : "", maxAttempts: f.maxAttempts, durationMinutes: f.durationMinutes, attemptPolicy: f.attemptPolicy, resultsRelease: f.resultsRelease, ...(f.latePolicy && f.dueAt ? { latePolicy: f.latePolicy } : {}), publish: f.publish, ...libraryOrSnapshot });
     setBusy(true); setError(""); setNotice("");
     const created: Item[] = [], failed: { id: string; error: string }[] = [];
     try {
