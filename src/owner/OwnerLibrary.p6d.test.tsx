@@ -122,12 +122,18 @@ describe("P6-D the teacher page's «الامتحانات»", () => {
   it("adding and removing exams sends only what changed", async () => {
     routes["POST /api/owner-library/set-teacher"] = c => ({ status: 200, body: { ok: true, accountId: SARA, added: c.body?.include, removed: c.body?.exclude } });
     const group = await openTab();
+    // adding while an exam she already has (T05) stays ticked: only the two new ones are sent
     fireEvent.click(within(group).getByRole("checkbox", { name: /عناوين IP/ }));
     fireEvent.click(within(group).getByRole("checkbox", { name: /امتحان جديد/ }));
-    fireEvent.click(within(group).getByRole("checkbox", { name: /أنظمة العد/ }));
-    expect(screen.getByText("تغييرات غير محفوظة: +2 / −1")).toBeTruthy();
+    expect(screen.getByText("تغييرات غير محفوظة: +2 / −0")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
-    await screen.findByText("حُفظ بنك المعلم: أُضيف 2، وأُزيل 1.");
-    expect(posted("/api/owner-library/set-teacher")[0].body).toEqual({ accountId: SARA, include: ["T07", "T31"], exclude: ["T05"] });
+    await screen.findByText("حُفظ بنك المعلم: أُضيف 2، وأُزيل 0.");
+    expect(posted("/api/owner-library/set-teacher")[0].body).toEqual({ accountId: SARA, include: ["T07", "T31"], exclude: [] });
+    // then removing one: only the removal is sent
+    const again = await screen.findByRole("group", { name: "امتحانات المكتبة" });
+    fireEvent.click(within(again).getByRole("checkbox", { name: /أنظمة العد/ }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
+    await screen.findByText("حُفظ بنك المعلم: أُضيف 0، وأُزيل 1.");
+    expect(posted("/api/owner-library/set-teacher")[1].body).toEqual({ accountId: SARA, include: [], exclude: ["T05"] });
   });
 });
