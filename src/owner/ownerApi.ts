@@ -260,3 +260,14 @@ export const ownerTransferApi = {
   transfer: (token: string, classId: string, toAccountId: string, expectedFromAccountId: string, reason: string) =>
     call<{ ok: true; ledger: ClassTransferLedger }>("/api/owner-classes/transfer", { method: "POST", token, body: { classId, toAccountId, expectedFromAccountId, reason } })
 };
+
+// Tadris+ P5-B3b — one student into another teacher's class (/api/owner-classes).
+export type OwnerRosterStudent = { userId: string; displayName: string; identityNumber: string; active: boolean; archived: boolean };
+export type StudentTransferPreview = { userId: string; displayName: string; archived: boolean; fromClassId: string; fromClassName: string; from: string; toClassId: string; toClassName: string; to: string; pendingGrading: number };
+export const ownerStudentTransferApi = {
+  roster: (token: string, classId: string) => call<{ ok: true; classId: string; students: OwnerRosterStudent[] }>("/api/owner-classes/students?classId=" + encodeURIComponent(classId), { token }),
+  preview: (token: string, userId: string, toClassId: string) =>
+    call<{ ok: true; preview: StudentTransferPreview }>("/api/owner-classes/student-transfer-preview?userId=" + encodeURIComponent(userId) + "&toClassId=" + encodeURIComponent(toClassId), { token }),
+  transfer: (token: string, userId: string, fromClassId: string, toClassId: string, reason: string) =>
+    call<{ ok: true; ledger: { transferId: string; complete: boolean } }>("/api/owner-classes/student-transfer", { method: "POST", token, body: { userId, fromClassId, toClassId, reason } })
+};

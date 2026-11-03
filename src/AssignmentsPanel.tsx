@@ -8,6 +8,7 @@ import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetail
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
+import MovedStudents from "./assignments/MovedStudents";   // Tadris+ P5-B3b
 import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog,BulkDeadlineDialog} from "./assignments/GradebookRowEditors";
 import {studentsCount} from "./assignments/assignmentPage";
 import {useAssignmentsController,type AssignmentsControllerProps} from "./assignments/useAssignmentsController";
@@ -79,6 +80,7 @@ export default function AssignmentsPanel(props:Props){
      onExportCsv={()=>{if(d.item)downloadCsv(exportFilename("TadrisPlus-سجل-العلامات",d.item.title),gradebookCsvRows(d.item,g.results,rowGrading))}}
      onExportXlsx={()=>{if(d.item)downloadXlsx(exportFilename("TadrisPlus-سجل-العلامات",d.item.title).replace(/\.csv$/,""),gradebookCsvRows(d.item,g.results,rowGrading),{sheetName:"سجل العلامات",rtl:true,boldRows:[GRADEBOOK_HEADER_ROW]})}}
      onPrint={()=>{if(d.item&&!printReport(gradebookPrintReport(d.item,g.results,rowGrading,d.stats)))c.reportError("تعذر فتح نافذة الطباعة في هذا المتصفح.")}}/>
+    <MovedStudents rows={g.moved} fmt={fmt}/>
    </AssignmentDetail>}
   </div>
 

@@ -19,7 +19,7 @@ import { reviewNav, type ReviewTarget } from "./reviewNav";
 import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
 import { normalizeLatePolicy, type LatePolicy } from "./latePolicy";
 import type { AssignmentDrill } from "./drillTarget";
-import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
+import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, MovedStudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
 
 export type AssignmentsControllerProps = {
   token: string;
@@ -42,7 +42,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const current = currentExam && typeof currentExam === "object" ? currentExam as Exam : null;
   const api = assignmentsApi(token);
   const [items, setItems] = useState<Item[]>([]), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
-  const [resultsFor, setResultsFor] = useState<Item | null>(null), [results, setResults] = useState<StudentResult[]>([]), [stats, setStats] = useState<Stats | null>(null), [review, setReview] = useState<{ studentId: string; attemptNumber: number } | null>(null);
+  const [resultsFor, setResultsFor] = useState<Item | null>(null), [results, setResults] = useState<StudentResult[]>([]), [stats, setStats] = useState<Stats | null>(null), [movedStudents, setMovedStudents] = useState<MovedStudentResult[]>([]), [review, setReview] = useState<{ studentId: string; attemptNumber: number } | null>(null);
   const [detailsFor, setDetailsFor] = useState<Item | null>(null);
   const [deadlineFor, setDeadlineFor] = useState<string | null>(null), [deadlineValue, setDeadlineValue] = useState("");
   const [reopenFor, setReopenFor] = useState<string | null>(null), [reopenValue, setReopenValue] = useState("");
@@ -225,11 +225,11 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     resultsBusy.current = true;
     setBusy(true); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null);
     try {
-      const r = await api<{ students: StudentResult[]; stats: Stats; codingSummary?: CodingGradingStatus; codingEvidenceTotals?: CodingEvidenceTotals }>("/api/assignment-results?assignmentId=" + encodeURIComponent(item.assignmentId));
+      const r = await api<{ students: StudentResult[]; movedStudents?: MovedStudentResult[]; stats: Stats; codingSummary?: CodingGradingStatus; codingEvidenceTotals?: CodingEvidenceTotals }>("/api/assignment-results?assignmentId=" + encodeURIComponent(item.assignmentId));
       if (seq !== resultsSeq.current) return;
       if (!matchesMasterScope(item, scopeRef.current)) return;
       const students = r.students || [];
-      setResultsFor(item); setResults(students); setStats(r.stats || null); setCodingSummary(r.codingSummary || null); setCodingTotals(r.codingEvidenceTotals || null);
+      setResultsFor(item); setResults(students); setMovedStudents(Array.isArray(r.movedStudents) ? r.movedStudents : []); setStats(r.stats || null); setCodingSummary(r.codingSummary || null); setCodingTotals(r.codingEvidenceTotals || null);
       if (drillTarget) applyDrillView(drillTarget, item, students);
       // A reload while the analysis section is shown refreshes it too (the reload cleared it above).
       if (trigger === undefined && pageTabRef.current === "analysis") void loadItemAnalysis(item);
@@ -281,7 +281,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // opener is ever focused.
   function clearDetail({ restoreFocus }: { restoreFocus: boolean }) {
     setPageTab("students"); stopBulk(); clearSelection(); setBulkDeadlineOpen(false);
-    setResultsFor(null); setResults([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setGbSort("name"); setDrillFocus(null);
+    setResultsFor(null); setResults([]); setMovedStudents([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setGbSort("name"); setDrillFocus(null);
     const el = detailOpenerRef.current; detailOpenerRef.current = null;
     // Phase 21G.3 — the opener sits in the list, which is hidden while the page is open: focus it once the list is shown again.
     if (restoreFocus && el) openerFocusPending.current = el;
@@ -472,7 +472,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
     list: { visible, hasAnyInScope: scoped.length > 0, selectedId: mode === "list" && resultsFor ? resultsFor.assignmentId : "", open: (item: Item, trigger: HTMLElement | null) => void loadResults(item, trigger), publish: (item: Item) => void action(item, { action: "setStatus", status: "published" }), unpublish: (item: Item) => void action(item, { action: "setStatus", status: "draft" }), editAttempts: setAttemptsFor, editTiming: setTimingFor, editDetails: setDetailsFor, archive: (item: Item) => void archiveItem(item), restore: (item: Item) => void restoreItem(item), purge: (item: Item) => void openPurge(item), setLatePolicy: (item: Item, value: LatePolicy | null) => void setLatePolicy(item, value), setResultsRelease: (item: Item, mode: ResultsRelease) => void setResultsRelease(item, mode), releaseResults: (item: Item, released: boolean) => void releaseResults(item, released) },
     composer: { ...composer, close: closeComposer, create: () => void create(), canCreate },
     detail: { item: resultsFor, stats, close: closeDetail, analysis, analysisBusy, analysisSort, setAnalysisSort, tab: pageTab, selectTab: selectPageTab, sortedQuestions, analysisSummary, reload: () => void loadResults(resultsFor) },
-    gradebook: { rows: visibleResults, results, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s), lateWaiver: (s: StudentResult, waived: boolean) => void lateWaiver(s, waived),
+    gradebook: { rows: visibleResults, results, moved: movedStudents, focusStudentId: drillFocus && resultsFor && drillFocus.assignmentId === resultsFor.assignmentId ? drillFocus.studentId : undefined, search: gbSearch, setSearch: (v: string) => { setGbSearch(v); clearSelection(); }, filter: gbFilter, setFilter: (v: GradebookFilter) => { setGbFilter(v); clearSelection(); }, sort: gbSort, setSort: setGbSort, codingSummary, codingTotals, bulkCodingRetry: () => void bulkCodingRetry(), review: openReview, grant: (s: StudentResult) => void grantAttempt(s), reopen: openReopen, extend: openExtend, deadline: openDeadline, endAttempt: (s: StudentResult) => void endAttempt(s), lateWaiver: (s: StudentResult, waived: boolean) => void lateWaiver(s, waived),
       selected, toggleSelected: (id: string) => setSelected(x => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
       toggleAllSelected: (ids: string[], on: boolean) => setSelected(x => { const n = new Set(x); for (const id of ids) { if (on) n.add(id); else n.delete(id); } return n; }),
       clearSelection, bulkGrant: () => void bulkGrant(), openBulkDeadline,

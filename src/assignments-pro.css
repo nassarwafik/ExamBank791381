@@ -58,6 +58,11 @@
 /* ---------- Gradebook ---------- */
 .eb-gradebook{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding-top:var(--eb-space-3); border-top:1px solid var(--eb-line); }
 .eb-gradebook-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+/* Tadris+ P5-B3b — students moved to another teacher: a read-only archive under the gradebook. */
+.eb-gradebook-moved{ border:1px dashed var(--eb-line); border-radius:var(--eb-r-lg); padding:var(--eb-space-3); color:var(--eb-muted); }
+.eb-gradebook-moved h4{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-14); color:var(--eb-text-heading); }
+.eb-gradebook-moved ul{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-gradebook-moved-badge{ border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); padding:0 var(--eb-space-2); font-size:var(--eb-fs-12); }
 .eb-gradebook-controls .eb-search-field{ flex:1 1 200px; }
 .eb-chip-group{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 .gradebook-chip,.library-cat-chip{
