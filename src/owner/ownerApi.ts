@@ -233,3 +233,17 @@ export const ownerLibraryApi = {
   setTeacher: (token: string, accountId: string, include: string[], exclude: string[]) =>
     call<{ ok: true; accountId: string; added: string[]; removed: string[] }>("/api/owner-library/set-teacher", { method: "POST", token, body: { accountId, include, exclude } })
 };
+
+// Tadris+ P5-B4 — the owner adds students to a teacher's class (/api/owner-classes): one, or a list after the server preview. The
+// temporary passwords come back once, in the answer only.
+export type OwnerStudentRow = { firstName: string; familyName: string; identityNumber: string };
+export type OwnerImportPreviewRow = OwnerStudentRow & { index?: number; status: "valid" | "duplicate" | "invalid"; error?: string; message?: string };
+export type OwnerCredential = { userId?: string; firstName?: string; familyName?: string; displayName?: string; identityNumber?: string; code: string; password: string; recovered?: boolean };
+export const ownerStudentsApi = {
+  add: (token: string, classId: string, row: OwnerStudentRow & { password?: string }) =>
+    call<{ ok: true; student: { userId: string; firstName: string; familyName: string; displayName: string; identityNumber: string; code: string }; temporaryPassword: string }>("/api/owner-classes/add-student", { method: "POST", token, body: { classId, ...row } }),
+  preview: (token: string, classId: string, students: OwnerStudentRow[]) =>
+    call<{ ok: true; preview: OwnerImportPreviewRow[]; valid: number; duplicates: number; invalid: number }>("/api/owner-classes/preview-import", { method: "POST", token, body: { classId, students } }),
+  import: (token: string, classId: string, students: OwnerStudentRow[], importId: string) =>
+    call<{ ok: true; imported: number; failed: number; duplicates: number; recovered: number; credentials: OwnerCredential[]; errors: Array<OwnerStudentRow & { error: string }> }>("/api/owner-classes/import-students", { method: "POST", token, body: { classId, students, importId } })
+};

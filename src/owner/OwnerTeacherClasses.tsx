@@ -3,11 +3,12 @@ import type { FormEvent } from "react";
 import { IconPlus, IconWarning } from "../icons";
 import { ownerClassesApi, type ApiResult, type OwnerClass, type OwnerClassFields, type OwnerClassLifecycle } from "./ownerApi";
 import { SAVE_LABELS } from "../teacher/saveLabels";
+import OwnerClassStudents from "./OwnerClassStudents";   // Tadris+ P5-B4
 
 /**
  * Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The «الصفوف» tab of a teacher's page in the Owner Console:
  * the teacher's classes (active first, then archived), a form to create a class for them, and per class: edit its labels, archive /
- * restore, graduate. The class belongs to the teacher, who sees it and adds students to it. Every change goes through the page's
+ * restore, graduate, and (P5-B4) add students — one, or a list after the server preview (OwnerClassStudents.tsx). The class belongs to the teacher, who sees it and adds students to it. Every change goes through the page's
  * `send` (a recent second-factor check is asked inline, then the same change is retried); the server decides everything.
  */
 
@@ -82,6 +83,7 @@ export default function OwnerTeacherClasses({ token, accountId, teacherName, bus
 function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolean; token: string; send: Send; done: (text: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<OwnerClassLifecycle | null>(null);
+  const [studentsOpen, setStudentsOpen] = useState(false);
   const act = (action: OwnerClassLifecycle) => send(() => ownerClassesApi.lifecycle(token, action, c.classId), () => { setConfirm(null); done(LIFECYCLE_DONE[action]); });
   return (
     <li className="eb-owner-teacher" aria-label={c.name}>
@@ -106,6 +108,7 @@ function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolea
         <div className="eb-owner-actions">
           {c.status === "active" ? (
             <>
+              <button type="button" className="eb-owner-secondary" aria-expanded={studentsOpen} onClick={() => setStudentsOpen(o => !o)}>{studentsOpen ? "إخفاء إضافة الطلاب" : "إضافة طلاب"}</button>
               <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setEditing(true)}>تعديل</button>
               <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setConfirm("archive")}>أرشفة</button>
               <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setConfirm("graduate")}>تخريج</button>
@@ -115,6 +118,7 @@ function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolea
           )}
         </div>
       )}
+      {studentsOpen && c.status === "active" && <OwnerClassStudents token={token} classId={c.classId} className={c.name} busy={busy} send={send} onChanged={() => done("")} />}
     </li>
   );
 }

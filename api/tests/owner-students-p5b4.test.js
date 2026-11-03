@@ -120,7 +120,8 @@ describe("P5-B4 the owner imports a list into a teacher's class", () => {
     const body = { classId: "cA", students: ROWS.slice(0, 2), importId: "owner-import-000000000002" };
     await owner(ctx, "import-students", body);
     const again = await owner(ctx, "import-students", body);
-    expect(again.status).toBe(200);
+    // the same key recovers the accounts this import created (S.3: new passwords for the SAME students), never new ones
+    expect([again.status, again.jsonBody.recovered, again.jsonBody.credentials.length]).toEqual([200, 2, 2]);
     expect(users(ctx)).toHaveLength(2);
   });
   it("an empty or oversized list, and an archived class, are refused; nothing written", async () => {
