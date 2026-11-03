@@ -42,7 +42,7 @@ const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require(".
 const {logReadCost}=require("../lib/read-cost-log");
 const {loadPublishedAssignmentsForClasses}=require("../lib/class-assignment-index");
 // Phase 21G.0 — teacher tenancy: the Today hub covers only the teacher's own classes (everything below derives from them).
-const {tenantOf,filterAccessible}=require("../lib/teacher-tenancy");
+const {tenantOf,filterAccessible,studentAccessible}=require("../lib/teacher-tenancy");
 // Phase 21H.4 — the class, user and submission documents come through an ETag-verified in-memory cache: an unchanged document
 // (same ETag in the listing) is not downloaded again on the next refresh. deps.docCache = null disables it (deps.listJson /
 // listBlobNames / downloadManyJson test seams keep the plain path).
@@ -189,7 +189,11 @@ async function handler(request,deps={},obs=null){
   const derived=deriveTeacherToday({assignments,classes,users,submissionsByAssignment,nowMs});
   // Optional sources: a messaging (or project-storage) failure degrades THAT block only (explicit `partial`), never the hub.
   const partial=[];let unreadMessages=null,projectEvaluation=null;
-  try{const u=await (deps.teacherDirectUnread||teacherDirectUnread)(container,teacherId,{},deps);unreadMessages={total:Math.max(0,Number(u.totalUnread)||0),capped:u.capped===true}}
+  // Hotfix — the badge counts only THIS teacher's students (the same tenancy predicate as GET /api/messages?kind=unread-summary);
+  // the classes come from the listing above, so the predicate reads nothing more.
+  const tenant=tenantOf(auth.user),classByName=new Map(allClasses.filter(c=>c&&c.classId).map(c=>[CP+String(c.classId)+".json",c]));
+  const canSee=tenant?user=>studentAccessible(async name=>classByName.get(name)||null,user,tenant):null;
+  try{const u=await (deps.teacherDirectUnread||teacherDirectUnread)(container,teacherId,{canSee},deps);unreadMessages={total:Math.max(0,Number(u.totalUnread)||0),capped:u.capped===true}}
   catch(e){partial.push("messages");obs?.logError("teacher.today.messages",e)}
   // Phase 9C — additive block: students with ungraded project stages (Phase 9B evaluation semantics, one authority).
   if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
