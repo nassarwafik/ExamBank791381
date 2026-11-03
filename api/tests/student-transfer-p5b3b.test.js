@@ -149,6 +149,17 @@ describe("P5-B3b refusals — nothing written", () => {
     expect([doc.classId, doc.ownerId, doc.directSince, doc.transferHistory]).toEqual(["cA", A, undefined, []]);
     expect(ctx.mem.names("platform/transfers/")).toEqual([]);
   });
+  it("the former teacher moving the student to another of her classes meanwhile makes the transfer refuse (compare-and-set)", async () => {
+    let moved = false;
+    const racing = { ...ctx.ownerDeps, mutateJsonWithRetry: async (c, name, fn, ...rest) => {
+      if (!moved && name === "platform/users/" + S + ".json") { moved = true; ctx.mem.setJson(name, { ...ctx.mem.getJson(name), classId: "cA2" }); }
+      return mutateJsonWithRetry(c, name, fn, ...rest);
+    } };
+    const r = await owner(ctx, "student-transfer", TRANSFER, ctx.owner, racing);
+    expect([r.status, r.jsonBody.code]).toEqual([409, "TRANSFER_STALE"]);
+    expect(ctx.mem.getJson("platform/users/" + S + ".json")).toMatchObject({ classId: "cA2", ownerId: A });
+    expect(ctx.mem.names("platform/transfers/")).toEqual([]);
+  });
   it("same teacher, archived or unowned target, stale source class, unknown student, no step-up", async () => {
     const before = snapshot(ctx);
     expect((await owner(ctx, "student-transfer", { ...TRANSFER, toClassId: "cA2" })).jsonBody.code).toBe("SAME_TEACHER");
