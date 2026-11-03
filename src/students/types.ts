@@ -33,6 +33,8 @@ export type StudentProfile = {
   strength?: { totalPoints: number; rawTotalPoints?: number; examPoints: number; practicePoints: number; studyPoints?: number; gamePoints?: number; projectPoints: number; stagePoints?: number; stageMaxPoints?: number; stageNumber?: number; stageCount?: number; withinStagePoints?: number; stageBlockSize?: number; stagePercent?: number; legacyRank?: { tier: string | null; level: number; nextTier: string | null } | null } | null;
   recognition?: { medals: { total: number; gold: number; silver: number; bronze: number }; reactionsReceived: { total: number; byType: Record<string, number> }; achievements: { total: number; byType: Record<string, number> } } | null;
   projectSummaries?: { projectCode: string; title: string; overallProgress: number; complete: boolean }[];
+  /** Tadris+ P7-A1 — parts the teacher's access does not include, not computed by the server (["assignments"]); absent = none. */
+  withheld?: string[];
 };
 export type SortKey = "firstName" | "familyName" | "identityNumber" | "status";
 export type StatusFilter = "all" | "active" | "disabled" | "archived" | "neverLogged";

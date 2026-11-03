@@ -4,6 +4,10 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+// Tadris+ P7-A1 — the profile's assignment history / grades / average need assignments.assignment.view (the route's GET gate is
+// students.student.view, which a learning-only teacher holds); without it they are not read at all (lib/access/session-grants.js).
+const { sessionGrants } = require("../lib/access/session-grants");
+const { ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
 const {
   studentCodeHash,
   hashPassword,
@@ -153,7 +157,7 @@ async function getClassroom(container, classId) {
   return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
 }
 
-async function listStudents(container, classId, includeArchived = false, obs = null, canSee = null) {
+async function listStudents(container, classId, includeArchived = false, obs = null, canSee = null, withSubmissions = true) {
   const result = [];
   // Roadmap #25: this scan already yields the AUTHORITATIVE member set of the class, so the roster index is
   // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
@@ -188,7 +192,7 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   // current roster (no per-student N+1 request).
   const idSet = new Set(result.map(s => s.userId));
   const submittedSets = new Map(); // studentId -> Set<assignmentId>
-  if (idSet.size) {
+  if (idSet.size && withSubmissions) {   // Tadris+ P7-A1: without assignments.assignment.view no submission is read (count 0)
     // Roadmap #27: select the roster students' submission blobs by NAME, then download them concurrently (S.2: through the
     // ETag-verified cache, with the ETag this same listing reports).
     const candidates = [];
@@ -681,7 +685,7 @@ async function buildImportPreview(container, items, visible = null) {
   return rows;
 }
 
-async function buildStudentProfile(container, userId, { visibleClass = null } = {}) {   // Tadris+ P5-B3b: visibleClass(classId) — the viewer's classes
+async function buildStudentProfile(container, userId, { visibleClass = null, assignments: withAssignments = true } = {}) {   // Tadris+ P5-B3b: visibleClass(classId) — the viewer's classes
   const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
   if (!student || student.role !== "student") return null;
 
@@ -690,7 +694,7 @@ async function buildStudentProfile(container, userId, { visibleClass = null } = 
 
   // Sorted once, newest first; the current-class "assignments" list below is a filtered view of
   // this same sorted array, so it preserves the exact ordering already relied on elsewhere.
-  const allAssignments = (await loadDocs(container, ASSIGNMENT_PREFIX))
+  const allAssignments = (withAssignments ? await loadDocs(container, ASSIGNMENT_PREFIX) : [])
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
   const history = [];
@@ -702,7 +706,7 @@ async function buildStudentProfile(container, userId, { visibleClass = null } = 
   // through the ETag-verified cache — instead of one download attempt per assignment of the platform, most of them a 404.
   // Aligned with allAssignments (null where the student has none), so the sequential aggregation below is unchanged.
   const ownSubmissions = new Map();
-  for (const entry of await listEntries(container, SUBMISSION_PREFIX)) ownSubmissions.set(entry.name, entry);
+  if (withAssignments) for (const entry of await listEntries(container, SUBMISSION_PREFIX)) ownSubmissions.set(entry.name, entry);
   const wanted = allAssignments.map(assignment => {
     const assignmentId = String(assignment.assignmentId || "");
     return assignmentId ? ownSubmissions.get(SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json") || null : null;
@@ -799,6 +803,7 @@ async function buildStudentProfile(container, userId, { visibleClass = null } = 
     assignments: history,
     submittedAssignmentsCount: submittedAssignments.length,
     submittedAssignments,
+    withheld: withAssignments ? [] : ["assignments"],   // Tadris+ P7-A1 — named, so the page never shows a fake «0 واجبات»
     // Concise Strength + recognition for the teacher's student profile — the SAME authorities as the student
     // dashboard (student-strength policy over finalized final percentages + practice best + study + project
     // progress; recognition aggregation). Secondary: a failure here never hides the profile.
@@ -1032,7 +1037,9 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             if (!subject || subject.role !== "student" || !(await studentOk(subject))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           }
           if (tenant) await classOk("");                // the viewer's classes, loaded once
-          const profile = await buildStudentProfile(container, profileUserId, { visibleClass: tenant ? id => classIdAllowed(allowedClasses, id) : null });
+          const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
+          if (!grants.ok) return grants.response;
+          const profile = await buildStudentProfile(container, profileUserId, { visibleClass: tenant ? id => classIdAllowed(allowedClasses, id) : null, assignments: grants.has(ASSIGNMENTS_CAPABILITY) });
           if (!profile) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           return { status: 200, headers: NO_STORE, jsonBody: { ok: true, profile } };
         }
@@ -1042,10 +1049,12 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (classId && (!isSafeId(classId) || !(await classOk(classId)))) return { status: 200, jsonBody: { ok: true, students: [] } };
         if (tenant) await classOk("");                // load the allowed classes once before the synchronous filter below
         const canSee = tenant ? student => (typeof student.ownerId === "string" && student.ownerId ? canAccessDocument(student, tenant) : classIdAllowed(allowedClasses, student.classId)) : null;
+        const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
+        if (!grants.ok) return grants.response;
         return {
           status: 200,
           headers: NO_STORE,
-          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee) }
+          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee, grants.has(ASSIGNMENTS_CAPABILITY)) }
         };
       }
 

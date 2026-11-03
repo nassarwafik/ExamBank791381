@@ -55,6 +55,7 @@ type StudentProfile={
  classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;
  stats:{assigned:number;completed:number;pending:number;average:number|null;lastLoginAt:string};
  assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;gradingStatus?:GradingStatus;finalized?:boolean}>;
+ withheld?:string[];   // Tadris+ P7-A1 — ["assignments"]: not part of this teacher's access (the server did not compute it)
 };
 type AssignmentResults={
  assignment:{assignmentId:string;title:string;maxAttempts:number;totalMarks:number};
@@ -609,8 +610,8 @@ function TeacherDashboard({token}:DashboardProps){
 
    {profileBusy&&<div className="analytics-loading" role="status">جارٍ فتح ملف الطالب...</div>}
    {profile&&<DashboardDrillPanel kind="profile" title={profile.student.displayName} subtitle={(profile.classroom?.name||"—")+" · "+maskIdentity(profile.student.identityNumber)} onClose={closeProfile}>
-    <div className="analytics-mini-kpis"><span>المعدل <b>{fmtPct(profile.stats.average)}</b></span><span>مكتملة <b>{profile.stats.completed}/{profile.stats.assigned}</b></span><span>ناقصة <b>{profile.stats.pending}</b></span><span>آخر دخول <b>{profile.stats.lastLoginAt?fmtDate(profile.stats.lastLoginAt):"لم يدخل"}</b></span></div>
-    <div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>المحاولات</th><th>العلامة</th><th>النسبة</th><th>الحالة</th></tr></thead><tbody>{profile.assignments.map(item=><tr key={item.assignmentId}><td>{item.title}</td><td>{item.attemptsUsed}</td><td>{item.latestScore===null?"—":item.latestScore+"/"+item.totalMarks}</td><td>{fmtPct(item.latestPercentage)}</td><td>{item.latestScore===null?"لم يسلّم":resolveGradingStatus(item)==="final"?"مصحح":"مراجعة"}</td></tr>)}</tbody></table></div>
+    {!(profile.withheld||[]).includes("assignments")&&<><div className="analytics-mini-kpis"><span>المعدل <b>{fmtPct(profile.stats.average)}</b></span><span>مكتملة <b>{profile.stats.completed}/{profile.stats.assigned}</b></span><span>ناقصة <b>{profile.stats.pending}</b></span><span>آخر دخول <b>{profile.stats.lastLoginAt?fmtDate(profile.stats.lastLoginAt):"لم يدخل"}</b></span></div>
+    <div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>المحاولات</th><th>العلامة</th><th>النسبة</th><th>الحالة</th></tr></thead><tbody>{profile.assignments.map(item=><tr key={item.assignmentId}><td>{item.title}</td><td>{item.attemptsUsed}</td><td>{item.latestScore===null?"—":item.latestScore+"/"+item.totalMarks}</td><td>{fmtPct(item.latestPercentage)}</td><td>{item.latestScore===null?"لم يسلّم":resolveGradingStatus(item)==="final"?"مصحح":"مراجعة"}</td></tr>)}</tbody></table></div></>}
    </DashboardDrillPanel>}
 
    {reviewBusy&&<div className="analytics-loading" role="status">جارٍ فتح تفاصيل المحاولة...</div>}

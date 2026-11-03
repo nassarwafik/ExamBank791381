@@ -2,7 +2,7 @@
 // Tadris+ P7-A1 — mutation proof for serving each dashboard section only with the capability behind it (blueprint §9.2): the session
 // grants (enforce only, fail closed), the widget rule (ALL capabilities), the Today hub's withheld reads (assignments, messages,
 // projects), the analytics without the assignment sources, the AI analysis refusal, the reports' academic / project parts, and the UI
-// following `widgets`. Same engine and rules as scripts/mutate-p1a.mjs.
+// following `widgets`, and the student profile / roster without the assignment part. Same engine and rules as scripts/mutate-p1a.mjs.
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
-const TESTS = ["api/tests/dashboard-sections-p7a1.test.js", "src/teacher/TeacherTodayHub.p7a1.test.tsx", "src/TeacherDashboard.p7a1.test.tsx", "src/reports/ReportViews.p7a1.test.tsx"];
+const TESTS = ["api/tests/dashboard-sections-p7a1.test.js", "api/tests/profile-sections-p7a1.test.js", "src/students/StudentDialog.p7a1.test.tsx", "src/teacher/TeacherTodayHub.p7a1.test.tsx", "src/TeacherDashboard.p7a1.test.tsx", "src/reports/ReportViews.p7a1.test.tsx"];
 const SG = "api/src/lib/access/session-grants.js";
 const DW = "api/src/lib/dashboard-widgets.js";
 const TT = "api/src/functions/teacher-today.js";
@@ -22,6 +22,8 @@ const RP = "api/src/functions/reports.js";
 const HUB = "src/teacher/TeacherTodayHub.tsx";
 const DASH = "src/TeacherDashboard.tsx";
 const RV = "src/reports/ReportViews.tsx";
+const MS = "api/src/functions/manage-students.js";
+const SD = "src/students/StudentDialog.tsx";
 
 export const MUTANTS = [
   { id: "P7A1-M1", what: "sections are never narrowed, even while enforcing", edits: [{ file: SG, find: "  if (mode !== \"enforce\") return EVERYTHING;", replace: "  return EVERYTHING;" }] },
@@ -43,7 +45,11 @@ export const MUTANTS = [
   { id: "P7A1-M17", what: "the report filters list the projects without projects.tracker.view", edits: [{ file: RP, find: "projectsAllowed ? getSupportedProjects().map(getProjectMeta) : []", replace: "getSupportedProjects().map(getProjectMeta)" }] },
   { id: "P7A1-M18", what: "the Today hub shows every card whatever `widgets` says", edits: [{ file: HUB, find: "  const shows = (id: string) => !data?.widgets || data.widgets.includes(id);", replace: "  const shows = (id: string) => !!id;" }] },
   { id: "P7A1-M19", what: "the dashboard shows every analysis section whatever `widgets` says", edits: [{ file: DASH, find: " const shows=(id:string)=>!Array.isArray(data.widgets)||data.widgets.includes(id);", replace: " const shows=(id:string)=>!!id;" }] },
-  { id: "P7A1-M20", what: "the class report renders its assignment figures from a withheld `kpis: null`", edits: [{ file: RV, find: "        {kpis && <>", replace: "        {<>" }] }
+  { id: "P7A1-M20", what: "the class report renders its assignment figures from a withheld `kpis: null`", edits: [{ file: RV, find: "        {kpis && <>", replace: "        {<>" }] },
+  { id: "P7A1-M21", what: "the student profile carries the grades without assignments.assignment.view", edits: [{ file: MS, find: "assignments: grants.has(ASSIGNMENTS_CAPABILITY) });", replace: "assignments: true });" }] },
+  { id: "P7A1-M22", what: "the profile reads the assignment documents anyway", edits: [{ file: MS, find: "  const allAssignments = (withAssignments ? await loadDocs(container, ASSIGNMENT_PREFIX) : [])", replace: "  const allAssignments = (await loadDocs(container, ASSIGNMENT_PREFIX))" }] },
+  { id: "P7A1-M23", what: "the roster counts submissions without assignments.assignment.view", edits: [{ file: MS, find: "listStudents(container, classId, includeArchived, obs, canSee, grants.has(ASSIGNMENTS_CAPABILITY))", replace: "listStudents(container, classId, includeArchived, obs, canSee, true)" }] },
+  { id: "P7A1-M24", what: "the student dialog shows the assignment part whatever `withheld` says", edits: [{ file: SD, find: "  const withAssignments = !(profile.withheld || []).includes(\"assignments\");", replace: "  const withAssignments = !!profile;" }] }
 ];
 
 const originals = new Map();
