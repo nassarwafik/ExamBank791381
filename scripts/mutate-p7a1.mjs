@@ -28,6 +28,7 @@ const SD = "src/students/StudentDialog.tsx";
 export const MUTANTS = [
   { id: "P7A1-M1", what: "sections are never narrowed, even while enforcing", edits: [{ file: SG, find: "  if (mode !== \"enforce\") return EVERYTHING;", replace: "  return EVERYTHING;" }] },
   { id: "P7A1-M2", what: "an unreadable revision answers every section (fail open)", edits: [{ file: SG, find: "    obs?.logWarn?.(\"access.sections.unavailable\", { reason: String(e && e.code || \"error\") });\n    return { ok: false, response: accessUnavailableResponse() };", replace: "    return EVERYTHING;" }] },
+  { id: "P7A1-M25", what: "an unreadable access mode answers every section (fail open)", edits: [{ file: SG, find: "    obs?.logWarn?.(\"access.sections.unavailable\", { reason: \"mode\" });\n    return { ok: false, response: accessUnavailableResponse() };", replace: "    return EVERYTHING;" }] },
   { id: "P7A1-M3", what: "a widget is shown when ANY of its capabilities is held", edits: [{ file: DW, find: "x.capabilities.every(c => has(c))", replace: "x.capabilities.some(c => has(c))" }] },
   { id: "P7A1-M4", what: "the Today hub reads the assignments without assignments.assignment.view", edits: [{ file: TT, find: "const withAssignments=ASSIGNMENT_WIDGETS.some(shows),", replace: "const withAssignments=true," }] },
   { id: "P7A1-M5", what: "the Today hub reads the unread messages without messages.inbox.read", edits: [{ file: TT, find: "  if(withMessages){", replace: "  if(true){" }] },
@@ -100,5 +101,5 @@ for (const m of MUTANTS.filter(x => !only || only.has(x.id))) {
 }
 const git = spawnSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" });
 const status = git.stdout.trim();
-console.log("\nP5-B3b: " + results.filter(r => r.verdict === "KILLED").length + "/" + results.length + " KILLED; every mutated file restored byte-for-byte (sha256 verified); git status: " + (status ? "\n" + status : "clean"));
+console.log("\nP7-A1: " + results.filter(r => r.verdict === "KILLED").length + "/" + results.length + " KILLED; every mutated file restored byte-for-byte (sha256 verified); git status: " + (status ? "\n" + status : "clean"));
 if (results.some(r => r.verdict !== "KILLED")) process.exitCode = 1;

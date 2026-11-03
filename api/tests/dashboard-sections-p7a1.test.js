@@ -213,3 +213,37 @@ describe("P7-A1 — analytics, AI analysis and reports", () => {
     expect(c.jsonBody.withheld).toEqual([]);
   });
 });
+
+// The library itself: on a route the gate's own authorize() refuses an unreadable revision first, so the fail-closed paths of
+// sessionGrants are proven here directly (a storage blip between the two reads).
+const { sessionGrants } = cjs("../src/lib/access/session-grants.js");
+describe("P7-A1 — sessionGrants()", () => {
+  const managed = rev => ({ sub: SARA, am: "managed", accessRevisionId: rev });
+  it("enforce + a revision that cannot be read → { ok: false, 503 ACCESS_UNAVAILABLE }", async () => {
+    const ctx = setup();
+    resetRevisionCache();
+    const g = await sessionGrants(managed("rev_missing_00000000000000"), { container: ctx.mem.container });
+    expect(g.ok).toBe(false);
+    expect([g.response.status, g.response.jsonBody.code]).toEqual([503, "ACCESS_UNAVAILABLE"]);
+  });
+  it("a mode document that cannot be understood → { ok: false, 503 } (never «every section»)", async () => {
+    const ctx = setup();
+    ctx.mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode: "nonsense" });
+    const g = await sessionGrants(managed(ctx.mem.getJson(teacherAccountName(SARA)).accessRevisionId), { container: ctx.mem.container });
+    expect([g.ok, g.response && g.response.status]).toEqual([false, 503]);
+  });
+  it("enforce: exactly the revision's capabilities; an unknown capability is a programming error", async () => {
+    const ctx = setup();
+    const g = await sessionGrants(managed(ctx.mem.getJson(teacherAccountName(SARA)).accessRevisionId), { container: ctx.mem.container });
+    expect([g.ok, g.narrowed]).toEqual([true, true]);
+    expect([g.has("classes.class.view"), g.has("assignments.assignment.view"), g.has("messages.inbox.read")]).toEqual([true, false, false]);
+    expect(() => g.has("assignments.nope")).toThrow();
+  });
+  it("observe, and every session that is not managed: nothing narrowed", async () => {
+    const ctx = setup({ mode: "observe" });
+    const g = await sessionGrants(managed(ctx.mem.getJson(teacherAccountName(SARA)).accessRevisionId), { container: ctx.mem.container });
+    expect([g.ok, g.narrowed, g.has("assignments.assignment.view")]).toEqual([true, false, true]);
+    const legacy = await sessionGrants({ sub: "builder", am: "multi-user" }, { container: setup().mem.container });
+    expect([legacy.narrowed, legacy.has("messages.inbox.read")]).toEqual([false, true]);
+  });
+});
