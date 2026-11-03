@@ -19,7 +19,7 @@ import type { ContentModule } from "../types";
 import { buildBookLock, bookPageFingerprint, bookBlocks, sha256 } from "../../../../scripts/book-lock.mjs";
 
 const CID = "791381s";
-const assetDir = fileURLToPath(new URL("../../../../public/learning-assets/" + CID + "/", import.meta.url));
+const assetDir = fileURLToPath(new URL("../../../../api/src/data/content-assets/learning/" + CID + "/", import.meta.url));
 type Lock = { courseId: string; pages: Record<string, string>; order: Record<string, string[]>; assets: Record<string, string> };
 const LOCK = lock as Lock;
 

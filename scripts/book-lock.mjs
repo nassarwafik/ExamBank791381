@@ -69,7 +69,7 @@ if (import.meta.url === `file://${process.argv[1]}` && process.argv[2] === "--wr
     const manifest = await registry.loadCourseManifest(courseId);
     const modules = [];
     for (const m of manifest.modules) modules.push(await loadBundledModuleContent(courseId, m.id));
-    const assetDir = resolve("public/learning-assets", courseId);
+    const assetDir = resolve("api/src/data/content-assets/learning", courseId);   // Tadris+ P5-C: the drawings are protected (same bytes)
     const assets = {};
     if (existsSync(assetDir)) for (const f of readdirSync(assetDir).sort()) assets[f] = sha256(readFileSync(resolve(assetDir, f)));
     const lock = buildBookLock(courseId, modules, assets);

@@ -7,7 +7,7 @@
 //   • since Phase 2 (owner decisions D2/D3, docs/enterprise-791381s-enrichment-plan.md) enrichment is ADDED, never mixed into the
 //     book: an added page is all enrichment (e.g. «تدريبات الوحدة», layout "practice"), and every enrichment block is
 //     origin "teacher-enrichment" of an enrichment type;
-//   • every diagram is a cropped PNG of the booklet under public/learning-assets/791381s/ that exists, stays small, and no
+//   • every diagram is a cropped PNG of the booklet under api/src/data/content-assets/learning/791381s/ (Tadris+ P5-C: protected) that exists, stays small, and no
 //     unreferenced asset ships.
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "fs";
@@ -26,7 +26,7 @@ import * as apiRegistry from "../../../../api/src/lib/learning-materials-registr
 
 const CID = "791381s";
 const server = apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string; title: string; order: number }[] };
-const assetDir = fileURLToPath(new URL("../../../../public/learning-assets/" + CID + "/", import.meta.url));
+const assetDir = fileURLToPath(new URL("../../../../api/src/data/content-assets/learning/" + CID + "/", import.meta.url));
 const ALLOWED_BLOCKS = new Set(["text", "heading", "callout", "list", "table", "code", "diagram", "unit-opener"]);
 /** What enrichment may add (Phase 2 onward): exercises, visuals, activities, worked examples, teacher clarifications. */
 const ENRICHMENT_BLOCKS = new Set(["practice", "practice-table", "visual", "simulation", "animation", "guided", "interactive-diagram", "example", "callout",

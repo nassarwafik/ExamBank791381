@@ -63,7 +63,7 @@ describe("check:csp — the build gate on dist/index.html", () => {
   const good = injectContentSecurityPolicy(INDEX);
   it("runs inside npm run build", () => {
     const pkg = JSON.parse(read("package.json"));
-    expect(pkg.scripts.build).toMatch(/&& npm run check:csp$/);
+    expect(pkg.scripts.build).toMatch(/&& npm run check:csp && npm run check:protected-assets$/);   // Tadris+ P5-C appended the protected-assets gate after it
     expect(pkg.scripts["check:csp"]).toBe("node scripts/check-csp-meta.mjs dist/index.html");
   });
   it("fails a page without a policy, with two, or with the policy after a script", () => {

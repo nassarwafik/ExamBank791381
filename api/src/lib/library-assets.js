@@ -1,9 +1,10 @@
 // Externalizes inline base64 question images into standalone files served as static content, so
 // the library's item JSON (and therefore the Azure Functions bundle it ships in) never carries
 // multi-megabyte data: URIs. Files are content-addressed (sha256) so identical images dedupe and
-// every rebuild produces byte-identical names (idempotent). Images are NOT secret - they're the
-// question diagrams a student sees during the exam anyway - so they live in the public static tree;
-// answers stay only in the auth-gated item JSON.
+// every rebuild produces byte-identical names (idempotent). Answers stay only in the auth-gated item JSON.
+// Tadris+ P5-C (risk S7, owner decision D10): the files are PROTECTED — written under api/src/data/content-assets/exam-library/,
+// never into the public static tree. The returned "/exam-library/assets/<code>/<file>" path is their durable identity only;
+// every delivery replaces it with a short-lived signed /api/content-asset URL (lib/content-assets.js).
 
 const fs = require("fs");
 const path = require("path");

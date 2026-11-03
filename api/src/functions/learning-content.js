@@ -8,6 +8,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { loadModuleBody } = require("../lib/learning-content");
 const { logReadCost } = require("../lib/read-cost-log");
+const { deliveryCopy } = require("../lib/content-assets");   // Tadris+ P5-C
 const { teacherCourseDecision, classCourseDecision, courseRefusal } = require("../lib/access/course-access");   // Tadris+ P5-A
 
 // Phase L.6a — GET /api/learning-content/{courseId}/{moduleId}: ONE module body of a learning book, the only way the app reads one.
@@ -58,8 +59,11 @@ async function handler(request, deps = {}, obs = null) {
       if (!course.ok) return courseRefusal(course);
     }
 
-    const body = loadModuleBody(courseId, moduleId);
-    if (!body) return NOT_FOUND;
+    const stored = loadModuleBody(courseId, moduleId);
+    if (!stored) return NOT_FOUND;
+    // Tadris+ P5-C (S7, D10): the module's drawings are delivered as this window's signed URLs (its own ETag per window).
+    const signed = deliveryCopy(stored.module, stored.etag, (deps.nowMs || Date.now)());
+    const body = { module: signed.value, etag: signed.etag };
     logReadCost(obs, "learning.content.read_cost", { classDocs });
     const ifNoneMatch = String(request.headers?.get?.("if-none-match") || "");
     if (ifNoneMatch && ifNoneMatch.split(",").map(t => t.trim()).includes(body.etag)) return { status: 304, headers: { ...CACHE_HEADERS, ETag: body.etag } };
