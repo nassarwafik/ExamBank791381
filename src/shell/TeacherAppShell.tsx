@@ -15,6 +15,7 @@ import {
 import TeacherIdentity from "../teacher/TeacherIdentity";
 import { navAllowed, firstAllowed, type TeacherAccessView } from "./teacherAccess";
 import QuickNavSearch from "./QuickNavSearch";
+import TrialNotice, { type TeacherTrialView } from "./TrialNotice";
 import ThemeSwitch from "../ui/ThemeSwitch";
 import SchoolBadge from "../ui/SchoolBadge";
 import type { SchoolBadgeView } from "./schoolIdentity";
@@ -58,12 +59,14 @@ type Props = {
   /** Tadris+ P3-C — the server-resolved access (null = not known yet / not limited: everything shown, as before). */
   access?: TeacherAccessView | null;
   onRetryAccess?: () => void;
+  /** Trial accounts — the teacher's own trial end (server-decided), or null for a permanent account. */
+  trial?: TeacherTrialView | null;
   /** Tadris+ P4-C — the teacher's school (name + loaded logo), shown beside the brand; null / absent = nothing (as before). */
   school?: SchoolBadgeView | null;
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, access = null, onRetryAccess, school = null, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfReportedTotal = 0, messageUnread, displayName, identity, onNavigate, onLogout, access = null, onRetryAccess, trial = null, school = null, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -251,6 +254,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
       <div className="app-shell-main eb-shell-main">
         <PageHeader title={pageTitleFor(nav)} icon={pageIcon(active)} breadcrumb={crumbs} />
         <main id="eb-main" className="eb-shell-content" tabIndex={-1}>
+          <TrialNotice trial={trial} />
           {content}
         </main>
       </div>

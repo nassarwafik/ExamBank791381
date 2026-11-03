@@ -69,6 +69,7 @@ import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkl
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import { parseTeacherAccess, navAllowed, firstAllowed, type TeacherAccessView } from "./shell/teacherAccess";
+import { parseTeacherTrial, type TeacherTrialView } from "./shell/TrialNotice";
 import { parseSchoolIdentity, SCHOOL_LOGO_URL, type SchoolIdentity } from "./shell/schoolIdentity";
 import { useProfilePhoto } from "./ui/useProfilePhoto";
 import { SchoolBadgeContext } from "./shell/schoolContext";
@@ -607,6 +608,7 @@ function App() {
   const [sessionProbeNonce, setSessionProbeNonce] = useState(0);
   const [teacherAccess, setTeacherAccess] = useState<TeacherAccessView | null>(null);   // Tadris+ P3-C
   const [teacherAccessNonce, setTeacherAccessNonce] = useState(0);
+  const [teacherTrial, setTeacherTrial] = useState<TeacherTrialView | null>(null);   // Trial accounts (display only)
   // Tadris+ P4-C — the school identity (presentation only) from the sign-in answer / the session probe; null = none (as before).
   const [sessionSchool, setSessionSchool] = useState<SchoolIdentity | null>(null);
   const schoolLogoUrl = useProfilePhoto(sessionSchool && sessionSchool.logoVersion ? SCHOOL_LOGO_URL : null,
@@ -797,14 +799,14 @@ function App() {
   // «إعادة المحاولة» re-reads it from /api/platform-session. Presentation only: the shell hides tools the server would refuse
   // (only while it enforces). Unknown → nothing hidden (every route is enforced on the server anyway); «unavailable» fails closed.
   useEffect(() => {
-    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherAccess(null); return; }
+    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherAccess(null); setTeacherTrial(null); return; }
     if (teacherAccessNonce === 0) return;                                     // only a retry reads it again
     let cancelled = false;
     fetch("/api/platform-session", { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "x-builder-token": token } })
       .then(async response => {
         if (cancelled || !response.ok) return;
-        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: string; access?: unknown } | null;
-        if (!cancelled && data && data.ok && data.role === "teacher") setTeacherAccess(parseTeacherAccess(data.access));
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: string; access?: unknown; trial?: unknown } | null;
+        if (!cancelled && data && data.ok && data.role === "teacher") { setTeacherAccess(parseTeacherAccess(data.access)); setTeacherTrial(parseTeacherTrial(data.trial)); }
       })
       .catch(() => { /* unknown: nothing hidden */ });
     return () => { cancelled = true; };
@@ -829,7 +831,7 @@ function App() {
         // momentarily unavailable — this is NOT proof the session is invalid, so KEEP the stored session and let
         // ordinary API calls re-validate later. Never convert a temporary server problem into a logout.
         if (!response.ok) { return; }
-        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string; access?: unknown; school?: unknown } | null;
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string; access?: unknown; trial?: unknown; school?: unknown } | null;
         // A 200 that is not a well-formed positive session is treated as transient (a working API only returns 200
         // with ok:true), never as an authoritative revocation — the retained session is left untouched and UNVALIDATED
         // (the retry state handles it) so we never enter the app on a stale role.
@@ -839,6 +841,7 @@ function App() {
         setSessionRole(data.role);
         setSessionDisplayName(data.displayName || "");
         setTeacherAccess(data.role === "teacher" ? parseTeacherAccess(data.access) : null);   // Tadris+ P3-C
+        setTeacherTrial(data.role === "teacher" ? parseTeacherTrial(data.trial) : null);       // Trial accounts
         setSessionSchool(parseSchoolIdentity(data.school));                                   // Tadris+ P4-C
         try {
           sessionStorage.setItem("examBankSessionRole", data.role);
@@ -1245,6 +1248,7 @@ function App() {
         displayName?: string;
         error?: string;
         access?: unknown;
+        trial?: unknown;
         school?: unknown;
       };
 
@@ -1289,6 +1293,7 @@ function App() {
       // their first enabled destination instead (unchanged for everyone else).
       const signedInAccess = resolvedRole === "teacher" ? parseTeacherAccess(data.access) : null;
       setTeacherAccess(signedInAccess);
+      setTeacherTrial(resolvedRole === "teacher" ? parseTeacherTrial(data.trial) : null);   // Trial accounts
       setSessionSchool(parseSchoolIdentity(data.school));                                     // Tadris+ P4-C
       // Phase L.2 — a Learning Materials link that brought the teacher to the sign-in page is honoured after it.
       const landing = !isLearningLocation() && !navAllowed("builder", signedInAccess) ? firstAllowed(PRIMARY_NAV, signedInAccess) : null;
@@ -5921,6 +5926,7 @@ function App() {
       onLogout={() => leavePlatformThen(() => { endTeacherServerSession(token); handleLogout(); })}
       access={teacherAccess}
       onRetryAccess={() => setTeacherAccessNonce(n => n + 1)}
+      trial={teacherTrial}
       school={schoolBadge}
     >
       {confirmDialog}

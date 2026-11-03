@@ -5,7 +5,7 @@ const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity
 const { isTeacherAccountId, LEGACY_TEACHER_ACCOUNT_ID } = require("../lib/identity/teacher-token");
 const {
   newTeacherAccountId, readTeacherAccount, listTeacherAccounts, mutateTeacherAccount, newInvitation, writeInvitationPointer,
-  usernameAvailable, createTeacherAccount, ownerView
+  usernameAvailable, createTeacherAccount, ownerView, validTrialDays, newTrial, isTrial, extendedTrial, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS
 } = require("../lib/identity/teacher-accounts");
 const { createOnly } = require("../lib/identity/owner-store");
 const { builderAuthConfigurationStatus } = require("../lib/builder-auth");
@@ -19,13 +19,17 @@ const { ACCESS_REFUSAL } = require("../lib/access/messages");
 // Tadris+ P2-A2 — the platform owner manages teacher accounts. Route: /api/owner-teachers/{action?}   (owner session only)
 //
 //   GET                                   → every managed teacher (owner view: never a credential or an invitation hash)
-//   POST create        { username, displayName, fullName?, email?, phone?, subjects?, notes?, presetId?, presetVersion? }
+//   POST create        { username, displayName, fullName?, email?, phone?, subjects?, notes?, presetId?, presetVersion?, trialDays? }
 //                      → invitation link (shown once). P3-B2: with a preset, the teacher starts with that access (an immutable
 //                      revision, written BEFORE the account so the account never exists without it); while enforcement is on (or
 //                      its mode cannot be read) a preset is REQUIRED, so no new teacher lands with no access at all.
 //                      P4-B2: `grants?` / `denies?` (with a preset only) and `accessReason?` — the wizard's «copy from a teacher»
 //                      sends the source's current preset / grants / denies; they are validated exactly like an assignment
 //                      (refused with their code, never corrected).
+//                      Trial accounts: `trialDays` (a whole number 1–90) makes it a TRIAL account that ends that many days after
+//                      its creation; from then on it is refused like a suspended one (lib/identity/teacher-accounts.js).
+//   POST extend-trial  { accountId, days } → the trial ends `days` (1–90) later, counted from its end (or from now if it ended)
+//   POST end-trial     { accountId }      → the trial account becomes a permanent account (no end date)
 //   POST reinvite      { accountId }      → a new invitation link; the previous one stops working
 //   POST reset         { accountId }      → the password is removed, every session ends, a reset link is issued
 //   POST suspend       { accountId, reason? } → no access from the next request (status + authVersion + 1). P4-B1: an optional
@@ -49,6 +53,7 @@ const notFound = () => reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error:
 const unavailable = () => reply(503, { ok: false, code: "OWNER_TEACHERS_UNAVAILABLE", error: "تعذر تنفيذ الطلب حاليًا. حاول مرة أخرى." }, { "Retry-After": "5" });
 
 const MAX_SUSPEND_REASON = 200;
+const TRIAL_DAYS_ERROR = `مدة التجربة: عدد صحيح من الأيام بين ${MIN_TRIAL_DAYS} و${MAX_TRIAL_DAYS}.`;
 const text = (v, max) => String(v ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 function profileFields(body) {
   const out = {};
@@ -133,6 +138,11 @@ async function handler(request, deps = {}, obs = null) {
       const fields = profileFields({ displayName: "", ...body });
       const problem = validProfile(fields);
       if (problem) return bad(problem, problem === "EMAIL_INVALID" ? "البريد الإلكتروني غير صالح." : "اسم العرض مطلوب (60 حرفًا على الأكثر).");
+      let trialDays = null;
+      if (!importing && body.trialDays !== undefined && body.trialDays !== null && body.trialDays !== "") {
+        trialDays = validTrialDays(body.trialDays);
+        if (!trialDays) return bad("TRIAL_DAYS_INVALID", TRIAL_DAYS_ERROR);
+      }
       const accountId = importing ? LEGACY_TEACHER_ACCOUNT_ID : newTeacherAccountId();
       let initialAccess = null;
       if (!importing) {
@@ -164,6 +174,7 @@ async function handler(request, deps = {}, obs = null) {
         subjects: fields.subjects || [], adminNotes: fields.adminNotes || "",
         status: "invited", credential: null, invitation: inv.record, authVersion: 1, revokedSessions: [],
         ...(importing ? { origin: "shared-password-workspace", importedAt: iso } : {}),
+        ...(trialDays ? { trial: newTrial(trialDays, nowMs) } : {}),
         ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length } : {}),
         createdAt: iso, createdBy: actor, updatedAt: iso
       };
@@ -179,7 +190,10 @@ async function handler(request, deps = {}, obs = null) {
       if (importing) { try { profileCopied = await copyLegacyProfile(container, env, iso); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
       await audit(container, {
         actor, action: importing ? "owner.teacher.legacy-imported" : "owner.teacher.created", targetType: "teacher-account", targetId: accountId, targetLabel: account.username,
-        ...(importing ? { details: { profileCopied } } : initialAccess ? { details: { revisionId: initialAccess.revisionId, preset: initialAccess.preset, ...(initialAccess.grants.length || initialAccess.denies.length ? { grants: initialAccess.grants, denies: initialAccess.denies } : {}) } } : {})
+        ...(importing ? { details: { profileCopied } } : (initialAccess || trialDays) ? { details: {
+          ...(initialAccess ? { revisionId: initialAccess.revisionId, preset: initialAccess.preset, ...(initialAccess.grants.length || initialAccess.denies.length ? { grants: initialAccess.grants, denies: initialAccess.denies } : {}) } : {}),
+          ...(trialDays ? { trialDays, trialEndsAt: new Date(account.trial.endsAtMs).toISOString() } : {})
+        } } : {})
       });
       return reply(201, { ok: true, teacher: ownerView(account, nowMs), invitation: invitationOut(inv.token, inv.record) });
     }
@@ -200,6 +214,23 @@ async function handler(request, deps = {}, obs = null) {
       await writeInvitationPointer(container, inv.token, accountId);
       await audit(container, { actor, action: action === "reset" ? "owner.teacher.password-reset" : "owner.teacher.reinvited", targetType: "teacher-account", targetId: accountId, targetLabel: current.username });
       return reply(200, { ok: true, teacher: ownerView(next, nowMs), invitation: invitationOut(inv.token, inv.record) });
+    }
+
+    if (action === "extend-trial" || action === "end-trial") {
+      if (!isTrial(current)) return reply(409, { ok: false, code: "NOT_A_TRIAL", error: "هذا الحساب دائم وليس حسابًا تجريبيًا." });
+      let days = null;
+      if (action === "extend-trial") { days = validTrialDays(body.days); if (!days) return bad("TRIAL_DAYS_INVALID", TRIAL_DAYS_ERROR); }
+      const next = await mutateTeacherAccount(container, accountId, a => {
+        if (!isTrial(a)) { const e = new Error("not a trial"); e.code = "NOT_A_TRIAL"; throw e; }
+        return action === "end-trial"
+          ? { ...a, trial: null, trialConvertedAt: iso, updatedAt: iso }
+          : { ...a, trial: extendedTrial(a.trial, days, nowMs), updatedAt: iso };
+      });
+      await audit(container, {
+        actor, action: action === "end-trial" ? "owner.teacher.trial-converted" : "owner.teacher.trial-extended", targetType: "teacher-account", targetId: accountId, targetLabel: current.username,
+        ...(days ? { details: { days, trialEndsAt: new Date(next.trial.endsAtMs).toISOString() } } : {})
+      });
+      return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
     }
 
     if (action === "suspend" || action === "reactivate" || action === "end-sessions" || action === "update") {
@@ -223,6 +254,7 @@ async function handler(request, deps = {}, obs = null) {
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
   } catch (e) {
     if (e?.code === "TEACHER_NOT_FOUND") return notFound();
+    if (e?.code === "NOT_A_TRIAL") return reply(409, { ok: false, code: "NOT_A_TRIAL", error: "هذا الحساب دائم وليس حسابًا تجريبيًا." });
     obs?.logError("owner.teachers.error", e, { action });
     return unavailable();
   }

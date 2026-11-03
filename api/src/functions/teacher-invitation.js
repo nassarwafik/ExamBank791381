@@ -5,7 +5,7 @@ const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require
 const { recordOwnerAuditEvent } = require("../lib/audit-log");
 const { hashSecret } = require("../lib/identity/password-hash");
 const { checkPassword, passwordPolicyMessage } = require("../lib/identity/password-policy");
-const { resolveInvitation, mutateTeacherAccount, deleteInvitationPointer, sha256Hex } = require("../lib/identity/teacher-accounts");
+const { resolveInvitation, mutateTeacherAccount, deleteInvitationPointer, sha256Hex, trialEnded } = require("../lib/identity/teacher-accounts");
 
 // Tadris+ P2-A2 — a teacher opens the owner's invitation (or reset) link and sets their own password (owner decision §19.3:
 // «رابط دعوة»; the owner never sees the password). Route: POST /api/teacher-invitation/{inspect|accept}
@@ -57,7 +57,7 @@ async function handler(request, deps = {}, obs = null) {
     try {
       await mutateTeacherAccount(container, account.accountId, a => {
         // Re-check under compare-and-set: the link must still be the current one (a concurrent accept or a newer link wins).
-        if (!a.invitation || a.invitation.tokenHash !== tokenHash || !(Number(a.invitation.expiresAtMs) > nowMs) || a.status === "suspended") {
+        if (!a.invitation || a.invitation.tokenHash !== tokenHash || !(Number(a.invitation.expiresAtMs) > nowMs) || a.status === "suspended" || trialEnded(a, nowMs)) {
           const e = new Error("stale"); e.code = "INVITATION_STALE"; throw e;
         }
         return { ...a, credential, invitation: null, status: "active", passwordSetAt: iso, updatedAt: iso };

@@ -184,7 +184,8 @@ describe("P4-C the teacher sees their school", () => {
   it("no school: the sign-in answer and the probe are exactly as before (no `school` field)", async () => {
     const p = await probeTeacher(ctx, SARA);
     expect(p.status).toBe(200);
-    expect(Object.keys(p.jsonBody).sort()).toEqual(["access", "displayName", "expiresAt", "ok", "role"]);
+    // The probe's keys on main (since #514 the teacher answer also carries `trial`) — no `school` key is added.
+    expect(Object.keys(p.jsonBody).sort()).toEqual(["access", "displayName", "expiresAt", "ok", "role", "trial"]);
     const l = await login(req({ body: { userCode: "t.sara", password: PASSWORD } }), ctx.deps);
     expect(l.status).toBe(200);
     expect("school" in l.jsonBody).toBe(false);
