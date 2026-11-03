@@ -16,6 +16,7 @@ import OwnerTeachers from "./OwnerTeachers";
 import OwnerTeacherDetails from "./OwnerTeacherDetails";
 import OwnerAccessMode from "./OwnerAccessMode";
 import OwnerSchools from "./OwnerSchools";
+import OwnerCourses from "./OwnerCourses";
 import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 
 /**
@@ -79,7 +80,7 @@ export default function OwnerApp() {
     </section>
   );
   else if (boot.kind === "signed-in") {
-    const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" ? route.view : "home";
+    const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" || route.view === "courses" ? route.view : "home";
     const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
     body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
       onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
@@ -163,7 +164,8 @@ const SECTIONS: { id: OwnerSection; label: string }[] = [
   { id: "home", label: "نظرة عامة" },
   { id: "teachers", label: "المعلمون" },
   { id: "access", label: "الصلاحيات" },
-  { id: "schools", label: "المدارس" }
+  { id: "schools", label: "المدارس" },
+  { id: "courses", label: "المقررات" }
 ];
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
@@ -179,6 +181,7 @@ function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, o
         {section === "teachers" && teacherId && <OwnerTeacherDetails key={teacherId} token={token} accountId={teacherId} onSignedOut={onSignedOut} onBack={() => onSection("teachers")} />}
         {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
         {section === "schools" && <OwnerSchools token={token} onSignedOut={onSignedOut} />}
+        {section === "courses" && <OwnerCourses token={token} onSignedOut={onSignedOut} />}
       </div>
     </div>
   );
@@ -284,7 +287,7 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: str
           <button type="button" className="eb-owner-secondary" onClick={() => onSection("teachers")}>المعلمون</button>
           <button type="button" className="eb-owner-secondary" onClick={() => onSection("access")}>الصلاحيات</button>
         </div>
-        <p className="eb-owner-hint">المواد التعليمية ومكتبة الواجبات تُضاف هنا في المراحل القادمة.</p>
+        <p className="eb-owner-hint">مكتبة الواجبات الجاهزة تُضاف هنا في مرحلة قادمة.</p>
       </div>
     </section>
   );

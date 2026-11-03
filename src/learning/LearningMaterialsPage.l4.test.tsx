@@ -29,10 +29,12 @@ describe("L.4 — «قراءة صفوفي» on the book page", () => {
     });
     openCourse("teacher-token");
     expect(screen.getByRole("heading", { name: "قراءة صفوفي" })).toBeTruthy();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // P5-A2: the LIBRARY (shown first) asks the server once which courses this teacher may use; the panel itself still issues
+    // no request until it is opened.
+    expect(fetchSpy.mock.calls.map(c => String(c[0]))).toEqual(["/api/learning-materials-catalog"]);
     fireEvent.click(screen.getByRole("button", { name: "عرض قراءة الصفوف" }));
     await screen.findByText(/لا وحدات منشورة لهذا الصف بعد/);
-    expect(fetchSpy.mock.calls.map(c => String(c[0])).sort()).toEqual(["/api/classrooms", "/api/learning-class-progress/cA/791381", "/api/learning-materials-catalog"]);
+    expect(fetchSpy.mock.calls.slice(1).map(c => String(c[0])).sort()).toEqual(["/api/classrooms", "/api/learning-class-progress/cA/791381", "/api/learning-materials-catalog"]);
     for (const [, init] of fetchSpy.mock.calls) expect((init as RequestInit).headers).toMatchObject({ "x-builder-token": "teacher-token", Authorization: "Bearer teacher-token" });
   });
 });

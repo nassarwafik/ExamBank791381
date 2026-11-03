@@ -29,8 +29,9 @@ describe("Learning Materials — teacher training host", () => {
     render(<LearningMaterialsPage token="builder-secret" />);
     await openReader();
     // Phase L.3 — teacher preview parity: the trainings list AND one study-state read, both teacher-authenticated
-    await waitFor(() => expect(calls.length).toBe(2));
-    expect(calls.map(c => c.url).sort()).toEqual(["/api/learning-study/791381", "/api/learning-training"]);
+    // P5-A2: + ONE library read of the teacher's available courses (made while the library was shown, before the Reader opened)
+    await waitFor(() => expect(calls.length).toBe(3));
+    expect(calls.map(c => c.url).sort()).toEqual(["/api/learning-materials-catalog", "/api/learning-study/791381", "/api/learning-training"]);
     for (const c of calls) {
       expect(c.headers["x-builder-token"]).toBe("builder-secret");
       expect(c.headers.Authorization).toBe("Bearer builder-secret");
@@ -42,7 +43,7 @@ describe("Learning Materials — teacher training host", () => {
     expect(t3.textContent).toContain("عناوين IPv4 وصلاحية العنوان");
     expect((t3.querySelector("button") as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByRole("button", { name: "العودة إلى نظرة الكتاب" })).toBeTruthy();
-    expect(calls.length).toBe(2);                                                     // a page change reads nothing more
+    expect(calls.length).toBe(3);                                                     // a page change reads nothing more (same 3 as above)
   }, T);
 
   it("without a token: the Reader opens PDF 22 with generic cards and issues ZERO requests", async () => {

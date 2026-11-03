@@ -2,7 +2,7 @@
 // Tadris+ P4-A — mutation proof for the console primitives (Tabs, Switch, DataTable, Stepper, DiffView), the Owner Console
 // sections and routes, and the change preview of «تغيير الصلاحيات». Same engine and rules as scripts/mutate-p1a.mjs.
 // P4-B1 updated P4A-M8 and P4A-M9 to the current code (the route now also takes a teacher id; the route state is an object).
-// P4-C updated them again (the «schools» section).
+// P4-C updated them again (the «schools» section; P5-A2 again for «courses»).
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -29,8 +29,8 @@ export const MUTANTS = [
   { id: "P4A-M5", what: "table rows lose their row header", edits: [{ file: TABLE, find: "(i === 0 ? <th key={c.id} scope=\"row\">{c.cell(row)}</th> : <td key={c.id}>{c.cell(row)}</td>)", replace: "<td key={c.id}>{c.cell(row)}</td>" }] },
   { id: "P4A-M6", what: "the stepper does not mark the current step", edits: [{ file: STEPPER, find: "aria-current={state === \"current\" ? \"step\" : undefined}", replace: "" }] },
   { id: "P4A-M7", what: "the diff reports the wrong side as added", edits: [{ file: DIFF, find: "  return { added: after.filter(x => !b.has(x)), removed: before.filter(x => !a.has(x)) };", replace: "  return { added: before.filter(x => !a.has(x)), removed: after.filter(x => !b.has(x)) };" }] },
-  { id: "P4A-M8", what: "any owner sub-path is accepted", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/([a-z]+)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;" }] },
-  { id: "P4A-M9", what: "the console ignores the section address (always the overview)", edits: [{ file: APP, find: "    const section: OwnerSection = route.view === \"teachers\" || route.view === \"access\" || route.view === \"schools\" ? route.view : \"home\";", replace: "    const section: OwnerSection = \"home\";" }] },
+  { id: "P4A-M8", what: "any owner sub-path is accepted", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools|courses)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/([a-z]+)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;" }] },
+  { id: "P4A-M9", what: "the console ignores the section address (always the overview)", edits: [{ file: APP, find: "    const section: OwnerSection = route.view === \"teachers\" || route.view === \"access\" || route.view === \"schools\" || route.view === \"courses\" ? route.view : \"home\";", replace: "    const section: OwnerSection = \"home\";" }] },
   { id: "P4A-M10", what: "the menu does not update the address", edits: [{ file: APP, find: "if (window.location.hash !== h) window.location.hash = h; ", replace: "" }] },
   { id: "P4A-M11", what: "the change preview compares with nothing (current access ignored)", edits: [{ file: TEACHERS, find: "  const before = presets.find(p => p.id === current)?.capabilities || [];", replace: "  const before: string[] = [];" }] }
 ];

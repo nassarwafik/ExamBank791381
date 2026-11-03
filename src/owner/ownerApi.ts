@@ -94,6 +94,8 @@ export type TeacherDraft = {
   username: string; displayName: string; fullName?: string; email?: string; phone?: string; subjects?: string[]; notes?: string; presetId?: string; presetVersion?: number;
   /** P4-B2 — individual changes to the preset (the wizard's «copy from a teacher»), and a note kept with the first revision. */
   grants?: string[]; denies?: string[]; accessReason?: string;
+  /** P5-A — the course entitlement (null / absent = every published course). */
+  courses?: string[] | null;
   /** Trial accounts — a trial of this many days (1–90); absent = a permanent account. */
   trialDays?: number;
 };
@@ -116,15 +118,19 @@ export const ownerTeachersApi = {
 
 // Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
 export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean; requires?: string[] };
+/** P5-A — a course of the catalog as the owner sees it. */
+export type CatalogCourse = { courseId: string; title: string; subject: string; modules: number; status: "published" | "archived"; updatedAt: string; updatedBy: string };
 /** P4-B1 — one immutable revision of a teacher's access, re-validated by the server (newest first). */
 export type AccessHistoryEntry = {
   revisionId: string; parentRevisionId: string | null; preset: { id: string; version: number } | null; grants: string[]; denies: string[];
+  /** P5-A — the course entitlement: null = every published course; an array = only those. */
+  courses?: string[] | null;
   reason: string; createdAt: string; createdBy: string; valid: boolean; code?: string; capabilities: string[];
 };
 /** P4-B1 — what the server's resolver gives the account right now, and whether the owner's mode enforces it. */
 export type EffectiveAccess = {
   accountStatus: TeacherStatus; mode: AccessMode; enforced: boolean;
-  access: { status: "ok" | "unavailable"; source?: string; code?: string; revisionId: string | null; preset: { id: string; version: number } | null; capabilities: string[] };
+  access: { status: "ok" | "unavailable"; source?: string; code?: string; revisionId: string | null; preset: { id: string; version: number } | null; capabilities: string[]; courses?: string[] | null };
 };
 export type ReadinessTeacher = {
   accountId: string; username: string; displayName: string; status: TeacherStatus;
@@ -135,8 +141,12 @@ export const ownerAccessApi = {
   get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[] }>("/api/owner-access", { token }),
   readiness: (token: string) => call<{ ok: true; mode: AccessMode; ready: boolean; teachers: ReadinessTeacher[] }>("/api/owner-access/readiness", { token }),
   setMode: (token: string, mode: "legacy" | "observe" | "enforce") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
-  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null; grants?: string[]; denies?: string[]; reason?: string }) =>
-    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[] }>("/api/owner-access/assign", { method: "POST", token, body }),
+  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null; grants?: string[]; denies?: string[]; reason?: string; courses?: string[] | null }) =>
+    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[]; courses?: string[] | null }>("/api/owner-access/assign", { method: "POST", token, body }),
+  /** P5-A — every course with its catalog status (owner decision D12). */
+  catalog: (token: string) => call<{ ok: true; courses: CatalogCourse[] }>("/api/owner-access/catalog", { token }),
+  courseStatus: (token: string, courseId: string, status: "published" | "archived") =>
+    call<{ ok: true; courseId: string; status: "published" | "archived" }>("/api/owner-access/course-status", { method: "POST", token, body: { courseId, status } }),
   history: (token: string, accountId: string) =>
     call<{ ok: true; accountId: string; currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean; limit: number }>("/api/owner-access/history?accountId=" + encodeURIComponent(accountId), { token }),
   effective: (token: string, accountId: string) =>

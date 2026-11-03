@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
   ownerTeachersApi, ownerAccessApi, currentAccessOf, type ApiResult, type ManagedTeacher, type AccessPreset, type AccessCapability, type AccessMode,
-  type AccessHistoryEntry, type EffectiveAccess, type TeacherAction, type TeacherProfileFields
+  type AccessHistoryEntry, type EffectiveAccess, type CatalogCourse, type TeacherAction, type TeacherProfileFields
 } from "./ownerApi";
 import Tabs from "../ui/Tabs";
 import TrialControls from "./TrialControls";
@@ -28,17 +28,18 @@ import {
  */
 
 type TabId = "profile" | "access" | "history" | "security";
-type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode };
+type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
 type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
 type State = { kind: "loading" } | { kind: "error"; message: string } | { kind: "missing" } | ({ kind: "ready" } & Loaded);
-export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string };
+export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string; courses?: string[] };
 
 const presetKey = (p: { id: string; version: number } | null | undefined) => (p ? p.id + "@" + p.version : "");
 
 async function loadAll(token: string, accountId: string): Promise<{ state: State; signedOut: boolean }> {
-  const [list, catalog, history, effective] = await Promise.all([
-    ownerTeachersApi.list(token), ownerAccessApi.get(token), ownerAccessApi.history(token, accountId), ownerAccessApi.effective(token, accountId)
+  const [list, catalog, history, effective, courseCatalog] = await Promise.all([
+    ownerTeachersApi.list(token), ownerAccessApi.get(token), ownerAccessApi.history(token, accountId), ownerAccessApi.effective(token, accountId),
+    ownerAccessApi.catalog(token)       // P5-A2 — optional: without it the course choice is not offered (and is kept unchanged)
   ]);
   const all = [list, catalog, history, effective] as ApiResult<unknown>[];
   if (all.some(r => !r.ok && r.status === 401)) return { state: { kind: "loading" }, signedOut: true };
@@ -51,7 +52,7 @@ async function loadAll(token: string, accountId: string): Promise<{ state: State
     signedOut: false,
     state: {
       kind: "ready", teacher, others: list.data.teachers.filter(t => t.accountId !== accountId),
-      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode },
+      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode, courses: courseCatalog.ok ? courseCatalog.data.courses : null },
       history: { currentRevisionId: history.data.currentRevisionId, entries: history.data.entries, truncated: history.data.truncated },
       effective: { accountStatus: effective.data.accountStatus, mode: effective.data.mode, enforced: effective.data.enforced, access: effective.data.access }
     }
@@ -240,6 +241,10 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     const p = catalog.presets.find(x => presetKey(x) === initialKey);
     return new Set(p ? p.capabilities : []);
   }, [head, catalog.presets, initialKey]);
+  // P5-A2 — the course entitlement: «all» = every published course (nothing sent); «some» = only the checked ones.
+  const initialCourses = head && head.valid && Array.isArray(head.courses) ? head.courses : null;
+  const [courseMode, setCourseMode] = useState<"all" | "some">(initialCourses ? "some" : "all");
+  const [chosenCourses, setChosenCourses] = useState<Set<string>>(() => new Set(initialCourses || []));
   const [key, setKey] = useState(initialKey);
   const [chosen, setChosen] = useState<Set<string>>(initialSet);
   const [reason, setReason] = useState("");
@@ -261,6 +266,8 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     if (!p) { setCopyNote({ error: true, text: "حزمة ذلك المعلم غير معروفة هنا، فلا يمكن نسخها." }); return; }
     setKey(presetKey(p));
     setChosen(new Set(r.data.capabilities));
+    setCourseMode(Array.isArray(r.data.courses) ? "some" : "all");
+    setChosenCourses(new Set(Array.isArray(r.data.courses) ? r.data.courses : []));
     if (source) setReason("نسخ من " + source.username);
     setCopyNote({ error: false, text: "حُمّلت صلاحيات " + (source ? source.displayName : "") + ". راجعها ثم احفظ." });
   }
@@ -274,7 +281,8 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     return out;
   }, [catalog.capabilities]);
   const { grants, denies } = picked ? grantsAndDenies(picked.capabilities, chosen) : { grants: [], denies: [] };
-  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)));
+  const coursesUnchanged = courseMode === (initialCourses ? "some" : "all") && (courseMode === "all" || (chosenCourses.size === (initialCourses || []).length && (initialCourses || []).every(c => chosenCourses.has(c))));
+  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged);
   const reachable = modules.filter(m => m.caps.some(c => chosen.has(c.id)));
 
   return (
@@ -327,6 +335,26 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
               <ul>{reachable.map(m => <li key={m.module}>{m.label}: {m.caps.filter(c => chosen.has(c.id)).length} من {m.caps.length}</li>)}</ul>
             )}
           </div>
+          {catalog.courses && (
+            <fieldset className="eb-owner-access-options eb-owner-courses-choice">
+              <legend>المقررات المخوَّلة</legend>
+              <label className="eb-owner-access-option">
+                <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "all"} onChange={() => setCourseMode("all")} />
+                <span><strong>كل المقررات المنشورة</strong><small>ومعها كل مقرر يُنشر لاحقًا.</small></span>
+              </label>
+              <label className="eb-owner-access-option">
+                <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "some"} onChange={() => setCourseMode("some")} />
+                <span><strong>مقررات محددة فقط</strong><small>لا يرى المعلم غيرها، ولا يقرؤها طلابه.</small></span>
+              </label>
+              {courseMode === "some" && catalog.courses.map(c => (
+                <label key={c.courseId} className="eb-owner-check">
+                  <input type="checkbox" checked={chosenCourses.has(c.courseId)} onChange={e => setChosenCourses(set => { const n = new Set(set); if (e.target.checked) n.add(c.courseId); else n.delete(c.courseId); return n; })} />
+                  <span><bdi>{c.title}</bdi>{c.status === "archived" ? " (مؤرشف: مغلق للجميع حاليًا)" : ""}</span>
+                </label>
+              ))}
+              {courseMode === "some" && chosenCourses.size === 0 && <p className="eb-owner-hint">لم تختر أي مقرر: لن يتمكن المعلم وطلابه من أي مقرر أثناء التطبيق.</p>}
+            </fieldset>
+          )}
           <label className="auth-field"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
             <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} /></div>
           </label>
@@ -335,7 +363,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
       <p className="eb-owner-hint">{modeNote(effective)}</p>
       <div className="eb-owner-actions">
         <button type="button" className="auth-submit" disabled={busy || !picked || unchanged}
-          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim() })}>حفظ الصلاحيات</button>
+          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}) })}>حفظ الصلاحيات</button>
       </div>
     </div>
   );
@@ -349,7 +377,7 @@ function AccessHistory({ history, effective, presets, labels, busy, onRestore }:
   const presetName = (p: AccessHistoryEntry["preset"]) => (p ? presets.find(x => x.id === p.id && x.version === p.version)?.label || p.id : "—");
   const columns: DataColumn<AccessHistoryEntry>[] = [
     { id: "date", header: "التاريخ", cell: e => <bdi>{formatDate(e.createdAt) || "—"}</bdi> },
-    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}</> },
+    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}{Array.isArray(e.courses) ? <small> · {e.courses.length} مقرر فقط</small> : null}</> },
     { id: "reason", header: "السبب", cell: e => e.reason || "—" },
     { id: "by", header: "بواسطة", cell: e => actorLabel(e.createdBy) },
     { id: "state", header: "الحالة", cell: e => (!e.valid ? <span className="eb-owner-status eb-owner-status--suspended">غير صالحة</span> : e.revisionId === history.currentRevisionId ? <span className="eb-owner-status eb-owner-status--active">الحالية</span> : "—") },
