@@ -164,11 +164,17 @@ async function handle(request, deps = {}, obs = null) {
         if (page.sequencedAbsorbable.length) {
           await absorbIrrelevantSequenced(container, { stateName, streamPrefix: directPrefix(studentId), ids: page.sequencedAbsorbable, meta }, deps).catch(() => {});
         }
+        // Tadris+ P5-B3b (owner decision §19.21) — a student moved from another teacher: the conversation BEFORE the transfer stays
+        // between the student and that teacher; this teacher sees it from the transfer on (the list is newest-first, so nothing
+        // older can follow a hidden message: «hasMore» ends there).
+        const since = typeof student.directSince === "string" ? student.directSince : "";
+        const visible = since ? page.messages.filter(m => String(m.createdAt || "") >= since) : page.messages;
+        const hasMore = since && visible.length < page.messages.length ? false : page.hasMore;
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
           canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
-          messages: page.messages.map(m => messageView(m, { includeStudentId: true, actions: actionsFor(state.canSend) })), hasMore: page.hasMore, hasNewer: page.hasNewer
+          messages: visible.map(m => messageView(m, { includeStudentId: true, actions: actionsFor(state.canSend) })), hasMore, hasNewer: page.hasNewer
         } };
       }
       if (classId && kind === "announcements") {
@@ -256,13 +262,18 @@ async function handle(request, deps = {}, obs = null) {
         const student = await loadStudent(container, studentId, dl);
         if (!student) return notFound(MSG.studentNotFound);
         const state = await directSendState(container, student, dl);
-        target = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, canSend: state.canSend, view: { includeStudentId: true }, targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student) };
+        target = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, canSend: state.canSend, view: { includeStudentId: true }, targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), directSince: typeof student.directSince === "string" ? student.directSince : "" };
       } else if (classId) {
         const classroom = await loadClass(container, classId, dl);
         if (!classroom) return notFound(MSG.classNotFound);
         target = { streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, canSend: normalizeClassStatus(classroom) !== "archived", view: { includeClassId: true }, targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") };
       } else return bad("حدّد الطالب أو الصف.");
       const messageId = String(body.messageId || "");
+      // Tadris+ P5-B3b — a message from before the student's transfer is not this teacher's to change (answered like a missing one)
+      if (studentId && target.directSince) {
+        const doc = MESSAGE_ID_RE.test(messageId) ? await dl(container, target.streamPrefix + messageId + ".json") : null;
+        if (doc && String(doc.createdAt || "") < target.directSince) return notFound("الرسالة غير موجودة.");
+      }
       const common = { streamPrefix: target.streamPrefix, expected: target.expected, messageId, actor, canSend: target.canSend };
       try {
         const r = action === "editMessage"

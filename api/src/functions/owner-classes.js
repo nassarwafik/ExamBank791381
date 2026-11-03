@@ -16,7 +16,7 @@ const {
   addStudentToClass, importStudentsToClass, studentErrorReply, normalizeBulkStudents, buildImportPreview, MAX_IMPORT_ROWS
 } = require("./manage-students");   // Tadris+ P5-B4
 const { recordAuditEvent } = require("../lib/audit-log");
-const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON } = require("../lib/teacher-transfer");   // Tadris+ P5-B3a
+const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON, classStudents, previewStudentTransfer, transferStudent, ownerOfStudent } = require("../lib/teacher-transfer");   // Tadris+ P5-B3a / P5-B3b
 
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The owner creates and manages a teacher's classes.
 // Route: /api/owner-classes/{action?}   (owner session only)
@@ -31,6 +31,11 @@ const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON } = req
 //   GET  transfer-preview?classId=&toAccountId=          (P5-B3a) what moving the WHOLE class to that teacher would move
 //   POST transfer        { classId, toAccountId, expectedFromAccountId, reason? }  → the class and every one of its students move
 //                          to that teacher, with the class's whole history (owner decision §19.21); resumable; one ledger record
+//   GET  students?classId=                                (P5-B3b) the class's students (names, identity, status) for the owner
+//   GET  student-transfer-preview?userId=&toClassId=      what moving ONE student into another teacher's class would do
+//   POST student-transfer { userId, fromClassId, toClassId, reason? } → the student moves (D16: the new teacher sees learning
+//                          progress, not the old class's grades nor the conversation before the transfer; the former teacher keeps
+//                          the old results as «منقول»); refused while work awaits the former teacher (PENDING_GRADING)
 //
 // A class is created EXACTLY as the teacher's own «إنشاء الصف» creates it (same document, same request-key idempotency), stamped
 // with the teacher as its owner; edit and lifecycle are the SAME shared functions as the teacher's route (same CAS write, archived
@@ -68,6 +73,23 @@ async function teacherOf(container, accountId, deps) {
   return (deps.readTeacherAccount || readTeacherAccount)(container, accountId);
 }
 
+/** The student, its current class (owned by an existing teacher) and the target class (another existing teacher's, active). */
+async function studentTransferContext(container, userId, toClassId, deps) {
+  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  if (!isSafeId(userId)) return { refusal: reply(404, { ok: false, code: "STUDENT_NOT_FOUND", error: "الطالب غير موجود." }) };
+  const student = await dl(container, "platform/users/" + userId + ".json");
+  if (!student || student.role !== "student" || String(student.userId || userId) !== userId) return { refusal: reply(404, { ok: false, code: "STUDENT_NOT_FOUND", error: "الطالب غير موجود." }) };
+  const fromId = String(student.classId || "");
+  const fromClass = isSafeId(fromId) ? await dl(container, CLASS_PREFIX + fromId + ".json") : null;
+  const from = fromClass ? ownerOfStudent(student, fromClass) : "";
+  if (!fromClass || !(await teacherOf(container, from, deps))) return { refusal: reply(404, { ok: false, code: "STUDENT_NOT_FOUND", error: "الطالب غير موجود." }) };
+  const target = isSafeId(toClassId) ? await dl(container, CLASS_PREFIX + toClassId + ".json") : null;
+  if (!target || String(target.classId || toClassId) !== toClassId || !(await teacherOf(container, String(target.ownerId || ""), deps))) return { refusal: CLASS_NOT_FOUND() };
+  if (String(target.ownerId) === from) return { refusal: bad("SAME_TEACHER", "اختر صفًا لمعلم آخر. النقل بين صفوف المعلم نفسه يتم من صفحته.") };
+  if (normalizeClassStatus(target) === "archived") return { refusal: reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف الهدف مؤرشف." }) };
+  return { student, fromClass: { ...fromClass, classId: fromId }, target: { ...target, classId: toClassId }, from };
+}
+
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
@@ -97,6 +119,22 @@ async function handler(request, deps = {}, obs = null) {
       if (!(await teacherOf(container, toAccountId, deps))) return TEACHER_NOT_FOUND();
       if (toAccountId === current.ownerId) return bad("SAME_TEACHER", "اختر معلمًا آخر غير المعلم الحالي.");
       return reply(200, { ok: true, preview: await previewClassTransfer(container, { ...current, classId }, toAccountId, deps) });
+    }
+    if (method === "GET" && action === "students") {
+      const classId = queryParam(request, "classId");
+      const current = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
+      if (!current || String(current.classId || classId) !== classId || !(await teacherOf(container, String(current.ownerId || ""), deps))) return CLASS_NOT_FOUND();
+      const roster = classStudents(await ls(container, "platform/users/"), classId)
+        .filter(st => ownerOfStudent(st, current) === current.ownerId)
+        .map(st => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: st.archived === true }))
+        .sort((x, y) => x.displayName.localeCompare(y.displayName, "ar"));
+      return reply(200, { ok: true, classId, students: roster });
+    }
+    if (method === "GET" && action === "student-transfer-preview") {
+      const userId = queryParam(request, "userId"), toClassId = queryParam(request, "toClassId");
+      const found = await studentTransferContext(container, userId, toClassId, deps);
+      if (found.refusal) return found.refusal;
+      return reply(200, { ok: true, preview: await previewStudentTransfer(container, found.student, found.fromClass, found.target, deps) });
     }
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
@@ -138,6 +176,23 @@ async function handler(request, deps = {}, obs = null) {
         ? await updateClassLabels(container, classId, body, { mut, record })
         : await changeClassLifecycle(container, classId, LIFECYCLE[action], { mut, ls, record, actor });
       return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+    }
+
+    if (action === "student-transfer") {
+      const userId = String(body.userId || "").trim(), toClassId = String(body.toClassId || "").trim(), fromClassId = String(body.fromClassId || "").trim();
+      if (typeof body.reason === "string" && body.reason.length > MAX_REASON) return bad("REASON_TOO_LONG", "سبب النقل طويل جدًا.");
+      const found = await studentTransferContext(container, userId, toClassId, deps);
+      if (found.refusal) return found.refusal;
+      if (String(found.fromClass.classId) !== fromClassId) return reply(409, { ok: false, code: "TRANSFER_STALE", error: "نُقل الطالب أو تغيّر صفه منذ المعاينة. أعد فتح النقل." });
+      let result;
+      try {
+        result = await transferStudent(container, { userId, fromClassId, toClassId, from: found.from, to: String(found.target.ownerId), actor, reason: body.reason, nowMs }, { ...deps, mutateJsonWithRetry: mut, obs });
+      } catch (e) {
+        if (e instanceof TransferRefusal) return reply(e.status, { ok: false, code: e.code, error: e.message });
+        throw e;
+      }
+      await audit(container, { actor, action: "owner.student.transferred", targetType: "student", targetId: userId, targetLabel: userId, details: { from: found.from, to: String(found.target.ownerId), fromClassId, toClassId, transferId: result.ledger.transferId } });
+      return reply(200, { ok: true, ledger: result.ledger });
     }
 
     if (action === "transfer") {
