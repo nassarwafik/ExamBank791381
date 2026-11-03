@@ -12,6 +12,10 @@ const { isSafeId } = require("../lib/roster-input");
 const {
   buildNewClassroomDocument, classIdForRequestKey, normalizeClassFields, updateClassLabels, changeClassLifecycle, CLASS_PREFIX
 } = require("./manage-classrooms");
+const {
+  addStudentToClass, importStudentsToClass, studentErrorReply, normalizeBulkStudents, buildImportPreview, MAX_IMPORT_ROWS
+} = require("./manage-students");   // Tadris+ P5-B4
+const { recordAuditEvent } = require("../lib/audit-log");
 
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The owner creates and manages a teacher's classes.
 // Route: /api/owner-classes/{action?}   (owner session only)
@@ -20,12 +24,20 @@ const {
 //   POST create    { accountId, name, grade, schoolYear, requestKey? }   → 201 { classroom } owned by that teacher
 //   POST update    { classId, name, grade, schoolYear }                   → the class's labels only
 //   POST archive | unarchive | graduate { classId }
+//   POST add-student      { classId, firstName, familyName, identityNumber, password? }   (P5-B4)
+//   POST preview-import   { classId, students: [...] }      → the SAME server preview as the teacher's (validation only)
+//   POST import-students  { classId, students: [...], importId? } → the SAME import as the teacher's (credentials shown ONCE)
 //
 // A class is created EXACTLY as the teacher's own «إنشاء الصف» creates it (same document, same request-key idempotency), stamped
 // with the teacher as its owner; edit and lifecycle are the SAME shared functions as the teacher's route (same CAS write, archived
 // class read-only, the pending-grading guards and their race re-check). Only a class owned by an existing teacher account is
 // reachable here; anything else is answered like a missing class. Every POST needs a recent second-factor check (step-up) and is
-// written to the owner audit log. Nothing about students, results or projects is changed here.
+// written to the owner audit log. Nothing about results or projects is changed here.
+// Tadris+ P5-B4 — «يقوم المالك باضافة طلاب المعلم لكي يجهز له الصفحة»: the owner adds students to a teacher's ACTIVE class, one
+// or a whole list, with the teacher route's own shared functions (manage-students.js): same validation, platform-wide identity
+// uniqueness, create-only login write, import retry key, in-file duplicate rule, roster index; each student is the teacher's (it
+// inherits the class's owner). The teacher keeps adding, editing and archiving their students. Temporary passwords are in the
+// answer only (never stored in plain text, never in any audit).
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 const bad = (code, error) => reply(400, { ok: false, code, error });
@@ -114,6 +126,39 @@ async function handler(request, deps = {}, obs = null) {
         ? await updateClassLabels(container, classId, body, { mut, record })
         : await changeClassLifecycle(container, classId, LIFECYCLE[action], { mut, ls, record, actor });
       return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+    }
+
+    if (action === "add-student" || action === "preview-import" || action === "import-students") {
+      const classId = String(body.classId || "").trim();
+      const classroom = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
+      if (!classroom || String(classroom.classId || classId) !== classId || !(await teacherOf(container, String(classroom.ownerId || ""), deps))) return CLASS_NOT_FOUND();
+      if (normalizeClassStatus(classroom) === "archived") return reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف مؤرشف. استعده أولًا لإضافة طلاب." });
+      const accountId = String(classroom.ownerId);
+      const studentAudit = deps.recordAuditEvent || recordAuditEvent;
+      // the event goes to the owner audit AND to the platform audit the teacher's own actions use (actor: the owner)
+      const record = async ev => {
+        await audit(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });
+        try { await studentAudit(container, { actor, ...ev }); } catch { /* audit is secondary */ }
+      };
+      try {
+        if (action === "add-student") {
+          const r = await addStudentToClass(container, { ...classroom, classId }, body, { visible: null, record, obs });
+          return { ...r, status: r.status === 200 ? 201 : r.status, headers: { ...NO_STORE, ...(r.headers || {}) } };
+        }
+        const students = normalizeBulkStudents(body.students);
+        if (!students.length) return bad("STUDENTS_EMPTY", "القائمة لا تحتوي بيانات طلاب صالحة.");
+        if (students.length > MAX_IMPORT_ROWS) return bad("STUDENTS_TOO_MANY", "يمكن استيراد " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة.");
+        if (action === "preview-import") {
+          const preview = await buildImportPreview(container, students, null);
+          return reply(200, { ok: true, preview, valid: preview.filter(x => x.status === "valid").length, duplicates: preview.filter(x => x.status === "duplicate").length, invalid: preview.filter(x => x.status === "invalid").length });
+        }
+        const r = await importStudentsToClass(container, { ...classroom, classId }, students, { importId: body.importId, visible: null, record, obs });
+        return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+      } catch (e) {
+        const refused = studentErrorReply(e);
+        if (refused) return { ...refused, headers: { ...NO_STORE, ...refused.headers } };
+        throw e;
+      }
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
