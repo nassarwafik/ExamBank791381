@@ -16,6 +16,7 @@ import OwnerTeachers from "./OwnerTeachers";
 import OwnerTeacherDetails from "./OwnerTeacherDetails";
 import OwnerAccessMode from "./OwnerAccessMode";
 import OwnerSchools from "./OwnerSchools";
+import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -244,6 +245,9 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: str
         <button type="button" className="eb-owner-secondary" onClick={signOut} disabled={busy}><IconLogout size={16} aria-hidden="true" /> تسجيل الخروج</button>
       </div>
 
+      {/* Tadris+ P4-D — owner decision D19: the owner's own teacher workspace, one click away. */}
+      <OwnerTeacherWorkspace token={token} onSignedOut={onSignedOut} />
+
       <div className="eb-owner-panel">
         <h2 className="eb-owner-h2">أمان الحساب</h2>
         <p className="eb-owner-hint">رموز الاسترداد المتبقية: <strong>{view.recoveryCodesRemaining}</strong> من 10.</p>
@@ -280,7 +284,7 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: str
           <button type="button" className="eb-owner-secondary" onClick={() => onSection("teachers")}>المعلمون</button>
           <button type="button" className="eb-owner-secondary" onClick={() => onSection("access")}>الصلاحيات</button>
         </div>
-        <p className="eb-owner-hint">المواد التعليمية ومكتبة الواجبات وهوية المدرسة تُضاف هنا في المراحل القادمة.</p>
+        <p className="eb-owner-hint">المواد التعليمية ومكتبة الواجبات تُضاف هنا في المراحل القادمة.</p>
       </div>
     </section>
   );
