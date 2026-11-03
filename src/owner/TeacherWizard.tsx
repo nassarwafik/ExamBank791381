@@ -48,7 +48,7 @@ export default function TeacherWizard({ initialTrial = false, token, busy, prese
   const first = useRef(true);
   useEffect(() => { if (first.current) { first.current = false; return; } heading.current?.focus(); }, [step]);
 
-  const offered = presets.filter(p => p.id !== "legacy-full");
+  const offered = presets.filter(p => p.id !== "legacy-full" && p.current !== false);   // P5-B4: a new teacher is offered current versions only
   const chosenPreset = offered.find(p => presetKey(p) === presetChoice);
   const copyable = teachers.filter(t => t.access);
   const sourceTeacher = copyable.find(t => t.accountId === sourceId);

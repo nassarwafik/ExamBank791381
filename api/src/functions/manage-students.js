@@ -841,6 +841,140 @@ async function buildProfileStrength(container, student, classroom, history) {
 // A per-row failure in a bulk loop shows the teacher only messages written FOR the teacher (typed rejections and the
 // credential-lock busy message). Any other error (storage SDK text with request ids, internal conflict names) is logged
 // and replaced by a generic row message.
+// Tadris+ P5-B4 — adding one student to a class and importing a list into it are shared by the teacher's route (below) and the
+// owner's (owner-classes.js): the SAME validation, identity uniqueness, create-only login write, import retry key (S.3), in-file
+// duplicate rule (QA-4 / QA2-18), roster-index append and aggregate audit. `record(event)` receives the audit event without its
+// actor (each route adds its own); `visible` is the tenancy predicate for naming a duplicate (null = may name it).
+async function addStudentToClass(container, classroom, input, { visible = null, record, obs = null }) {
+  const result = await createStudentRecord(container, classroom, input, { forceGeneratedPassword: false, visible });
+  // Roadmap #25: the student now EXISTS (authoritative user + auth documents). A roster-index conflict must
+  // not turn that into a 500 (which made the teacher retry and hit "duplicate identity"); it is reported
+  // as rosterSynced:false and self-heals on the next roster read.
+  const sync = await addToRosterIndex(container, classroom.classId, [result.student.userId], { obs, operation: "create" });
+  // Roadmap #19: safe audit — never the generated plaintext password (returned in-memory only).
+  await record({
+    action: "student.create",
+    targetType: "student",
+    targetId: result.student.userId,
+    targetLabel: result.student.displayName || result.student.code,
+    details: { classId: classroom.classId }
+  });
+  return { status: 200, headers: NO_STORE, jsonBody: { ok: true, ...result, rosterSynced: sync.synced } };
+}
+
+async function importStudentsToClass(container, classroom, students, { importId: rawImportId = "", visible = null, record, obs = null }) {
+  const credentials = [];
+  const errors = [];
+  const createdIds = [];
+  let duplicates = 0;
+  let recovered = 0;
+  const importId = typeof rawImportId === "string" && IMPORT_ID_PATTERN.test(rawImportId) ? rawImportId : "";
+
+  // CREATE-only, per-row. Each row is revalidated server-side by createStudentRecord (name/identity/
+  // existing-identity), and the conditional auth write is the final race guard — a row that loses a
+  // race, or duplicates an existing identity, fails EXPLICITLY as a duplicate and never overwrites
+  // another account. A partial result is reported explicitly (created + failed), never as full success.
+  // createStudentRecord already writes each new student's AUTHORITATIVE membership (user.classId) — the
+  // classroom.studentIds list it also touches in-memory is a denormalized index we DO NOT persist here.
+  // Phase S.3 — one row: a create, or (same import key, identity already held by an account this import created) a
+  // recovery with a new password. A failed recovery is reported as ITS failure through the same per-row catch below.
+  const importRow = async item => {
+    try {
+      const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true, visible, importId });
+      return { student: result.student, password: result.temporaryPassword, recovered: false };
+    } catch (error) {
+      const again = importId && error && error.code === "duplicate" ? await recoverImportedStudent(container, classroom.classId, importId, item) : null;
+      if (!again) throw error;
+      return { ...again, recovered: true };
+    }
+  };
+  // QA-4 — an identity that appears again in THIS request is a duplicate of the earlier row, never a create and never a
+  // Phase S.3 recovery: a recovery would match the account the earlier row created moments ago and reset its password
+  // (the printed credential stops working) while the later row's student is never created nor reported.
+  const seenInBatch = new Set();
+  for (const item of students) {
+    const batchIdentity = identityFromInput(item);
+    if (batchIdentity && seenInBatch.has(batchIdentity)) {
+      duplicates += 1;
+      errors.push({ index: item.index, firstName: item.firstName, familyName: item.familyName, identityNumber: item.identityNumber, displayName: [item.firstName, item.familyName].filter(Boolean).join(" "), code: item.identityNumber || "", duplicate: true, error: "رقم الهوية مكرر داخل الملف." });
+      continue;
+    }
+    try {
+      const result = await importRow(item);
+      // QA2-18 — only a row that was actually imported claims its identity: an earlier row refused for its own reason (a missing
+      // family name) used to make the valid row with the same identity a «duplicate», so nobody was created.
+      if (batchIdentity) seenInBatch.add(batchIdentity);
+      credentials.push({
+        userId: result.student.userId,
+        firstName: result.student.firstName,
+        familyName: result.student.familyName,
+        displayName: result.student.displayName,
+        identityNumber: result.student.identityNumber,
+        code: result.student.code,
+        password: result.password,
+        ...(result.recovered ? { recovered: true } : {})
+      });
+      createdIds.push(result.student.userId);
+      if (result.recovered) recovered += 1;
+    } catch (error) {
+      if (error && error.code === "duplicate") duplicates += 1;
+      errors.push({
+        index: item.index,
+        firstName: item.firstName,
+        familyName: item.familyName,
+        identityNumber: item.identityNumber,
+        displayName: [item.firstName, item.familyName].filter(Boolean).join(" "),
+        code: item.identityNumber || "",
+        duplicate: !!(error && error.code === "duplicate"),
+        error: rowErrorMessage(error, "تعذر إنشاء الطالب.", obs)
+      });
+    }
+  }
+
+  // Roadmap #21 — add the successfully-created students to the classroom roster through the ONE
+  // canonical concurrency-safe roster-index writer (class-roster-index → mutateJsonWithRetry
+  // + conditional ETag write), NEVER a stale whole-blob overwrite. This re-reads the classroom fresh
+  // on every attempt, so concurrent legitimate additions/removals and unrelated field changes are
+  // preserved; it dedups by id (idempotent — a repeat import adds nothing); and it only appends here
+  // (never removes). It runs OUTSIDE the per-row loop so ordinary conflicts are resolved by one
+  // retry-safe mutation rather than N racy writes.
+  // Roadmap #25: one idempotent CAS append through the shared roster-index module. Exhausted retries are
+  // reported as rosterSynced:false (structured warning emitted by the module) — the import itself succeeded.
+  const rosterSynced = createdIds.length
+    ? (await addToRosterIndex(container, classroom.classId, createdIds, { obs, operation: "bulkImport" })).synced
+    : true;
+  // Roadmap #19: record ONE aggregate audit event — safe counts only, NEVER student names, identity
+  // numbers, or any generated plaintext credential (those exist only in the in-memory response).
+  await record({
+    action: "student.bulkImport",
+    targetType: "class",
+    targetId: classroom.classId,
+    targetLabel: String(classroom.name || ""),
+    details: { classId: classroom.classId, createdCount: credentials.length - recovered, recoveredCount: recovered, duplicateCount: duplicates, failedCount: errors.length }
+  });
+  return {
+    status: 200,
+    headers: NO_STORE,
+    jsonBody: {
+      ok: true,
+      imported: credentials.length,
+      failed: errors.length,
+      duplicates,
+      recovered,
+      rosterSynced,
+      credentials,
+      errors
+    }
+  };
+}
+
+/** The reply for a refused student action (the same for the teacher's route and the owner's); null for any other error. */
+function studentErrorReply(e) {
+  if (e instanceof CredentialLockBusyError) return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "عملية أخرى على بيانات الطالب قيد التنفيذ. أعد المحاولة." } };
+  if (e instanceof StudentActionError) return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message, ...(e.code === "PENDING_GRADING" || e.code === "STUDENT_STALE" ? { code: e.code } : {}) } };
+  return null;
+}
+
 function rowErrorMessage(error, fallback, obs) {
   if (error instanceof StudentActionError || error instanceof CredentialLockBusyError) return error.message || fallback;
   obs?.logError("student.manage.rowError", error);
@@ -925,21 +1059,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
 
-        const result = await createStudentRecord(container, classroom, body, { forceGeneratedPassword: false, visible: tenant ? studentOk : null });
-        // Roadmap #25: the student now EXISTS (authoritative user + auth documents). A roster-index conflict must
-        // not turn that into a 500 (which made the teacher retry and hit "duplicate identity"); it is reported
-        // as rosterSynced:false and self-heals on the next roster read.
-        const sync = await addToRosterIndex(container, classId, [result.student.userId], { obs, operation: "create" });
-        // Roadmap #19: safe audit — never the generated plaintext password (returned in-memory only).
-        await rec(container, {
-          actor: auth.user?.sub,
-          action: "student.create",
-          targetType: "student",
-          targetId: result.student.userId,
-          targetLabel: result.student.displayName || result.student.code,
-          details: { classId }
-        });
-        return { status: 200, headers: NO_STORE, jsonBody: { ok: true, ...result, rosterSynced: sync.synced } };
+        return await addStudentToClass(container, classroom, body, { visible: tenant ? studentOk : null, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), obs });
       }
 
       if (action === "previewimport") {
@@ -978,110 +1098,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 400, jsonBody: { ok: false, error: "يمكن استيراد " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة." } };
         }
 
-        const credentials = [];
-        const errors = [];
-        const createdIds = [];
-        let duplicates = 0;
-        let recovered = 0;
-        const importId = typeof body?.importId === "string" && IMPORT_ID_PATTERN.test(body.importId) ? body.importId : "";
-
-        // CREATE-only, per-row. Each row is revalidated server-side by createStudentRecord (name/identity/
-        // existing-identity), and the conditional auth write is the final race guard — a row that loses a
-        // race, or duplicates an existing identity, fails EXPLICITLY as a duplicate and never overwrites
-        // another account. A partial result is reported explicitly (created + failed), never as full success.
-        // createStudentRecord already writes each new student's AUTHORITATIVE membership (user.classId) — the
-        // classroom.studentIds list it also touches in-memory is a denormalized index we DO NOT persist here.
-        // Phase S.3 — one row: a create, or (same import key, identity already held by an account this import created) a
-        // recovery with a new password. A failed recovery is reported as ITS failure through the same per-row catch below.
-        const importRow = async item => {
-          try {
-            const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true, visible: tenant ? studentOk : null, importId });
-            return { student: result.student, password: result.temporaryPassword, recovered: false };
-          } catch (error) {
-            const again = importId && error && error.code === "duplicate" ? await recoverImportedStudent(container, classId, importId, item) : null;
-            if (!again) throw error;
-            return { ...again, recovered: true };
-          }
-        };
-        // QA-4 — an identity that appears again in THIS request is a duplicate of the earlier row, never a create and never a
-        // Phase S.3 recovery: a recovery would match the account the earlier row created moments ago and reset its password
-        // (the printed credential stops working) while the later row's student is never created nor reported.
-        const seenInBatch = new Set();
-        for (const item of students) {
-          const batchIdentity = identityFromInput(item);
-          if (batchIdentity && seenInBatch.has(batchIdentity)) {
-            duplicates += 1;
-            errors.push({ index: item.index, firstName: item.firstName, familyName: item.familyName, identityNumber: item.identityNumber, displayName: [item.firstName, item.familyName].filter(Boolean).join(" "), code: item.identityNumber || "", duplicate: true, error: "رقم الهوية مكرر داخل الملف." });
-            continue;
-          }
-          try {
-            const result = await importRow(item);
-            // QA2-18 — only a row that was actually imported claims its identity: an earlier row refused for its own reason (a missing
-            // family name) used to make the valid row with the same identity a «duplicate», so nobody was created.
-            if (batchIdentity) seenInBatch.add(batchIdentity);
-            credentials.push({
-              userId: result.student.userId,
-              firstName: result.student.firstName,
-              familyName: result.student.familyName,
-              displayName: result.student.displayName,
-              identityNumber: result.student.identityNumber,
-              code: result.student.code,
-              password: result.password,
-              ...(result.recovered ? { recovered: true } : {})
-            });
-            createdIds.push(result.student.userId);
-            if (result.recovered) recovered += 1;
-          } catch (error) {
-            if (error && error.code === "duplicate") duplicates += 1;
-            errors.push({
-              index: item.index,
-              firstName: item.firstName,
-              familyName: item.familyName,
-              identityNumber: item.identityNumber,
-              displayName: [item.firstName, item.familyName].filter(Boolean).join(" "),
-              code: item.identityNumber || "",
-              duplicate: !!(error && error.code === "duplicate"),
-              error: rowErrorMessage(error, "تعذر إنشاء الطالب.", obs)
-            });
-          }
-        }
-
-        // Roadmap #21 — add the successfully-created students to the classroom roster through the ONE
-        // canonical concurrency-safe roster-index writer (class-roster-index → mutateJsonWithRetry
-        // + conditional ETag write), NEVER a stale whole-blob overwrite. This re-reads the classroom fresh
-        // on every attempt, so concurrent legitimate additions/removals and unrelated field changes are
-        // preserved; it dedups by id (idempotent — a repeat import adds nothing); and it only appends here
-        // (never removes). It runs OUTSIDE the per-row loop so ordinary conflicts are resolved by one
-        // retry-safe mutation rather than N racy writes.
-        // Roadmap #25: one idempotent CAS append through the shared roster-index module. Exhausted retries are
-        // reported as rosterSynced:false (structured warning emitted by the module) — the import itself succeeded.
-        const rosterSynced = createdIds.length
-          ? (await addToRosterIndex(container, classId, createdIds, { obs, operation: "bulkImport" })).synced
-          : true;
-        // Roadmap #19: record ONE aggregate audit event — safe counts only, NEVER student names, identity
-        // numbers, or any generated plaintext credential (those exist only in the in-memory response).
-        await rec(container, {
-          actor: auth.user?.sub,
-          action: "student.bulkImport",
-          targetType: "class",
-          targetId: classId,
-          targetLabel: String(classroom.name || ""),
-          details: { classId, createdCount: credentials.length - recovered, recoveredCount: recovered, duplicateCount: duplicates, failedCount: errors.length }
-        });
-        return {
-          status: 200,
-          headers: NO_STORE,
-          jsonBody: {
-            ok: true,
-            imported: credentials.length,
-            failed: errors.length,
-            duplicates,
-            recovered,
-            rosterSynced,
-            credentials,
-            errors
-          }
-        };
+        return await importStudentsToClass(container, classroom, students, { importId: body?.importId, visible: tenant ? studentOk : null, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), obs });
       }
 
       if (action === "update") {
@@ -1516,5 +1533,5 @@ app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", r
 module.exports = {
   createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler, StudentActionError,
   normalizeBulkStudents, namesFromInput, identityFromInput, normalizeIdentityNumber, isValidIdentityNumber,
-  buildImportPreview, MAX_IMPORT_ROWS
+  buildImportPreview, MAX_IMPORT_ROWS, addStudentToClass, importStudentsToClass, studentErrorReply, getClassroom
 };

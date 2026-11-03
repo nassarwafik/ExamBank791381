@@ -313,10 +313,10 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
         : <p className="eb-owner-hint" role="status">{copyNote.text}</p>)}
       <fieldset className="eb-owner-access-options">
         <legend>الحزمة الأساسية</legend>
-        {catalog.presets.map(p => (
+        {catalog.presets.filter(p => p.current !== false || presetKey(p) === initialKey).map(p => (   /* P5-B4: superseded versions only for the teacher already on one */
           <label key={presetKey(p)} className="eb-owner-access-option">
             <input type="radio" name={"preset-" + teacher.accountId} value={presetKey(p)} checked={key === presetKey(p)} onChange={() => { setKey(presetKey(p)); setChosen(new Set(p.capabilities)); }} />
-            <span><strong>{p.label}</strong><small>{p.description}</small></span>
+            <span><strong>{p.label}{p.current === false ? " (نسخة سابقة)" : ""}</strong><small>{p.current === false ? "حزمة هذا المعلم الحالية. توجد نسخة أحدث منها في القائمة. " : ""}{p.description}</small></span>
           </label>
         ))}
       </fieldset>

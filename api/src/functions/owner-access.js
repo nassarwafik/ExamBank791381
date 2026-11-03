@@ -7,7 +7,7 @@ const { readTeacherAccount, mutateTeacherAccount } = require("../lib/identity/te
 const { computeReadiness } = require("../lib/access/readiness");
 const { ACCESS_REFUSAL: REFUSAL } = require("../lib/access/messages");
 const { CAPABILITIES } = require("../lib/access/capabilities");
-const { PRESETS } = require("../lib/access/presets");
+const { PRESETS, isCurrentPreset } = require("../lib/access/presets");
 const { AccessError, REVISION_ID_RE, buildRevision, writeRevision, readRevision } = require("../lib/access/revisions");
 const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode");
 const { readAccessHistory, MAX_HISTORY } = require("../lib/access/history");
@@ -44,7 +44,7 @@ const { findLearningCourse } = require("../lib/learning-materials-registry");
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 
 const publicCapabilities = () => CAPABILITIES.map(c => ({ id: c.id, module: c.module, moduleLabel: c.moduleLabel, label: c.label, ownerOnly: c.ownerOnly, requires: [...c.requires] }));
-const publicPresets = () => PRESETS.map(p => ({ id: p.id, version: p.version, label: p.label, description: p.description, capabilities: [...p.capabilities] }));
+const publicPresets = () => PRESETS.map(p => ({ id: p.id, version: p.version, label: p.label, description: p.description, capabilities: [...p.capabilities], current: isCurrentPreset(p) }));   // P5-B4: `current`
 
 /** A query parameter (Azure Functions `request.query`, or parsed from the URL). */
 function queryParam(request, name) {

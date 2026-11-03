@@ -352,7 +352,7 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "update") {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
-      return updateClassLabels(container, classId, body, { mut, record: ev => rec(container, { actor: auth.user?.sub, ...ev }) });
+      return await updateClassLabels(container, classId, body, { mut, record: ev => rec(container, { actor: auth.user?.sub, ...ev }) });
     }
 
     // Modern multi-project action, and the legacy single-project setProgram kept as a thin wrapper
@@ -505,7 +505,7 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "archive" || action === "unarchive" || action === "graduateandarchive") {
       const classId = String(body?.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
-      return changeClassLifecycle(container, classId, action, { mut, ls, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), actor: auth.user?.sub });
+      return await changeClassLifecycle(container, classId, action, { mut, ls, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), actor: auth.user?.sub });
     }
 
     return { status: 400, jsonBody: { ok: false, error: "Unsupported classroom action." } };
