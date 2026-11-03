@@ -94,7 +94,7 @@ describe("P5-B2 the teacher's classes tab", () => {
     fireEvent.click(within(within(active).getByRole("listitem", { name: "الحادي عشر أ" })).getByRole("button", { name: "تعديل" }));
     const form = screen.getByRole("form", { name: "تعديل الحادي عشر أ" });
     fireEvent.change(within(form).getByLabelText("اسم الصف"), { target: { value: "الحادي عشر د" } });
-    fireEvent.click(within(form).getByRole("button", { name: "حفظ" }));
+    fireEvent.click(within(form).getByRole("button", { name: "حفظ التغييرات" }));
     await screen.findByText("حُفظت بيانات الصف.");
     expect(posted("/api/owner-classes/update")[0].body).toEqual({ classId: "c1", name: "الحادي عشر د", grade: "11", schoolYear: "2026-2027" });
   });

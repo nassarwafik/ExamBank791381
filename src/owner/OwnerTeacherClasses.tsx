@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconPlus, IconWarning } from "../icons";
 import { ownerClassesApi, type ApiResult, type OwnerClass, type OwnerClassFields, type OwnerClassLifecycle } from "./ownerApi";
+import { SAVE_LABELS } from "../teacher/saveLabels";
 
 /**
  * Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The «الصفوف» tab of a teacher's page in the Owner Console:
@@ -91,7 +92,7 @@ function ClassCard({ c, busy, token, send, done }: { c: OwnerClass; busy: boolea
         <span className={"eb-owner-status eb-owner-status--" + (c.status === "active" ? "active" : "suspended")}>{STATUS_TEXT[c.status]}</span>
       </div>
       {editing ? (
-        <ClassForm label={"تعديل " + c.name} submitText="حفظ" initial={{ name: c.name, grade: c.grade, schoolYear: c.schoolYear }} busy={busy} onCancel={() => setEditing(false)}
+        <ClassForm label={"تعديل " + c.name} submitText={SAVE_LABELS.saveChanges} initial={{ name: c.name, grade: c.grade, schoolYear: c.schoolYear }} busy={busy} onCancel={() => setEditing(false)}
           onSubmit={fields => send(() => ownerClassesApi.update(token, c.classId, fields), d => { setEditing(false); done(d.changed ? "حُفظت بيانات الصف." : "لا تغيير."); })} />
       ) : confirm ? (
         <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + c.name}>
