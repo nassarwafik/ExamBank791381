@@ -7,7 +7,7 @@
 // With only <sourceDir>, output goes to the versioned in-repo locations, so the library ships with
 // the app (git -> deploy -> available, no manual Azure upload):
 //   api/src/data/exam-library/{catalog.json, quality-report.json, items/<code>.json}
-//   public/exam-library/assets/<code>/<sha8>.<ext>
+//   api/src/data/content-assets/exam-library/<code>/<sha8>.<ext> (Tadris+ P5-C: protected; served signed by /api/content-asset)
 // Passing explicit output dirs (as the tests do) writes elsewhere instead.
 //
 // <sourceDir> must contain index.html plus T01.html..T30.html and F01.html..F06.html, saved locally
@@ -35,7 +35,7 @@ const { mapF03Question, mapF06Question, extractF03ImagesByQid } = require("../ap
 const { externalizeSnapshotImages } = require("../api/src/lib/library-assets");
 
 const REPO_DATA_DIR = path.join(__dirname, "..", "api", "src", "data", "exam-library");
-const REPO_ASSETS_DIR = path.join(__dirname, "..", "public", "exam-library", "assets");
+const REPO_ASSETS_DIR = path.join(__dirname, "..", "api", "src", "data", "content-assets", "exam-library");   // Tadris+ P5-C: protected, never public
 
 const T_FILE_REGEX = /^T(\d{2})\.html$/;
 const F_FILE_REGEX = /^F(\d{2})\.html$/;

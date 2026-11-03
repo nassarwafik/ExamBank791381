@@ -13,6 +13,10 @@
 // anything with an unsafe blobName are returned by the SAME reference, untouched. Nothing here mutates its input: every
 // changed node is copied on the way down (path copy), unchanged subtrees keep their identity. Never touches storage.
 const { createSignedAssetParams } = require("./builder-auth");
+// Tadris+ P5-C (S7, D10) — the SAME two moments also carry the protected course / library images (lib/content-assets.js): delivery
+// signs every stored path ("/exam-library/assets/…", "/learning-assets/…") for this window; persistence turns every such reference
+// — a signed URL a browser sends back included — into its stored path. Nothing else changes.
+const { signContentAssets, normalizeContentAssets } = require("./content-assets");
 
 const BANK_ASSET_TTL_SECONDS = 8 * 60 * 60;
 const SAFE_BLOB_NAME = /^[A-Za-z0-9][A-Za-z0-9._\-/]{0,255}$/;
@@ -148,19 +152,19 @@ function mapExamAssets(exam, assetFn) {
 /** Delivery: every bank asset gets a fresh signed URL minted NOW. Non-bank assets and unsafe blob names are untouched. */
 function hydrateBankAssets(exam, options = {}) {
   const ttl = Number(options.ttlSeconds) > 0 ? Number(options.ttlSeconds) : BANK_ASSET_TTL_SECONDS;
-  return mapExamAssets(exam, a => signedBankAsset(a, ttl));
+  return signContentAssets(mapExamAssets(exam, a => signedBankAsset(a, ttl)), options.nowMs);
 }
 /** Persistence: bank assets keep only their durable identity (no dataUrl / exp / sig). Same reference when nothing changes. */
 function normalizeBankAssetsForStorage(exam) {
-  return mapExamAssets(exam, a => (isDurableForm(a) ? a : durableBankAsset(a)));
+  return normalizeContentAssets(mapExamAssets(exam, a => (isDurableForm(a) ? a : durableBankAsset(a))));
 }
 /** Question-level variants for callers that hold a single question. */
 function hydrateBankAssetsInQuestion(question, options = {}) {
   const ttl = Number(options.ttlSeconds) > 0 ? Number(options.ttlSeconds) : BANK_ASSET_TTL_SECONDS;
-  return mapNode(question, a => signedBankAsset(a, ttl));
+  return signContentAssets(mapNode(question, a => signedBankAsset(a, ttl)), options.nowMs);
 }
 function normalizeBankAssetsInQuestion(question) {
-  return mapNode(question, a => (isDurableForm(a) ? a : durableBankAsset(a)));
+  return normalizeContentAssets(mapNode(question, a => (isDurableForm(a) ? a : durableBankAsset(a))));
 }
 
 module.exports = {

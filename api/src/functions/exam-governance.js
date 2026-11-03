@@ -5,6 +5,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { examOwnerOf, canAccessSavedExam } = require("../lib/saved-exam-access");
 const { tenantOf, canAccessDocument, CONSOLE_ACCOUNT_RE } = require("../lib/teacher-tenancy");   // Tadris+ P6-B
+const { signContentAssets } = require("../lib/content-assets");   // Tadris+ P5-C: protected images in a revision are delivered signed
 const { isSafeExamId } = require("../lib/exam-governance-model");
 const { resolveGovernanceCapabilities, describeCapabilitySource, isCapabilityConfigurationBroken, governanceWorkflowMode, governanceIdentityStatus, governanceDirectorySnapshot } = require("../lib/exam-governance-capabilities");
 const { listGovernanceActors } = require("../lib/governance-directory");
@@ -92,11 +93,11 @@ async function handler(request, deps = {}, obs = null) {
       return { status: 200, jsonBody: { ok: true, governed: s.governed, manifest: GOV.publicManifest(s.manifest), ...common } };
     }
     if (action === "revisions") { const r = await GOV.listRevisions(container, { examId, cursor: body.cursor, limit: body.limit }, libDeps); return { status: 200, jsonBody: { ok: true, ...r } }; }
-    if (action === "revision") { const revision = await GOV.loadRevision(container, { examId, revisionId: String(body.revisionId || "") }, libDeps); return { status: 200, jsonBody: { ok: true, revision } }; }
+    if (action === "revision") { const revision = signContentAssets(await GOV.loadRevision(container, { examId, revisionId: String(body.revisionId || "") }, libDeps)); return { status: 200, jsonBody: { ok: true, revision } }; }
     if (action === "events") { const r = await GOV.listEvents(container, { examId, cursor: body.cursor, limit: body.limit }, libDeps); return { status: 200, jsonBody: { ok: true, ...r } }; }
     if (action === "decisions") { const r = await GOV.listDecisions(container, { examId, cursor: body.cursor, limit: body.limit }, libDeps); return { status: 200, jsonBody: { ok: true, ...r } }; }
     if (action === "decision") { const decision = await GOV.loadDecision(container, { examId, decisionId: String(body.decisionId || "") }, libDeps); return { status: 200, jsonBody: { ok: true, decision } }; }
-    if (action === "published") { const revision = await GOV.loadPublishedRevision(container, examId, libDeps); return { status: 200, jsonBody: { ok: true, revision } }; }
+    if (action === "published") { const revision = signContentAssets(await GOV.loadPublishedRevision(container, examId, libDeps)); return { status: 200, jsonBody: { ok: true, revision } }; }
     if (!MUTATIONS.has(action)) return { status: 400, jsonBody: { ok: false, code: "INVALID", error: "Unsupported governance action." } };
     // Review Fix 1 / Blocker 3: a malformed capability configuration fails SAFE — no mutation until an operator fixes it.
     if (isCapabilityConfigurationBroken(process.env)) return { status: 503, jsonBody: { ok: false, code: "GOVERNANCE_CONFIG_INVALID", error: "إعدادات صلاحيات إدارة النشر على الخادم غير صالحة (GOVERNANCE_CAPABILITIES). لا يمكن تنفيذ أي تعديل حتى يصحّحها المسؤول.", capabilitySource } };
