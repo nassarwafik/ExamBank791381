@@ -106,7 +106,7 @@ function normalizeContentAssets(value) {
 /** Whether a payload carries any protected-asset reference. */
 function hasContentAssets(value) {
   let found = false;
-  rewrite(value, rel => { found = true; return null; });
+  rewrite(value, () => { found = true; return null; });
   return found;
 }
 
