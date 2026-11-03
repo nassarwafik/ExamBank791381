@@ -4,6 +4,7 @@ import { ownerLibraryApi, type ApiResult, type LibraryAudience, type OwnerLibrar
 import { CATEGORY_LABELS, categoryLabel } from "../examLibrary";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 import StepUpPrompt from "./StepUpPrompt";
+import { audienceText, matchesSearch } from "./libraryShared";
 
 /**
  * Tadris+ P6-D — «بنك الامتحانات» in the Owner Console (#/owner/exams, /api/owner-library): who sees each library exam.
@@ -14,17 +15,6 @@ import StepUpPrompt from "./StepUpPrompt";
  * Removing an exam from a teacher never touches the assignments already published from it. Every change needs a recent second-factor
  * check (asked inline, then retried). The server decides everything; a 401 signs out.
  */
-
-export const matchesSearch = (item: Pick<OwnerLibraryItem, "libraryItemId" | "title">, q: string) => {
-  const s = q.trim().toLowerCase();
-  return !s || item.libraryItemId.toLowerCase().includes(s) || item.title.toLowerCase().includes(s);
-};
-export function audienceText(item: OwnerLibraryItem): string {
-  if (item.audience === "all") return "لكل المعلمين";
-  if (!item.decided) return "لم يُحدَّد بعد — لا يراه أحد";
-  if (!item.teachers.length) return "لا يراه أي معلم";
-  return item.teachers.length === 1 ? "معلم واحد" : item.teachers.length + " معلمين";
-}
 
 export default function OwnerLibrary({ token, onSignedOut }: { token: string; onSignedOut: () => void }) {
   const [data, setData] = useState<{ items: OwnerLibraryItem[]; teachers: OwnerLibraryTeacher[] } | null>(null);

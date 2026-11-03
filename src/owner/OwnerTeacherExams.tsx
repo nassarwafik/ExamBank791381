@@ -3,7 +3,7 @@ import { IconWarning } from "../icons";
 import { ownerLibraryApi, type ApiResult, type OwnerLibraryItem } from "./ownerApi";
 import { CATEGORY_LABELS, categoryLabel } from "../examLibrary";
 import { SAVE_LABELS } from "../teacher/saveLabels";
-import { matchesSearch } from "./OwnerLibrary";
+import { matchesSearch } from "./libraryShared";
 
 /**
  * Tadris+ P6-D — the «الامتحانات» tab of a teacher's page: this teacher's exam bank, chosen exam by exam (and added to later).
