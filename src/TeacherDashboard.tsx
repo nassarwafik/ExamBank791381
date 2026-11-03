@@ -47,6 +47,8 @@ type Analytics={
  insights:Insight[];
  students:Array<{userId:string;displayName:string}>;
  studentDetail:StudentDetail|null;
+ /** Tadris+ P7-A1 — the analytics widgets this answer carries (absent on an older API → every section). */
+ widgets?:string[];
 };
 type StudentProfile={
  student:{userId:string;displayName:string;identityNumber:string;firstName:string;familyName:string;classId:string;active:boolean;archived:boolean;createdAt:string;lastLoginAt:string};
@@ -460,6 +462,9 @@ function TeacherDashboard({token}:DashboardProps){
 
  const fresh=loaded?.key===scopeKey;
  const k=data.kpis;
+ // Tadris+ P7-A1 — a section is shown only when the server served its widget (it computes nothing it does not send).
+ const shows=(id:string)=>!Array.isArray(data.widgets)||data.widgets.includes(id);
+ const scores=shows("scores.overview"),trendShown=shows("scores.trend"),classesShown=mode==="global"&&shows("classes.comparison"),topicsShown=shows("topics.performance");
  const isStudent=mode==="student";
  // 21E.2 — the accessible name + data table of each chart, from the same series the charts draw (null = empty state).
  const trendChart=trendModel(data.assignmentTrend,isStudent);
@@ -518,68 +523,68 @@ function TeacherDashboard({token}:DashboardProps){
   <section className="eb-dash-section eb-dash-kpis" aria-labelledby="eb-kpis-title">
    <h2 id="eb-kpis-title" className="eb-visually-hidden">المؤشرات الرئيسية</h2>
    <div className="eb-stat-grid is-primary">
-    <StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)} icon={<IconGraduation size={18}/>}/>
-    <StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info" icon={<IconCheck size={18}/>}/>
+    {scores&&<StatCard primary label={isStudent?"معدل الطالب":"متوسط العلامات"} value={fmtPct(k.average)} hint={k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)} icon={<IconGraduation size={18}/>}/>}
+    {scores&&<StatCard primary label="نسبة التسليم" value={fmtPct(k.completionRate)} hint={`${k.submissions} من ${k.expectedSubmissions} حالة متوقعة`} tone="info" icon={<IconCheck size={18}/>}/>}
     {isStudent
      ?<StatCard primary label="يحتاج متابعة" value={k.followUpStudents?"نعم":"لا"} hint={k.neverLogged?"لم يسجل الدخول بعد":"سجّل الدخول"} tone="attention" icon={<IconUser size={18}/>}/>
      :<StatCard primary label="يحتاجون متابعة" value={k.followUpStudents} hint={`${k.neverLogged} لم يسجلوا الدخول`} tone="attention" icon={<IconUser size={18}/>}/>}
-    <StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger" icon={<IconAssignments size={18}/>}/>
+    {scores&&<StatCard primary label="بانتظار التصحيح" value={k.pendingReview} hint={`من ${k.submissions} تسليمًا`} tone="danger" icon={<IconAssignments size={18}/>}/>}
    </div>
    <div className="eb-stat-grid is-secondary">
     <StatCard label="الطلاب الفعّالون" value={k.activeStudents} hint={mode==="global"?k.activeClasses+" صفوف فعّالة":mode==="class"?"في الصف المختار":"الطالب المختار فقط"}/>
-    <StatCard label="واجبات منشورة" value={k.publishedAssignments} hint="ضمن النطاق الحالي"/>
-    <StatCard label="اتجاه الأداء" value={trendIcon(k.performanceChange)+" "+fmtPct(Math.abs(k.performanceChange))} hint={trendText(k.performanceChange)+" مقارنة بالواجبات السابقة"} tone={k.performanceChange<0?"danger":"success"}/>
+    {scores&&<StatCard label="واجبات منشورة" value={k.publishedAssignments} hint="ضمن النطاق الحالي"/>}
+    {trendShown&&<StatCard label="اتجاه الأداء" value={trendIcon(k.performanceChange)+" "+fmtPct(Math.abs(k.performanceChange))} hint={trendText(k.performanceChange)+" مقارنة بالواجبات السابقة"} tone={k.performanceChange<0?"danger":"success"}/>}
    </div>
   </section>
 
   <section className="eb-dash-section" aria-labelledby="eb-attention-title">
    <SectionHeader level={2} id="eb-attention-title" title="يحتاج إلى انتباهك" description="من نتائج الصف والفترة المحددين أعلاه · أربع فئات مرتّبة حسب الأولوية"/>
    <div className="eb-attention-grid">
-    <AttentionCard id="eb-attention-pending" title="بانتظار التصحيح" count={k.pendingReview} tone="danger" items={pendingItems} empty="لا توجد تسليمات بانتظار التصحيح"/>
+    {scores&&<AttentionCard id="eb-attention-pending" title="بانتظار التصحيح" count={k.pendingReview} tone="danger" items={pendingItems} empty="لا توجد تسليمات بانتظار التصحيح"/>}
     <AttentionCard id="eb-attention-urgent" title={isStudent?"حالة عاجلة":"طلاب في حالة عاجلة"} count={urgentItems.length} tone="danger" items={urgentItems} empty="لا توجد حالات عاجلة"/>
-    <AttentionCard id="eb-attention-missing" title="تسليمات ناقصة" count={k.missingSubmissions} tone="attention" items={missingItems} empty="لا توجد تسليمات ناقصة"/>
+    {scores&&<AttentionCard id="eb-attention-missing" title="تسليمات ناقصة" count={k.missingSubmissions} tone="attention" items={missingItems} empty="لا توجد تسليمات ناقصة"/>}
     <AttentionCard id="eb-attention-never" title={isStudent?"لم يسجّل الدخول":"لم يسجّلوا الدخول"} count={k.neverLogged} tone="info" items={neverLoggedItems} empty={isStudent?"سجّل الطالب الدخول":"جميع الطلاب سجّلوا الدخول"}/>
    </div>
   </section>
 
-  <section className="eb-dash-section" aria-labelledby="eb-trends-title">
+  {(scores||trendShown||classesShown||topicsShown)&&<section className="eb-dash-section" aria-labelledby="eb-trends-title">
    <SectionHeader level={2} id="eb-trends-title" title="الاتجاهات والتحليلات"/>
    <div className="eb-chart-grid">
-    <ChartCard className="analytics-card eb-span-2" title={isStudent?"حركة علامات الطالب":"تطور متوسط الأداء"} ariaLabel={trendChart?.summary} table={trendChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">آخر {data.assignmentTrend.length} واجبات</span>} empty={trendChart?undefined:emptyChart(isStudent?"تظهر حركة العلامات بعد توفر نتيجتين على الأقل لهذا الطالب.":"تظهر حركة الأداء بعد توفر نتيجتين على الأقل.")}><LineChart items={data.assignmentTrend} student={isStudent}/></ChartCard>
-    <ChartCard className="analytics-card" title={isStudent?"حالة تسليم الطالب":"حالة التسليم"} ariaLabel={statusChart.summary} table={statusChart.table}><DonutChart submitted={data.submissionStatus.submitted} missing={data.submissionStatus.missing} pendingReview={data.submissionStatus.pendingReview}/></ChartCard>
-    <ChartCard className="analytics-card" title={isStudent?"توزيع علامات الطالب":"توزيع العلامات"} ariaLabel={distributionChart?.summary} table={distributionChart?.table||EMPTY_TABLE} empty={distributionChart?undefined:emptyChart("لا توجد علامات بعد.")}><GradeDistributionChart items={data.gradeDistribution} student={isStudent}/></ChartCard>
-    {mode==="global"&&<ChartCard className="analytics-card" title="مقارنة الصفوف" description="اختر صفًا لعرض تفاصيله" ariaLabel={classChart?.summary} table={classChart?.table||EMPTY_TABLE} empty={classChart?undefined:emptyChart("لا توجد بيانات صفوف بعد.")} after={<ClassPicker items={data.classComparison} selectedClassId={classId} onSelect={selectClass}/>}><ClassComparisonChart items={data.classComparison} onSelect={selectClass}/></ChartCard>}
-    <ChartCard className="analytics-card" title={isStudent?"الموضوعات لهذا الطالب":"الأداء حسب الموضوع"} ariaLabel={topicChart?.summary} table={topicChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">الأضعف أولًا</span>} empty={topicChart?undefined:emptyChart("ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.")}><TopicChart items={data.topicAnalytics}/></ChartCard>
-   </div>
-  </section>
-
-  {!isStudent&&<section className="eb-dash-section" aria-labelledby="eb-followup-title">
-   <SectionHeader level={2} id="eb-followup-title" title="طلاب يحتاجون متابعة" count={data.followUp.length} description="عاجل: يحتاج تدخلًا فوريًا · متابعة: يحتاج مراقبة"/>
-   <div className="eb-followup-grid">
-    <article className="analytics-card is-flush eb-span-2"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>الصف</th><th>المعدل</th><th>غير مسلّم</th><th>الاتجاه</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>{data.followUp.map(item=><tr key={item.userId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(item.userId)}>{item.displayName}</button><small>{maskIdentity(item.identityNumber)}</small></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{item.missing}</td><td><span className={"analytics-trend-badge "+item.trend}>{trendIcon(item.trendDelta)} {trendText(item.trendDelta)} {item.trendDelta?Math.abs(item.trendDelta)+"%":""}</span></td><td>{item.reasons.join("، ")}</td><td><span className={"analytics-risk "+item.severity}>{item.severity==="high"?"عاجل":"متابعة"}</span></td></tr>)}{!data.followUp.length&&<tr><td colSpan={7}>لا توجد حالات متابعة بارزة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
-    <article className="analytics-card"><SectionHeader level={3} title="أفضل تحسن"/><div className="analytics-improvers">{data.topImprovers.map((item,index)=><button type="button" key={item.userId} onClick={()=>void openProfile(item.userId)}><span className="analytics-rank">{index+1}</span><div><strong>{item.displayName}</strong><small>{item.className}</small></div><b>↑ {item.trendDelta}%</b></button>)}{!data.topImprovers.length&&<div className="analytics-empty-chart">نحتاج نتائج متتابعة أكثر لقياس التحسن.</div>}</div></article>
+    {trendShown&&<ChartCard className="analytics-card eb-span-2" title={isStudent?"حركة علامات الطالب":"تطور متوسط الأداء"} ariaLabel={trendChart?.summary} table={trendChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">آخر {data.assignmentTrend.length} واجبات</span>} empty={trendChart?undefined:emptyChart(isStudent?"تظهر حركة العلامات بعد توفر نتيجتين على الأقل لهذا الطالب.":"تظهر حركة الأداء بعد توفر نتيجتين على الأقل.")}><LineChart items={data.assignmentTrend} student={isStudent}/></ChartCard>}
+    {scores&&<ChartCard className="analytics-card" title={isStudent?"حالة تسليم الطالب":"حالة التسليم"} ariaLabel={statusChart.summary} table={statusChart.table}><DonutChart submitted={data.submissionStatus.submitted} missing={data.submissionStatus.missing} pendingReview={data.submissionStatus.pendingReview}/></ChartCard>}
+    {scores&&<ChartCard className="analytics-card" title={isStudent?"توزيع علامات الطالب":"توزيع العلامات"} ariaLabel={distributionChart?.summary} table={distributionChart?.table||EMPTY_TABLE} empty={distributionChart?undefined:emptyChart("لا توجد علامات بعد.")}><GradeDistributionChart items={data.gradeDistribution} student={isStudent}/></ChartCard>}
+    {classesShown&&<ChartCard className="analytics-card" title="مقارنة الصفوف" description="اختر صفًا لعرض تفاصيله" ariaLabel={classChart?.summary} table={classChart?.table||EMPTY_TABLE} empty={classChart?undefined:emptyChart("لا توجد بيانات صفوف بعد.")} after={<ClassPicker items={data.classComparison} selectedClassId={classId} onSelect={selectClass}/>}><ClassComparisonChart items={data.classComparison} onSelect={selectClass}/></ChartCard>}
+    {topicsShown&&<ChartCard className="analytics-card" title={isStudent?"الموضوعات لهذا الطالب":"الأداء حسب الموضوع"} ariaLabel={topicChart?.summary} table={topicChart?.table||EMPTY_TABLE} actions={<span className="analytics-chip">الأضعف أولًا</span>} empty={topicChart?undefined:emptyChart("ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.")}><TopicChart items={data.topicAnalytics}/></ChartCard>}
    </div>
   </section>}
 
-  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-assignments-title">
+  {!isStudent&&shows("students.followUp")&&<section className="eb-dash-section" aria-labelledby="eb-followup-title">
+   <SectionHeader level={2} id="eb-followup-title" title="طلاب يحتاجون متابعة" count={data.followUp.length} description="عاجل: يحتاج تدخلًا فوريًا · متابعة: يحتاج مراقبة"/>
+   <div className="eb-followup-grid">
+    <article className="analytics-card is-flush eb-span-2"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>الصف</th><th>المعدل</th><th>غير مسلّم</th><th>الاتجاه</th><th>السبب</th><th>الحالة</th></tr></thead><tbody>{data.followUp.map(item=><tr key={item.userId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(item.userId)}>{item.displayName}</button><small>{maskIdentity(item.identityNumber)}</small></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{item.missing}</td><td><span className={"analytics-trend-badge "+item.trend}>{trendIcon(item.trendDelta)} {trendText(item.trendDelta)} {item.trendDelta?Math.abs(item.trendDelta)+"%":""}</span></td><td>{item.reasons.join("، ")}</td><td><span className={"analytics-risk "+item.severity}>{item.severity==="high"?"عاجل":"متابعة"}</span></td></tr>)}{!data.followUp.length&&<tr><td colSpan={7}>لا توجد حالات متابعة بارزة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
+    {shows("students.improvers")&&<article className="analytics-card"><SectionHeader level={3} title="أفضل تحسن"/><div className="analytics-improvers">{data.topImprovers.map((item,index)=><button type="button" key={item.userId} onClick={()=>void openProfile(item.userId)}><span className="analytics-rank">{index+1}</span><div><strong>{item.displayName}</strong><small>{item.className}</small></div><b>↑ {item.trendDelta}%</b></button>)}{!data.topImprovers.length&&<div className="analytics-empty-chart">نحتاج نتائج متتابعة أكثر لقياس التحسن.</div>}</div></article>}
+   </div>
+  </section>}
+
+  {trendShown&&<section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-assignments-title">
    <SectionHeader level={2} id="eb-assignments-title" title={isStudent?"واجبات الطالب":"متابعة الواجبات"} description={isStudent?"افتح أي واجب لعرض نتيجة الطالب ومحاولاته":"افتح أي واجب لعرض نتائج طلابه ومحاولاتهم"}/>
    <article className="analytics-card is-flush"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>الصف</th><th>{isStudent?"العلامة":"المتوسط"}</th><th>{isStudent?"الحالة":"التسليم"}</th>{!isStudent&&<th>غير مسلّم</th>}<th>مراجعة</th><th>الموعد</th></tr></thead><tbody>{[...data.assignmentTrend].reverse().map(item=><tr key={item.assignmentId}><td><button type="button" className="analytics-link" onClick={()=>void openAssignment(item)}>{item.title}</button></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{isStudent?(item.submitted?"تم التسليم":"لم يُسلّم"):fmtPct(item.completionRate)}</td>{!isStudent&&<td>{item.missing}</td>}<td>{isStudent?(item.pendingReview?"بانتظار التصحيح":"—"):item.pendingReview}</td><td>{item.dueAt?fmtDate(item.dueAt):"—"}</td></tr>)}{!data.assignmentTrend.length&&<tr><td colSpan={isStudent?6:7}>لا توجد واجبات منشورة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
-  </section>
+  </section>}
 
-  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-insights-title">
+  {shows("insights")&&<section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-insights-title">
    <SectionHeader level={2} id="eb-insights-title" title="مؤشرات ذكية للمعلم"/>
    <article className="analytics-card"><div className="analytics-insights">{data.insights.map((item,index)=><article key={index} className={"analytics-insight "+item.tone}><div className="analytics-insight-icon" aria-hidden="true">{insightIcon(item.tone)}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}{!data.insights.length&&<div className="analytics-empty-chart">لا توجد مؤشرات ضمن النطاق الحالي.</div>}</div></article>
-  </section>
+  </section>}
 
   <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-achievements-title">
    <SectionHeader level={2} id="eb-achievements-title" title="إنجازات الطلاب الأخيرة" count={achievements.length>0?achievements.length:undefined}/>
    <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&!achievementsLoading&&!achievementsError&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}{achievementsLoading&&<div className="analytics-empty-chart" role="status">جارٍ تحميل الإنجازات...</div>}</div></article>
   </section>
 
-  <section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-ai-title">
+  {scores&&<section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-ai-title">
    <SectionHeader level={2} id="eb-ai-title" title={aiLabel} description={aiDescription}/>
    <article className="analytics-card"><button type="button" className="analytics-ai-button primary" onClick={()=>void runAiAnalysis()} disabled={aiBusy}><IconSparkles size={16}/>{aiBusy&&aiVisible?"جارٍ التحليل...":aiLabel}</button>{aiError&&aiVisible&&<div className="platform-error" role="alert">{aiError}</div>}{aiAdvice&&aiVisible&&adviceBlock(aiAdvice)}</article>
-  </section>
+  </section>}
 
   </div>
 

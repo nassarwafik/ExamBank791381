@@ -218,7 +218,7 @@ function topicBreakdown(records) {
 
 // Phase 8A — insights speak about the CURRENT scope only. GLOBAL: every current class ("عام"); CLASS: "في الصف …";
 // STUDENT: the one selected student — never "طلاب يحتاجون متابعة" or any classmate-derived figure.
-function buildInsights({ mode, className, performanceChange, trendCount, topicAnalytics, followUp, missing, pendingReview, neverLogged, student }) {
+function buildInsights({ mode, className, performanceChange, trendCount, topicAnalytics, followUp, missing, pendingReview, neverLogged, student, academic = true }) {
   const insights = [];
   const weakestTopic = topicAnalytics.find(item => item.average !== null && item.average < 70);
   const strongestTopic = [...topicAnalytics].reverse().find(item => item.average !== null && item.average >= 85);
@@ -264,7 +264,8 @@ function buildInsights({ mode, className, performanceChange, trendCount, topicAn
     if (strongestTopic) {
       insights.push({ tone: "success", title: "نقطة قوة", text: lead("الأداء في " + strongestTopic.topic + " قوي بمتوسط " + strongestTopic.average + "%.") });
     }
-    if (followUp.length) {
+    // P7-A1: without the assignment sources the follow-up can only be «not logged in yet», which the neverLogged line says.
+    if (followUp.length && academic) {
       insights.push({ tone: "warning", title: "طلاب يحتاجون متابعة", text: lead(followUp.length + " طالبًا لديهم مؤشر متابعة مثل انخفاض المعدل أو واجبات ناقصة أو تراجع في الأداء.") });
     }
     if (missing) {
@@ -292,18 +293,21 @@ function buildInsights({ mode, className, performanceChange, trendCount, topicAn
 // run the exact same pipeline with the prefilter disabled (download every listed submission = the pre-R28 scan);
 // `scopedSubmissionReads: false` (Phase 8E-3) runs a CLASS / STUDENT scope through the GLOBAL read path (one
 // whole-prefix listing + candidate prefilter = the pre-8E-3 pipeline) so the scoped reads can be proven equivalent.
-async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0, tenant = null } = {}, deps = {}) {
+// Tadris+ P7-A1 — `assignments: false` (a teacher without assignments.assignment.view, while the owner enforces access): no
+// assignment document, folder or submission is listed or read, so every assignment-derived figure is empty BY CONSTRUCTION (no
+// submissions, no marks, no trend, no topics) and the follow-up / insights can only come from the class and student figures.
+async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0, tenant = null, assignments: withAssignments = true } = {}, deps = {}) {
   const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
   // Phase 8A — ONE authoritative analytics scope per request (validated below, once the users are loaded).
   const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
   // Phase 8E-3 — which submission READ path serves this request (see listScopedSubmissionNames above).
-  const globalReads = mode === "global" || deps.scopedSubmissionReads === false;
+  const globalReads = withAssignments && (mode === "global" || deps.scopedSubmissionReads === false);
   // Roadmap #28: in the GLOBAL path the submissions prefix is LISTED once (as before) but downloaded only after the
   // candidate assignment population is known, so the assignment documents are read first (with the submission
   // listing), and the selected submission downloads then overlap the classes/users reads. Classes/users/assignments
   // are still read in full (users remain the sole membership authority; the roster index is never consulted).
   const [assignmentsRaw, submissionNames] = await Promise.all([
-    listJson(container, ASSIGNMENT_PREFIX),
+    withAssignments ? listJson(container, ASSIGNMENT_PREFIX) : Promise.resolve([]),
     globalReads ? listBlobNames(container, SUBMISSION_PREFIX) : Promise.resolve([])
   ]);
   const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && normalizeAssignmentStatus(item) === "published");
@@ -321,6 +325,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     listJson(container, CLASS_PREFIX),
     listJson(container, USER_PREFIX),
     globalReads ? downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))
+      : !withAssignments ? Promise.resolve([])
       : mode === "class" ? listScopedSubmissionNames(container, classCandidates).then(names => downloadManyJson(container, names))
       : Promise.resolve(null)                                            // STUDENT: exact reads only after scope validation
   ]);
@@ -480,7 +485,8 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     .slice(0, 8);
 
   // A comparison of classes is a GLOBAL view only: a class or student scope never carries other classes' aggregates.
-  const classComparison = mode !== "global" ? [] : classes
+  // P7-A1: a comparison of classes is a comparison of their assignment results — nothing to compare without them.
+  const classComparison = mode !== "global" || !withAssignments ? [] : classes
     .filter(item => item.active)
     .map(classroom => ({
       classId: classroom.classId,
@@ -538,7 +544,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
 
   const neverLogged = scopedStudents.filter(student => !student.lastLoginAt).length;
   const scopeClassName = classMap.get(requestedClassId)?.name || "";
-  const insights = buildInsights({ mode, className: scopeClassName, performanceChange, trendCount: trendAverages.length, topicAnalytics, followUp, missing, pendingReview, neverLogged, student: mode === "student" ? studentSummaries[0] || null : null });
+  const insights = buildInsights({ mode, className: scopeClassName, performanceChange, trendCount: trendAverages.length, topicAnalytics, followUp, missing, pendingReview, neverLogged, student: mode === "student" ? studentSummaries[0] || null : null, academic: withAssignments });
 
   // Phase 8A — the student view has ONE authority: in STUDENT mode the whole response is already that student's records,
   // so studentDetail is a projection of the SAME summary / trend / topics as the main KPIs (never a second computation).

@@ -40,6 +40,9 @@ export type TeacherToday = {
   /** Phase 9C — additive: students with ungraded project stages (Phase 9B evaluation semantics). Absent on older
    * payloads (no card), null when the source failed this round ("projectEvaluation" in `partial`). */
   projectEvaluation?: ProjectEvaluationAttention | null;
+  /** Tadris+ P7-A1 — the widgets this answer carries (lib/dashboard-widgets.js): the server computes and sends only the sections the
+   *  teacher's access allows, and a card is shown only when its widget is listed. Absent on an older API → every card. */
+  widgets?: string[];
 };
 type AttemptItem = { assignmentId: string; title: string; className: string; studentId: string; studentName: string; startedAt: string; status: string; lastActivityAt?: string };
 type Props = {
@@ -84,7 +87,8 @@ function parse(j: unknown): TeacherToday | null {
   const o = j as Partial<TeacherToday> | null;
   if (!o || typeof o !== "object" || !o.attention || !o.attention.activeAttempts || !o.attention.notStarted || !o.attention.pendingReview) return null;
   const projectEvaluation = parseProjectEvaluation((o as Record<string, unknown>).projectEvaluation);
-  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null, staleAttempts: block(o.attention.staleAttempts), dueSoon: block(o.attention.dueSoon), resultsUnreleased: block(o.attention.resultsUnreleased), openingSoon: block(o.attention.openingSoon) }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [], ...(projectEvaluation === undefined ? {} : { projectEvaluation }) };
+  const widgets = Array.isArray(o.widgets) ? o.widgets.filter((w): w is string => typeof w === "string") : undefined;
+  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null, staleAttempts: block(o.attention.staleAttempts), dueSoon: block(o.attention.dueSoon), resultsUnreleased: block(o.attention.resultsUnreleased), openingSoon: block(o.attention.openingSoon) }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [], ...(projectEvaluation === undefined ? {} : { projectEvaluation }), ...(widgets ? { widgets } : {}) };
 }
 
 /** «3/7 مراحل مقيّمة» — the row's evaluation state in the Phase 9B wording (0 IS a grade: it is counted as graded by the server). */
@@ -226,6 +230,9 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
 
   const go = (id: TeacherNavId) => onNavigate?.(id);
   const scrollToFeed = () => { const el = document.getElementById("eb-achievements-title"); el?.scrollIntoView?.({ block: "start" }); el?.focus?.(); };
+  // Tadris+ P7-A1 — only the widgets the server served (an older payload without `widgets` → every card, as before).
+  const shows = (id: string) => !data?.widgets || data.widgets.includes(id);
+  const anyAssignments = ["grading.pending", "assignments.deadlines", "assignments.notStarted", "results.unreleased", "attempts.live", "activity.recent"].some(shows);
   const a = data?.attention;
   const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
   const stale = a?.staleAttempts;                                              // undefined = older payload (no card)
@@ -283,54 +290,54 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
         // Phase 21H.3 — cards in priority order: grading, deadlines, who has not started, results to publish, messages,
         // projects, then the live / idle attempts and what opens soon.
         <div className="eb-attention-grid eb-today-grid">
-          <Card id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
+          {shows("grading.pending") && <Card id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={spread(a.pendingReview.count, SUBMISSIONS, a.pendingReview.assignments)}
             items={a.pendingReview.items.map(i => ({ key: i.assignmentId, label: i.title, meta: count(i.pendingReview, SUBMISSIONS) + " · " + i.className,
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />
-          {due && <Card id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />}
+          {due && shows("assignments.deadlines") && <Card id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
             items={due.items.map(i => ({ key: "due:" + i.assignmentId, label: i.title, meta: "يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) + " · لم يسلّم " + i.notSubmitted + " من " + i.expected + " · " + i.className,
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) } : {}),
               ...(openAssignment && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />}
-          <Card id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
+          {shows("assignments.notStarted") && <Card id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={spread(a.notStarted.count, STUDENTS, a.notStarted.assignments)}
             items={a.notStarted.items.map(i => ({ key: i.assignmentId, label: i.title, meta: "لم يبدأ " + i.notStarted + " من " + i.expected + " · " + i.className + (i.dueAt ? " · التسليم " + fmt(i.dueAt) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — " + notStartedText(i.notStarted) } : {}),
-              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />
-          {unreleased && <Card id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />}
+          {unreleased && shows("results.unreleased") && <Card id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary="اخترت نشر نتائج هذه الواجبات يدويًا؛ لا يرى الطلاب علاماتهم قبل أن تنشرها."
             items={unreleased.items.map(i => ({ key: "rel:" + i.assignmentId, label: i.title, meta: count(i.submitted, SUBMISSIONS) + " · " + i.className,
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " لنشر نتائجه" } : {}) }))} />}
-          <article className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
+          {shows("messages.unread") && <article className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
             <h3 id="eb-today-messages" className="eb-attention-title"><span>رسائل غير مقروءة</span><span className="eb-attention-count">{a.unreadMessages ? (a.unreadMessages.capped ? "99+" : a.unreadMessages.total) : "—"}</span></h3>
             {a.unreadMessages === null ? <p className="eb-attention-partial">تعذر قراءة الرسائل الآن؛ بقية الملخص محدّثة.</p>
               : a.unreadMessages.total === 0 ? <p className="eb-attention-empty">لا رسائل جديدة من الطلاب.</p>
               : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : count(a.unreadMessages.total, MESSAGES)} من طلابك بانتظار الرد.</p>}
             <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
-          </article>
-          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
-          <Card id="eb-today-active" title="محاولات نشطة الآن" count={a.activeAttempts.count} tone="attention" empty="لا يعمل أي طالب على محاولة الآن." actionLabel="الواجبات" onAction={() => go("assignments")}
+          </article>}
+          {projectEval !== undefined && shows("projects.evaluation") && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
+          {shows("attempts.live") && <Card id="eb-today-active" title="محاولات نشطة الآن" count={a.activeAttempts.count} tone="attention" empty="لا يعمل أي طالب على محاولة الآن." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={count(a.activeAttempts.count, STUDENTS_WORKING)}
             items={a.activeAttempts.items.map(i => ({ key: i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — " + attemptText(i.status) } : {}) }))} />
-          {stale && <Card id="eb-today-stale" title="محاولات مفتوحة بلا نشاط" count={stale.count} tone="attention" empty="لا توجد محاولات مفتوحة متروكة." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — " + attemptText(i.status) } : {}) }))} />}
+          {stale && shows("attempts.live") && <Card id="eb-today-stale" title="محاولات مفتوحة بلا نشاط" count={stale.count} tone="attention" empty="لا توجد محاولات مفتوحة متروكة." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={"لم يعمل عليها أصحابها منذ أكثر من 15 دقيقة، أو أوقفتها مؤقتًا. افتح المحاولة لتمديدها أو إنهائها من سجل العلامات."}
             items={stale.items.map(i => ({ key: "stale:" + i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — محاولة مفتوحة بلا نشاط" } : {}) }))} />}
-          {opening && opening.count > 0 && <Card id="eb-today-opening" title="تفتح خلال 24 ساعة" count={opening.count} tone="info" empty="" actionLabel="الواجبات" onAction={() => go("assignments")}
+          {opening && opening.count > 0 && shows("assignments.deadlines") && <Card id="eb-today-opening" title="تفتح خلال 24 ساعة" count={opening.count} tone="info" empty="" actionLabel="الواجبات" onAction={() => go("assignments")}
             items={opening.items.map(i => ({ key: "open:" + i.assignmentId, label: i.title, meta: "تفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) + " · " + count(i.expected, STUDENTS) + " · " + i.className,
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " — يفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) } : {}) }))} />}
         </div>
       )}
       {confirmDialog}
       <div className="eb-today-actions" role="group" aria-label="إجراءات سريعة">
-        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("messages")}><span className="eb-today-action-icon" aria-hidden="true"><IconMail size={18} /></span>فتح الرسائل</button>
-        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("assignments")}><span className="eb-today-action-icon" aria-hidden="true"><IconAssignments size={18} /></span>الواجبات</button>
+        {shows("messages.unread") && <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("messages")}><span className="eb-today-action-icon" aria-hidden="true"><IconMail size={18} /></span>فتح الرسائل</button>}
+        {anyAssignments && <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("assignments")}><span className="eb-today-action-icon" aria-hidden="true"><IconAssignments size={18} /></span>الواجبات</button>}
         <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("students")}><span className="eb-today-action-icon" aria-hidden="true"><IconStudents size={18} /></span>الصفوف والطلاب</button>
         <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("reports")}><span className="eb-today-action-icon" aria-hidden="true"><IconReports size={18} /></span>التقارير</button>
-        <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("projects")}><span className="eb-today-action-icon" aria-hidden="true"><IconProjects size={18} /></span>المشاريع</button>
+        {shows("projects.evaluation") && <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("projects")}><span className="eb-today-action-icon" aria-hidden="true"><IconProjects size={18} /></span>المشاريع</button>}
         <button type="button" className="eb-button is-small eb-today-action" onClick={scrollToFeed}><span className="eb-today-action-icon" aria-hidden="true"><IconMedal size={18} /></span>تقدير طالب</button>
       </div>
-      {data && data.recent.length > 0 && (
+      {data && shows("activity.recent") && data.recent.length > 0 && (
         <section className="eb-today-recent" aria-labelledby="eb-today-recent-title">
           <h3 id="eb-today-recent-title" className="eb-subheading">آخر نشاط في صفوفك</h3>
           <ul className="eb-today-recent-list">
