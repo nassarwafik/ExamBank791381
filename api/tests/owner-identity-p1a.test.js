@@ -557,7 +557,7 @@ describe("P1-A owner login and session", () => {
 describe("P1-A boundaries", () => {
   const FN = path.join(import.meta.dirname, "../src/functions");
   it("no teacher or student route touches the owner's storage prefixes", () => {
-    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js"];   // P2-A2: the owner's teacher management; P3-A: teacher capabilities; P4-C: school identities; P4-D: the handoff to the owner's teacher account
+    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-library.js"];   // P6-D: each teacher's exam bank; P2-A2: the owner's teacher management; P3-A: teacher capabilities; P4-C: school identities; P4-D: the handoff to the owner's teacher account
     for (const f of readdirSync(FN).filter(n => n.endsWith(".js") && !owners.includes(n))) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/platform\/(accounts|sessions\/owners|owner\/|owner-audit)/);
@@ -567,7 +567,7 @@ describe("P1-A boundaries", () => {
     }
   });
   it("the owner routes never accept a teacher session and never call the teacher login", () => {
-    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js"]) {
+    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-library.js"]) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/requireBuilderAuth|validateBuilderCredentials|requireStudentAuth|requireTeacherSession/);
     }

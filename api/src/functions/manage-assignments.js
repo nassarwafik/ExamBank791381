@@ -26,6 +26,7 @@ const {latePolicyOf,parseLatePolicyInput}=require("../lib/late-policy");   // D5
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 // Tadris+ P6-C (owner decision D8) — a library assignment is built from the SERVER's frozen library item (never from the browser).
 const {libraryItemEntry,VALID_ID:LIBRARY_ID}=require("../lib/exam-library-store");
+const {teacherLibraryFilter,libraryAccessUnavailable}=require("../lib/access/library-access");   // Tadris+ P6-D
 const {authorize}=require("../lib/access/authorize");
 // Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
 // publishedRevisionId → revision, fail closed); the browser's exam body is never the source for a governed exam. Legacy
@@ -97,6 +98,9 @@ async function handler(request,deps={},obs=null){
     const itemId=String(b.libraryRef&&b.libraryRef.itemId||"").trim();
     const entry=LIBRARY_ID.test(itemId)?libraryItemEntry(itemId):null;
     if(!entry||!entry.value||!entry.value.examSnapshot)return {status:404,jsonBody:{ok:false,code:"LIBRARY_ITEM_NOT_FOUND",error:"العنصر غير موجود في المكتبة."}};
+    // Tadris+ P6-D — only an exam of the teacher's own bank (its audience): another exam is answered exactly like a missing one.
+    let bank;try{bank=await teacherLibraryFilter(c,auth.user,{...deps,container:c})}catch{return libraryAccessUnavailable()}
+    if(bank&&!bank(itemId))return {status:404,jsonBody:{ok:false,code:"LIBRARY_ITEM_NOT_FOUND",error:"العنصر غير موجود في المكتبة."}};
     exam=cleanExam(entry.value.examSnapshot);source={kind:"library",itemId,etag:String(entry.etag||"")};
    }else if(auth.user&&auth.user.am==="managed"){   // like requireCapability: only a managed session is evaluated
     const own=await authorize(auth.user,"assignments.assignment.create",{...deps,container:c},obs);
