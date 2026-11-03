@@ -33,7 +33,7 @@ export const MUTANTS = [
   { id: "P1A2-M11", what: "the QR format information is not masked (0x5412 dropped)", edits: [{ file: QR, find: "const bits = ((data << 10) | rem) ^ 0x5412;", replace: "const bits = ((data << 10) | rem);" }] },
   { id: "P1A2-M12", what: "the Reed–Solomon error correction is wrong (generator root step)", edits: [{ file: QR, find: "root = gfMultiply(root, 0x02);", replace: "root = gfMultiply(root, 0x03);" }] },
   // P4-A: the route now also names the console sections (teachers, access).
-  { id: "P1A2-M13", what: "any hash under #/owner… is the owner surface", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?/;" }] }
+  { id: "P1A2-M13", what: "any hash under #/owner… is the owner surface", edits: [{ file: ROUTE, find: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools|courses)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?\\/?$/;", replace: "const OWNER_HASH = /^#\\/owner(?:\\/(setup|access|schools|courses)|\\/(teachers)(?:\\/(t_[a-f0-9]{16}|t_legacy))?)?/;" }] }
 ];
 
 const originals = new Map();

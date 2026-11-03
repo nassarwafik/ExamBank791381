@@ -88,7 +88,7 @@ export default function TeacherWizard({ initialTrial = false, token, busy, prese
       ...(trial ? { trialDays } : {})
     };
     if (copied && copied.preset && sourceTeacher) {
-      return { ...base, presetId: copied.preset.id, presetVersion: copied.preset.version, grants: [...copied.grants], denies: [...copied.denies], accessReason: "نسخ من " + sourceTeacher.username };
+      return { ...base, presetId: copied.preset.id, presetVersion: copied.preset.version, grants: [...copied.grants], denies: [...copied.denies], accessReason: "نسخ من " + sourceTeacher.username, ...(Array.isArray(copied.courses) ? { courses: [...copied.courses] } : {}) };
     }
     if (chosenPreset) return { ...base, presetId: chosenPreset.id, presetVersion: chosenPreset.version };
     return base;
@@ -104,7 +104,7 @@ export default function TeacherWizard({ initialTrial = false, token, busy, prese
 
   const presetName = (p: { id: string; version: number } | null) => (p ? presets.find(x => x.id === p.id && x.version === p.version)?.label || p.id : "—");
   const accessSummary = copied
-    ? "نسخة من صلاحيات " + (sourceTeacher ? sourceTeacher.displayName : "") + ": " + presetName(copied.preset) + (copied.grants.length || copied.denies.length ? " (+" + copied.grants.length + " / −" + copied.denies.length + ")" : "")
+    ? "نسخة من صلاحيات " + (sourceTeacher ? sourceTeacher.displayName : "") + ": " + presetName(copied.preset) + (copied.grants.length || copied.denies.length ? " (+" + copied.grants.length + " / −" + copied.denies.length + ")" : "") + (Array.isArray(copied.courses) ? " · " + copied.courses.length + " مقرر فقط" : "")
     : chosenPreset ? chosenPreset.label : "لاحقًا (بلا صلاحيات حتى تختار)";
 
   return (

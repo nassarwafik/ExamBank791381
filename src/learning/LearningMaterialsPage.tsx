@@ -69,6 +69,24 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   // authenticated teacher app, and it is enabled only with the teacher session token present. The student portal never
   // reaches this page; its Reader searches exactly its released modules.
   const teacherSearch = Boolean(token);
+  // Tadris+ P5-A2 — with a teacher session the library offers only the courses the SERVER says this teacher may use now
+  // (/api/learning-materials-catalog: published in the owner's catalog and within the teacher's entitlement). Presentation only:
+  // every content route refuses on its own. No answer (or a failure) → the list as before; the server still decides.
+  // Read once, and only while the library itself is shown (the course page and the Reader make no extra request).
+  const [allowedCourses, setAllowedCourses] = useState<Set<string> | null>(null);
+  const onLibrary = view.kind === "library";
+  useEffect(() => {
+    if (!token || !onLibrary || allowedCourses) return;
+    let live = true;
+    void fetch("/api/learning-materials-catalog", { headers: teacherTrainingHeaders(token), cache: "no-store" })
+      .then(async r => {
+        if (!live || !r.ok) return;
+        const j = (await r.json().catch(() => null)) as { ok?: boolean; courses?: { courseId?: unknown }[] } | null;
+        if (live && j && j.ok === true && Array.isArray(j.courses)) setAllowedCourses(new Set(j.courses.map(c => String(c.courseId))));
+      })
+      .catch(() => { /* the list stays as it is; the server still refuses what is not allowed */ });
+    return () => { live = false; };
+  }, [token, onLibrary, allowedCourses]);
   // Library search + filters survive opening a result in the Reader and coming back («العودة إلى نتائج البحث»).
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,7 +149,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   const subjects = [...new Set(LEARNING_COURSES.map(c => c.subject))];
   const grades = [...new Set(LEARNING_COURSES.flatMap(courseGrades))];
   const matchesFilters = (c: LearningCourse) => (!subject || c.subject === subject) && (!grade || courseGrades(c).includes(grade));
-  const availableCourses = LEARNING_COURSES.filter(c => c.status === "available").filter(matchesFilters);
+  const availableCourses = LEARNING_COURSES.filter(c => c.status === "available").filter(c => !allowedCourses || allowedCourses.has(c.id)).filter(matchesFilters);
   const upcomingCourses = LEARNING_COURSES.filter(c => c.status === "coming-soon").filter(matchesFilters);
   const searchableCourses = availableCourses.filter(c => hasCourseContent(c.id));
   return (
