@@ -147,7 +147,7 @@ async function handler(request, deps = {}, obs = null) {
       let initialAccess = null;
       if (!importing) {
         const wantsPreset = body.presetId !== undefined && body.presetId !== null && body.presetId !== "";
-        const hasLists = (Array.isArray(body.grants) && body.grants.length > 0) || (Array.isArray(body.denies) && body.denies.length > 0) || Array.isArray(body.courses) || Array.isArray(body.widgets) || Array.isArray(body.games);
+        const hasLists = (Array.isArray(body.grants) && body.grants.length > 0) || (Array.isArray(body.denies) && body.denies.length > 0) || Array.isArray(body.courses) || Array.isArray(body.widgets) || Array.isArray(body.games) || (body.appearance !== undefined && body.appearance !== null);
         if (!wantsPreset && hasLists) return bad("ACCESS_PRESET_MISSING", ACCESS_REFUSAL.ACCESS_PRESET_MISSING);
         if (!wantsPreset) {
           let mode = "enforce";                                   // unreadable → treated as enforce (fail safe)
@@ -162,7 +162,8 @@ async function handler(request, deps = {}, obs = null) {
               resources: {   // P5-A courses, P7-A2 widgets (absent / null = all)
                 ...(body.courses === undefined || body.courses === null ? {} : { courses: body.courses }),
                 ...(body.widgets === undefined || body.widgets === null ? {} : { widgets: body.widgets }),
-                ...(body.games === undefined || body.games === null ? {} : { games: body.games })   // P7-B2
+                ...(body.games === undefined || body.games === null ? {} : { games: body.games }),   // P7-B2
+                ...(body.appearance === undefined || body.appearance === null ? {} : { appearance: body.appearance })   // P8-A2
               },
               reason: "initial access at creation" + (note ? " — " + note : ""), createdBy: actor, nowMs
             }).revision;

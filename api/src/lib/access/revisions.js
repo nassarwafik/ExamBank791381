@@ -6,6 +6,7 @@ const { preset } = require("./presets");
 const { findLearningCourse } = require("../learning-materials-registry");
 const { widget: findWidget } = require("../dashboard-widgets");
 const { game: findGame } = require("../game-catalog");
+const { APPEARANCE } = require("../appearance-registry");
 
 // Tadris+ P3-A — access revisions (blueprint §6.3). A revision is IMMUTABLE: written once (create-only), never changed. A teacher
 // account points at its current revision (`accessRevisionId`); changing access = a NEW revision, then a compare-and-set on the
@@ -24,14 +25,17 @@ const { game: findGame } = require("../game-catalog");
 //   Tadris+ P7-A2 — `resources.widgets` (optional): the ONLY dashboard widgets this teacher may see, as known widget ids
 //   (lib/dashboard-widgets.js), without duplicates; absent = every widget (the same «only narrows» rule).
 //   Tadris+ P7-B2 — `resources.games` (optional): the ONLY educational games this teacher (and so their students) may use, as known
-//   game ids (lib/game-catalog.js), without duplicates; absent = every game. Any other key is refused.
+//   game ids (lib/game-catalog.js), without duplicates; absent = every game.
+//   Tadris+ P8-A2 — `resources.appearance` (optional): { theme?, palette?, density? } — for each part present, the ONLY values this
+//   teacher may choose (lib/appearance-registry.js), without duplicates; a part absent = every value; the part's default is always
+//   allowed. Any other key is refused.
 // A problem is REFUSED with its code — never corrected silently.
 
 const REVISION_PREFIX = "platform/access/revisions/";
 const REVISION_ID_RE = /^ar_[0-9a-z]{9}_[a-f0-9]{16}$/;
 const MAX_REASON = 300;
 const MAX_LIST = 80;
-const RESOURCE_KEYS = new Set(["courses", "widgets", "games"]);   // P5-A, P7-A2, P7-B2
+const RESOURCE_KEYS = new Set(["courses", "widgets", "games", "appearance"]);   // P5-A, P7-A2, P7-B2, P8-A2
 
 const newRevisionId = (nowMs = Date.now()) => "ar_" + Math.max(0, Math.floor(nowMs)).toString(36).padStart(9, "0").slice(-9) + "_" + crypto.randomBytes(8).toString("hex");
 const revisionName = id => {
@@ -64,7 +68,7 @@ function evaluateRevision(rev) {
   if (forbidden.length) return { ok: false, code: "PLATFORM_CAPABILITY_FORBIDDEN", details: { capabilities: forbidden } };
   const both = lists.grants.filter(c => lists.denies.includes(c));
   if (both.length) return { ok: false, code: "CAPABILITY_CONFLICT", details: { capabilities: both } };
-  let courses = null, widgets = null, games = null;
+  let courses = null, widgets = null, games = null, appearance = null;
   if (rev.resources !== undefined) {
     const r = rev.resources;
     if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => !RESOURCE_KEYS.has(k))) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
@@ -89,6 +93,16 @@ function evaluateRevision(rev) {
       if (new Set(r.games).size !== r.games.length) return { ok: false, code: "GAME_DUPLICATE" };
       games = [...r.games].sort();
     }
+    if (r.appearance !== undefined) {
+      const ap = r.appearance;
+      if (!ap || typeof ap !== "object" || Array.isArray(ap) || Object.keys(ap).some(k => !Object.prototype.hasOwnProperty.call(APPEARANCE, k))) return { ok: false, code: "APPEARANCE_RESOURCE_INVALID" };
+      appearance = {};
+      for (const [k, list] of Object.entries(ap)) {
+        if (!Array.isArray(list) || list.some(v => typeof v !== "string" || !APPEARANCE[k].values.includes(v))) return { ok: false, code: "APPEARANCE_RESOURCE_INVALID", details: { part: k } };
+        if (new Set(list).size !== list.length) return { ok: false, code: "APPEARANCE_RESOURCE_INVALID", details: { part: k } };
+        appearance[k] = APPEARANCE[k].values.filter(v => list.includes(v));   // registry order
+      }
+    }
   }
   const set = new Set(p.capabilities);
   for (const c of lists.grants) set.add(c);
@@ -96,7 +110,7 @@ function evaluateRevision(rev) {
   for (const c of [...set]) if (isOwnerOnly(c)) set.delete(c);      // defence in depth: platform.* never reaches a teacher
   const unmet = unmetDependencies(set);
   if (unmet.length) return { ok: false, code: "DEPENDENCY_UNMET", details: { unmet } };
-  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses, widgets, games };
+  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses, widgets, games, appearance };
 }
 
 /** Only the known resource keys that are present (P5-A courses, P7-A2 widgets); anything else is passed on to be refused. */
@@ -147,7 +161,7 @@ async function readRevision(container, revisionId, accountId, deps = {}) {
   if (doc.accountId !== accountId) throw new AccessError("REVISION_INVALID", { reason: "account" });
   const verdict = evaluateRevision(doc);
   if (!verdict.ok) throw new AccessError("REVISION_INVALID", { reason: verdict.code });
-  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null, widgets: verdict.widgets ? Object.freeze(verdict.widgets) : null, games: verdict.games ? Object.freeze(verdict.games) : null });
+  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null, widgets: verdict.widgets ? Object.freeze(verdict.widgets) : null, games: verdict.games ? Object.freeze(verdict.games) : null, appearance: verdict.appearance ? Object.freeze(verdict.appearance) : null });
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(revisionId, entry);
   return entry;

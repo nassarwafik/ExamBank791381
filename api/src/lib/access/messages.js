@@ -14,6 +14,7 @@ const ACCESS_REFUSAL = Object.freeze({
   WIDGET_DUPLICATE: "بطاقة لوحة مكررة في القائمة.",
   GAME_UNKNOWN: "لعبة غير معروفة.",                              // Tadris+ P7-B2
   GAME_DUPLICATE: "لعبة مكررة في القائمة.",
+  APPEARANCE_RESOURCE_INVALID: "خيارات المظهر غير صالحة.",          // Tadris+ P8-A2
   REVISION_MALFORMED: "طلب غير صالح.",
   ACCESS_PRESET_MISSING: "الإضافات والحجب تحتاج حزمة أساسية."
 });

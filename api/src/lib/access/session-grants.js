@@ -21,7 +21,7 @@ const { isCapability } = require("./capabilities");
 // → { ok: true, narrowed: boolean, has(capability), widgets: Set | null } | { ok: false, response }
 
 const known = c => { if (!isCapability(c)) throw new Error("sessionGrants(): unknown capability " + String(c)); return c; };
-const EVERYTHING = Object.freeze({ ok: true, narrowed: false, has: c => !!known(c), widgets: null, games: null });
+const EVERYTHING = Object.freeze({ ok: true, narrowed: false, has: c => !!known(c), widgets: null, games: null, appearance: null });
 
 async function sessionGrants(user, deps = {}, obs = null) {
   if (!user || user.am !== "managed") return EVERYTHING;
@@ -42,7 +42,8 @@ async function sessionGrants(user, deps = {}, obs = null) {
     ok: true, narrowed: true,
     has: c => held.has(known(c)),
     widgets: Array.isArray(access.widgets) ? new Set(access.widgets) : null,
-    games: Array.isArray(access.games) ? new Set(access.games) : null   // Tadris+ P7-B2
+    games: Array.isArray(access.games) ? new Set(access.games) : null,   // Tadris+ P7-B2
+    appearance: access.appearance && typeof access.appearance === "object" ? access.appearance : null   // Tadris+ P8-A2
   });
 }
 

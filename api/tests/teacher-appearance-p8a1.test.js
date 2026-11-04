@@ -112,7 +112,8 @@ describe("P8-A1 — acceptance test 12: appearance grants no capability", () => 
     for (const f of files.filter(f => f.endsWith(".js"))) {
       const src = readFileSync(f, "utf8");
       expect(src, path.basename(f)).not.toMatch(/require\([^)]*teacher-profile|profileDocName|teacher-profiles\//);   // (route-capabilities only NAMES the exempt route)
-      expect(src, path.basename(f)).not.toMatch(/\.appearance\b/);
+      // P8-A2: the access modules now read the OWNER's restriction `resources.appearance` of the revision (what may be chosen). The
+      // teacher's CHOICE lives only in the profile document, which the line above keeps out of every access / identity module.
     }
   });
 });

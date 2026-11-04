@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { setThemeChoice, getThemeChoice } from "../ui/themePreference";
 import {
   PALETTES, DENSITIES, DEFAULT_APPEARANCE, applyTeacherAppearance, cacheAppearance, fetchTeacherAppearance, saveTeacherAppearance,
-  type TeacherAppearance, type AppearanceChoosable
+  type TeacherAppearance, type AppearanceChoosable, type AppearanceAllowed
 } from "./teacherAppearance";
 import "./appearance.css";
 
@@ -15,11 +15,14 @@ import "./appearance.css";
 export default function AppearanceSettings({ token }: { token: string }) {
   const [current, setCurrent] = useState<TeacherAppearance | null>(null);
   const [choosable, setChoosable] = useState<AppearanceChoosable>({ theme: false, palette: false, density: false });
+  // Tadris+ P8-A2 — the values the owner allows this teacher; a value outside them is shown, disabled (null → every value).
+  const [allowed, setAllowed] = useState<AppearanceAllowed | null>(null);
+  const may = (part: keyof AppearanceAllowed, value: string) => !allowed || allowed[part].includes(value);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   useEffect(() => {
     let live = true;
-    void fetchTeacherAppearance(token).then(r => { if (live && r) { setCurrent({ ...r.appearance, theme: getThemeChoice() }); setChoosable(r.choosable); } });
+    void fetchTeacherAppearance(token).then(r => { if (live && r) { setCurrent({ ...r.appearance, theme: getThemeChoice() }); setChoosable(r.choosable); setAllowed(r.allowed); } });
     return () => { live = false; };
   }, [token]);
   if (!current) return null;
@@ -51,7 +54,7 @@ export default function AppearanceSettings({ token }: { token: string }) {
       <fieldset className="eb-teacher-appearance-group" disabled={busy || !choosable.theme}>
         <legend>الوضع</legend>
         {(["light", "dark"] as const).map(t => (
-          <label key={t} className="eb-field-inline"><input type="radio" name="eb-appearance-theme" disabled={busy || !choosable.theme} checked={current.theme === t} onChange={() => void change({ theme: t }, "حُفظ الوضع.")} />{t === "light" ? "فاتح" : "داكن"}</label>
+          <label key={t} className="eb-field-inline"><input type="radio" name="eb-appearance-theme" disabled={busy || !choosable.theme || !may("theme", t)} checked={current.theme === t} onChange={() => void change({ theme: t }, "حُفظ الوضع.")} />{t === "light" ? "فاتح" : "داكن"}</label>
         ))}
       </fieldset>
       <fieldset className="eb-teacher-appearance-group" disabled={busy || !choosable.palette}>
@@ -59,7 +62,7 @@ export default function AppearanceSettings({ token }: { token: string }) {
         <div className="eb-teacher-appearance-swatches" role="radiogroup" aria-label="لوحة الألوان">
           {PALETTES.map(p => (
             <label key={p.id} className="eb-teacher-appearance-swatch">
-              <input type="radio" name="eb-appearance-palette" disabled={busy || !choosable.palette} checked={current.palette === p.id} onChange={() => void change({ palette: p.id }, "حُفظت لوحة الألوان.")} />
+              <input type="radio" name="eb-appearance-palette" disabled={busy || !choosable.palette || !may("palette", p.id)} checked={current.palette === p.id} onChange={() => void change({ palette: p.id }, "حُفظت لوحة الألوان.")} />
               <span className="eb-teacher-appearance-dot" data-swatch={p.id} aria-hidden="true" />{p.label}
             </label>
           ))}
@@ -68,7 +71,7 @@ export default function AppearanceSettings({ token }: { token: string }) {
       <fieldset className="eb-teacher-appearance-group" disabled={busy || !choosable.density}>
         <legend>الكثافة</legend>
         {DENSITIES.map(d => (
-          <label key={d.id} className="eb-field-inline"><input type="radio" name="eb-appearance-density" disabled={busy || !choosable.density} checked={current.density === d.id} onChange={() => void change({ density: d.id }, "حُفظت الكثافة.")} />{d.label}</label>
+          <label key={d.id} className="eb-field-inline"><input type="radio" name="eb-appearance-density" disabled={busy || !choosable.density || !may("density", d.id)} checked={current.density === d.id} onChange={() => void change({ density: d.id }, "حُفظت الكثافة.")} />{d.label}</label>
         ))}
       </fieldset>
       <div className="eb-inline-actions">
