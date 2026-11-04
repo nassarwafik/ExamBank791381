@@ -18,6 +18,7 @@ import OwnerAccessMode from "./OwnerAccessMode";
 import OwnerSchools from "./OwnerSchools";
 import OwnerCourses from "./OwnerCourses";
 import OwnerLibrary from "./OwnerLibrary";   // Tadris+ P6-D
+import OwnerLegacyClasses from "./OwnerLegacyClasses";   // Tadris+ P9-A2
 import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 
 /**
@@ -82,7 +83,7 @@ export default function OwnerApp() {
     </section>
   );
   else if (boot.kind === "signed-in") {
-    const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" || route.view === "courses" || route.view === "exams" ? route.view : "home";
+    const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" || route.view === "courses" || route.view === "exams" || route.view === "legacy" ? route.view : "home";   // P9-A2: legacy
     const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
     body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
       onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
@@ -168,7 +169,8 @@ const SECTIONS: { id: OwnerSection; label: string }[] = [
   { id: "access", label: "الصلاحيات" },
   { id: "schools", label: "المدارس" },
   { id: "courses", label: "المقررات" },
-  { id: "exams", label: "بنك الامتحانات" }
+  { id: "exams", label: "بنك الامتحانات" },
+  { id: "legacy", label: "البيانات القديمة" }   // Tadris+ P9-A2
 ];
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
@@ -186,6 +188,7 @@ function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, o
         {section === "schools" && <OwnerSchools token={token} onSignedOut={onSignedOut} />}
         {section === "courses" && <OwnerCourses token={token} onSignedOut={onSignedOut} />}
         {section === "exams" && <OwnerLibrary token={token} onSignedOut={onSignedOut} />}
+        {section === "legacy" && <OwnerLegacyClasses token={token} onSignedOut={onSignedOut} />}
       </div>
     </div>
   );

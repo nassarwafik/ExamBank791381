@@ -9,10 +9,11 @@
 
 // Tadris+ P5-A2 — `#/owner/courses`: the course catalog (published / archived, owner decision D12).
 // Tadris+ P6-D — `#/owner/exams`: «بنك الامتحانات», who sees each library exam (every teacher, or a chosen group).
-export type OwnerView = "home" | "setup" | "teachers" | "access" | "schools" | "courses" | "exams";
-export type OwnerSection = "home" | "teachers" | "access" | "schools" | "courses" | "exams";
+// Tadris+ P9-A2 — `#/owner/legacy`: «البيانات القديمة», the owner's decision for every class without an owner.
+export type OwnerView = "home" | "setup" | "teachers" | "access" | "schools" | "courses" | "exams" | "legacy";
+export type OwnerSection = "home" | "teachers" | "access" | "schools" | "courses" | "exams" | "legacy";
 
-const OWNER_HASH = /^#\/owner(?:\/(setup|access|schools|courses|exams)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy))?)?\/?$/;
+const OWNER_HASH = /^#\/owner(?:\/(setup|access|schools|courses|exams|legacy)|\/(teachers)(?:\/(t_[a-f0-9]{16}|t_legacy))?)?\/?$/;
 
 export function isOwnerLocation(hash: string = typeof window === "undefined" ? "" : window.location.hash): boolean {
   return OWNER_HASH.test(String(hash || ""));

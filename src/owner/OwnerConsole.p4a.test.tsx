@@ -66,7 +66,7 @@ describe("P4-A the console", () => {
     render(<OwnerApp />);
     expect(await screen.findByRole("heading", { name: /أهلًا/ })).toBeTruthy();
     // P4-C added «المدارس», P5-A2 «المقررات» (intentional): the menu names them after the existing sections, in order.
-    expect(within(menu()).getAllByRole("button").map(b => b.textContent)).toEqual(["نظرة عامة", "المعلمون", "الصلاحيات", "المدارس", "المقررات", "بنك الامتحانات"]);   // Tadris+ P6-D added «بنك الامتحانات»
+    expect(within(menu()).getAllByRole("button").map(b => b.textContent)).toEqual(["نظرة عامة", "المعلمون", "الصلاحيات", "المدارس", "المقررات", "بنك الامتحانات", "البيانات القديمة"]);   // Tadris+ P6-D added «بنك الامتحانات»; P9-A2 «البيانات القديمة»
     expect(within(menu()).getByRole("button", { name: "نظرة عامة" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByText(/رموز الاسترداد المتبقية/)).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "المعلمون" })).toBeNull();     // one section at a time

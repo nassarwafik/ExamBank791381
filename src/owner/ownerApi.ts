@@ -293,3 +293,36 @@ export const ownerConversationsApi = {
   open: (token: string, studentId: string, reason: string, before?: string) =>
     call<{ ok: true; student: { userId: string; displayName: string }; messages: OwnerConversationMessage[]; hasMore: boolean }>("/api/owner-conversations/open", { method: "POST", token, body: { studentId, reason, ...(before ? { before } : {}) } })
 };
+
+// Tadris+ P9-A2 — «البيانات القديمة» (/api/owner-legacy-classes, P9-A1): the owner's decision for every class without an owner —
+// a teacher, «يبقى مشتركًا» or «أرشفة». Preview (a dry run), apply (only on the preview's digest), undo (only when nothing changed
+// since). Every POST needs a recent second-factor check and (apply / undo) a reason; the server decides everything.
+export type LegacyDecision = "assign" | "shared" | "archive";
+export type LegacyVisibility = { kind: "shared" } | { kind: "legacy-owner"; accountId: string } | { kind: "teacher"; accountId: string };
+export type LegacyClass = {
+  classId: string; name: string; grade: string; schoolYear: string; status: string;
+  students: { total: number; archived: number; withOwner: number }; assignments: { total: number; byStatus: Record<string, number> };
+  decision: { migrationId: string; decision: LegacyDecision; toAccountId: string; at: string; by: string } | null;
+};
+export type LegacyChange = { path: string; type: "class" | "student"; userId?: string; field: string; before: string | null; after: string; archived?: boolean; outcome?: string };
+export type LegacyPlan = {
+  classId: string; className: string; status: string; decision: LegacyDecision; to: string;
+  changes: LegacyChange[]; untouched: { userId: string; ownerId: string; reason: string }[];
+  students: { total: number; changed: number; untouched: number }; pendingGrading: number;
+  visibility: { before: LegacyVisibility; after: LegacyVisibility; studentServicesFollow: string }; digest: string;
+};
+export type LegacyLedger = {
+  migrationId: string; classId: string; className: string; decision: LegacyDecision; to: string; reason: string; by: string; at: string;
+  status: "pending" | "applied" | "undone" | "refused"; changes: LegacyChange[]; untouched: { userId: string }[];
+  undoneAt?: string; undoReason?: string; refusedCode?: string;
+};
+export const ownerLegacyApi = {
+  inventory: (token: string) => call<{ ok: true; visibilityToday: LegacyVisibility; classes: LegacyClass[] }>("/api/owner-legacy-classes", { token }),
+  ledger: (token: string) => call<{ ok: true; ledgers: LegacyLedger[] }>("/api/owner-legacy-classes/ledger", { token }),
+  preview: (token: string, classId: string, decision: LegacyDecision, toAccountId: string) =>
+    call<{ ok: true; plan: LegacyPlan }>("/api/owner-legacy-classes/preview", { method: "POST", token, body: { classId, decision, ...(decision === "assign" ? { toAccountId } : {}) } }),
+  apply: (token: string, body: { classId: string; decision: LegacyDecision; toAccountId: string; reason: string; previewDigest: string; requestKey: string }) =>
+    call<{ ok: true; ledger: LegacyLedger; duplicate?: boolean }>("/api/owner-legacy-classes/apply", { method: "POST", token, body: { ...body, ...(body.decision === "assign" ? {} : { toAccountId: undefined }) } }),
+  undo: (token: string, migrationId: string, reason: string) =>
+    call<{ ok: true; ledger: LegacyLedger }>("/api/owner-legacy-classes/undo", { method: "POST", token, body: { migrationId, reason } })
+};
