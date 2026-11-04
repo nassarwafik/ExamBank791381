@@ -10,6 +10,7 @@ import { cardState, isStalled, sortStudentCards, STUDENT_SORTS, type StudentSort
 import "./studentCards.css";
 import { fmtGrade, projectRankVisual } from "./projectPerformance";
 import type { StudentCard, StudentFilter, TrackMeta } from "./types";
+import { useDevicePref, oneOf } from "../ui/devicePrefs";   // Tadris+ P8-B2b
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -32,6 +33,7 @@ const FILTERS: { key: StudentFilter; label: string }[] = [
 ];
 const DEFAULT_LATE_THRESHOLD = 40;
 type StudentsView = "cards" | "table";
+const STUDENTS_VIEWS = oneOf<StudentsView>(["cards", "table"]);
 
 // The class's student cards for one project: ONE `students` read per class/project (and per explicit reload);
 // search and filters are client-side over the already-loaded cards (zero requests). Card values are the
@@ -45,7 +47,7 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
   const [filter, setFilter] = useState<StudentFilter>("all");
   // Phase P-5 — the teacher's order and view (cards or a compact table); both apply to the same filtered list.
   const [sort, setSort] = useState<StudentSort>("name");
-  const [view, setView] = useState<StudentsView>("cards");
+  const [view, setView] = useDevicePref<StudentsView>("view.projectStudents", "cards", STUDENTS_VIEWS);   // Tadris+ P8-B2b — on this device
   // Phase P-1 — only the LATEST read may populate the cards: a slower response for a previously selected class is dropped.
   const seq = useRef(0);
 

@@ -34,6 +34,13 @@ import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needs
 // Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
 import {csvCell} from "./reports/csv";
 import {arabicCount,STUDENTS_GENITIVE} from "./learning/arabicCount";
+import {useDevicePref,oneOf} from "./ui/devicePrefs";   // Tadris+ P8-B2b
+type RosterSort={key:SortKey;asc:boolean};
+const ROSTER_STATUS=oneOf<StatusFilter>(["all","active","disabled","archived","neverLogged"]);
+const ROSTER_SORT_KEYS=oneOf<SortKey>(["firstName","familyName","identityNumber","status"]);
+const ROSTER_SORT_DEFAULT:RosterSort={key:"familyName",asc:true};
+const parseRosterSort=(v:unknown):RosterSort|null=>{const o=v&&typeof v==="object"?v as Record<string,unknown>:null;const key=o?ROSTER_SORT_KEYS(o.key):null;return key&&typeof o!.asc==="boolean"?{key,asc:o!.asc as boolean}:null};
+const sameRosterSort=(a:RosterSort,b:RosterSort)=>a.key===b.key&&a.asc===b.asc;
 
 type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
@@ -159,9 +166,10 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const [editPassword,setEditPassword]=useState("");
 
  const [searchText,setSearchText]=useState("");
- const [statusFilter,setStatusFilter]=useState<StatusFilter>("all");
- const [sortKey,setSortKey]=useState<SortKey>("familyName");
- const [sortAsc,setSortAsc]=useState(true);
+ // Tadris+ P8-B2b (owner decision §19.31) — the roster's status filter and sort are remembered on this device (the search is not).
+ const [statusFilter,setStatusFilter]=useDevicePref<StatusFilter>("roster.status","all",ROSTER_STATUS);
+ const [rosterSort,setRosterSort]=useDevicePref<RosterSort>("roster.sort",ROSTER_SORT_DEFAULT,parseRosterSort,sameRosterSort);
+ const sortKey=rosterSort.key,sortAsc=rosterSort.asc;
  const [selectedIds,setSelectedIds]=useState<string[]>([]);
  const [bulkTargetClassId,setBulkTargetClassId]=useState("");
 
@@ -922,7 +930,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const list=view==="active"?activeClasses:archivedClasses;
   if(list.length&&!list.some(c=>c.classId===selectedClassId))setSelectedClassId(list[0].classId);
  }
- function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
+ function toggleSort(key:SortKey){setRosterSort(s=>s.key===key?{key,asc:!s.asc}:{key,asc:true})}
  function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setImportId("");setBulkFileName("");setError("");setDialog("import")}
 
  // The Suspense boundary wraps ONLY the dashboard body: the teacher shell, sidebar and this workspace wrapper stay mounted

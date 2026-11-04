@@ -505,6 +505,146 @@
       "page": "studio-setup",
       "viewport": "phone",
       "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "assignments",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "assignments",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "assignments",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "students",
+      "viewport": "desktop",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "students",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "students",
+      "viewport": "tablet",
+      "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
     }
   ]
 }

@@ -17,6 +17,7 @@ import {
 import "../bank-pro.css";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 import { useCan } from "../shell/teacherAccessContext";
+import { useDevicePref } from "../ui/devicePrefs";   // Tadris+ P8-B2b
 
 /*
  * UX-6c — Exam Bank Management (بنك الامتحانات): the real destination behind the sidebar group.
@@ -47,6 +48,15 @@ const VIEWS: { key: View; label: string }[] = [
 ];
 const fmtDate = (v: string) => (v ? new Date(v).toLocaleString("ar", { numberingSystem: "latn" }) : "—");
 const NO_ROWS: BankQuestionRow[] = [];
+// Tadris+ P8-B2b — the remembered filters: known values only (anything else → «الكل»); the search text is never kept.
+const parseBankFilters = (v: unknown): BankFilters | null => {
+  const o = v && typeof v === "object" ? v as Record<string, unknown> : null;
+  if (!o) return null;
+  const pick = (k: string, ok: (x: string) => boolean) => (typeof o[k] === "string" && ok(o[k] as string) ? o[k] as string : "");
+  return { q: "", section: pick("section", x => (SECTIONS as readonly string[]).includes(x)), type: pick("type", x => (PRESENTATION_TYPES as readonly string[]).includes(x)), difficulty: pick("difficulty", x => ["1", "2", "3", "4", "5"].includes(x)), source: pick("source", x => ["official", "import", "manual"].includes(x)) };
+};
+const storedBankFilters = ({ section, type, difficulty, source }: BankFilters) => ({ section, type, difficulty, source });
+const sameBankFilters = (a: BankFilters, b: BankFilters) => a.section === b.section && a.type === b.type && a.difficulty === b.difficulty && a.source === b.source;
 
 export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpenSavedExam, onCopyLibraryExamToBuilder }: Props) {
   const [view, setView] = useState<View>("overview");
@@ -62,7 +72,9 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   const [rows, setRows] = useState<BankQuestionRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [filters, setFilters] = useState<BankFilters>(EMPTY_FILTERS);
+  // Tadris+ P8-B2b (owner decision §19.31) — the question filters (section, type, difficulty, source) are remembered on this device;
+  // the free-text search is not. «مسح التصفية» clears them (and the remembered copy).
+  const [filters, setFilters] = useDevicePref<BankFilters>("bank.filters", EMPTY_FILTERS, parseBankFilters, sameBankFilters, storedBankFilters);
   const [savedExams, setSavedExams] = useState<SavedExamListItem[] | null>(null);
   const [savedError, setSavedError] = useState("");
   const [catalog, setCatalog] = useState<LibraryCatalogItem[] | null>(null);

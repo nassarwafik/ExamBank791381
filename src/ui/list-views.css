@@ -1,0 +1,16 @@
+/* Tadris+ P8-B2b — the «قائمة مضغوطة» view of the list pages (owner decision §19.31). «بطاقات» is the page's look before P8-B2b and
+   keeps every rule it had; the compact view only removes the secondary lines and tightens the rows. Token-only, RTL-first. */
+.eb-list-view-switch { flex: 0 0 auto; }
+
+/* The classes: one row per class (name and its line), no project chips; a vertical list at every width (no phone strip). */
+.eb-class-list.is-compact { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; grid-auto-columns: auto; gap: 2px; max-block-size: 260px; overflow-x: hidden; overflow-y: auto; }
+.eb-class-list.is-compact .eb-class-chips { display: none; }
+.eb-class-list.is-compact .eb-class-select { flex-wrap: nowrap; padding-block: 2px; }
+.eb-class-list.is-compact .eb-class-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eb-class-list.is-compact .eb-class-meta { white-space: nowrap; }
+
+/* The assignments: the title, the status and the actions on one row; no progress block, no due line. */
+.eb-assign-rows.is-compact { gap: var(--eb-space-1); }
+.eb-assign-rows.is-compact .eb-assign-row { padding-block: var(--eb-space-2); }
+.eb-assign-rows.is-compact .eb-assign-row-progress,
+.eb-assign-rows.is-compact .eb-assign-row-due { display: none; }
