@@ -22,6 +22,7 @@ function describeDetails(ev: AuditEvent): string {
   if (typeof d.graduationYear === "string" && d.graduationYear) parts.push("دفعة " + d.graduationYear);
   if (Array.isArray(d.programCodes)) parts.push("مشاريع: " + (d.programCodes.length ? d.programCodes.join("، ") : "بدون"));
   if (typeof d.grade === "string" && d.grade) parts.push(d.grade);
+  if (ev.action === "owner.conversation.opened" && typeof d.reason === "string" && d.reason) parts.push("السبب: " + d.reason);   // Tadris+ P7-B1 (D14)
   return parts.join(" · ");
 }
 

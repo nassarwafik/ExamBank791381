@@ -56,7 +56,10 @@ function parsePublicEventId(value) {
  * Everything a request needs, derived ONLY from the persisted student + their current class document (never from the
  * request). `classroom` may be null (no class) — then there are no class events and no announcements.
  */
-async function notificationContext(container, student, classroom, deps = {}) {
+// Tadris+ P7-B1 — `options.messages === false`: the student's teacher offers no messaging (lib/access/student-services.js) — no
+// message stream is read, the message counts are 0 and no message item is listed; the events stay.
+const NO_MESSAGES = Object.freeze({ directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: 0, totalCapped: false });
+async function notificationContext(container, student, classroom, deps = {}, options = {}) {
   const studentId = String(student.userId || "");
   const classId = classroom ? String(student.classId || "") : "";
   const classActive = !!classroom && normalizeClassStatus(classroom) !== "archived";
@@ -65,7 +68,7 @@ async function notificationContext(container, student, classroom, deps = {}) {
   const classFloorMs = Math.max(Number.isFinite(created) ? created : 0, nowMs - CLASS_UNREAD_WINDOW_DAYS * 86400000);
   const streams = [{ key: "personal", scope: "student", prefix: studentEventPrefix(studentId) }];
   if (classActive) streams.push({ key: classId, scope: "class", prefix: classEventPrefix(classId) });
-  return { studentId, classId, classroom, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), assignmentCache: new Map(), docCache: new Map() };
+  return { studentId, classId, classroom, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), messagesOn: options.messages !== false, assignmentCache: new Map(), docCache: new Map() };
 }
 
 async function assignmentOf(container, ctx, assignmentId, deps) {
@@ -178,7 +181,7 @@ async function listEventIds(container, ctx, deps) {
 
 /** The unified count snapshot: { messages, events, bell } (messages = EXACTLY the Phase 5D summary). */
 async function unifiedSummary(container, ctx, deps = {}, loaded = {}) {
-  const messages = await unreadSummary(container, ctx.messageStreams, deps, loaded.markers || null);
+  const messages = ctx.messagesOn === false ? NO_MESSAGES : await unreadSummary(container, ctx.messageStreams, deps, loaded.markers || null);
   const readState = loaded.readState || await loadEventReadState(container, ctx.studentId, deps);
   const idsByStream = loaded.idsByStream || await listEventIds(container, ctx, deps);
   const perStream = [];
@@ -193,10 +196,10 @@ const KIND_RANK = { direct: 0, announcement: 1 };
 
 /** Recent unified items, newest first (stable: messages before events at the same instant, then by id), capped. */
 async function unifiedItems(container, ctx, deps = {}, loaded = {}, limit = CENTER_LIMIT) {
-  const markers = loaded.markers || await loadStreamMarkers(container, ctx.messageStreams, deps);
+  const markers = ctx.messagesOn === false ? null : loaded.markers || await loadStreamMarkers(container, ctx.messageStreams, deps);
   const readState = loaded.readState || await loadEventReadState(container, ctx.studentId, deps);
   const idsByStream = loaded.idsByStream || await listEventIds(container, ctx, deps);
-  const messages = (await recentNotifications(container, ctx.messageStreams, markers, deps, limit)).map(m => ({ ...m, kind: "message" }));
+  const messages = ctx.messagesOn === false ? [] : (await recentNotifications(container, ctx.messageStreams, markers, deps, limit)).map(m => ({ ...m, kind: "message" }));
   const events = [];
   for (const stream of ctx.streams) events.push(...(await recentStream(container, ctx, stream, readState, idsByStream.get(stream.key), limit, deps)).map(e => ({ ...e.item, kind: "event" })));
   return [...messages, ...events]
@@ -211,7 +214,7 @@ async function unifiedItems(container, ctx, deps = {}, loaded = {}, limit = CENT
 /** Items + counts from ONE set of loaded read states (the panel and the badges agree). */
 async function unifiedView(container, ctx, deps = {}) {
   const loaded = {
-    markers: await loadStreamMarkers(container, ctx.messageStreams, deps),
+    markers: ctx.messagesOn === false ? null : await loadStreamMarkers(container, ctx.messageStreams, deps),
     readState: await loadEventReadState(container, ctx.studentId, deps),
     idsByStream: await listEventIds(container, ctx, deps)
   };

@@ -39,7 +39,9 @@ const ACTION_LABELS: Record<string, string> = {
   "assignment.setDueAtOverride": "تمديد موعد الطالب",
   "assignment.reopenStudent": "إعادة فتح للطالب",
   "assignment.extendActiveAttempt": "تمديد وقت المحاولة",
-  "assignment.manualGradeOverride": "حفظ تصحيح"
+  "assignment.manualGradeOverride": "حفظ تصحيح",
+  // Tadris+ P7-B1 — D14: an event about the teacher that the teacher did not perform (the platform's administration).
+  "owner.conversation.opened": "اطّلعت إدارة المنصة على محادثة طالب"
 };
 
 export function auditActionLabel(action: string): string {

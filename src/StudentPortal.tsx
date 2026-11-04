@@ -82,6 +82,9 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 5D — unread messages badge (AUXILIARY: its failure, including a 401, never logs out — the dashboard stays the
   // only session authority; a failure keeps the last-good badge). Rides the portal's silent refresh cycle.
   const [messagesUnread, setMessagesUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
+  // Tadris+ P7-B1 — whether the student's teacher offers messaging (the server's `services`, with every unified count snapshot;
+  // until the first snapshot — or from an older API — the service is offered, as before).
+  const [messagesService, setMessagesService] = useState(true);
   // Phase 6C — the tab the Messages view opens on («الرسائل» → direct; a notification → its own stream).
   const [messagesTab, setMessagesTab] = useState<StudentMessagesTab>("direct");
   // Phase 6C/6D — the notification center's preview data (AUXILIARY like the badges: a failure keeps the last-good items
@@ -161,6 +164,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     unreadApplied.current = seq;
     setMessagesUnread(u);
     if (unified) setBellCounts({ bell: unified.bell, events: unified.events, messages: u });
+    if (unified && unified.services) setMessagesService(unified.services.messages);
     else setBellCounts(prev => (prev ? { ...prev, messages: u } : prev));
     if (!withItems) setNotif(prev => (prev.items === null && !prev.error ? prev : { ...prev, items: null, error: "" }));
     return true;
@@ -426,11 +430,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const quickNav = !loading && data && stats ? <StudentMobileNav reducedMotion={reducedMotion} hidden={avatarPickerOpen} /> : undefined;
 
   return (
-    <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
+    <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} messagesUnread={messagesService ? messagesUnread : undefined} notifications={{
       items: notif.items, counts: bellCounts, loading: notif.loading, error: notif.error,
       onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
       onSelect: selectNotification,
-      onOpenMessages: () => openMessages("direct"),
+      onOpenMessages: messagesService ? () => openMessages("direct") : undefined,
       onRetry: () => void loadNotifications()
     }}>
       <div className="eb-sp eb-sp-v2">
@@ -459,7 +463,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
               onOpenNow={() => scrollToSection("eb-sp-now-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")} onOpenProgress={() => scrollToSection("eb-sp-progress-title")}
             />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
-            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={() => openMessages("direct")} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")}
+            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")}
               projectEvaluation={projectEvaluation} onOpenProjects={() => scrollToSection("eb-sp-projects-title")} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <InstallAppCard />

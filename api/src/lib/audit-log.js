@@ -20,7 +20,16 @@ async function recordOwnerAuditEvent(container, event) {
   return writeAuditEvent(container, { actor: "system", ...event }, OWNER_AUDIT_PREFIX);
 }
 
-async function writeAuditEvent(container, event, prefix) {
+// Tadris+ P7-B1 — STRICT variants for an action that must not happen unrecorded (D14: the owner reading a conversation): a write
+// failure throws, so the caller refuses the action instead of performing it silently.
+async function recordAuditEventStrict(container, event) {
+  return writeAuditEvent(container, event, AUDIT_PREFIX, { strict: true });
+}
+async function recordOwnerAuditEventStrict(container, event) {
+  return writeAuditEvent(container, { actor: "system", ...event }, OWNER_AUDIT_PREFIX, { strict: true });
+}
+
+async function writeAuditEvent(container, event, prefix, { strict = false } = {}) {
   try {
     const now = new Date();
     const stamp = now.toISOString().replace(/[:.]/g, "-");
@@ -34,11 +43,14 @@ async function writeAuditEvent(container, event, prefix) {
       targetType: String(event?.targetType || ""),
       targetId: String(event?.targetId || ""),
       targetLabel: String(event?.targetLabel || ""),
-      details: event?.details && typeof event.details === "object" ? event.details : {}
+      details: event?.details && typeof event.details === "object" ? event.details : {},
+      // Tadris+ P7-B1 — an event about a teacher that the teacher did not perform (D14), shown in THAT teacher's activity log.
+      ...(typeof event?.forTeacher === "string" && event.forTeacher ? { forTeacher: event.forTeacher } : {})
     });
-  } catch {
-    // Recording the event must never break the sensitive action it's describing.
+  } catch (e) {
+    // Recording the event must never break the sensitive action it's describing — unless the caller asked for a strict write.
+    if (strict) throw e;
   }
 }
 
-module.exports = { recordAuditEvent, recordOwnerAuditEvent, AUDIT_PREFIX, OWNER_AUDIT_PREFIX };
+module.exports = { recordAuditEvent, recordOwnerAuditEvent, recordAuditEventStrict, recordOwnerAuditEventStrict, AUDIT_PREFIX, OWNER_AUDIT_PREFIX };
