@@ -250,6 +250,17 @@ async function undo(container, { migrationId, reason, actor, nowMs = Date.now() 
     if (!ok) conflicts.push(c.type === "student" ? { type: "student", userId: c.userId } : { type: "class" });
     reads.push({ c, cur, etag: r.etag });
   }
+  // 1b. Tadris+ P9-B3 — a student the assigned teacher ADDED to the class since (stamped with that teacher by the teachers' own
+  // rule) is a change too: undoing the class alone would leave the un-assigned teacher with those students. Refused, nothing written.
+  if (ledger.decision === "assign") {
+    const ls = deps.listJson || loadDocs;
+    const decided = new Set(changed.filter(c => c.type === "student").map(c => String(c.userId)));
+    for (const userId of classStudentsOf(await ls(container, USER_PREFIX), ledger.classId).map(x => String(x.userId)).sort()) {
+      if (decided.has(userId)) continue;
+      const cur = (await read(container, USER_PREFIX + userId + ".json")).value;
+      if (cur && cur.role === "student" && String(cur.classId || "") === ledger.classId && cur.ownerId === ledger.to) conflicts.push({ type: "student", userId, reason: "added-since" });
+    }
+  }
   if (conflicts.length) throw new LegacyRefusal(409, "UNDO_CONFLICT", "تغيّر الصف أو بعض طلابه منذ القرار، فلا يمكن التراجع عنه تلقائيًا.", { conflicts });
 
   // 2. WRITE the previous values, each conditional on the ETag just checked (a change in between → stop: the ledger stays applied)

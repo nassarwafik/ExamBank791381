@@ -6,6 +6,8 @@ const {
   verifySignedAssetParams
 } = require("../lib/builder-auth");
 
+const { allowedImageType, IMAGE_SAFETY_HEADERS } = require("../lib/image-content-type");   // Tadris+ P9-B3
+
 const ASSETS_CONTAINER = "assets";
 
 async function streamToBuffer(stream) {
@@ -85,13 +87,17 @@ async function handler(request, deps = {}) {
       };
     }
 
+    // Tadris+ P9-B3 — only an allow-listed image type is rendered (with nosniff and a sandbox policy); any other stored type is
+    // an opaque download, so a blob stored with a browser-declared `text/html` can never run as the app.
+    const imageType = allowedImageType(asset.contentType);
     return {
       status: 200,
       body: asset.buffer,
       headers: {
-        "content-type":
-          asset.contentType || "application/octet-stream",
-        "cache-control": "private, max-age=600"
+        "content-type": imageType || "application/octet-stream",
+        ...(imageType ? {} : { "content-disposition": "attachment" }),
+        "cache-control": "private, max-age=600",
+        ...IMAGE_SAFETY_HEADERS
       }
     };
   }

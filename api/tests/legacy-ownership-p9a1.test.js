@@ -272,6 +272,23 @@ describe("P9-A1 — undo", () => {
       expect(ledgers(ctx)[0].status).toBe("applied");
     }
   });
+  // Tadris+ P9-B3 — security review finding: a student the assigned teacher ADDED to the class after the decision is stamped with
+  // that teacher (manage-students copies the class owner). Undo reversed only the ledger's documents, so the un-assigned teacher
+  // kept those students. Owner decision «نعم، بشرط»: undo only when nothing changed — an added student is a change.
+  it("fail-first: refused when the assigned teacher added a student since — the teacher would keep that student; nothing written", async () => {
+    const ctx = setup();
+    const r = await decide(ctx, { classId: "old", decision: "assign", toAccountId: OMAR });
+    const made = await students({ method: "POST", url: "https://x/api/students", headers: hdr(ctx.omar), json: async () => ({ action: "create", classId: "old", firstName: "طالب", familyName: "جديد", identityNumber: "990000001" }) }, ctx.deps);
+    expect(made.status).toBe(200);
+    const added = made.jsonBody.student.userId;
+    expect(ctx.mem.getJson("platform/users/" + added + ".json").ownerId).toBe(OMAR);             // stamped by the teachers' own rule
+    const before = dataSnapshot(ctx);
+    const u = await post(ctx, "undo", { migrationId: r.jsonBody.ledger.migrationId, reason: "تراجع المالك" });
+    expect([u.status, u.jsonBody.code]).toEqual([409, "UNDO_CONFLICT"]);
+    expect(u.jsonBody.conflicts).toContainEqual({ type: "student", userId: added, reason: "added-since" });
+    expect(dataSnapshot(ctx)).toBe(before);
+    expect(ledgers(ctx)[0].status).toBe("applied");
+  });
   it("refused: no reason, an unknown ledger, a stale step-up", async () => {
     const ctx = setup();
     const r = await decide(ctx, { classId: "old", decision: "assign", toAccountId: OMAR });
