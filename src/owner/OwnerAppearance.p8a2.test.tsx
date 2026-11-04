@@ -54,7 +54,6 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const posted = () => calls.filter(c => c.method === "POST" && c.url === "/api/owner-access/assign");
 const open = async () => { window.location.hash = ownerTeacherHash(SARA); render(<OwnerApp />); await screen.findByRole("heading", { name: "سارة" }); fireEvent.click(screen.getByRole("tab", { name: "الصلاحيات" })); };
-const radio = (name: RegExp) => screen.getByRole("radio", { name }) as HTMLInputElement;
 const box = (name: RegExp) => screen.getByRole("checkbox", { name }) as HTMLInputElement;
 const save = () => fireEvent.click(screen.getByRole("button", { name: "حفظ الصلاحيات" }));
 
