@@ -174,3 +174,50 @@
   --eb-book-crimson: #e11d48; --eb-book-crimson-ink: #be123c; --eb-book-crimson-soft: #fff1f2;
   --eb-book-emerald: #059669; --eb-book-emerald-ink: #047857; --eb-book-emerald-soft: #ecfdf5;
 }
+
+/* ── Tadris+ P8-A1 — teacher appearance presets (blueprint §9.3, owner decisions §19.27) ───────────────────────────────────────────
+   A palette swaps ONLY the brand family (primary, its tints, the focus halo); the neutrals, the semantic colours and every component
+   stay. Applied as data-palette on <html> by the TEACHER shell alone (the student portal, the owner console and exam pages keep the
+   default). Every value passes WCAG AA in both modes (src/designSystem/palettes.p8a1.test.ts). «default» is the tokens above. */
+:root {   /* the palette picker's swatches (each palette's primary, whatever palette is active) */
+  --eb-swatch-default: #2a0a4e; --eb-swatch-ocean: #0b4a5c; --eb-swatch-forest: #1d4a2a; --eb-swatch-sand: #5a3410;
+}
+:root[data-palette="ocean"] {
+  --eb-primary: #0b4a5c; --eb-primary-strong: #13697f; --eb-primary-050: #ecf6f8; --eb-primary-100: #e0f0f3; --eb-primary-200: #c4e2e9; --eb-primary-300: #5a9bab;
+  --eb-focus: 0 0 0 4px rgba(11,74,92,.14);
+}
+:root[data-palette="forest"] {
+  --eb-primary: #1d4a2a; --eb-primary-strong: #2c6b3e; --eb-primary-050: #edf6ef; --eb-primary-100: #e2f0e5; --eb-primary-200: #c8e2ce; --eb-primary-300: #6aa279;
+  --eb-focus: 0 0 0 4px rgba(29,74,42,.14);
+}
+:root[data-palette="sand"] {
+  --eb-primary: #5a3410; --eb-primary-strong: #7a4a1c; --eb-primary-050: #f8f2ea; --eb-primary-100: #f2e8dc; --eb-primary-200: #e6d4bd; --eb-primary-300: #b08a5e;
+  --eb-focus: 0 0 0 4px rgba(90,52,16,.14);
+}
+@supports (color: light-dark(#000, #fff)) {
+  :root[data-palette="ocean"] {
+    --eb-primary: light-dark(#0b4a5c, #7ccbdc); --eb-primary-strong: light-dark(#13697f, #c3ecf4); --eb-primary-050: light-dark(#ecf6f8, #152429);
+    --eb-primary-100: light-dark(#e0f0f3, #1a2d33); --eb-primary-200: light-dark(#c4e2e9, #24434c); --eb-primary-300: light-dark(#5a9bab, #5fb3c5);
+    --eb-focus: 0 0 0 4px light-dark(rgba(11,74,92,.14), rgba(124,203,220,.28));
+  }
+  :root[data-palette="forest"] {
+    --eb-primary: light-dark(#1d4a2a, #86c99a); --eb-primary-strong: light-dark(#2c6b3e, #d3f1db); --eb-primary-050: light-dark(#edf6ef, #16241a);
+    --eb-primary-100: light-dark(#e2f0e5, #1b2d20); --eb-primary-200: light-dark(#c8e2ce, #27432f); --eb-primary-300: light-dark(#6aa279, #6dbb84);
+    --eb-focus: 0 0 0 4px light-dark(rgba(29,74,42,.14), rgba(134,201,154,.28));
+  }
+  :root[data-palette="sand"] {
+    --eb-primary: light-dark(#5a3410, #d9ad7c); --eb-primary-strong: light-dark(#7a4a1c, #f6e6d1); --eb-primary-050: light-dark(#f8f2ea, #2a2117);
+    --eb-primary-100: light-dark(#f2e8dc, #33281c); --eb-primary-200: light-dark(#e6d4bd, #4a3a28); --eb-primary-300: light-dark(#b08a5e, #c99b66);
+    --eb-focus: 0 0 0 4px light-dark(rgba(90,52,16,.14), rgba(217,173,124,.28));
+  }
+}
+/* Density: «compact» tightens the larger spacing steps only (the small ones keep touch targets and focus rings). */
+:root[data-density="compact"] { --eb-space-3: 10px; --eb-space-4: 12px; --eb-space-5: 18px; --eb-space-6: 24px; --eb-space-7: 36px; }
+/* An exam page / preview (a light island) keeps the platform's DEFAULT look whatever the teacher chose: what students see. */
+:root[data-palette] :is(.interactive-exam-page, .iex-navigator, .i3d-scene, .eb-light-island) {
+  --eb-primary: #2a0a4e; --eb-primary-strong: #4a2380; --eb-primary-050: #f3effa; --eb-primary-100: #ebe5f4; --eb-primary-200: #d9cfea; --eb-primary-300: #8b74b8;
+  --eb-focus: 0 0 0 4px rgba(42,10,78,.14);
+}
+:root[data-density] :is(.interactive-exam-page, .iex-navigator, .i3d-scene, .eb-light-island) {
+  --eb-space-3: 12px; --eb-space-4: 16px; --eb-space-5: 24px; --eb-space-6: 32px; --eb-space-7: 48px;
+}

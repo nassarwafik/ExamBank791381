@@ -1,6 +1,8 @@
 // Teacher SELF profile — builder-authenticated, always the token subject (never a body-supplied teacher id):
 //   GET  /api/teacher-profile                → { ok, profile }
-//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName" | "setDashboardLayout", ... }
+//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName" | "setDashboardLayout" | "setAppearance", ... }
+//   Tadris+ P8-A1 — GET also answers `appearance` { theme, palette, density } and `appearanceChoosable`; «setAppearance» stores the
+//   registered values only, each part needing its capability (appearance.theme / palette / density.choose). Presentation only.
 //   Tadris+ P7-A2 — GET also answers `dashboardLayout` (the teacher's arrangement of the «اليوم» cards, or null) and
 //   `layoutChoosable`; «setDashboardLayout» { order, hidden } needs appearance.layout.choose (evaluated like every capability:
 //   a managed session while the owner enforces access). Presentation only — it never changes what the server serves.
@@ -16,7 +18,7 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { recordAuditEvent } = require("../lib/audit-log");
 const { ProfileImageError } = require("../lib/profile-image");
 const { photoRecord, publishProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
-const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile, validateDashboardLayout, dashboardLayoutOf } = require("../lib/teacher-profile");
+const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile, validateDashboardLayout, dashboardLayoutOf, APPEARANCE, validateAppearance, appearanceOf } = require("../lib/teacher-profile");
 const { sessionGrants } = require("../lib/access/session-grants");   // Tadris+ P7-A2
 const LAYOUT_CAPABILITY = "appearance.layout.choose";
 
@@ -62,7 +64,9 @@ async function handler(request, deps = {}, obs = null) {
       if (isPhotoRoute) return photoResponse(container, photoRecord(doc), teacherPhotoPrefix(sub), deps, obs);   // the committed record selects the blob; `?v=` is cache context only
       // P7-A2: whether the arrangement can be changed; an unresolvable access answers «not choosable» (the profile itself still loads).
       const grants = await sessionGrants(actor.user, { ...deps, container }, obs);
-      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc), dashboardLayout: dashboardLayoutOf(doc), layoutChoosable: grants.ok && grants.has(LAYOUT_CAPABILITY) } };
+      // P8-A1: the teacher's appearance and which of its parts they may change (presentation only — never read by a security check).
+      const appearanceChoosable = Object.fromEntries(Object.entries(APPEARANCE).map(([k, spec]) => [k, grants.ok && grants.has(spec.capability)]));
+      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc), dashboardLayout: dashboardLayoutOf(doc), layoutChoosable: grants.ok && grants.has(LAYOUT_CAPABILITY), appearance: appearanceOf(doc), appearanceChoosable } };
     }
     if (isPhotoRoute) return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };
 
@@ -94,6 +98,21 @@ async function handler(request, deps = {}, obs = null) {
         const updated = await mutateProfile(container, sub, deps, doc => { doc.appearance = { ...(doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {}), dashboardLayout: v.layout }; });
         await rec(container, { actor: sub, action: "teacher.profile.setDashboardLayout", targetType: "teacher", targetId: sub, details: { order: v.layout.order.length, hidden: v.layout.hidden.length } });
         return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated), dashboardLayout: dashboardLayoutOf(updated) } };
+      }
+      if (action === "setAppearance") {   // Tadris+ P8-A1 — { appearance: { theme?, palette?, density? } }; «default» = the field removed
+        const v = validateAppearance(body?.appearance);
+        if (!v.ok) return { status: 400, jsonBody: { ok: false, code: "APPEARANCE_INVALID", error: v.error } };
+        const grants = await sessionGrants(actor.user, { ...deps, container }, obs);
+        if (!grants.ok) return grants.response;
+        const refused = Object.keys(v.changes).find(k => !grants.has(APPEARANCE[k].capability));
+        if (refused) return { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذا الخيار من المظهر غير مفعّل لحسابك.", capability: APPEARANCE[refused].capability } };
+        const updated = await mutateProfile(container, sub, deps, doc => {
+          const next = { ...(doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {}) };
+          for (const [k, value] of Object.entries(v.changes)) { if (value === APPEARANCE[k].fallback) delete next[k]; else next[k] = value; }
+          doc.appearance = next;
+        });
+        await rec(container, { actor: sub, action: "teacher.profile.setAppearance", targetType: "teacher", targetId: sub, details: { ...v.changes } });
+        return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated), appearance: appearanceOf(updated) } };
       }
       if (action === "uploadPhoto") {
         // new immutable revision → CAS commit of the profile document → cleanup of the previous revision (store order).

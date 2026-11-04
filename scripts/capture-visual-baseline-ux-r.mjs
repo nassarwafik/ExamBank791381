@@ -402,6 +402,14 @@ const TEACHER_PAGES = [
 // captured, and the chart container's height is measured (a chart with no height is a blank card).
 // UX-R8 — an OPENED conversation (class «العاشر – أ», the SECOND roster row, so the unread student listed first keeps its count and the roster filters stay shown) and the student's dedicated messages view.
 const SCRIPTED = [
+  // Tadris+ P8-A1 — the teacher appearance presets: the dashboard in each new palette and in the compact density (the workflow's
+  // light / dark matrix captures each in both modes). The attributes are set as the teacher shell sets them.
+  ...[["appearance-ocean", "data-palette", "ocean"], ["appearance-forest", "data-palette", "forest"], ["appearance-sand", "data-palette", "sand"], ["appearance-compact", "data-density", "compact"]].map(([id, attr, value]) => ({
+    id, role: "teacher", nav: "لوحة المتابعة", run: async page => {
+      await page.evaluate(([a, v]) => document.documentElement.setAttribute(a, v), [attr, value]);
+      await page.waitForTimeout(150);
+    }
+  })),
   // UX-R13 — the games: the teacher's number-conversion preview and live-challenge authoring, and the student's games page.
   { id: "games-conversion", role: "teacher", nav: "الألعاب التعليمية", run: async page => {
     await page.getByRole("button", { name: "معاينة اللعبة" }).first().click({ timeout: 15000 });

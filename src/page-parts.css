@@ -460,3 +460,15 @@
 .teacher-platform-inner > .platform-hero > button:hover{ background:var(--eb-surface-2); }
 .teacher-platform-inner > .platform-card:has(.audit-history-table){ border-color:var(--eb-line); border-radius:var(--eb-r); box-shadow:none; }
 .audit-history-table.students-table thead th{ background:var(--eb-surface); color:var(--eb-muted); }
+
+/* Tadris+ P8-A1 — «المظهر» in the teacher's profile */
+.eb-teacher-appearance { display: grid; gap: var(--eb-space-2); border-top: 1px solid var(--eb-line); padding-top: var(--eb-space-3); }
+.eb-teacher-appearance-group { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); align-items: center; }
+.eb-teacher-appearance-group legend { font-weight: var(--eb-fw-semibold, 600); margin-block-end: var(--eb-space-1); }
+.eb-teacher-appearance-swatches { display: flex; flex-wrap: wrap; gap: var(--eb-space-2) var(--eb-space-4); }
+.eb-teacher-appearance-swatch { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-teacher-appearance-dot { inline-size: 18px; block-size: 18px; border-radius: var(--eb-pill); border: 1px solid var(--eb-line-2); }
+.eb-teacher-appearance-dot[data-swatch="default"] { background: var(--eb-swatch-default); }
+.eb-teacher-appearance-dot[data-swatch="ocean"] { background: var(--eb-swatch-ocean); }
+.eb-teacher-appearance-dot[data-swatch="forest"] { background: var(--eb-swatch-forest); }
+.eb-teacher-appearance-dot[data-swatch="sand"] { background: var(--eb-swatch-sand); }

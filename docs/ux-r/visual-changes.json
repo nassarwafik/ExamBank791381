@@ -240,6 +240,26 @@
       "page": "learning-search",
       "viewport": "all",
       "reason": "791381s Phase 7 — units 31–36 gain their «تدريبات الوحدة» page, so every booklet search hit's «الصفحة X من Y» reads Y = 238 (was 232); no hit, title or layout changes."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "all",
+      "reason": "Tadris+ P8-A1 — new scene: the teacher dashboard in the «محيط» palette (teacher appearance presets, owner decisions §19.27); the default look of every other page is unchanged."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "all",
+      "reason": "Tadris+ P8-A1 — new scene: the teacher dashboard in the «غابة» palette (teacher appearance presets, owner decisions §19.27); the default look of every other page is unchanged."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "all",
+      "reason": "Tadris+ P8-A1 — new scene: the teacher dashboard in the «رمل» palette (teacher appearance presets, owner decisions §19.27); the default look of every other page is unchanged."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "all",
+      "reason": "Tadris+ P8-A1 — new scene: the teacher dashboard in the compact density (teacher appearance presets, owner decisions §19.27); the default look of every other page is unchanged."
     }
   ]
 }
