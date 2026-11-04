@@ -173,6 +173,22 @@ describe("P8-B1a — the assignments page shows only the actions the teacher's a
     expect(within(row).queryByRole("button", { name: /عرض التصحيح|تصحيح الآن/ })).toBeNull();
     expect(r.queryByRole("button", { name: /^إجراءات الواجب/ })).toBeNull();
   });
+  it("the overview: each setting follows its capability (schedule → timing / attempts / late policy; content edit → details; release → results)", async () => {
+    const overviewButtons = async (caps: string[]) => {
+      const r = await mountAssignments(caps, false);
+      fireEvent.click(r.getByRole("button", { name: "فتح" }));
+      await r.findByText("طالب مسلّم");
+      fireEvent.click(r.getByRole("button", { name: "نظرة عامة" }));
+      await r.findByText("التعليمات");
+      const settings = document.querySelector(".eb-assign-settings-actions");
+      const out = { settings: settings ? [...settings.querySelectorAll("button")].map(b => b.textContent) : [], release: !!r.queryByLabelText("متى يرى الطلاب نتائجهم") };
+      cleanup();
+      return out;
+    };
+    expect(await overviewButtons([...BASE, "assignments.assignment.view"])).toEqual({ settings: [], release: false });
+    expect(await overviewButtons([...BASE, "assignments.assignment.view", "assignments.content.edit"])).toEqual({ settings: ["تعديل العنوان والتعليمات"], release: false });
+    expect(await overviewButtons(READY)).toEqual({ settings: ["تعديل الوقت والموعد", "تعديل عدد المحاولات"], release: true });
+  });
   it("the gradebook with schedule and grading: the student menu, the selection and the marking button are there", async () => {
     const r = await mountAssignments(READY, false);
     fireEvent.click(r.getByRole("button", { name: "فتح" }));
@@ -234,10 +250,12 @@ describe("P8-B1a — the students and classes page", () => {
   it("the classes: «إنشاء صف» needs classes.class.create; editing / graduating / archiving need classes.class.manage", () => {
     render(withAccess(BASE, <ClassesPane {...paneProps()} />));
     expect(screen.queryByRole("button", { name: "إنشاء صف" })).toBeNull();
-    expect(document.body.textContent).not.toMatch(/تعديل بيانات الصف|تخريج وأرشفة|أرشفة الصف/);
+    const classMenu = () => { const b = screen.queryByRole("button", { name: /^إجراءات الصف/ }); if (!b) return []; fireEvent.click(b); return within(screen.getByRole("group", { name: /^إجراءات الصف/ })).queryAllByRole("button").map(x => x.textContent); };
+    expect(classMenu().join("|")).not.toMatch(/تعديل بيانات الصف|تخريج وأرشفة|أرشفة الصف/);
     cleanup();
     render(withAccess([...BASE, "classes.class.create", "classes.class.manage"], <ClassesPane {...paneProps()} />));
     expect(screen.getByRole("button", { name: "إنشاء صف" })).toBeTruthy();
+    expect(classMenu().join("|")).toMatch(/أرشفة الصف/);
     cleanup();
     render(withAccess(BASE, <ClassesPane {...paneProps({ classes: [], activeCount: 0 })} />));
     expect(screen.queryByRole("button", { name: "إنشاء صف" })).toBeNull();
