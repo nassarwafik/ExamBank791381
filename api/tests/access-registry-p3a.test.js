@@ -153,7 +153,8 @@ describe("P3-A resolver", () => {
   });
   it("default deny: a console account the owner has not given access to holds NOTHING", async () => {
     // P5-A added `courses` (the course entitlement): null = no narrowing (owner decisions §19.13). Capabilities: still none.
-    expect(await resolveTeacherAccess(managed(CONSOLE), { getContainer: down })).toEqual({ source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null });
+    // P7-A2 added `widgets` (the dashboard-widget entitlement), the same rule: null = no narrowing.
+    expect(await resolveTeacherAccess(managed(CONSOLE), { getContainer: down })).toEqual({ source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null, widgets: null });
   });
   it("the imported shared-password workspace (t_legacy) keeps today's access until the owner assigns one", async () => {
     const a = await resolveTeacherAccess(managed("t_legacy"), { getContainer: down });
