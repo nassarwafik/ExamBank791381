@@ -1,0 +1,47 @@
+name: P9-B1 Access Acceptance E2E (Real Chromium)
+# Tadris+ P9-B1 — the blueprint's E2E acceptance tests (§14.2 #1, #2, #5, #13) on the production build in a real Chromium, against
+# the real API in process (test data only, enforce mode). A NEW gate (it weakens nothing): it runs whenever the app, the API, the
+# harness or this check changes. Nothing is deployed and no secret is used (the session signing values are random per run).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/**"
+      - "api/src/**"
+      - "browser-harness/learning-l8-api.cjs"
+      - "scripts/check-access-e2e-p9b1.mjs"
+      - "docs/enterprise-certification-p9b1.md"
+      - ".github/workflows/access-e2e-p9b1.yml"
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: "#1 #2 #5 #13 in real Chromium (enforce, test data)"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare production assets, the API and the measuring tool
+        run: |
+          npm ci
+          npm ci --prefix api
+          npm run build
+          npm install --prefix /tmp/pw --no-save playwright-core@1.55.0
+          command -v google-chrome
+      - name: Certify the access acceptance tests in real Chromium
+        env:
+          PLAYWRIGHT_CORE_DIR: /tmp/pw
+          CHROMIUM_PATH: /usr/bin/google-chrome
+          HARNESS_OUT: .harness-p9b1
+        run: node scripts/check-access-e2e-p9b1.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: access-e2e-p9b1
+          path: .harness-p9b1/
+          include-hidden-files: true
+          retention-days: 7

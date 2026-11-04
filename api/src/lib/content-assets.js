@@ -118,6 +118,13 @@ function hasContentAssets(value) {
  */
 const deliveryMemo = new Map();
 const MEMO_MAX = 128;
+// Tadris+ P9-B1 (acceptance test #5) — the memoized copy is shared by every request of the window, like the frozen value it was
+// made from: it is deep-frozen too (the path-copy's new nodes; the untouched branches are the original frozen ones), so no caller
+// can change what the next request receives.
+function deepFreeze(v) {
+  if (v && typeof v === "object" && !Object.isFrozen(v)) { Object.freeze(v); for (const x of Object.values(v)) deepFreeze(x); }
+  return v;
+}
 function deliveryCopy(value, etag, nowMs) {
   if (!signingKey()) return { value, etag };
   const w = windowOf(nowMs);
@@ -125,7 +132,7 @@ function deliveryCopy(value, etag, nowMs) {
   const hit = deliveryMemo.get(key);
   if (hit) return hit;
   const signed = signContentAssets(value, nowMs);
-  const out = signed === value ? { value, etag } : { value: signed, etag: "\"" + crypto.createHash("sha256").update(key).digest("base64url").slice(0, 22) + "\"" };
+  const out = Object.freeze(signed === value ? { value, etag } : { value: deepFreeze(signed), etag: "\"" + crypto.createHash("sha256").update(key).digest("base64url").slice(0, 22) + "\"" });
   if (deliveryMemo.size >= MEMO_MAX) deliveryMemo.delete(deliveryMemo.keys().next().value);
   deliveryMemo.set(key, out);
   return out;

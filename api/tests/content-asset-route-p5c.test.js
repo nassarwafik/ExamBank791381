@@ -131,6 +131,21 @@ describe("P5-C windowed signing and ETags", () => {
     expect(r.jsonBody.module).toEqual(JSON.parse(text));
     expect(r.headers.ETag).toBe('"' + createHash("sha256").update(text).digest("base64url").slice(0, 22) + '"');
   });
+  // Tadris+ P9-B1 (acceptance test #5): the signed copy is memoized for the window and shared by every request, so it is frozen
+  // like the stored value it came from — no caller can change what the next teacher or student receives.
+  it("the window's signed copy is shared and deep-frozen: changing one response never reaches the next (module and library item)", async () => {
+    for (const [read, pick] of [[() => module00(teacher()), r => r.jsonBody.module], [() => item(teacher()), r => r.jsonBody.item]]) {
+      const first = await read();
+      const original = JSON.stringify(pick(first));
+      expect(signedIn(pick(first)).length).toBeGreaterThan(0);                  // a copy was made (it carries signed URLs)
+      const v = pick(first);
+      expect(Object.isFrozen(v)).toBe(true);
+      const firstObject = Object.values(v).find(x => x && typeof x === "object");
+      expect(Object.isFrozen(firstObject)).toBe(true);
+      try { v.title = "x"; } catch { /* frozen */ }
+      expect(JSON.stringify(pick(await read()))).toBe(original);
+    }
+  });
 });
 
 describe("P5-C governance revisions", () => {

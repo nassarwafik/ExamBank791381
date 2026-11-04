@@ -109,3 +109,5 @@ artifacts/phase-21e2/
 
 # Phase UX-R0 — visual baseline captures (scripts/capture-visual-baseline-ux-r.mjs)
 .harness-ux-r/
+# Tadris+ P9-B1 — real-Chromium access acceptance E2E output (scripts/check-access-e2e-p9b1.mjs), produced per run
+.harness-p9b1/

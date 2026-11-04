@@ -10,6 +10,7 @@ import { createRequire } from "node:module";
 import TeacherAppShell from "./TeacherAppShell";
 import type { TeacherNavState } from "./teacherNav";
 import { NAV_CAPABILITIES, navAllowed, parseTeacherAccess, firstAllowed, type TeacherAccessView } from "./teacherAccess";
+import { PALETTES, DENSITIES, noteTeacherAppearance, resetKnownAppearance, forgetCachedAppearance } from "../teacher/teacherAppearance";
 
 const ALL = ["لوحة المتابعة", "المواد التعليمية", "الصفوف والطلاب", "الواجبات", "الرسائل", "المشاريع", "التقارير", "الألعاب التعليمية", "بنك الامتحانات", "باني الامتحان", "استيراد من ملف", "مراجعات النشر", "سجل النشاط"];
 const state = (over: Partial<TeacherNavState> = {}): TeacherNavState => ({ teacherView: "platform", workspaceTab: "dashboard", projectCode: "", projectList: [], ...over });
@@ -85,5 +86,40 @@ describe("P3-C the shell", () => {
     expect(screen.getByRole("alert").textContent).toContain("تعذر تحميل صلاحياتك");
     fireEvent.click(screen.getByRole("button", { name: "إعادة المحاولة" }));
     expect(onRetryAccess).toHaveBeenCalled();
+  });
+});
+
+// Tadris+ P9-B1 — blueprint acceptance test #12 in the UI (the API half: teacher-appearance-p8a1): an appearance changes the look
+// only. Every palette × density gives exactly the same destinations — with every tool, and limited (enforced learning-only) — and a
+// destination that is not enabled stays «غير مفعّلة».
+describe("P9-B1 acceptance test #12 — appearance grants nothing in the shell", () => {
+  afterEach(() => { resetKnownAppearance(); forgetCachedAppearance(); });
+  const LIMITED = { status: "ok" as const, enforced: true, capabilities: LEARNING_ONLY };
+  const withIdentity = (access: TeacherAccessView | null, over: Partial<TeacherNavState> = {}) => {
+    render(
+      <TeacherAppShell nav={state(over)} projectReadyTotal={0} displayName="المعلم" identity={{ token: "teacher-token", profile: null, onProfileChange: vi.fn() }} onNavigate={vi.fn()} onLogout={vi.fn()} access={access} onRetryAccess={vi.fn()}>
+        <p>محتوى الصفحة</p>
+      </TeacherAppShell>
+    );
+  };
+  it("every palette and density: the same destinations (all, and limited), and a refused one stays «غير مفعّلة»", () => {
+    const limitedBaseline = ["لوحة المتابعة", "المواد التعليمية", "الصفوف والطلاب", "التقارير", "سجل النشاط"];
+    for (const palette of PALETTES) for (const density of DENSITIES) {
+      const label = palette.id + "/" + density.id;
+      noteTeacherAppearance({ appearance: { theme: "light", palette: palette.id, density: density.id } });
+      withIdentity(null);
+      expect(document.documentElement.getAttribute("data-palette"), label).toBe(palette.id === "default" ? null : palette.id);   // the look IS applied
+      expect(document.documentElement.getAttribute("data-density"), label).toBe(density.id === "comfortable" ? null : density.id);
+      expect(navLabels(), label).toEqual(ALL);
+      cleanup();
+      withIdentity(LIMITED);
+      expect(navLabels(), label).toEqual(limitedBaseline);
+      cleanup();
+      withIdentity(LIMITED, { teacherView: "builder" });
+      expect(screen.queryByText("محتوى الصفحة"), label).toBeNull();
+      expect(screen.getByText("هذه الأداة غير مفعّلة لحسابك")).toBeTruthy();
+      cleanup();
+    }
+    expect(document.documentElement.getAttribute("data-palette")).toBeNull();                       // the shell closed: the default look
   });
 });

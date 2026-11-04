@@ -61,6 +61,17 @@ describe("GET /api/learning-content/{courseId}/{moduleId}", () => {
     expect((await get(asStudent(ctx), M01)).status).toBe(200);
   });
 
+  // Tadris+ P9-B1 — blueprint acceptance test #3, as one named two-class case.
+  it("acceptance test #3: a module published to class A never opens for a student of class B (B publishes another); each sees its own", async () => {
+    const ctx = seed([M01], { [USR("u2")]: student("u2", "cB"), [CLS("cB")]: room("cB", [M02]) });
+    expect((await get(asStudent(ctx, "u1"), M01)).status).toBe(200);                           // class A's student: A's module
+    const cross = await get(asStudent(ctx, "u2"), M01);
+    expect(cross.status).toBe(403);                                                            // class B's student: never A's
+    expect(cross.jsonBody.module).toBeUndefined();
+    expect((await get(asStudent(ctx, "u2"), M02)).status).toBe(200);                           // B's own module
+    expect((await get(asStudent(ctx, "u1"), M02)).status).toBe(403);                           // and the other way round
+  });
+
   it("revalidation: If-None-Match → 304 only after the gate passed; a hidden module is refused even with a matching tag", async () => {
     const tag = (await get(asTeacher(), M02)).headers.ETag;
     const ctx = seed([M01, M02]);

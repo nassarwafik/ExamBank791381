@@ -1343,6 +1343,9 @@ flowchart LR
 | 14 | فشل تحميل الصلاحيات = رفض، لا وصول كامل | P3-A / P3-C | API + UI (Mutation) |
 | 15 | البيانات والنتائج القديمة محفوظة بعد الترحيل (لقطة قبل وبعد) | P2-B / P9-A | API على بيانات تجريبية |
 
+> **P9-B1:** سجل الشهادة، أي كل اختبار ودليله بالملف والعنوان، في `docs/enterprise-certification-p9b1.md`. الفهرس الآلي
+> `api/tests/certification-index-p9b1.test.js` يُسقط CI إذا اختفى دليل.
+
 **أهداف Mutation الأساسية:**
 
 - default-deny؛
