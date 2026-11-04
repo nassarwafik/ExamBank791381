@@ -64,7 +64,7 @@
 
 | الملف | العدد |
 |---|---|
-| `api/tests/dashboard-widgets-p7a2.test.js` | 17 |
+| `api/tests/dashboard-widgets-p7a2.test.js` | 18 |
 | `src/teacher/TeacherTodayHub.p7a2.test.tsx` | 5 |
 | `src/owner/OwnerWidgets.p7a2.test.tsx` | 3 |
 

@@ -133,6 +133,15 @@ describe("P7-A2 — analytics, AI analysis and reports follow the choice", () =>
     expect(r.insights.length).toBeGreaterThan(0);
     expect(JSON.stringify(r.insights)).not.toMatch(/جبر|هندسة|مراجعة|تسليم|يحتاجون متابعة|متوسط الأداء/);
   });
+  it("the assignments ARE read (for «ملخص العلامات») but the topics are hidden: no insight names a topic", async () => {
+    const full = setup();
+    expect(JSON.stringify((await analytics(get(full, "/api/teacher-analytics"), full.deps)).jsonBody.insights)).toMatch(/جبر|هندسة/);   // the fixture does produce a topic insight
+    const ctx = setup({ widgets: ["scores.overview", "insights"] });
+    const r = (await analytics(get(ctx, "/api/teacher-analytics"), ctx.deps)).jsonBody;
+    expect(r.kpis.submissions).toBeGreaterThan(0);
+    expect(r.insights.length).toBeGreaterThan(0);
+    expect(JSON.stringify(r.insights)).not.toMatch(/جبر|هندسة/);
+  });
   it("follow-up / insights only: no assignment document or submission is read", async () => {
     const ctx = setup({ widgets: ["students.followUp", "insights"] });
     const st = instrument(ctx.mem);
