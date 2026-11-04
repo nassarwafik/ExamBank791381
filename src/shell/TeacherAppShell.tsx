@@ -21,6 +21,7 @@ import SchoolBadge from "../ui/SchoolBadge";
 import type { SchoolBadgeView } from "./schoolIdentity";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import type { TeacherProfile } from "../teacher/teacherProfile";
+import { startTeacherAppearance } from "../teacher/teacherAppearance";   // Tadris+ P8-A1
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
@@ -72,6 +73,9 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   const asideRef = useRef<HTMLElement>(null);
   const active = activeNavId(nav);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // Tadris+ P8-A1 — the teacher's palette / density (their account; a device copy first) on <html> while this shell is open only.
+  const appearanceToken = identity ? identity.token : "";
+  useEffect(() => (appearanceToken ? startTeacherAppearance(appearanceToken) : undefined), [appearanceToken]);
   // 21E.0 audit F16 (21E.1 slice 2) — when the teacher dismisses the phone menu (Escape, the backdrop or «إغلاق القائمة»), keyboard
   // focus goes back to the «القائمة» button that opens it. The trap alone restored whatever was focused when the drawer OPENED, which is
   // <body> whenever the tap did not focus the button (WebKit, scripted clicks) — focus was lost. Navigating to a page and the drawer

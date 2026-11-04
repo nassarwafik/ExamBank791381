@@ -110,4 +110,32 @@ function dashboardLayoutOf(doc) {
   return r.ok ? r.layout : null;
 }
 
-module.exports = { validateDashboardLayout, dashboardLayoutOf, resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
+// Tadris+ P8-A1 — the teacher's appearance presets (blueprint §9.3, owner decisions §19.27), stored as `appearance.{theme, palette,
+// density}` of the profile document so it follows the teacher on every device. Only the registered values; «default» is stored as the
+// field's absence. PRESENTATION ONLY: no security check ever reads these fields (blueprint acceptance test 12).
+const APPEARANCE = Object.freeze({
+  theme: Object.freeze({ values: Object.freeze(["light", "dark"]), fallback: "light", capability: "appearance.theme.choose" }),
+  palette: Object.freeze({ values: Object.freeze(["default", "ocean", "forest", "sand"]), fallback: "default", capability: "appearance.palette.choose" }),
+  density: Object.freeze({ values: Object.freeze(["comfortable", "compact"]), fallback: "comfortable", capability: "appearance.density.choose" })
+});
+/** { ok, changes: { field: value } } — only the fields present in `input`; each must be a registered value. */
+function validateAppearance(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, error: "المظهر غير صالح." };
+  const keys = Object.keys(input);
+  if (!keys.length || keys.some(k => !Object.prototype.hasOwnProperty.call(APPEARANCE, k))) return { ok: false, error: "المظهر غير صالح." };
+  const changes = {};
+  for (const k of keys) {
+    if (typeof input[k] !== "string" || !APPEARANCE[k].values.includes(input[k])) return { ok: false, error: "قيمة مظهر غير معروفة." };
+    changes[k] = input[k];
+  }
+  return { ok: true, changes };
+}
+/** The stored appearance, re-validated on read (an unknown value → that field's default). */
+function appearanceOf(doc) {
+  const a = doc && doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {};
+  const out = {};
+  for (const [k, spec] of Object.entries(APPEARANCE)) out[k] = typeof a[k] === "string" && spec.values.includes(a[k]) ? a[k] : spec.fallback;
+  return out;
+}
+
+module.exports = { APPEARANCE, validateAppearance, appearanceOf, validateDashboardLayout, dashboardLayoutOf, resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };

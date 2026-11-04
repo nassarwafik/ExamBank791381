@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import AppearanceSettings from "./AppearanceSettings";   // Tadris+ P8-A1
 import Dialog from "../ui/Dialog";
 import ProfileAvatar from "../ui/ProfileAvatar";
 import { AVATAR_OPTIONS } from "../avatars";
@@ -69,6 +70,7 @@ export default function TeacherProfileDialog({ open, token, profile, photoUrl, o
           <label>اسم المعلم<input value={nameDraft} onChange={e => setNameDraft(e.target.value)} maxLength={60} placeholder={profile.displayName} autoComplete="name" disabled={busy} /></label>
           <button type="submit" className="eb-button is-small" disabled={busy || !nameDraft.trim() || nameDraft.trim() === (profile.hasCustomName ? profile.displayName : "")}>حفظ الاسم</button>
         </form>
+        <AppearanceSettings token={token} />   {/* Tadris+ P8-A1 */}
         {busy && <p className="eb-muted" role="status">جارٍ الحفظ...</p>}
         {notice && !busy && <p className="eb-teacher-profile-notice" role="status">{notice}</p>}
         {error && <p className="platform-error" role="alert">{error}</p>}

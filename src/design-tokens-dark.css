@@ -70,6 +70,8 @@
     --eb-sh-md: 0 10px 28px -12px light-dark(rgba(28,19,48,.18), rgba(0,0,0,.6));
     --eb-sh-lg: 0 18px 40px -18px light-dark(rgba(28,19,48,.24), rgba(0,0,0,.65));
     --eb-focus: 0 0 0 4px light-dark(rgba(42,10,78,.14), rgba(181,156,238,.28));
+    --eb-swatch-default: light-dark(#2a0a4e, #b59cee); --eb-swatch-ocean: light-dark(#0b4a5c, #7ccbdc);   /* Tadris+ P8-A1 */
+    --eb-swatch-forest: light-dark(#1d4a2a, #86c99a); --eb-swatch-sand: light-dark(#5a3410, #d9ad7c);
     --eb-backdrop: light-dark(rgba(28, 19, 48, 0.45), rgba(0, 0, 0, 0.6));
     --eb-scrim: light-dark(#1c1330, #000000);
 
