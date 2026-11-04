@@ -21,6 +21,7 @@ import { gridStatusChanges, parseGridScore, scoreGridChanges, type GridChange } 
 import type { Board } from "./ProjectBulkReview";
 import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation, StageStatus } from "./types";
 import type { ProjectEvaluationQueueView } from "./drillTarget";
+import { useCan } from "../shell/teacherAccessContext";
 
 type Props = {
   token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[];
@@ -138,6 +139,9 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // Tadris+ P8-B1b — without projects.tracker.manage (every write of /api/project-tracker) the profile is read only, exactly as an
+  // archived class's (presentation only: the server refuses the writes anyway). The «مؤرشف» badge still means only the archive.
+  const locked = !useCan()("projects.tracker.manage");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [detailsFor, setDetailsFor] = useState("");                            // the stage whose details / note dialog is open
   const [history, setHistory] = useState<StageHistoryTarget | null>(null);     // Phase G3 — the open «سجلّ التغييرات» dialog
@@ -208,7 +212,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     if (!focusMode || evaluationFocusSeq === appliedFocusSeq.current || !detail || !detailIsCurrent) return;
     appliedFocusSeq.current = evaluationFocusSeq;                              // consumed ONLY against this selection's own detail
     const stage = firstUngraded(evaluation);
-    if (stage && !detail.readOnly) focusStage(stage);
+    if (stage && !(detail.readOnly || locked)) focusStage(stage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluationFocusSeq, detail, detailIsCurrent]);
   // Phase 9F — tell the session owner when the SERVER says this student is fully graded (after load or after a save);
@@ -235,7 +239,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const name = detail?.student.displayName || studentId;
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
-  const board = useMemo(() => (detail ? boardOf(detail, studentId, name) : null), [detail, studentId, name]);
+  const board = useMemo(() => { const b = detail ? boardOf(detail, studentId, name) : null; return b && locked ? { ...b, readOnly: true } : b; }, [detail, studentId, name, locked]);
   const keyOf = (stageId: string) => studentId + "|" + stageId;
   // ---- the save bar's decisions (the matrix's helpers over this one student) ----
   const changes: GridChange[] = useMemo(() => (board ? scoreGridChanges(scoreDrafts, board) : []), [scoreDrafts, board]);
@@ -291,7 +295,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
 
   // ---- the save bar: every changed score, then the approvals and the reopenings, then the profile is re-read ----
   async function save() {
-    if (!detail || detail.readOnly || saving || savingRef.current || !pendingCount || invalid) return;
+    if (!detail || detail.readOnly || locked || saving || savingRef.current || !pendingCount || invalid) return;
     const context = contextRef.current;
     savingRef.current = true; setSaving(true); setError(""); setNotice("");
     const failed: Record<string, string> = {};
@@ -342,7 +346,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
 
   // ---- single writes: a note, or a workflow status the toggle does not cover — the canonical progress.update ----
   function writeSingle(stage: ProjectStage, patch: Patch) {
-    if (!detail || detail.readOnly) return;
+    if (!detail || detail.readOnly || locked) return;
     const keys = patchKinds(patch).map(k => stage.stageId + ":" + k);
     if (keys.some(k => pendingRef.current.has(k))) return;                      // double-submit guard (same operation)
     const context = contextRef.current;
@@ -430,7 +434,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const s = detail.summary;
   const perf = normalizeProjectPerformance(detail.performance);
   const timeline = [...detail.history].reverse().slice(0, 20);
-  const readOnly = detail.readOnly;
+  const readOnly = detail.readOnly || locked;
   const detailsStage = detailsFor ? detail.stages.find(st => st.stageId === detailsFor) ?? null : null;
   const detailsEntry = detailsStage ? detail.progress[detailsStage.stageId] : undefined;
   const detailsValue = detailsStage && perf ? stageValueOf(perf, detailsStage.stageId) : null;

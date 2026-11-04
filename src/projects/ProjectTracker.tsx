@@ -16,6 +16,7 @@ import type { ClassAttention } from "./projectAttention";
 import type { BulkMode } from "./ProjectBulkReview";
 import type { ProjectDrillTarget, ProjectEvaluationQueueView, ProjectStudentRef } from "./drillTarget";
 import "../projects-pro.css";
+import { useCan } from "../shell/teacherAccessContext";
 
 export type ProjectView = "dashboard" | "students" | "bulk" | "analytics" | "settings";
 type Props = {
@@ -195,6 +196,11 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const archivedClasses = useMemo(() => classes.filter(c => c.status === "archived"), [classes]);
   const selected = useMemo(() => classes.find(c => c.classId === classId) || null, [classes, classId]);
   const readOnly = selected?.status === "archived";
+  // Tadris+ P8-B1b — every write of /api/project-tracker needs projects.tracker.manage: without it the workspace is read only (the
+  // group evaluation and the stage settings are not offered; the dashboard has no shortcuts into them). Presentation only.
+  const manage = useCan()("projects.tracker.manage");
+  const views = manage ? VIEWS : VIEWS.filter(v => v.key !== "bulk" && v.key !== "settings");
+  const locked = readOnly || !manage;
   const trackNames = tracks.map(t => t.title).join(" · ");
   const selectedAttention = attentionByClass[classId];
   const classWaiting = selectedAttention && !readOnly ? selectedAttention.ready + selectedAttention.selfReported : 0;
@@ -224,7 +230,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
           </label>
           {readOnly && <StatusBadge tone="warn" className="eb-project-readonly"><IconLock size={14} aria-hidden="true" />مؤرشف — للقراءة فقط</StatusBadge>}
           <div className="eb-segmented eb-project-views" role="group" aria-label="أقسام المشروع">
-            {VIEWS.map(v => (
+            {views.map(v => (
               <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => { if (v.key !== view || v.key === "students") afterSettingsGuard(() => changeView(v.key)); }} disabled={!classId}>{v.icon(16)}<span>{v.label}</span>{v.key === "bulk" && classWaiting > 0 && <span className="eb-view-count" aria-label={attentionText(selectedAttention)}>{classWaiting}</span>}</button>
             ))}
           </div>
@@ -241,7 +247,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
         <EmptyState title="لا يوجد صف مرتبط بهذا المشروع بعد." description={"فعّل المشروع (" + projectCode + ") للصف من صفحة «الصفوف والطلاب»."} />
       ) : classId && tracks.length > 0 ? (
         <div className="eb-project-body" key={viewNonce}>
-          {view === "dashboard" && <ProjectDashboard token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onOpenBulk={openBulk} />}
+          {view === "dashboard" && <ProjectDashboard token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={locked} onOpenBulk={openBulk} />}
           {view === "students" && (
             <>
               <div hidden={!!openStudentId}>
@@ -256,9 +262,9 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               )}
             </>
           )}
-          {view === "bulk" && <ProjectBulkReview key={bulkMode || "auto"} token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onGridDirty} initialMode={bulkMode} />}
+          {view === "bulk" && manage && <ProjectBulkReview key={bulkMode || "auto"} token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onGridDirty} initialMode={bulkMode} />}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
-          {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onSettingsDirty} />}
+          {view === "settings" && manage && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} onDirtyChange={onSettingsDirty} />}
         </div>
       ) : null}
       {confirmDialog}

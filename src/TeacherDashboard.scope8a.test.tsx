@@ -18,6 +18,7 @@ vi.mock("react-chartjs-2", () => {
 
 import TeacherDashboard from "./TeacherDashboard";
 import TeacherAppShell from "./shell/TeacherAppShell";
+import { TeacherAccessContext } from "./shell/teacherAccessContext";
 
 const CLASSES = [
   { classId: "cA", name: "صف ألف", grade: "10", schoolYear: "2026", active: true, studentCount: 2 },
@@ -435,5 +436,29 @@ describe("8A review fix — the assignment drill follows the scope", () => {
     await screen.findByRole("complementary", { name: "واجب a1" });
     await pickStudent("u2");
     expect(screen.queryByRole("complementary")).toBeNull();
+  });
+});
+
+// Tadris+ P8-B1b — the AI analysis (/api/teacher-analytics-ai) needs reports.ai.use: without it the section is not offered and
+// nothing is requested. Presentation only (the server refuses the request anyway); no access information → shown, as before.
+describe("P8-B1b — the AI section follows reports.ai.use", () => {
+  const mountWith = async (capabilities: string[]) => {
+    const srv = server();
+    render(<TeacherAccessContext.Provider value={{ status: "ok", enforced: true, capabilities }}><TeacherDashboard token="tkn" /></TeacherAccessContext.Provider>);
+    await screen.findByRole("heading", { level: 2, name: "يحتاج إلى انتباهك" });
+    return srv;
+  };
+  const READ = ["classes.class.view", "reports.widget.view"];
+  it("without it: no AI section and no AI request; the rest of the dashboard stays", async () => {
+    const srv = await mountWith(READ);
+    expect(screen.queryByRole("heading", { level: 2, name: "تحليل البيانات العامة واستخلاص العبر" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /تحليل البيانات العامة واستخلاص العبر/ })).toBeNull();
+    expect(srv.ai()).toEqual([]);
+    expect(avgCard()).toBe("51.7%");
+  });
+  it("with it: the section and its button", async () => {
+    await mountWith([...READ, "reports.ai.use"]);
+    expect(screen.getByRole("heading", { level: 2, name: "تحليل البيانات العامة واستخلاص العبر" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /تحليل البيانات العامة واستخلاص العبر/ })).toBeTruthy();
   });
 });

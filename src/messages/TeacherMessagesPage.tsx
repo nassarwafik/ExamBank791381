@@ -13,6 +13,7 @@ import {
 import { isConversationVisible, messagesPane, useWideLayout, type NarrowPane } from "./messagesLayout";
 import { rosterView, type RosterFilter } from "./threadLayout";
 import "./messages.css";
+import { useCan } from "../shell/teacherAccessContext";
 
 /**
  * Phase 5C — the teacher «الرسائل» destination. Two modes over ONE selected class (from the existing /api/classrooms):
@@ -57,6 +58,8 @@ import "./messages.css";
  * replies beyond the frontier (`hasNewer`), a successful acknowledgement of the shown ones reloads the thread at once.
  */
 type Tab = "direct" | "announcements";
+/** Tadris+ P8-B1b — the thread is readable, but sending is not part of this teacher's access. */
+const SEND_NOT_ENABLED_TEXT = "الإرسال غير مفعّل لحسابك. الرسائل متاحة للقراءة فقط.";
 const ARCHIVED_CLASS_TEXT = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
 type Thread = ThreadState & { key: string };
 const SESSION_EXPIRED_TEXT = "انتهت صلاحية الجلسة. سجّل الدخول من جديد ثم أعد المحاولة.";
@@ -71,6 +74,10 @@ function studentStatus(s: Student): { label: string; code: "active" | "disabled"
 
 export default function TeacherMessagesPage({ token, client: injected, onUnreadChanged }: { token: string; client?: TeacherMessagesClient; onUnreadChanged?: () => void }) {
   const client = useMemo(() => injected || createTeacherMessagesClient(token), [injected, token]);
+  // Tadris+ P8-B1b — presentation only (the server enforces each action): the direct composer needs messages.direct.send, the
+  // announcement composer messages.announcement.send, and editing / deleting a message either of them (the route map's rule).
+  const can = useCan();
+  const mayDirect = can("messages.direct.send"), mayAnnounce = can("messages.announcement.send"), mayManage = can(["messages.direct.send", "messages.announcement.send"]);
   const [classes, setClasses] = useState<Classroom[] | null>(null);
   const [classesError, setClassesError] = useState("");
   const [classId, setClassId] = useState("");
@@ -288,7 +295,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
    */
   function actionsFor(key: string): MessageActions | undefined {
     const edit = client.editMessage, remove = client.deleteMessage;
-    if (!key || !edit || !remove) return undefined;
+    if (!key || !edit || !remove || !mayManage) return undefined;
     const target = key.startsWith("ann:") ? { classId: key.slice(4) } : { studentId: key.slice(3) };
     const apply = (message: MessageView) => {
       threadGen.current += 1;
@@ -495,7 +502,9 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                     </div>
                     {shown && (
                       <div className="eb-msg-convo-foot">
-                        {shown.canSend
+                        {shown.canSend && !mayDirect
+                          ? readOnlyNote(SEND_NOT_ENABLED_TEXT)
+                          : shown.canSend
                           ? <MessageComposer label="رسالة إلى الطالب" buttonLabel="إرسال" value={draft} onChange={updateDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب رسالة..." />
                           : readOnlyNote(shown.readOnlyReason || "المحادثة متاحة للقراءة فقط.")}
                       </div>
@@ -535,7 +544,9 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
                 </div>
                 {shown && (
                   <div className="eb-msg-convo-foot">
-                    {shown.canSend
+                    {shown.canSend && !mayAnnounce
+                      ? readOnlyNote(SEND_NOT_ENABLED_TEXT)
+                      : shown.canSend
                       ? <MessageComposer label="إعلان جديد للصف" buttonLabel="إرسال إعلان للصف" value={draft} onChange={updateDraft} onSend={() => void send()} sending={sending} error={sendError} placeholder="اكتب إعلانًا لكامل الصف..." />
                       : readOnlyNote(shown.readOnlyReason || ARCHIVED_CLASS_TEXT)}
                   </div>
