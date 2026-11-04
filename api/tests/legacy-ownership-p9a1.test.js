@@ -175,6 +175,23 @@ describe("P9-A1 — «assign» (a teacher)", () => {
     expect(dataSnapshot(ctx)).toBe(after);
     expect((await post(ctx, "apply", { classId: "old", decision: "shared", reason: "قرار المالك", previewDigest: "x", requestKey: "req-same-0001" })).jsonBody.code).toBe("REQUEST_KEY_REUSED");
   });
+  it("a change that lands AFTER the digest check (a race) is still never overwritten: the class refused, another owner's student kept", async () => {
+    // the class: someone gives it an owner between the digest check and the class write → refused, no student written
+    const ctx = setup();
+    const raceClass = { ...ctx.deps, mutateJsonWithRetry: (c, name, fn, o) => { if (name === "platform/classes/old.json" && !classDoc(ctx).ownerId) ctx.mem.setJson(name, { ...classDoc(ctx), ownerId: SARA }); return mutateJsonWithRetry(c, name, fn, o); } };
+    const p = await preview(ctx, { classId: "old", decision: "assign", toAccountId: OMAR });
+    const r = await post(ctx, "apply", { classId: "old", decision: "assign", toAccountId: OMAR, reason: "قرار المالك الموثّق", previewDigest: p.digest, requestKey: "req-race-0001" }, ctx.owner, raceClass);
+    expect([r.status, r.jsonBody.code, classDoc(ctx).ownerId]).toEqual([409, "CLASS_ALREADY_OWNED", SARA]);
+    expect(owners(ctx)).toEqual([null, null, null, SARA]);
+    // a student: another teacher takes s3 in that window → s3 keeps that teacher, the others are stamped
+    const ctx2 = setup();
+    const raceStudent = { ...ctx2.deps, mutateJsonWithRetry: (c, name, fn, o) => { if (name === "platform/users/s3.json" && !ctx2.mem.getJson(name).ownerId) ctx2.mem.setJson(name, { ...ctx2.mem.getJson(name), ownerId: SARA }); return mutateJsonWithRetry(c, name, fn, o); } };
+    const p2 = await preview(ctx2, { classId: "old", decision: "assign", toAccountId: OMAR });
+    const r2 = await post(ctx2, "apply", { classId: "old", decision: "assign", toAccountId: OMAR, reason: "قرار المالك الموثّق", previewDigest: p2.digest, requestKey: "req-race-0002" }, ctx2.owner, raceStudent);
+    expect(r2.status).toBe(200);
+    expect(owners(ctx2)).toEqual([OMAR, OMAR, SARA, SARA]);
+    expect(r2.jsonBody.ledger.changes.find(c => c.userId === "s3").outcome).toBe("skipped");
+  });
   it("a run that stopped half-way (a student write failed) stays pending and is completed by the same request — never twice", async () => {
     const ctx = setup();
     let failOnce = true;
