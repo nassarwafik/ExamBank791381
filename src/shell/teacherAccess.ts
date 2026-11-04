@@ -7,7 +7,8 @@
 //   the access could not be resolved («unavailable») →  nothing is offered (fail closed) and the teacher can retry.
 import type { TeacherNavId } from "./teacherNav";
 
-export type TeacherAccessView = { status: "ok" | "unavailable"; enforced: boolean; capabilities: string[] };
+/** Tadris+ P7-B2 — `games`: the games open to this teacher (the server's answer; absent on an older API → every game). */
+export type TeacherAccessView = { status: "ok" | "unavailable"; enforced: boolean; capabilities: string[]; games?: string[] };
 
 const GOV_ANY = ["examGovernance.exam.author", "examGovernance.exam.review", "examGovernance.exam.approve", "examGovernance.exam.publish"];
 
@@ -31,11 +32,12 @@ export const NAV_CAPABILITIES: Record<TeacherNavId, string[]> = {
 /** The session probe's `access` field → the view the UI uses (null when absent: an older API, or not a teacher). */
 export function parseTeacherAccess(value: unknown): TeacherAccessView | null {
   if (!value || typeof value !== "object") return null;
-  const v = value as { status?: unknown; enforced?: unknown; capabilities?: unknown };
+  const v = value as { status?: unknown; enforced?: unknown; capabilities?: unknown; games?: unknown };
   if (v.status === "unavailable") return { status: "unavailable", enforced: true, capabilities: [] };
   if (v.status !== "ok") return null;
   const capabilities = Array.isArray(v.capabilities) ? v.capabilities.filter((c): c is string => typeof c === "string") : [];
-  return { status: "ok", enforced: v.enforced === true, capabilities };
+  const games = Array.isArray(v.games) ? v.games.filter((g): g is string => typeof g === "string") : undefined;
+  return { status: "ok", enforced: v.enforced === true, capabilities, ...(games ? { games } : {}) };
 }
 
 /** Whether the UI offers this destination. */

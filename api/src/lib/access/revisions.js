@@ -5,6 +5,7 @@ const { isCapability, isOwnerOnly, unmetDependencies } = require("./capabilities
 const { preset } = require("./presets");
 const { findLearningCourse } = require("../learning-materials-registry");
 const { widget: findWidget } = require("../dashboard-widgets");
+const { game: findGame } = require("../game-catalog");
 
 // Tadris+ P3-A — access revisions (blueprint §6.3). A revision is IMMUTABLE: written once (create-only), never changed. A teacher
 // account points at its current revision (`accessRevisionId`); changing access = a NEW revision, then a compare-and-set on the
@@ -21,13 +22,16 @@ const { widget: findWidget } = require("../dashboard-widgets");
 //   Tadris+ P5-A — `resources.courses` (optional): the ONLY courses this teacher may use, as known course ids, without duplicates
 //   (owner decisions §19.13: an entitlement only NARROWS — absent = every published course).
 //   Tadris+ P7-A2 — `resources.widgets` (optional): the ONLY dashboard widgets this teacher may see, as known widget ids
-//   (lib/dashboard-widgets.js), without duplicates; absent = every widget (the same «only narrows» rule). Any other key is refused.
+//   (lib/dashboard-widgets.js), without duplicates; absent = every widget (the same «only narrows» rule).
+//   Tadris+ P7-B2 — `resources.games` (optional): the ONLY educational games this teacher (and so their students) may use, as known
+//   game ids (lib/game-catalog.js), without duplicates; absent = every game. Any other key is refused.
 // A problem is REFUSED with its code — never corrected silently.
 
 const REVISION_PREFIX = "platform/access/revisions/";
 const REVISION_ID_RE = /^ar_[0-9a-z]{9}_[a-f0-9]{16}$/;
 const MAX_REASON = 300;
 const MAX_LIST = 80;
+const RESOURCE_KEYS = new Set(["courses", "widgets", "games"]);   // P5-A, P7-A2, P7-B2
 
 const newRevisionId = (nowMs = Date.now()) => "ar_" + Math.max(0, Math.floor(nowMs)).toString(36).padStart(9, "0").slice(-9) + "_" + crypto.randomBytes(8).toString("hex");
 const revisionName = id => {
@@ -60,10 +64,10 @@ function evaluateRevision(rev) {
   if (forbidden.length) return { ok: false, code: "PLATFORM_CAPABILITY_FORBIDDEN", details: { capabilities: forbidden } };
   const both = lists.grants.filter(c => lists.denies.includes(c));
   if (both.length) return { ok: false, code: "CAPABILITY_CONFLICT", details: { capabilities: both } };
-  let courses = null, widgets = null;
+  let courses = null, widgets = null, games = null;
   if (rev.resources !== undefined) {
     const r = rev.resources;
-    if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => k !== "courses" && k !== "widgets")) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
+    if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => !RESOURCE_KEYS.has(k))) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
     if (r.courses !== undefined) {
       if (!Array.isArray(r.courses) || r.courses.length > MAX_LIST) return { ok: false, code: "REVISION_MALFORMED", details: { field: "resources.courses" } };
       const unknown = r.courses.filter(c => typeof c !== "string" || !findLearningCourse(c) || findLearningCourse(c).courseId !== c);
@@ -78,6 +82,13 @@ function evaluateRevision(rev) {
       if (new Set(r.widgets).size !== r.widgets.length) return { ok: false, code: "WIDGET_DUPLICATE" };
       widgets = [...r.widgets].sort();
     }
+    if (r.games !== undefined) {
+      if (!Array.isArray(r.games) || r.games.length > MAX_LIST) return { ok: false, code: "REVISION_MALFORMED", details: { field: "resources.games" } };
+      const unknown = r.games.filter(g => typeof g !== "string" || !findGame(g));
+      if (unknown.length) return { ok: false, code: "GAME_UNKNOWN", details: { games: unknown.map(String).slice(0, 10) } };
+      if (new Set(r.games).size !== r.games.length) return { ok: false, code: "GAME_DUPLICATE" };
+      games = [...r.games].sort();
+    }
   }
   const set = new Set(p.capabilities);
   for (const c of lists.grants) set.add(c);
@@ -85,16 +96,15 @@ function evaluateRevision(rev) {
   for (const c of [...set]) if (isOwnerOnly(c)) set.delete(c);      // defence in depth: platform.* never reaches a teacher
   const unmet = unmetDependencies(set);
   if (unmet.length) return { ok: false, code: "DEPENDENCY_UNMET", details: { unmet } };
-  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses, widgets };
+  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses, widgets, games };
 }
 
 /** Only the known resource keys that are present (P5-A courses, P7-A2 widgets); anything else is passed on to be refused. */
 function keptResources(resources) {
   if (!resources || typeof resources !== "object" || Array.isArray(resources)) return resources;
-  if (Object.keys(resources).some(k => k !== "courses" && k !== "widgets")) return resources;
+  if (Object.keys(resources).some(k => !RESOURCE_KEYS.has(k))) return resources;
   const out = {};
-  if (resources.courses !== undefined) out.courses = resources.courses;
-  if (resources.widgets !== undefined) out.widgets = resources.widgets;
+  for (const k of RESOURCE_KEYS) if (resources[k] !== undefined) out[k] = resources[k];
   return out;
 }
 
@@ -137,7 +147,7 @@ async function readRevision(container, revisionId, accountId, deps = {}) {
   if (doc.accountId !== accountId) throw new AccessError("REVISION_INVALID", { reason: "account" });
   const verdict = evaluateRevision(doc);
   if (!verdict.ok) throw new AccessError("REVISION_INVALID", { reason: verdict.code });
-  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null, widgets: verdict.widgets ? Object.freeze(verdict.widgets) : null });
+  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null, widgets: verdict.widgets ? Object.freeze(verdict.widgets) : null, games: verdict.games ? Object.freeze(verdict.games) : null });
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(revisionId, entry);
   return entry;

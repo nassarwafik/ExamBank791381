@@ -9,7 +9,12 @@ import { gameDocName } from "../src/lib/number-conversion-store.js";
 // answer (the boxes are only working/hint context), malformed answers are format errors that change nothing, client
 // score ignored, result + best record server-derived and non-additive.
 const DOC = gameDocName("u1");
-const studentDeps = (ctx, id = "u1") => ({ requireActiveStudentSession: async () => ({ ok: true, user: { sub: id }, student: { userId: id }, container: ctx.container }) });
+// Tadris+ P7-B2 — the game is played from a CURRENT, non-archived class (the class check): the student has one (class-check
+// cases: game-number-conversion-class-p7b2.test.js). No access mode is set → legacy (nothing narrowed).
+const studentDeps = (ctx, id = "u1") => {
+  if (!ctx.has("platform/classes/c1.json")) ctx.setJson("platform/classes/c1.json", { classId: "c1", name: "صف", status: "active", active: true });
+  return { requireActiveStudentSession: async () => ({ ok: true, user: { sub: id }, student: { userId: id, classId: "c1" }, container: ctx.container }) };
+};
 const anonDeps = () => ({ requireActiveStudentSession: async () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) });
 
 const get = deps => handler({ method: "GET", url: "https://x/api/game-number-conversion", headers: { get: () => null }, params: {} }, deps);

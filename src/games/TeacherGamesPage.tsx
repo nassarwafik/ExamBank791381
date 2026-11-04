@@ -16,8 +16,9 @@ import "./games.css";
  * Both nested views render `embedded`: the teacher shell already owns the page's <main> and <h1>, so they render a <div>
  * root and an <h2> title (one <main>, one <h1> per page).
  */
-export default function TeacherGamesPage({ token }: { token: string }) {
-  const games = listGames();
+/** Tadris+ P7-B2 — `openGames`: the games open to this teacher (the server's session answer); absent → every game, as before. */
+export default function TeacherGamesPage({ token, openGames }: { token: string; openGames?: string[] }) {
+  const games = listGames().filter(g => !openGames || openGames.includes(g.id));
   const [view, setView] = useState<"list" | "live-authoring" | "nc-preview">("list");
 
   if (view === "live-authoring") {

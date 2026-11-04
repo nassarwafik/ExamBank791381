@@ -99,7 +99,7 @@ describe("P3-A revision validation — refused with its code, never corrected", 
     [{ grants: ["examLibrary.item.copy"] }, "DEPENDENCY_UNMET"],
     // P5-A — `resources.courses` is now the course entitlement (an unknown course is refused); any OTHER resource key is still refused.
     [{ resources: { courses: ["x"] } }, "COURSE_UNKNOWN"],
-    [{ resources: { games: [] } }, "RESOURCES_NOT_SUPPORTED"]
+    [{ resources: { projects: [] } }, "RESOURCES_NOT_SUPPORTED"]   // P7-B2 made `games` a known key: another unknown key keeps the rule
   ])("%j → %s", (over, code) => {
     const v = evaluateRevision(rev(over));
     expect(v.ok).toBe(false);
@@ -153,8 +153,8 @@ describe("P3-A resolver", () => {
   });
   it("default deny: a console account the owner has not given access to holds NOTHING", async () => {
     // P5-A added `courses` (the course entitlement): null = no narrowing (owner decisions §19.13). Capabilities: still none.
-    // P7-A2 added `widgets` (the dashboard-widget entitlement), the same rule: null = no narrowing.
-    expect(await resolveTeacherAccess(managed(CONSOLE), { getContainer: down })).toEqual({ source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null, widgets: null });
+    // P7-A2 added `widgets` (the dashboard-widget entitlement), the same rule: null = no narrowing. P7-B2 added `games`, likewise.
+    expect(await resolveTeacherAccess(managed(CONSOLE), { getContainer: down })).toEqual({ source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null, widgets: null, games: null });
   });
   it("the imported shared-password workspace (t_legacy) keeps today's access until the owner assigns one", async () => {
     const a = await resolveTeacherAccess(managed("t_legacy"), { getContainer: down });

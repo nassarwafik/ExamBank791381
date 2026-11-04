@@ -5,6 +5,13 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { gameDocName, normalizeGameDoc, publicActive, startAttempt, applyAnswer, isPath, isLevel, INVALID_ANSWER_FORMAT } = require("../lib/number-conversion-store");
 const { isValidBits } = require("../lib/number-conversion");
+// Tadris+ P7-B2 — the class check (blueprint: «فحص الصف في لعبة التحويل»): the student plays only from a CURRENT class that exists
+// and is not archived (the same rule as the dashboard and the live room); and the game must be open to the student's teacher
+// (lib/access/student-services.js: the capability and the owner's game choice, enforce only). The stored record is never touched.
+const { normalizeClassStatus } = require("../lib/class-lifecycle");
+const { isSafeId } = require("../lib/roster-input");
+const { requireStudentService } = require("../lib/access/student-services");
+const NO_CLASS = { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "NO_ACTIVE_CLASS", error: "لا يمكنك اللعب لأنك غير مسجل في صف نشط." } };
 
 // Number Conversion Challenge API — the SERVER AUTHORITY for the Phase 2 solo game (FREE PLAY only). Routes:
 //   GET  /api/game-number-conversion            → the caller's state: the active attempt (client-safe, NO answer key) + best record
@@ -33,6 +40,11 @@ async function handler(request, deps = {}, obs = null) {
     const studentId = String(sess.student && sess.student.userId || "");
     if (!studentId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const container = sess.container;
+    const classId = String(sess.student.classId || "");
+    const classroom = isSafeId(classId) ? await dl(container, "platform/classes/" + classId + ".json") : null;
+    if (!classroom || normalizeClassStatus(classroom) === "archived") return NO_CLASS;   // P7-B2 — the class check
+    const serviceDenial = await requireStudentService(container, sess.student, "game:number-conversion", deps, obs, { classroom });
+    if (serviceDenial) return serviceDenial;
     const name = gameDocName(studentId);
     const action = String(request.params?.action || "").trim().toLowerCase();
     const method = String(request.method || "GET").toUpperCase();

@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+const { requireTeacherGame } = require("../lib/access/game-access");          // Tadris+ P7-B2
 const { getContainer, downloadJsonOrNull, uploadJsonConditional, mutateJsonWithRetry, isConcurrencyConflict } = require("../lib/platform-storage");
 const { challengeDocName, challengeFromDoc } = require("../lib/live-challenge-store");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -158,6 +159,8 @@ async function handler(request, deps = {}, obs = null) {
     if (!sess.ok) return sess.response;
     const capabilityDenial = await requireCapability(sess, "game-live-session.js", "*", deps, obs);   // Tadris+ P3-B
     if (capabilityDenial) return capabilityDenial;
+    const gameDenial = await requireTeacherGame(sess, "live-challenge", deps, obs);   // Tadris+ P7-B2 — the owner's game choice
+    if (gameDenial) return gameDenial;
     const teacherId = String(sess.user && sess.user.sub || "");
     if (!teacherId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const container = deps.container || (deps.getContainer || getContainer)();
