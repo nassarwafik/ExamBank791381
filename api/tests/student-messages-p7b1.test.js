@@ -103,6 +103,8 @@ describe("P7-B1 — the messaging service follows the student's teacher", () => 
     const ctx = setup();
     ctx.mem.setJson("platform/users/" + S1 + ".json", { ...ctx.mem.getJson("platform/users/" + S1 + ".json"), ownerId: OMAR });
     expect((await studentMessages(sGet(ctx, "/api/student-messages"), ctx.deps)).status).toBe(200);
+    // the bell decides from the class it already loaded — the student's own owner stamp still wins
+    expect((await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody.services).toEqual({ messages: true });
   });
   it("an unowned class whose workspace was never imported: today's service", async () => {
     const ctx = setup({ classOwner: null });
