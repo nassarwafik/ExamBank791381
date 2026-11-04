@@ -38,14 +38,14 @@ async function handler(request, deps = {}, obs = null) {
     const container = sess.container, student = sess.student;
     if (!isSafeId(String(student.userId || ""))) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const classroom = await currentClassroom(container, student, dl);
-    let messages = false;
-    try { messages = (await studentServices(container, student, deps, process.env, { classroom })).messages; } catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
+    let messages = false, games = [];   // undecidable → neither (fail closed; the bell still works)
+    try { ({ messages, games } = await studentServices(container, student, deps, process.env, { classroom })); } catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
     const ctx = await notificationContext(container, student, classroom, deps, { messages });
 
     if (request.method === "GET") {
       const view = new URL(request.url).searchParams.get("view");
       // P7-B1 — `services`: what the portal offers (the messaging entry and its badge only when the teacher offers messaging).
-      const services = { messages };
+      const services = { messages, games: [...games] };   // P7-B2 — the games open to the student's teacher
       if (view === "unread") return { status: 200, jsonBody: { ok: true, ...(await unifiedSummary(container, ctx, deps)), services } };
       return { status: 200, jsonBody: { ok: true, ...(await unifiedView(container, ctx, deps)), services } };
     }

@@ -24,7 +24,7 @@ export type EventNotification = Exclude<NotificationItem, MessageNotification>;
 
 /** Tadris+ P7-B1 — `services.messages: false`: the student's teacher offers no messaging (the portal hides the entry). Absent on an
  *  older API → the service is offered, as before. */
-export type NotificationCounts = { messages: StudentUnread; events: BadgeCount; bell: BadgeCount; services?: { messages: boolean } };
+export type NotificationCounts = { messages: StudentUnread; events: BadgeCount; bell: BadgeCount; services?: { messages: boolean; games?: string[] } };
 export type NotificationCenterData = { items: NotificationItem[]; counts: NotificationCounts };
 
 export function isMessageNotification(item: NotificationItem): item is MessageNotification {
@@ -79,7 +79,7 @@ export function countsOf(j: Record<string, unknown>): NotificationCounts | null 
   const s = j.services && typeof j.services === "object" ? j.services as Record<string, unknown> : null;
   return {
     messages: { directUnread: unreadOf(m.directUnread), announcementUnread: unreadOf(m.announcementUnread), totalUnread: Math.max(0, Number(m.totalUnread) || 0), totalCapped: m.totalCapped === true },
-    events, bell, ...(s ? { services: { messages: s.messages !== false } } : {})
+    events, bell, ...(s ? { services: { messages: s.messages !== false, ...(Array.isArray(s.games) ? { games: s.games.filter((g): g is string => typeof g === "string") } : {}) } } : {})
   };
 }
 

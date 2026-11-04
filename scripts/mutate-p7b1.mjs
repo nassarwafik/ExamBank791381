@@ -14,11 +14,11 @@ const sha = buf => createHash("sha256").update(buf).digest("hex");
 const TESTS = ["api/tests/student-messages-p7b1.test.js", "api/tests/owner-conversations-p7b1.test.js", "src/StudentPortal.services.p7b1.test.tsx", "src/owner/OwnerConversation.p7b1.test.tsx", "src/AuditHistoryPanel.p7b1.test.tsx"];
 
 export const MUTANTS = [
-  { id: "P7B1-M1", what: "the student keeps messaging whatever the teacher holds", edits: [{ file: "api/src/lib/access/student-services.js", find: "  return { messages: access.capabilities.includes(MESSAGES_CAPABILITY) };", replace: "  return { messages: true };" }] },
+  { id: "P7B1-M1", what: "the student keeps messaging whatever the teacher holds", edits: [{ file: "api/src/lib/access/student-services.js", find: "  return { messages: held.has(MESSAGES_CAPABILITY), games:", replace: "  return { messages: true, games:" }] },
   { id: "P7B1-M2", what: "the rule applies before enforcement", edits: [{ file: "api/src/lib/access/student-services.js", find: "  if (!(await entitlementsEnforced(container, deps))) return EVERYTHING;\n", replace: "" }] },
   { id: "P7B1-M3", what: "an undecidable check opens the service (fail open)", edits: [{ file: "api/src/lib/access/student-services.js", find: "    return serviceUnavailable();", replace: "    return null;" }] },
   { id: "P7B1-M4", what: "the student messages route ignores the service", edits: [{ file: "api/src/functions/student-messages.js", find: "    if (serviceDenial) return serviceDenial;\n", replace: "" }] },
-  { id: "P7B1-M5", what: "an undecidable check keeps the bell's messages", edits: [{ file: "api/src/functions/student-notifications.js", find: "    let messages = false;", replace: "    let messages = true;" }] },
+  { id: "P7B1-M5", what: "an undecidable check keeps the bell's messages", edits: [{ file: "api/src/functions/student-notifications.js", find: "    let messages = false, games = [];", replace: "    let messages = true, games = [];" }] },
   { id: "P7B1-M6", what: "the bell counts the messages anyway", edits: [{ file: "api/src/lib/notification-center.js", find: "const messages = ctx.messagesOn === false ? NO_MESSAGES : await unreadSummary(", replace: "const messages = await unreadSummary(" }] },
   { id: "P7B1-M7", what: "the bell lists the message previews anyway", edits: [{ file: "api/src/lib/notification-center.js", find: "const messages = ctx.messagesOn === false ? [] : (await recentNotifications(", replace: "const messages = (await recentNotifications(" }] },
   { id: "P7B1-M8", what: "a moved student follows the class's teacher, not their own", edits: [{ file: "api/src/lib/access/student-services.js", find: "  let owner = student && typeof student.ownerId === \"string\" && student.ownerId ? student.ownerId : null;", replace: "  let owner = null;" }] },
@@ -30,8 +30,8 @@ export const MUTANTS = [
   { id: "P7B1-M14", what: "the teacher's log hides the events about them", edits: [{ file: "api/src/functions/audit-history.js", find: " && String(stored.forTeacher || \"\") !== tenant", replace: "" }] },
   { id: "P7B1-M15", what: "the audit writer drops `forTeacher`", edits: [{ file: "api/src/lib/audit-log.js", find: "      ...(typeof event?.forTeacher === \"string\" && event.forTeacher ? { forTeacher: event.forTeacher } : {})\n", replace: "" }] },
   { id: "P7B1-M16", what: "the conversation is served with edit / delete permissions", edits: [{ file: "api/src/functions/owner-conversations.js", find: "const messages = page.messages.map(doc => messageView(doc));", replace: "const messages = page.messages.map(doc => messageView(doc, { actions: () => ({ canDelete: true }) }));" }] },
-  { id: "P7B1-M17", what: "the portal ignores `services`", edits: [{ file: "src/StudentPortal.tsx", find: "    if (unified && unified.services) setMessagesService(unified.services.messages);\n", replace: "" }] },
-  { id: "P7B1-M18", what: "the client drops `services`", edits: [{ file: "src/notifications/notificationsClient.ts", find: "events, bell, ...(s ? { services: { messages: s.messages !== false } } : {})", replace: "events, bell" }] },
+  { id: "P7B1-M17", what: "the portal ignores `services`", edits: [{ file: "src/StudentPortal.tsx", find: "setMessagesService(unified.services.messages); ", replace: "" }] },
+  { id: "P7B1-M18", what: "the client drops `services`", edits: [{ file: "src/notifications/notificationsClient.ts", find: "messages: s.messages !== false, ...(Array.isArray(s.games)", replace: "messages: true, ...(Array.isArray(s.games)" }] },
   { id: "P7B1-M19", what: "the owner panel opens without a reason", edits: [{ file: "src/owner/OwnerConversation.tsx", find: "  const enough = reason.trim().length >= MIN_REASON;", replace: "  const enough = true;" }] }
 ];
 

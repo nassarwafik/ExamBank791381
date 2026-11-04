@@ -30,6 +30,7 @@ async function readAccessHistory(container, accountId, headRevisionId, deps = {}
       grants: Array.isArray(doc.grants) ? doc.grants.map(String) : [], denies: Array.isArray(doc.denies) ? doc.denies.map(String) : [],
       courses: doc.resources && Array.isArray(doc.resources.courses) ? doc.resources.courses.map(String) : null,   // P5-A
       widgets: doc.resources && Array.isArray(doc.resources.widgets) ? doc.resources.widgets.map(String) : null,   // P7-A2
+      games: doc.resources && Array.isArray(doc.resources.games) ? doc.resources.games.map(String) : null,   // P7-B2
       reason: String(doc.reason || ""), createdAt: String(doc.createdAt || ""), createdBy: String(doc.createdBy || ""),
       valid: verdict.ok, ...(verdict.ok ? {} : { code: verdict.code }), capabilities: verdict.ok ? verdict.capabilities : []
     });
@@ -39,6 +40,6 @@ async function readAccessHistory(container, accountId, headRevisionId, deps = {}
   return { entries, truncated: Boolean(id) };
 }
 
-const broken = (revisionId, code) => ({ revisionId: String(revisionId), parentRevisionId: null, preset: null, grants: [], denies: [], courses: null, widgets: null, reason: "", createdAt: "", createdBy: "", valid: false, code, capabilities: [] });
+const broken = (revisionId, code) => ({ revisionId: String(revisionId), parentRevisionId: null, preset: null, grants: [], denies: [], courses: null, widgets: null, games: null, reason: "", createdAt: "", createdBy: "", valid: false, code, capabilities: [] });
 
 module.exports = { MAX_HISTORY, readAccessHistory };

@@ -83,11 +83,11 @@ describe("P7-B1 — the messaging service follows the student's teacher", () => 
     const r = await studentMessages(sGet(ctx, "/api/student-messages"), ctx.deps);
     expect(r.status).toBe(200);
     const u = (await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody;
-    expect([u.messages.totalUnread, u.services]).toEqual([2, { messages: true }]);
+    expect([u.messages.totalUnread, u.services]).toEqual([2, { messages: true, games: ["number-conversion", "live-challenge"] }]);   // P7-B2 adds games
   });
   it("learning-only: `services.messages: false`", async () => {
     const ctx = setup();
-    expect((await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody.services).toEqual({ messages: false });
+    expect((await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody.services).toEqual({ messages: false, games: [] });   // P7-B2 adds games
   });
   it("observe / legacy mode: unchanged (the rule applies with enforcement)", async () => {
     for (const mode of ["observe", "legacy"]) {
@@ -104,7 +104,7 @@ describe("P7-B1 — the messaging service follows the student's teacher", () => 
     ctx.mem.setJson("platform/users/" + S1 + ".json", { ...ctx.mem.getJson("platform/users/" + S1 + ".json"), ownerId: OMAR });
     expect((await studentMessages(sGet(ctx, "/api/student-messages"), ctx.deps)).status).toBe(200);
     // the bell decides from the class it already loaded — the student's own owner stamp still wins
-    expect((await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody.services).toEqual({ messages: true });
+    expect((await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps)).jsonBody.services).toEqual({ messages: true, games: ["number-conversion", "live-challenge"] });
   });
   it("an unowned class whose workspace was never imported: today's service", async () => {
     const ctx = setup({ classOwner: null });
@@ -117,7 +117,7 @@ describe("P7-B1 — the messaging service follows the student's teacher", () => 
     const r = await studentMessages(sGet(ctx, "/api/student-messages"), ctx.deps);
     expect([r.status, r.jsonBody.code]).toEqual([503, "SERVICE_CHECK_UNAVAILABLE"]);
     const u = await studentNotifications(sGet(ctx, "/api/student-notifications?view=unread"), ctx.deps);
-    expect([u.status, u.jsonBody.messages.totalUnread, u.jsonBody.services]).toEqual([200, 0, { messages: false }]);
+    expect([u.status, u.jsonBody.messages.totalUnread, u.jsonBody.services]).toEqual([200, 0, { messages: false, games: [] }]);
   });
 });
 

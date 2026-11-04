@@ -65,7 +65,7 @@ describe("P7-A2 — the revision's widget entitlement", () => {
     expect(() => buildRevision({ ...base, resources: { widgets: ["nope"] } })).toThrow(/WIDGET_UNKNOWN/);
     expect(() => buildRevision({ ...base, resources: { widgets: ["insights", "insights"] } })).toThrow(/WIDGET_DUPLICATE/);
     expect(() => buildRevision({ ...base, resources: { widgets: "insights" } })).toThrow(/REVISION_MALFORMED/);
-    expect(() => buildRevision({ ...base, resources: { widgets: [], games: [] } })).toThrow(/RESOURCES_NOT_SUPPORTED/);
+    expect(() => buildRevision({ ...base, resources: { widgets: [], projects: [] } })).toThrow(/RESOURCES_NOT_SUPPORTED/);   // P7-B2: `games` is a known key now
     expect(buildRevision({ ...base, resources: { courses: ["791381"], widgets: [] } }).revision.resources).toEqual({ courses: ["791381"], widgets: [] });
   });
   it("a stored revision with an unknown widget is not trusted (fail closed: 503 on the dashboard)", async () => {

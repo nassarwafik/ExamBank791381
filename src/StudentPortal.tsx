@@ -85,6 +85,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Tadris+ P7-B1 — whether the student's teacher offers messaging (the server's `services`, with every unified count snapshot;
   // until the first snapshot — or from an older API — the service is offered, as before).
   const [messagesService, setMessagesService] = useState(true);
+  // Tadris+ P7-B2 — the games open to the student's teacher (`services.games`; null until known → every game, as before).
+  const [openGames, setOpenGames] = useState<string[] | null>(null);
   // Phase 6C — the tab the Messages view opens on («الرسائل» → direct; a notification → its own stream).
   const [messagesTab, setMessagesTab] = useState<StudentMessagesTab>("direct");
   // Phase 6C/6D — the notification center's preview data (AUXILIARY like the badges: a failure keeps the last-good items
@@ -164,7 +166,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     unreadApplied.current = seq;
     setMessagesUnread(u);
     if (unified) setBellCounts({ bell: unified.bell, events: unified.events, messages: u });
-    if (unified && unified.services) setMessagesService(unified.services.messages);
+    if (unified && unified.services) { setMessagesService(unified.services.messages); if (unified.services.games) setOpenGames(unified.services.games); }
     else setBellCounts(prev => (prev ? { ...prev, messages: u } : prev));
     if (!withItems) setNotif(prev => (prev.items === null && !prev.error ? prev : { ...prev, items: null, error: "" }));
     return true;
@@ -404,7 +406,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 6C — the Messages view's counts (its own polls and mark responses) are fresher than anything the portal
   // started before: they take a new sequence number, so an older in-flight portal read can never overwrite them.
   if (messagesOpen) return <StudentMessagesPage token={token} initialTab={messagesTab} onUnreadChange={u => applyUnread(++unreadSeq.current, { total: u.totalUnread, capped: u.totalCapped })} onBack={() => { setMessagesOpen(false); invalidateNotifications(); void loadMessagesUnread(); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
-  if (gamesOpen) return <StudentGamesPage token={token} onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
+  if (gamesOpen) return <StudentGamesPage token={token} openGames={openGames ?? undefined} onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
@@ -430,7 +432,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const quickNav = !loading && data && stats ? <StudentMobileNav reducedMotion={reducedMotion} hidden={avatarPickerOpen} /> : undefined;
 
   return (
-    <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} messagesUnread={messagesService ? messagesUnread : undefined} notifications={{
+    <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={openGames && openGames.length === 0 ? undefined : () => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} messagesUnread={messagesService ? messagesUnread : undefined} notifications={{
       items: notif.items, counts: bellCounts, loading: notif.loading, error: notif.error,
       onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
       onSelect: selectNotification,

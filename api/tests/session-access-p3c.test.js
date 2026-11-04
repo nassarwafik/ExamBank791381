@@ -59,7 +59,7 @@ describe("P3-C access in the sign-in answer and the session probe", () => {
     const ctx = await setup({ mode: "observe" });
     const r = await signIn(ctx);
     expect(r.status).toBe(200);
-    expect(r.jsonBody.access).toEqual({ status: "ok", source: "revision", preset: { id: "learning-only", version: 1 }, capabilities: [...preset("learning-only", 1).capabilities].sort(), enforced: false });
+    expect(r.jsonBody.access).toEqual({ status: "ok", source: "revision", preset: { id: "learning-only", version: 1 }, capabilities: [...preset("learning-only", 1).capabilities].sort(), enforced: false, games: ["number-conversion", "live-challenge"] });   // Tadris+ P7-B2 adds games (not enforced: every game)
     const p = await probe(req({ method: "GET", headers: { "x-builder-token": r.jsonBody.token } }), ctx.deps);
     expect(p.jsonBody.access).toEqual(r.jsonBody.access);
   });

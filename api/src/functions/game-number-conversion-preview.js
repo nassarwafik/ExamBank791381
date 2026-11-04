@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+const { requireTeacherGame } = require("../lib/access/game-access");          // Tadris+ P7-B2
 const { publicActive, startAttempt, applyAnswer, isPath, isLevel, INVALID_ANSWER_FORMAT } = require("../lib/number-conversion-store");
 const { isValidBits } = require("../lib/number-conversion");
 const { defaultPreviewKey, sealPreview, openPreview, MAX_CONTINUATION_LENGTH } = require("../lib/number-conversion-preview");
@@ -26,6 +27,8 @@ async function handler(request, deps = {}, obs = null) {
     if (!auth.ok) return auth.response;
     const capabilityDenial = await requireCapability(auth, "game-number-conversion-preview.js", "*", deps, obs);   // Tadris+ P3-B
     if (capabilityDenial) return capabilityDenial;
+    const gameDenial = await requireTeacherGame(auth, "number-conversion", deps, obs);   // Tadris+ P7-B2 — the owner's game choice
+    if (gameDenial) return gameDenial;
     const sub = String(auth.user && auth.user.sub || "");
     if (!sub) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const key = deps.previewKey || defaultPreviewKey();

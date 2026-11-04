@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
+const { requireStudentService } = require("../lib/access/student-services");   // Tadris+ P7-B2
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { gradeQuestion } = require("../lib/assignment-grading");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -123,6 +124,9 @@ async function handler(request, deps = {}, obs = null) {
     const container = deps.container || auth.container || (deps.getContainer || getContainer)();
     const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
     const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+    // Tadris+ P7-B2 — the live challenge must be open to the student's teacher (capability and the owner's game choice, enforce only).
+    const serviceDenial = await requireStudentService(container, auth.student, "game:live-challenge", deps, obs);
+    if (serviceDenial) return serviceDenial;
     const action = String(request.params?.action || "").trim().toLowerCase();
     const method = String(request.method || "POST").toUpperCase();
     const now = new Date().toISOString();

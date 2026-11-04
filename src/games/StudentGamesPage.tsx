@@ -13,8 +13,9 @@ import "./games.css";
  * game as a NESTED full-view here (no React Router, no second navigation authority; a `العودة إلى الألعاب` back path
  * returns to the games list). Live Challenge stays coming-soon. Only available games receive an `onStart`.
  */
-export default function StudentGamesPage({ token, onBack }: { token: string; onBack: () => void }) {
-  const games = listGames();
+/** Tadris+ P7-B2 — `openGames`: the games open to the student's teacher (the server's `services.games`); absent → every game. */
+export default function StudentGamesPage({ token, onBack, openGames }: { token: string; onBack: () => void; openGames?: string[] }) {
+  const games = listGames().filter(g => !openGames || openGames.includes(g.id));
   const [openGame, setOpenGame] = useState<GameId | null>(null);
 
   if (openGame === "number-conversion") {
