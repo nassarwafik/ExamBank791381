@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -64,6 +65,7 @@ const SORT_COLUMNS: Array<{ key: SortKey; label: string }> = [
 ];
 
 export default function RosterPane(p: RosterPaneProps) {
+  const can = useCan();   // Tadris+ P8-B1 — only the tools the teacher's access allows
   const { classroom } = p;
   if (!classroom) {
     return (
@@ -97,7 +99,7 @@ export default function RosterPane(p: RosterPaneProps) {
       {Array.from({ length: SKELETON_ROWS }, (_, i) => <div key={i} className="eb-skeleton-row" aria-hidden="true"><span className="eb-skeleton-dot" /><span className="eb-skeleton-bar" /><span className="eb-skeleton-bar is-short" /></div>)}
     </div>
   );
-  else if (p.students.length === 0) tableBody = <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طالبًا واحدًا أو استورد قائمة كاملة من ملف." action={p.classActive ? <button type="button" className="eb-button is-primary is-small" onClick={p.onAddStudent}><IconPlus size={16} />إضافة طالب</button> : undefined} />;
+  else if (p.students.length === 0) tableBody = <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طالبًا واحدًا أو استورد قائمة كاملة من ملف." action={p.classActive && can("students.student.create") ? <button type="button" className="eb-button is-primary is-small" onClick={p.onAddStudent}><IconPlus size={16} />إضافة طالب</button> : undefined} />;
   else if (p.visibleStudents.length === 0) tableBody = <EmptyState compact title="لا توجد نتائج مطابقة." description="جرّب كلمة بحث أخرى أو غيّر مرشح الحالة." />;
 
   return (
@@ -108,8 +110,8 @@ export default function RosterPane(p: RosterPaneProps) {
         title={classroom.name}
         description={<><span className="student-count-badge">{shown(p.stats.total - p.stats.archived)}</span>{ready ? arabicCountParts(p.stats.total - p.stats.archived, STUDENTS_AFTER_DIGITS).after : " طالب"}{ready && p.stats.archived > 0 ? <> · {p.stats.archived} مؤرشف</> : ""} · {classroom.grade || "—"}{classroom.schoolYear ? <> · <bdi dir="ltr">{classroom.schoolYear}</bdi></> : ""} · <StatusBadge tone={p.classActive ? "success" : "neutral"}>{p.classActive ? "فعّال" : "مؤرشف"}</StatusBadge></>}
         actions={<>
-          <button type="button" className="eb-button is-primary" onClick={p.onAddStudent} disabled={p.busy || !p.classActive}><IconPlus size={16} />إضافة طالب</button>
-          <button type="button" className="eb-button" onClick={p.onImport} disabled={p.busy || !p.classActive}><IconUpload size={16} />استيراد</button>
+          {can("students.student.create") && <button type="button" className="eb-button is-primary" onClick={p.onAddStudent} disabled={p.busy || !p.classActive}><IconPlus size={16} />إضافة طالب</button>}
+          {can("students.student.import") && <button type="button" className="eb-button" onClick={p.onImport} disabled={p.busy || !p.classActive}><IconUpload size={16} />استيراد</button>}
           <ActionMenu label="المزيد من إجراءات الصف">
             <button type="button" className="eb-menu-item" onClick={p.onRefresh} disabled={p.loading || p.refreshing}><IconRefresh size={16} />تحديث</button>
             <button type="button" className="eb-menu-item" onClick={p.onExportCsv} disabled={!ready}><IconDownload size={16} />تصدير CSV</button>
@@ -168,12 +170,12 @@ export default function RosterPane(p: RosterPaneProps) {
             <td className="eb-col-actions"><div className="eb-row-actions">
               <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>{"تفاصيل " + student.displayName}</VisuallyHidden></button>
               <ActionMenu label={"إجراءات " + student.displayName}>
-                <button type="button" className="eb-menu-item" onClick={() => p.onEdit(student)} disabled={p.busy}><IconEdit size={16} />تعديل</button>
+                {can("students.student.edit") && <button type="button" className="eb-menu-item" onClick={() => p.onEdit(student)} disabled={p.busy}><IconEdit size={16} />تعديل</button>}
                 <button type="button" className="eb-menu-item" onClick={() => p.onCopyIdentity(student)}><IconCopy size={16} />نسخ رقم الهوية</button>
-                {!student.archived && <button type="button" className="eb-menu-item" onClick={() => p.onToggleActive(student)} disabled={p.busy}>{student.active ? "تعطيل الحساب" : "تفعيل الحساب"}</button>}
-                <button type="button" className="eb-menu-item" onClick={() => p.onArchive(student)} disabled={p.busy}>{student.archived ? <><IconRestore size={16} />استعادة</> : <><IconArchive size={16} />أرشفة</>}</button>
-                <hr className="eb-menu-sep" />
-                <button type="button" className="eb-menu-item is-danger" onClick={() => p.onDelete(student)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button>
+                {!student.archived && can("students.student.edit") && <button type="button" className="eb-menu-item" onClick={() => p.onToggleActive(student)} disabled={p.busy}>{student.active ? "تعطيل الحساب" : "تفعيل الحساب"}</button>}
+                {can(student.archived ? "students.student.restore" : "students.student.archive") && <button type="button" className="eb-menu-item" onClick={() => p.onArchive(student)} disabled={p.busy}>{student.archived ? <><IconRestore size={16} />استعادة</> : <><IconArchive size={16} />أرشفة</>}</button>}
+                {can("students.student.delete") && <><hr className="eb-menu-sep" />
+                <button type="button" className="eb-menu-item is-danger" onClick={() => p.onDelete(student)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button></>}
               </ActionMenu>
             </div></td>
           </tr>;

@@ -8,6 +8,7 @@ import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "../projects/
 import { recentActivityTarget, type AssignmentDrillTarget } from "../assignments/drillTarget";
 import { count, spread, sinceText, untilText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING, STAGES, FROM_STUDENTS, MESSAGES } from "./todayFormat";
 import { useConfirm } from "../ui/useConfirm";
+import { useCan } from "../shell/teacherAccessContext";
 import { ARRANGEABLE, arrangeSlots, parseLayout, type DashboardLayout } from "./todayLayout";   // Tadris+ P7-A2
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
@@ -249,6 +250,7 @@ function ArrangePanel({ token, layout, available, onClose, onSaved }: { token: s
 }
 
 export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent, onStartEvaluationQueue, onOpenAssignmentTarget, classId = "", refreshSignal = 0, embedded = false }: Props) {
+  const can = useCan();
   // Phase 21H.2 — the summary belongs to the scope it was read for: another class's figures are never shown under this one,
   // and a slower answer for an earlier scope never overwrites a newer one (gen).
   const [loadedFor, setLoadedFor] = useState<{ key: string; data: TeacherToday } | null>(null);
@@ -341,6 +343,8 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
     } catch (e) { if (alive.current) setNotice({ text: e instanceof Error ? e.message : "تعذر إرسال التذكير.", error: true }); }
     finally { if (alive.current) setReminding(""); }
   }
+  // Tadris+ P8-B1 — «تذكير» is a POST of /api/assignment-results (assignments.schedule.set); not offered without it.
+  const mayRemind = can("assignments.schedule.set");
   const remindAction = (assignmentId: string, title: string) => ({ label: reminding === assignmentId ? "جارٍ الإرسال..." : "تذكير", ariaLabel: "تذكير من لم يسلّم «" + title + "»", onClick: () => void remind(assignmentId, title), disabled: !!reminding });
 
   return (
@@ -365,12 +369,12 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
           ["assignments.deadlines", due && shows("assignments.deadlines") && <Card key="slot2" id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
             items={due.items.map(i => ({ key: "due:" + i.assignmentId, label: i.title, meta: "يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) + " · لم يسلّم " + i.notSubmitted + " من " + i.expected + " · " + i.className,
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) } : {}),
-              ...(openAssignment && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
+              ...(openAssignment && mayRemind && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
           ["assignments.notStarted", shows("assignments.notStarted") && <Card key="slot3" id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={spread(a.notStarted.count, STUDENTS, a.notStarted.assignments)}
             items={a.notStarted.items.map(i => ({ key: i.assignmentId, label: i.title, meta: "لم يبدأ " + i.notStarted + " من " + i.expected + " · " + i.className + (i.dueAt ? " · التسليم " + fmt(i.dueAt) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — " + notStartedText(i.notStarted) } : {}),
-              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
+              ...(openAssignment && mayRemind ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
           ["results.unreleased", unreleased && shows("results.unreleased") && <Card key="slot4" id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary="اخترت نشر نتائج هذه الواجبات يدويًا؛ لا يرى الطلاب علاماتهم قبل أن تنشرها."
             items={unreleased.items.map(i => ({ key: "rel:" + i.assignmentId, label: i.title, meta: count(i.submitted, SUBMISSIONS) + " · " + i.className,

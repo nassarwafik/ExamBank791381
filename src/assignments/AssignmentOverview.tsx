@@ -1,4 +1,5 @@
 import ChartCard from "../ui/ChartCard";
+import { useCan } from "../shell/teacherAccessContext";
 import { IconEdit, IconHistory, IconEye, IconEyeOff } from "../icons";
 import { attemptPolicyLabel } from "./attemptPolicy";
 import { scoreDistribution, statusBreakdown, studentsCount } from "./assignmentPage";
@@ -30,6 +31,8 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
   const dist = scoreDistribution(results);
   const parts = statusBreakdown(results), total = results.length;
   const archived = item.status === "archived";
+  // Tadris+ P8-B1 — only the settings the teacher's access may change (presentation only; the server enforces each action).
+  const can = useCan(), schedule = can("assignments.schedule.set"), details = can("assignments.content.edit"), canRelease = can("assignments.results.release");
   const releaseMode = normalizeResultsRelease(item.resultsRelease), release = resultsReleaseState(item, now ?? 0, fmt);
   const distSummary = dist.graded
     ? "توزيع العلامات النهائية (" + studentsCount(dist.graded) + "): " + dist.bands.map(b => b.label + " " + b.count).join("، ")
@@ -81,7 +84,7 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
           <div><dt>التسليم المتأخر</dt><dd>{latePolicyLabel(item.latePolicy)}{lateUntilIso(item.dueAt, item.latePolicy) && <small className="eb-release-state">حتى {fmt(lateUntilIso(item.dueAt, item.latePolicy))}</small>}</dd></div>
           <div><dt>إظهار النتائج</dt><dd>{resultsReleaseLabel(releaseMode)}<small className={"eb-release-state" + (release.visible ? " is-visible" : " is-hidden")}>{release.text}</small></dd></div>
         </dl>
-        {!archived && onResultsRelease && (
+        {!archived && canRelease && onResultsRelease && (
           <div className="eb-release-controls">
             <label className="eb-release-mode">متى يرى الطلاب نتائجهم
               <select value={releaseMode} onChange={e => onResultsRelease(item, e.target.value as ResultsRelease)} disabled={busy}>
@@ -93,17 +96,17 @@ export default function AssignmentOverview({ item, results, fmt, onEditDetails, 
               : <button type="button" className="eb-button is-small is-primary" onClick={() => onReleaseResults(item, true)} disabled={busy}><IconEye size={16} />نشر النتائج للطلاب</button>)}
           </div>
         )}
-        {!archived && onLatePolicy && <LatePolicyFields value={normalizeLatePolicy(item.latePolicy)} onChange={v => onLatePolicy(item, v)} disabled={busy || !item.dueAt} hint={item.dueAt ? "يسري على المحاولات التي تنتهي من الآن؛ المحاولات المتأخرة السابقة تحتفظ بخصمها." : "يحتاج التسليم المتأخر إلى موعد تسليم للواجب."} />}
+        {!archived && schedule && onLatePolicy && <LatePolicyFields value={normalizeLatePolicy(item.latePolicy)} onChange={v => onLatePolicy(item, v)} disabled={busy || !item.dueAt} hint={item.dueAt ? "يسري على المحاولات التي تنتهي من الآن؛ المحاولات المتأخرة السابقة تحتفظ بخصمها." : "يحتاج التسليم المتأخر إلى موعد تسليم للواجب."} />}
         <div className="eb-assign-instructions">
           <h4 className="eb-assign-instructions-title">التعليمات</h4>
           <p>{item.instructions?.trim() || "لا توجد تعليمات."}</p>
         </div>
         {archived
-          ? <p className="eb-muted">الواجب مؤرشف؛ استعده من قائمة المؤرشفة لتعديل إعداداته.</p>
-          : <div className="eb-assign-settings-actions">
-              <button type="button" className="eb-button is-small" onClick={() => onEditDetails(item)}><IconEdit size={16} />تعديل العنوان والتعليمات</button>
-              <button type="button" className="eb-button is-small" onClick={() => onEditTiming(item)}><IconHistory size={16} />تعديل الوقت والموعد</button>
-              <button type="button" className="eb-button is-small" onClick={() => onEditAttempts(item)}><IconEdit size={16} />تعديل عدد المحاولات</button>
+          ? (schedule ? <p className="eb-muted">الواجب مؤرشف؛ استعده من قائمة المؤرشفة لتعديل إعداداته.</p> : null)
+          : (details || schedule) && <div className="eb-assign-settings-actions">
+              {details && <button type="button" className="eb-button is-small" onClick={() => onEditDetails(item)}><IconEdit size={16} />تعديل العنوان والتعليمات</button>}
+              {schedule && <button type="button" className="eb-button is-small" onClick={() => onEditTiming(item)}><IconHistory size={16} />تعديل الوقت والموعد</button>}
+              {schedule && <button type="button" className="eb-button is-small" onClick={() => onEditAttempts(item)}><IconEdit size={16} />تعديل عدد المحاولات</button>}
             </div>}
       </section>
     </div>

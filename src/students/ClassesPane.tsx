@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import SectionHeader from "../ui/SectionHeader";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
@@ -42,6 +43,7 @@ export type ClassesPaneProps = {
 const CLASS_FILTER_THRESHOLD = 7;
 
 export default function ClassesPane(p: ClassesPaneProps) {
+  const can = useCan();   // Tadris+ P8-B1 — only the tools the teacher's access allows
   const isActive = (c: Classroom) => normalizeClassStatus(c) === "active";
   const [query, setQuery] = useState("");
   const showFilter = p.activeCount + p.archivedCount >= CLASS_FILTER_THRESHOLD;
@@ -68,7 +70,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
         title="الصفوف"
         description={`${p.activeCount} نشطة · ${p.archivedCount} في الأرشيف`}
         actions={<>
-          <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button>
+          {can("classes.class.create") && <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button>}
           <IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={p.onRefresh} disabled={p.loading} />
         </>}
       />
@@ -105,7 +107,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
                 })()}
               </button>
               <ActionMenu label={"إجراءات الصف " + classroom.name} className="eb-class-menu">
-                {active && p.projects.length > 0 && (
+                {active && p.projects.length > 0 && can("learning.course.assign") && (
                   <div className="eb-menu-group" role="group" aria-label="المشاريع">
                     <span className="eb-menu-label">المشاريع</span>
                     {p.projects.map(project => {
@@ -114,9 +116,9 @@ export default function ClassesPane(p: ClassesPaneProps) {
                     })}
                   </div>
                 )}
-                {active && p.onEdit && <button type="button" className="eb-menu-item" onClick={() => p.onEdit?.(classroom)} disabled={p.busy}><IconEdit size={16} />تعديل بيانات الصف</button>}
-                {active && p.isGraduationEligible(classroom) && <button type="button" className="eb-menu-item" onClick={() => p.onGraduate(classroom)} disabled={p.busy}><IconGraduation size={16} />تخريج وأرشفة الصف</button>}
-                <button type="button" className="eb-menu-item" onClick={() => p.onToggleArchive(classroom)} disabled={p.busy}>{active ? <><IconArchive size={16} />أرشفة الصف</> : <><IconRestore size={16} />استعادة الصف</>}</button>
+                {active && p.onEdit && can("classes.class.manage") && <button type="button" className="eb-menu-item" onClick={() => p.onEdit?.(classroom)} disabled={p.busy}><IconEdit size={16} />تعديل بيانات الصف</button>}
+                {active && p.isGraduationEligible(classroom) && can("classes.class.manage") && <button type="button" className="eb-menu-item" onClick={() => p.onGraduate(classroom)} disabled={p.busy}><IconGraduation size={16} />تخريج وأرشفة الصف</button>}
+                {can("classes.class.manage") && <button type="button" className="eb-menu-item" onClick={() => p.onToggleArchive(classroom)} disabled={p.busy}>{active ? <><IconArchive size={16} />أرشفة الصف</> : <><IconRestore size={16} />استعادة الصف</>}</button>}
               </ActionMenu>
             </li>
           );
@@ -130,7 +132,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
       )}
       {!p.loading && !p.loadError && p.classes.length === 0 && (
         p.view === "active"
-          ? <EmptyState compact title="لا توجد صفوف نشطة بعد." description="أنشئ أول صف لبدء إضافة الطلاب." action={<button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button>} />
+          ? <EmptyState compact title="لا توجد صفوف نشطة بعد." description="أنشئ أول صف لبدء إضافة الطلاب." action={can("classes.class.create") ? <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}><IconPlus size={16} />إنشاء صف</button> : undefined} />
           : <EmptyState compact title="لا توجد صفوف مؤرشفة." description="الصفوف المؤرشفة أو المُخرَّجة تظهر هنا مع الاحتفاظ ببياناتها." />
       )}
     </section>

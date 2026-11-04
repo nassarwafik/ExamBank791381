@@ -69,6 +69,7 @@ import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkl
 import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import { parseTeacherAccess, navAllowed, firstAllowed, type TeacherAccessView } from "./shell/teacherAccess";
+import { TeacherAccessContext } from "./shell/teacherAccessContext";   // Tadris+ P8-B1
 import { parseTeacherTrial, type TeacherTrialView } from "./shell/TrialNotice";
 import { parseSchoolIdentity, SCHOOL_LOGO_URL, type SchoolIdentity } from "./shell/schoolIdentity";
 import { useProfilePhoto } from "./ui/useProfilePhoto";
@@ -5930,6 +5931,7 @@ function App() {
       school={schoolBadge}
     >
       {confirmDialog}
+      <TeacherAccessContext.Provider value={teacherAccess}>{/* Tadris+ P8-B1 — the tools inside each page follow the teacher's access */}
       {marksDistributionUsed && <Suspense fallback={null}><Dialog open={marksDistributionOpen} size="sm" title="توزيع العلامات تلقائيًا" onClose={() => setMarksDistributionOpen(false)} initialFocusRef={marksByDifficultyRef} footer={<><button type="button" className="eb-button" onClick={() => setMarksDistributionOpen(false)}>إلغاء</button><button type="button" className="eb-button" onClick={() => applyMarksDistribution("1")}>توزيع متساوٍ</button><button ref={marksByDifficultyRef} type="button" className="eb-button is-primary" onClick={() => applyMarksDistribution("2")}>حسب الصعوبة</button></>}>
         <p>اختر طريقة توزيع مجموع العلامات على أسئلة الامتحان (<bdi dir="ltr">{exam ? exam.questions.length : 0}</bdi> أسئلة): بالتساوي بين الأسئلة، أو بحسب درجة صعوبة كل سؤال.</p>
       </Dialog></Suspense>}
@@ -8086,6 +8088,7 @@ function App() {
           )}
         </div>
       )}
+      </TeacherAccessContext.Provider>
     </TeacherAppShell>
   );
 }

@@ -1,4 +1,5 @@
 import { Fragment, useRef, useState } from "react";
+import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import Dialog from "../ui/Dialog";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
@@ -96,6 +97,7 @@ export type StudentDialogProps = {
  * section navigator.
  */
 export default function StudentDialog(p: StudentDialogProps) {
+  const can = useCan();   // Tadris+ P8-B1 — only the tools the teacher's access allows
   const historyRef = useRef<HTMLHeadingElement>(null);
   const summaryRef = useRef<HTMLHeadingElement>(null);
   const { profile } = p;
@@ -134,7 +136,7 @@ export default function StudentDialog(p: StudentDialogProps) {
           <div><dt>إنشاء الحساب</dt><dd>{p.fmtDate(profile.student.createdAt)}</dd></div>
         </dl>
         <div className="eb-inline-actions">
-          <button type="button" className="eb-button is-small" onClick={p.onResetPassword} disabled={p.busy}><IconKey size={14} />كلمة مرور جديدة</button>
+          {can("students.credential.reset") && <button type="button" className="eb-button is-small" onClick={p.onResetPassword} disabled={p.busy}><IconKey size={14} />كلمة مرور جديدة</button>}
         </div>
         {p.passwordReveal && <ResetPasswordBox key={p.passwordReveal.password} reveal={p.passwordReveal} onCopy={p.onCopyPassword} />}
       </section>
@@ -168,8 +170,8 @@ export default function StudentDialog(p: StudentDialogProps) {
               <td>{item.attemptsUsed > 1 ? "المحاولات: " + item.attemptsUsed : item.attemptsUsed}</td>
               <td>{resolveGradingStatus(item) === "final" ? "مصحح نهائيًا" : "بانتظار المراجعة"}</td>
               <td><div className="eb-inline-actions">
-                <button type="button" className="eb-button is-small" onClick={() => p.onReview(item)}><IconEye size={14} />فحص الواجب</button>
-                {item.isCurrentClassAssignment ? <>
+                {can("assignments.grading.grade") && <button type="button" className="eb-button is-small" onClick={() => p.onReview(item)}><IconEye size={14} />فحص الواجب</button>}
+                {item.isCurrentClassAssignment ? can("assignments.schedule.set") && <>
                   <button type="button" className="eb-button is-small" onClick={() => p.onAllowRetry(item)} disabled={p.busy}><IconPlus size={14} />محاولة إضافية</button>
                   <button type="button" className="eb-button is-small" aria-expanded={p.deadlineFor === item.assignmentId} onClick={() => p.deadlineFor === item.assignmentId ? p.onCloseDeadline() : p.onOpenDeadline(item)} disabled={p.busy}><IconEdit size={14} />تمديد الموعد</button>
                 </> : <small className="result-code">سجل سابق</small>}

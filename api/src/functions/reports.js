@@ -133,7 +133,9 @@ async function handler(request, deps = {}, obs = null) {
           .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
         const schoolYears = [...new Set(classes.map(c => c.schoolYear).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
         const projects = projectsAllowed ? getSupportedProjects().map(getProjectMeta) : [];
-        return { status: 200, jsonBody: { ok: true, schoolYears, classes, projects } };
+        // Tadris+ P8-B1 — `available`: which report families this teacher may open (the SAME rule that refuses them below), so the
+        // Reports Center offers only those cards. Presentation only: every report is still decided here on its own request.
+        return { status: 200, jsonBody: { ok: true, schoolYears, classes, projects, available: { academic, projects: projectsAllowed } } };
       }
 
       // Students of one class, for the student/timeline filter dropdowns.

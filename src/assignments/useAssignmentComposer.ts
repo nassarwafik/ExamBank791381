@@ -21,9 +21,12 @@ type ComposerDeps = {
   onCopyLibraryExamToBuilder?: (examSnapshot: Exam, title: string) => void;
   setError: (v: string) => void;
   setNotice: (v: string) => void;
+  /** Tadris+ P8-B1 — the sources the teacher's access allows (absent → all, as before). `own`: «امتحاناتي»; `saved`: the list of
+   *  saved exams may be read; `library`: «مكتبة 791381». */
+  sources?: { own: boolean; saved: boolean; library: boolean };
 };
 
-export function useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder, setError, setNotice }: ComposerDeps) {
+export function useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder, setError, setNotice, sources = { own: true, saved: true, library: true } }: ComposerDeps) {
   // Phase 21G.6 — the target classes (one copy of the assignment per class, D4). The first active class is chosen once, when the
   // classes arrive; after that only the teacher (or a finished create) changes the selection — it is never re-filled behind them.
   const [classIds, setClassIds] = useState<string[]>([]), classDefaulted = useRef(false);
@@ -44,6 +47,8 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
   useEffect(() => { if (current && examSource === "" && examHasQuestions(current)) setExamSource("current"); }, [current, examSource]);
 
   async function loadSavedExams() {
+    // Tadris+ P8-B1 — without «امتحاناتي» the composer starts on the library (this runs with the workspace's first load / refresh).
+    if (!sources.own || !sources.saved) { setSavedExams([]); if (!sources.own && sources.library && sourceMode === "mine") void switchSourceMode("library"); return; }
     try { const r = await api<{ exams: SavedExam[] }>("/api/saved-exams"); setSavedExams(r.exams || []); } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الامتحانات المحفوظة."); }
   }
   async function chooseExam(value: string) {
@@ -106,7 +111,7 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
 
   return {
     fields: { classIds, setClassIds, toggleClass, setAllClasses, title, setTitle, instructions, setInstructions, openAt, setOpenAt, dueAt, setDueAt, maxAttempts, setMaxAttempts, durationMinutes, setDurationMinutes, attemptPolicy, setAttemptPolicy, resultsRelease, setResultsRelease, latePolicy, setLatePolicy, publish, setPublish },
-    source: { sourceMode, switchSourceMode, sourceExam, sourceCount, current, hasCurrent: !!(current && examHasQuestions(current)), savedExams, examSource, chooseExam, examLoading, loadSavedExams },
+    source: { sourceMode, switchSourceMode, sources, sourceExam, sourceCount, current, hasCurrent: !!(current && examHasQuestions(current)), savedExams, examSource, chooseExam, examLoading, loadSavedExams },
     library: { libraryLoading, libraryFiltered, libraryCats, librarySearch, setLibrarySearch, libraryCategory, setLibraryCategory, librarySelectedId, chooseLibraryItem, openPreview, previewBusyId, copyLibraryItem: onCopyLibraryExamToBuilder ? copyLibraryItem : undefined, copyBusyId },
     preview, closePreview: () => setPreview(null),
     // The chosen content, previewed by the ONE faithful renderer (ExamPreview scrubs every grading secret).

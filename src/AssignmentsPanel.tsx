@@ -5,6 +5,8 @@ import ExamPreview from "./ExamPreview";
 import {IconPlus,IconRefresh} from "./icons";
 import ActionMenu from "./ui/ActionMenu";
 import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog,AssignmentActionMenu} from "./assignments/AssignmentList";
+import {ASSIGNMENT_CREATE_CAPS} from "./assignments/assignmentCaps";
+import {useCan} from "./shell/teacherAccessContext";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -31,6 +33,7 @@ type Props=AssignmentsControllerProps;
 export default function AssignmentsPanel(props:Props){
  const toolbarRef=useRef<HTMLDivElement|null>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null),detailHeadingRef=useRef<HTMLHeadingElement>(null);
  const c=useAssignmentsController(props,{toolbarRef,composerHeadingRef,detailHeadingRef});
+ const can=useCan();   // Tadris+ P8-B1 — presentation only (the server enforces every action)
  const {toolbar:t,list:l,composer:k,detail:d,gradebook:g,dialogs:x}=c;
  const showDetailArea=c.mode==="composer"||d.item!==null;
  // Phase 21G.3 — an open assignment is a FULL-WIDTH page: the list (kept mounted, so focus returns to its «فتح») and the KPI strip wait.
@@ -51,7 +54,7 @@ export default function AssignmentsPanel(props:Props){
     </div>}
    </div>
    <div className="eb-assign-actions">
-    <button type="button" className="eb-button is-primary" onClick={t.openComposer} disabled={c.mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>
+    {can(ASSIGNMENT_CREATE_CAPS)&&<button type="button" className="eb-button is-primary" onClick={t.openComposer} disabled={c.mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>}
     <ActionMenu label="المزيد من إجراءات الواجبات">
      <button type="button" className="eb-menu-item" onClick={t.refresh} disabled={c.loading||k.source.examLoading}><IconRefresh size={16}/>تحديث</button>
     </ActionMenu>
@@ -64,7 +67,7 @@ export default function AssignmentsPanel(props:Props){
     onOpen={l.open} onPublish={l.publish} onUnpublish={l.unpublish}
     onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now}/>
    {c.mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={k.close} busy={c.busy} examLoading={k.source.examLoading}
-    sourceMode={k.source.sourceMode} onSourceMode={m=>void k.source.switchSourceMode(m)} sourceExam={k.source.sourceExam} sourceCount={k.source.sourceCount} currentExam={k.source.current} hasCurrent={k.source.hasCurrent}
+    sourceMode={k.source.sourceMode} sources={k.source.sources} onSourceMode={m=>void k.source.switchSourceMode(m)} sourceExam={k.source.sourceExam} sourceCount={k.source.sourceCount} currentExam={k.source.current} hasCurrent={k.source.hasCurrent}
     savedExams={k.source.savedExams} examSource={k.source.examSource} onChooseExam={v=>void k.source.chooseExam(v)}
     libraryLoading={k.library.libraryLoading} libraryItems={k.library.libraryFiltered} libraryCategories={k.library.libraryCats} librarySearch={k.library.librarySearch} onLibrarySearch={k.library.setLibrarySearch} libraryCategory={k.library.libraryCategory} onLibraryCategory={k.library.setLibraryCategory}
     librarySelectedId={k.library.librarySelectedId} onChooseLibraryItem={it=>void k.library.chooseLibraryItem(it)} onPreview={it=>void k.library.openPreview(it)} previewBusyId={k.library.previewBusyId} onCopyToBuilder={k.library.copyLibraryItem?(it=>void k.library.copyLibraryItem?.(it)):undefined} copyBusyId={k.library.copyBusyId}
