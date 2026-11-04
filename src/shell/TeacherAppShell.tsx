@@ -167,7 +167,8 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
     );
   }
 
-  const bottomItems = access && access.status === "unavailable" ? [] : bottomBarItems(navLayout, access);
+  // (an unavailable access offers no destination at all — navAllowed — so no bottom bar either)
+  const bottomItems = bottomBarItems(navLayout, access);
   const destinations = (Object.keys(ICONS) as TeacherNavId[]).filter(id => navAllowed(id, access)).map(id => ({ id, label: NAV_LABELS[id] }));
   const examItems = [EXAM_BANK_HEAD, ...EXAM_BANK_NAV].filter(id => navAllowed(id, access));
   const homeTarget = firstAllowed([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV], access);

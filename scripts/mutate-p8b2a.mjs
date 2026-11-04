@@ -30,8 +30,7 @@ export const MUTANTS = [
   { id: "P8B2a-M15", what: "the profile answer's order never reaches the shell", edits: [{ file: "src/teacher/teacherProfile.ts", find: "  noteTeacherNavLayout(j);    // Tadris+ P8-B2a", replace: "  void noteTeacherNavLayout;    // Tadris+ P8-B2a" }] },
   { id: "P8B2a-M16", what: "«ترتيب القائمة» is offered without layoutChoosable", edits: [{ file: "src/teacher/NavOrderSettings.tsx", find: "  if (!choosable) return null;\n", replace: "" }] },
   { id: "P8B2a-M17", what: "«ترتيب القائمة» lists destinations the teacher may not open", edits: [{ file: "src/teacher/NavOrderSettings.tsx", find: "  const shown = current.order.filter(id => navAllowed(id, access));", replace: "  const shown = current.order;" }] },
-  { id: "P8B2a-M18", what: "closing the menu opened from «المزيد» loses the focus", edits: [{ file: "src/shell/TeacherAppShell.tsx", find: "    (openedFrom.current === \"more\" ? moreButtonRef.current : menuButtonRef.current)?.focus();", replace: "    menuButtonRef.current?.focus();" }] },
-  { id: "P8B2a-M19", what: "an unavailable access still shows the bottom bar", edits: [{ file: "src/shell/TeacherAppShell.tsx", find: "  const bottomItems = access && access.status === \"unavailable\" ? [] : bottomBarItems(navLayout, access);", replace: "  const bottomItems = bottomBarItems(navLayout, access);" }] }
+  { id: "P8B2a-M18", what: "closing the menu opened from «المزيد» loses the focus", edits: [{ file: "src/shell/TeacherAppShell.tsx", find: "    (openedFrom.current === \"more\" ? moreButtonRef.current : menuButtonRef.current)?.focus();", replace: "    menuButtonRef.current?.focus();" }] }
 ];
 
 const originals = new Map();
