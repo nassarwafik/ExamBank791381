@@ -4,6 +4,7 @@ import {
   PALETTES, DENSITIES, DEFAULT_APPEARANCE, applyTeacherAppearance, cacheAppearance, fetchTeacherAppearance, saveTeacherAppearance,
   type TeacherAppearance, type AppearanceChoosable
 } from "./teacherAppearance";
+import "./appearance.css";
 
 /**
  * Tadris+ P8-A1 — «المظهر» in the teacher's profile (blueprint §9.3, owner decisions §19.27): the light / dark mode, one of the

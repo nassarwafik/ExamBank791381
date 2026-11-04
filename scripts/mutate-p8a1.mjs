@@ -28,7 +28,7 @@ export const MUTANTS = [
   { id: "P8A1-M13", what: "a refusal keeps the refused look", edits: [{ file: "src/teacher/AppearanceSettings.tsx", find: "catch (e) { setCurrent(before); show(before); setMessage", replace: "catch (e) { setMessage" }] },
   { id: "P8A1-M14", what: "a part the teacher may not change stays enabled", edits: [{ file: "src/teacher/AppearanceSettings.tsx", find: "disabled={busy || !choosable.palette} checked", replace: "disabled={busy} checked" }] },
   { id: "P8A1-M15", what: "«استعادة الافتراضي» leaves the theme", edits: [{ file: "src/teacher/AppearanceSettings.tsx", find: "    if (choosable.theme) changes.theme = DEFAULT_APPEARANCE.theme;\n", replace: "" }] },
-  { id: "P8A1-M16", what: "the app's profile read does not deliver the appearance", edits: [{ file: "src/teacher/teacherProfile.ts", find: "  noteTeacherAppearance(j);   // Tadris+ P8-A1", replace: "  void j;" }] }
+  { id: "P8A1-M16", what: "the app's profile read does not deliver the appearance", edits: [{ file: "src/teacher/teacherProfile.ts", find: "  noteTeacherAppearance(j);   // Tadris+ P8-A1", replace: "  void j; //" }] }
 ];
 
 const originals = new Map();
