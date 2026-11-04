@@ -65,19 +65,49 @@ function connectCdp(url) {
   });
 }
 
-export async function launchBrowser() {
+// Tadris+ P9-B2 — the start (CI run 41858886186: «Chromium did not start», and the runner then had to kill the browser this
+// fixture left behind). Chromium runs in its OWN process group, so a failed start stops it AND its helpers (crashpad, …); its
+// profile is removed. Readiness has two signals: the «DevTools listening on» line, or the DevToolsActivePort file Chrome writes
+// into its profile (whichever comes first). A failure says what was observed. The start budget is unchanged (30 s).
+const groupKill = proc => { try { process.kill(-proc.pid, "SIGKILL"); } catch { try { proc.kill("SIGKILL"); } catch { /* already gone */ } } };
+const removeProfile = dir => { try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch { /* best effort */ } };
+function readDevToolsActivePort(dir) {
+  try {
+    const [port, wsPath] = fs.readFileSync(path.join(dir, "DevToolsActivePort"), "utf8").split("\n").map(x => x.trim());
+    return /^\d+$/.test(port) && /^\/devtools\/browser\//.test(wsPath || "") ? "ws://127.0.0.1:" + port + wsPath : null;
+  } catch { return null; }
+}
+function waitForDevTools(proc, dir, startTimeoutMs) {
+  const t0 = Date.now();
+  return new Promise((res, rej) => {
+    let buf = "", done = false;
+    const finish = (fn, v) => { if (done) return; done = true; clearTimeout(timer); clearInterval(poll); fn(v); };
+    const observed = () => "after " + (Date.now() - t0) + " ms; process: " + (proc.exitCode === null && proc.signalCode === null ? "running" : "exited " + (proc.exitCode ?? proc.signalCode)) +
+      "; DevToolsActivePort: " + (fs.existsSync(path.join(dir, "DevToolsActivePort")) ? "present" : "absent") + "; load average: " + os.loadavg().map(x => x.toFixed(2)).join(" ") +
+      "; free memory: " + Math.round(os.freemem() / 1048576) + " MB; last output: " + buf.slice(-800);
+    const timer = setTimeout(() => finish(rej, new Error("Chromium did not start: not ready within " + startTimeoutMs + " ms (" + observed() + ")")), startTimeoutMs);
+    const poll = setInterval(() => { const u = readDevToolsActivePort(dir); if (u) finish(res, u); }, 100);
+    proc.stderr.on("data", d => { buf += d; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) finish(res, m[1]); });
+    proc.on("error", e => finish(rej, new Error("Chromium did not start: " + e.message + " (" + observed() + ")")));
+    proc.on("exit", c => finish(rej, new Error("Chromium exited (" + c + ") before it was ready (" + observed() + ")")));
+  });
+}
+
+export async function launchBrowser({ startTimeoutMs = 30000 } = {}) {
   const exe = findChromium();
   if (!exe) return null;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "smartsim-chrome-"));
-  const proc = spawn(exe, ["--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-background-networking", "--disable-component-update", "--no-proxy-server", "--remote-debugging-port=0", "--user-data-dir=" + dir, "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
-  const wsUrl = await new Promise((res, rej) => {
-    let buf = "";
-    const t = setTimeout(() => rej(new Error("Chromium did not start: " + buf.slice(-800))), 30000);
-    proc.stderr.on("data", d => { buf += d; const m = /DevTools listening on (ws:\/\/\S+)/.exec(buf); if (m) { clearTimeout(t); res(m[1]); } });
-    proc.on("exit", c => { clearTimeout(t); rej(new Error("Chromium exited (" + c + "): " + buf.slice(-800))); });
-  });
-  const cdp = await connectCdp(wsUrl);
-  const { product } = await cdp.send("Browser.getVersion");
+  const proc = spawn(exe, ["--headless=new", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage", "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-background-networking", "--disable-component-update", "--no-proxy-server", "--remote-debugging-port=0", "--user-data-dir=" + dir, "about:blank"], { stdio: ["ignore", "ignore", "pipe"], detached: true });
+  const stopAndClean = async () => {
+    const exited = new Promise(r => { if (proc.exitCode !== null || proc.signalCode !== null) r(); else proc.once("exit", () => r()); });
+    groupKill(proc);
+    await Promise.race([exited, sleep(2000)]);
+    removeProfile(dir);
+  };
+  let wsUrl;
+  try { wsUrl = await waitForDevTools(proc, dir, startTimeoutMs); } catch (e) { await stopAndClean(); throw e; }
+  let cdp, product;
+  try { cdp = await connectCdp(wsUrl); ({ product } = await cdp.send("Browser.getVersion")); } catch (e) { if (cdp) cdp.close(); await stopAndClean(); throw e; }
   return {
     exe, product, cdp,
     newPage: () => openPage(cdp),
@@ -90,7 +120,7 @@ export async function launchBrowser() {
       try { await cdp.send("Browser.close"); } catch { /* already gone */ }
       cdp.close();
       await Promise.race([exited, sleep(5000)]);
-      try { proc.kill("SIGKILL"); } catch { /* already gone */ }
+      groupKill(proc);   // P9-B2: its helpers too
       await Promise.race([exited, sleep(2000)]);
       try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch { /* best effort: a leftover temp profile is harmless */ }
     }

@@ -178,3 +178,45 @@ Fix: the test gives the App the eager `useConfirm` (identical contract and retur
 the guard's dialog renders in the same commit. No assertion and no timeout changed; the lazy path keeps its own tests
 (`App.sharedConfirm.21e1`, `App.confirmPrefetch.21e1s2`, `deferredConfirmPrefetched.21e1s2`). The test still fails when the guard
 never asks, or when «البقاء في الصفحة» leaves anyway (both planted and caught). It is not added to §4: it is no longer timing-sensitive.
+
+## 9. SmartSim real-browser fixture — a Chromium start that never became ready (P9-B2)
+
+**What was seen.** Run 41858886186 (#541), Quality Gate, attempt 1:
+- `api/tests/smartsim-browser-16b-a-rf.test.js` failed with «Chromium did not start» after the fixture's 30 s. The output was four
+  `dbus/bus.cc:405 Failed to connect to the bus` lines, 15:37:18 → :23 → :25.
+- At job end the runner had to kill what the fixture left behind: «Terminate orphan process: pid (5606) (chrome)», plus a `cat`
+  child and two crashpad handlers.
+- The owner's re-run (attempt 2) passed.
+
+**What it is not** (each checked locally against the same Chromium, start-up 130–1,120 ms in every case):
+- not D-Bus blocking the start: an invalid `DBUS_SESSION_BUS_ADDRESS`, and a bus that accepts the connection and never answers;
+- not CPU starvation alone: three busy processes per core.
+
+The slow start did **not** reproduce. Its cause is not proven, so no browser flag was added on speculation.
+
+**What was proven and fixed** (`api/tests/fixtures/smartsim-browser.js`; fail-first on `29e80a3f` in
+`api/tests/smartsim-browser-startup-p9b2.test.js`, with a fake browser that never gets ready):
+- **The leak.** A start that times out used to leave the browser, its helper children and its profile running. The baseline test
+  reads `{ browser: true, helper: true, … }`. My four baseline runs also left four profiles in `/tmp`.
+  - Chromium now runs in its own process group. A failed start (or a failed DevTools connection) kills the whole group and removes
+    the profile.
+  - `close()` also kills the group.
+- **A second readiness signal.** Besides the «DevTools listening on» stderr line, the fixture now accepts the `DevToolsActivePort`
+  file Chrome writes into its profile, whichever comes first. This is hardening: it is not proven to be the cause.
+- **Diagnostics.** A failed start now reports:
+  - the budget and the elapsed time;
+  - whether the process is still running;
+  - whether `DevToolsActivePort` exists;
+  - the load average and free memory;
+  - Chrome's last output.
+
+  A recurrence can then be classified: a browser that never got ready, or ready without any signal reaching the fixture.
+
+**Not done:** the start budget stays 30 s (a test pins it), and nothing is retried. `scripts/mutate-p9b2.mjs`: 6/6 KILLED.
+
+**Policy if it recurs:** the same as §4.
+- Record the run and the new diagnostic line, re-run the job once, and treat a second failure on the same head as real.
+- If the diagnostics show `DevToolsActivePort: present` with no stderr line, the second signal should have caught it, so that is a
+  defect in the fixture.
+- If they show `absent` with the process running, the browser itself did not get ready. Then compare the load figures before
+  changing anything.
