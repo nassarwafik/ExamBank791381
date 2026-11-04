@@ -155,10 +155,10 @@ describe("P3-A the teacher's session probe reports the effective capabilities", 
     const ctx = setup();
     const before = await probe(ctx, ctx.saraToken);
     expect(before.status).toBe(200);
-    expect(before.jsonBody.access).toEqual({ status: "ok", source: "unassigned", preset: null, capabilities: [], enforced: false });
+    expect(before.jsonBody.access).toEqual({ status: "ok", source: "unassigned", preset: null, capabilities: [], enforced: false, games: ["number-conversion", "live-challenge"] });   // P7-B2: + games (not enforced: every game)
     await assign(ctx, {});
     const after = await probe(ctx, ctx.saraToken);
-    expect(after.jsonBody.access).toEqual({ status: "ok", source: "revision", preset: { id: "learning-only", version: 1 }, capabilities: [...preset("learning-only", 1).capabilities].sort(), enforced: false });   // P3-C: + enforced
+    expect(after.jsonBody.access).toEqual({ status: "ok", source: "revision", preset: { id: "learning-only", version: 1 }, capabilities: [...preset("learning-only", 1).capabilities].sort(), enforced: false, games: ["number-conversion", "live-challenge"] });   // P3-C: + enforced; P7-B2: + games
   });
   it("a shared-password session (no owner yet) → legacy-full", async () => {
     const ctx = setup({ owner: false });

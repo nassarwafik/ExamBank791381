@@ -77,7 +77,7 @@
 | الملف | التعديل |
 |---|---|
 | `api/tests/game-number-conversion.test.js` | الطالب في الاختبار صار له صف حالي، لأن اللعبة صارت تتطلبه. لم يُحذف تحقق |
-| `api/tests/session-access-p3c.test.js` | جواب الجلسة صار يضم `games` |
+| `api/tests/session-access-p3c.test.js` و`api/tests/owner-access-p3a.test.js` | جواب الجلسة صار يضم `games`. قبل التطبيق: كل الألعاب |
 | `api/tests/access-registry-p3a.test.js` | جواب الـ resolver صار يضم `games: null`. مثال المفتاح غير المدعوم صار `projects` لأن `games` صار معروفًا، والقاعدة نفسها باقية |
 | `api/tests/dashboard-widgets-p7a2.test.js` | مثال المفتاح غير المدعوم صار `projects` |
 | `api/tests/student-messages-p7b1.test.js` | `services` صار يضم `games` |
