@@ -260,6 +260,251 @@
       "page": "appearance-compact",
       "viewport": "all",
       "reason": "Tadris+ P8-A1 — new scene: the teacher dashboard in the compact density (teacher appearance presets, owner decisions §19.27); the default look of every other page is unchanged."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "assignments",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "audit",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "bank",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "games",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "games-live",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "import",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "learning",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "messages",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "project-students",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "projects",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "reports",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "reviews",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-ai-composer",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-governance",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-question-types",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "state-studio-title-focus",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "students",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "studio-content",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "studio-publish",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "studio-review",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "phone",
+      "reason": "Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations and «المزيد» fixed at the bottom of every teacher page, and 56 px kept free above it at the page's end; phone only — tablet and desktop are unchanged."
     }
   ]
 }
