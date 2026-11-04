@@ -10,6 +10,8 @@ export type PaletteId = "default" | "ocean" | "forest" | "sand";
 export type DensityId = "comfortable" | "compact";
 export type TeacherAppearance = { theme: ThemeChoice; palette: PaletteId; density: DensityId };
 export type AppearanceChoosable = { theme: boolean; palette: boolean; density: boolean };
+/** Tadris+ P8-A2 — the values of each part the owner allows this teacher (absent on an older API → every value). */
+export type AppearanceAllowed = { theme: string[]; palette: string[]; density: string[] };
 
 export const PALETTES: { id: PaletteId; label: string; swatch: string }[] = [
   { id: "default", label: "الافتراضية", swatch: "#2a0a4e" },
@@ -73,12 +75,18 @@ export function noteTeacherAppearance(j: { appearance?: unknown; appearanceChoos
 export function resetKnownAppearance(): void { known = null; }
 
 /** GET the teacher's appearance and what may be changed (null on any failure: the device copy / defaults stay). */
-export async function fetchTeacherAppearance(token: string): Promise<{ appearance: TeacherAppearance; choosable: AppearanceChoosable } | null> {
+const allowedOf = (a: unknown): AppearanceAllowed | null => {
+  const o = a && typeof a === "object" ? a as Record<string, unknown> : null;
+  if (!o) return null;
+  const list = (k: string) => (Array.isArray(o[k]) ? (o[k] as unknown[]).filter((v): v is string => typeof v === "string") : []);
+  return { theme: list("theme"), palette: list("palette"), density: list("density") };
+};
+export async function fetchTeacherAppearance(token: string): Promise<{ appearance: TeacherAppearance; choosable: AppearanceChoosable; allowed: AppearanceAllowed | null } | null> {
   try {
     const r = await fetch("/api/teacher-profile", { headers: headers(token) });
-    const j = await r.json().catch(() => null) as { ok?: boolean; appearance?: unknown; appearanceChoosable?: Partial<AppearanceChoosable> } | null;
+    const j = await r.json().catch(() => null) as { ok?: boolean; appearance?: unknown; appearanceChoosable?: Partial<AppearanceChoosable>; appearanceAllowed?: unknown } | null;
     if (!r.ok || !j || !j.ok || !j.appearance) return null;
-    return { appearance: parseAppearance(j.appearance), choosable: choosableOf(j.appearanceChoosable) };
+    return { appearance: parseAppearance(j.appearance), choosable: choosableOf(j.appearanceChoosable), allowed: allowedOf(j.appearanceAllowed) };
   } catch { return null; }
 }
 

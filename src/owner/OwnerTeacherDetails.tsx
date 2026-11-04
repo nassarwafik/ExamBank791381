@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
   ownerTeachersApi, ownerAccessApi, currentAccessOf, type ApiResult, type ManagedTeacher, type AccessPreset, type AccessCapability, type AccessMode,
-  type AccessHistoryEntry, type EffectiveAccess, type CatalogCourse, type DashboardWidget, type EducationalGame, type TeacherAction, type TeacherProfileFields
+  type AccessHistoryEntry, type EffectiveAccess, type CatalogCourse, type DashboardWidget, type EducationalGame, type AppearancePart, type AppearanceRestriction, type TeacherAction, type TeacherProfileFields
 } from "./ownerApi";
 import Tabs from "../ui/Tabs";
 import TrialControls from "./TrialControls";
@@ -14,6 +14,7 @@ import InvitationPanel, { type Issued } from "./InvitationPanel";
 import OwnerTeacherClasses from "./OwnerTeacherClasses";   // Tadris+ P5-B2
 import WidgetChoice from "./WidgetChoice";                 // Tadris+ P7-A2
 import GameChoice from "./GameChoice";                     // Tadris+ P7-B2
+import AppearanceChoice, { type AppearanceDraft } from "./AppearanceChoice";   // Tadris+ P8-A2
 import OwnerTeacherExams from "./OwnerTeacherExams";   // Tadris+ P6-D
 import {
   STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
@@ -34,11 +35,11 @@ import {
  */
 
 type TabId = "profile" | "classes" | "exams" | "access" | "history" | "security";
-type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null; widgets: DashboardWidget[] | null; games: EducationalGame[] | null };
+type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null; widgets: DashboardWidget[] | null; games: EducationalGame[] | null; appearance: AppearancePart[] | null };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
 type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
 type State = { kind: "loading" } | { kind: "error"; message: string } | { kind: "missing" } | ({ kind: "ready" } & Loaded);
-export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string; courses?: string[]; widgets?: string[]; games?: string[] };
+export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string; courses?: string[]; widgets?: string[]; games?: string[]; appearance?: AppearanceRestriction };
 
 const presetKey = (p: { id: string; version: number } | null | undefined) => (p ? p.id + "@" + p.version : "");
 
@@ -58,7 +59,7 @@ async function loadAll(token: string, accountId: string): Promise<{ state: State
     signedOut: false,
     state: {
       kind: "ready", teacher, others: list.data.teachers.filter(t => t.accountId !== accountId),
-      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode, courses: courseCatalog.ok ? courseCatalog.data.courses : null, widgets: Array.isArray(catalog.data.widgets) ? catalog.data.widgets : null, games: Array.isArray(catalog.data.games) ? catalog.data.games : null },
+      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode, courses: courseCatalog.ok ? courseCatalog.data.courses : null, widgets: Array.isArray(catalog.data.widgets) ? catalog.data.widgets : null, games: Array.isArray(catalog.data.games) ? catalog.data.games : null, appearance: Array.isArray(catalog.data.appearance) ? catalog.data.appearance : null },
       history: { currentRevisionId: history.data.currentRevisionId, entries: history.data.entries, truncated: history.data.truncated },
       effective: { accountStatus: effective.data.accountStatus, mode: effective.data.mode, enforced: effective.data.enforced, access: effective.data.access }
     }
@@ -266,6 +267,9 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const initialGames = head && head.valid && Array.isArray(head.games) ? head.games : null;
   const [gameMode, setGameMode] = useState<"all" | "some">(initialGames ? "some" : "all");
   const [chosenGames, setChosenGames] = useState<Set<string>>(() => new Set(initialGames || []));
+  // P8-A2 — the appearance restriction: per part, every value (nothing sent) or only the checked ones; untouched = sent back unchanged.
+  const initialAppearance: AppearanceDraft = head && head.valid && head.appearance ? { ...head.appearance } : {};
+  const [appearanceDraft, setAppearanceDraft] = useState<AppearanceDraft>(initialAppearance);
   const [key, setKey] = useState(initialKey);
   const [chosen, setChosen] = useState<Set<string>>(initialSet);
   const [reason, setReason] = useState("");
@@ -293,6 +297,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     setChosenWidgets(new Set(Array.isArray(r.data.widgets) ? r.data.widgets : []));
     setGameMode(Array.isArray(r.data.games) ? "some" : "all");
     setChosenGames(new Set(Array.isArray(r.data.games) ? r.data.games : []));
+    setAppearanceDraft(r.data.appearance ? { ...r.data.appearance } : {});
     if (source) setReason("نسخ من " + source.username);
     setCopyNote({ error: false, text: "حُمّلت صلاحيات " + (source ? source.displayName : "") + ". راجعها ثم احفظ." });
   }
@@ -309,7 +314,9 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const coursesUnchanged = courseMode === (initialCourses ? "some" : "all") && (courseMode === "all" || (chosenCourses.size === (initialCourses || []).length && (initialCourses || []).every(c => chosenCourses.has(c))));
   const widgetsUnchanged = widgetMode === (initialWidgets ? "some" : "all") && (widgetMode === "all" || (chosenWidgets.size === (initialWidgets || []).length && (initialWidgets || []).every(w => chosenWidgets.has(w))));
   const gamesUnchanged = gameMode === (initialGames ? "some" : "all") && (gameMode === "all" || (chosenGames.size === (initialGames || []).length && (initialGames || []).every(g => chosenGames.has(g))));
-  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged && widgetsUnchanged && gamesUnchanged);
+  const appearanceOut = (d: AppearanceDraft) => { const out: AppearanceRestriction = {}; for (const [k, v] of Object.entries(d)) if (Array.isArray(v)) out[k] = [...v]; return out; };
+  const appearanceUnchanged = JSON.stringify(appearanceOut(appearanceDraft)) === JSON.stringify(appearanceOut(initialAppearance));
+  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged && widgetsUnchanged && gamesUnchanged && appearanceUnchanged);
   const reachable = modules.filter(m => m.caps.some(c => chosen.has(c.id)));
 
   return (
@@ -382,6 +389,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
               {courseMode === "some" && chosenCourses.size === 0 && <p className="eb-owner-hint">لم تختر أي مقرر: لن يتمكن المعلم وطلابه من أي مقرر أثناء التطبيق.</p>}
             </fieldset>
           )}
+          {catalog.appearance && <AppearanceChoice teacherId={teacher.accountId} parts={catalog.appearance} draft={appearanceDraft} onDraft={setAppearanceDraft} />}
           {catalog.games && <GameChoice teacherId={teacher.accountId} games={catalog.games} chosenCapabilities={chosen} mode={gameMode} onMode={setGameMode} chosen={chosenGames} onChosen={setChosenGames} />}
           {catalog.widgets && <WidgetChoice teacherId={teacher.accountId} widgets={catalog.widgets} chosenCapabilities={chosen} mode={widgetMode} onMode={setWidgetMode} chosen={chosenWidgets} onChosen={setChosenWidgets} />}
           <label className="auth-field"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
@@ -392,7 +400,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
       <p className="eb-owner-hint">{modeNote(effective)}</p>
       <div className="eb-owner-actions">
         <button type="button" className="auth-submit" disabled={busy || !picked || unchanged}
-          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}), ...(widgetMode === "some" ? { widgets: [...chosenWidgets].sort() } : {}), ...(gameMode === "some" ? { games: [...chosenGames].sort() } : {}) })}>حفظ الصلاحيات</button>
+          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}), ...(widgetMode === "some" ? { widgets: [...chosenWidgets].sort() } : {}), ...(gameMode === "some" ? { games: [...chosenGames].sort() } : {}), ...(Object.keys(appearanceOut(appearanceDraft)).length ? { appearance: appearanceOut(appearanceDraft) } : {}) })}>حفظ الصلاحيات</button>
       </div>
     </div>
   );
@@ -406,7 +414,7 @@ function AccessHistory({ history, effective, presets, labels, busy, onRestore }:
   const presetName = (p: AccessHistoryEntry["preset"]) => (p ? presets.find(x => x.id === p.id && x.version === p.version)?.label || p.id : "—");
   const columns: DataColumn<AccessHistoryEntry>[] = [
     { id: "date", header: "التاريخ", cell: e => <bdi>{formatDate(e.createdAt) || "—"}</bdi> },
-    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}{Array.isArray(e.courses) ? <small> · {e.courses.length} مقرر فقط</small> : null}{Array.isArray(e.widgets) ? <small> · {e.widgets.length} بطاقة فقط</small> : null}{Array.isArray(e.games) ? <small> · {e.games.length} لعبة فقط</small> : null}</> },
+    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}{Array.isArray(e.courses) ? <small> · {e.courses.length} مقرر فقط</small> : null}{Array.isArray(e.widgets) ? <small> · {e.widgets.length} بطاقة فقط</small> : null}{Array.isArray(e.games) ? <small> · {e.games.length} لعبة فقط</small> : null}{e.appearance && Object.keys(e.appearance).length ? <small> · مظهر مقيّد</small> : null}</> },
     { id: "reason", header: "السبب", cell: e => e.reason || "—" },
     { id: "by", header: "بواسطة", cell: e => actorLabel(e.createdBy) },
     { id: "state", header: "الحالة", cell: e => (!e.valid ? <span className="eb-owner-status eb-owner-status--suspended">غير صالحة</span> : e.revisionId === history.currentRevisionId ? <span className="eb-owner-status eb-owner-status--active">الحالية</span> : "—") },

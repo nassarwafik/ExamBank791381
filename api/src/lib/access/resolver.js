@@ -15,6 +15,7 @@ const { AccessError, readRevision } = require("./revisions");
 // P5-A — `courses`: the course entitlement (null = every published course; an array = only those). Owner decisions §19.13.
 // P7-A2 — `widgets`: the dashboard-widget entitlement, the same rule (null = every widget; an array = only those).
 // P7-B2 — `games`: the educational-game entitlement, the same rule (null = every game; an array = only those).
+// P8-A2 — `appearance`: the owner's appearance restriction ({ part: allowed values }; null / a part absent = every value).
 // A revision that cannot be trusted (missing, another account's, unknown preset / capability, broken dependency) is an
 // AccessError; a storage error propagates. Callers fail closed on both. Capabilities never come from the token or the client.
 //
@@ -23,7 +24,7 @@ const { AccessError, readRevision } = require("./revisions");
 
 const legacyFull = source => {
   const p = preset(LEGACY_FULL.id, LEGACY_FULL.version);
-  return { source, revisionId: null, preset: { id: p.id, version: p.version }, capabilities: [...p.capabilities].sort(), courses: null, widgets: null, games: null };
+  return { source, revisionId: null, preset: { id: p.id, version: p.version }, capabilities: [...p.capabilities].sort(), courses: null, widgets: null, games: null, appearance: null };
 };
 
 async function resolveTeacherAccess(user, deps = {}) {
@@ -32,10 +33,10 @@ async function resolveTeacherAccess(user, deps = {}) {
     if (user.accessRevisionId) {
       const container = deps.container || (deps.getContainer || storage.getContainer)();
       const entry = await readRevision(container, user.accessRevisionId, user.sub, deps);
-      return { source: "revision", revisionId: entry.revision.revisionId, preset: { ...entry.preset }, capabilities: [...entry.capabilities], courses: entry.courses ? [...entry.courses] : null, widgets: entry.widgets ? [...entry.widgets] : null, games: entry.games ? [...entry.games] : null };
+      return { source: "revision", revisionId: entry.revision.revisionId, preset: { ...entry.preset }, capabilities: [...entry.capabilities], courses: entry.courses ? [...entry.courses] : null, widgets: entry.widgets ? [...entry.widgets] : null, games: entry.games ? [...entry.games] : null, appearance: entry.appearance ? { ...entry.appearance } : null };
     }
     if (user.sub === LEGACY_TEACHER_ACCOUNT_ID) return legacyFull("migrated-default");
-    return { source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null, widgets: null, games: null };
+    return { source: "unassigned", revisionId: null, preset: null, capabilities: [], courses: null, widgets: null, games: null, appearance: null };
   }
   if (user.am === "multi-user") return legacyFull("migrated-default");
   if (sharedPasswordSession(user)) return legacyFull("shared-password");
