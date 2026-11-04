@@ -514,3 +514,33 @@ describe("UX-4 accessibility source guards", () => {
     expect(RAW["./TeacherPlatform.tsx"]).toMatch(/await loadStudents\(sourceClassId\);\n  if\(targetClassId!==sourceClassId\)await loadStudents\(targetClassId\);\n  await loadClasses\(\);/);
   });
 });
+
+// Tadris+ P8-B2b (owner decision §19.31, «على هذا الجهاز») — the roster's status filter and sort are remembered on this device; the
+// search is not. (The test setup clears the remembered preferences before every test: src/test-setup/devicePrefsReset.ts.)
+describe("P8-B2b — the roster remembers its filter and sort on this device", () => {
+  it("chosen, then the page opens again: the same status filter and order; the search starts empty; only the choice is stored", async () => {
+    await mount();
+    fireEvent.change(screen.getByLabelText("الحالة"), { target: { value: "active" } });
+    fireEvent.click(within(th("الاسم")).getByRole("button"));
+    fireEvent.click(within(th("الاسم")).getByRole("button"));
+    fireEvent.change(screen.getByLabelText("ابحث بالاسم، العائلة أو رقم الهوية"), { target: { value: "علي" } });
+    expect(JSON.parse(localStorage.getItem("examBankViewPref:roster.status")!)).toBe("active");
+    expect(JSON.parse(localStorage.getItem("examBankViewPref:roster.sort")!)).toEqual({ key: "firstName", asc: false });
+    expect(Object.keys(localStorage).filter(k => k.startsWith("examBankViewPref:")).map(k => localStorage.getItem(k)).join("|")).not.toMatch(/علي/);
+    cleanup();
+    await mount();
+    expect((screen.getByLabelText("الحالة") as HTMLSelectElement).value).toBe("active");
+    expect(th("الاسم").getAttribute("aria-sort")).toBe("descending");
+    expect((screen.getByLabelText("ابحث بالاسم، العائلة أو رقم الهوية") as HTMLInputElement).value).toBe("");
+  });
+  it("back to the defaults: nothing is stored; an unknown stored value is ignored", async () => {
+    localStorage.setItem("examBankViewPref:roster.status", JSON.stringify("everyone"));
+    localStorage.setItem("examBankViewPref:roster.sort", JSON.stringify({ key: "password", asc: true }));
+    await mount();
+    expect((screen.getByLabelText("الحالة") as HTMLSelectElement).value).toBe("all");
+    expect(th("اسم العائلة").getAttribute("aria-sort")).toBe("ascending");
+    fireEvent.change(screen.getByLabelText("الحالة"), { target: { value: "archived" } });
+    fireEvent.change(screen.getByLabelText("الحالة"), { target: { value: "all" } });
+    expect(localStorage.getItem("examBankViewPref:roster.status")).toBeNull();
+  });
+});

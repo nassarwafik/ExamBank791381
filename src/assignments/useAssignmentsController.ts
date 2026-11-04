@@ -16,11 +16,14 @@ import { studentsCount, type PageTab } from "./assignmentPage";
 import { copiesCount } from "./assignmentWizard";
 import { useAssignmentComposer } from "./useAssignmentComposer";
 import { useCan } from "../shell/teacherAccessContext";
+import { useDevicePref, oneOf } from "../ui/devicePrefs";   // Tadris+ P8-B2b
 import { reviewNav, type ReviewTarget } from "./reviewNav";
 import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
 import { normalizeLatePolicy, type LatePolicy } from "./latePolicy";
 import type { AssignmentDrill } from "./drillTarget";
 import type { AssignmentProgress, CodingEvidenceTotals, CodingGradingStatus, Classroom, Item, Impact, Exam, StudentResult, MovedStudentResult, LifecycleSnap, Stats, GradebookFilter, GradebookSort, ItemAnalysis, AnalysisSort, WorkspaceMode } from "./types";
+
+const GRADEBOOK_SORTS = oneOf<GradebookSort>(["name", "pendingFirst", "highest", "lowest"]);
 
 export type AssignmentsControllerProps = {
   token: string;
@@ -55,7 +58,11 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   const [analysis, setAnalysis] = useState<ItemAnalysis | null>(null), [analysisBusy, setAnalysisBusy] = useState(false), [analysisSort, setAnalysisSort] = useState<AnalysisSort>("number");
   const [codingSummary, setCodingSummary] = useState<CodingGradingStatus | null>(null), [codingTotals, setCodingTotals] = useState<CodingEvidenceTotals | null>(null);
   // Roadmap #13 — gradebook search / filter / sort (client-side over the already-loaded results; no request per keystroke).
-  const [gbSearch, setGbSearch] = useState(""), [gbFilter, setGbFilter] = useState<GradebookFilter>("all"), [gbSort, setGbSort] = useState<GradebookSort>("name");
+  const [gbSearch, setGbSearch] = useState(""), [gbFilter, setGbFilter] = useState<GradebookFilter>("all");
+  // Tadris+ P8-B2b (owner decision §19.31) — the gradebook's ORDER is remembered on this device and kept from one assignment to the
+  // next. The search and the filter still start empty for every assignment: a remembered filter would hide students of a newly
+  // opened assignment without the teacher noticing (and a drill-in sets its own filter).
+  const [gbSort, setGbSort] = useDevicePref<GradebookSort>("gradebook.sort", "name", GRADEBOOK_SORTS);
   // Phase 21G.4 — the gradebook's row selection for the bulk actions. Cleared whenever the visible rows change meaning (another
   // assignment, a search, a filter), so a bulk action only ever reaches rows the teacher can see ticked.
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set()), [bulkDeadlineOpen, setBulkDeadlineOpen] = useState(false), [bulkDeadlineValue, setBulkDeadlineValue] = useState("");
@@ -288,7 +295,7 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // opener is ever focused.
   function clearDetail({ restoreFocus }: { restoreFocus: boolean }) {
     setPageTab("students"); stopBulk(); clearSelection(); setBulkDeadlineOpen(false);
-    setResultsFor(null); setResults([]); setMovedStudents([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setGbSort("name"); setDrillFocus(null);
+    setResultsFor(null); setResults([]); setMovedStudents([]); setStats(null); setDeadlineFor(null); setReopenFor(null); setExtendFor(null); setAnalysis(null); setGbSearch(""); setGbFilter("all"); setDrillFocus(null);
     const el = detailOpenerRef.current; detailOpenerRef.current = null;
     // Phase 21G.3 — the opener sits in the list, which is hidden while the page is open: focus it once the list is shown again.
     if (restoreFocus && el) openerFocusPending.current = el;

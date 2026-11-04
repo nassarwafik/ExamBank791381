@@ -11,6 +11,8 @@ import { timeLabel } from "./assignmentsHome";
 import { SAVE_LABELS } from "../teacher/saveLabels";
 import { useCan } from "../shell/teacherAccessContext";
 import { ASSIGNMENT_ACTION_CAPS, ASSIGNMENT_CREATE_CAPS } from "./assignmentCaps";
+import type { ListView } from "../ui/devicePrefs";
+import "../ui/list-views.css";
 
 // ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
 const toLocalInput = (iso: string) => { if (!iso) return ""; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -39,6 +41,8 @@ export type AssignmentListProps = {
   now?: number;
   /** Phase 21G.3 — hidden (still mounted) while an assignment page is open. */
   hidden?: boolean;
+  /** Tadris+ P8-B2b — «بطاقات» (default, the look before) or «قائمة مضغوطة» (the teacher's choice on this device). */
+  view?: ListView;
 };
 
 /** The actions one assignment offers (status, edits, archive / restore / purge). */
@@ -89,7 +93,7 @@ export default function AssignmentList(p: AssignmentListProps) {
     <section className="eb-assign-list" aria-labelledby="eb-assign-list-title" hidden={p.hidden}>
       <h2 id="eb-assign-list-title" className="eb-visually-hidden">{p.showArchived ? "الواجبات المؤرشفة" : "الواجبات الحالية"}</h2>
       {p.loading && p.items.length === 0 && <div className="platform-loading" role="status">جارٍ تحميل الواجبات...</div>}
-      <ul className="assignment-list eb-assign-rows">
+      <ul className={"assignment-list eb-assign-rows" + (p.view === "compact" ? " is-compact" : "")}>
         {p.items.map(item => {
           const selected = item.assignmentId === p.selectedId;
           const archived = item.status === "archived";

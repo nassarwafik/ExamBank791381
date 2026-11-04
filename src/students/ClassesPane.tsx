@@ -11,6 +11,8 @@ import { normalizeClassStatus } from "../classLifecycle";
 import { getClassProgramCodes } from "../projects/classPrograms";
 import { arabicCount, STUDENTS } from "../learning/arabicCount";
 import type { Classroom, ClassArchiveView, ProjectOption } from "./types";
+import { useDevicePref, oneOf, LIST_VIEWS, type ListView } from "../ui/devicePrefs";   // Tadris+ P8-B2b
+import ListViewSwitch from "../ui/ListViewSwitch";
 
 export type ClassesPaneProps = {
   classes: Classroom[];              // the rows for the current view (active or archived), already filtered by TeacherPlatform
@@ -42,8 +44,11 @@ export type ClassesPaneProps = {
 // The class filter appears only once the list is long enough to need it; it folds Arabic spelling variants.
 const CLASS_FILTER_THRESHOLD = 7;
 
+const CLASS_VIEWS = oneOf<ListView>(LIST_VIEWS);
+
 export default function ClassesPane(p: ClassesPaneProps) {
   const can = useCan();   // Tadris+ P8-B1 — only the tools the teacher's access allows
+  const [listView, setListView] = useDevicePref<ListView>("view.classes", "cards", CLASS_VIEWS);   // Tadris+ P8-B2b — on this device
   const isActive = (c: Classroom) => normalizeClassStatus(c) === "active";
   const [query, setQuery] = useState("");
   const showFilter = p.activeCount + p.archivedCount >= CLASS_FILTER_THRESHOLD;
@@ -79,6 +84,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
           <button type="button" aria-pressed={p.view === "active"} onClick={() => p.onViewChange("active")}>الصفوف النشطة<span className="eb-segmented-count">{p.activeCount}</span></button>
           <button type="button" aria-pressed={p.view === "archived"} onClick={() => p.onViewChange("archived")}>الأرشيف<span className="eb-segmented-count">{p.archivedCount}</span></button>
         </div>
+        <ListViewSwitch value={listView} onChange={setListView} label="طريقة عرض الصفوف" />
         {showFilter && (
           <label className="student-search-field eb-search-field eb-class-filter">
             <IconSearch size={16} aria-hidden="true" />
@@ -87,7 +93,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
         )}
       </div>
       {p.loading && p.classes.length === 0 && <div className="platform-loading" role="status">جارٍ التحميل...</div>}
-      <ul ref={listRef} className="class-list eb-class-list">
+      <ul ref={listRef} className={"class-list eb-class-list" + (listView === "compact" ? " is-compact" : "")}>
         {rows.map(classroom => {
           const active = isActive(classroom);
           const codes = getClassProgramCodes(classroom);

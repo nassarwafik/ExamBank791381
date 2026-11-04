@@ -7,6 +7,8 @@ import ActionMenu from "./ui/ActionMenu";
 import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog,AssignmentDetailsDialog,AssignmentActionMenu} from "./assignments/AssignmentList";
 import {ASSIGNMENT_CREATE_CAPS} from "./assignments/assignmentCaps";
 import {useCan} from "./shell/teacherAccessContext";
+import {useDevicePref,oneOf,LIST_VIEWS,type ListView} from "./ui/devicePrefs";   // Tadris+ P8-B2b
+import ListViewSwitch from "./ui/ListViewSwitch";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -30,10 +32,13 @@ import {gradebookCsvRows,gradebookPrintReport,exportFilename,GRADEBOOK_HEADER_RO
 // against the panel's own authoritative data, then reported through onDrillConsumed).
 type Props=AssignmentsControllerProps;
 
+const ASSIGNMENT_VIEWS=oneOf<ListView>(LIST_VIEWS);
+
 export default function AssignmentsPanel(props:Props){
  const toolbarRef=useRef<HTMLDivElement|null>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null),detailHeadingRef=useRef<HTMLHeadingElement>(null);
  const c=useAssignmentsController(props,{toolbarRef,composerHeadingRef,detailHeadingRef});
  const can=useCan();   // Tadris+ P8-B1 — presentation only (the server enforces every action)
+ const [listView,setListView]=useDevicePref<ListView>("view.assignments","cards",ASSIGNMENT_VIEWS);   // Tadris+ P8-B2b — on this device
  const {toolbar:t,list:l,composer:k,detail:d,gradebook:g,dialogs:x}=c;
  const showDetailArea=c.mode==="composer"||d.item!==null;
  // Phase 21G.3 — an open assignment is a FULL-WIDTH page: the list (kept mounted, so focus returns to its «فتح») and the KPI strip wait.
@@ -48,6 +53,7 @@ export default function AssignmentsPanel(props:Props){
      <button type="button" aria-pressed={!t.showArchived} onClick={()=>t.changeScope({showArchived:false})}>الواجبات الحالية</button>
      <button type="button" aria-pressed={t.showArchived} onClick={()=>t.changeScope({showArchived:true})}>المؤرشفة{t.archivedCount?" ("+t.archivedCount+")":""}</button>
     </div>
+    <ListViewSwitch value={listView} onChange={setListView} label="طريقة عرض الواجبات"/>
     <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={t.search} onChange={e=>t.changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
     {!t.showArchived&&<div className="eb-chip-group eb-assign-time-filters" role="group" aria-label="تصفية حسب الوقت">
      {TIME_FILTERS.filter(f=>f.key==="all"||t.timeCounts[f.key]>0||t.timeFilter===f.key).map(f=><button key={f.key} type="button" className="eb-filter-chip" aria-pressed={t.timeFilter===f.key} onClick={()=>t.changeScope({timeFilter:f.key})}>{f.label} <span className="eb-filter-chip-n">{t.timeCounts[f.key]}</span></button>)}
@@ -65,7 +71,7 @@ export default function AssignmentsPanel(props:Props){
   <div className={"eb-assign-layout"+(pageOpen?" is-page":showDetailArea?" has-detail":"")}>
    <AssignmentList hidden={pageOpen} items={l.visible} showArchived={t.showArchived} hasAnyInScope={l.hasAnyInScope} selectedId={l.selectedId} busy={c.busy} loading={c.loading}
     onOpen={l.open} onPublish={l.publish} onUnpublish={l.unpublish}
-    onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now}/>
+    onEditAttempts={l.editAttempts} onEditTiming={l.editTiming} onEditDetails={l.editDetails} onArchive={l.archive} onRestore={l.restore} onPurge={l.purge} onCreate={t.openComposer} fmt={fmt} progress={c.home.progress} now={c.home.now} view={listView}/>
    {c.mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={k.close} busy={c.busy} examLoading={k.source.examLoading}
     sourceMode={k.source.sourceMode} sources={k.source.sources} onSourceMode={m=>void k.source.switchSourceMode(m)} sourceExam={k.source.sourceExam} sourceCount={k.source.sourceCount} currentExam={k.source.current} hasCurrent={k.source.hasCurrent}
     savedExams={k.source.savedExams} examSource={k.source.examSource} onChooseExam={v=>void k.source.chooseExam(v)}
