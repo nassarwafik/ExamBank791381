@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import AppearanceSettings from "./AppearanceSettings";   // Tadris+ P8-A1
+import NavOrderSettings from "./NavOrderSettings";   // Tadris+ P8-B2a
 import Dialog from "../ui/Dialog";
 import ProfileAvatar from "../ui/ProfileAvatar";
 import { AVATAR_OPTIONS } from "../avatars";
@@ -71,6 +72,7 @@ export default function TeacherProfileDialog({ open, token, profile, photoUrl, o
           <button type="submit" className="eb-button is-small" disabled={busy || !nameDraft.trim() || nameDraft.trim() === (profile.hasCustomName ? profile.displayName : "")}>حفظ الاسم</button>
         </form>
         <AppearanceSettings token={token} />   {/* Tadris+ P8-A1 */}
+        <NavOrderSettings token={token} />     {/* Tadris+ P8-B2a */}
         {busy && <p className="eb-muted" role="status">جارٍ الحفظ...</p>}
         {notice && !busy && <p className="eb-teacher-profile-notice" role="status">{notice}</p>}
         {error && <p className="platform-error" role="alert">{error}</p>}

@@ -1,4 +1,5 @@
 import { noteTeacherAppearance } from "./teacherAppearance";   // Tadris+ P8-A1
+import { noteTeacherNavLayout } from "../shell/navLayout";      // Tadris+ P8-B2a
 // Teacher self-profile client (builder-authenticated; the server always acts on the token subject — no teacher id
 // is ever sent). Display-name authority order on the client: profile displayName → session displayName → "المعلم".
 export type TeacherProfile = {
@@ -30,9 +31,10 @@ export function normalizeTeacherProfile(raw: unknown): TeacherProfile | null {
 
 async function call(token: string, init: RequestInit = {}): Promise<TeacherProfile> {
   const r = await fetch("/api/teacher-profile", { ...init, headers: { ...(init.body ? { "Content-Type": "application/json" } : {}), ...teacherHeaders(token) } });
-  const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; profile?: unknown; appearance?: unknown };
+  const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; profile?: unknown; appearance?: unknown; navLayout?: unknown; layoutChoosable?: unknown };
   if (!r.ok || !j.ok) throw new Error(j.error || "حدث خطأ.");
   noteTeacherAppearance(j);   // Tadris+ P8-A1 — the shell applies the account's appearance from this same answer
+  noteTeacherNavLayout(j);    // Tadris+ P8-B2a — and the account's order of the sidebar
   const profile = normalizeTeacherProfile(j.profile);
   if (!profile) throw new Error("حدث خطأ.");
   return profile;

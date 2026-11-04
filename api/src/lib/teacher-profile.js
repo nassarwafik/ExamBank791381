@@ -110,6 +110,32 @@ function dashboardLayoutOf(doc) {
   return r.ok ? r.layout : null;
 }
 
+// Tadris+ P8-B2a — the teacher's own order of the sidebar (owner decision §19.31): { order: nav ids, hidden: nav ids }, stored as
+// `appearance.navLayout` of the profile document so it follows the teacher on every device. Only the arrangeable destinations of the
+// main sections (the same list as src/shell/teacherNav.ts PRIMARY_NAV without «لوحة المتابعة», which always stays first and shown —
+// a sync test pins the two lists), without duplicates. PRESENTATION ONLY: hiding a destination never widens or narrows what the
+// teacher may open (the server's capabilities decide; no security check reads this field).
+const NAV_LAYOUT_IDS = Object.freeze(["learning", "students", "assignments", "messages", "projects", "reports", "games"]);
+function validateNavLayout(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, error: "ترتيب القائمة غير صالح." };
+  const out = {};
+  for (const key of ["order", "hidden"]) {
+    const v = input[key] === undefined ? [] : input[key];
+    if (!Array.isArray(v) || v.length > NAV_LAYOUT_IDS.length) return { ok: false, error: "ترتيب القائمة غير صالح." };
+    if (v.some(id => typeof id !== "string" || !NAV_LAYOUT_IDS.includes(id))) return { ok: false, error: "وجهة غير معروفة في القائمة." };
+    if (new Set(v).size !== v.length) return { ok: false, error: "وجهة مكررة في القائمة." };
+    out[key] = [...v];
+  }
+  return { ok: true, layout: out };
+}
+/** The stored order, re-validated on read (an invalid one → the default order, i.e. null). */
+function navLayoutOf(doc) {
+  const v = doc && doc.appearance && doc.appearance.navLayout;
+  if (!v) return null;
+  const r = validateNavLayout(v);
+  return r.ok ? r.layout : null;
+}
+
 // Tadris+ P8-A1 — the teacher's appearance presets (blueprint §9.3, owner decisions §19.27), stored as `appearance.{theme, palette,
 // density}` of the profile document so it follows the teacher on every device. Only the registered values; «default» is stored as the
 // field's absence. PRESENTATION ONLY: no security check ever reads these fields (blueprint acceptance test 12).
@@ -135,4 +161,4 @@ function appearanceOf(doc, allowed = null) {
   return out;
 }
 
-module.exports = { APPEARANCE, validateAppearance, appearanceOf, validateDashboardLayout, dashboardLayoutOf, resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
+module.exports = { NAV_LAYOUT_IDS, validateNavLayout, navLayoutOf, APPEARANCE, validateAppearance, appearanceOf, validateDashboardLayout, dashboardLayoutOf, resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
