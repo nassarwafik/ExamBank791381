@@ -1,0 +1,44 @@
+/* Tadris+ P8-B2a — the teacher's bottom bar on a phone (owner decision §19.31): «لوحة المتابعة», the teacher's first destinations in
+   their order, then «المزيد» (the full menu, the same drawer). Phone widths only; the tablet / desktop shell is unchanged. Token-only,
+   RTL-first; the drawer (--eb-z-drawer) opens above it. Touch targets are at least 48 px high. */
+.eb-bottom-bar { display: none; }
+
+@media (max-width: 767px) {
+  .eb-bottom-bar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: var(--eb-z-nav);
+    background: var(--eb-surface);
+    border-block-start: 1px solid var(--eb-border);
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+  }
+  .eb-bottom-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    min-width: 0;
+    padding: 6px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--eb-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .eb-bottom-link.is-active { color: var(--eb-primary); font-weight: 700; }
+  .eb-bottom-link:focus-visible { outline: 2px solid var(--eb-primary); outline-offset: -4px; }
+  .eb-bottom-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* The page keeps its last lines above the bar. */
+  .eb-shell-main { padding-block-end: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  /* While the menu is open the bar steps back (the drawer is the dialog). */
+  .eb-shell.is-drawer-open .eb-bottom-bar { visibility: hidden; }
+}
+
+@media print { .eb-bottom-bar { display: none !important; } }

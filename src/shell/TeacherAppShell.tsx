@@ -22,10 +22,13 @@ import type { SchoolBadgeView } from "./schoolIdentity";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import type { TeacherProfile } from "../teacher/teacherProfile";
 import { startTeacherAppearance } from "../teacher/teacherAppearance";   // Tadris+ P8-A1
+import { arrangeSections, bottomBarItems, useTeacherNavLayout } from "./navLayout";   // Tadris+ P8-B2a
+import { TeacherAccessContext } from "./teacherAccessContext";
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
 import "./teacher-nav-21e.css";
+import "./bottom-bar.css";   // Tadris+ P8-B2a
 
 // UX-2 — Teacher App Shell. Consumes the existing navigation state (App.tsx owns it) and renders: skip link,
 // sidebar (expanded ≥1280 / compact rail 1024–1279 / drawer <1024, plus a manual compact toggle), page header
@@ -44,6 +47,8 @@ function pageIcon(id: TeacherNavId): ReactNode {
   return <Icon size={22} />;
 }
 const DESKTOP_QUERY = "(min-width: 1024px)";
+/** Tadris+ P8-B2a — the bottom bar's short labels (a phone has room for one or two words). */
+const BOTTOM_LABELS: Partial<Record<TeacherNavId, string>> = { dashboard: "المتابعة", learning: "المواد", students: "الطلاب", games: "الألعاب" };
 
 type Props = {
   nav: TeacherNavState;
@@ -81,18 +86,24 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   // <body> whenever the tap did not focus the button (WebKit, scripted clicks) — focus was lost. Navigating to a page and the drawer
   // closing because the window became desktop-sized keep their behaviour.
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  // Tadris+ P8-B2a — the phone's bottom bar opens the same menu from «المزيد»; focus returns to the button that opened it.
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const openedFrom = useRef<"menu" | "more">("menu");
   const returnFocusToMenu = useRef(false);
   const dismissDrawer = useCallback(() => { returnFocusToMenu.current = true; setDrawerOpen(false); }, []);
   useEffect(() => {
     if (drawerOpen || !returnFocusToMenu.current) return;
     returnFocusToMenu.current = false;
-    menuButtonRef.current?.focus();
+    (openedFrom.current === "more" ? moreButtonRef.current : menuButtonRef.current)?.focus();
   }, [drawerOpen]);
+  // Tadris+ P8-B2a — the teacher's own order of the sidebar (their account; owner decision §19.31). Presentation only.
+  const { layout: navLayout } = useTeacherNavLayout();
 
   // The drawer exists only below the shell breakpoint (CSS hides its trigger above it); opening is refused on
   // desktop so the fixed rail can never become a modal dialog.
-  function openDrawer() {
+  function openDrawer(from: "menu" | "more" = "menu") {
     if (typeof window.matchMedia === "function" && window.matchMedia(DESKTOP_QUERY).matches) return;
+    openedFrom.current = from;
     setDrawerOpen(true);
   }
   // Drawer lifecycle: lock body scroll while open; close automatically when the viewport grows to desktop
@@ -156,6 +167,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
     );
   }
 
+  const bottomItems = access && access.status === "unavailable" ? [] : bottomBarItems(navLayout, access);
   const destinations = (Object.keys(ICONS) as TeacherNavId[]).filter(id => navAllowed(id, access)).map(id => ({ id, label: NAV_LABELS[id] }));
   const examItems = [EXAM_BANK_HEAD, ...EXAM_BANK_NAV].filter(id => navAllowed(id, access));
   const homeTarget = firstAllowed([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV], access);
@@ -181,6 +193,8 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
   const crumbs = breadcrumbFor(nav).map(c => ({ label: c.label, onSelect: c.navId ? () => onNavigate(c.navId as TeacherNavId) : undefined }));
 
   return (
+    // Tadris+ P8-B2a — the shell provides its access to everything it renders (the top bar's profile dialog included).
+    <TeacherAccessContext.Provider value={access}>
     <div className={"builder-page eb-shell" + (compact ? " is-compact" : "") + (drawerOpen ? " is-drawer-open" : "")} dir="rtl">
       <a className="eb-skip-link" href="#eb-main">تجاوز إلى المحتوى</a>
       <header className="eb-topbar">
@@ -197,7 +211,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           icon={<IconMenu size={20} />}
           aria-expanded={drawerOpen}
           aria-controls="eb-sidebar"
-          onClick={openDrawer}
+          onClick={() => openDrawer("menu")}
           className="eb-drawer-toggle"
         />
         <div className="eb-brand">
@@ -236,7 +250,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           </div>
         )}
         <nav className="eb-nav" aria-label="الأقسام">
-          {PRIMARY_SECTIONS.map(s => section(s.id, s.label, s.items.map(id => navButton(id))))}
+          {arrangeSections(navLayout, PRIMARY_SECTIONS).map(s => section(s.id, s.label, s.items.map(id => navButton(id))))}
           {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
           {examItems.length > 0 && section("exams", EXAM_SECTION_LABEL, (
             <div className="eb-nav-group" role="group" aria-label={EXAM_BANK_GROUP_LABEL}>
@@ -262,6 +276,24 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           {content}
         </main>
       </div>
+      {/* Tadris+ P8-B2a — the phone's bottom bar (owner decision §19.31): «لوحة المتابعة» and the teacher's first destinations, in their
+          order and within their access, then «المزيد» for the full menu. CSS shows it on a phone only; the sidebar is unchanged. */}
+      {bottomItems.length > 0 && (
+        <nav className="eb-bottom-bar" aria-label="التنقل السريع">
+          {bottomItems.map(id => {
+            const Icon = ICONS[id];
+            return (
+              <button key={id} type="button" className={"eb-bottom-link" + (id === active ? " is-active" : "")} aria-current={id === active ? "page" : undefined} onClick={() => navigate(id)}>
+                <Icon size={22} /><span className="eb-bottom-label">{BOTTOM_LABELS[id] || NAV_LABELS[id]}</span>
+              </button>
+            );
+          })}
+          <button ref={moreButtonRef} type="button" className="eb-bottom-link eb-bottom-more" aria-expanded={drawerOpen} aria-controls="eb-sidebar" onClick={() => openDrawer("more")}>
+            <IconMenu size={22} /><span className="eb-bottom-label">المزيد</span>
+          </button>
+        </nav>
+      )}
     </div>
+    </TeacherAccessContext.Provider>
   );
 }

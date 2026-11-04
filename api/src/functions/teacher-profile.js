@@ -1,6 +1,8 @@
 // Teacher SELF profile — builder-authenticated, always the token subject (never a body-supplied teacher id):
 //   GET  /api/teacher-profile                → { ok, profile }
-//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName" | "setDashboardLayout" | "setAppearance", ... }
+//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName" | "setDashboardLayout" | "setNavLayout" | "setAppearance", ... }
+//   Tadris+ P8-B2a — GET also answers `navLayout` (the teacher's order of the sidebar, or null); «setNavLayout» { order, hidden } needs
+//   appearance.layout.choose, like «setDashboardLayout».
 //   Tadris+ P8-A1 — GET also answers `appearance` { theme, palette, density } and `appearanceChoosable`; «setAppearance» stores the
 //   registered values only, each part needing its capability (appearance.theme / palette / density.choose). Presentation only.
 //   Tadris+ P7-A2 — GET also answers `dashboardLayout` (the teacher's arrangement of the «اليوم» cards, or null) and
@@ -18,7 +20,7 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { recordAuditEvent } = require("../lib/audit-log");
 const { ProfileImageError } = require("../lib/profile-image");
 const { photoRecord, publishProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
-const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile, validateDashboardLayout, dashboardLayoutOf, APPEARANCE, validateAppearance, appearanceOf } = require("../lib/teacher-profile");
+const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile, validateDashboardLayout, dashboardLayoutOf, validateNavLayout, navLayoutOf, APPEARANCE, validateAppearance, appearanceOf } = require("../lib/teacher-profile");
 const { sessionGrants } = require("../lib/access/session-grants");   // Tadris+ P7-A2
 const LAYOUT_CAPABILITY = "appearance.layout.choose";
 const { appearanceAllowed, allowedValues } = require("../lib/appearance-registry");   // Tadris+ P8-A2 — the owner's restriction
@@ -70,7 +72,7 @@ async function handler(request, deps = {}, obs = null) {
       // P8-A2: the owner's restriction (applied with the capabilities, enforce only): what may be chosen, and a stored value the owner
       // no longer allows reads back as the default (nothing is deleted).
       const restriction = grants.ok ? grants.appearance : null;
-      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc), dashboardLayout: dashboardLayoutOf(doc), layoutChoosable: grants.ok && grants.has(LAYOUT_CAPABILITY), appearance: appearanceOf(doc, restriction), appearanceChoosable, appearanceAllowed: allowedValues(restriction) } };
+      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc), dashboardLayout: dashboardLayoutOf(doc), navLayout: navLayoutOf(doc), layoutChoosable: grants.ok && grants.has(LAYOUT_CAPABILITY), appearance: appearanceOf(doc, restriction), appearanceChoosable, appearanceAllowed: allowedValues(restriction) } };
     }
     if (isPhotoRoute) return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };
 
@@ -102,6 +104,21 @@ async function handler(request, deps = {}, obs = null) {
         const updated = await mutateProfile(container, sub, deps, doc => { doc.appearance = { ...(doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {}), dashboardLayout: v.layout }; });
         await rec(container, { actor: sub, action: "teacher.profile.setDashboardLayout", targetType: "teacher", targetId: sub, details: { order: v.layout.order.length, hidden: v.layout.hidden.length } });
         return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated), dashboardLayout: dashboardLayoutOf(updated) } };
+      }
+      if (action === "setNavLayout") {   // Tadris+ P8-B2a — the sidebar's order; the same capability as the «اليوم» arrangement
+        const grants = await sessionGrants(actor.user, { ...deps, container }, obs);
+        if (!grants.ok) return grants.response;
+        if (!grants.has(LAYOUT_CAPABILITY)) return { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "ترتيب القائمة غير مفعّل لحسابك.", capability: LAYOUT_CAPABILITY } };
+        const v = validateNavLayout(body?.layout);
+        if (!v.ok) return { status: 400, jsonBody: { ok: false, code: "NAV_LAYOUT_INVALID", error: v.error } };
+        const empty = !v.layout.order.length && !v.layout.hidden.length;   // the default order is stored as the field's absence
+        const updated = await mutateProfile(container, sub, deps, doc => {
+          const next = { ...(doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {}) };
+          if (empty) delete next.navLayout; else next.navLayout = v.layout;
+          doc.appearance = next;
+        });
+        await rec(container, { actor: sub, action: "teacher.profile.setNavLayout", targetType: "teacher", targetId: sub, details: { order: v.layout.order.length, hidden: v.layout.hidden.length } });
+        return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated), navLayout: navLayoutOf(updated) } };
       }
       if (action === "setAppearance") {   // Tadris+ P8-A1 — { appearance: { theme?, palette?, density? } }; «default» = the field removed
         const v = validateAppearance(body?.appearance);

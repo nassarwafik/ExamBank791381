@@ -9,3 +9,10 @@
 .eb-teacher-appearance-dot[data-swatch="ocean"] { background: var(--eb-swatch-ocean); }
 .eb-teacher-appearance-dot[data-swatch="forest"] { background: var(--eb-swatch-forest); }
 .eb-teacher-appearance-dot[data-swatch="sand"] { background: var(--eb-swatch-sand); }
+
+/* Tadris+ P8-B2a — «ترتيب القائمة» */
+.eb-nav-order-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--eb-space-2); }
+.eb-nav-order-row { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); min-height: 44px; border-block-end: 1px solid var(--eb-border); }
+.eb-nav-order-show { display: inline-flex; align-items: center; gap: var(--eb-space-2); }
+.eb-nav-order-moves { display: inline-flex; gap: var(--eb-space-1); }
+.eb-nav-order-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin-block-start: var(--eb-space-3); }
