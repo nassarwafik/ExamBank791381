@@ -92,8 +92,9 @@ async function handler(request, deps = {}, obs = null) {
     for (const name of window) {
       const stored = await dl(container, name);
       if (!stored) continue;
-      // Phase 21G.0 — teacher tenancy: a teacher reads only the record of their own actions.
-      if (tenant && String(stored.actor || "") !== tenant) continue;
+      // Phase 21G.0 — teacher tenancy: a teacher reads only the record of their own actions — and, Tadris+ P7-B1 (D14), the events
+      // about them that they did not perform (`forTeacher`: the platform's administration read one of their students' conversations).
+      if (tenant && String(stored.actor || "") !== tenant && String(stored.forTeacher || "") !== tenant) continue;
       const ev = toPublicAuditEvent(stored, eventIdFromName(name));
       if (matchesFilters(ev, filters)) events.push(ev);
       if (events.length >= limit) break;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { IconWarning } from "../icons";
+import OwnerConversation from "./OwnerConversation";   // Tadris+ P7-B1 (D14)
 import {
   ownerClassesApi, ownerStudentTransferApi, ownerTeachersApi, type ApiResult, type ManagedTeacher, type OwnerClass, type OwnerRosterStudent, type StudentTransferPreview
 } from "./ownerApi";
@@ -21,6 +22,7 @@ export default function OwnerClassRoster({ token, classId, className, ownerAccou
   const [error, setError] = useState("");
   const [nonce, setNonce] = useState(0);
   const [moving, setMoving] = useState<OwnerRosterStudent | null>(null);
+  const [reading, setReading] = useState<OwnerRosterStudent | null>(null);   // P7-B1 — D14
 
   useEffect(() => {
     let live = true;
@@ -39,6 +41,8 @@ export default function OwnerClassRoster({ token, classId, className, ownerAccou
             <li key={st.userId} aria-label={st.displayName}>
               <bdi>{st.displayName}</bdi> · <span dir="ltr">{st.identityNumber}</span>{st.archived ? " · مؤرشف" : ""}{" "}
               {moving?.userId === st.userId ? null : <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setMoving(st)}>نقل إلى معلم آخر</button>}
+              {reading?.userId === st.userId ? null : <>{" "}<button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setReading(st)}>الاطلاع على المحادثة</button></>}
+              {reading?.userId === st.userId && <OwnerConversation token={token} studentId={st.userId} studentName={st.displayName} busy={busy} send={send} onClose={() => setReading(null)} />}
               {moving?.userId === st.userId && (
                 <StudentTransfer token={token} student={st} fromClassId={classId} ownerAccountId={ownerAccountId} busy={busy} send={send}
                   onCancel={() => setMoving(null)} onDone={text => { setMoving(null); setNonce(n => n + 1); onChanged(text); }} />

@@ -41,6 +41,10 @@ const {
 // Phase 6D: the stream/summary helpers moved (unchanged) into the shared lib so the unified notification center reuses
 // the SAME message unread authority instead of re-implementing it.
 const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } = require("../lib/student-notifications");
+// Tadris+ P7-B1 — the messaging service follows the access of the student's teacher (lib/access/student-services.js): a teacher
+// without messages.inbox.read (while the owner enforces access) has no messaging for their students — every read and write here is
+// refused (403 SERVICE_NOT_AVAILABLE; 503 when it cannot be decided). Nothing stored is changed or deleted.
+const { requireStudentService } = require("../lib/access/student-services");
 
 const CLASS_PREFIX = "platform/classes/";
 const CLASS_ARCHIVED = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -71,6 +75,8 @@ async function handle(request, deps = {}, obs = null) {
     const container = sess.container, student = sess.student;
     const studentId = String(student.userId || "");
     if (!isSafeId(studentId)) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
+    const serviceDenial = await requireStudentService(container, student, "messages", deps, obs);   // P7-B1
+    if (serviceDenial) return serviceDenial;
     const classroom = await currentClassroom(container, student, dl);
     const state = sendState(classroom);
     const streams = studentStreams(studentId, classroom ? String(student.classId) : "");

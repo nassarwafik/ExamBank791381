@@ -557,7 +557,7 @@ describe("P1-A owner login and session", () => {
 describe("P1-A boundaries", () => {
   const FN = path.join(import.meta.dirname, "../src/functions");
   it("no teacher or student route touches the owner's storage prefixes", () => {
-    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-classes.js", "owner-library.js"];   // P2-A2: the owner's teacher management; P3-A: teacher capabilities; P4-C: school identities; P4-D: the handoff to the owner's teacher account; P5-B2: a teacher's classes; P6-D: each teacher's exam bank
+    const owners = ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-classes.js", "owner-library.js", "owner-conversations.js"];   // P7-B1: D14, one conversation for a written reason; P2-A2: the owner's teacher management; P3-A: teacher capabilities; P4-C: school identities; P4-D: the handoff to the owner's teacher account; P5-B2: a teacher's classes; P6-D: each teacher's exam bank
     for (const f of readdirSync(FN).filter(n => n.endsWith(".js") && !owners.includes(n))) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/platform\/(accounts|sessions\/owners|owner\/|owner-audit)/);
@@ -567,7 +567,7 @@ describe("P1-A boundaries", () => {
     }
   });
   it("the owner routes never accept a teacher session and never call the teacher login", () => {
-    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-classes.js", "owner-library.js"]) {
+    for (const f of ["owner-bootstrap.js", "owner-login.js", "owner-session.js", "owner-teachers.js", "owner-access.js", "owner-schools.js", "owner-handoff.js", "owner-classes.js", "owner-library.js", "owner-conversations.js"]) {
       const src = readFileSync(path.join(FN, f), "utf8");
       expect(src, f).not.toMatch(/requireBuilderAuth|validateBuilderCredentials|requireStudentAuth|requireTeacherSession/);
     }

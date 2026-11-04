@@ -16,6 +16,9 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { isSafeId } = require("../lib/message-store");
 const { notificationContext, unifiedSummary, unifiedView, resolveOwnEvent } = require("../lib/notification-center");
+// Tadris+ P7-B1 — no messaging from the student's teacher → no message count or item here (the events stay). A service check that
+// cannot be decided counts as «no messaging» (fail closed: the bell still works).
+const { studentServices } = require("../lib/access/student-services");
 const { markEventPositionRead } = require("../lib/notification-events");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -35,12 +38,16 @@ async function handler(request, deps = {}, obs = null) {
     const container = sess.container, student = sess.student;
     if (!isSafeId(String(student.userId || ""))) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const classroom = await currentClassroom(container, student, dl);
-    const ctx = await notificationContext(container, student, classroom, deps);
+    let messages = false;
+    try { messages = (await studentServices(container, student, deps, process.env, { classroom })).messages; } catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
+    const ctx = await notificationContext(container, student, classroom, deps, { messages });
 
     if (request.method === "GET") {
       const view = new URL(request.url).searchParams.get("view");
-      if (view === "unread") return { status: 200, jsonBody: { ok: true, ...(await unifiedSummary(container, ctx, deps)) } };
-      return { status: 200, jsonBody: { ok: true, ...(await unifiedView(container, ctx, deps)) } };
+      // P7-B1 — `services`: what the portal offers (the messaging entry and its badge only when the teacher offers messaging).
+      const services = { messages };
+      if (view === "unread") return { status: 200, jsonBody: { ok: true, ...(await unifiedSummary(container, ctx, deps)), services } };
+      return { status: 200, jsonBody: { ok: true, ...(await unifiedView(container, ctx, deps)), services } };
     }
 
     if (request.method !== "POST") return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };

@@ -111,9 +111,9 @@ describe("12E-A notification center — bounds unchanged", () => {
     for (let i = 0; i < 15; i++) { ctx.setJson(AP + "v" + i + ".json", asg("v" + i)); await classEvent("v" + i, 1); }
     const { r } = await measure("notifications");
     expect(r.jsonBody.items.length).toBe(CENTER_LIMIT);
-    expect(Object.keys(r.jsonBody).sort()).toEqual(["bell", "events", "items", "messages", "ok"]);
+    expect(Object.keys(r.jsonBody).sort()).toEqual(["bell", "events", "items", "messages", "ok", "services"]);   // Tadris+ P7-B1 adds services
     const u = await measure("unread");
-    expect(Object.keys(u.r.jsonBody).sort()).toEqual(["bell", "events", "messages", "ok"]);
+    expect(Object.keys(u.r.jsonBody).sort()).toEqual(["bell", "events", "messages", "ok", "services"]);   // Tadris+ P7-B1 adds services
     for (const k of ["readCost", "read_cost", "debug", "metrics"]) expect(JSON.stringify(r.jsonBody)).not.toContain(k);
   });
 });

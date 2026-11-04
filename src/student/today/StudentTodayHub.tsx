@@ -18,7 +18,8 @@ type Props = {
   busy: boolean;
   onContinue: (item: TodayContinue) => void;
   messagesUnread: { total: number; capped: boolean };
-  onOpenMessages: () => void;
+  /** Tadris+ P7-B1 — absent when the student's teacher offers no messaging: the messages chip is not shown. */
+  onOpenMessages?: () => void;
   progress: TodayProgress;
   onOpenProgress: () => void;
   /** The empty state's action («المهام والواجبات» — the full list). */
@@ -56,11 +57,11 @@ export default function StudentTodayHub({ continueItem, busy, onContinue, messag
         </div>
       )}
       <ul className="eb-sp-today-strip" aria-label="رسائلك وتقدمك">
-        <li className={"eb-sp-today-chip is-messages" + (unread ? " has-unread" : "")}>
+        {onOpenMessages && <li className={"eb-sp-today-chip is-messages" + (unread ? " has-unread" : "")}>
           <IconMail size={18} aria-hidden="true" />
           <span className="eb-sp-today-chip-text">{unread ? "لديك " + unread + " رسائل غير مقروءة من المعلم" : "لا رسائل جديدة من المعلم"}</span>
           <button type="button" className="eb-button is-quiet is-small eb-sp-today-chip-action" onClick={onOpenMessages}>افتح رسائل المعلم</button>
-        </li>
+        </li>}
         <li className="eb-sp-today-chip is-progress">
           <IconSparkles size={18} aria-hidden="true" />
           <span className="eb-sp-today-chip-text">{progressText || "تقدمك يظهر هنا بعد أول نشاط"}</span>

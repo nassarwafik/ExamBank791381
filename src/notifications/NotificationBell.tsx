@@ -30,7 +30,8 @@ export type NotificationCenterProps = {
   error: string;
   onOpenChange?: (open: boolean) => void;
   onSelect: (item: NotificationItem) => void;
-  onOpenMessages: () => void;
+  /** Tadris+ P7-B1 — absent when the student's teacher offers no messaging (no «فتح الرسائل»). */
+  onOpenMessages?: () => void;
   onRetry?: () => void;
 };
 
@@ -124,7 +125,7 @@ export default function NotificationBell({ counts, items, loading, error, onOpen
           <>
             <header className="eb-notif-head">
               <h2 id={titleId} className="eb-notif-title">الإشعارات</h2>
-              <button type="button" className="eb-notif-head-action" onClick={() => { setOpenState(false); onOpenMessages(); }}>فتح الرسائل</button>
+              {onOpenMessages && <button type="button" className="eb-notif-head-action" onClick={() => { setOpenState(false); onOpenMessages(); }}>فتح الرسائل</button>}
             </header>
 
             {(loading || pending) && <p className="eb-notif-status" role="status">{items ? "جارٍ تحديث الإشعارات..." : "جارٍ تحميل الإشعارات..."}</p>}

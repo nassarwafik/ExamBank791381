@@ -275,3 +275,11 @@ export const ownerStudentTransferApi = {
   transfer: (token: string, userId: string, fromClassId: string, toClassId: string, reason: string) =>
     call<{ ok: true; ledger: { transferId: string; complete: boolean } }>("/api/owner-classes/student-transfer", { method: "POST", token, body: { userId, fromClassId, toClassId, reason } })
 };
+
+// Tadris+ P7-B1 — owner decision D14: ONE conversation, read only, for a written reason (each opening needs its own reason and a
+// recent second-factor check, and is recorded in the owner's audit log and in the teacher's activity log).
+export type OwnerConversationMessage = { messageId: string; kind: string; senderRole: string; senderDisplayName: string; body: string; createdAt: string; deleted?: boolean; editedAt?: string };
+export const ownerConversationsApi = {
+  open: (token: string, studentId: string, reason: string, before?: string) =>
+    call<{ ok: true; student: { userId: string; displayName: string }; messages: OwnerConversationMessage[]; hasMore: boolean }>("/api/owner-conversations/open", { method: "POST", token, body: { studentId, reason, ...(before ? { before } : {}) } })
+};
