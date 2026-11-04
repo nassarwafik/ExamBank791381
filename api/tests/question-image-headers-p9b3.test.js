@@ -47,6 +47,16 @@ describe("P9-B3 /api/question-image never renders a stored non-image as the app"
       expect(header(r, "x-content-type-options")).toBe("nosniff");
     }
   });
+  // Review Fix 1 — the import pipelines keep the type the source file declared (html-extract / docx-extract / the bank builder), so
+  // real, already stored images carry `image/jpg`, `image/bmp`, `image/x-icon` …: they must keep showing, under the same headers.
+  it("review fix 1: every real image type is still shown — image/jpg, image/bmp, image/x-icon, image/avif — with nosniff and the sandbox", async () => {
+    for (const type of ["image/jpg", "image/bmp", "image/x-icon", "image/vnd.microsoft.icon", "image/avif", "image/tiff", "image/pjpeg"]) {
+      const r = await serve(type, "bytes");
+      expect([type, header(r, "content-type"), header(r, "content-disposition")]).toEqual([type, type, null]);
+      expect(header(r, "x-content-type-options")).toBe("nosniff");
+      expect(header(r, "content-security-policy")).toMatch(/default-src 'none'.*sandbox/);
+    }
+  });
   it("a type with parameters or odd case is judged by its media type; an unknown or missing type is a download", async () => {
     expect(header(await serve("IMAGE/PNG; charset=binary"), "content-type")).toBe("image/png");
     for (const t of ["application/xhtml+xml", "text/xml", "application/octet-stream", "", "image/png\n<script>"]) {
@@ -72,8 +82,8 @@ describe("P9-B3 the bank import stores only an allow-listed image type", () => {
     }
     expect(uploads.every(u => u.type === "application/octet-stream" && /\.bin$/.test(u.name))).toBe(true);
   });
-  it("png / jpeg / gif / webp / svg keep their type and extension", async () => {
-    for (const [contentType, ext] of [["image/png", "png"], ["image/jpeg", "jpeg"], ["image/gif", "gif"], ["image/webp", "webp"], ["image/svg+xml", "svg"]]) {
+  it("every image type keeps its type and a safe extension (png / jpeg / gif / webp / svg by name, others from their subtype)", async () => {
+    for (const [contentType, ext] of [["image/png", "png"], ["image/jpeg", "jpeg"], ["image/gif", "gif"], ["image/webp", "webp"], ["image/svg+xml", "svg"], ["image/jpg", "jpg"], ["image/bmp", "bmp"], ["image/x-icon", "xicon"]]) {
       await uploadImageAssetForTests(container, "import-src", 1, { dataUrl: "data:" + contentType + ";base64,AAAA", contentType });
       expect(uploads.at(-1).type).toBe(contentType);
       expect(uploads.at(-1).name.endsWith("." + ext)).toBe(true);
