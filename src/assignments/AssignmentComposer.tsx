@@ -18,6 +18,8 @@ export type AssignmentComposerProps = {
   examLoading: boolean;
   // source
   sourceMode: SourceMode; onSourceMode: (m: SourceMode) => void;
+  /** Tadris+ P8-B1 — the sources the teacher's access allows (absent → both). */
+  sources?: { own: boolean; library: boolean };
   sourceExam: Exam | null; sourceCount: number;
   currentExam: Exam | null; hasCurrent: boolean;
   savedExams: SavedExam[]; examSource: string; onChooseExam: (value: string) => void;
@@ -94,8 +96,8 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
       <div className="eb-composer-section">
         <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>مصدر الواجب</h3>
         <div className="eb-segmented" role="group" aria-label="مصدر محتوى الواجب">
-          <button type="button" aria-pressed={p.sourceMode === "mine"} onClick={() => p.onSourceMode("mine")}>امتحاناتي</button>
-          <button type="button" aria-pressed={p.sourceMode === "library"} onClick={() => p.onSourceMode("library")}>مكتبة 791381</button>
+          {p.sources?.own !== false && <button type="button" aria-pressed={p.sourceMode === "mine"} onClick={() => p.onSourceMode("mine")}>امتحاناتي</button>}
+          {p.sources?.library !== false && <button type="button" aria-pressed={p.sourceMode === "library"} onClick={() => p.onSourceMode("library")}>مكتبة 791381</button>}
         </div>
         <div className="assignment-source-card eb-source-card">
           <div className="eb-source-card-text"><span>المحتوى المختار</span><strong>{p.sourceExam?.title || "لم يتم اختيار محتوى"}</strong><small>{p.sourceCount ? p.sourceCount + " سؤال" : "اختر محتوى الواجب"}{p.sourceExam?.totalMarks ? " · " + p.sourceExam.totalMarks + " علامة" : ""}</small></div>

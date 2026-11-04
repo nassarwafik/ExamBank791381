@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import Dialog from "../ui/Dialog";
 import StudentPhotoField from "./StudentPhotoField";
 import StatusBadge from "../ui/StatusBadge";
@@ -160,6 +161,7 @@ export function EditStudentDialog({ open, onClose, classes, firstName, familyNam
   /** Teacher-managed student photo (top of the dialog). Omitted → no photo section (older hosts). */
   photo?: { token: string; student: Student; onChange: (meta: ProfilePhotoMeta | null) => void };
 }) {
+  const can = useCan();
   const formId = "eb-edit-student-form";
   const identity = identityFieldProps(identityNumber, formId + "-identity-error");
   return (
@@ -171,8 +173,9 @@ export function EditStudentDialog({ open, onClose, classes, firstName, familyNam
         <label>الاسم<input value={firstName} onChange={e => onFirstName(e.target.value)} autoComplete="off" maxLength={60} /></label>
         <label>اسم العائلة<input value={familyName} onChange={e => onFamilyName(e.target.value)} autoComplete="off" maxLength={60} /></label>
         <label>رقم الهوية<input value={identityNumber} onChange={e => onIdentityNumber(e.target.value)} inputMode="numeric" maxLength={9} dir="ltr" autoComplete="off" {...identity.inputProps} /><IdentityError id={formId + "-identity-error"} show={identity.invalid} /></label>
-        <label>الصف<select value={classId} onChange={e => onClassId(e.target.value)}>{classes.map(c => <option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>
-        <PasswordField label="كلمة مرور جديدة" value={password} onChange={onPassword} placeholder="اتركها فارغة للإبقاء على الحالية" />
+        {/* Tadris+ P8-B1 — moving to another class needs students.student.move, a new password students.credential.reset */}
+        {can("students.student.move") && <label>الصف<select value={classId} onChange={e => onClassId(e.target.value)}>{classes.map(c => <option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>}
+        {can("students.credential.reset") && <PasswordField label="كلمة مرور جديدة" value={password} onChange={onPassword} placeholder="اتركها فارغة للإبقاء على الحالية" />}
       </form>
     </Dialog>
   );

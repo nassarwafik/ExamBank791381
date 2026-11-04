@@ -9,6 +9,8 @@ import ProgressBar from "../ui/ProgressBar";
 import { STATUS_LABEL, type AssignmentProgress, type Item } from "./types";
 import { timeLabel } from "./assignmentsHome";
 import { SAVE_LABELS } from "../teacher/saveLabels";
+import { useCan } from "../shell/teacherAccessContext";
+import { ASSIGNMENT_ACTION_CAPS, ASSIGNMENT_CREATE_CAPS } from "./assignmentCaps";
 
 // ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
 const toLocalInput = (iso: string) => { if (!iso) return ""; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -47,32 +49,40 @@ export type AssignmentActions = Pick<AssignmentListProps, "busy" | "onPublish" |
  * page offers every action the hidden row did. Each button calls the workspace's own handler; nothing is decided here.
  */
 export function AssignmentActionMenu({ item, actions: p }: { item: Item; actions: AssignmentActions }) {
+  const can = useCan();
   const archived = item.status === "archived";
+  // Tadris+ P8-B1 — only the actions the teacher's access allows (presentation only: the server refuses the others anyway); a
+  // menu with nothing in it is not shown.
+  const schedule = can(ASSIGNMENT_ACTION_CAPS.schedule), details = !!p.onEditDetails && can(ASSIGNMENT_ACTION_CAPS.details), purge = can(ASSIGNMENT_ACTION_CAPS.purge);
+  if (archived ? !schedule && !purge : !schedule && !details) return null;
   return (
     <ActionMenu label={"إجراءات الواجب " + item.title}>
       {archived ? <>
-        <button type="button" className="eb-menu-item" onClick={() => p.onRestore(item)} disabled={p.busy}><IconRestore size={16} />استعادة</button>
-        <hr className="eb-menu-sep" />
-        <button type="button" className="eb-menu-item is-danger assignment-delete-button" onClick={() => p.onPurge(item)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button>
+        {schedule && <button type="button" className="eb-menu-item" onClick={() => p.onRestore(item)} disabled={p.busy}><IconRestore size={16} />استعادة</button>}
+        {schedule && purge && <hr className="eb-menu-sep" />}
+        {purge && <button type="button" className="eb-menu-item is-danger assignment-delete-button" onClick={() => p.onPurge(item)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button>}
       </> : <>
-        {item.status !== "published"
+        {schedule && (item.status !== "published"
           ? <button type="button" className="eb-menu-item" onClick={() => p.onPublish(item)} disabled={p.busy}><IconUpload size={16} />نشر</button>
-          : <button type="button" className="eb-menu-item" onClick={() => p.onUnpublish(item)} disabled={p.busy}><IconEyeOff size={16} />إيقاف النشر</button>}
-        {p.onEditDetails && <button type="button" className="eb-menu-item" onClick={() => p.onEditDetails?.(item)} disabled={p.busy}><IconEdit size={16} />تعديل العنوان والتعليمات</button>}
-        <button type="button" className="eb-menu-item" onClick={() => p.onEditAttempts(item)} disabled={p.busy}><IconEdit size={16} />تعديل عدد المحاولات</button>
-        <button type="button" className="eb-menu-item assignment-timing-button" onClick={() => p.onEditTiming(item)} disabled={p.busy}><IconHistory size={16} />تعديل الوقت والموعد</button>
-        <hr className="eb-menu-sep" />
-        <button type="button" className="eb-menu-item" onClick={() => p.onArchive(item)} disabled={p.busy}><IconArchive size={16} />أرشفة</button>
+          : <button type="button" className="eb-menu-item" onClick={() => p.onUnpublish(item)} disabled={p.busy}><IconEyeOff size={16} />إيقاف النشر</button>)}
+        {details && <button type="button" className="eb-menu-item" onClick={() => p.onEditDetails?.(item)} disabled={p.busy}><IconEdit size={16} />تعديل العنوان والتعليمات</button>}
+        {schedule && <>
+          <button type="button" className="eb-menu-item" onClick={() => p.onEditAttempts(item)} disabled={p.busy}><IconEdit size={16} />تعديل عدد المحاولات</button>
+          <button type="button" className="eb-menu-item assignment-timing-button" onClick={() => p.onEditTiming(item)} disabled={p.busy}><IconHistory size={16} />تعديل الوقت والموعد</button>
+          <hr className="eb-menu-sep" />
+          <button type="button" className="eb-menu-item" onClick={() => p.onArchive(item)} disabled={p.busy}><IconArchive size={16} />أرشفة</button>
+        </>}
       </>}
     </ActionMenu>
   );
 }
 
 export default function AssignmentList(p: AssignmentListProps) {
+  const can = useCan();
   let empty: React.ReactNode = null;
   if (!p.loading && p.items.length === 0) {
     if (p.showArchived) empty = <EmptyState compact title="لا توجد واجبات مؤرشفة." description="الواجبات المؤرشفة تحتفظ بكل التسليمات والنتائج ويمكن استعادتها في أي وقت." />;
-    else if (!p.hasAnyInScope) empty = <EmptyState title="لا توجد واجبات بعد." description="أنشئ أول واجب من امتحان محفوظ أو من مكتبة 791381." action={<button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}>إنشاء واجب</button>} />;
+    else if (!p.hasAnyInScope) empty = <EmptyState title="لا توجد واجبات بعد." description="أنشئ أول واجب من امتحان محفوظ أو من مكتبة 791381." action={can(ASSIGNMENT_CREATE_CAPS) ? <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}>إنشاء واجب</button> : undefined} />;
     else empty = <EmptyState compact title="لا توجد واجبات مطابقة." description="جرّب كلمة بحث أخرى أو غيّر مرشح الصف." />;
   }
   return (

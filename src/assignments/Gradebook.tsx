@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { useCan } from "../shell/teacherAccessContext";
 import { studentsCount } from "./assignmentPage";
 import { formatRemaining } from "./attemptPolicy";
 import ActionMenu from "../ui/ActionMenu";
@@ -64,6 +65,10 @@ const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendin
 
 export default function Gradebook(p: GradebookProps) {
   const archived = p.assignment.status === "archived";
+  // Tadris+ P8-B1 — presentation only (the server enforces): the per-student actions, the selection's bulk actions and the reminders
+  // need assignments.schedule.set (every POST of /api/assignment-results); opening a student's marking and the coding retry need
+  // assignments.grading.grade. A teacher without them still reads the whole gradebook and exports it.
+  const can = useCan(), schedule = can("assignments.schedule.set"), grade = can("assignments.grading.grade");
   // Phase 17E-D — the assignment-level coding summary card (counts only, server-derived). "بحاجة لإعادة محاولة" = retryable / stale
   // targets whose automatic recovery is still running; "متأخر" = automatic recovery exhausted (needs a teacher retry).
   const cs = p.codingSummary, ct = p.codingTotals;
@@ -80,7 +85,7 @@ export default function Gradebook(p: GradebookProps) {
   const sortButton = (key: GradebookSort, label: string) => (
       <button type="button" className={"eb-th-sort" + (p.sort === key ? " is-active" : "")} onClick={() => p.onSort(key)}>{label}<IconSort size={14} aria-hidden="true" /></button>
   );
-  const sel = archived ? undefined : p.selection;
+  const sel = archived || !schedule ? undefined : p.selection;
   const visibleIds = p.rows.map(s => s.studentId);
   const selectedVisible = sel ? visibleIds.filter(id => sel.selected.has(id)).length : 0;
   const allBox = useRef<HTMLInputElement | null>(null);
@@ -100,8 +105,8 @@ export default function Gradebook(p: GradebookProps) {
         {p.onExportCsv && <button type="button" className="eb-button is-small gradebook-export" onClick={p.onExportCsv} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />تصدير سجل العلامات (CSV)</button>}
         {p.onExportXlsx && <button type="button" className="eb-button is-small gradebook-export-xlsx" onClick={p.onExportXlsx} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />تصدير سجل العلامات (Excel)</button>}
         {p.onPrint && <button type="button" className="eb-button is-small gradebook-print" onClick={p.onPrint} disabled={p.busy || p.totalRows === 0}><IconDownload size={16} aria-hidden="true" />طباعة سجل العلامات (PDF)</button>}
-        {p.onRemindAll && p.assignment.status === "published" && p.rows.some(s => !s.latestResult) && <button type="button" className="eb-button is-small gradebook-remind" onClick={p.onRemindAll} disabled={p.busy}><IconBell size={16} aria-hidden="true" />تذكير من لم يسلّم</button>}
-        {!archived && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
+        {schedule && p.onRemindAll && p.assignment.status === "published" && p.rows.some(s => !s.latestResult) && <button type="button" className="eb-button is-small gradebook-remind" onClick={p.onRemindAll} disabled={p.busy}><IconBell size={16} aria-hidden="true" />تذكير من لم يسلّم</button>}
+        {!archived && grade && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
       </div>
       {codingCard && <p className="eb-coding-summary" data-testid="coding-summary-card">
         <span>قيد التصحيح: {codingCard.pending}</span><span>بحاجة لإعادة محاولة: {codingCard.retry}</span><span>متأخر: {codingCard.delayed}</span>{codingCard.superseded > 0 && <span>علامة المعلم معتمدة: {codingCard.superseded}</span>}
@@ -157,8 +162,8 @@ export default function Gradebook(p: GradebookProps) {
                 <td data-label="المحاولات">{s.attemptsUsed}/{s.allowedAttempts}</td>
                 <td data-label="العلامة">{s.latestResult ? s.latestResult.score + "/" + s.latestResult.totalMarks + " (" + s.latestResult.percentage + "%)" : "—"}{late && !late.waived && (s.latestResult?.latePenalty || 0) > 0 && <small className="late-penalty-note">قبل الخصم: {s.latestResult!.rawScore}</small>}</td>
                 <td className="eb-col-actions"><div className="eb-row-actions">
-                  {s.latestResult && <button type="button" className={"eb-button is-small review-button" + (pending ? " is-primary" : "")} onClick={() => p.onReview(s)}>{pending ? "تصحيح الآن" : "عرض التصحيح"}</button>}
-                  {!archived && (
+                  {grade && s.latestResult && <button type="button" className={"eb-button is-small review-button" + (pending ? " is-primary" : "")} onClick={() => p.onReview(s)}>{pending ? "تصحيح الآن" : "عرض التصحيح"}</button>}
+                  {!archived && schedule && (
                     <ActionMenu label={"إجراءات " + s.studentName}>
                       <button type="button" className="eb-menu-item" onClick={() => p.onGrant(s)} disabled={p.busy}><IconPlus size={16} />منح محاولة إضافية</button>
                       <button type="button" className="eb-menu-item" onClick={() => p.onReopen(s)} disabled={p.busy || !!s.activeAttempt}><IconRestore size={16} />إعادة فتح للطالب</button>

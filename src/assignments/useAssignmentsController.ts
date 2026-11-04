@@ -15,6 +15,7 @@ import { homeKpis, timeFilterCounts, type TimeFilter } from "./assignmentsHome";
 import { studentsCount, type PageTab } from "./assignmentPage";
 import { copiesCount } from "./assignmentWizard";
 import { useAssignmentComposer } from "./useAssignmentComposer";
+import { useCan } from "../shell/teacherAccessContext";
 import { reviewNav, type ReviewTarget } from "./reviewNav";
 import { normalizeResultsRelease, type ResultsRelease } from "./resultsRelease";
 import { normalizeLatePolicy, type LatePolicy } from "./latePolicy";
@@ -86,7 +87,13 @@ export function useAssignmentsController({ token, classes, currentExam, onCopyLi
   // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status "archived" OR
   // active:false ⇒ archived), never the raw compatibility `active` flag.
   const active = useMemo(() => classes.filter(x => normalizeClassStatus(x) === "active"), [classes]);
-  const composer = useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder, setError, setNotice });
+  // Tadris+ P8-B1 — where an assignment's content may come from, by the teacher's access (presentation only; the server decides):
+  // «امتحاناتي» needs assignments.assignment.create; the list of saved exams is read only with examBuilder.exam.edit (a teacher
+  // without it was shown «تعذر تحميل الامتحانات المحفوظة» on every visit); the library needs examLibrary.item.view; copying a
+  // library exam into the builder needs the builder.
+  const can = useCan();
+  const sources = { own: can("assignments.assignment.create"), saved: can("examBuilder.exam.edit"), library: can("examLibrary.item.view") };
+  const composer = useAssignmentComposer({ api, current, active, onCopyLibraryExamToBuilder: can(["examBuilder.exam.edit", "examBuilder.exam.create"]) ? onCopyLibraryExamToBuilder : undefined, setError, setNotice, sources });
   // Phase 21G.2 — the list scope covers every class until the teacher picks one ("" = all classes).
   const effectiveFilter = filterClassId;
 

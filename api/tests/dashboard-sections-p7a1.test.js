@@ -203,6 +203,15 @@ describe("P7-A1 — analytics, AI analysis and reports", () => {
     expect(f.status).toBe(200);
     expect(f.jsonBody.projects).toEqual([]);
     expect(f.jsonBody.classes.length).toBeGreaterThan(0);
+    // Tadris+ P8-B1a — the filters say which report families open, so the Reports Center offers only those cards.
+    expect(f.jsonBody.available).toEqual({ academic: false, projects: false });
+  });
+
+  it("P8-B1a — reports filters, full-teaching / observe: every report family is available", async () => {
+    for (const ctx of [setup({ preset: "full-teaching", version: 2 }), setup({ mode: "observe" })]) {
+      const f = await reports(get(ctx, "/api/reports?type=filters"), ctx.deps);
+      expect([f.status, f.jsonBody.available]).toEqual([200, { academic: true, projects: true }]);
+    }
   });
 
   it("reports, full-teaching: the class report keeps its assignment figures", async () => {

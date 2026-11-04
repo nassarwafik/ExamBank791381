@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { useCan } from "../shell/teacherAccessContext";   // Tadris+ P8-B1
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
@@ -40,13 +41,14 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
   const materials = classLearningMaterials(classroom);
   const attachedIds = new Set(materials.map(m => m.courseId));
   const addable = (p.catalog || []).filter(c => !attachedIds.has(c.courseId));
-  const editable = Boolean(classroom) && p.classActive;
+  const can = useCan();   // Tadris+ P8-B1 — releasing modules / removing a course follow the teacher's access
+  const editable = Boolean(classroom) && p.classActive && can("learning.module.release");
   // Derived from the same class release state and catalog used by the existing controls.
   // Never infer publication from a catalog default or an unassigned module.
   const summary = classLearningReleaseSummary(materials, p.catalog);
 
   // The add affordance exists only while there is something left to add (catalog loaded, a course not yet attached).
-  const addButton = classroom && p.classActive && p.catalog && addable.length > 0 ? (
+  const addButton = classroom && p.classActive && p.catalog && addable.length > 0 && can("learning.module.release") ? (
     <button type="button" className="eb-button is-primary is-small" onClick={() => setAddOpen(true)} disabled={p.busy}>
       <IconPlus size={16} aria-hidden="true" />إضافة مادة تعليمية
     </button>
@@ -112,6 +114,7 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
   classroom: Classroom; entry: ClassLearningMaterial; course: LearningCatalogCourse | null; editable: boolean; busy: boolean;
   onToggleModule: ClassLearningMaterialsPanelProps["onToggleModule"]; onRemoveCourse: ClassLearningMaterialsPanelProps["onRemoveCourse"];
 }) {
+  const can = useCan();
   const headingId = "eb-lm-class-course-" + entry.courseId;
   const modules = course ? course.modules.slice().sort((a, b) => a.order - b.order) : [];
   const visible = new Set(entry.visibleModuleIds);
@@ -148,7 +151,7 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
         )}
         {editable && (
           <div className="eb-lm-class-card-foot">
-            <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => onRemoveCourse(classroom, entry.courseId)}>إزالة المادة من الصف</button>
+            {can("learning.course.assign") && <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => onRemoveCourse(classroom, entry.courseId)}>إزالة المادة من الصف</button>}
           </div>
         )}
       </article>

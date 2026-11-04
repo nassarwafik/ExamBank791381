@@ -18,7 +18,8 @@ const ReportView = lazy(lazyWithRetry(() => import("./ReportViews"), "teacher-re
 
 type ClassOpt = { classId: string; name: string; schoolYear: string; status: string; programCodes: string[] };
 type ProjectOpt = { projectCode: string; title: string };
-type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
+/** Tadris+ P8-B1 — `available`: the report families the server will open for this teacher (absent on an older API → every card). */
+type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[]; available?: { academic: boolean; projects: boolean } };
 
 // Phase R-2 — the custom range is applied after a short pause (no request for a half-typed date) and only when valid.
 const CUSTOM_RANGE_DELAY_MS = 400;
@@ -132,18 +133,28 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
     if (el && el.isConnected) el.focus();
   }, [active]);
 
-  const visibleGroups = GROUPS.filter(g => category === "all" || g.key === category);
+  // Tadris+ P8-B1 — a report the server would refuse this teacher is not offered: the assessments report needs the academic part,
+  // the project reports the project part. The class / student summaries always open (their withheld parts are left out there).
+  const offered = (type: ReportType) => {
+    const a = opts?.available;
+    if (!a) return true;
+    if (type === "assignments") return a.academic;
+    if (["project", "track", "ready", "delayed", "timeline"].includes(type)) return a.projects;
+    return true;
+  };
+  const visibleGroups = GROUPS.filter(g => (category === "all" || g.key === category) && REPORT_CARDS.some(c => c.category === g.key && offered(c.type)));
+  const visibleCategories = CATEGORIES.filter(c => c.key === "all" || REPORT_CARDS.some(r => r.category === c.key && offered(r.type)));
 
   if (!active) {
     return (
       <section className="eb-reports-hub" aria-label="مركز التقارير">
         <div className="eb-chip-group eb-reports-categories" role="group" aria-label="تصنيف التقارير">
-          {CATEGORIES.map(c => <button key={c.key} type="button" className="eb-chip-button" aria-pressed={category === c.key} onClick={() => setCategory(c.key)}>{c.label}</button>)}
+          {visibleCategories.map(c => <button key={c.key} type="button" className="eb-chip-button" aria-pressed={category === c.key} onClick={() => setCategory(c.key)}>{c.label}</button>)}
         </div>
         {optsError && <ErrorState text={optsError} onRetry={() => setOptsNonce(n => n + 1)} />}
         {optsLoading && !opts && <LoadingState text="جارٍ تحميل بيانات التقارير..." />}
         {visibleGroups.map(g => {
-          const cards = REPORT_CARDS.filter(c => c.category === g.key);
+          const cards = REPORT_CARDS.filter(c => c.category === g.key && offered(c.type));
           const titleId = "eb-reports-group-" + g.key;
           return (
             <section key={g.key} className="eb-reports-group" aria-labelledby={titleId}>
