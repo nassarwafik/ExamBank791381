@@ -195,6 +195,34 @@ describe("P5-A the teacher's entitlement (resources.courses) narrows — while E
     expect((await calls(ctx).content("teacher")).status).toBe(401);                                  // the teacher is out
   });
 
+  // Tadris+ P9-B1 — acceptance test #4 for the ENTITLEMENT (the catalog's version is «history stays» above): narrowing a teacher's
+  // courses hides the course and changes nothing stored but the account's own revision pointer; widening it again gives back the
+  // student's progress exactly as it was.
+  it("acceptance test #4: narrowing the teacher's courses hides B, keeps every stored byte (progress, notes, class), and widening restores it", async () => {
+    const ctx = setup({ courses: [A, B] });
+    const c = calls(ctx);
+    expect((await c.progressPost(B)).status).toBe(200);                                              // the student studied B
+    const progressBefore = (await c.progressGet(B)).jsonBody;
+    const accountName = teacherAccountName(SARA);
+    const wide = ctx.mem.getJson(accountName).accessRevisionId;
+    const stored = () => JSON.stringify(ctx.mem.names("platform/").filter(n => n !== accountName && !n.startsWith("platform/access/revisions/")).sort().map(n => [n, ctx.mem.getJson(n)]));
+    const before = stored();
+    const { revision: narrow } = buildRevision({ accountId: SARA, presetId: "full-teaching", presetVersion: 1, resources: { courses: [A] }, createdBy: "owner:x" });
+    ctx.mem.setJson(revisionName(narrow.revisionId), narrow);
+    ctx.mem.setJson(accountName, { ...ctx.mem.getJson(accountName), accessRevisionId: narrow.revisionId });
+    for (const r of [await c.content("teacher", B), await c.content("student", B), await c.progressPost(B)]) expect([r.status, r.jsonBody.code]).toEqual([403, "COURSE_NOT_AVAILABLE"]);
+    expect((await c.materials()).jsonBody.materials.map(m => m.courseId)).toEqual([A]);
+    expect((await c.content("student")).status).toBe(200);                                          // A is untouched
+    expect((await c.progressGet(B)).jsonBody).toEqual(progressBefore);                              // their history stays readable
+    expect((await c.notesGet(B)).status).toBe(200);
+    expect(stored()).toBe(before);                                                                  // nothing stored changed
+    expect(ctx.mem.getJson("platform/classes/c1.json").learningMaterials.map(m => m.courseId)).toEqual([A, B]);   // the release stays
+    ctx.mem.setJson(accountName, { ...ctx.mem.getJson(accountName), accessRevisionId: wide });   // widened again (the owner's rollback)
+    expect((await c.content("student", B)).status).toBe(200);
+    expect((await c.progressGet(B)).jsonBody).toEqual(progressBefore);
+    expect(stored()).toBe(before);
+  });
+
   it("pre-tenancy data (a class with no owner) follows the imported workspace (t_legacy)", async () => {
     const ctx = setup({ mode: "enforce" });
     ctx.mem.setJson("platform/classes/c1.json", { ...ctx.mem.getJson("platform/classes/c1.json"), ownerId: undefined });

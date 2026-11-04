@@ -143,3 +143,44 @@ describe("P6-C library assignments are built by the server (owner decision D8)",
     expect((await create(legacy, { examSnapshot: full() })).status).toBe(200);                  // before enforcement: unchanged
   });
 });
+
+// Tadris+ P9-B1 — acceptance test #5: the library TEMPLATE is never changed by using it. The library ships with the deployment
+// (read-only, cached deep-frozen); assigning it, editing the assignment, and changing the copy a teacher received (what the builder
+// does with it) leave the file's bytes, its ETag and what the next teacher receives exactly as they were.
+describe("P9-B1 acceptance test #5 — the library template stays unchanged", () => {
+  const { readFileSync, readdirSync } = cjs("node:fs");
+  const { createHash } = cjs("node:crypto");
+  const { join } = cjs("node:path");
+  const DATA = join(import.meta.dirname, "..", "src", "data", "exam-library");
+  const fileHash = () => createHash("sha256").update(readFileSync(join(DATA, "items", ITEM + ".json"))).digest("hex");
+
+  it("assign by reference, edit the assignment, change the received copy: the item, its ETag and the next assignment are unchanged", async () => {
+    const ctx = setup({ preset: "full-teaching" });
+    const hash = fileHash();
+    const first = await getItem(ctx);
+    const original = JSON.stringify(first.jsonBody.item);
+    const a1 = await create(ctx, { libraryRef: { itemId: ITEM } });
+    const snapshot1 = JSON.stringify(stored(ctx, a1).examSnapshot);
+    const upd = await assignments({ method: "POST", url: "http://x/assignments", params: {}, headers: hdr(ctx.headers), json: async () => ({ action: "updateDetails", assignmentId: a1.jsonBody.assignment.assignmentId, title: "عنوان معدّل", instructions: "تعليمات معدّلة" }) }, ctx.deps);
+    expect(upd.status).toBe(200);
+    // the builder edits what it received: try every way an in-process caller could change it
+    const copy = first.jsonBody.item;
+    try { copy.title = "معدّل"; copy.sections[0].questions[0].text = "معدّل"; copy.sections[0].questions.push({ id: "x" }); } catch { /* frozen: refused */ }
+    const again = await getItem(ctx);
+    expect(JSON.stringify(again.jsonBody.item)).toBe(original);
+    expect(again.headers.ETag).toBe(first.headers.ETag);
+    const a2 = await create(ctx, { libraryRef: { itemId: ITEM } });
+    expect(JSON.stringify(stored(ctx, a2).examSnapshot)).toBe(snapshot1);                          // the next assignment: the same template
+    expect(stored(ctx, a1).title).toBe("عنوان معدّل");
+    expect(fileHash()).toBe(hash);                                                                 // the shipped file, byte for byte
+  });
+
+  it("no API module can write the library: no route or library module writes files, and the one asset writer is a build-script helper", () => {
+    const SRC = join(import.meta.dirname, "..", "src");
+    const files = [...readdirSync(join(SRC, "functions")).map(f => join(SRC, "functions", f)), ...readdirSync(join(SRC, "lib"), { recursive: true }).map(f => join(SRC, "lib", f))]
+      .filter(f => f.endsWith(".js") && !f.endsWith(".test.js"));
+    const writers = files.filter(f => /\bfs\.(writeFile|writeFileSync|appendFile|appendFileSync|createWriteStream|rename|renameSync|rm|rmSync|unlink|unlinkSync)\b/.test(readFileSync(f, "utf8")));
+    expect(writers.map(f => f.slice(SRC.length + 1))).toEqual(["lib/library-assets.js"]);
+    expect(files.filter(f => /require\([^)]*library-assets/.test(readFileSync(f, "utf8")))).toEqual([]);
+  });
+});

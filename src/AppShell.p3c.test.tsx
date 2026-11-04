@@ -68,3 +68,33 @@ describe("P3-C App — the teacher shell follows the sign-in access", () => {
     expect(calls.filter(u => u.includes("/api/platform-session"))).toHaveLength(1);
   });
 });
+
+// Tadris+ P9-B1 — blueprint acceptance test #13 at the App level. The app has no URL routes (the destination is state), so a
+// «reload» is the app starting again from the session kept in this tab: the authoritative /api/platform-session probe — not the
+// stale stored metadata — decides what is offered, before any teacher page is shown.
+describe("P9-B1 acceptance test #13 — a reload re-applies the restrictions from the server", () => {
+  const restore = () => { sessionStorage.setItem("examBankBuilderToken", "teacher-token"); sessionStorage.setItem("examBankSessionRole", "teacher"); sessionStorage.setItem("examBankSessionDisplayName", "المعلم"); };
+  it("enforced learning-only after a reload: the probe's access applies — the builder is «غير مفعّلة», not offered, its data never requested", async () => {
+    restore();
+    const calls = installFetch(undefined, { status: "ok", enforced: true, capabilities: LEARNING_ONLY, source: "revision", preset: { id: "learning-only", version: 1 } });
+    render(<App />);
+    await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
+    // the tab kept the builder as its place: it is answered «غير مفعّلة», never the builder page
+    await waitFor(() => expect(screen.getByText("هذه الأداة غير مفعّلة لحسابك")).toBeTruthy());
+    expect(document.querySelector(".exam-builder, [data-builder-root]")).toBeNull();
+    expect(within(sidebar()).queryByRole("button", { name: "باني الامتحان" })).toBeNull();
+    expect(within(sidebar()).getByRole("button", { name: "المواد التعليمية" })).toBeTruthy();
+    expect(calls.filter(u => u.includes("/api/platform-session"))).toHaveLength(1);
+    expect(calls.some(u => u.includes("/api/platform-login"))).toBe(false);                        // no new sign-in: the kept session
+    expect(calls.some(u => /\/api\/(saved-exams|templates|assessment-presets|exam-question-availability|bank-summary)/.test(u))).toBe(false);   // no builder data
+    fireEvent.click(screen.getByRole("button", { name: "الذهاب إلى «لوحة المتابعة»" }));
+    await waitFor(() => expect(h1()).toBe("لوحة المتابعة"));
+  });
+  it("the same reload when the access cannot be read: nothing is offered (fail closed), never the stored «teacher» everything", async () => {
+    restore();
+    installFetch(undefined, { status: "unavailable", capabilities: [] });
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("تعذر تحميل صلاحياتك"));
+    expect(within(sidebar()).queryByRole("button", { name: "باني الامتحان" })).toBeNull();
+  });
+});
