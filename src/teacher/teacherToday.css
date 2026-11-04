@@ -77,3 +77,10 @@
 .eb-today-row-item.has-action, .eb-today-row.has-action{ flex-wrap:wrap; }
 .eb-today-row-item.has-action .eb-today-row-action{ flex:1 1 170px; }
 .eb-today-row-secondary{ margin-inline-start:auto; }
+
+/* Tadris+ P7-A2 — «ترتيب البطاقات» */
+.eb-today-arrange-entry { display: flex; justify-content: flex-end; margin-block: var(--eb-space-1); }
+.eb-today-arrange { border: 1px solid var(--eb-line); border-radius: var(--eb-r-sm); padding: var(--eb-space-3); margin-block: var(--eb-space-2); background: var(--eb-surface); }
+.eb-today-arrange-list { display: grid; gap: var(--eb-space-1); padding-inline-start: var(--eb-space-5); margin-block: var(--eb-space-2); }
+.eb-today-arrange-list li { display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; }
+.eb-today-arrange-actions { display: flex; gap: var(--eb-space-2); flex-wrap: wrap; }

@@ -10,7 +10,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 // may not see is not read: the class / student report answers it null / [] and names it in `withheld`; a report that is nothing
 // but that part (assessments, project reports) is refused (403 CAPABILITY_DENIED).
 const { sessionGrants } = require("../lib/access/session-grants");
-const { ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
+const { ASSIGNMENTS_CAPABILITY, widgetsOf, widgetDenied } = require("../lib/dashboard-widgets");
 const PROJECTS_CAPABILITY = "projects.tracker.view";
 const notGranted = capability => ({ status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذه الأداة غير مفعّلة لحسابك. تواصل مع إدارة المنصة.", capability } });
 const { getContainer, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
@@ -97,7 +97,11 @@ async function handler(request, deps = {}, obs = null) {
       if (capabilityDenial) return capabilityDenial;
       const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
       if (!grants.ok) return grants.response;
-      const academic = grants.has(ASSIGNMENTS_CAPABILITY), projectsAllowed = grants.has(PROJECTS_CAPABILITY);
+      // Tadris+ P7-A2 — and the owner's widget choice: the academic part is «ملخص العلامات», the project part «تقييم المشاريع» (a widget
+      // left out for this teacher is not read through a report either — blueprint acceptance test 7).
+      const academicWidget = widgetsOf("analytics", grants).includes("scores.overview"), projectsWidget = widgetsOf("today", grants).includes("projects.evaluation");
+      const academic = grants.has(ASSIGNMENTS_CAPABILITY) && academicWidget, projectsAllowed = grants.has(PROJECTS_CAPABILITY) && projectsWidget;
+      const refuse = (capability, widgetId) => (grants.has(capability) ? widgetDenied(widgetId) : notGranted(capability));
       const withheld = [...(academic ? [] : ["academic"]), ...(projectsAllowed ? [] : ["projects"])];
       const container = deps.container || (deps.getContainer || getContainer)();
       const reads = requestReads(container);
@@ -212,7 +216,7 @@ async function handler(request, deps = {}, obs = null) {
       // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a
       // single report covers every published assessment (no duplicate exam/assignment reports).
       if (type === "assignments") {
-        if (!academic) return notGranted(ASSIGNMENTS_CAPABILITY);
+        if (!academic) return refuse(ASSIGNMENTS_CAPABILITY, "scores.overview");
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
@@ -247,7 +251,7 @@ async function handler(request, deps = {}, obs = null) {
 
       // ---------- Project reports (generic) ----------
       if (["project", "track", "ready", "delayed", "timeline"].includes(type)) {
-        if (!projectsAllowed) return notGranted(PROJECTS_CAPABILITY);
+        if (!projectsAllowed) return refuse(PROJECTS_CAPABILITY, "projects.evaluation");
         if (!isSupportedProject(projectCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);

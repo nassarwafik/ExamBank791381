@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
   ownerTeachersApi, ownerAccessApi, currentAccessOf, type ApiResult, type ManagedTeacher, type AccessPreset, type AccessCapability, type AccessMode,
-  type AccessHistoryEntry, type EffectiveAccess, type CatalogCourse, type TeacherAction, type TeacherProfileFields
+  type AccessHistoryEntry, type EffectiveAccess, type CatalogCourse, type DashboardWidget, type TeacherAction, type TeacherProfileFields
 } from "./ownerApi";
 import Tabs from "../ui/Tabs";
 import TrialControls from "./TrialControls";
@@ -12,6 +12,7 @@ import DiffView from "../ui/DiffView";
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import OwnerTeacherClasses from "./OwnerTeacherClasses";   // Tadris+ P5-B2
+import WidgetChoice from "./WidgetChoice";                 // Tadris+ P7-A2
 import OwnerTeacherExams from "./OwnerTeacherExams";   // Tadris+ P6-D
 import {
   STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
@@ -32,11 +33,11 @@ import {
  */
 
 type TabId = "profile" | "classes" | "exams" | "access" | "history" | "security";
-type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null };
+type Catalog = { presets: AccessPreset[]; capabilities: AccessCapability[]; mode: AccessMode; courses: CatalogCourse[] | null; widgets: DashboardWidget[] | null };
 type History = { currentRevisionId: string | null; entries: AccessHistoryEntry[]; truncated: boolean };
 type Loaded = { teacher: ManagedTeacher; others: ManagedTeacher[]; catalog: Catalog; history: History; effective: EffectiveAccess };
 type State = { kind: "loading" } | { kind: "error"; message: string } | { kind: "missing" } | ({ kind: "ready" } & Loaded);
-export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string; courses?: string[] };
+export type AccessDraft = { presetId: string; presetVersion: number; grants: string[]; denies: string[]; reason: string; courses?: string[]; widgets?: string[] };
 
 const presetKey = (p: { id: string; version: number } | null | undefined) => (p ? p.id + "@" + p.version : "");
 
@@ -56,7 +57,7 @@ async function loadAll(token: string, accountId: string): Promise<{ state: State
     signedOut: false,
     state: {
       kind: "ready", teacher, others: list.data.teachers.filter(t => t.accountId !== accountId),
-      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode, courses: courseCatalog.ok ? courseCatalog.data.courses : null },
+      catalog: { presets: catalog.data.presets, capabilities: catalog.data.capabilities, mode: catalog.data.mode, courses: courseCatalog.ok ? courseCatalog.data.courses : null, widgets: Array.isArray(catalog.data.widgets) ? catalog.data.widgets : null },
       history: { currentRevisionId: history.data.currentRevisionId, entries: history.data.entries, truncated: history.data.truncated },
       effective: { accountStatus: effective.data.accountStatus, mode: effective.data.mode, enforced: effective.data.enforced, access: effective.data.access }
     }
@@ -255,6 +256,11 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const initialCourses = head && head.valid && Array.isArray(head.courses) ? head.courses : null;
   const [courseMode, setCourseMode] = useState<"all" | "some">(initialCourses ? "some" : "all");
   const [chosenCourses, setChosenCourses] = useState<Set<string>>(() => new Set(initialCourses || []));
+  // P7-A2 — the dashboard widgets, the same rule: «all» = every widget (nothing sent); «some» = only the checked ones. Untouched, the
+  // current choice is sent back unchanged (a capability change never resets it).
+  const initialWidgets = head && head.valid && Array.isArray(head.widgets) ? head.widgets : null;
+  const [widgetMode, setWidgetMode] = useState<"all" | "some">(initialWidgets ? "some" : "all");
+  const [chosenWidgets, setChosenWidgets] = useState<Set<string>>(() => new Set(initialWidgets || []));
   const [key, setKey] = useState(initialKey);
   const [chosen, setChosen] = useState<Set<string>>(initialSet);
   const [reason, setReason] = useState("");
@@ -278,6 +284,8 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     setChosen(new Set(r.data.capabilities));
     setCourseMode(Array.isArray(r.data.courses) ? "some" : "all");
     setChosenCourses(new Set(Array.isArray(r.data.courses) ? r.data.courses : []));
+    setWidgetMode(Array.isArray(r.data.widgets) ? "some" : "all");
+    setChosenWidgets(new Set(Array.isArray(r.data.widgets) ? r.data.widgets : []));
     if (source) setReason("نسخ من " + source.username);
     setCopyNote({ error: false, text: "حُمّلت صلاحيات " + (source ? source.displayName : "") + ". راجعها ثم احفظ." });
   }
@@ -292,7 +300,8 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   }, [catalog.capabilities]);
   const { grants, denies } = picked ? grantsAndDenies(picked.capabilities, chosen) : { grants: [], denies: [] };
   const coursesUnchanged = courseMode === (initialCourses ? "some" : "all") && (courseMode === "all" || (chosenCourses.size === (initialCourses || []).length && (initialCourses || []).every(c => chosenCourses.has(c))));
-  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged);
+  const widgetsUnchanged = widgetMode === (initialWidgets ? "some" : "all") && (widgetMode === "all" || (chosenWidgets.size === (initialWidgets || []).length && (initialWidgets || []).every(w => chosenWidgets.has(w))));
+  const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged && widgetsUnchanged);
   const reachable = modules.filter(m => m.caps.some(c => chosen.has(c.id)));
 
   return (
@@ -365,6 +374,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
               {courseMode === "some" && chosenCourses.size === 0 && <p className="eb-owner-hint">لم تختر أي مقرر: لن يتمكن المعلم وطلابه من أي مقرر أثناء التطبيق.</p>}
             </fieldset>
           )}
+          {catalog.widgets && <WidgetChoice teacherId={teacher.accountId} widgets={catalog.widgets} chosenCapabilities={chosen} mode={widgetMode} onMode={setWidgetMode} chosen={chosenWidgets} onChosen={setChosenWidgets} />}
           <label className="auth-field"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
             <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} /></div>
           </label>
@@ -373,7 +383,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
       <p className="eb-owner-hint">{modeNote(effective)}</p>
       <div className="eb-owner-actions">
         <button type="button" className="auth-submit" disabled={busy || !picked || unchanged}
-          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}) })}>حفظ الصلاحيات</button>
+          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}), ...(widgetMode === "some" ? { widgets: [...chosenWidgets].sort() } : {}) })}>حفظ الصلاحيات</button>
       </div>
     </div>
   );
@@ -387,7 +397,7 @@ function AccessHistory({ history, effective, presets, labels, busy, onRestore }:
   const presetName = (p: AccessHistoryEntry["preset"]) => (p ? presets.find(x => x.id === p.id && x.version === p.version)?.label || p.id : "—");
   const columns: DataColumn<AccessHistoryEntry>[] = [
     { id: "date", header: "التاريخ", cell: e => <bdi>{formatDate(e.createdAt) || "—"}</bdi> },
-    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}{Array.isArray(e.courses) ? <small> · {e.courses.length} مقرر فقط</small> : null}</> },
+    { id: "preset", header: "الحزمة", cell: e => <>{presetName(e.preset)}{(e.grants.length || e.denies.length) ? <small> (+{e.grants.length} / −{e.denies.length})</small> : null}{Array.isArray(e.courses) ? <small> · {e.courses.length} مقرر فقط</small> : null}{Array.isArray(e.widgets) ? <small> · {e.widgets.length} بطاقة فقط</small> : null}</> },
     { id: "reason", header: "السبب", cell: e => e.reason || "—" },
     { id: "by", header: "بواسطة", cell: e => actorLabel(e.createdBy) },
     { id: "state", header: "الحالة", cell: e => (!e.valid ? <span className="eb-owner-status eb-owner-status--suspended">غير صالحة</span> : e.revisionId === history.currentRevisionId ? <span className="eb-owner-status eb-owner-status--active">الحالية</span> : "—") },

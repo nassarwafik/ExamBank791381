@@ -296,7 +296,10 @@ function buildInsights({ mode, className, performanceChange, trendCount, topicAn
 // Tadris+ P7-A1 — `assignments: false` (a teacher without assignments.assignment.view, while the owner enforces access): no
 // assignment document, folder or submission is listed or read, so every assignment-derived figure is empty BY CONSTRUCTION (no
 // submissions, no marks, no trend, no topics) and the follow-up / insights can only come from the class and student figures.
-async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0, tenant = null, assignments: withAssignments = true } = {}, deps = {}) {
+// Tadris+ P7-A2 — `shows(widgetId)`: the analytics widgets this teacher may see (capabilities AND the owner's widget entitlement). A
+// hidden widget's section is answered EMPTY, and the insights are built ONLY from the visible sections (an insight never quotes a
+// hidden topic, trend, follow-up or submission figure). Default: every widget.
+async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0, tenant = null, assignments: withAssignments = true, shows = () => true } = {}, deps = {}) {
   const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
   // Phase 8A — ONE authoritative analytics scope per request (validated below, once the users are loaded).
   const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
@@ -544,7 +547,12 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
 
   const neverLogged = scopedStudents.filter(student => !student.lastLoginAt).length;
   const scopeClassName = classMap.get(requestedClassId)?.name || "";
-  const insights = buildInsights({ mode, className: scopeClassName, performanceChange, trendCount: trendAverages.length, topicAnalytics, followUp, missing, pendingReview, neverLogged, student: mode === "student" ? studentSummaries[0] || null : null, academic: withAssignments });
+  const overviewShown = shows("scores.overview"), trendShown = shows("scores.trend"), topicsShown = shows("topics.performance"), followUpShown = shows("students.followUp");
+  const insights = !shows("insights") ? [] : buildInsights({
+    mode, className: scopeClassName, performanceChange: trendShown ? performanceChange : 0, trendCount: trendShown ? trendAverages.length : 0,
+    topicAnalytics: topicsShown ? topicAnalytics : [], followUp: followUpShown ? followUp : [], missing: overviewShown ? missing : 0, pendingReview: overviewShown ? pendingReview : 0,
+    neverLogged, student: mode === "student" && followUpShown ? studentSummaries[0] || null : null, academic: withAssignments
+  });
 
   // Phase 8A — the student view has ONE authority: in STUDENT mode the whole response is already that student's records,
   // so studentDetail is a projection of the SAME summary / trend / topics as the main KPIs (never a second computation).
@@ -572,7 +580,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     };
   }
 
-  return {
+  return withholdSections({
     generatedAt: new Date().toISOString(),
     scope: {
       mode,
@@ -622,7 +630,25 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
       .map(item => ({ userId: String(item.userId), displayName: studentName(item) }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "ar")),
     studentDetail
-  };
+  }, shows);
+}
+
+// Tadris+ P7-A2 — the sections of the widgets this teacher may not see, answered EMPTY in the same shape (an older client never
+// breaks). The class / student figures (classes, activeClasses, activeStudents, neverLogged, the picker roster) are not widgets.
+function withholdSections(r, shows) {
+  const out = { ...r, kpis: { ...r.kpis } };
+  if (!shows("scores.overview")) {
+    Object.assign(out.kpis, { publishedAssignments: 0, submissions: 0, expectedSubmissions: 0, missingSubmissions: 0, pendingReview: 0, lateSubmissions: 0, completionRate: 0, average: null, highest: null, lowest: null });
+    out.submissionStatus = { submitted: 0, missing: 0, pendingReview: 0, late: 0 };
+    out.gradeDistribution = r.gradeDistribution.map(b => ({ ...b, count: 0 }));
+    out.studentDetail = null;
+  }
+  if (!shows("scores.trend")) { out.assignmentTrend = []; out.kpis.performanceChange = 0; if (out.studentDetail) out.studentDetail = { ...out.studentDetail, scoreTrend: [], trendDelta: 0, trend: "stable" }; }
+  if (!shows("topics.performance")) { out.topicAnalytics = []; if (out.studentDetail) out.studentDetail = { ...out.studentDetail, topicAnalytics: [] }; }
+  if (!shows("classes.comparison")) out.classComparison = [];
+  if (!shows("students.improvers")) out.topImprovers = [];
+  if (!shows("students.followUp")) { out.followUp = []; out.kpis.followUpStudents = 0; if (out.studentDetail) out.studentDetail = { ...out.studentDetail, needsFollowUp: false, reasons: [] }; }
+  return out;
 }
 
 module.exports = { computeTeacherAnalytics, AnalyticsScopeError, buildInsights, selectSubmissionNames, submissionPathAssignmentId, submissionFolder, submissionPath, round, average, trendDelta, trendLabel, missingAssignmentsPhrase };

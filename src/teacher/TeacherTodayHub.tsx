@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { IconMail, IconAssignments, IconStudents, IconReports, IconProjects, IconMedal, IconRefresh } from "../icons";
 import SectionHeader from "../ui/SectionHeader";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
@@ -8,6 +8,7 @@ import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "../projects/
 import { recentActivityTarget, type AssignmentDrillTarget } from "../assignments/drillTarget";
 import { count, spread, sinceText, untilText, exactTime, SUBMISSIONS, STUDENTS, STUDENTS_WORKING, STAGES, FROM_STUDENTS, MESSAGES } from "./todayFormat";
 import { useConfirm } from "../ui/useConfirm";
+import { ARRANGEABLE, arrangeSlots, parseLayout, type DashboardLayout } from "./todayLayout";   // Tadris+ P7-A2
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
@@ -67,6 +68,8 @@ type Props = {
 };
 
 export const TEACHER_TODAY_REFRESH_MS = 60000;
+
+
 const PREVIEW = 4;
 const two = (n: number) => String(n).padStart(2, "0");
 const fmt = (iso: string) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? "" : d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()) + " " + two(d.getHours()) + ":" + two(d.getMinutes()); };
@@ -199,6 +202,52 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction, sum
   );
 }
 
+/**
+ * Tadris+ P7-A2 — «ترتيب البطاقات»: the teacher orders and hides the cards the server serves to them (only those); saved in the
+ * teacher's profile. Presentation only — what the server computes and sends does not change.
+ */
+function ArrangePanel({ token, layout, available, onClose, onSaved }: { token: string; layout: DashboardLayout | null; available: typeof ARRANGEABLE; onClose: () => void; onSaved: (l: DashboardLayout) => void }) {
+  const initial = arrangeSlots(available.map(w => [w.id, w] as [string, typeof w]), layout ? { order: layout.order, hidden: [] } : null).map(([, w]) => w);
+  const [items, setItems] = useState(initial);
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(layout ? layout.hidden : []));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const move = (i: number, d: -1 | 1) => setItems(list => { const n = [...list]; const j = i + d; if (j < 0 || j >= n.length) return list; [n[i], n[j]] = [n[j], n[i]]; return n; });
+  async function save(next: DashboardLayout) {
+    setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/teacher-profile", { method: "POST", headers: { "Content-Type": "application/json", "x-builder-token": token, Authorization: "Bearer " + token }, body: JSON.stringify({ action: "setDashboardLayout", layout: next }) });
+      const j = await r.json().catch(() => null) as { ok?: boolean; error?: string; dashboardLayout?: unknown } | null;
+      if (!r.ok || !j || !j.ok) throw new Error((j && j.error) || "تعذر حفظ الترتيب.");
+      onSaved(parseLayout(j.dashboardLayout) || next);
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ الترتيب."); }
+    finally { setBusy(false); }
+  }
+  return (
+    <section className="eb-today-arrange" aria-labelledby="eb-today-arrange-title">
+      <h3 id="eb-today-arrange-title" className="eb-subheading">ترتيب البطاقات</h3>
+      <p className="eb-muted">رتّب البطاقات واختر ما تراه منها. يبقى الترتيب في حسابك على كل أجهزتك.</p>
+      <ol className="eb-today-arrange-list">
+        {items.map((w, i) => (
+          <li key={w.id}>
+            <label className="eb-field-inline"><input type="checkbox" checked={!hidden.has(w.id)} onChange={e => setHidden(h => { const n = new Set(h); if (e.target.checked) n.delete(w.id); else n.add(w.id); return n; })} />{w.label}</label>
+            {w.grid && <>
+              <button type="button" className="eb-button is-quiet is-small" aria-label={"تقديم " + w.label} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button type="button" className="eb-button is-quiet is-small" aria-label={"تأخير " + w.label} disabled={i === items.length - 1 || !items[i + 1]?.grid} onClick={() => move(i, 1)}>↓</button>
+            </>}
+          </li>
+        ))}
+      </ol>
+      {error && <p className="platform-error" role="alert">{error}</p>}
+      <div className="eb-today-arrange-actions">
+        <button type="button" className="eb-button is-small is-primary" disabled={busy} onClick={() => void save({ order: items.map(w => w.id), hidden: items.map(w => w.id).filter(id => hidden.has(id)) })}>حفظ الترتيب</button>
+        <button type="button" className="eb-button is-small" disabled={busy} onClick={() => void save({ order: [], hidden: [] })}>الترتيب الافتراضي</button>
+        <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={onClose}>إلغاء</button>
+      </div>
+    </section>
+  );
+}
+
 export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent, onStartEvaluationQueue, onOpenAssignmentTarget, classId = "", refreshSignal = 0, embedded = false }: Props) {
   // Phase 21H.2 — the summary belongs to the scope it was read for: another class's figures are never shown under this one,
   // and a slower answer for an earlier scope never overwrites a newer one (gen).
@@ -232,6 +281,22 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
   const scrollToFeed = () => { const el = document.getElementById("eb-achievements-title"); el?.scrollIntoView?.({ block: "start" }); el?.focus?.(); };
   // Tadris+ P7-A1 — only the widgets the server served (an older payload without `widgets` → every card, as before).
   const shows = (id: string) => !data?.widgets || data.widgets.includes(id);
+  // Tadris+ P7-A2 — the teacher's arrangement (read once per session token; a failed read keeps the default order).
+  const [layout, setLayout] = useState<DashboardLayout | null>(null);
+  const [layoutChoosable, setLayoutChoosable] = useState(false);
+  const [arranging, setArranging] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void fetch("/api/teacher-profile", { headers: { "x-builder-token": token, Authorization: "Bearer " + token } })
+      .then(r => (r.ok ? r.json() : null)).catch(() => null)
+      .then((j: { ok?: boolean; dashboardLayout?: unknown; layoutChoosable?: unknown } | null) => {
+        if (!live || !j || !j.ok) return;
+        setLayout(parseLayout(j.dashboardLayout)); setLayoutChoosable(j.layoutChoosable === true);
+      });
+    return () => { live = false; };
+  }, [token]);
+  const arrange = (slots: [string, ReactNode][]) => arrangeSlots(slots.filter(([, node]) => !!node), layout).map(([id, node], i) => <Fragment key={id + ":" + i}>{node}</Fragment>);
+  const recentHidden = !!layout && layout.hidden.includes("activity.recent");
   const anyAssignments = ["grading.pending", "assignments.deadlines", "assignments.notStarted", "results.unreleased", "attempts.live", "activity.recent"].some(shows);
   const a = data?.attention;
   const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
@@ -285,47 +350,51 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
       {loading && !data && <p className="eb-muted" role="status">جارٍ تحميل ملخص اليوم...</p>}
       {error && !data && <div className="platform-error eb-today-error" role="alert">{error} <button type="button" className="eb-notif-retry" onClick={() => void load()}>إعادة المحاولة</button></div>}
       {a && quiet && <p className="eb-attention-empty eb-today-quiet" role="status">لا توجد عناصر تحتاج تدخلك الآن.</p>}
+      {a && layoutChoosable && !arranging && <div className="eb-today-arrange-entry"><button type="button" className="eb-button is-quiet is-small" onClick={() => setArranging(true)}>ترتيب البطاقات</button></div>}
+      {a && arranging && <ArrangePanel token={token} layout={layout} available={ARRANGEABLE.filter(w => shows(w.id))} onClose={() => setArranging(false)} onSaved={l => { setLayout(l); setArranging(false); }} />}
       {notice && <p className={"eb-today-notice" + (notice.error ? " is-error" : "")} role={notice.error ? "alert" : "status"}>{notice.text}</p>}
       {a && (
         // Phase 21H.3 — cards in priority order: grading, deadlines, who has not started, results to publish, messages,
         // projects, then the live / idle attempts and what opens soon.
         <div className="eb-attention-grid eb-today-grid">
-          {shows("grading.pending") && <Card id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
+          {arrange([
+          ["grading.pending", shows("grading.pending") && <Card key="slot1" id="eb-today-pending" title="بانتظار التصحيح" count={a.pendingReview.count} tone="info" empty="لا تسليمات تنتظر تصحيحًا يدويًا." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={spread(a.pendingReview.count, SUBMISSIONS, a.pendingReview.assignments)}
             items={a.pendingReview.items.map(i => ({ key: i.assignmentId, label: i.title, meta: count(i.pendingReview, SUBMISSIONS) + " · " + i.className,
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />}
-          {due && shows("assignments.deadlines") && <Card id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "pendingReview" }), ariaLabel: "افتح واجب " + i.title + " — " + pendingText(i.pendingReview) } : {}) }))} />],
+          ["assignments.deadlines", due && shows("assignments.deadlines") && <Card key="slot2" id="eb-today-due" title="يُغلق خلال 48 ساعة" count={due.count} tone="attention" empty="لا واجبات يقترب موعد إغلاقها." actionLabel="الواجبات" onAction={() => go("assignments")}
             items={due.items.map(i => ({ key: "due:" + i.assignmentId, label: i.title, meta: "يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) + " · لم يسلّم " + i.notSubmitted + " من " + i.expected + " · " + i.className,
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — يُغلق " + (untilText(i.dueAt, now) || fmt(i.dueAt)) } : {}),
-              ...(openAssignment && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />}
-          {shows("assignments.notStarted") && <Card id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment && i.notSubmitted > 0 ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
+          ["assignments.notStarted", shows("assignments.notStarted") && <Card key="slot3" id="eb-today-notstarted" title="لم يبدؤوا بعد" count={a.notStarted.count} tone="danger" empty="بدأ الجميع واجباتهم المفتوحة." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={spread(a.notStarted.count, STUDENTS, a.notStarted.assignments)}
             items={a.notStarted.items.map(i => ({ key: i.assignmentId, label: i.title, meta: "لم يبدأ " + i.notStarted + " من " + i.expected + " · " + i.className + (i.dueAt ? " · التسليم " + fmt(i.dueAt) : ""),
               ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "notSubmitted" }), ariaLabel: "افتح واجب " + i.title + " — " + notStartedText(i.notStarted) } : {}),
-              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />}
-          {unreleased && shows("results.unreleased") && <Card id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { action: remindAction(i.assignmentId, i.title) } : {}) }))} />],
+          ["results.unreleased", unreleased && shows("results.unreleased") && <Card key="slot4" id="eb-today-unreleased" title="نتائج بانتظار النشر" count={unreleased.count} tone="info" empty="لا نتائج تنتظر النشر." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary="اخترت نشر نتائج هذه الواجبات يدويًا؛ لا يرى الطلاب علاماتهم قبل أن تنشرها."
             items={unreleased.items.map(i => ({ key: "rel:" + i.assignmentId, label: i.title, meta: count(i.submitted, SUBMISSIONS) + " · " + i.className,
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " لنشر نتائجه" } : {}) }))} />}
-          {shows("messages.unread") && <article className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " لنشر نتائجه" } : {}) }))} />],
+          ["messages.unread", shows("messages.unread") && <article key="slot5" className={"eb-attention-card tone-" + (a.unreadMessages && a.unreadMessages.total > 0 ? "info" : "neutral")} aria-labelledby="eb-today-messages">
             <h3 id="eb-today-messages" className="eb-attention-title"><span>رسائل غير مقروءة</span><span className="eb-attention-count">{a.unreadMessages ? (a.unreadMessages.capped ? "99+" : a.unreadMessages.total) : "—"}</span></h3>
             {a.unreadMessages === null ? <p className="eb-attention-partial">تعذر قراءة الرسائل الآن؛ بقية الملخص محدّثة.</p>
               : a.unreadMessages.total === 0 ? <p className="eb-attention-empty">لا رسائل جديدة من الطلاب.</p>
               : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : count(a.unreadMessages.total, MESSAGES)} من طلابك بانتظار الرد.</p>}
             <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
-          </article>}
-          {projectEval !== undefined && shows("projects.evaluation") && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
-          {shows("attempts.live") && <Card id="eb-today-active" title="محاولات نشطة الآن" count={a.activeAttempts.count} tone="attention" empty="لا يعمل أي طالب على محاولة الآن." actionLabel="الواجبات" onAction={() => go("assignments")}
+          </article>],
+          ["projects.evaluation", projectEval !== undefined && shows("projects.evaluation") && <ProjectEvaluationCard key="slot6" data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />],
+          ["attempts.live", shows("attempts.live") && <Card key="slot7" id="eb-today-active" title="محاولات نشطة الآن" count={a.activeAttempts.count} tone="attention" empty="لا يعمل أي طالب على محاولة الآن." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={count(a.activeAttempts.count, STUDENTS_WORKING)}
             items={a.activeAttempts.items.map(i => ({ key: i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — " + attemptText(i.status) } : {}) }))} />}
-          {stale && shows("attempts.live") && <Card id="eb-today-stale" title="محاولات مفتوحة بلا نشاط" count={stale.count} tone="attention" empty="لا توجد محاولات مفتوحة متروكة." actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — " + attemptText(i.status) } : {}) }))} />],
+          ["attempts.live", stale && shows("attempts.live") && <Card key="slot8" id="eb-today-stale" title="محاولات مفتوحة بلا نشاط" count={stale.count} tone="attention" empty="لا توجد محاولات مفتوحة متروكة." actionLabel="الواجبات" onAction={() => go("assignments")}
             summary={"لم يعمل عليها أصحابها منذ أكثر من 15 دقيقة، أو أوقفتها مؤقتًا. افتح المحاولة لتمديدها أو إنهائها من سجل العلامات."}
             items={stale.items.map(i => ({ key: "stale:" + i.assignmentId + ":" + i.studentId, label: i.studentName, meta: i.title + " · " + i.className + (activityText(i, now) ? " · " + activityText(i, now) : ""),
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — محاولة مفتوحة بلا نشاط" } : {}) }))} />}
-          {opening && opening.count > 0 && shows("assignments.deadlines") && <Card id="eb-today-opening" title="تفتح خلال 24 ساعة" count={opening.count} tone="info" empty="" actionLabel="الواجبات" onAction={() => go("assignments")}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "active", studentId: i.studentId }), ariaLabel: "افتح واجب " + i.title + " للطالب " + i.studentName + " — محاولة مفتوحة بلا نشاط" } : {}) }))} />],
+          ["assignments.deadlines", opening && opening.count > 0 && shows("assignments.deadlines") && <Card key="slot9" id="eb-today-opening" title="تفتح خلال 24 ساعة" count={opening.count} tone="info" empty="" actionLabel="الواجبات" onAction={() => go("assignments")}
             items={opening.items.map(i => ({ key: "open:" + i.assignmentId, label: i.title, meta: "تفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) + " · " + count(i.expected, STUDENTS) + " · " + i.className,
-              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " — يفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) } : {}) }))} />}
+              ...(openAssignment ? { onOpen: openAssignment({ assignmentId: i.assignmentId, mode: "assignment" }), ariaLabel: "افتح واجب " + i.title + " — يفتح " + (untilText(i.openAt, now) || fmt(i.openAt)) } : {}) }))} />],
+          ])}
         </div>
       )}
       {confirmDialog}
@@ -337,7 +406,7 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
         {shows("projects.evaluation") && <button type="button" className="eb-button is-small eb-today-action" onClick={() => go("projects")}><span className="eb-today-action-icon" aria-hidden="true"><IconProjects size={18} /></span>المشاريع</button>}
         <button type="button" className="eb-button is-small eb-today-action" onClick={scrollToFeed}><span className="eb-today-action-icon" aria-hidden="true"><IconMedal size={18} /></span>تقدير طالب</button>
       </div>
-      {data && shows("activity.recent") && data.recent.length > 0 && (
+      {data && shows("activity.recent") && !recentHidden && data.recent.length > 0 && (
         <section className="eb-today-recent" aria-labelledby="eb-today-recent-title">
           <h3 id="eb-today-recent-title" className="eb-subheading">آخر نشاط في صفوفك</h3>
           <ul className="eb-today-recent-list">

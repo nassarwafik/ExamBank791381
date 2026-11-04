@@ -10,6 +10,8 @@ const ACCESS_REFUSAL = Object.freeze({
   RESOURCES_NOT_SUPPORTED: "تخصيص هذا النوع من الموارد يأتي في مرحلة لاحقة.",
   COURSE_UNKNOWN: "مقرر غير معروف.",
   COURSE_DUPLICATE: "مقرر مكرر في القائمة.",
+  WIDGET_UNKNOWN: "بطاقة لوحة غير معروفة.",                      // Tadris+ P7-A2
+  WIDGET_DUPLICATE: "بطاقة لوحة مكررة في القائمة.",
   REVISION_MALFORMED: "طلب غير صالح.",
   ACCESS_PRESET_MISSING: "الإضافات والحجب تحتاج حزمة أساسية."
 });

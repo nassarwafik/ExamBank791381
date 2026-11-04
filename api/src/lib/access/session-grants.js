@@ -15,10 +15,13 @@ const { isCapability } = require("./capabilities");
 //   the mode or the revision cannot be read                  → { ok: false, response: 503 ACCESS_UNAVAILABLE } (fail closed: never
 //                                                              a full answer, never a silently narrowed one)
 //
-// → { ok: true, narrowed: boolean, has(capability) } | { ok: false, response }
+// Tadris+ P7-A2 — `widgets`: the revision's widget entitlement (`resources.widgets`), applied with the capabilities (enforce only):
+// null = every widget; a Set = only those.
+//
+// → { ok: true, narrowed: boolean, has(capability), widgets: Set | null } | { ok: false, response }
 
 const known = c => { if (!isCapability(c)) throw new Error("sessionGrants(): unknown capability " + String(c)); return c; };
-const EVERYTHING = Object.freeze({ ok: true, narrowed: false, has: c => !!known(c) });
+const EVERYTHING = Object.freeze({ ok: true, narrowed: false, has: c => !!known(c), widgets: null });
 
 async function sessionGrants(user, deps = {}, obs = null) {
   if (!user || user.am !== "managed") return EVERYTHING;
@@ -37,7 +40,8 @@ async function sessionGrants(user, deps = {}, obs = null) {
   const held = new Set(access.capabilities);
   return Object.freeze({
     ok: true, narrowed: true,
-    has: c => held.has(known(c))
+    has: c => held.has(known(c)),
+    widgets: Array.isArray(access.widgets) ? new Set(access.widgets) : null
   });
 }
 

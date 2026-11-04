@@ -5,7 +5,9 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 // Tadris+ P7-A1 — the assignment-derived sections need assignments.assignment.view as well (reports.widget.view alone is the class /
 // student view of a learning-only teacher); without it the assignment sources are not read at all (lib/dashboard-widgets.js).
 const { sessionGrants } = require("../lib/access/session-grants");
-const { visibleWidgets, ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
+const { widgetsOf } = require("../lib/dashboard-widgets");
+// Tadris+ P7-A2 — the analytics widgets that read the assignments; none visible (capability or the owner's choice) → none is read.
+const ASSIGNMENT_WIDGETS = ["scores.overview", "scores.trend", "classes.comparison", "topics.performance", "students.improvers"];
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
@@ -28,6 +30,7 @@ async function handler(request, deps = {}, obs = null) {
       if (capabilityDenial) return capabilityDenial;
       const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
       if (!grants.ok) return grants.response;
+      const widgets = widgetsOf("analytics", grants), shows = id => widgets.includes(id);
 
       const url = new URL(request.url);
       const requestedClassId = String(url.searchParams.get("classId") || "").trim();
@@ -42,12 +45,13 @@ async function handler(request, deps = {}, obs = null) {
         fromMs,
         toMs,
         tenant: tenantOf(auth.user),
-        assignments: grants.has(ASSIGNMENTS_CAPABILITY)
+        assignments: ASSIGNMENT_WIDGETS.some(shows),
+        shows
       });
 
       return {
         status: 200,
-        jsonBody: { ok: true, ...result, widgets: visibleWidgets("analytics", grants.has) }
+        jsonBody: { ok: true, ...result, widgets }
       };
     } catch (e) {
       // Phase 8A: a rejected scope (student without class / unknown / not a member) is a safe, explicit client error.
