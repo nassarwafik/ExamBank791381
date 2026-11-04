@@ -16,6 +16,7 @@ import {
 } from "./bankQuestionModel";
 import "../bank-pro.css";
 import { SAVE_LABELS } from "../teacher/saveLabels";
+import { useCan } from "../shell/teacherAccessContext";
 
 /*
  * UX-6c — Exam Bank Management (بنك الامتحانات): the real destination behind the sidebar group.
@@ -49,6 +50,15 @@ const NO_ROWS: BankQuestionRow[] = [];
 
 export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpenSavedExam, onCopyLibraryExamToBuilder }: Props) {
   const [view, setView] = useState<View>("overview");
+  // Tadris+ P8-B1b — only the tools the teacher's access allows (presentation only; the server enforces every route). The saved
+  // exams are the builder's (GET needs examBuilder.exam.edit): without it they are not read — a teacher who may only view the bank
+  // was shown «تعذر تحميل الامتحانات المحفوظة» on arrival — and their section is not offered.
+  const can = useCan();
+  const may = {
+    builder: can(["examBuilder.exam.edit", "examBuilder.exam.create"]), saved: can("examBuilder.exam.edit"), save: can("examBuilder.exam.save"),
+    create: can("examBank.question.create"), edit: can("examBank.question.edit"), import: can("examBank.import.use"), library: can("examLibrary.item.view")
+  };
+  const views = VIEWS.filter(v => (v.key !== "exams" || may.saved) && (v.key !== "library" || may.library));
   const [rows, setRows] = useState<BankQuestionRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -81,10 +91,11 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
     fetchBank()
       .then(r => { if (seq === loadSeq.current) { setRows(r.questions || []); setLoadError(""); } })
       .catch(e => { if (seq === loadSeq.current) setLoadError(e instanceof Error ? e.message : "تعذر تحميل بنك الأسئلة."); });
+    if (!may.saved) return;
     fetchSavedExams()
       .then(r => { setSavedExams(r.exams || []); setSavedError(""); })
       .catch(e => { setSavedExams([]); setSavedError(e instanceof Error ? e.message : "تعذر تحميل الامتحانات المحفوظة."); });
-  }, [fetchBank, fetchSavedExams]);
+  }, [fetchBank, fetchSavedExams, may.saved]);
   async function refreshBank() {                                              // user-initiated: shows the loading state
     const seq = ++loadSeq.current;
     setRefreshing(true); setLoadError("");
@@ -180,9 +191,9 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
 
   const primaryActions = (
     <div className="eb-bank-actions">
-      <button type="button" className="eb-button is-primary" onClick={onOpenBuilder}><IconBuilder size={16} aria-hidden="true" />إنشاء امتحان جديد</button>
-      <button type="button" className="eb-button" onClick={() => { setActionError(""); setEditor({ mode: "create" }); }}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button>
-      <button type="button" className="eb-button" onClick={onOpenImport}><IconUpload size={16} aria-hidden="true" />استيراد أسئلة</button>
+      {may.builder && <button type="button" className="eb-button is-primary" onClick={onOpenBuilder}><IconBuilder size={16} aria-hidden="true" />إنشاء امتحان جديد</button>}
+      {may.create && <button type="button" className="eb-button" onClick={() => { setActionError(""); setEditor({ mode: "create" }); }}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button>}
+      {may.import && <button type="button" className="eb-button" onClick={onOpenImport}><IconUpload size={16} aria-hidden="true" />استيراد أسئلة</button>}
     </div>
   );
 
@@ -190,7 +201,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
     <section className="eb-bank" aria-label="بنك الامتحانات">
       <p className="eb-bank-intro">إدارة أسئلة البنك، الامتحانات المحفوظة والمكتبة الرسمية من مكان واحد. الأسئلة الرسمية للقراءة فقط.</p>
       <div className="eb-segmented" role="group" aria-label="أقسام بنك الامتحانات">
-        {VIEWS.map(v => <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => void openView(v.key)}>{v.label}</button>)}
+        {views.map(v => <button key={v.key} type="button" aria-pressed={view === v.key} onClick={() => void openView(v.key)}>{v.label}</button>)}
       </div>
       {notice && <p className="eb-muted" role="status">{notice}</p>}
       {actionError && <p className="platform-error" role="alert">{actionError}</p>}
@@ -205,7 +216,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
               <StatCard label="عدد الأسئلة" value={summary.total} primary />
               <StatCard label="قابلة للتعديل" value={summary.editable} hint="مستوردة أو مضافة يدويًا" />
               <StatCard label="أسئلة رسمية" value={summary.official} hint="للقراءة فقط" />
-              <StatCard label="الامتحانات المحفوظة" value={savedExams === null ? "…" : savedExams.length} tone="info" />
+              {may.saved && <StatCard label="الامتحانات المحفوظة" value={savedExams === null ? "…" : savedExams.length} tone="info" />}
               <StatCard label="بانتظار التصنيف" value={summary.pendingClassification} tone={summary.pendingClassification > 0 ? "attention" : "neutral"} />
             </div>
             {summary.total > 0 && (
@@ -224,7 +235,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
       {view === "questions" && (
         <section aria-labelledby="eb-bank-questions-title">
           <SectionHeader level={2} id="eb-bank-questions-title" title="بنك الأسئلة" count={rows ? visible.length : undefined} description="بحث وتصفية محليان على القائمة المحمّلة. الأسئلة الرسمية تُعرض للقراءة فقط."
-            actions={<><button type="button" className="eb-button is-primary is-small" onClick={() => { setActionError(""); setEditor({ mode: "create" }); }}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button><button type="button" className="eb-button is-small" onClick={onOpenImport}><IconUpload size={16} aria-hidden="true" />استيراد</button><IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={() => void refreshBank()} /></>} />
+            actions={<>{may.create && <button type="button" className="eb-button is-primary is-small" onClick={() => { setActionError(""); setEditor({ mode: "create" }); }}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button>}{may.import && <button type="button" className="eb-button is-small" onClick={onOpenImport}><IconUpload size={16} aria-hidden="true" />استيراد</button>}<IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={() => void refreshBank()} /></>} />
           <h2 ref={questionsHeadingRef} tabIndex={-1} className="eb-visually-hidden">قائمة الأسئلة</h2>
           <div className="eb-bank-toolbar">
             <div className="eb-search-field student-search-field">
@@ -244,7 +255,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
           {loading && <p className="eb-muted" role="status">جارٍ تحميل بنك الأسئلة...</p>}
           {loadError && <p className="platform-error" role="alert">{loadError} <button type="button" className="eb-button is-small" onClick={() => void refreshBank()}>إعادة المحاولة</button></p>}
           {!loading && !loadError && list.length === 0 && (
-            <EmptyState title="لا توجد أسئلة في البنك بعد." description="أضف سؤالًا يدويًا أو استورد أسئلة من ملف." action={<><button type="button" className="eb-button is-primary is-small" onClick={() => setEditor({ mode: "create" })}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button></>} />
+            <EmptyState title="لا توجد أسئلة في البنك بعد." description="أضف سؤالًا يدويًا أو استورد أسئلة من ملف." action={may.create ? <button type="button" className="eb-button is-primary is-small" onClick={() => setEditor({ mode: "create" })}><IconPlus size={16} aria-hidden="true" />إضافة سؤال</button> : undefined} />
           )}
           {!loading && !loadError && list.length > 0 && visible.length === 0 && <EmptyState compact title="لا توجد أسئلة مطابقة." description="جرّب كلمة بحث أخرى أو غيّر المرشحات." />}
           {!loading && !loadError && visible.length > 0 && (
@@ -262,8 +273,8 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
                       <td><StatusBadge tone={row.official ? "neutral" : row.sourceKind === "manual" ? "success" : "info"}>{row.official ? <><IconLock size={12} aria-hidden="true" /> رسمي</> : sourceLabel(row.sourceKind)}</StatusBadge></td>
                       <td><div className="eb-row-actions">
                         <button type="button" className="eb-button is-quiet is-small" onClick={() => setPreview(row)}><IconEye size={14} aria-hidden="true" />معاينة</button>
-                        {!row.official && <button type="button" className="eb-button is-quiet is-small" onClick={() => { setActionError(""); setEditor({ mode: "edit", row }); }} disabled={busy}><IconEdit size={14} aria-hidden="true" />تعديل</button>}
-                        {!row.official && <button type="button" className="eb-button is-quiet is-small is-danger" onClick={() => void deleteQuestion(row)} disabled={busy}><IconTrash size={14} aria-hidden="true" />حذف</button>}
+                        {!row.official && may.edit && <button type="button" className="eb-button is-quiet is-small" onClick={() => { setActionError(""); setEditor({ mode: "edit", row }); }} disabled={busy}><IconEdit size={14} aria-hidden="true" />تعديل</button>}
+                        {!row.official && may.edit && <button type="button" className="eb-button is-quiet is-small is-danger" onClick={() => void deleteQuestion(row)} disabled={busy}><IconTrash size={14} aria-hidden="true" />حذف</button>}
                       </div></td>
                     </tr>
                   ))}
@@ -277,10 +288,10 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
       {view === "exams" && (
         <section aria-labelledby="eb-bank-exams-title">
           <SectionHeader level={2} id="eb-bank-exams-title" title="الامتحانات المحفوظة" count={savedExams ? savedExams.length : undefined} description="الامتحانات التي حفظتها من باني الامتحان. الفتح يتابع التعديل في الباني."
-            actions={<><button type="button" className="eb-button is-primary is-small" onClick={onOpenBuilder}><IconBuilder size={16} aria-hidden="true" />إنشاء امتحان جديد</button><IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={() => void loadSavedExams()} /></>} />
+            actions={<>{may.builder && <button type="button" className="eb-button is-primary is-small" onClick={onOpenBuilder}><IconBuilder size={16} aria-hidden="true" />إنشاء امتحان جديد</button>}<IconButton label="تحديث" icon={<IconRefresh size={18} />} onClick={() => void loadSavedExams()} /></>} />
           {savedExams === null && <p className="eb-muted" role="status">جارٍ تحميل الامتحانات المحفوظة...</p>}
           {savedError && <p className="platform-error" role="alert">{savedError}</p>}
-          {savedExams !== null && savedExams.length === 0 && !savedError && <EmptyState title="لا توجد امتحانات محفوظة بعد." description="أنشئ امتحانًا في الباني واحفظه ليظهر هنا." action={<button type="button" className="eb-button is-primary is-small" onClick={onOpenBuilder}>إنشاء امتحان جديد</button>} />}
+          {savedExams !== null && savedExams.length === 0 && !savedError && <EmptyState title="لا توجد امتحانات محفوظة بعد." description="أنشئ امتحانًا في الباني واحفظه ليظهر هنا." action={may.builder ? <button type="button" className="eb-button is-primary is-small" onClick={onOpenBuilder}>إنشاء امتحان جديد</button> : undefined} />}
           {savedExams !== null && savedExams.length > 0 && (
             <ul className="eb-bank-exam-list">
               {savedExams.map(item => (
@@ -291,7 +302,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
                   </div>
                   <div className="eb-bank-exam-actions">
                     <button type="button" className="eb-button is-primary is-small" onClick={() => void onOpenSavedExam(item)} disabled={busy}><IconBuilder size={14} aria-hidden="true" />فتح في الباني</button>
-                    <button type="button" className="eb-button is-quiet is-small is-danger" onClick={() => void deleteSavedExam(item)} disabled={busy}><IconTrash size={14} aria-hidden="true" />حذف</button>
+                    {may.save && <button type="button" className="eb-button is-quiet is-small is-danger" onClick={() => void deleteSavedExam(item)} disabled={busy}><IconTrash size={14} aria-hidden="true" />حذف</button>}
                   </div>
                 </li>
               ))}
@@ -316,7 +327,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
                   </div>
                   <div className="eb-bank-meta"><StatusBadge tone="neutral"><IconLock size={12} aria-hidden="true" /> للقراءة فقط</StatusBadge>{item.publishable === false && <StatusBadge tone="warn">يحتاج مراجعة</StatusBadge>}</div>
                   <div className="eb-bank-exam-actions">
-                    <button type="button" className="eb-button is-small" onClick={() => void openLibraryCopy(item)} disabled={busy}><IconBuilder size={14} aria-hidden="true" />فتح نسخة في الباني</button>
+                    {may.builder && <button type="button" className="eb-button is-small" onClick={() => void openLibraryCopy(item)} disabled={busy}><IconBuilder size={14} aria-hidden="true" />فتح نسخة في الباني</button>}
                   </div>
                 </li>
               ))}
@@ -326,7 +337,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
       )}
 
       <Dialog open={preview !== null} title="معاينة السؤال" onClose={() => setPreview(null)} size="md"
-        footer={<>{preview && !preview.official && <button type="button" className="eb-button" onClick={() => { const row = preview; setPreview(null); setActionError(""); setEditor({ mode: "edit", row }); }}><IconEdit size={16} aria-hidden="true" />تعديل</button>}<button type="button" className="eb-button is-primary" onClick={() => setPreview(null)}>إغلاق المعاينة</button></>}>
+        footer={<>{preview && !preview.official && may.edit && <button type="button" className="eb-button" onClick={() => { const row = preview; setPreview(null); setActionError(""); setEditor({ mode: "edit", row }); }}><IconEdit size={16} aria-hidden="true" />تعديل</button>}<button type="button" className="eb-button is-primary" onClick={() => setPreview(null)}>إغلاق المعاينة</button></>}>
         {preview && (
           <div className="eb-bank-preview">
             <div className="eb-bank-meta">

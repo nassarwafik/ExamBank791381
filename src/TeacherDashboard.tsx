@@ -20,6 +20,7 @@ import SectionHeader from "./ui/SectionHeader";
 import ChartCard from "./ui/ChartCard";
 import {fmtPct,trendPoints,topicPoints,trendModel,submissionModel,distributionModel,classComparisonModel,topicModel} from "./teacher/dashboardChartTables";
 import {teacherFetchJson} from "./teacherFetch";
+import {useCan} from "./shell/teacherAccessContext";
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
@@ -208,6 +209,8 @@ function AttentionCard({id,title,count,tone,items,empty}:{id:string;title:string
 }
 
 function TeacherDashboard({token}:DashboardProps){
+ // Tadris+ P8-B1b — the AI analysis (/api/teacher-analytics-ai) needs reports.ai.use: without it the section is not offered.
+ const mayAi=useCan()("reports.ai.use");
  // Phase 21H.2 — the live «ما الذي يحتاج انتباهي الآن؟» hub (provided by TeacherPlatform) renders UNDER this page's scope
  // bar with the page's class and its single refresh: one filter and one «تحديث» for the whole page.
  const renderToday=useContext(TodaySlot);
@@ -582,7 +585,7 @@ function TeacherDashboard({token}:DashboardProps){
    <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&!achievementsLoading&&!achievementsError&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}{achievementsLoading&&<div className="analytics-empty-chart" role="status">جارٍ تحميل الإنجازات...</div>}</div></article>
   </section>
 
-  {scores&&<section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-ai-title">
+  {scores&&mayAi&&<section className="eb-dash-section eb-dash-panel" aria-labelledby="eb-ai-title">
    <SectionHeader level={2} id="eb-ai-title" title={aiLabel} description={aiDescription}/>
    <article className="analytics-card"><button type="button" className="analytics-ai-button primary" onClick={()=>void runAiAnalysis()} disabled={aiBusy}><IconSparkles size={16}/>{aiBusy&&aiVisible?"جارٍ التحليل...":aiLabel}</button>{aiError&&aiVisible&&<div className="platform-error" role="alert">{aiError}</div>}{aiAdvice&&aiVisible&&adviceBlock(aiAdvice)}</article>
   </section>}

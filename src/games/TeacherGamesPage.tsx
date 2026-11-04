@@ -5,6 +5,7 @@ import { listGames } from "./gameCatalog";
 import LiveChallengeGenerator from "./liveChallenge/LiveChallengeGenerator";
 import TeacherNumberConversionPreview from "./numberConversion/TeacherNumberConversionPreview";
 import "./games.css";
+import { useCan } from "../shell/teacherAccessContext";
 
 /**
  * The teacher "الألعاب التعليمية" page shell (the `games` nav destination). The shell's PageHeader already renders the
@@ -19,6 +20,9 @@ import "./games.css";
 /** Tadris+ P7-B2 — `openGames`: the games open to this teacher (the server's session answer); absent → every game, as before. */
 export default function TeacherGamesPage({ token, openGames }: { token: string; openGames?: string[] }) {
   const games = listGames().filter(g => !openGames || openGames.includes(g.id));
+  // Tadris+ P8-B1b (owner decision §19.30) — «إنشاء تحدٍّ» opens the challenge authoring, every request of which needs
+  // games.challenge.create; a teacher who may only run games (games.session.run) is not offered it. Presentation only.
+  const can = useCan(), mayAuthor = can("games.challenge.create");
   const [view, setView] = useState<"list" | "live-authoring" | "nc-preview">("list");
 
   if (view === "live-authoring") {
@@ -34,7 +38,7 @@ export default function TeacherGamesPage({ token, openGames }: { token: string; 
         level={2}
         id="eb-games-page-title"
         title="الألعاب المتاحة"
-        description="منصّة الألعاب التعليمية القابلة لإعادة الاستخدام — يمكنك الآن إنشاء تحدٍّ مباشر وتحضير أسئلته."
+        description={mayAuthor ? "منصّة الألعاب التعليمية القابلة لإعادة الاستخدام — يمكنك الآن إنشاء تحدٍّ مباشر وتحضير أسئلته." : "منصّة الألعاب التعليمية القابلة لإعادة الاستخدام."}
       />
       <ul className="eb-game-cards" aria-label="الألعاب">
         {games.map(g => (
@@ -42,7 +46,7 @@ export default function TeacherGamesPage({ token, openGames }: { token: string; 
             <GameCard
               game={g}
               teacherAction={
-                g.id === "live-challenge" ? { label: "إنشاء تحدٍّ", onClick: () => setView("live-authoring") }
+                g.id === "live-challenge" && mayAuthor ? { label: "إنشاء تحدٍّ", onClick: () => setView("live-authoring") }
                 : g.id === "number-conversion" ? { label: "معاينة اللعبة", onClick: () => setView("nc-preview") }
                 : undefined
               }

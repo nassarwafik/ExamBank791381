@@ -9,6 +9,7 @@ import type { Classroom, LearningCatalogModule } from "../../students/types";
 import { arabicCount, PUBLISHED_MODULES, STUDENTS } from "../arabicCount";
 import type { ClassReading, ClassReadingClient } from "./classReadingClient";
 import "./class-reading.css";
+import { useCan } from "../../shell/teacherAccessContext";
 
 // Phase L.4 — «قراءة صفوفي» on the teacher's book page: for each of the teacher's ACTIVE classes that use this book, which
 // units are published to it (and publishing / hiding them right here), how far the class has read each published unit, and
@@ -41,6 +42,9 @@ export default function ClassReadingPanel({ courseId, client }: { courseId: stri
   const [notice, setNotice] = useState("");
   const [actionError, setActionError] = useState("");
   const { confirm, confirmDialog } = useConfirm();
+  // Tadris+ P8-B1b — publishing / hiding units and adding the book to a class are setLearningCourseModules (learning.module.release):
+  // without it the reading report stays, the publishing tools are not offered. Presentation only (the server enforces).
+  const mayRelease = useCan()("learning.module.release");
   // The class whose report is being shown NOW: a response for a class the teacher has since left is never committed.
   const selectedRef = useRef("");
 
@@ -148,15 +152,15 @@ export default function ClassReadingPanel({ courseId, client }: { courseId: stri
                 <p className="eb-lm-cr-publine">
                   <StatusBadge tone={visibleIds.size ? "info" : "warn"}>{arabicCount(units.filter(u => visibleIds.has(u.moduleId)).length, PUBLISHED_MODULES)}</StatusBadge>
                   <span className="eb-muted">من أصل {units.length}</span>
-                  <button type="button" className="eb-button is-quiet is-small" aria-expanded={managing} aria-controls={regionId + "-publish"} onClick={() => setManaging(v => !v)}>
+                  {mayRelease && <button type="button" className="eb-button is-quiet is-small" aria-expanded={managing} aria-controls={regionId + "-publish"} onClick={() => setManaging(v => !v)}>
                     {managing ? "إغلاق إدارة النشر" : "إدارة النشر"}
-                  </button>
+                  </button>}
                 </p>
               </div>
             )}
             {notice && <p className="eb-lm-cr-notice" role="status">{notice}</p>}
             {actionError && <p className="eb-lm-batches-error" role="alert">{actionError}</p>}
-            {selected && managing && (
+            {selected && managing && mayRelease && (
               <fieldset id={regionId + "-publish"} className="eb-lm-cr-publish" disabled={busy}>
                 <legend>الوحدات المنشورة لطلاب «{selected.name}»</legend>
                 <ul>
@@ -172,7 +176,7 @@ export default function ClassReadingPanel({ courseId, client }: { courseId: stri
               </fieldset>
             )}
             {selected && <ClassReadingReport reading={reading} className={selected.name} onRetry={refreshReading} />}
-            {otherClasses.length > 0 && <AttachToClass classes={otherClasses} busy={busy} onAttach={id => { void attach(id); }} />}
+            {mayRelease && otherClasses.length > 0 && <AttachToClass classes={otherClasses} busy={busy} onAttach={id => { void attach(id); }} />}
           </>
         )}
       </div>
