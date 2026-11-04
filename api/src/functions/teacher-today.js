@@ -30,7 +30,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 // assignment figures need assignments.assignment.view, the unread count messages.inbox.read, the project block projects.tracker.view.
 // A withheld section's source is not read at all; `widgets` names what this answer carries (lib/dashboard-widgets.js).
 const { sessionGrants } = require("../lib/access/session-grants");
-const { visibleWidgets } = require("../lib/dashboard-widgets");
+const { widgetsOf } = require("../lib/dashboard-widgets");
 const {getContainer,listJson,listBlobNames,downloadManyJson,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
@@ -65,7 +65,11 @@ const DUE_SOON_MS=48*3600e3,OPENING_MS=24*3600e3;
 // Tadris+ P7-A1 — the widgets computed from the assignments (all need assignments.assignment.view). Without any of them no assignment
 // index, document or submission folder is read, so every attention block is EMPTY by construction (the same shape: an older client
 // never breaks) and `recent` is empty.
-const ASSIGNMENT_WIDGETS=["grading.pending","assignments.deadlines","assignments.notStarted","results.unreleased","attempts.live","activity.recent"];
+// Tadris+ P7-A2 — the owner can also narrow the widgets of ONE teacher (resources.widgets): a widget outside it answers its blocks
+// EMPTY even when the assignments are read for another widget, and `recent` is empty without «activity.recent».
+const ASSIGNMENT_WIDGET_BLOCKS={"attempts.live":["activeAttempts","staleAttempts"],"assignments.notStarted":["notStarted"],"grading.pending":["pendingReview"],"assignments.deadlines":["dueSoon","openingSoon"],"results.unreleased":["resultsUnreleased"]};
+const ASSIGNMENT_WIDGETS=[...Object.keys(ASSIGNMENT_WIDGET_BLOCKS),"activity.recent"];
+const emptyBlock=key=>(key==="notStarted"||key==="pendingReview"?{count:0,assignments:0,items:[]}:{count:0,items:[]});
 const NO_INDEX_STATS={assignmentDocsLoaded:0,indexReads:0,bootstrapped:0,globalScans:0,authoritative:0,authorityChanges:0};
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
@@ -170,7 +174,7 @@ async function handler(request,deps={},obs=null){
   if (capabilityDenial) return capabilityDenial;
   const grants=await sessionGrants(auth.user,deps,obs);   // Tadris+ P7-A1
   if(!grants.ok)return grants.response;
-  const widgets=visibleWidgets("today",grants.has),shows=id=>widgets.includes(id);
+  const widgets=widgetsOf("today",grants),shows=id=>widgets.includes(id);
   const withAssignments=ASSIGNMENT_WIDGETS.some(shows),withMessages=shows("messages.unread"),withProjects=shows("projects.evaluation");
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();
@@ -201,6 +205,8 @@ async function handler(request,deps={},obs=null){
   ]);
   const submissionsByAssignment=new Map(published.map((a,i)=>[String(a.assignmentId),folders[i]]));
   const derived=deriveTeacherToday({assignments,classes,users,submissionsByAssignment,nowMs});
+  for(const [id,keys] of Object.entries(ASSIGNMENT_WIDGET_BLOCKS))if(!shows(id))for(const k of keys)derived.attention[k]=emptyBlock(k);   // P7-A2
+  if(!shows("activity.recent"))derived.recent=[];
   // Optional sources: a messaging (or project-storage) failure degrades THAT block only (explicit `partial`), never the hub.
   const partial=[];let unreadMessages=null,projectEvaluation=null;
   // Hotfix — the badge counts only THIS teacher's students (the same tenancy predicate as GET /api/messages?kind=unread-summary);

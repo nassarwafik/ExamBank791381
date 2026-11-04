@@ -4,7 +4,7 @@ const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { sessionGrants } = require("../lib/access/session-grants");             // Tadris+ P7-A1
-const { ASSIGNMENTS_CAPABILITY } = require("../lib/dashboard-widgets");
+const { ASSIGNMENTS_CAPABILITY, widgetsOf, widgetDenied } = require("../lib/dashboard-widgets");
 // Phase 21G.0 — teacher tenancy: analytics cover only the teacher's own classes.
 const { tenantOf } = require("../lib/teacher-tenancy");
 const { getContainer } = require("../lib/platform-storage");
@@ -106,6 +106,9 @@ async function handler(request, deps = {}, obs = null) {
       const grants = await sessionGrants(auth.user, deps, obs);
       if (!grants.ok) return grants.response;
       if (!grants.has(ASSIGNMENTS_CAPABILITY)) return { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "هذه الأداة غير مفعّلة لحسابك. تواصل مع إدارة المنصة.", capability: ASSIGNMENTS_CAPABILITY } };
+      // Tadris+ P7-A2 — and the owner's widget choice: no «ملخص العلامات» → no analysis; the prompt holds only the visible sections.
+      const widgets = widgetsOf("analytics", grants), shows = id => widgets.includes(id);
+      if (!shows("scores.overview")) return widgetDenied("scores.overview");
 
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
@@ -117,7 +120,7 @@ async function handler(request, deps = {}, obs = null) {
       // Phase 8A: the server RECOMPUTES the requested scope with the same authority as the dashboard (a mismatched or
       // unknown student is rejected there) — the browser never sends analytics figures, only the scope selectors.
       const container = deps.container || (deps.getContainer || getContainer)();
-      const data = await computeTeacherAnalytics(container, { classId, studentId, fromMs, toMs, tenant: tenantOf(auth.user) });
+      const data = await computeTeacherAnalytics(container, { classId, studentId, fromMs, toMs, tenant: tenantOf(auth.user), shows });
       const mode = data.scope.mode;
       if (mode === "student" && !data.studentDetail) {
         return { status: 404, jsonBody: { ok: false, error: "لا توجد بيانات كافية لهذا الطالب ضمن هذا النطاق." } };

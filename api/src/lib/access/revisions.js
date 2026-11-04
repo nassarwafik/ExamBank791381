@@ -4,6 +4,7 @@ const { createOnly } = require("../identity/owner-store");
 const { isCapability, isOwnerOnly, unmetDependencies } = require("./capabilities");
 const { preset } = require("./presets");
 const { findLearningCourse } = require("../learning-materials-registry");
+const { widget: findWidget } = require("../dashboard-widgets");
 
 // Tadris+ P3-A — access revisions (blueprint §6.3). A revision is IMMUTABLE: written once (create-only), never changed. A teacher
 // account points at its current revision (`accessRevisionId`); changing access = a NEW revision, then a compare-and-set on the
@@ -18,7 +19,9 @@ const { findLearningCourse } = require("../learning-materials-registry");
 //   the preset version exists; grants / denies are known capabilities, without duplicates and never both; no platform.* grant;
 //   the effective set meets every dependency.
 //   Tadris+ P5-A — `resources.courses` (optional): the ONLY courses this teacher may use, as known course ids, without duplicates
-//   (owner decisions §19.13: an entitlement only NARROWS — absent = every published course). Any other key is refused.
+//   (owner decisions §19.13: an entitlement only NARROWS — absent = every published course).
+//   Tadris+ P7-A2 — `resources.widgets` (optional): the ONLY dashboard widgets this teacher may see, as known widget ids
+//   (lib/dashboard-widgets.js), without duplicates; absent = every widget (the same «only narrows» rule). Any other key is refused.
 // A problem is REFUSED with its code — never corrected silently.
 
 const REVISION_PREFIX = "platform/access/revisions/";
@@ -57,16 +60,23 @@ function evaluateRevision(rev) {
   if (forbidden.length) return { ok: false, code: "PLATFORM_CAPABILITY_FORBIDDEN", details: { capabilities: forbidden } };
   const both = lists.grants.filter(c => lists.denies.includes(c));
   if (both.length) return { ok: false, code: "CAPABILITY_CONFLICT", details: { capabilities: both } };
-  let courses = null;
+  let courses = null, widgets = null;
   if (rev.resources !== undefined) {
     const r = rev.resources;
-    if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => k !== "courses")) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
+    if (typeof r !== "object" || r === null || Array.isArray(r) || Object.keys(r).some(k => k !== "courses" && k !== "widgets")) return { ok: false, code: "RESOURCES_NOT_SUPPORTED" };
     if (r.courses !== undefined) {
       if (!Array.isArray(r.courses) || r.courses.length > MAX_LIST) return { ok: false, code: "REVISION_MALFORMED", details: { field: "resources.courses" } };
       const unknown = r.courses.filter(c => typeof c !== "string" || !findLearningCourse(c) || findLearningCourse(c).courseId !== c);
       if (unknown.length) return { ok: false, code: "COURSE_UNKNOWN", details: { courses: unknown.map(String).slice(0, 10) } };
       if (new Set(r.courses).size !== r.courses.length) return { ok: false, code: "COURSE_DUPLICATE" };
       courses = [...r.courses].sort();
+    }
+    if (r.widgets !== undefined) {
+      if (!Array.isArray(r.widgets) || r.widgets.length > MAX_LIST) return { ok: false, code: "REVISION_MALFORMED", details: { field: "resources.widgets" } };
+      const unknown = r.widgets.filter(w => typeof w !== "string" || !findWidget(w));
+      if (unknown.length) return { ok: false, code: "WIDGET_UNKNOWN", details: { widgets: unknown.map(String).slice(0, 10) } };
+      if (new Set(r.widgets).size !== r.widgets.length) return { ok: false, code: "WIDGET_DUPLICATE" };
+      widgets = [...r.widgets].sort();
     }
   }
   const set = new Set(p.capabilities);
@@ -75,14 +85,24 @@ function evaluateRevision(rev) {
   for (const c of [...set]) if (isOwnerOnly(c)) set.delete(c);      // defence in depth: platform.* never reaches a teacher
   const unmet = unmetDependencies(set);
   if (unmet.length) return { ok: false, code: "DEPENDENCY_UNMET", details: { unmet } };
-  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses };
+  return { ok: true, capabilities: [...set].sort(), preset: { id: p.id, version: p.version }, courses, widgets };
+}
+
+/** Only the known resource keys that are present (P5-A courses, P7-A2 widgets); anything else is passed on to be refused. */
+function keptResources(resources) {
+  if (!resources || typeof resources !== "object" || Array.isArray(resources)) return resources;
+  if (Object.keys(resources).some(k => k !== "courses" && k !== "widgets")) return resources;
+  const out = {};
+  if (resources.courses !== undefined) out.courses = resources.courses;
+  if (resources.widgets !== undefined) out.widgets = resources.widgets;
+  return out;
 }
 
 /** Builds and validates a new revision for `accountId` (not stored yet). Throws AccessError on a refusal. */
 function buildRevision({ accountId, parentRevisionId = null, presetId, presetVersion, grants = [], denies = [], resources = {}, reason = "", createdBy, nowMs = Date.now() }) {
   const rev = {
     schemaVersion: 1, revisionId: newRevisionId(nowMs), accountId: String(accountId), parentRevisionId: parentRevisionId || null,
-    preset: { id: String(presetId || ""), version: Number(presetVersion) }, grants, denies, resources: resources && typeof resources === "object" && !Array.isArray(resources) && resources.courses !== undefined ? { courses: resources.courses } : resources,
+    preset: { id: String(presetId || ""), version: Number(presetVersion) }, grants, denies, resources: keptResources(resources),
     reason: String(reason || "").trim().slice(0, MAX_REASON), createdAt: new Date(nowMs).toISOString(), createdBy: String(createdBy || "")
   };
   const verdict = evaluateRevision(rev);
@@ -117,7 +137,7 @@ async function readRevision(container, revisionId, accountId, deps = {}) {
   if (doc.accountId !== accountId) throw new AccessError("REVISION_INVALID", { reason: "account" });
   const verdict = evaluateRevision(doc);
   if (!verdict.ok) throw new AccessError("REVISION_INVALID", { reason: verdict.code });
-  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null });
+  const entry = Object.freeze({ revision: doc, capabilities: Object.freeze(verdict.capabilities), preset: verdict.preset, courses: verdict.courses ? Object.freeze(verdict.courses) : null, widgets: verdict.widgets ? Object.freeze(verdict.widgets) : null });
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(revisionId, entry);
   return entry;

@@ -7,6 +7,7 @@
 const { downloadJsonOrNull } = require("./platform-storage");
 const { photoMeta } = require("./profile-photo-store");
 const { getBuilderAccount } = require("./builder-users");
+const { WIDGETS } = require("./dashboard-widgets");
 
 const PROFILE_PREFIX = "platform/teacher-profiles/";
 const PHOTO_PREFIX = "platform/teacher-profile-images/";
@@ -83,4 +84,30 @@ async function resolveManagedTeacherDisplayName(containerOrGetter, sub, accountD
   }
 }
 
-module.exports = { resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
+// Tadris+ P7-A2 — the teacher's own arrangement of the «اليوم» cards: { order: widget ids, hidden: widget ids }, stored as
+// `appearance.dashboardLayout` of the profile document. Only «today» widget ids, without duplicates; a stored id the teacher may no
+// longer see is simply ignored when shown (the server's `widgets` still decides what is sent). Presentation only: hiding a card
+// here never widens or narrows what the server serves.
+const LAYOUT_IDS = new Set(WIDGETS.filter(w => w.page === "today").map(w => w.id));
+const MAX_LAYOUT = 32;
+function validateDashboardLayout(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return { ok: false, error: "ترتيب البطاقات غير صالح." };
+  const out = {};
+  for (const key of ["order", "hidden"]) {
+    const v = input[key] === undefined ? [] : input[key];
+    if (!Array.isArray(v) || v.length > MAX_LAYOUT) return { ok: false, error: "ترتيب البطاقات غير صالح." };
+    if (v.some(id => typeof id !== "string" || !LAYOUT_IDS.has(id))) return { ok: false, error: "بطاقة غير معروفة في الترتيب." };
+    if (new Set(v).size !== v.length) return { ok: false, error: "بطاقة مكررة في الترتيب." };
+    out[key] = [...v];
+  }
+  return { ok: true, layout: out };
+}
+/** The stored arrangement, re-validated on read (an invalid one → the default arrangement, i.e. null). */
+function dashboardLayoutOf(doc) {
+  const v = doc && doc.appearance && doc.appearance.dashboardLayout;
+  if (!v) return null;
+  const r = validateDashboardLayout(v);
+  return r.ok ? r.layout : null;
+}
+
+module.exports = { validateDashboardLayout, dashboardLayoutOf, resolveManagedTeacherDisplayName, PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };

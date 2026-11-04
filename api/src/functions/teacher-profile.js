@@ -1,6 +1,9 @@
 // Teacher SELF profile — builder-authenticated, always the token subject (never a body-supplied teacher id):
 //   GET  /api/teacher-profile                → { ok, profile }
-//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName", ... }
+//   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName" | "setDashboardLayout", ... }
+//   Tadris+ P7-A2 — GET also answers `dashboardLayout` (the teacher's arrangement of the «اليوم» cards, or null) and
+//   `layoutChoosable`; «setDashboardLayout» { order, hidden } needs appearance.layout.choose (evaluated like every capability:
+//   a managed session while the owner enforces access). Presentation only — it never changes what the server serves.
 //   GET  /api/teacher-profile-photo?v=<n>    → the teacher's OWN photo (image/webp)
 // A student token and anonymous callers are denied (403 / 401). The photo uses the SAME safe image pipeline and the
 // SAME publication authority (profile-photo-store: immutable revision → CAS metadata commit → cleanup) as the
@@ -13,14 +16,16 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { recordAuditEvent } = require("../lib/audit-log");
 const { ProfileImageError } = require("../lib/profile-image");
 const { photoRecord, publishProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
-const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile } = require("../lib/teacher-profile");
+const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile, validateDashboardLayout, dashboardLayoutOf } = require("../lib/teacher-profile");
+const { sessionGrants } = require("../lib/access/session-grants");   // Tadris+ P7-A2
+const LAYOUT_CAPABILITY = "appearance.layout.choose";
 
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const STUDENT_DENIED = { status: 403, jsonBody: { ok: false, error: "هذه الخدمة للمعلم فقط." } };
 
 async function resolveTeacher(request, deps) {
   const builder = (await requireTeacherSession(request, deps));
-  if (builder.ok && teacherKey(builder.user && builder.user.sub)) return { kind: "teacher", sub: String(builder.user.sub) };
+  if (builder.ok && teacherKey(builder.user && builder.user.sub)) return { kind: "teacher", sub: String(builder.user.sub), user: builder.user };
   const student = (deps.requireStudentAuth || requireStudentAuth)(request);
   if (student.ok) return { kind: "student" };
   return { kind: "denied" };
@@ -55,7 +60,9 @@ async function handler(request, deps = {}, obs = null) {
     if (request.method === "GET") {
       const doc = await dl(container, profileDocName(sub));
       if (isPhotoRoute) return photoResponse(container, photoRecord(doc), teacherPhotoPrefix(sub), deps, obs);   // the committed record selects the blob; `?v=` is cache context only
-      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc) } };
+      // P7-A2: whether the arrangement can be changed; an unresolvable access answers «not choosable» (the profile itself still loads).
+      const grants = await sessionGrants(actor.user, { ...deps, container }, obs);
+      return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc), dashboardLayout: dashboardLayoutOf(doc), layoutChoosable: grants.ok && grants.has(LAYOUT_CAPABILITY) } };
     }
     if (isPhotoRoute) return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };
 
@@ -77,6 +84,16 @@ async function handler(request, deps = {}, obs = null) {
         const updated = await mutateProfile(container, sub, deps, doc => { doc.displayName = name; });
         await rec(container, { actor: sub, action: "teacher.profile.setDisplayName", targetType: "teacher", targetId: sub });
         return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated) } };
+      }
+      if (action === "setDashboardLayout") {   // Tadris+ P7-A2
+        const grants = await sessionGrants(actor.user, { ...deps, container }, obs);
+        if (!grants.ok) return grants.response;
+        if (!grants.has(LAYOUT_CAPABILITY)) return { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "CAPABILITY_DENIED", error: "ترتيب اللوحة غير مفعّل لحسابك.", capability: LAYOUT_CAPABILITY } };
+        const v = validateDashboardLayout(body?.layout);
+        if (!v.ok) return { status: 400, jsonBody: { ok: false, code: "LAYOUT_INVALID", error: v.error } };
+        const updated = await mutateProfile(container, sub, deps, doc => { doc.appearance = { ...(doc.appearance && typeof doc.appearance === "object" ? doc.appearance : {}), dashboardLayout: v.layout }; });
+        await rec(container, { actor: sub, action: "teacher.profile.setDashboardLayout", targetType: "teacher", targetId: sub, details: { order: v.layout.order.length, hidden: v.layout.hidden.length } });
+        return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated), dashboardLayout: dashboardLayoutOf(updated) } };
       }
       if (action === "uploadPhoto") {
         // new immutable revision → CAS commit of the profile document → cleanup of the previous revision (store order).

@@ -38,9 +38,20 @@ const BY_ID = new Map(WIDGETS.map(x => [x.id, x]));
 /** The widget, or null. */
 const widget = id => BY_ID.get(String(id)) || null;
 
-/** The ids of a page's widgets the session may see (`has` = sessionGrants(...).has), in registry order. */
-function visibleWidgets(page, has) {
-  return WIDGETS.filter(x => x.page === page && x.capabilities.every(c => has(c))).map(x => x.id);
+/** The ids of a page's widgets the session may see, in registry order: every capability held (`has` = sessionGrants(...).has) AND,
+ *  Tadris+ P7-A2, within the owner's widget entitlement (`entitled` = sessionGrants(...).widgets: null = every widget). */
+function visibleWidgets(page, has, entitled = null) {
+  return WIDGETS.filter(x => x.page === page && x.capabilities.every(c => has(c)) && (!entitled || entitled.has(x.id))).map(x => x.id);
 }
 
-module.exports = { WIDGETS, widget, visibleWidgets, ASSIGNMENTS_CAPABILITY: ASSIGNMENTS };
+/** The visible widgets of a `sessionGrants` answer. */
+const widgetsOf = (page, grants) => visibleWidgets(page, grants.has, grants.widgets);
+
+// Tadris+ P7-A2 — a widget the owner left out for ONE teacher (the capabilities are held): its data is refused like a capability.
+const NO_STORE = { "Cache-Control": "no-store" };
+const widgetDenied = widgetId => ({ status: 403, headers: NO_STORE, jsonBody: { ok: false, code: "WIDGET_NOT_AVAILABLE", error: "هذه البيانات غير مفعّلة في لوحتك. تواصل مع إدارة المنصة.", widget: widgetId } });
+
+/** The owner console's catalog of widgets (id, page, label, capabilities). */
+const publicWidgets = () => WIDGETS.map(x => ({ id: x.id, page: x.page, label: x.label, capabilities: [...x.capabilities] }));
+
+module.exports = { WIDGETS, widget, visibleWidgets, widgetsOf, publicWidgets, widgetDenied, ASSIGNMENTS_CAPABILITY: ASSIGNMENTS };

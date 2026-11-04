@@ -118,6 +118,8 @@ export const ownerTeachersApi = {
 
 // Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
 export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean; requires?: string[] };
+/** P7-A2 — a dashboard widget of the server's registry (lib/dashboard-widgets.js): the page that shows it and what it needs. */
+export type DashboardWidget = { id: string; page: "today" | "analytics"; label: string; capabilities: string[] };
 /** P5-A — a course of the catalog as the owner sees it. */
 export type CatalogCourse = { courseId: string; title: string; subject: string; modules: number; status: "published" | "archived"; updatedAt: string; updatedBy: string };
 /** P4-B1 — one immutable revision of a teacher's access, re-validated by the server (newest first). */
@@ -125,12 +127,14 @@ export type AccessHistoryEntry = {
   revisionId: string; parentRevisionId: string | null; preset: { id: string; version: number } | null; grants: string[]; denies: string[];
   /** P5-A — the course entitlement: null = every published course; an array = only those. */
   courses?: string[] | null;
+  /** P7-A2 — the widget entitlement: null = every widget; an array = only those. */
+  widgets?: string[] | null;
   reason: string; createdAt: string; createdBy: string; valid: boolean; code?: string; capabilities: string[];
 };
 /** P4-B1 — what the server's resolver gives the account right now, and whether the owner's mode enforces it. */
 export type EffectiveAccess = {
   accountStatus: TeacherStatus; mode: AccessMode; enforced: boolean;
-  access: { status: "ok" | "unavailable"; source?: string; code?: string; revisionId: string | null; preset: { id: string; version: number } | null; capabilities: string[]; courses?: string[] | null };
+  access: { status: "ok" | "unavailable"; source?: string; code?: string; revisionId: string | null; preset: { id: string; version: number } | null; capabilities: string[]; courses?: string[] | null; widgets?: string[] | null };
 };
 export type ReadinessTeacher = {
   accountId: string; username: string; displayName: string; status: TeacherStatus;
@@ -138,11 +142,11 @@ export type ReadinessTeacher = {
   wouldDeny: { capability: string; count: number; lastAt: string }[];
 };
 export const ownerAccessApi = {
-  get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[] }>("/api/owner-access", { token }),
+  get: (token: string) => call<{ ok: true; mode: AccessMode; presets: AccessPreset[]; capabilities: AccessCapability[]; widgets?: DashboardWidget[] }>("/api/owner-access", { token }),
   readiness: (token: string) => call<{ ok: true; mode: AccessMode; ready: boolean; teachers: ReadinessTeacher[] }>("/api/owner-access/readiness", { token }),
   setMode: (token: string, mode: "legacy" | "observe" | "enforce") => call<{ ok: true; mode: AccessMode }>("/api/owner-access/mode", { method: "POST", token, body: { mode } }),
-  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null; grants?: string[]; denies?: string[]; reason?: string; courses?: string[] | null }) =>
-    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[]; courses?: string[] | null }>("/api/owner-access/assign", { method: "POST", token, body }),
+  assign: (token: string, body: { accountId: string; presetId: string; presetVersion: number; baseRevisionId: string | null; grants?: string[]; denies?: string[]; reason?: string; courses?: string[] | null; widgets?: string[] | null }) =>
+    call<{ ok: true; accountId: string; access: TeacherAccess; capabilities: string[]; courses?: string[] | null; widgets?: string[] | null }>("/api/owner-access/assign", { method: "POST", token, body }),
   /** P5-A — every course with its catalog status (owner decision D12). */
   catalog: (token: string) => call<{ ok: true; courses: CatalogCourse[] }>("/api/owner-access/catalog", { token }),
   courseStatus: (token: string, courseId: string, status: "published" | "archived") =>
