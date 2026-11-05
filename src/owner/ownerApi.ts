@@ -59,8 +59,17 @@ export const ownerApi = {
   stepUp: (token: string, body: { code?: string; recoveryCode?: string }) =>
     call<OwnerSessionView & { ok: true }>("/api/owner-session/step-up", { method: "POST", token, body }),
   revokeAll: (token: string) => call<{ ok: true }>("/api/owner-session/revoke-all", { method: "POST", token, body: {} }),
-  regenerateRecoveryCodes: (token: string) => call<{ ok: true; recoveryCodes: string[] }>("/api/owner-session/recovery-codes", { method: "POST", token, body: {} })
+  regenerateRecoveryCodes: (token: string) => call<{ ok: true; recoveryCodes: string[] }>("/api/owner-session/recovery-codes", { method: "POST", token, body: {} }),
+  // Tadris+ P10-C — the owner's own credentials (step-up + the current password). After a change the server ends every other
+  // owner session and answers this device's NEW token (or signInAgain when it could not open one).
+  changePassword: (token: string, body: { currentPassword: string; newPassword: string }) =>
+    call<CredentialChange>("/api/owner-session/password", { method: "POST", token, body }),
+  beginTotpReenrol: (token: string, body: { currentPassword: string }) =>
+    call<{ ok: true; totp: TotpEnrolment; expiresInSeconds: number }>("/api/owner-session/totp-begin", { method: "POST", token, body }),
+  confirmTotpReenrol: (token: string, body: { code: string }) =>
+    call<CredentialChange & { recoveryCodes: string[] }>("/api/owner-session/totp-confirm", { method: "POST", token, body })
 };
+export type CredentialChange = { ok: true; token?: string; expiresInSeconds?: number; signInAgain?: boolean };
 
 // Tadris+ P2-A2b — the owner's teacher management (P2-A2a /api/owner-teachers). Every change needs a recent step-up; the
 // caller handles STEP_UP_REQUIRED by asking for a code and retrying.

@@ -4,9 +4,14 @@ const { deleteBlob, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require("../lib/login-throttle");
 const { recordOwnerAuditEvent } = require("../lib/audit-log");
 const { verifyAndConsumeSecondFactor } = require("../lib/identity/owner-mfa");
-const { ownerSessionName, mutateOwnerAccount } = require("../lib/identity/owner-store");
-const { requireOwnerSession, stepUpValidUntilMs, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
+const { ownerSessionName, mutateOwnerAccount, newSessionId, createOnly } = require("../lib/identity/owner-store");
+const { requireOwnerSession, stepUpValidUntilMs, stepUpDenial, createOwnerToken, OWNER_TOKEN_TTL_SECONDS, NO_STORE } = require("../lib/identity/owner-session");
 const { generateRecoveryCodes, remainingRecoveryCodes } = require("../lib/identity/recovery-codes");
+const { hashSecret, verifySecret } = require("../lib/identity/password-hash");
+const { checkPassword, passwordPolicyMessage } = require("../lib/identity/password-policy");
+const { generateTotpSecret, verifyTotp, otpauthUri, base32Encode } = require("../lib/identity/totp");
+const { sealSecret, openSecret } = require("../lib/identity/secret-box");
+const { TOTP_PURPOSE } = require("../lib/identity/owner-mfa");
 
 // Tadris+ P1-A — the owner's session. Route: /api/owner-session/{action?}   (every call needs a valid owner session)
 //
@@ -15,8 +20,23 @@ const { generateRecoveryCodes, remainingRecoveryCodes } = require("../lib/identi
 //   POST step-up  { code | recoveryCode }  → a fresh second-factor check for sensitive actions (valid 10 minutes)
 //   POST revoke-all            (needs step-up) → authVersion + 1: every owner session on every device ends
 //   POST recovery-codes        (needs step-up) → 10 new recovery codes, shown once; the old ones stop working
+//   Tadris+ P10-C (closes security review O9; design docs/enterprise-owner-credentials-p10c.md, owner decisions §19.39) —
+//   each needs step-up AND the current password, behind the per-account bucket "owner-credentials:<accountId>":
+//   POST password      { currentPassword, newPassword } → the password changes
+//   POST totp-begin    { currentPassword } → a NEW authenticator secret (shown once, sealed in mfa.pendingTotp for
+//                       15 minutes); the old authenticator stays valid
+//   POST totp-confirm  { code }  (from the NEW app; needs step-up, not the password) → the new authenticator replaces the old,
+//                       10 new recovery codes (shown once) replace the old ones
+//   After password / totp-confirm: authVersion + 1 ends every owner session, and THIS device gets a new session + token
+//   (owner decision: other devices end, this one stays). If that new session cannot be created the change still stands and
+//   the answer is { ok: true, signInAgain: true } — never access with the old credentials.
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
+const PENDING_TOTP_MS = 15 * 60 * 1000;
+const TOTP_ISSUER = "Tadris+";
+const CREDENTIALS_ACTIONS = new Set(["password", "totp-begin", "totp-confirm"]);
+const sessionGone = () => { const e = new Error("gone"); e.code = "SESSION_GONE"; return e; };
+const fail = code => { const e = new Error(code); e.code = code; return e; };
 const unavailable = () => reply(503, { ok: false, code: "OWNER_SESSION_UNAVAILABLE", error: "تعذر تنفيذ الطلب حاليًا. حاول مرة أخرى." }, { "Retry-After": "5" });
 
 function view(owner, session) {
@@ -26,6 +46,130 @@ function view(owner, session) {
     session: { expiresAt: new Date(Number(session.expiresAtMs)).toISOString(), stepUpValidUntil: stepUpValidUntilMs(session) ? new Date(stepUpValidUntilMs(session)).toISOString() : null },
     recoveryCodesRemaining: remainingRecoveryCodes(owner.mfa?.recoveryCodes)
   };
+}
+
+async function readBody(request) {
+  try { const b = await request.json(); return b && typeof b === "object" ? b : {}; } catch { return {}; }
+}
+
+/**
+ * Tadris+ P10-C — THIS device keeps a session after its credentials changed: a new session document (new sid) at the new
+ * authVersion, keeping the old session's step-up time (the change is not itself a new step-up), then a new token. The old
+ * session document is deleted. → { token, expiresInSeconds } or null when the new session could not be created (the change
+ * stands; the owner signs in again with the new credentials).
+ */
+async function reissueThisDevice(container, account, session, nowMs, env) {
+  try {
+    const sid = newSessionId();
+    const created = await createOnly(container, ownerSessionName(sid), {
+      schemaVersion: 1, sid, accountId: account.accountId, authVersion: account.authVersion,
+      createdAtMs: nowMs, expiresAtMs: nowMs + OWNER_TOKEN_TTL_SECONDS * 1000, stepUpAtMs: Number(session.stepUpAtMs) || 0, factor: session.factor
+    });
+    if (!created) return null;
+    const { token } = createOwnerToken({ accountId: account.accountId, sid, authVersion: account.authVersion }, { nowMs, env });
+    await deleteBlob(container, ownerSessionName(session.sid)).catch(() => {});
+    return { token, expiresInSeconds: OWNER_TOKEN_TTL_SECONDS };
+  } catch {
+    return null;
+  }
+}
+
+/** The account is still the one this session was issued for (a concurrent change, suspension or revoke-all ends it). */
+function assertSameAccountState(current, session) {
+  if (current.status !== "active" || current.authVersion !== session.authVersion) throw sessionGone();
+}
+
+async function changeCredentials(action, request, { owner, session, container, actor, audit, nowMs, env, deps }) {
+  const denial = stepUpDenial(session, nowMs);
+  if (denial) return denial;
+  const body = await readBody(request);
+  const currentPassword = String(body.currentPassword ?? ""), newPassword = String(body.newPassword ?? "");
+  const code = String(body.code ?? "").replace(/\s/g, "");
+  if (currentPassword.length > 1024 || newPassword.length > 1024 || code.length > 16) return reply(400, { ok: false, code: "INVALID_INPUT", error: "بيانات غير صالحة." });
+  if (action === "password" && (!currentPassword || !newPassword)) return reply(400, { ok: false, code: "INVALID_INPUT", error: "كلمة المرور الحالية والجديدة مطلوبتان." });
+  if (action === "totp-begin" && !currentPassword) return reply(400, { ok: false, code: "INVALID_INPUT", error: "كلمة المرور الحالية مطلوبة." });
+  if (action === "totp-confirm" && !code) return reply(400, { ok: false, code: "INVALID_INPUT", error: "رمز التحقق من التطبيق الجديد مطلوب." });
+
+  const throttleId = "owner-credentials:" + owner.accountId;
+  const clientId = (deps.clientIdFromRequest || clientIdFromRequest)(request);
+  const gate = await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, throttleId, clientId, deps).catch(() => ({ allowed: false, retryAfterSeconds: 5 }));
+  if (!gate.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(gate.retryAfterSeconds || 5) });
+  const cleared = () => (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
+
+  if (action !== "totp-confirm" && !(await verifySecret(currentPassword, owner.credential))) {
+    await audit(container, { actor, action: action === "password" ? "owner.password.change-failed" : "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "current-password" } });
+    return reply(401, { ok: false, code: "CURRENT_PASSWORD_INVALID", error: "كلمة المرور الحالية غير صحيحة." });
+  }
+
+  if (action === "password") {
+    const policy = checkPassword(newPassword, { role: "owner", username: owner.username });
+    if (!policy.ok) return reply(400, { ok: false, code: "PASSWORD_" + policy.code, error: passwordPolicyMessage(policy) });
+    if (await verifySecret(newPassword, owner.credential)) return reply(400, { ok: false, code: "PASSWORD_SAME", error: "كلمة المرور الجديدة يجب أن تختلف عن الحالية." });
+    const credential = await hashSecret(newPassword, deps.hashParams ? { params: deps.hashParams } : {});
+    const iso = new Date(nowMs).toISOString();
+    const updated = await mutateOwnerAccount(container, owner.accountId, current => {
+      assertSameAccountState(current, session);
+      return { ...current, credential, authVersion: Number(current.authVersion) + 1, passwordChangedAt: iso, updatedAt: iso };
+    });
+    await cleared();
+    await audit(container, { actor, action: "owner.password.changed", targetType: "owner-account", targetId: owner.accountId });
+    const device = await reissueThisDevice(container, updated, session, nowMs, env);
+    return reply(200, device ? { ok: true, ...device } : { ok: true, signInAgain: true });
+  }
+
+  if (action === "totp-begin") {
+    const secret = generateTotpSecret();
+    const sealed = sealSecret(secret, { purpose: TOTP_PURPOSE, aad: owner.accountId, env });
+    await mutateOwnerAccount(container, owner.accountId, current => {
+      assertSameAccountState(current, session);
+      const mfa = current.mfa || {};
+      return { ...current, mfa: { ...mfa, pendingTotp: { sealed, createdAtMs: nowMs, expiresAtMs: nowMs + PENDING_TOTP_MS } }, updatedAt: new Date(nowMs).toISOString() };
+    });
+    await cleared();
+    await audit(container, { actor, action: "owner.totp.reenrol-started", targetType: "owner-account", targetId: owner.accountId });
+    return reply(200, {
+      ok: true,
+      totp: { issuer: TOTP_ISSUER, account: owner.username, secret: base32Encode(secret), uri: otpauthUri({ issuer: TOTP_ISSUER, account: owner.username, secret }) },
+      expiresInSeconds: PENDING_TOTP_MS / 1000
+    });
+  }
+
+  // totp-confirm: the new authenticator is proved and swapped in, with new recovery codes, in ONE compare-and-set write
+  // against the freshest account (a second, concurrent confirm finds pendingTotp gone).
+  let fresh = null;
+  let updated;
+  try {
+    updated = await mutateOwnerAccount(container, owner.accountId, current => {
+      assertSameAccountState(current, session);
+      const mfa = current.mfa || {};
+      const pending = mfa.pendingTotp;
+      if (!pending || !(Number(pending.expiresAtMs) > nowMs)) throw fail("TOTP_REENROL_NOT_STARTED");
+      const secret = openSecret(pending.sealed, { purpose: TOTP_PURPOSE, aad: current.accountId, env });
+      if (!secret) throw fail("TOTP_REENROL_NOT_STARTED");
+      const result = verifyTotp(secret, code, { nowMs });
+      if (!result.ok) throw fail("TOTP_INVALID");
+      fresh = generateRecoveryCodes();
+      const iso = new Date(nowMs).toISOString();
+      const { pendingTotp: _done, ...rest } = mfa;
+      return {
+        ...current,
+        mfa: { ...rest, totp: { sealed: pending.sealed, lastUsedStep: result.step, enrolledAt: iso }, recoveryCodes: fresh.records },
+        authVersion: Number(current.authVersion) + 1,
+        updatedAt: iso
+      };
+    });
+  } catch (e) {
+    if (e?.code === "TOTP_REENROL_NOT_STARTED") return reply(409, { ok: false, code: "TOTP_REENROL_NOT_STARTED", error: "انتهت مهلة ربط التطبيق الجديد. ابدأ من جديد." });
+    if (e?.code === "TOTP_INVALID") {
+      await audit(container, { actor, action: "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "new-code" } });
+      return reply(401, { ok: false, code: "TOTP_INVALID", error: "رمز التحقق غير صحيح. أدخل الرمز الذي يظهر في التطبيق الجديد." });
+    }
+    throw e;
+  }
+  await cleared();
+  await audit(container, { actor, action: "owner.totp.reenrolled", targetType: "owner-account", targetId: owner.accountId });
+  const device = await reissueThisDevice(container, updated, session, nowMs, env);
+  return reply(200, device ? { ok: true, ...device, recoveryCodes: fresh.codes } : { ok: true, signInAgain: true, recoveryCodes: fresh.codes });
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -72,6 +216,8 @@ async function handler(request, deps = {}, obs = null) {
       await audit(container, { actor, action: "owner.step-up.succeeded", targetType: "owner-session", targetId: owner.accountId, details: { factor: factor.method } });
       return reply(200, view(factor.account, updated));
     }
+
+    if (CREDENTIALS_ACTIONS.has(action)) return await changeCredentials(action, request, { owner, session, container, actor, audit, nowMs, env, deps });
 
     if (action === "revoke-all" || action === "recovery-codes") {
       const denial = stepUpDenial(session, nowMs);
