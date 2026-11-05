@@ -186,3 +186,8 @@
   .eb-owner-auth-form { flex-direction: column; }
   .eb-owner-auth-tools { position: static; align-self: flex-end; margin-block-end: var(--eb-space-2); }
 }
+
+/* Tadris+ P10-C — «أمان الحساب»: the password change and the authenticator move, under the existing security panel. */
+.eb-owner-credentials { display: flex; flex-direction: column; gap: var(--eb-space-3); margin-block-start: var(--eb-space-3); padding-block-start: var(--eb-space-3); border-block-start: 1px solid var(--eb-line); }
+.eb-owner-credentials .auth-form { max-width: 420px; }
+.eb-owner-success { margin: 0; padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-success); background: var(--eb-success-bg); color: var(--eb-success-tx); border-radius: var(--eb-r); font-weight: var(--eb-fw-semibold); }

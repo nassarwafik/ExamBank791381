@@ -21,6 +21,7 @@ import OwnerLibrary from "./OwnerLibrary";   // Tadris+ P6-D
 import OwnerLegacyClasses from "./OwnerLegacyClasses";   // Tadris+ P9-A2
 import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 import OwnerLoginHero from "./OwnerLoginHero";   // Tadris+ P10-B
+import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -88,7 +89,13 @@ export default function OwnerApp() {
     const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
     body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
       onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
-      onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })} />;
+      onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })}
+      onToken={async next => {   // Tadris+ P10-C — this device's new session after a credential change
+        writeOwnerToken(next);
+        const s = await ownerApi.session(next);
+        if (s.ok) setBoot({ kind: "signed-in", token: next, view: s.data });
+        else { clearOwnerToken(); load(); }
+      }} />;
   }
   else if (route.view === "setup" && boot.bootstrap === "open") body = <OwnerSetup onDone={() => { goHome(); load(); }} />;
   else {
@@ -189,14 +196,14 @@ const SECTIONS: { id: OwnerSection; label: string }[] = [
 ];
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
-function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, onSignedOut, onView }: { token: string; view: OwnerSessionView; section: OwnerSection; teacherId: string | null; onSection: (s: OwnerSection) => void; onTeacher: (accountId: string) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void }) {
+function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, onSignedOut, onView, onToken }: { token: string; view: OwnerSessionView; section: OwnerSection; teacherId: string | null; onSection: (s: OwnerSection) => void; onTeacher: (accountId: string) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onToken: (token: string) => Promise<void> }) {
   return (
     <div className="eb-owner-console">
       <aside className="eb-owner-console-nav">
         <SubNav label="أقسام لوحة المالك" groups={[{ items: SECTIONS.map(s => ({ id: s.id, label: s.label })) }]} currentId={section} onSelect={id => onSection(id as OwnerSection)} />
       </aside>
       <div className="eb-owner-console-main">
-        {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} />}
+        {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} onToken={onToken} />}
         {section === "teachers" && !teacherId && <OwnerTeachers token={token} onSignedOut={onSignedOut} onOpen={onTeacher} />}
         {section === "teachers" && teacherId && <OwnerTeacherDetails key={teacherId} token={token} accountId={teacherId} onSignedOut={onSignedOut} onBack={() => onSection("teachers")} />}
         {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
@@ -209,7 +216,7 @@ function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, o
   );
 }
 
-function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onSection: (s: OwnerSection) => void }) {
+function OwnerHome({ token, view, onSignedOut, onView, onSection, onToken }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onSection: (s: OwnerSection) => void; onToken: (token: string) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [stepUpFor, setStepUpFor] = useState<Pending>(null);
@@ -301,6 +308,7 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection }: { token: str
           </form>
         )}
         {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
+        <OwnerCredentials token={token} username={view.owner.username} onToken={onToken} onSignedOut={onSignedOut} />
       </div>
 
       <div className="eb-owner-panel">
