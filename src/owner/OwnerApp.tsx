@@ -20,6 +20,7 @@ import OwnerCourses from "./OwnerCourses";
 import OwnerLibrary from "./OwnerLibrary";   // Tadris+ P6-D
 import OwnerLegacyClasses from "./OwnerLegacyClasses";   // Tadris+ P9-A2
 import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
+import OwnerLoginHero from "./OwnerLoginHero";   // Tadris+ P10-B
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -90,7 +91,21 @@ export default function OwnerApp() {
       onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })} />;
   }
   else if (route.view === "setup" && boot.bootstrap === "open") body = <OwnerSetup onDone={() => { goHome(); load(); }} />;
-  else body = <OwnerLogin bootstrap={boot.bootstrap} onSignedIn={(token) => { writeOwnerToken(token); goHome(); load(); }} />;
+  else {
+    // Tadris+ P10-B — the sign-in page takes the main sign-in page's split layout: the owner's illustrated brand panel beside
+    // the form (the form, its fields and what the server checks are unchanged).
+    return (
+      <main className="eb-owner-page" dir="rtl">
+        <div className="auth eb-owner-auth">
+          <OwnerLoginHero />
+          <div className="auth-form-wrap eb-owner-auth-form">
+            {DARK_MODE_RELEASED && <div className="eb-owner-auth-tools"><ThemeSwitch /></div>}
+            <OwnerLogin bootstrap={boot.bootstrap} onSignedIn={(token) => { writeOwnerToken(token); goHome(); load(); }} />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="eb-owner-page" dir="rtl">
