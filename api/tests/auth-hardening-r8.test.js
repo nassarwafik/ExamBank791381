@@ -17,6 +17,9 @@ const {
 } = await import("../src/lib/student-auth.js");
 const throttle = await import("../src/lib/login-throttle.js");
 const { handler: loginHandler } = await import("../src/functions/platform-login.js");
+// P10-F hotfix — the decoy that equalises a failed sign-in (P10-F) costs a real teacher check; tests pass the suite's test-only
+// scrypt parameters through the existing `hashParams` seam so each failed attempt stays cheap (production always uses its own).
+const FAST_LOGIN_HASH = { N: 16384, r: 8, p: 1, keyLen: 64 };
 const { handler: builderLoginHandler } = await import("../src/functions/builder-login.js");
 const { handler: sessionHandler } = await import("../src/functions/platform-session.js");
 const { handler: dashboardHandler } = await import("../src/functions/student-dashboard.js");
@@ -255,7 +258,7 @@ describe("R8 login throttling (reserve-before-verify)", () => {
   });
   it("X: a throttled login returns 429 + Retry-After (no-store) without reaching verify", async () => {
     let verified = 0;
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => ({}), downloadJsonOrNull: async () => null,
       mutateJsonWithRetry: async () => {}, clientIdFromRequest: () => "ip1",
       validateBuilderCredentials: () => false, verifyPassword: () => { verified++; return true; },
@@ -292,7 +295,7 @@ describe("R8 login throttling (reserve-before-verify)", () => {
     c._blobs.set("platform/auth/" + createdCodeHash("BURST") + ".json", { body: JSON.stringify({ userId: "u1", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a"' });
     c._blobs.set("platform/users/u1.json", { body: JSON.stringify({ userId: "u1", role: "student", active: true, authVersion: 1, code: "BURST", displayName: "A", classId: "c1" }), etag: '"u"' });
     let verifyCalls = 0;
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => c,
       downloadJsonOrNull: async (_c, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
       // real mutateJsonWithRetry (default) over the fake blob for reserve; verify is a counting spy that
@@ -394,7 +397,7 @@ describe("R8 platform-login storage safety", () => {
     store.set("platform/auth/" + codeHash + ".json", { userId: "u1", active: true, salt, passwordHash });
     store.set("platform/users/u1.json", { userId: "u1", role: "student", active: true, authVersion: 1, code: "S-1", displayName: "A", classId: "c1", teacherNote: "KEEP-ME" });
     let firstRead = true;
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => ({}),
       downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
       // Simulate a concurrent edit landing AFTER the login read but the merge must preserve it: our simple
@@ -419,7 +422,7 @@ describe("R8 platform-login storage safety", () => {
     const { salt, passwordHash } = hashPassword("pw123456");
     store.set("platform/auth/" + codeHash + ".json", { userId: "u2", active: true, salt, passwordHash });
     store.set("platform/users/u2.json", { userId: "u2", role: "student", active: true, authVersion: 1, code: "S-2", displayName: "B", classId: "c1" });
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => ({}), downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
       mutateJsonWithRetry: async (_c, k, fn) => { const cur = store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null; const next = await fn(cur); store.set(k, next); return next; },
       deleteBlob: async () => {}, clientIdFromRequest: () => "ip1", validateBuilderCredentials: () => false,
@@ -429,7 +432,7 @@ describe("R8 platform-login storage safety", () => {
     expect(r.status).toBe(200); expect(r.headers["Cache-Control"]).toBe("no-store");
   });
   it("invalid credentials return a single generic error (no enumeration)", async () => {
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => ({}), downloadJsonOrNull: async () => null,
       mutateJsonWithRetry: async () => {}, deleteBlob: async () => {}, clientIdFromRequest: () => "ip1",
       validateBuilderCredentials: () => false,
@@ -574,7 +577,7 @@ describe("R8 §3 — auth-doc version, fail-closed reset, login race", () => {
     const c = makeBlobContainer(); seedStudent(c);
     await resetStudentPassword(c, readJson(c, "platform/users/u1.json"), "newpass1");
     // Now student+auth are both v2 with the NEW hash. The OLD password must fail.
-    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
+    const deps = { hashParams: FAST_LOGIN_HASH, getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
       reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "203.0.113.1", validateBuilderCredentials: () => false };
     const r = await loginHandler({ json: async () => ({ userCode: "S-1", password: "oldpass1" }) }, deps);
     expect(r.status).toBe(401);
@@ -592,7 +595,7 @@ describe("R8 §3 — auth-doc version, fail-closed reset, login race", () => {
     // Student was bumped to 2; auth doc still at 1 → inconsistent → login (even OLD password) fails closed.
     expect(readJson(c, "platform/users/u1.json").authVersion).toBe(2);
     expect(readJson(c, authName).authVersion).toBe(1);
-    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
+    const deps = { hashParams: FAST_LOGIN_HASH, getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
       reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "1.2.3.4", validateBuilderCredentials: () => false };
     const r = await loginHandler({ json: async () => ({ userCode: "S-1", password: "oldpass1" }) }, deps);
     expect(r.status).toBe(401);                                             // fail-closed
@@ -619,7 +622,7 @@ describe("R8 §3 — auth-doc version, fail-closed reset, login race", () => {
     const store = new Map();
     store.set("platform/auth/" + createdCodeHash("S-9") + ".json", { userId: "u9", active: true, authVersion: 1, ...hashPassword("pw123456") });
     store.set("platform/users/u9.json", { userId: "u9", role: "student", active: true, authVersion: 1, code: "S-9", displayName: "A", classId: "c1" });
-    const deps = {
+    const deps = { hashParams: FAST_LOGIN_HASH,
       getContainer: () => ({}),
       downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
       // The lastLogin mutate observes a concurrent reset that bumped the student to v2 → fail-closed.
@@ -686,7 +689,7 @@ describe("R8 §A — throttle recovery state machine", () => {
     const { salt, passwordHash } = hashPassword("correctpw1");
     c._blobs.set("platform/auth/" + createdCodeHash("S-D") + ".json", { body: JSON.stringify({ userId: "ud", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a"' });
     c._blobs.set("platform/users/ud.json", { body: JSON.stringify({ userId: "ud", role: "student", active: true, authVersion: 1, code: "S-D", displayName: "A", classId: "c1" }), etag: '"u"' });
-    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "198.51.100.7", validateBuilderCredentials: () => false, now: () => clock };
+    const deps = { hashParams: FAST_LOGIN_HASH, getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "198.51.100.7", validateBuilderCredentials: () => false, now: () => clock };
     // exhaust the free band with wrong guesses → the next is 429
     for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS; i++) {
       const r = await loginHandler({ json: async () => ({ userCode: "S-D", password: "wrong" }) }, deps);
@@ -1011,7 +1014,7 @@ describe("R8 FINAL §2 — out-of-phase buckets do not waste the other dimension
     seedOutOfPhase(c, "S-2", "203.0.113.5", clock);
     const perIpName = throttle.throttleName("S-2", "203.0.113.5");
     const perIpBefore = c._blobs.get(perIpName).body;
-    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "203.0.113.5", validateBuilderCredentials: () => false, now: () => clock };
+    const deps = { hashParams: FAST_LOGIN_HASH, getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "203.0.113.5", validateBuilderCredentials: () => false, now: () => clock };
     const blocked = await loginHandler({ json: async () => ({ userCode: "S-2", password: "correctpw1" }) }, deps);
     expect(blocked.status).toBe(429);                                     // rejected by the GLOBAL dimension
     expect(c._blobs.get(perIpName).body).toBe(perIpBefore);              // per-IP probe NOT consumed

@@ -19,7 +19,9 @@ beforeAll(() => { process.env.STUDENT_SESSION_SECRET = "qa-roster-identity-secre
 const AUTH = { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), recordAuditEvent: async () => {} };
 const sreq = body => ({ method: "POST", url: "https://x/api/students", json: async () => body });
 const lreq = body => ({ method: "POST", url: "https://x/api/platform-login", headers: new Map(), json: async () => body });
-const loginDeps = ctx => ({ getContainer: () => ctx.container, reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "qa", validateBuilderCredentials: () => false });
+// P10-F hotfix — the decoy that equalises a failed sign-in (P10-F) costs a real teacher check; tests pass the suite's test-only
+// scrypt parameters through the existing `hashParams` seam so each failed attempt stays cheap (production always uses its own).
+const loginDeps = ctx => ({ getContainer: () => ctx.container, reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "qa", validateBuilderCredentials: () => false, hashParams: { N: 16384, r: 8, p: 1, keyLen: 64 } });
 const seed = () => { const ctx = createMemoryContainer(); ctx.setJson("platform/classes/c1.json", { classId: "c1", name: "صف", active: true, studentIds: [] }); return ctx; };
 const call = (ctx, body) => students(sreq(body), { ...AUTH, container: ctx.container });
 const signIn = (ctx, userCode, password) => login(lreq({ userCode, password }), loginDeps(ctx));

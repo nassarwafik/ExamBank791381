@@ -25,6 +25,7 @@ const deps = ctx => ({
   clientIdFromRequest: () => "ip-hotfix",
   reserveLoginAttempt: async () => ({ allowed: true }),
   clearLoginThrottle: async () => {},
+  hashParams: { N: 16384, r: 8, p: 1, keyLen: 64 },   // P10-F hotfix — test-only scrypt cost for the failure-path decoy
 });
 const login = (ctx, body) => loginHandler({ json: async () => body, headers: { get: () => null } }, deps(ctx));
 
