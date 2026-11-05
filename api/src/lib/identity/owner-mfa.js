@@ -23,7 +23,7 @@ function openOwnerTotpSecret(account, env = process.env) {
  * → { ok: true, method: "totp" | "recovery", account } or { ok: false }.
  * Storage failures (other than a rejected factor) propagate, so the caller answers 503 rather than "denied" or "allowed".
  */
-async function verifyAndConsumeSecondFactor(container, accountId, { code, recoveryCode } = {}, { nowMs = Date.now(), env = process.env, mutate = mutateOwnerAccount } = {}) {
+async function verifyAndConsumeSecondFactor(container, accountId, { code, recoveryCode } = {}, { nowMs = Date.now(), env = process.env, mutate = mutateOwnerAccount, windowSteps } = {}) {
   const useRecovery = !code && Boolean(recoveryCode);
   if (!code && !useRecovery) return { ok: false };
   let method = null;
@@ -35,7 +35,7 @@ async function verifyAndConsumeSecondFactor(container, accountId, { code, recove
         const secret = openOwnerTotpSecret(current, env);
         if (!secret) throw new SecondFactorRejected();
         const last = Number.isInteger(mfa.totp?.lastUsedStep) ? mfa.totp.lastUsedStep : null;
-        const result = verifyTotp(secret, code, { nowMs, lastUsedStep: last });
+        const result = verifyTotp(secret, code, { nowMs, lastUsedStep: last, windowSteps });
         if (!result.ok) throw new SecondFactorRejected();
         method = "totp";
         return { ...current, mfa: { ...mfa, totp: { ...mfa.totp, lastUsedStep: result.step } }, updatedAt: new Date(nowMs).toISOString() };
