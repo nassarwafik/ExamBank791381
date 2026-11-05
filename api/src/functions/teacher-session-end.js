@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { getContainer } = require("../lib/platform-storage");
 const { requireTeacherSession } = require("../lib/teacher-session");
-const { mutateTeacherAccount, withRevokedSession } = require("../lib/identity/teacher-accounts");
+const { mutateTeacherAccount, withoutTeacherSession } = require("../lib/identity/teacher-accounts");
 
 // Tadris+ P2-A2 — a teacher signs out on the SERVER. Route: POST /api/teacher-session/logout   (teacher session)
 //
@@ -14,7 +14,7 @@ const { mutateTeacherAccount, withRevokedSession } = require("../lib/identity/te
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 
 async function revokeTeacherSession(container, accountId, sid, expMs, nowMs, deps = {}) {
-  await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, accountId, a => ({ ...a, revokedSessions: withRevokedSession(a, sid, expMs, nowMs) }));
+  await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, accountId, a => withoutTeacherSession(a, sid, nowMs));
 }
 
 async function handler(request, deps = {}, obs = null) {

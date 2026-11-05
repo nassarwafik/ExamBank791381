@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P8-A2 — the owner restricts the appearance values of ONE teacher (`resources.appearance` of the access revision; a part absent
 // = every value; the part's default always allowed), applied with the capabilities (enforce only): the server refuses a value outside
 // it, GET reports what is allowed, a stored value no longer allowed reads back as the default (nothing deleted); the owner's routes
@@ -38,7 +39,7 @@ function setup({ mode = "enforce", appearance } = {}) {
   mem.setJson(revisionName(revision.revisionId), revision);
   mem.setJson(teacherAccountName(SARA), { schemaVersion: 1, accountId: SARA, role: "teacher", username: "t.sara", displayName: "سارة", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], accessRevisionId: revision.revisionId, accessPreset: { id: "full-teaching", version: 2 } });
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, token, deps: { getContainer: () => mem.container, container: mem.container } };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

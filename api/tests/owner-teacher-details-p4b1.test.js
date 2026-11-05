@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P4-B1 — one teacher's page, server side. TEST data only.
 //   GET history   — the revision chain from the account's pointer, newest first, re-validated; an untrusted link is shown invalid
 //                   and ends the walk (nothing past it is presented as this teacher's history); orphans never appear.
@@ -61,7 +62,7 @@ function setup() {
     mem.setJson(ownerSessionName(sid), { schemaVersion: 1, sid, accountId: OWNER_ID, authVersion: 1, createdAtMs: now, expiresAtMs: now + 7200e3, stepUpAtMs: now - ago });
     headers[name] = { "x-owner-token": createOwnerToken({ accountId: OWNER_ID, sid, authVersion: 1 }, { nowMs: now }).token };
   }
-  const saraToken = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const saraToken = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, deps, ...headers, saraToken };
 }
 const assign = (ctx, body) => ownerAccess(req({ action: "assign", headers: ctx.owner, body: { accountId: SARA, presetId: "learning-only", presetVersion: 1, ...body } }), ctx.deps);

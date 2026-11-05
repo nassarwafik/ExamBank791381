@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». TEST data only.
 // The owner creates a teacher's classes and manages them (labels, archive / restore / graduate) from the console:
 //   owner session only; every change needs a recent step-up and is in the owner audit log;
@@ -47,7 +48,7 @@ function setup() {
   }
   mem.setJson("platform/classes/legacy.json", { classId: "legacy", name: "صف قديم", grade: "10", schoolYear: "2025", active: true, studentIds: [] });   // unowned (pre-tenancy)
   const deps = { getContainer: () => mem.container, container: mem.container };
-  const teacher = id => ({ "x-builder-token": createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
+  const teacher = id => ({ "x-builder-token": recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
   return { mem, deps, ...headers, teacher };
 }
 const call = (ctx, action, body, headers = ctx.owner) => ownerClasses(req({ action, body, headers }), ctx.deps);

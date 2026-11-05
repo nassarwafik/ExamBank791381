@@ -22,7 +22,7 @@ const { isTeacherAccountId } = require("./teacher-token");
 const TEACHER_PREFIX = "platform/accounts/teachers/";
 const INVITATION_PREFIX = "platform/accounts/invitations/";
 const INVITATION_TTL_MS = 72 * 60 * 60 * 1000;
-const MAX_REVOKED_SESSIONS = 50;
+const MAX_TEACHER_SESSIONS = 10;   // Tadris+ P10-A — owner decision §19.37: 10 devices; a new sign-in ends the oldest
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_ENDED_MESSAGE = "انتهت الفترة التجريبية لحسابك. تواصل مع إدارة المنصة لتمديدها أو لتحويل الحساب إلى حساب دائم.";
 const TRIAL_WARNING_DAYS = 7;       // «ينتهي قريبًا»: the last week of a trial (owner decision: the in-app warnings start a week before)
@@ -157,16 +157,46 @@ async function createTeacherAccount(container, account) {
   return { ok: true };
 }
 
-/** Whether a session id was ended by logout (bounded list, expired entries ignored). */
-function sessionRevoked(account, sid, nowMs) {
-  const list = Array.isArray(account && account.revokedSessions) ? account.revokedSessions : [];
-  return list.some(r => r && r.sid === sid && Number(r.expMs) > nowMs - 5 * 60 * 1000);
-}
+// Tadris+ P10-A — every issued managed session is RECORDED in the account (approved design docs/enterprise-teacher-sessions-p10a.md):
+// `sessions: [{ sidHash, createdAtMs, expiresAtMs, via }]` — only a recorded, unexpired session is accepted (lib/teacher-session.js),
+// so a token signed with the right secret but never issued is refused (security review O1). The id itself is never stored (its
+// sha256, with a context prefix). Logout removes the entry, so a session never comes back (O6). At most 10: a new sign-in ends the
+// oldest. The former `revokedSessions` list is no longer read; every write here drops it.
+const sessionHash = sid => sha256Hex("tadris-teacher-session|" + String(sid));
+const SESSION_VIA = new Set(["login", "owner-handoff"]);
 
-function withRevokedSession(account, sid, expMs, nowMs) {
-  const list = (Array.isArray(account.revokedSessions) ? account.revokedSessions : []).filter(r => r && Number(r.expMs) > nowMs && r.sid !== sid);
-  list.push({ sid, expMs });
-  return list.slice(-MAX_REVOKED_SESSIONS);
+/** The account's recorded sessions that are well formed and not expired at nowMs, oldest first. */
+function liveSessions(account, nowMs) {
+  const list = Array.isArray(account && account.sessions) ? account.sessions : [];
+  return list
+    .filter(s => s && typeof s.sidHash === "string" && /^[0-9a-f]{64}$/.test(s.sidHash) && Number.isFinite(Number(s.expiresAtMs)) && Number(s.expiresAtMs) > nowMs && Number.isFinite(Number(s.createdAtMs)))
+    .sort((a, b) => Number(a.createdAtMs) - Number(b.createdAtMs));
+}
+/** Whether session `sid` was issued for this account and is still live. */
+function sessionActive(account, sid, nowMs) {
+  if (!sid) return false;
+  const h = sessionHash(sid);
+  return liveSessions(account, nowMs).some(s => s.sidHash === h);
+}
+/** The account with session `sid` recorded (expired ones dropped; beyond 10, the oldest ended), and without `revokedSessions`. */
+function withTeacherSession(account, { sid, expiresAtMs, nowMs, via }) {
+  if (!sid || !Number.isFinite(Number(expiresAtMs))) throw new Error("A recorded teacher session needs its id and its expiry.");
+  const h = sessionHash(sid);
+  const list = liveSessions(account, nowMs).filter(s => s.sidHash !== h);
+  list.push({ sidHash: h, createdAtMs: nowMs, expiresAtMs: Number(expiresAtMs), via: SESSION_VIA.has(via) ? via : "login" });
+  const { revokedSessions, ...rest } = account;   // eslint-disable-line no-unused-vars
+  return { ...rest, sessions: list.slice(-MAX_TEACHER_SESSIONS) };
+}
+/** The account without session `sid` (expired ones dropped), and without `revokedSessions`. */
+function withoutTeacherSession(account, sid, nowMs) {
+  const h = sessionHash(sid);
+  const { revokedSessions, ...rest } = account;   // eslint-disable-line no-unused-vars
+  return { ...rest, sessions: liveSessions(account, nowMs).filter(s => s.sidHash !== h) };
+}
+/** The account with NO session (owner end-sessions, suspension, password reset), and without `revokedSessions`. */
+function withNoTeacherSessions(account) {
+  const { revokedSessions, ...rest } = account;   // eslint-disable-line no-unused-vars
+  return { ...rest, sessions: [] };
 }
 
 /** What the owner sees about a teacher: never the credential, never an invitation hash. */
@@ -189,9 +219,9 @@ function ownerView(a, nowMs = Date.now()) {
 }
 
 module.exports = {
-  TEACHER_PREFIX, INVITATION_PREFIX, INVITATION_TTL_MS, MAX_REVOKED_SESSIONS, DAY_MS, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS,
+  TEACHER_PREFIX, INVITATION_PREFIX, INVITATION_TTL_MS, MAX_TEACHER_SESSIONS, DAY_MS, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS,
   TRIAL_ENDED_MESSAGE, TRIAL_WARNING_DAYS, validTrialDays, newTrial, isTrial, trialEnded, trialEndingSoon, teacherTrialView, extendedTrial,
   teacherAccountName, invitationName, newTeacherAccountId, readTeacherAccount, findTeacherByUsername, listTeacherAccounts,
   mutateTeacherAccount, newInvitation, writeInvitationPointer, resolveInvitation, deleteInvitationPointer, usernameAvailable,
-  createTeacherAccount, sessionRevoked, withRevokedSession, ownerView, sha256Hex
+  createTeacherAccount, sessionActive, liveSessions, withTeacherSession, withoutTeacherSession, withNoTeacherSessions, ownerView, sha256Hex
 };

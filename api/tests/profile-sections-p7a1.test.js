@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 import { school, NOW, SUB, instrument } from "./fixtures/analytics-school.js";
 
 // Tadris+ P7-A1 — the student profile (GET /api/students?profileUserId=, gated by students.student.view) carries the student's
@@ -36,7 +37,7 @@ function setup({ mode = "enforce", preset = "learning-only", version = 1 } = {})
   mem.setJson(revisionName(revision.revisionId), revision);
   mem.setJson(teacherAccountName(SARA), { schemaVersion: 1, accountId: SARA, role: "teacher", username: "t.sara", displayName: "سارة", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], accessRevisionId: revision.revisionId, accessPreset: { id: preset, version } });
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, token, deps: { getContainer: () => mem.container, container: mem.container } };
 }
 const profileOf = async ctx => students({ method: "GET", url: "https://x/api/students?profileUserId=s01", headers: { get: k => (String(k).toLowerCase() === "x-builder-token" ? ctx.token : null) } }, ctx.deps);

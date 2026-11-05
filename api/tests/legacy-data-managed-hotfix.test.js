@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ hotfix after P2-A2 — data created before teacher tenancy (21G.0) carries no ownerId. Without LEGACY_DATA_OWNER it was
 // shared with EVERY tenant, so a brand-new managed teacher created from the Owner Console (account id t_…) saw all pre-tenancy
 // classes, students, saved exams and bank questions. Owner rule: «لا تُسند البيانات القديمة عشوائيًا لأي معلم».
@@ -44,7 +45,7 @@ describe("hotfix — pre-tenancy data is never handed to a console-created manag
   it("end to end: a managed teacher's class list does not include a pre-tenancy class", async () => {
     const mem = createMemoryContainer({ "platform/classes/c-old.json": { ...unowned, status: "active", studentIds: [] } });
     mem.setJson(teacherAccountName(MANAGED), { schemaVersion: 1, accountId: MANAGED, role: "teacher", username: "t.sara", displayName: "سارة", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [] });
-    const { token } = createManagedTeacherToken({ accountId: MANAGED, sid: newTeacherSessionId(), authVersion: 1 });
+    const { token } = recordedManagedToken(mem, { accountId: MANAGED, sid: newTeacherSessionId(), authVersion: 1 });
     const req = { method: "GET", headers: { get: k => ({ "x-builder-token": token })[String(k).toLowerCase()] ?? null }, json: async () => ({}) };
     const r = await classrooms(req, { getContainer: () => mem.container });
     expect(r.status).toBe(200);

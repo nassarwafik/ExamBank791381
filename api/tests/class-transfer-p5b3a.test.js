@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P5-B3a — moving a WHOLE class to another teacher (owner only; owner decision §19.21: «كل تاريخ الصف»). TEST data only.
 //   preview first (counts only, nothing written); the transfer moves class.ownerId AND every student of the class (archived ones too)
 //   to the new teacher, who then has the class's whole history (assignments, results, pending grading) while the former teacher has
@@ -53,7 +54,7 @@ function setup() {
     heads[name] = { "x-owner-token": createOwnerToken({ accountId: OWNER_ID, sid, authVersion: 1 }, { nowMs: now }).token };
   }
   const deps = { getContainer: () => mem.container, container: mem.container, recordAuditEvent: async () => {} };
-  const tok = id => ({ "x-builder-token": createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
+  const tok = id => ({ "x-builder-token": recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
   return { mem, deps, ...heads, sara: tok(SARA), omar: tok(OMAR) };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

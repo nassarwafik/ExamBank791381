@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P6-A + P6-C (risks S2 / S5, owner decision D8). TEST data only.
 //   the exam library carries ANSWER KEYS: one item needs preview (or viewKeys); the keys go only with examLibrary.item.viewKeys —
 //   otherwise the item is sanitized like a student's view (answerKeys: false, its own ETag);
@@ -44,7 +45,7 @@ function setup({ mode = "enforce", preset = "learning-ready-assignments", denies
   mem.setJson("platform/classes/c1.json", { classId: "c1", name: "صف سارة", active: true, status: "active", ownerId: SARA });
   let clock = Date.parse("2026-11-03T10:00:00.000Z");
   const deps = { getContainer: () => mem.container, now: () => new Date((clock += 1000)).toISOString(), ensurePublishedAssignmentIndexed: async () => {}, recordAuditEvent: async () => {}, recordEventSafely: async () => {} };
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }, { nowMs: clock }).token;
   return { mem, deps, headers: { "x-builder-token": token } };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

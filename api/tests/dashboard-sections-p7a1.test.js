@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 import { school, NOW, SUB, instrument } from "./fixtures/analytics-school.js";
 
 // Tadris+ P7-A1 — the teacher's dashboard serves a section only to a teacher who holds the capability behind it (blueprint §9.2).
@@ -47,7 +48,7 @@ function setup({ mode = "enforce", preset = "learning-only", version = 1, grants
   // one unread direct message from a student of c1
   const prefix = directPrefix("s01"), id = sequencedMessageId(prefix, 1);
   mem.setJson(prefix + id + ".json", { schemaVersion: 1, messageId: id, createdAt: NOW, kind: "direct", studentId: "s01", senderRole: "student", senderId: "s01", senderDisplayName: "طالب", body: "سؤال" });
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   const deps = { getContainer: () => mem.container, container: mem.container, nowMs: NOW_MS, unreadMemo: createUnreadMemo(), docCache: null };
   return { mem, deps, token };
 }

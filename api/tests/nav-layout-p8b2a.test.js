@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P8-B2a — the teacher's own order of the sidebar on their account (owner decision §19.31): GET answers `navLayout` (null =
 // the default order); «setNavLayout» stores { order, hidden } of the arrangeable destinations only, needs appearance.layout.choose
 // (enforce only, like every capability), stores the default as the field's absence, and is audited. Presentation only: no access
@@ -37,7 +38,7 @@ function setup({ mode = "enforce", denies = [] } = {}) {
   mem.setJson(revisionName(revision.revisionId), revision);
   mem.setJson(teacherAccountName(SARA), { schemaVersion: 1, accountId: SARA, role: "teacher", username: "t.sara", displayName: "سارة", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], accessRevisionId: revision.revisionId, accessPreset: { id: "full-teaching", version: 2 } });
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, token, deps: { getContainer: () => mem.container, container: mem.container } };
 }
 const hdr = ctx => ({ get: k => (String(k).toLowerCase() === "x-builder-token" ? ctx.token : null) });

@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import sharp from "sharp";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P4-C — the school identity, server side (TEST data only):
 //   the owner creates / renames schools, publishes a logo through the SAME safe image pipeline as photos (real bytes sniffed —
 //   never SVG —, decoded, re-encoded to WebP, fitted inside, never cropped), links teachers; every POST needs step-up + audit;
@@ -74,7 +75,7 @@ async function setup() {
   for (const [id, classId, extra] of [["s1", "c1", {}], ["s0", "c0", {}], ["s2", "c1", { ownerId: OMAR }]]) {
     mem.setJson("platform/users/" + id + ".json", { userId: id, role: "student", code: "100" + id, displayName: "طالب " + id, classId, active: true, authVersion: 1, ...extra });
   }
-  const teacherToken = id => createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const teacherToken = id => recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
   const studentToken = id => createStudentToken({ userId: id, authVersion: 1, code: "100" + id, displayName: "x", classId: "c1" });
   return { mem, deps, ...headers, teacherToken, studentToken };
 }

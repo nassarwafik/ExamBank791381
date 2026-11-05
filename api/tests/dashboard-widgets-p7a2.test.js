@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 import { school, NOW, SUB, instrument } from "./fixtures/analytics-school.js";
 
 // Tadris+ P7-A2 — the owner chooses the dashboard widgets of ONE teacher (`resources.widgets` of the access revision; absent = every
@@ -50,7 +51,7 @@ function setup({ mode = "enforce", preset = "full-teaching", version = 2, widget
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
   const prefix = directPrefix("s01"), id = sequencedMessageId(prefix, 1);
   mem.setJson(prefix + id + ".json", { schemaVersion: 1, messageId: id, createdAt: NOW, kind: "direct", studentId: "s01", senderRole: "student", senderId: "s01", senderDisplayName: "طالب", body: "سؤال" });
-  const token = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, token, deps: { getContainer: () => mem.container, container: mem.container, nowMs: NOW_MS, unreadMemo: createUnreadMemo(), docCache: null } };
 }
 const hdr = ctx => ({ get: k => (String(k).toLowerCase() === "x-builder-token" ? ctx.token : null) });
@@ -99,7 +100,8 @@ describe("P7-A2 — «اليوم» sends only the chosen widgets", () => {
     expect(st.downloads.filter(n => n.startsWith("platform/assignments/") || n.startsWith("platform/class-assignments/"))).toEqual([]);
   });
   it("an empty choice: nothing but the page itself; observe / legacy mode: every widget (the choice applies with enforcement)", async () => {
-    expect((await today(get(setup({ widgets: [] }), "/api/teacher-today"), setup({ widgets: [] }).deps)).jsonBody.widgets).toEqual([]);
+    const empty = setup({ widgets: [] });   // one platform: its token is recorded in its own account (P10-A)
+    expect((await today(get(empty, "/api/teacher-today"), empty.deps)).jsonBody.widgets).toEqual([]);
     for (const mode of ["observe", "legacy"]) {
       const ctx = setup({ mode, widgets: ["grading.pending"] });
       expect((await today(get(ctx, "/api/teacher-today"), ctx.deps)).jsonBody.widgets).toContain("messages.unread");

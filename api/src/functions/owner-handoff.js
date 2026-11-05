@@ -5,7 +5,7 @@ const { recordOwnerAuditEvent, recordAuditEvent } = require("../lib/audit-log");
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { ownerSessionName, readOwnerAccount, mutateOwnerAccount, createOnly } = require("../lib/identity/owner-store");
 const { isTeacherAccountId, createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
-const { readTeacherAccount, mutateTeacherAccount, trialEnded } = require("../lib/identity/teacher-accounts");
+const { readTeacherAccount, mutateTeacherAccount, withTeacherSession, trialEnded } = require("../lib/identity/teacher-accounts");
 const { TOKEN_TTL_SECONDS } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
 
@@ -91,8 +91,12 @@ async function redeem(request, deps, obs, nowMs) {
   const u = teacherUsability(account, nowMs);
   if (!u.usable) return REDEEM_REFUSED(u.reason);
   // 4. an ORDINARY teacher session of its own (no owner claim at all).
-  const { token: teacherToken } = createManagedTeacherToken({ accountId: account.accountId, sid: newTeacherSessionId(), authVersion: account.authVersion }, { nowMs });
-  try { await mutateTeacherAccount(container, account.accountId, a => ({ ...a, lastLoginAt: new Date(nowMs).toISOString() })); } catch { /* the stamp is informational */ }
+  // Tadris+ P10-A — recorded in the account BEFORE the token is given (an unrecorded session is refused on every request).
+  const sid = newTeacherSessionId();
+  const { token: teacherToken, payload } = createManagedTeacherToken({ accountId: account.accountId, sid, authVersion: account.authVersion }, { nowMs });
+  try {
+    await mutateTeacherAccount(container, account.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "owner-handoff" }), lastLoginAt: new Date(nowMs).toISOString() }));
+  } catch { return reply(503, { ok: false, code: "TEACHER_SESSION_UNAVAILABLE", error: "تعذر فتح صفحة المعلم حاليًا. حاول مرة أخرى بعد قليل." }); }
   await (deps.recordAuditEvent || recordAuditEvent)(container, { actor: account.accountId, action: "teacher.session.from-owner", targetType: "teacher-account", targetId: account.accountId, targetLabel: account.username, details: { ownerId: ticket.ownerId } });
   obs?.logInfo?.("auth.login.succeeded", { role: "teacher", kind: "owner-handoff" });
   return reply(200, { ok: true, role: "teacher", token: teacherToken, userCode: account.username, displayName: account.displayName, expiresInSeconds: TOKEN_TTL_SECONDS });

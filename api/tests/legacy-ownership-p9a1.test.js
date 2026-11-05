@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P9-A1 — the owner's explicit decision for every class WITHOUT an owner (blueprint §11.2 M7; owner decisions §19.33; the
 // approved design docs/enterprise-legacy-ownership-p9a.md). TEST data only. Pinned here:
 //   inventory (read only) · preview = a dry run (NOTHING written) with the exact changes and a digest · apply only on a matching
@@ -57,7 +58,7 @@ function setup({ pending = false } = {}) {
     heads[name] = { "x-owner-token": createOwnerToken({ accountId: OWNER_ID, sid, authVersion: 1 }, { nowMs: now }).token };
   }
   const deps = { getContainer: () => mem.container, container: mem.container, tenancyEnv: {} };
-  const tok = id => ({ "x-builder-token": createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
+  const tok = id => ({ "x-builder-token": recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
   return { mem, deps, ...heads, omar: tok(OMAR), sara: tok(SARA), legacy: tok(LEGACY) };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });
