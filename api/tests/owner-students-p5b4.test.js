@@ -19,7 +19,7 @@ const { handler: students } = await import("../src/functions/manage-students.js"
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { OWNER_AUDIT_PREFIX } = await import("../src/lib/audit-log.js");
 const { resetOperatorGateCache } = cjs("../src/lib/identity/operator-gate.js");
 

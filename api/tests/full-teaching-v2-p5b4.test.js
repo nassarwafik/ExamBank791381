@@ -11,7 +11,7 @@ process.env.BANK_SETUP_KEY = "p5b4-full-teaching-v2-root-secret";
 for (const k of ["BUILDER_SESSION_SECRET", "BUILDER_USERS", "BUILDER_USER_CODE", "BUILDER_SESSION_VERSION", "LEGACY_DATA_OWNER"]) delete process.env[k];
 const { handler: classrooms } = await import("../src/functions/manage-classrooms.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
 const P = cjs("../src/lib/access/presets.js");

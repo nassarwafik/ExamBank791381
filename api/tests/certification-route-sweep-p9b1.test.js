@@ -26,7 +26,7 @@ const { ROUTE_CAPABILITIES } = require("../src/lib/access/route-capabilities.js"
 const { PRESETS } = require("../src/lib/access/presets.js");
 const { buildRevision, resetRevisionCache } = require("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = require("../src/lib/access/access-mode.js");
-const { createManagedTeacherToken, newTeacherSessionId } = require("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = require("../src/lib/identity/teacher-token.js");
 const { teacherAccountName } = require("../src/lib/identity/teacher-accounts.js");
 const { resetOperatorGateCache } = require("../src/lib/identity/operator-gate.js");
 

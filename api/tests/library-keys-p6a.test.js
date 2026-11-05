@@ -23,7 +23,7 @@ delete process.env.LEGACY_DATA_OWNER;
 const { handler: library } = await import("../src/functions/exam-library.js");
 const { handler: assignments } = await import("../src/functions/manage-assignments.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");

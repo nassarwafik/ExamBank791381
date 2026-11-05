@@ -17,7 +17,7 @@ delete process.env.LEGACY_DATA_OWNER;
 const { canAccessDocument } = await import("../src/lib/teacher-tenancy.js");
 const { bankEntryVisible } = await import("../src/lib/bank-tenancy.js");
 const { handler: classrooms } = await import("../src/functions/manage-classrooms.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
 
 const MANAGED = "t_00112233445566aa";
