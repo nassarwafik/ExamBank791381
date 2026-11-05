@@ -47,7 +47,8 @@ function setup({ owner = false } = {}) {
   const deps = {
     getContainer: () => mem.container,
     reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "10.0.0.9",
-    validateBuilderCredentials: (code, pw) => { passwordChecks++; return pw === SHARED; }
+    validateBuilderCredentials: (code, pw) => { passwordChecks++; return pw === SHARED; },
+    hashParams: { N: 16384, r: 8, p: 1, keyLen: 64 }   // P10-F hotfix — test-only scrypt cost for the failure-path decoy
   };
   if (owner) mem.setJson(BOOTSTRAP_MARKER, { schemaVersion: 1, accountId: "own_0011223344556677", completedAtMs: Date.now() });
   return { mem, deps, passwordChecks: () => passwordChecks };
