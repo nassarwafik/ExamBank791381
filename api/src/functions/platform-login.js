@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { app } = require("@azure/functions");
 const { withObservability, storageObserver } = require("../lib/observability");
 const {
@@ -33,7 +34,8 @@ const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile"); 
 const { normalizeIdentityNumber } = require("../lib/roster-input");
 const { findTeacherByUsername, mutateTeacherAccount, withTeacherSession, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
-const { verifySecret } = require("../lib/identity/password-hash");
+const { verifySecret, hashSecret } = require("../lib/identity/password-hash");
+const { createHeavyCheckGate } = require("../lib/identity/heavy-check-gate");
 const { ownerExists } = require("../lib/identity/owner-presence");
 const { sessionAccess } = require("../lib/access/session-access");
 const { schoolField, schoolOfAccount, schoolForStudent } = require("../lib/schools");
@@ -45,6 +47,31 @@ const { schoolField, schoolOfAccount, schoolForStudent } = require("../lib/schoo
 const IDENTITY_LIKE = /^[\s0-9\u0660-\u0669\u06F0-\u06F9\-./]+$/;
 
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
+
+// Tadris+ P10-F (closes security review O8; design docs/enterprise-login-timing-p10f.md, owner decision §19.42) — every FAILED
+// sign-in costs the same: exactly one teacher-cost scrypt (the managed teacher's check, or a decoy with the same parameters) and
+// one student-cost scrypt (the student's check, or a decoy) run before the generic 401, so the time of a failure no longer says
+// whether a teacher username or a student code exists. Decoys run ONLY on the failure path (a successful sign-in is unchanged)
+// and at most 2 at a time per instance (P10-E's gate, its own instance here); with no slot after a short wait the 401 is answered
+// without them (under that load response times are noise anyway, and memory stays bounded).
+const decoyCheckGate = createHeavyCheckGate(2);
+const teacherDecoys = new Map();
+function teacherDecoyRecord(params) {
+  const key = JSON.stringify(params || "default");
+  if (!teacherDecoys.has(key)) teacherDecoys.set(key, hashSecret("decoy-" + crypto.randomBytes(8).toString("hex"), params ? { params } : {}));
+  return teacherDecoys.get(key);
+}
+const STUDENT_DECOY_SALT = "tadris-login-decoy-salt";
+const STUDENT_DECOY_HASH = Buffer.alloc(64).toString("base64");
+async function equaliseFailedSignIn(password, ran, deps, verifyPw) {
+  const gate = deps.decoyCheckGate || decoyCheckGate;
+  const release = await gate.acquire(Number.isFinite(deps.decoyWaitMs) ? deps.decoyWaitMs : 2000);
+  if (!release) return;
+  try {
+    if (!ran.teacher) await verifySecret(password, await teacherDecoyRecord(deps.hashParams));
+    if (!ran.student) verifyPw(password, STUDENT_DECOY_SALT, STUDENT_DECOY_HASH);
+  } finally { release(); }
+}
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
 // Tadris+ P2-B (D6) — once the platform owner exists the shared teacher password no longer signs anyone in. The answer to a failed
 // sign-in then also says how teachers sign in now. It is the SAME for every failed attempt (student or teacher, right or wrong
@@ -106,7 +133,10 @@ async function handler(request, deps = {}, obs = null) {
     // the stored account on every request (lib/teacher-session.js). A wrong password continues to the other checks below, so
     // the answer is the same single generic error as before.
     const managed = await (deps.findTeacherByUsername || findTeacherByUsername)(container, userCode, { downloadJsonOrNull: dl });
-    if (managed && managed.status === "active" && managed.credential && await verifySecret(password, managed.credential)) {
+    const ran = { teacher: false, student: false };                       // P10-F — which real heavy checks this attempt ran
+    const managedCheckable = Boolean(managed && managed.status === "active" && managed.credential);
+    if (managedCheckable) ran.teacher = true;
+    if (managedCheckable && await verifySecret(password, managed.credential)) {
       const nowMs = deps.now ? deps.now() : Date.now();
       // A TRIAL account whose period is over: refused, with its own message (said only after the right password).
       if (trialEnded(managed, nowMs)) {
@@ -163,6 +193,7 @@ async function handler(request, deps = {}, obs = null) {
     const student = studentBlobName ? await dl(container, studentBlobName) : null;
     const boundVersion = normalizeAuthVersion(authDocument && authDocument.authVersion);
 
+    if (authDocument && authDocument.active !== false) ran.student = true;
     const credentialsOk = !!(
       authDocument &&
       authDocument.active !== false &&
@@ -192,6 +223,7 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى بعد قليل." } };
       }
       // The attempt was already counted at reserve; just return the single generic error (no enumeration).
+      await equaliseFailedSignIn(password, ran, deps, verifyPw);            // P10-F — the same cost for every failure
       obs?.logWarn("auth.login.failed", { reason: "invalid_credentials" });
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: sharedPassword === "closed" ? CLOSED_AUTH_ERROR : GENERIC_AUTH_ERROR } };
     }
