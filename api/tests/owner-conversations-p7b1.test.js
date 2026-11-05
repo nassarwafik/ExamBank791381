@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P7-B1 — owner decision D14 (§19.25): the owner reads ONE conversation, read only, with a written reason and a recent
 // second-factor check, recorded in the owner's audit log and in the teacher's activity log. A new owner route (a feature: no
 // fail-first). TEST data only.
@@ -20,7 +21,7 @@ const { handler: studentNotifications } = await import("../src/functions/student
 const { directPrefix, sequencedMessageId } = await import("../src/lib/message-store.js");
 const { createUnreadMemo } = await import("../src/lib/message-unread-memo.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createStudentToken } = await import("../src/lib/student-auth.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
@@ -72,7 +73,7 @@ describe("P7-B1 — D14: the owner reads one conversation, read only, for a writ
   }
   const open = (ctx, h, body) => ownerConversations({ method: "POST", params: { action: "open" }, headers: hdr(h), json: async () => body }, ctx.deps);
   const REASON = "شكوى ولي أمر بتاريخ اليوم";
-  const teacherLog = async (ctx, accountId) => (await auditHistory({ method: "GET", url: "https://x/api/audit-history", headers: hdr({ "x-builder-token": createManagedTeacherToken({ accountId, sid: newTeacherSessionId(), authVersion: 1 }).token }) }, ctx.deps)).jsonBody.events;
+  const teacherLog = async (ctx, accountId) => (await auditHistory({ method: "GET", url: "https://x/api/audit-history", headers: hdr({ "x-builder-token": recordedManagedToken(ctx.mem, { accountId, sid: newTeacherSessionId(), authVersion: 1 }).token }) }, ctx.deps)).jsonBody.events;
 
   it("refused without a recent second-factor check, without a reason, for an unknown student; nothing is recorded", async () => {
     const ctx = setup({ preset: "full-teaching", version: 2 });

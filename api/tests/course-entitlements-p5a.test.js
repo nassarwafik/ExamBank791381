@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P5-A — course entitlements (blueprint §10, owner decisions §19.13). TEST data only.
 //   catalog: the owner can archive a course — closed to every teacher and student at once, in every mode (no document = published);
 //   entitlement: `resources.courses` of the teacher's revision narrows the courses — applied while the access mode is ENFORCE
@@ -23,7 +24,7 @@ delete process.env.LEGACY_DATA_OWNER;
 
 const { handler: content } = await import("../src/functions/learning-content.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createStudentToken } = await import("../src/lib/student-auth.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
@@ -47,7 +48,7 @@ function setup({ mode = "enforce", courses, preset = "full-teaching" } = {}) {
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
   mem.setJson("platform/classes/c1.json", { classId: "c1", name: "صف سارة", status: "active", active: true, ownerId: SARA, learningMaterials: [{ courseId: A, visibleModuleIds: [A1] }, { courseId: B, visibleModuleIds: [B1] }] });
   mem.setJson("platform/users/s1.json", { userId: "s1", role: "student", code: "1001", displayName: "طالب", classId: "c1", active: true, archived: false, authVersion: 1 });
-  const teacher = { "x-builder-token": createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token };
+  const teacher = { "x-builder-token": recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token };
   const student = { "x-student-token": createStudentToken({ userId: "s1", authVersion: 1, code: "1001", displayName: "x", classId: "c1" }) };
   return { mem, deps, teacher, student };
 }

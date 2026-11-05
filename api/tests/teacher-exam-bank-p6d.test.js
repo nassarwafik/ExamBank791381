@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P6-D — each teacher's own exam bank (owner direction, blueprint §19.19). TEST data only; real owner and managed sessions.
 //   every library exam has an audience: «all» (every teacher's bank) or «selected» (only the teachers listed);
 //   launch default: the 36 exams shipped before P6-D are «all» (nobody loses anything); an exam added later starts for nobody;
@@ -21,7 +22,7 @@ const { handler: assignments } = await import("../src/functions/manage-assignmen
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
@@ -54,7 +55,7 @@ function setup({ mode = "enforce" } = {}) {
   }
   let clock = Date.parse("2026-11-03T10:00:00.000Z");
   const deps = { getContainer: () => mem.container, container: mem.container, now: () => new Date((clock += 1000)).toISOString(), ensurePublishedAssignmentIndexed: async () => {}, recordAuditEvent: async () => {}, recordEventSafely: async () => {} };
-  const tok = id => ({ "x-builder-token": createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
+  const tok = id => ({ "x-builder-token": recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }, { nowMs: clock }).token });
   return { mem, deps, ...heads, sara: tok(SARA), omar: tok(OMAR) };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

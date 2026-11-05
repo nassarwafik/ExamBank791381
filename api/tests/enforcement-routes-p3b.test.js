@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // The routes load their libraries with require(): reset THOSE instances (an ESM import is a separate module instance here).
 const cjs = createRequire(import.meta.url);
 
@@ -26,7 +27,7 @@ const { handler: savedExams } = await import("../src/functions/manage-saved-exam
 const { handler: aiAuthor } = await import("../src/functions/ai-question-author.js");
 const { handler: messages } = await import("../src/functions/messages.js");
 const { handler: ownerAccess } = await import("../src/functions/owner-access.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
 const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
@@ -58,7 +59,7 @@ function setup() {
       accessRevisionId = revision.revisionId;
     }
     mem.setJson(teacherAccountName(id), { schemaVersion: 1, accountId: id, role: "teacher", username: "u" + id.slice(-1), displayName: "معلم " + id.slice(-1), status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], ...(accessRevisionId ? { accessRevisionId, accessPreset: { id: presetId, version: 1 } } : {}) });
-    tokens[id] = createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
+    tokens[id] = recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
   };
   account(A, "learning-only"); account(C, "full-teaching"); account(U, null);
   const mode = m => mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode: m });
@@ -135,7 +136,7 @@ describe("P3-B enforce mode (written directly: the owner cannot choose it before
   });
   it("the imported workspace (t_legacy) without an assignment keeps today's access", async () => {
     ctx.mem.setJson(teacherAccountName("t_legacy"), { schemaVersion: 1, accountId: "t_legacy", role: "teacher", username: "w.nassar", displayName: "وفيق", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], origin: "shared-password-workspace" });
-    const token = createManagedTeacherToken({ accountId: "t_legacy", sid: newTeacherSessionId(), authVersion: 1 }).token;
+    const token = recordedManagedToken(ctx.mem, { accountId: "t_legacy", sid: newTeacherSessionId(), authVersion: 1 }).token;
     expect((await createClass(ctx, token)).status).not.toBe(403);
   });
   it("the mode or a revision cannot be read → 503, never allowed", async () => {

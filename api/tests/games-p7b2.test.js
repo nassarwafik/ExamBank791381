@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P7-B2 — the educational games (blueprint §10.3, owner decision §19.25):
 //   the class check of the Number Conversion game (the student plays only from a CURRENT class that exists and is not archived);
 //   a game is open to a teacher = its capability AND the owner's game choice (`resources.games`; absent = every game), enforce
@@ -27,7 +28,7 @@ const { handler: notifications } = await import("../src/functions/student-notifi
 const { handler: ownerAccess } = await import("../src/functions/owner-access.js");
 const { gameDocName } = await import("../src/lib/number-conversion-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createStudentToken } = await import("../src/lib/student-auth.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
@@ -52,7 +53,7 @@ function setup({ mode = "enforce", preset = "full-teaching", version = 2, games,
   mem.setJson("platform/classes/c1.json", { classId: "c1", name: "صف سارة", status: classStatus, active: classStatus === "active", ownerId: SARA });
   mem.setJson("platform/users/" + S1 + ".json", { schemaVersion: 3, userId: S1, role: "student", code: "1001", displayName: "ليان", ...(classId ? { classId } : {}), active: true, archived: false, authVersion: 1, createdAt: "2026-01-01T00:00:00.000Z" });
   const student = { "x-student-token": createStudentToken({ userId: S1, authVersion: 1, code: "1001", displayName: "ليان", classId: classId || "" }) };
-  const teacher = { "x-builder-token": createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token };
+  const teacher = { "x-builder-token": recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token };
   return { mem, deps: { getContainer: () => mem.container, container: mem.container }, student, teacher };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

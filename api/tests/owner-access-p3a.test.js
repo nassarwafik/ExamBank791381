@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P3-A — the owner assigns teacher capabilities (/api/owner-access) and a teacher's session probe reports them. TEST data.
 //   owner session + recent step-up · validation codes (never corrected) · immutable revision then compare-and-set of the account
 //   pointer · a stale screen or a concurrent change → 409 · audit · the change is seen on the teacher's NEXT request · in P3-A no
@@ -21,7 +22,7 @@ const { handler: platformSession } = await import("../src/functions/platform-ses
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 const { resetOperatorGateCache } = await import("../src/lib/identity/operator-gate.js");
 const { revisionName, resetRevisionCache, REVISION_PREFIX } = await import("../src/lib/access/revisions.js");
@@ -54,7 +55,7 @@ function setup({ owner = true } = {}) {
       headers[name] = { "x-owner-token": createOwnerToken({ accountId: OWNER_ID, sid, authVersion: 1 }, { nowMs: now }).token };
     }
   }
-  const saraToken = createManagedTeacherToken({ accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const saraToken = recordedManagedToken(mem, { accountId: SARA, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, deps, ...headers, saraToken };
 }
 const assign = (ctx, body, headers = ctx.owner) => ownerAccess(req({ action: "assign", headers, body: { accountId: SARA, presetId: "learning-only", presetVersion: 1, ...body } }), ctx.deps);

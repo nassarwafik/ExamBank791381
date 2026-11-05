@@ -4,6 +4,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P9-B1 — the BEHAVIOURAL route sweep (blueprint §14.1, §17 criterion 1; acceptance tests #6 and #14). The static registry
 // test (route-capabilities-p3b) proves every teacher route DECLARES a capability and ASKS for it; this sweep proves the answer:
 // every HTTP registration of every declared route file is called, for every key of its map (each action, GET and POST), by a
@@ -25,7 +26,7 @@ const { ROUTE_CAPABILITIES } = require("../src/lib/access/route-capabilities.js"
 const { PRESETS } = require("../src/lib/access/presets.js");
 const { buildRevision, resetRevisionCache } = require("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = require("../src/lib/access/access-mode.js");
-const { createManagedTeacherToken, newTeacherSessionId } = require("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = require("../src/lib/identity/teacher-token.js");
 const { teacherAccountName } = require("../src/lib/identity/teacher-accounts.js");
 const { resetOperatorGateCache } = require("../src/lib/identity/operator-gate.js");
 
@@ -75,7 +76,7 @@ function freshPlatform(mode) {
   mem.setJson("platform/access/revisions/" + emptyRevision.revision.revisionId + ".json", emptyRevision.revision);
   account(EMPTY, { accessRevisionId: emptyRevision.revision.revisionId, accessPreset: { id: "learning-only", version: 1 } });
   mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
-  const token = id => createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const token = id => recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { [NOBODY]: token(NOBODY), [EMPTY]: token(EMPTY) };
 }
 

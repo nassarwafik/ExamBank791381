@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P5-B1 — classes & student permissions (owner decision D18 revised: the owner creates classes; the teacher adds, edits and
 // archives students inside their own classes). TEST data only; real managed sessions, the capability map, enforce mode.
 // FAIL-FIRST (first block): `update` could do what two other capabilities gate —
@@ -19,7 +20,7 @@ for (const k of ["BUILDER_SESSION_SECRET", "BUILDER_USERS", "BUILDER_USER_CODE",
 const { handler: students } = await import("../src/functions/manage-students.js");
 const { handler: classrooms } = await import("../src/functions/manage-classrooms.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
 const { resetRevisionCache } = cjs("../src/lib/access/revisions.js");
@@ -39,7 +40,7 @@ function setup({ preset = "full-teaching", denies = [], mode = "enforce", extraC
   if (mode) mem.setJson(ACCESS_CONTROL_DOC, { schemaVersion: 1, mode });
   const audit = [];
   const deps = { container: mem.container, getContainer: () => mem.container, recordAuditEvent: async (_c, ev) => { audit.push(ev); } };
-  const tokenOf = id => createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  const tokenOf = id => recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
   return { mem, deps, audit, sara: { "x-builder-token": tokenOf(SARA) }, omar: { "x-builder-token": tokenOf(OMAR) } };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });
@@ -158,7 +159,7 @@ describe("P5-B1 scale — 10 teachers × 3 classes × 30 students", () => {
       ctx.mem.setJson(revisionName(revision.revisionId), revision);
       ctx.mem.setJson(teacherAccountName(t), { schemaVersion: 1, accountId: t, role: "teacher", username: "u" + t.slice(-2), displayName: "م", status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], accessRevisionId: revision.revisionId, accessPreset: { id: "full-teaching", version: 1 } });
     }
-    const tokens = Object.fromEntries(teachers.map(t => [t, { "x-builder-token": createManagedTeacherToken({ accountId: t, sid: newTeacherSessionId(), authVersion: 1 }).token }]));
+    const tokens = Object.fromEntries(teachers.map(t => [t, { "x-builder-token": recordedManagedToken(ctx.mem, { accountId: t, sid: newTeacherSessionId(), authVersion: 1 }).token }]));
     for (const t of teachers) for (let c = 0; c < 3; c++) for (let k = 0; k < 30; k++) await add(ctx, tokens[t], t + "-c" + c);
     const started = Date.now();
     for (const t of teachers) {

@@ -48,7 +48,7 @@ require(require.resolve("@azure/storage-blob", { paths: [path.join(root, "api")]
 }
 const lib = p => require(path.join(root, "api/src", p));
 const { createManagedTeacherToken, newTeacherSessionId } = lib("lib/identity/teacher-token.js");
-const { teacherAccountName } = lib("lib/identity/teacher-accounts.js");
+const { teacherAccountName, withTeacherSession } = lib("lib/identity/teacher-accounts.js");
 const { buildRevision, revisionName } = lib("lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = lib("lib/access/access-mode.js");
 const mem = api.mem;
@@ -59,8 +59,12 @@ const LINA = "t_00000000000e2e01", SARA = "t_00000000000e2e02", HUDA = "t_000000
 function teacher(id, username, displayName, presetId, resources) {
   const { revision } = buildRevision({ accountId: id, presetId, presetVersion: 1, createdBy: "owner:own_00000000000e2e00", ...(resources ? { resources } : {}) });
   mem.setJson(revisionName(revision.revisionId), revision);
-  mem.setJson(teacherAccountName(id), { schemaVersion: 1, accountId: id, role: "teacher", username, displayName, status: "active", credential: { algo: "scrypt" }, authVersion: 1, revokedSessions: [], accessRevisionId: revision.revisionId, accessPreset: { id: presetId, version: 1 } });
-  return createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token;
+  mem.setJson(teacherAccountName(id), { schemaVersion: 1, accountId: id, role: "teacher", username, displayName, status: "active", credential: { algo: "scrypt" }, authVersion: 1, accessRevisionId: revision.revisionId, accessPreset: { id: presetId, version: 1 } });
+  // Tadris+ P10-A — the session is recorded in the account exactly as a sign-in records it (production withTeacherSession)
+  const sid = newTeacherSessionId(), nowMs = Date.now();
+  const issued = createManagedTeacherToken({ accountId: id, sid, authVersion: 1 }, { nowMs });
+  mem.setJson(teacherAccountName(id), withTeacherSession(mem.getJson(teacherAccountName(id)), { sid, expiresAtMs: issued.payload.exp * 1000, nowMs, via: "login" }));
+  return issued.token;
 }
 const tokens = {
   [LINA]: teacher(LINA, "t.lina", "لينا", "learning-only"),

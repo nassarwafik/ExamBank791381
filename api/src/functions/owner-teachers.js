@@ -5,7 +5,8 @@ const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity
 const { isTeacherAccountId, LEGACY_TEACHER_ACCOUNT_ID } = require("../lib/identity/teacher-token");
 const {
   newTeacherAccountId, readTeacherAccount, listTeacherAccounts, mutateTeacherAccount, newInvitation, writeInvitationPointer,
-  usernameAvailable, createTeacherAccount, ownerView, validTrialDays, newTrial, isTrial, extendedTrial, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS
+  usernameAvailable, createTeacherAccount, ownerView, validTrialDays, newTrial, isTrial, extendedTrial, MIN_TRIAL_DAYS, MAX_TRIAL_DAYS,
+  withNoTeacherSessions   // Tadris+ P10-A
 } = require("../lib/identity/teacher-accounts");
 const { createOnly } = require("../lib/identity/owner-store");
 const { builderAuthConfigurationStatus } = require("../lib/builder-auth");
@@ -178,7 +179,7 @@ async function handler(request, deps = {}, obs = null) {
         schemaVersion: 1, accountId, role: "teacher", organizationId: "default", username: name.username,
         displayName: fields.displayName, fullName: fields.fullName || "", email: fields.email || "", phone: fields.phone || "",
         subjects: fields.subjects || [], adminNotes: fields.adminNotes || "",
-        status: "invited", credential: null, invitation: inv.record, authVersion: 1, revokedSessions: [],
+        status: "invited", credential: null, invitation: inv.record, authVersion: 1, sessions: [],
         ...(importing ? { origin: "shared-password-workspace", importedAt: iso } : {}),
         ...(trialDays ? { trial: newTrial(trialDays, nowMs) } : {}),
         ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length } : {}),
@@ -214,7 +215,7 @@ async function handler(request, deps = {}, obs = null) {
       if (current.status === "suspended") return reply(409, { ok: false, code: "SUSPENDED", error: "الحساب موقوف. أعد تفعيله أولًا." });
       const inv = newInvitation(action === "reset" ? "reset" : "invite", nowMs);
       const next = await mutateTeacherAccount(container, accountId, a => ({
-        ...a, invitation: inv.record, updatedAt: iso,
+        ...(action === "reset" ? withNoTeacherSessions(a) : a), invitation: inv.record, updatedAt: iso,
         ...(action === "reset" ? { credential: null, authVersion: Number(a.authVersion) + 1 } : {})
       }));
       await writeInvitationPointer(container, inv.token, accountId);
@@ -248,9 +249,9 @@ async function handler(request, deps = {}, obs = null) {
       }
       const reason = action === "suspend" ? text(body.reason, MAX_SUSPEND_REASON) : "";
       const next = await mutateTeacherAccount(container, accountId, a => {
-        if (action === "suspend") return { ...a, status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, suspendedReason: reason, updatedAt: iso };
+        if (action === "suspend") return { ...withNoTeacherSessions(a), status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, suspendedReason: reason, updatedAt: iso };
         if (action === "reactivate") return { ...a, status: a.credential ? "active" : "invited", suspendedAt: null, suspendedReason: null, updatedAt: iso };
-        if (action === "end-sessions") return { ...a, authVersion: Number(a.authVersion) + 1, revokedSessions: [], updatedAt: iso };
+        if (action === "end-sessions") return { ...withNoTeacherSessions(a), authVersion: Number(a.authVersion) + 1, updatedAt: iso };
         return { ...a, ...fields, updatedAt: iso };
       });
       await audit(container, { actor, action: "owner.teacher." + action, targetType: "teacher-account", targetId: accountId, targetLabel: current.username, ...(reason ? { details: { reason } } : {}) });

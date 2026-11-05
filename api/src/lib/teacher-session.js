@@ -1,7 +1,7 @@
 const storage = require("./platform-storage");
 const { requireBuilderAuth } = require("./builder-auth");
 const { managedTeacherClaim } = require("./identity/teacher-token");
-const { readTeacherAccount, sessionRevoked, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("./identity/teacher-accounts");
+const { readTeacherAccount, sessionActive, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("./identity/teacher-accounts");
 const { ownerExists } = require("./identity/owner-presence");
 
 // Tadris+ P2-A1/P2-A2 — the ONE asynchronous teacher-session check every teacher route awaits (owner decision 2026-11-01: a
@@ -46,7 +46,11 @@ async function requireTeacherSession(request, deps = {}) {
     try { closed = await ownerExists(() => containerOf(deps)); } catch { return unavailable(); }
     return closed ? legacyClosed() : legacy;
   }
-  const nowMs = deps.now ? deps.now() : Date.now();
+  // Tadris+ P10-A — the clock as a number of ms (a route's injected `now` may give an ISO string, the assignments convention). An
+  // unreadable clock refuses the session (fail closed): no expiry can be judged against it.
+  const rawNow = deps.now ? deps.now() : Date.now();
+  const nowMs = typeof rawNow === "number" ? rawNow : Date.parse(String(rawNow));
+  if (!Number.isFinite(nowMs)) return revoked();
   const claim = managedTeacherClaim(request, { nowMs });
   if (!claim) return legacy;
 
@@ -57,7 +61,9 @@ async function requireTeacherSession(request, deps = {}) {
     return unavailable();
   }
   if (!account || account.status !== "active" || !account.credential) return revoked();
-  if (account.authVersion !== claim.av || sessionRevoked(account, claim.sid, nowMs)) return revoked();
+  // Tadris+ P10-A — only a session this account ISSUED (recorded at sign-in) and that is still live: a token signed with the right
+  // secret but never issued, a logged-out one and one ended by the 10-device limit are all refused (security review O1, O6).
+  if (account.authVersion !== claim.av || !sessionActive(account, claim.sid, nowMs)) return revoked();
   if (trialEnded(account, nowMs)) return trialOver();
   // P3-A — the account's CURRENT access revision travels with the verified identity (read now, from the account), so the
   // resolver sees an access change on the very next request. It is never taken from the token or the client.

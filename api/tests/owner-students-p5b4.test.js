@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
+import { recordedManagedToken } from "./fixtures/managed-session.js";
 // Tadris+ P5-B4 — «يقوم المالك باضافة طلاب المعلم لكي يجهز له الصفحة… المعلم لديه القدرة على تعديل الطلاب حذف طالب اضافة طلاب اخرين».
 // TEST data only (synthetic 9-digit identities). The owner adds students to a teacher's ACTIVE class — one, or a whole list after the
 // same server preview the teacher gets — with the teacher route's own shared functions; each student is the teacher's (inherits the
@@ -18,7 +19,7 @@ const { handler: students } = await import("../src/functions/manage-students.js"
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
-const { createManagedTeacherToken, newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
+const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { OWNER_AUDIT_PREFIX } = await import("../src/lib/audit-log.js");
 const { resetOperatorGateCache } = cjs("../src/lib/identity/operator-gate.js");
 
@@ -41,7 +42,7 @@ function setup() {
   }
   const platformAudit = [];
   const deps = { getContainer: () => mem.container, container: mem.container, recordAuditEvent: async (_c, ev) => { platformAudit.push(ev); } };
-  const tok = id => ({ "x-builder-token": createManagedTeacherToken({ accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
+  const tok = id => ({ "x-builder-token": recordedManagedToken(mem, { accountId: id, sid: newTeacherSessionId(), authVersion: 1 }).token });
   return { mem, deps, platformAudit, ...heads, sara: tok(SARA), omar: tok(OMAR) };
 }
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });

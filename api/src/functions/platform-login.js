@@ -31,7 +31,7 @@ const {
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { resolveManagedTeacherDisplayName } = require("../lib/teacher-profile");   // Tadris+ P2-A2: managed teachers
 const { normalizeIdentityNumber } = require("../lib/roster-input");
-const { findTeacherByUsername, mutateTeacherAccount, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
+const { findTeacherByUsername, mutateTeacherAccount, withTeacherSession, trialEnded, teacherTrialView, TRIAL_ENDED_MESSAGE } = require("../lib/identity/teacher-accounts");
 const { createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
 const { verifySecret } = require("../lib/identity/password-hash");
 const { ownerExists } = require("../lib/identity/owner-presence");
@@ -114,8 +114,16 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 403, headers: NO_STORE, jsonBody: { ok: false, code: "TEACHER_TRIAL_ENDED", error: TRIAL_ENDED_MESSAGE } };
       }
       await throttleClear(container, throttleKey, clientId, deps);
-      const { token } = createManagedTeacherToken({ accountId: managed.accountId, sid: newTeacherSessionId(), authVersion: managed.authVersion }, { nowMs });
-      try { await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...a, lastLoginAt: new Date(nowMs).toISOString() })); } catch { /* the stamp is informational */ }
+      // Tadris+ P10-A — the session is RECORDED in the account (with the sign-in stamp, in the one write that already happened here)
+      // BEFORE the token is given: a session the server did not record is refused on every request. Cannot record → 503, no token.
+      const sid = newTeacherSessionId();
+      const { token, payload } = createManagedTeacherToken({ accountId: managed.accountId, sid, authVersion: managed.authVersion }, { nowMs });
+      try {
+        await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "login" }), lastLoginAt: new Date(nowMs).toISOString() }));
+      } catch (e) {
+        obs?.logError?.("auth.login.session_record_failed", e, { role: "teacher", kind: "managed" });
+        return { status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, code: "TEACHER_SESSION_UNAVAILABLE", error: "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى بعد قليل." } };
+      }
       obs?.logInfo("auth.login.succeeded", { role: "teacher", kind: "managed" });
       const displayName = await resolveManagedTeacherDisplayName(container, managed.accountId, managed.displayName, deps);
       // Tadris+ P3-C — the access the UI shapes itself by (never an authority: every route checks it again on the server).
