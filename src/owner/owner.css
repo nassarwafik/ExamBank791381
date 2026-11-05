@@ -153,3 +153,36 @@
 .eb-owner-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .eb-owner-file.is-disabled { opacity: 0.6; cursor: not-allowed; }
 .eb-owner-file:focus-within { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+
+/* Tadris+ P10-B — the owner sign-in page: the main sign-in page's split layout (.auth, .auth-brand, .auth-form-wrap from
+   login-pro.css) with the owner's own illustration (OwnerLoginHero). Tokens only, so the dark theme follows the main sign-in
+   page's panel. On a phone the panel stacks above the form and the illustration becomes a small picture between the brand and
+   the headline, so it never sits behind the text. */
+.eb-owner-auth { flex: 1; width: 100%; }
+.eb-owner-auth-form { position: relative; }
+.eb-owner-auth-tools { position: absolute; inset-block-start: var(--eb-space-3); inset-inline-end: var(--eb-space-3); }
+/* in the panel's flow between the brand and the text (never behind the text): as wide as the panel allows, and no taller than
+   the viewport leaves once the brand and the text are placed (560:640 is the drawing's aspect). */
+.auth-brand.eb-owner-hero { gap: var(--eb-space-4); }
+.auth-brand.eb-owner-hero > .eb-owner-art {
+  display: block; align-self: center; width: min(100%, 500px, calc((100vh - 360px) * 1.14)); min-width: 220px; height: auto; pointer-events: none;
+}
+.eb-owner-hero .auth-hero { margin-block: auto 0; }
+.eb-owner-art .eb-oa-glow stop { stop-color: var(--eb-primary-300); }
+.eb-owner-art .eb-oa-shield-fill stop { stop-color: var(--eb-surface); }
+.eb-owner-art .eb-oa-orbits { stroke: var(--eb-surface); }
+.eb-owner-art .eb-oa-links { stroke: var(--eb-primary-200); }
+.eb-owner-art .eb-oa-tiles { fill: color-mix(in srgb, var(--eb-primary-strong) 62%, var(--eb-primary)); stroke: var(--eb-surface); }
+.eb-owner-art .eb-oa-glyphs { stroke: var(--eb-surface); }
+.eb-owner-art .eb-oa-solid { fill: var(--eb-surface); }
+.eb-owner-art .eb-oa-halo { fill: var(--eb-surface); }
+.eb-owner-art .eb-oa-core { fill: color-mix(in srgb, var(--eb-primary-strong) 40%, var(--eb-primary)); }
+.eb-owner-art .eb-oa-shield { stroke: var(--eb-surface); }
+.eb-owner-art .eb-oa-crown { fill: var(--eb-surface); stroke: var(--eb-surface); }
+.eb-owner-art .eb-oa-code { fill: var(--eb-primary-200); }
+.eb-owner-art .eb-oa-stars { fill: var(--eb-surface); }
+@media (max-width: 900px) {
+  .auth-brand.eb-owner-hero > .eb-owner-art { width: min(240px, 70%); min-width: 0; margin-block: -6px -12px; }
+  .eb-owner-auth-form { flex-direction: column; }
+  .eb-owner-auth-tools { position: static; align-self: flex-end; margin-block-end: var(--eb-space-2); }
+}
