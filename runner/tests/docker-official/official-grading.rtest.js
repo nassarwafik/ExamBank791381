@@ -10,22 +10,25 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
-const { spawn, spawnSync } = require("node:child_process");
+const { spawnSync } = require("node:child_process");
 const { installHostWriteGuard } = require("../helpers/host-fs-guard.js");
 const hostWrites = installHostWriteGuard();                         // BEFORE the gateway modules load
 const { createDockerSandbox } = require("../../gateway/sandbox.js");
 const { resolveLanguage, LANGUAGES } = require("../../gateway/registry.js");
+const { createDockerTimeline } = require("../helpers/docker-timeline.js");   // R1 — diagnostics only (printed on failure)
 
 const LIMITS = { timeMs: 3000, memoryMb: 128, outputBytes: 17408 };
 const orphans = () => spawnSync("docker", ["ps", "-aq", "--filter", "label=smartassess.coding-runner=1"], { encoding: "utf8" }).stdout.trim();
 let seq = 0;
 const jobId = () => "cg_dockerofficial" + String(++seq).padStart(8, "0");
 const cases = stdins => stdins.map((stdin, i) => ({ token: "c" + String(i + 1).padStart(2, "0"), stdin }));
-/** A sandbox whose docker invocations are recorded (the real docker CLI still runs every one of them). */
+/** A sandbox whose docker invocations are recorded (the real docker CLI still runs every one of them). R1: each invocation is also
+ *  timed (docker-timeline.js), and `tl.around` prints that timeline if the test fails — nothing else changes. */
 function recordingSandbox() {
   const runs = [];
-  const sb = createDockerSandbox({ spawnImpl: (cmd, argv, opts) => { if (argv[0] === "run") runs.push(argv.slice()); return spawn(cmd, argv, opts); } });
-  return { sb, runs };
+  const tl = createDockerTimeline();
+  const sb = createDockerSandbox({ spawnImpl: (cmd, argv, opts) => { if (argv[0] === "run") runs.push(argv.slice()); return tl.spawnImpl(cmd, argv, opts); } });
+  return { sb, runs, tl };
 }
 const suite = (sb, language, source, stdins, limits = {}) => sb.runOfficialSuite(resolveLanguage(language, 1), { jobId: jobId(), language, languageVersion: 1, source, cases: cases(stdins), limits: { ...LIMITS, ...limits } }, { signal: new AbortController().signal });
 
@@ -35,37 +38,43 @@ test("preflight: Docker and the java / csharp / python worker images (17C tag) e
 });
 
 test("G1 Python official suite: raw stdout per case, a fresh runtime container per case", async () => {
-  const { sb, runs } = recordingSandbox();
-  const r = await suite(sb, "python", "a, b = map(int, input().split())\nprint('SUM=' + str(a + b))\n", ["1 2\n", "-1 -2\n", "5 5\n"]);
-  assert.equal(r.compile, undefined);
-  assert.deepEqual(r.cases.map(c => [c.token, c.status, c.stdout]), [["c01", "success", "SUM=3\n"], ["c02", "success", "SUM=-3\n"], ["c03", "success", "SUM=10\n"]]);
-  assert.equal(runs.length, 3);
-  assert.equal(new Set(runs.map(a => a[a.indexOf("--name") + 1])).size, 3);
-  assert.equal(orphans(), "");
+  const { sb, runs, tl } = recordingSandbox();
+  await tl.around("G1", async () => {
+    const r = await suite(sb, "python", "a, b = map(int, input().split())\nprint('SUM=' + str(a + b))\n", ["1 2\n", "-1 -2\n", "5 5\n"]);
+    assert.equal(r.compile, undefined);
+    assert.deepEqual(r.cases.map(c => [c.token, c.status, c.stdout]), [["c01", "success", "SUM=3\n"], ["c02", "success", "SUM=-3\n"], ["c03", "success", "SUM=10\n"]]);
+    assert.equal(runs.length, 3);
+    assert.equal(new Set(runs.map(a => a[a.indexOf("--name") + 1])).size, 3);
+    assert.equal(orphans(), "");
+  });
 });
 
 test("G2 Java: compiled ONCE, then one fresh runtime container per hidden case (artifact reused from gateway memory)", async () => {
-  const { sb, runs } = recordingSandbox();
-  const src = "import java.util.*;\npublic class Main { public static void main(String[] a) { Scanner s = new Scanner(System.in); int x = s.nextInt(), y = s.nextInt(); System.out.println(\"SUM=\" + (x + y)); } }\n";
-  const r = await suite(sb, "java", src, ["1 2\n", "-1 -2\n", "5 5\n", "100 1\n"]);
-  assert.equal(r.compile.status, "compiled");
-  assert.deepEqual(r.cases.map(c => [c.status, c.stdout]), [["success", "SUM=3\n"], ["success", "SUM=-3\n"], ["success", "SUM=10\n"], ["success", "SUM=101\n"]]);
-  const compileRuns = runs.filter(a => a[a.indexOf("--memory") + 1] === resolveLanguage("java", 1).compileMemoryMb + "m");
-  assert.equal(compileRuns.length, 1, "exactly ONE compile sandbox");
-  assert.equal(runs.length - compileRuns.length, 4, "one runtime sandbox per case");
-  for (const a of runs.filter(x => !compileRuns.includes(x))) assert.equal(a[a.indexOf("--memory") + 1], (128 + resolveLanguage("java", 1).runtimeOverheadMb) + "m");
-  const bad = await suite(createDockerSandbox(), "java", "public class Main { int x = ; }\n", ["1\n", "2\n"]);
-  assert.equal(bad.compile.status, "compile-error"); assert.equal(bad.cases.length, 0); assert.match(bad.compile.stderr, /error/);
-  assert.equal(orphans(), "");
+  const { sb, runs, tl } = recordingSandbox();
+  await tl.around("G2", async () => {
+    const src = "import java.util.*;\npublic class Main { public static void main(String[] a) { Scanner s = new Scanner(System.in); int x = s.nextInt(), y = s.nextInt(); System.out.println(\"SUM=\" + (x + y)); } }\n";
+    const r = await suite(sb, "java", src, ["1 2\n", "-1 -2\n", "5 5\n", "100 1\n"]);
+    assert.equal(r.compile.status, "compiled");
+    assert.deepEqual(r.cases.map(c => [c.status, c.stdout]), [["success", "SUM=3\n"], ["success", "SUM=-3\n"], ["success", "SUM=10\n"], ["success", "SUM=101\n"]]);
+    const compileRuns = runs.filter(a => a[a.indexOf("--memory") + 1] === resolveLanguage("java", 1).compileMemoryMb + "m");
+    assert.equal(compileRuns.length, 1, "exactly ONE compile sandbox");
+    assert.equal(runs.length - compileRuns.length, 4, "one runtime sandbox per case");
+    for (const a of runs.filter(x => !compileRuns.includes(x))) assert.equal(a[a.indexOf("--memory") + 1], (128 + resolveLanguage("java", 1).runtimeOverheadMb) + "m");
+    const bad = await suite(createDockerSandbox(), "java", "public class Main { int x = ; }\n", ["1\n", "2\n"]);
+    assert.equal(bad.compile.status, "compile-error"); assert.equal(bad.cases.length, 0); assert.match(bad.compile.stderr, /error/);
+    assert.equal(orphans(), "");
+  });
 });
 
 test("G3 C#: compiled ONCE, fresh runtime per case", async () => {
-  const { sb, runs } = recordingSandbox();
-  const r = await suite(sb, "csharp", "var p = Console.ReadLine()!.Split(' ');\nConsole.WriteLine(\"SUM=\" + (int.Parse(p[0]) + int.Parse(p[1])));\n", ["1 2\n", "7 8\n", "0 0\n"]);
-  assert.equal(r.compile.status, "compiled");
-  assert.deepEqual(r.cases.map(c => c.stdout), ["SUM=3\n", "SUM=15\n", "SUM=0\n"]);
-  assert.equal(runs.length, 4);
-  assert.equal(orphans(), "");
+  const { sb, runs, tl } = recordingSandbox();
+  await tl.around("G3", async () => {
+    const r = await suite(sb, "csharp", "var p = Console.ReadLine()!.Split(' ');\nConsole.WriteLine(\"SUM=\" + (int.Parse(p[0]) + int.Parse(p[1])));\n", ["1 2\n", "7 8\n", "0 0\n"]);
+    assert.equal(r.compile.status, "compiled");
+    assert.deepEqual(r.cases.map(c => c.stdout), ["SUM=3\n", "SUM=15\n", "SUM=0\n"]);
+    assert.equal(runs.length, 4);
+    assert.equal(orphans(), "");
+  });
 });
 
 test("G4 stdout can NEVER forge an execution status: fake grading JSON + error exit is runtime-error; fake JSON + exit 0 is plain stdout", async () => {
