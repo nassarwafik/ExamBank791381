@@ -2,6 +2,7 @@
 // and the pull request template must exist and keep their non-negotiable rules. Dependency-free: Node fs + Vitest only.
 // It reads the real repository (no fixtures) and fails BY NAME when a file disappears, a rule is dropped, a relative
 // link breaks, a documented command no longer exists, or a transient SHA is hard-coded into the reusable template.
+// Tadris+ P9-B3: the identity / access / owner rules of §10 are checked too, and the documents they point at must exist.
 // Review Fix 1: the §2 authority rules are checked by POLARITY (inside the must-NOT block, absent from the may block), the
 // phase-record rule is the consistent one, and the PR template's preview wording is conditional on the deploy job's result.
 import { describe, it, expect } from "vitest";
@@ -92,6 +93,20 @@ const AGENTS_RULES = [
   // handoff
   "⛔ do not merge — independent review required",
   "does not modify production code during the review",
+  // Tadris+ P9-B3 — identity, access and owner safety (tightening only; the owner's standing constraints)
+  "### identity, access and owner safety",
+  "the server decides access",
+  "client-side checks are presentation only, never protection",
+  "access fails closed",
+  "protected content never bypasses the api",
+  "no default owner",
+  "never use the national identity number as an internal identifier or a default password",
+  "identities never change silently",
+  "legacy data is never assigned arbitrarily",
+  "no automatic storage migration and no deletion of old data without a plan and the owner's approval",
+  "audit records are kept at least 400 days and never deleted automatically",
+  "owner mutations need an owner session and a recent step-up",
+  "is the owner's action from the console, never an agent's",
 ];
 
 const TEMPLATE_SECTIONS = [

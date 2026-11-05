@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
+const { allowedImageType, imageExtension } = require("../lib/image-content-type");   // Tadris+ P9-B3
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
@@ -134,12 +135,15 @@ function deriveImportedBlankStructure(importedQuestion) {
 async function uploadImageAsset(assetsContainer, sourceId, ordinal, imageAsset) {
   const buffer = Buffer.from(imageAsset.dataUrl.split(",")[1] || "", "base64");
   const hash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 16);
-  const extension = (imageAsset.contentType || "image/png").split("/")[1] || "png";
+  // Tadris+ P9-B3 — the type comes from the browser: only an allow-listed image type is kept (a missing one stays the historical
+  // png); anything else is stored as an opaque octet-stream with a .bin name, which /api/question-image serves as a download.
+  const contentType = imageAsset.contentType ? (allowedImageType(imageAsset.contentType) || "application/octet-stream") : "image/png";
+  const extension = imageExtension(contentType);
   const blobName = `${sourceId}-img-${hash}.${extension}`;
 
   await assetsContainer.getBlockBlobClient(blobName).upload(buffer, buffer.length, {
     overwrite: true,
-    blobHTTPHeaders: { blobContentType: imageAsset.contentType || "image/png" }
+    blobHTTPHeaders: { blobContentType: contentType }
   });
 
   return {
@@ -147,7 +151,7 @@ async function uploadImageAsset(assetsContainer, sourceId, ordinal, imageAsset) 
     key: blobName,
     container: ASSETS_CONTAINER,
     blobName,
-    contentType: imageAsset.contentType || "image/png",
+    contentType,
     sizeBytes: buffer.length
   };
 }
@@ -356,4 +360,4 @@ app.http("bankImportAction", {
 
 // Exported only for unit testing (the section-validation gate, the blank-structure derivation and the
 // pure question mapping); app.http's own route registration above is unaffected.
-module.exports = { partitionQuestionsBySectionValidity, countExplicitBlanks, deriveImportedBlankStructure, toBankQuestion, toIndexEntry, loadAllBankQuestionTexts };
+module.exports = { uploadImageAssetForTests: uploadImageAsset, partitionQuestionsBySectionValidity, countExplicitBlanks, deriveImportedBlankStructure, toBankQuestion, toIndexEntry, loadAllBankQuestionTexts };

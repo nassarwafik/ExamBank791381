@@ -177,6 +177,34 @@ Preserve, in every change touching coding assessment:
 - **callback / HMAC boundaries**: three distinct keys (runner request, callback, recovery sweep), signature + freshness +
   replay checks on both sides, keys never logged.
 
+### Identity, access and owner safety
+
+These rules come from the owner's standing constraints for the Tadris+ programme (blueprint
+`docs/enterprise-three-tier-p0-blueprint.md`). Preserve every one of them in every change touching identity, sessions, access,
+content delivery or stored data:
+
+- **the server decides access**: every teacher route declares its capability in `api/src/lib/access/route-capabilities.js` and
+  asks it at its dispatch point. `api/tests/route-capabilities-p3b.test.js` and the behavioural sweep
+  `api/tests/certification-route-sweep-p9b1.test.js` fail CI otherwise;
+- **client-side checks are presentation only, never protection**: hiding a tool in the UI never replaces the server's refusal;
+- **access fails closed**: an unreadable access mode, an untrusted revision, an unknown identity or a storage error is a
+  refusal or a 503, never access;
+- **protected content never bypasses the API**: answer keys, hidden tests, library items, learning modules and protected images
+  are never served from static assets or by a route that skips the capability, the tenancy check or the sanitizer;
+- **no default owner**: the owner exists only through the one-time, create-only bootstrap. Never a default owner, never a fixed,
+  shared or exposed credential;
+- **never use the national identity number as an internal identifier or a default password**;
+- **identities never change silently**: a teacher's or a student's identity, or the owner of stored data, changes only through an
+  explicit, recorded step;
+- **legacy data is never assigned arbitrarily**: unowned data is assigned only by the owner's own decision, through the dry run,
+  the ledger and its audit (`api/src/lib/migrations/legacy-ownership.js`);
+- **no automatic storage migration and no deletion of old data without a plan and the owner's approval**;
+- **audit records are kept at least 400 days and never deleted automatically** (D17, `docs/operations-audit-retention.md`);
+- **owner mutations need an owner session and a recent step-up**. A teacher or student token never reaches an owner route;
+- **switching the access mode (observe → enforce) or changing a production teacher's access is the owner's action from the
+  console, never an agent's** (`docs/operations-access-enforcement.md`);
+- **no new infrastructure for appearance**: no microservices, event bus or new database unless a phase proves the need.
+
 ## 11. Deployment boundaries
 
 Five tiers exist. Reports name the tier that was actually exercised; "nothing deployed" is only true when none of tiers

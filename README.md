@@ -1,8 +1,10 @@
 # ExamBank 791381
 
-Arabic, right-to-left exam and training platform for a communication-networks course. One teacher manages classes,
-students, assignments and exams, projects, messages and learning materials; students take exams, read and practise
-course content, follow their progress, and use the app on phones as an installable PWA.
+Arabic, right-to-left exam and training platform for a communication-networks course. A **platform owner** runs the Owner
+Console: teacher accounts, each teacher's access, schools, courses, the exam library and the decisions about legacy data.
+**Teachers** each manage their own classes, students, assignments and exams, projects, messages and learning materials, within
+the access the owner gave them. **Students** take exams, read and practise course content, follow their progress, and use the
+app on phones as an installable PWA.
 
 This README is for operators and developers. It contains no secret values; every variable below is configured in the
 hosting environment, never in the repository.
@@ -16,6 +18,8 @@ hosting environment, never in the repository.
 | Storage | Azure Blob Storage, JSON documents | containers `bank` (platform data), `assets` (images), `raw` (imports) |
 | Hosting | Azure Static Web Apps (static `dist/` + managed API) | `.github/workflows/`, `public/staticwebapp.config.json` |
 | PWA | network-first navigations, offline page, Web Push notifications, install flows | `public/sw.js`, `public/manifest.webmanifest`, `src/pwa/` |
+| Owner Console | the platform owner's console (`#/owner`), owner session with TOTP step-up | `src/owner/`, `api/src/functions/owner-*.js`, `api/src/lib/identity/` |
+| Access control | capabilities, presets, revisions, the access mode (legacy / observe / enforce), teacher tenancy | `api/src/lib/access/`, `api/src/lib/teacher-tenancy.js` |
 
 Platform documents are flat JSON blobs, for example `platform/users/<id>.json`, `platform/classes/<id>.json`,
 `platform/assignments/<id>.json` and `platform/submissions/<assignmentId>/<studentId>.json`. Contended writes use
@@ -24,6 +28,41 @@ per-assignment blob lease (`api/src/lib/assignment-lock.js`).
 
 The service worker never caches app code or API responses. It only answers failed navigations with `offline.html`
 and shows push notifications.
+
+## Platform owner, teachers and access (Tadris+)
+
+The design record is `docs/enterprise-three-tier-p0-blueprint.md`, and the owner's decisions are in its §19.
+
+- **Identity.**
+  - The owner is created once, through a one-time, create-only bootstrap (`docs/enterprise-owner-identity-p1a.md`). There is no
+    default owner and no default password.
+  - Teachers have personal accounts: an invitation, their own password, and a session that a suspension or a password reset
+    revokes from the next request.
+  - The shared-password workspace is imported once into the account `t_legacy` (`docs/enterprise-legacy-import-p2b.md`).
+- **Access.**
+  - Every teacher route declares the capability it needs (`api/src/lib/access/route-capabilities.js`).
+  - The owner gives each teacher a preset and, optionally, single capabilities and resources (courses, dashboard widgets, games,
+    appearance). Each change is an immutable revision with a history and a rollback.
+  - The **access mode** decides whether this is applied:
+    - `legacy`: nothing is checked;
+    - `observe`: what would be refused is recorded, and nothing is blocked;
+    - `enforce`: the server refuses everything outside the teacher's access.
+  - The owner switches the mode from the console, following `docs/operations-access-enforcement.md`.
+  - Access fails closed: an unreadable mode or revision, or a storage error, is a refusal or 503, never access. Hiding a tool in the
+    app is presentation only; the API refuses.
+- **Tenancy.** A teacher reads and changes only their own classes and students, and what follows them: assignments, submissions,
+  messages, projects.
+  - Data from before tenancy has no owner. It follows `LEGACY_DATA_OWNER`, or stays shared, until the owner decides each class in
+    «البيانات القديمة» (`docs/enterprise-legacy-ownership-p9a.md`).
+  - Nothing is assigned automatically.
+- **Protected content.** Answer keys, library items, learning modules and protected images are served only by the API. Images use
+  short-lived signed URLs; nothing protected is in the static assets.
+- **Audit.**
+  - Teacher actions go to `platform/audit/`, and owner actions to `platform/owner-audit/`.
+  - Records are kept at least 400 days and never deleted automatically (`docs/operations-audit-retention.md`).
+- **Evidence.**
+  - The 15 acceptance tests and their tests: `docs/enterprise-certification-p9b1.md`.
+  - The security review: `docs/enterprise-security-review-p9b3.md`.
 
 ## Local development
 
@@ -153,7 +192,10 @@ The frontend reads no runtime environment variables.
 - **Changing a signing secret logs everyone out** of that role. Bumping `BUILDER_SESSION_VERSION` logs out the teacher only.
 - **Removing `BANK_SETUP_KEY`** while a dedicated variable is unset breaks login. Set the dedicated variables first,
   deploy, confirm no `auth.secret_configuration` warning, then remove the fallback.
-- **Single-teacher model.** Every teacher-authenticated route sees all classes; there is no per-teacher scoping.
+- **Teacher tenancy and the access mode.**
+  - Each teacher sees only their own data (`api/src/lib/teacher-tenancy.js`).
+  - Enforcing access is the owner's switch in the console, never a deployment setting. Read `docs/operations-access-enforcement.md`
+    before using it, and switch back to observe at any time.
 - **Public routes.** Only `builder-login`, `platform-login` and `health` answer without a session; `question-image`
   requires a short-lived signed URL. `api/tests/route-auth-inventory-11a.test.js` fails CI if any other route
   answers an anonymous request.
@@ -206,6 +248,9 @@ ships as one phase on its own branch and one pull request:
 | Messages and notifications | `src/messages/`, `src/notifications/`, `api/src/lib/message-*.js`, `api/src/lib/notification-center.js` |
 | PWA: install, push, service worker | `src/pwa/`, `public/sw.js` |
 | Auth | `api/src/lib/builder-auth.js`, `api/src/lib/student-auth.js`, `api/src/lib/login-throttle.js` |
+| Owner Console and identity | `src/owner/`, `api/src/functions/owner-*.js`, `api/src/lib/identity/` |
+| Access control and tenancy | `api/src/lib/access/`, `api/src/lib/teacher-tenancy.js`, `src/shell/teacherAccess*.ts` |
+| Legacy data decisions (ledger) | `api/src/lib/migrations/legacy-ownership.js`, `src/owner/OwnerLegacyClasses.tsx` |
 | Observability (structured logs, request ids) | `api/src/lib/observability.js` |
 | Design tokens and shell styles | `src/design-tokens.css`, `src/shell.css`, `src/ui/` |
 | Further documentation | `docs/` |
