@@ -59,13 +59,15 @@ function timingSafeEqualText(a, b) {
  * → { ok: true, step } or { ok: false }. `lastUsedStep` (integer or null) blocks replay: only a step strictly greater is
  * accepted. Every window step is computed (no early exit), so timing does not reveal which step matched.
  */
-function verifyTotp(secret, code, { nowMs = Date.now(), lastUsedStep = null } = {}) {
+function verifyTotp(secret, code, { nowMs = Date.now(), lastUsedStep = null, windowSteps = WINDOW_STEPS } = {}) {
   const text = String(code ?? "").replace(/\s/g, "");
   if (!Buffer.isBuffer(secret) || secret.length < 10 || !/^\d{6}$/.test(text)) return { ok: false };
   const current = stepAt(nowMs);
   const floor = Number.isInteger(lastUsedStep) ? lastUsedStep : -Infinity;
+  // Tadris+ P10-D — a caller may narrow the window (0 = the current step only); it can never widen it.
+  const span = Number.isInteger(windowSteps) && windowSteps >= 0 && windowSteps < WINDOW_STEPS ? windowSteps : WINDOW_STEPS;
   let matched = null;
-  for (let delta = -WINDOW_STEPS; delta <= WINDOW_STEPS; delta++) {
+  for (let delta = -span; delta <= span; delta++) {
     const step = current + delta;
     const equal = timingSafeEqualText(hotp(secret, step), text);
     if (equal && step > floor && matched === null) matched = step;

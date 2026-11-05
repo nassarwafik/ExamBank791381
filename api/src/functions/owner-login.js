@@ -15,7 +15,8 @@ const { remainingRecoveryCodes } = require("../lib/identity/recovery-codes");
 // authenticates a teacher or student. All three factors arrive together; the answer to any failure is the same generic
 // 401, so the response never reveals whether the username exists, the password matched, or only the code was wrong.
 //
-//   1. throttle (reserve-before-verify) on "owner:" + username, per client and globally
+//   1. throttle (reserve-before-verify) on "owner:" + username, per client and globally. P10-D: while it refuses, only a
+//      correct authenticator code (current step, consumed) followed by the correct password gets through (O2)
 //   2. password check (scrypt; an unknown username costs the same work through a dummy record)
 //   3. second factor, verified AND consumed under compare-and-set (a TOTP step or a recovery code is single-use)
 //   4. a server-side session document is created (create-only), then a 2-hour owner token is signed
@@ -61,25 +62,44 @@ async function handler(request, deps = {}, obs = null) {
     let gate;
     try { gate = await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, throttleId, clientId, deps, OWNER_THROTTLE_POLICY); }
     catch { return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": "5" }); }
+    let account, factor, via = "";
     if (!gate.allowed) {
-      obs?.logWarn("owner.login.throttled", { retryable: true });
-      return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(gate.retryAfterSeconds || 5) });
-    }
+      // Tadris+ P10-D (closes security review O2) — a flooded limit never keeps the owner out. While the limit refuses, an
+      // attempt carrying an AUTHENTICATOR code (never a recovery code: owner decision §19.40) is checked code-FIRST: the code
+      // (the current step only) is verified and consumed, then the password is checked once. A wrong code, an unknown or
+      // inactive username, or a recovery code gets the very same 429 as before, and nothing is consumed. No password work
+      // happens before a correct code, so a flood buys no password guesses and no scrypt.
+      const throttled = () => {
+        obs?.logWarn("owner.login.throttled", { retryable: true });
+        return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(gate.retryAfterSeconds || 5) });
+      };
+      if (!code || recoveryCode) return throttled();
+      account = username === "invalid" ? null : await findOwnerByUsername(container, username);
+      if (!account || account.status !== "active") return throttled();
+      factor = await verifyAndConsumeSecondFactor(container, account.accountId, { code }, { nowMs, env, windowSteps: 0 });
+      if (!factor.ok) return throttled();
+      if (!(await verifySecret(password, account.credential))) {
+        await audit(container, { action: "owner.login.failed", targetType: "owner-account", targetId: account.accountId, details: { stage: "password-after-code" } });
+        obs?.logWarn("owner.login.failed", { stage: "password-after-code" });
+        return denied();
+      }
+      via = "throttle-bypass";
+    } else {
+      account = username === "invalid" ? null : await findOwnerByUsername(container, username);
+      const record = account?.credential || await decoyRecord(deps.hashParams);
+      const passwordOk = await verifySecret(password, record);
+      if (!account || !passwordOk || account.status !== "active") {
+        await audit(container, { action: "owner.login.failed", targetType: "owner-account", targetId: account?.accountId || "", details: { stage: "password" } });
+        obs?.logWarn("owner.login.failed", { stage: "password" });
+        return denied();
+      }
 
-    const account = username === "invalid" ? null : await findOwnerByUsername(container, username);
-    const record = account?.credential || await decoyRecord(deps.hashParams);
-    const passwordOk = await verifySecret(password, record);
-    if (!account || !passwordOk || account.status !== "active") {
-      await audit(container, { action: "owner.login.failed", targetType: "owner-account", targetId: account?.accountId || "", details: { stage: "password" } });
-      obs?.logWarn("owner.login.failed", { stage: "password" });
-      return denied();
-    }
-
-    const factor = await verifyAndConsumeSecondFactor(container, account.accountId, { code, recoveryCode }, { nowMs, env });
-    if (!factor.ok) {
-      await audit(container, { action: "owner.login.failed", targetType: "owner-account", targetId: account.accountId, details: { stage: "second-factor" } });
-      obs?.logWarn("owner.login.failed", { stage: "second-factor" });
-      return denied();
+      factor = await verifyAndConsumeSecondFactor(container, account.accountId, { code, recoveryCode }, { nowMs, env });
+      if (!factor.ok) {
+        await audit(container, { action: "owner.login.failed", targetType: "owner-account", targetId: account.accountId, details: { stage: "second-factor" } });
+        obs?.logWarn("owner.login.failed", { stage: "second-factor" });
+        return denied();
+      }
     }
 
     const fresh = factor.account;
@@ -93,8 +113,8 @@ async function handler(request, deps = {}, obs = null) {
     const { token } = createOwnerToken({ accountId: fresh.accountId, sid, authVersion: fresh.authVersion }, { nowMs, env });
 
     await (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
-    await audit(container, { actor: "owner:" + fresh.accountId, action: "owner.login.succeeded", targetType: "owner-account", targetId: fresh.accountId, details: { factor: factor.method } });
-    obs?.logInfo("owner.login.succeeded", { factor: factor.method });
+    await audit(container, { actor: "owner:" + fresh.accountId, action: "owner.login.succeeded", targetType: "owner-account", targetId: fresh.accountId, details: via ? { factor: factor.method, via } : { factor: factor.method } });
+    obs?.logInfo("owner.login.succeeded", via ? { factor: factor.method, via } : { factor: factor.method });
     return reply(200, {
       ok: true,
       token,
