@@ -18,6 +18,7 @@ const P = require("../../deploy/azure-vm/preflight.js");
 const smoke = require("../../deploy/azure-vm/smoke.js");
 const { createGatewayServer } = require("../../gateway/server.js");
 const { createDockerSandbox } = require("../../gateway/sandbox.js");
+const { createDockerTimeline } = require("../helpers/docker-timeline.js");
 
 const KEY_A = crypto.randomBytes(32).toString("hex"), KEY_B = crypto.randomBytes(32).toString("hex");
 const leftovers = () => spawnSync("docker", ["ps", "-aq", "--filter", "label=smartassess.coding-runner=1"], { encoding: "utf8" }).stdout.trim();
@@ -48,11 +49,12 @@ test("DP2 — an unreachable Docker daemon (real CLI, missing socket) fails the 
 });
 
 test("DP3 — smoke.js against a REAL gateway + REAL sandboxes: surface, security, pilot language matrix, sandbox boundary", { timeout: 600000 }, async () => {
-  const server = createGatewayServer({ key: KEY_A, sandbox: createDockerSandbox(), maxConcurrency: 1, officialQueue: { submit: async () => ({ status: "busy" }) }, logger: { info() {}, warn() {} } });
+  const tl = createDockerTimeline();                                  // R1 — diagnostics only: printed if DP3 fails
+  const server = createGatewayServer({ key: KEY_A, sandbox: createDockerSandbox({ spawnImpl: tl.spawnImpl }), maxConcurrency: 1, officialQueue: { submit: async () => ({ status: "busy" }) }, logger: { info() {}, warn() {} } });
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   try {
     const out = await smoke.smokeRunner({ baseUrl: "http://127.0.0.1:" + server.address().port, key: KEY_A });
-    assert.deepEqual(out.filter(c => !c.ok), []);
+    await tl.around("DP3", async () => assert.deepEqual(out.filter(c => !c.ok), []));
     assert.equal(out.filter(c => c.id.startsWith("practice:")).length, 14, "4 python + 5 java + 5 csharp rows");
     assert.equal(out.filter(c => c.id.startsWith("sandbox:")).length, 5, "staging-only pressure probes are not run by default");
   } finally { await new Promise(r => server.close(r)); }

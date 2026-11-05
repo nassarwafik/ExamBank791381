@@ -26,6 +26,18 @@ const { createGatewayServer } = require("../../gateway/server.js");
 let unhandled = 0;
 process.on("unhandledRejection", () => { unhandled++; });
 const count = (results, status) => results.filter(r => r && r.status === status).length;
+// R1 (runner test stability) — the journal writes every record atomically (temp file → fsync → rename, journal.js atomicWrite), and
+// an ACCEPTED job is rewritten in the background right after admission (`state: running`, official.js, before its sandbox starts).
+// Listing jobs/ at that instant can see the in-flight `<id>.json.tmp-<hex>` beside the records: CI attempt 1 of #550 failed ADM5
+// with «4 !== 3» exactly so (reproduced deterministically by delaying only that rename — ADM5b below). A temp file is a write in
+// progress, never a record (the journal's startup scan deletes leftovers). The count stays STRICT — every entry in jobs/ — but it is
+// read once the in-flight writes have settled; a temp file that never settles still fails (waitFor times out).
+const isTemp = name => /\.tmp-[0-9a-f]+$/.test(name);
+async function settledJobFiles(dir) {
+  const jobsDir = path.join(dir, "jobs");
+  await waitFor(() => !fs.readdirSync(jobsDir).some(isTemp), { timeoutMs: 5000 });
+  return fs.readdirSync(jobsDir);
+}
 const jobs = (n, from = 1, over = {}) => Array.from({ length: n }, (_, i) => job(from + i, over));
 /** A sandbox that HOLDS every execution open (accepted work stays LIVE) and records the peak physical concurrency. */
 function holdingSandbox() {
@@ -72,7 +84,7 @@ test("ADM1 maxPending=3, eight DISTINCT concurrent submissions with LIVE work he
   assert.equal(count(results, "accepted"), 3, JSON.stringify(results.map(r => r.status)));
   assert.equal(count(results, "busy"), 5);
   assert.equal(h.q.size().pending, 3);
-  assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 3);                              // exactly the admitted records are durable
+  assert.equal((await settledJobFiles(dir)).length, 3);                              // exactly the admitted records are durable
   s.hold.open(); await h.q.idle(); await crash(h);
 });
 
@@ -139,8 +151,39 @@ test("ADM5 maxRecords=3 with a high maxPending: concurrent distinct new jobs nev
   assert.equal(count(results, "accepted"), 3, JSON.stringify(results.map(r => r.status)));
   assert.equal(count(results, "busy"), 4);
   assert.equal(h.q.size().entries, 3);
-  assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 3);
+  assert.equal((await settledJobFiles(dir)).length, 3);
   s.hold.open(); await h.q.idle(); await crash(h);
+});
+
+test("ADM5b R1: a record rewrite still IN FLIGHT (its temp file not yet renamed) is never counted as a record — the strict count waits for it", async () => {
+  // A slow disk, simulated for ONE write only: the background `state: running` rewrite of an accepted job renames 300 ms late.
+  const dir = tmpJournalDir(), s = holdingSandbox();
+  const realRename = fs.promises.rename;
+  let delayed = 0;
+  fs.promises.rename = async function (from, to) {
+    if (String(to).startsWith(path.join(dir, "jobs") + path.sep) && /"state":"running"/.test(fs.readFileSync(from, "utf8"))) { delayed++; await sleep(300); }
+    return realRename.call(fs.promises, from, to);
+  };
+  try {
+    const h = await boot(dir, { maxPending: 16, sandbox: s.sandbox, limits: { maxRecords: 3 } });
+    const g = gate(h.journal, "writeRecord");
+    const results = await burst(h.q, jobs(7, 500), [g]);
+    assert.equal(count(results, "accepted"), 3);
+    await waitFor(() => fs.readdirSync(path.join(dir, "jobs")).some(isTemp), { timeoutMs: 3000 });   // the window ADM5 used to hit
+    assert.ok(fs.readdirSync(path.join(dir, "jobs")).length > 3, "an in-flight temp file sits beside the 3 records");
+    const files = await settledJobFiles(dir);
+    assert.equal(files.length, 3);
+    assert.ok(files.every(n => /^cg_[A-Za-z0-9_-]+\.json$/.test(n)), files.join(","));
+    assert.ok(delayed >= 1);
+    s.hold.open(); await h.q.idle(); await crash(h);
+  } finally { fs.promises.rename = realRename; s.hold.open(); }
+});
+
+test("ADM5c R1: a temp file that NEVER settles still fails the strict count (waitFor times out — nothing is filtered away)", async () => {
+  const dir = tmpJournalDir();
+  fs.mkdirSync(path.join(dir, "jobs"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "jobs", "cg_stuck0000000000000.json.tmp-0123456789ab"), "{}");
+  await assert.rejects(() => (async () => { const d = path.join(dir, "jobs"); await waitFor(() => !fs.readdirSync(d).some(isTemp), { timeoutMs: 200 }); })(), /waitFor timed out/);
 });
 
 // ── duplicates and conflicts under concurrency ────────────────────────────────────────────────────────────────────────
@@ -171,7 +214,7 @@ test("ADM7 same job id with CONFLICTING payloads concurrently: one canonical pay
   const { officialPayloadHash } = require("../../gateway/official.js");
   const winner = variants[results.findIndex(r => r.status === "accepted")];
   assert.equal(rec.payloadHash, officialPayloadHash(winner));
-  assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 1);
+  assert.equal((await settledJobFiles(dir)).length, 1);
   s.hold.open(); await h.q.idle();
   assert.equal(h.sandbox.count(job(600).jobId), 1);
   await crash(h);
@@ -274,7 +317,7 @@ for (const method of ["writeInput", "writeRecord"]) {
     assert.equal((await h.q.submit(job(900))).status, "busy");
     assert.equal(f.failures(), 1);
     assert.equal(h.q.size().entries, 0);
-    assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 0);
+    assert.equal((await settledJobFiles(dir)).length, 0);
     assert.equal(fs.existsSync(path.join(dir, "inputs", job(900).jobId + ".json")), false);
     const later = await Promise.race([h.q.submit(job(901)), sleep(1500).then(() => ({ status: "timeout" }))]);
     assert.equal(later.status, "accepted");                                                       // ADM16
@@ -352,7 +395,7 @@ test("ADM17 stop() while submissions wait for admission: no post-stop admission 
   const [r1, ...rest] = await Promise.all([first, ...waiting]);
   assert.ok(["accepted", "busy"].includes(r1.status));
   for (const r of rest) assert.equal(r.status, "busy", JSON.stringify(r));
-  const files = fs.readdirSync(path.join(dir, "jobs"));
+  const files = await settledJobFiles(dir);
   assert.ok(files.length <= 1, "post-stop records: " + files.join(", "));
   assert.equal(files.includes(job(931).jobId + ".json"), false);
   assert.equal(files.includes(job(932).jobId + ".json"), false);
@@ -396,7 +439,7 @@ test("ADM20 the same target revision with different job ids concurrently: one ac
   const results = await burst(h.q, [job(960, { revision: 3, targetRef: TARGET }), job(961, { revision: 3, targetRef: TARGET }), job(962, { revision: 3, targetRef: TARGET })], [g]);
   assert.equal(count(results, "accepted"), 1, JSON.stringify(results.map(r => r.status)));
   assert.equal(count(results, "conflict"), 2);
-  assert.equal(fs.readdirSync(path.join(dir, "jobs")).length, 1);
+  assert.equal((await settledJobFiles(dir)).length, 1);
   s.hold.open(); await h.q.idle(); await crash(h);
 });
 
