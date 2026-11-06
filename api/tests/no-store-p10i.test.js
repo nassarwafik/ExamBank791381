@@ -128,21 +128,26 @@ describe("P10-I the five routes named by the review answer a valid request with 
 
   it("only the header is added: the same request through the bare handler gives the same status and body", async () => {
     const s = platform();
-    const bare = require(join(FUNCTIONS_DIR, "student-submission.js")).handler;
-    const req = () => request("GET", "student-submission/a1", { headers: s.student, params: { assignmentId: "a1" } });
-    const plain = await bare(req());
-    const served = await call("studentSubmission", req());
-    expect(served.status).toBe(plain.status);
-    expect(served.jsonBody).toEqual(plain.jsonBody);
-    expect(cacheControlOf(plain)).toBeUndefined();
-    expect(cacheControlOf(served)).toBe(NO_STORE);
-    const bareSaved = require(join(FUNCTIONS_DIR, "manage-saved-exams.js")).handler;
-    const savedReq = () => request("GET", "saved-exams", { headers: s.teacher });
-    const plainSaved = await bareSaved(savedReq());
-    const servedSaved = await call("manageSavedExams", savedReq());
-    expect(servedSaved.status).toBe(plainSaved.status);
-    expect(servedSaved.jsonBody).toEqual(plainSaved.jsonBody);
-    expect(cacheControlOf(servedSaved)).toBe(NO_STORE);
+    // The submission answer carries the server's clock (`serverNow`): the clock is held still (Date only) so the two calls are
+    // compared byte for byte, instead of differing by the millisecond that passes between them on a loaded machine.
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() });
+    try {
+      const bare = require(join(FUNCTIONS_DIR, "student-submission.js")).handler;
+      const req = () => request("GET", "student-submission/a1", { headers: s.student, params: { assignmentId: "a1" } });
+      const plain = await bare(req());
+      const served = await call("studentSubmission", req());
+      expect(served.status).toBe(plain.status);
+      expect(served.jsonBody).toEqual(plain.jsonBody);
+      expect(cacheControlOf(plain)).toBeUndefined();
+      expect(cacheControlOf(served)).toBe(NO_STORE);
+      const bareSaved = require(join(FUNCTIONS_DIR, "manage-saved-exams.js")).handler;
+      const savedReq = () => request("GET", "saved-exams", { headers: s.teacher });
+      const plainSaved = await bareSaved(savedReq());
+      const servedSaved = await call("manageSavedExams", savedReq());
+      expect(servedSaved.status).toBe(plainSaved.status);
+      expect(servedSaved.jsonBody).toEqual(plainSaved.jsonBody);
+      expect(cacheControlOf(servedSaved)).toBe(NO_STORE);
+    } finally { vi.useRealTimers(); }
   });
 });
 
