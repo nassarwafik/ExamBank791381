@@ -14,12 +14,20 @@ const { resolveInvitation, mutateTeacherAccount, deleteInvitationPointer, sha256
 //   accept  { token, password }  → the password is stored (scrypt), the link is used up, the account becomes active;
 //                                  on a reset every older session has already ended (authVersion was bumped by the owner)
 //
-// Public by design (the link is the credential), throttled per client, and an unusable link always answers the same 404.
+// Public by design (the link is the credential); an unusable link always answers the same 404. Limits: see P10-G below.
 
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 const unusable = () => reply(404, { ok: false, code: "INVITATION_INVALID", error: "الرابط غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا من إدارة المنصة." });
-const THROTTLE_ID = "teacher-invitation";
+// Tadris+ P10-G (closes security review O7; design docs/enterprise-invitation-throttle-p10g.md, owner decision §19.44) — there is
+// NO platform-wide invitation bucket any more (the old fixed id let 200 random links block every teacher's real link):
+//   • a malformed link is a 404 with no storage work;
+//   • an unknown / used / expired link counts on the SENDER's miss limit only (MISS_ID, per client as before);
+//   • a valid, current link counts on ITS OWN limit (LINK_ID + sha256(link)), which only its holder can fill.
+const LINK_FORMAT = /^[A-Za-z0-9_-]{43}$/;
+const MISS_ID = "teacher-invitation-miss";
+const LINK_ID = token => "teacher-invitation:" + sha256Hex(token);
+const LINK_POLICY = Object.freeze({ globalFreeAttempts: 20, globalMaxCooldownSeconds: 60 });
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
@@ -30,18 +38,26 @@ async function handler(request, deps = {}, obs = null) {
   try { const b = await request.json(); body = b && typeof b === "object" ? b : {}; } catch { body = {}; }
   const token = String(body.token ?? "").trim();
   if (!token || token.length > 128 || String(body.password ?? "").length > 1024) return unusable();
+  if (!LINK_FORMAT.test(token)) return unusable();                       // P10-G — no storage work for a malformed link
 
   let container;
   try { container = (deps.getContainer || getContainer)(); } catch { return reply(503, { ok: false, code: "INVITATION_UNAVAILABLE", error: "تعذر تنفيذ الطلب حاليًا." }, { "Retry-After": "5" }); }
   const clientId = (deps.clientIdFromRequest || clientIdFromRequest)(request);
   try {
-    let gate;
-    try { gate = await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, THROTTLE_ID, clientId, deps, { globalFreeAttempts: 200, globalMaxCooldownSeconds: 60 }); }
-    catch { return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": "5" }); }
-    if (!gate.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(gate.retryAfterSeconds || 5) });
+    const limited = seconds => reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(seconds || 5) });
+    const reserve = async (id, policy) => {
+      try { return await (deps.reserveLoginAttempt || reserveLoginAttempt)(container, id, clientId, deps, policy); }
+      catch { return { allowed: false, retryAfterSeconds: 5 }; }
+    };
 
     const found = await resolveInvitation(container, token, nowMs);
-    if (!found) return unusable();
+    if (!found) {
+      const miss = await reserve(MISS_ID);                                  // the sender's own budget, never anyone else's
+      return miss.allowed ? unusable() : limited(miss.retryAfterSeconds);
+    }
+    const throttleId = LINK_ID(token);
+    const gate = await reserve(throttleId, LINK_POLICY);                     // this link's own budget
+    if (!gate.allowed) return limited(gate.retryAfterSeconds);
     const { account, invitation } = found;
 
     if (action === "inspect") {
@@ -67,7 +83,7 @@ async function handler(request, deps = {}, obs = null) {
     }
     if (usedUp) return unusable();
     await deleteInvitationPointer(container, token);
-    await (deps.clearLoginThrottle || clearLoginThrottle)(container, THROTTLE_ID, clientId, deps);
+    await (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
     await (deps.recordOwnerAuditEvent || recordOwnerAuditEvent)(container, { action: "teacher.invitation.accepted", targetType: "teacher-account", targetId: account.accountId, targetLabel: account.username, details: { purpose: invitation.purpose } });
     return reply(200, { ok: true, username: account.username });
   } catch (e) {
