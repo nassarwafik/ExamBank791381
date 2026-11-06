@@ -14,7 +14,17 @@ import { audienceText, matchesSearch } from "./libraryShared";
  *   - one teacher's whole bank is chosen on the teacher's page («الامتحانات»).
  * Removing an exam from a teacher never touches the assignments already published from it. Every change needs a recent second-factor
  * check (asked inline, then retried). The server decides everything; a 401 signs out.
+ * UX-O3 — presentation only (design docs/enterprise-ux-owner-console-o3.md §2.1): the exams are a table (one row group per exam,
+ * named after it), filtered by who sees them (the same rule as `audienceText`); «تحديد الجمهور» opens its editor in a full-width
+ * row under the exam. The request, its step-up and its notice are unchanged.
  */
+type AudienceFilter = "all" | "everyone" | "selected" | "undecided";
+const AUDIENCE_FILTERS: { id: AudienceFilter; label: string; test: (i: OwnerLibraryItem) => boolean }[] = [
+  { id: "all", label: "الكل", test: () => true },
+  { id: "everyone", label: "لكل المعلمين", test: i => i.audience === "all" },
+  { id: "selected", label: "معلمون محددون", test: i => i.audience !== "all" && i.decided },
+  { id: "undecided", label: "لم يُحدَّد", test: i => i.audience !== "all" && !i.decided }
+];
 
 export default function OwnerLibrary({ token, onSignedOut }: { token: string; onSignedOut: () => void }) {
   const [data, setData] = useState<{ items: OwnerLibraryItem[]; teachers: OwnerLibraryTeacher[] } | null>(null);
@@ -26,6 +36,7 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>("all");
 
   useEffect(() => {
     let live = true;
@@ -52,11 +63,15 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
   }
 
   const categories = useMemo(() => [...new Set((data?.items || []).map(i => i.category).filter(Boolean))], [data]);
-  const shown = (data?.items || []).filter(i => (!category || i.category === category) && matchesSearch(i, query));
+  const searched = (data?.items || []).filter(i => (!category || i.category === category) && matchesSearch(i, query));
+  const counts = Object.fromEntries(AUDIENCE_FILTERS.map(f => [f.id, searched.filter(f.test).length])) as Record<AudienceFilter, number>;
+  const byAudience = (AUDIENCE_FILTERS.find(f => f.id === audienceFilter) || AUDIENCE_FILTERS[0]).test;
+  const shown = searched.filter(byAudience);
+  const clearFilters = () => { setQuery(""); setCategory(""); setAudienceFilter("all"); };
 
   return (
     <section className="eb-owner-panel eb-owner-library" aria-labelledby="eb-owner-library-title">
-      <h2 id="eb-owner-library-title" className="eb-owner-h2">بنك الامتحانات</h2>
+      <h2 id="eb-owner-library-title" className="eb-owner-h2">بنك الامتحانات{data && <span className="eb-owner-h2-count"> · {data.items.length} امتحانًا</span>}</h2>
       <p className="eb-owner-hint">اختر من يرى كل امتحان: كل المعلمين، أو مجموعة تختارها. بنك المعلم يحوي ما هو «لكل المعلمين» وما اخترته له، ومنه يسند الواجبات لطلابه. لاختيار بنك معلم بعينه افتح صفحته ← «الامتحانات». إزالة امتحان لا تمس الواجبات المنشورة منه.</p>
 
       {stepUp && <StepUpPrompt token={token} onSignedOut={onSignedOut} onCancel={() => setStepUp(null)} onConfirmed={() => stepUp.retry()} />}
@@ -66,40 +81,64 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
       {data === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل بنك الامتحانات…</p>}
       {data && (
         <>
-          <div className="eb-owner-actions" role="search">
-            <label className="auth-field"><span>بحث</span>
+          <div className="eb-owner-toolbar" role="search">
+            <label className="auth-field eb-owner-search"><span>بحث</span>
               <div className="auth-input"><input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="اسم الامتحان أو رمزه" /></div>
             </label>
-            <label className="auth-field"><span>التصنيف</span>
+            <label className="auth-field eb-owner-library-category"><span>التصنيف</span>
               <div className="auth-input"><select value={category} onChange={e => setCategory(e.target.value)}>
                 <option value="">الكل</option>
                 {categories.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] ? categoryLabel(c) : c}</option>)}
               </select></div>
             </label>
+            <div className="eb-owner-chips" role="group" aria-label="تصفية حسب من يراه">
+              {AUDIENCE_FILTERS.map(f => (
+                <button key={f.id} type="button" className={"eb-owner-chip" + (audienceFilter === f.id ? " is-on" : "")} aria-pressed={audienceFilter === f.id} onClick={() => setAudienceFilter(f.id)}>
+                  {f.label}<span className="eb-owner-chip-count">{counts[f.id]}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <p className="eb-owner-hint">{shown.length} من {data.items.length} امتحانًا</p>
-          <ul className="eb-owner-teacher-list" aria-label="امتحانات المكتبة">
-            {shown.map(item => (
-              <li key={item.libraryItemId} className="eb-owner-teacher" aria-label={item.title}>
-                <div className="eb-owner-teacher-main">
-                  <strong><bdi>{item.title}</bdi></strong>
-                  <span className="eb-owner-hint" dir="ltr">{item.libraryItemId}</span>
-                  <span className="eb-owner-hint">{categoryLabel(item.category)} · {item.questionCount} سؤال</span>
-                  <span className={"eb-owner-status eb-owner-status--" + (item.audience === "all" ? "active" : item.decided ? "invited" : "suspended")}>{audienceText(item)}</span>
-                </div>
-                {editing === item.libraryItemId ? (
-                  <AudienceEditor item={item} teachers={data.teachers} busy={busy} onCancel={() => setEditing(null)}
-                    onSave={(audience, teachers) => send(() => ownerLibraryApi.setAudience(token, item.libraryItemId, audience, teachers), () => {
-                      setEditing(null);
-                      setNotice("حُفظ جمهور «" + item.title + "».");
-                      setNonce(n => n + 1);
-                    })} />
-                ) : (
-                  <div className="eb-owner-actions"><button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setEditing(item.libraryItemId)}>تحديد الجمهور</button></div>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="eb-table-wrap eb-owner-teacher-table-wrap eb-owner-library-table-wrap">
+            <table className="eb-table eb-owner-teacher-table eb-owner-library-table">
+              <caption className="eb-visually-hidden">امتحانات المكتبة</caption>
+              <thead>
+                <tr><th scope="col">الامتحان</th><th scope="col">التصنيف</th><th scope="col">الأسئلة</th><th scope="col">من يراه</th><th scope="col"><span className="eb-visually-hidden">الإجراءات</span></th></tr>
+              </thead>
+              {shown.map(item => (
+                <tbody key={item.libraryItemId} className="eb-owner-teacher-group" aria-label={item.title}>
+                  <tr className={"eb-owner-teacher-row" + (editing === item.libraryItemId ? " is-open" : "")}>
+                    <td className="eb-owner-teacher-who"><strong><bdi>{item.title}</bdi></strong><span className="eb-owner-teacher-user" dir="ltr">{item.libraryItemId}</span></td>
+                    <td className="eb-owner-library-meta">{categoryLabel(item.category)}</td>
+                    <td className="eb-owner-library-meta eb-owner-library-count"><bdi>{item.questionCount}</bdi><span className="eb-owner-library-unit"> سؤال</span></td>
+                    <td className="eb-owner-library-meta"><span className={"eb-owner-status eb-owner-status--" + (item.audience === "all" ? "active" : item.decided ? "invited" : "suspended")}>{audienceText(item)}</span></td>
+                    <td className="eb-owner-teacher-menu eb-owner-library-action">
+                      <button type="button" className="eb-owner-secondary eb-owner-small" disabled={busy} aria-expanded={editing === item.libraryItemId}
+                        onClick={() => setEditing(e => (e === item.libraryItemId ? null : item.libraryItemId))}>تحديد الجمهور</button>
+                    </td>
+                  </tr>
+                  {editing === item.libraryItemId && (
+                    <tr className="eb-owner-teacher-panel">
+                      <td colSpan={5}>
+                        <AudienceEditor item={item} teachers={data.teachers} busy={busy} onCancel={() => setEditing(null)}
+                          onSave={(audience, teachers) => send(() => ownerLibraryApi.setAudience(token, item.libraryItemId, audience, teachers), () => {
+                            setEditing(null);
+                            setNotice("حُفظ جمهور «" + item.title + "».");
+                            setNonce(n => n + 1);
+                          })} />
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              ))}
+              {shown.length === 0 && (
+                <tbody>
+                  <tr><td className="eb-table-empty" colSpan={5}>لا امتحان يطابق البحث. <button type="button" className="eb-owner-link" onClick={clearFilters}>مسح التصفية</button></td></tr>
+                </tbody>
+              )}
+            </table>
+          </div>
         </>
       )}
     </section>
