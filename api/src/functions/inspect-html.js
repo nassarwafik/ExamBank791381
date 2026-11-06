@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { BlobServiceClient } = require("@azure/storage-blob");
 // Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
 const { requireOperator } = require("../lib/identity/operator-gate");
@@ -150,7 +151,7 @@ app.http("inspectHtml", {
   authLevel: "anonymous",
   route: "inspect-html",
 
-  handler: async request => {
+  handler: withCachePolicy(async request => {
     try {
       const auth = await requireOperator(request);
 
@@ -325,5 +326,5 @@ app.http("inspectHtml", {
         }
       };
     }
-  }
+  })
 });

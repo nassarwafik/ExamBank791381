@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -264,7 +265,7 @@ app.http("bankImportAction", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "bank-import-action",
-  handler: async request => {
+  handler: withCachePolicy(async request => {
     try {
       const auth = await requireTeacherSession(request);
       if (!auth.ok) {
@@ -355,7 +356,7 @@ app.http("bankImportAction", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ العملية على بنك الأسئلة حاليًا." } };
     }
-  }
+  })
 });
 
 // Exported only for unit testing (the section-validation gate, the blank-structure derivation and the

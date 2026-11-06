@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const {
   BlobServiceClient
 } = require("@azure/storage-blob");
@@ -112,7 +113,7 @@ app.http("bankSummary", {
     "bank-summary",
 
 
-  handler: async request => {
+  handler: withCachePolicy(async request => {
     try {
       // ----------------------------------------------------
       // Authentication (teacher/builder session required)
@@ -402,5 +403,5 @@ app.http("bankSummary", {
         }
       };
     }
-  }
+  })
 });

@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
@@ -359,7 +360,7 @@ async function importAnalyzeInner(request, _ctx, obs) {
     }
 }
 const importAnalyzeHandler = withObservability("import-analyze", importAnalyzeInner);
-app.http("importAnalyze", { methods: ["POST"], authLevel: "anonymous", route: "import-analyze", handler: withAiRateLimit("import-analyze", "ai-bulk", importAnalyzeHandler) });
+app.http("importAnalyze", { methods: ["POST"], authLevel: "anonymous", route: "import-analyze", handler: withCachePolicy(withAiRateLimit("import-analyze", "ai-bulk", importAnalyzeHandler)) });
 
 // Exported only for unit testing the Buffer<->base64 state-persistence boundary, the
 // already-done-job-never-recalls-AI guarantee, and the OpenAI-by-default provider resolution
