@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite } = require("../lib/audit-log");   // Tadris+ P10-L
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { readTeacherAccount, listTeacherAccounts, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
@@ -39,7 +39,7 @@ function queryParam(request, name) {
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const iso = new Date(nowMs).toISOString();
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;   // Tadris+ P10-L: every change is recorded BEFORE it happens
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -74,10 +74,12 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "create") {
       const name = normalizeSchoolName(body.name);
       if (!name) return NAME_INVALID();
-      const school = await createSchool(container, { name, createdBy: actor, nowMs });
-      if (!school) return reply(409, { ok: false, code: "SCHOOL_EXISTS", error: "تعذر إنشاء المدرسة. حاول مرة أخرى." });
-      await audit(container, { actor, action: "owner.school.created", targetType: "school", targetId: school.schoolId, targetLabel: name });
-      return reply(201, { ok: true, school: { ...publicSchool(school), teachers: 0 } });
+      // the school's id is chosen by createSchool: the record names it at the school's (first) write
+      return await recordOwnerChangeAtWrite(container, ({ json }) => ({ actor, action: "owner.school.created", targetType: "school", targetId: String(json && json.schoolId || ""), targetLabel: name }), async guarded => {
+        const school = await createSchool(guarded, { name, createdBy: actor, nowMs });
+        if (!school) return reply(409, { ok: false, code: "SCHOOL_EXISTS", error: "تعذر إنشاء المدرسة. حاول مرة أخرى." });
+        return reply(201, { ok: true, school: { ...publicSchool(school), teachers: 0 } });
+      }, { write });
     }
 
     if (action === "link") {
@@ -85,31 +87,38 @@ async function handler(request, deps = {}, obs = null) {
       if (!isTeacherAccountId(accountId)) return bad("ACCOUNT_ID_INVALID", "معرّف الحساب غير صالح.");
       const wanted = body.schoolId === null || body.schoolId === "" ? null : String(body.schoolId || "");
       if (wanted !== null && !isSchoolId(wanted)) return bad("SCHOOL_ID_INVALID", "معرّف المدرسة غير صالح.");
-      if (!(await readTeacherAccount(container, accountId))) return TEACHER_NOT_FOUND();
+      const account = await readTeacherAccount(container, accountId);
+      if (!account) return TEACHER_NOT_FOUND();
       if (wanted !== null && !(await readSchool(container, wanted))) return NOT_FOUND();
-      let previous = null;
-      const next = await mutateTeacherAccount(container, accountId, a => { previous = isSchoolId(a.schoolId) ? a.schoolId : null; return { ...a, schoolId: wanted, updatedAt: iso }; });
-      await audit(container, { actor, action: "owner.school.linked", targetType: "teacher-account", targetId: accountId, targetLabel: next.username, details: { from: previous, to: wanted } });
-      return reply(200, { ok: true, accountId, schoolId: wanted });
+      const previous = isSchoolId(account.schoolId) ? account.schoolId : null;
+      return await recordOwnerChange(container, { actor, action: "owner.school.linked", targetType: "teacher-account", targetId: accountId, targetLabel: account.username, details: { from: previous, to: wanted } }, async () => {
+        await mutateTeacherAccount(container, accountId, a => ({ ...a, schoolId: wanted, updatedAt: iso }));
+        return reply(200, { ok: true, accountId, schoolId: wanted });
+      }, { write });
     }
 
     const schoolId = String(body.schoolId || "");
     if (!isSchoolId(schoolId)) return bad("SCHOOL_ID_INVALID", "معرّف المدرسة غير صالح.");
-    if (!(await readSchool(container, schoolId))) return NOT_FOUND();
+    const school = await readSchool(container, schoolId);
+    if (!school) return NOT_FOUND();
 
     if (action === "rename") {
       const name = normalizeSchoolName(body.name);
       if (!name) return NAME_INVALID();
-      let from = "";
-      const doc = await mutateSchool(container, schoolId, s => { from = s.name; return { ...s, name, updatedAt: iso }; });
-      await audit(container, { actor, action: "owner.school.renamed", targetType: "school", targetId: schoolId, targetLabel: name, details: { from, to: name } });
-      return reply(200, { ok: true, school: publicSchool(doc) });
+      return await recordOwnerChange(container, { actor, action: "owner.school.renamed", targetType: "school", targetId: schoolId, targetLabel: name, details: { from: String(school.name || ""), to: name } }, async () => {
+        const doc = await mutateSchool(container, schoolId, s => ({ ...s, name, updatedAt: iso }));
+        return reply(200, { ok: true, school: publicSchool(doc) });
+      }, { write });
     }
 
     if (action === "logo") {
+      // recorded at the first write: an image refused while it is decoded and normalised writes, and records, nothing
+      const prevPhoto = photoRecord(school), seq = Number(school.profilePhotoSeq);
+      const version = Math.max(Number.isFinite(seq) && seq > 0 ? seq : 0, prevPhoto ? prevPhoto.version : 0) + 1;
+      return await recordOwnerChangeAtWrite(container, { actor, action: "owner.school.logo-updated", targetType: "school", targetId: schoolId, targetLabel: String(school.name || ""), details: { version } }, async guarded => {
       let published;
       try {
-        published = await publishProfilePhoto(container, {
+        published = await publishProfilePhoto(guarded, {
           ownerPrefix: logoPrefix(schoolId), docName: schoolDocName(schoolId), dataUrl: body.dataUrl, now: iso,
           prepareDoc: current => {
             if (!current || current.schoolId !== schoolId) { const e = new Error("SCHOOL_NOT_FOUND"); e.code = "SCHOOL_NOT_FOUND"; throw e; }
@@ -120,20 +129,21 @@ async function handler(request, deps = {}, obs = null) {
         if (e instanceof ProfileImageError) return reply(e.httpStatus || 400, { ok: false, code: "LOGO_" + e.code, error: e.message });
         throw e;
       }
-      await audit(container, { actor, action: "owner.school.logo-updated", targetType: "school", targetId: schoolId, targetLabel: published.doc.name, details: { version: published.meta.version } });
       return reply(200, { ok: true, school: publicSchool(published.doc) });
+      }, { write });
     }
 
     if (action === "remove-logo") {
-      const r = await removeProfilePhoto(container, {
+      return await recordOwnerChangeAtWrite(container, { actor, action: "owner.school.logo-removed", targetType: "school", targetId: schoolId, targetLabel: String(school.name || "") }, async guarded => {
+      const r = await removeProfilePhoto(guarded, {
         ownerPrefix: logoPrefix(schoolId), docName: schoolDocName(schoolId),
         prepareDoc: current => {
           if (!current || current.schoolId !== schoolId) { const e = new Error("SCHOOL_NOT_FOUND"); e.code = "SCHOOL_NOT_FOUND"; throw e; }
           return { ...current, updatedAt: iso };
         }
       }, deps, obs);
-      await audit(container, { actor, action: "owner.school.logo-removed", targetType: "school", targetId: schoolId, targetLabel: r.doc.name });
       return reply(200, { ok: true, school: publicSchool(r.doc) });
+      }, { write });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
