@@ -78,6 +78,18 @@ function bestIfAttempted(entry, trainingId) {
   return entry && Number(entry.attempts) > 0 ? { best: bestOf(entry, trainingId) } : {};
 }
 
+/**
+ * Tadris+ O16 (docs/enterprise-security-review-p9b3.md) — the key revealed after a submission. Only a non-negative whole number, or
+ * its digits as a string (as before), is a key: `Number(null)`, `Number("")`, `Number(false)` are 0 and `Number(true)` is 1, so the
+ * old `Number.isInteger(Number(v))` showed a missing key as option 0 (and hid the item's own answer text). Anything else → null.
+ * The post-submit review only: grading (gradeExam) does not read this.
+ */
+function keyIndex(value) {
+  if (typeof value === "number") return Number.isInteger(value) && value >= 0 ? value : null;
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) return Number(value.trim());
+  return null;
+}
+
 async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
@@ -142,7 +154,7 @@ async function handler(request, deps = {}, obs = null) {
       const review = graded.questions.map(g => {
         const q = questions.find(x => String(x.examQuestionId || x.id || "") === String(g.questionId)) || {};
         const chosen = answers[g.questionId];
-        const correctOptionIndex = Number.isInteger(Number(q.answer?.correctOptionIndex)) ? Number(q.answer.correctOptionIndex) : null;
+        const correctOptionIndex = keyIndex(q.answer?.correctOptionIndex);   // O16: a missing / malformed key is never option 0
         return {
           questionId: g.questionId,
           questionNumber: g.questionNumber,
