@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const {
   BlobServiceClient
@@ -746,7 +747,7 @@ app.http("classifyQuestionPreview", {
     "classify-question-preview",
 
 
-  handler: withAiRateLimit("classify-question-preview", "ai-general", async request => {
+  handler: withCachePolicy(withAiRateLimit("classify-question-preview", "ai-general", async request => {
     try {
       // ----------------------------------------------------
       // AUTH (teacher/builder session required)
@@ -1159,5 +1160,5 @@ app.http("classifyQuestionPreview", {
         }
       };
     }
-  })
+  }))
 });

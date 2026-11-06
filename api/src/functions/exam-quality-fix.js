@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -186,7 +187,7 @@ app.http("examQualityFix", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "exam-quality-fix",
-  handler: withAiRateLimit("exam-quality-fix", "ai-general", async request => {
+  handler: withCachePolicy(withAiRateLimit("exam-quality-fix", "ai-general", async request => {
     try {
       const auth = await requireTeacherSession(request);
       if (!auth.ok) {
@@ -230,7 +231,7 @@ app.http("examQualityFix", {
     catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر إصلاح هذا السؤال تلقائيًا حاليًا." } };
     }
-  })
+  }))
 });
 
 module.exports = { buildQualityFixPatch, buildPrompt, buildSchema };

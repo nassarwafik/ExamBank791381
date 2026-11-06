@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { verifyContentAssetSignature, readContentAsset } = require("../lib/content-assets");
 
 // Tadris+ P5-C (risk S7, D10) — GET /api/content-asset?p=<protected path>&exp=<unix>&sig=<hmac>: ONE course drawing or library
@@ -27,6 +28,6 @@ async function handler(request, deps = {}) {
   }
 }
 
-app.http("contentAsset", { methods: ["GET"], authLevel: "anonymous", route: "content-asset", handler: request => handler(request) });
+app.http("contentAsset", { methods: ["GET"], authLevel: "anonymous", route: "content-asset", handler: withCachePolicy(request => handler(request)) });
 
 module.exports = { handler };

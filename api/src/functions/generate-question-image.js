@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
@@ -82,7 +83,7 @@ app.http("generateQuestionImage", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "generate-question-image",
-  handler: withAiRateLimit("generate-question-image", "ai-image", request => handler(request))
+  handler: withCachePolicy(withAiRateLimit("generate-question-image", "ai-image", request => handler(request)))
 });
 
 module.exports = { handler, buildImagePrompt };

@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const fs = require("fs");
 const path = require("path");
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -28,7 +29,7 @@ app.http("examQuestionAvailability", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "exam-question-availability",
-  handler: async request => {
+  handler: withCachePolicy(async request => {
     try {
       const auth = await requireTeacherSession(request);
       if (!auth.ok) return auth.response;
@@ -146,5 +147,5 @@ app.http("examQuestionAvailability", {
         jsonBody: { ok: false, error: "تعذر حساب عدد الأسئلة المتاحة حاليًا." }
       };
     }
-  }
+  })
 });

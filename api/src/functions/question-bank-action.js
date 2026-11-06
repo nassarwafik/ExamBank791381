@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 
 const {
   BlobServiceClient
@@ -329,7 +330,7 @@ app.http("questionBankAction", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "question-bank-action",
-  handler: request => handler(request)
+  handler: withCachePolicy(request => handler(request))
 });
 
 module.exports = { handler, isBlobNotFound, presentationTypeFromFullQuestion, broadlyMatchesType, isOfficialLikeSource, buildExamQuestion };

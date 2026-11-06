@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 
 const {
   BlobServiceClient
@@ -168,5 +169,5 @@ async function handler(request, deps = {}) {
   }
 }
 
-app.http("manageTemplates", { methods: ["GET", "POST"], authLevel: "anonymous", route: "templates", handler: request => handler(request) });
+app.http("manageTemplates", { methods: ["GET", "POST"], authLevel: "anonymous", route: "templates", handler: withCachePolicy(request => handler(request)) });
 module.exports = { handler, listTemplates };

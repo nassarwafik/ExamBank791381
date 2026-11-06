@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 // Tadris+ P1-B — operator tool: owner-only once an owner exists (requireOperator; owner decision D9).
@@ -822,7 +823,7 @@ app.http("buildBank2025", {
   authLevel: "anonymous",
   route: "build-bank-2025",
 
-  handler: async request => {
+  handler: withCachePolicy(async request => {
     try {
       // --------------------------------------------------
       // Authentication (teacher/builder session required)
@@ -1297,5 +1298,5 @@ app.http("buildBank2025", {
         }
       };
     }
-  }
+  })
 });

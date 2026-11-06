@@ -1,5 +1,6 @@
 
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const crypto = require("crypto");
 
 const {
@@ -374,7 +375,7 @@ app.http(
       "save-exam-artifact",
 
     handler:
-      request => handler(request)
+      withCachePolicy(request => handler(request))
   }
 );
 

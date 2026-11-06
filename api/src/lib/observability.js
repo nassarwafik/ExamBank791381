@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { applyDefaultCachePolicy } = require("./http-cache");
 
 // Roadmap #9 — Observability. A small, dependency-free structured-logging + request-correlation layer for
 // the Azure Functions API. It emits stable, JSON-shaped events (one object per log line) that Azure /
@@ -264,7 +265,8 @@ function withRequestIdHeader(response, ctx) {
 //   1. builds a request context (requestId from a safe x-request-id, else a UUID),
 //   2. invokes the inner handler unchanged, passing the context as a THIRD argument so a handler MAY emit
 //      domain events (existing handlers ignore it; tests call the bare handler without it),
-//   3. adds X-Request-ID to the response headers (never overwriting),
+//   3. adds X-Request-ID to the response headers (never overwriting) and, to a JSON answer that states no Cache-Control,
+//      `Cache-Control: private, no-store` (Tadris+ P10-I, lib/http-cache.js),
 //   4. emits the terminal http.request.* event with status + durationMs,
 //   5. on an UNEXPECTED throw, logs the safe error and returns a generic 500 (with X-Request-ID) — it never
 //      converts an intentional 4xx into a 500, because handlers already return those as values.
@@ -274,7 +276,8 @@ function withObservability(route, innerHandler, options = {}) {
     const ctx = createRequestContext(request, { route });
     try {
       const response = await innerHandler(request, azureCtxOrDeps, ctx);
-      const withHeader = withRequestIdHeader(response, ctx);
+      // Tadris+ P10-I — a JSON answer that states no Cache-Control of its own leaves as `private, no-store` (O12).
+      const withHeader = withRequestIdHeader(applyDefaultCachePolicy(response), ctx);
       finishRequest(ctx, withHeader.status, options.completedFields ? options.completedFields(withHeader) : undefined);
       return withHeader;
     } catch (error) {

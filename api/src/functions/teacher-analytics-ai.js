@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withCachePolicy } = require("../lib/http-cache");   // Tadris+ P10-I: JSON responses default to private, no-store
 const { withAiRateLimit } = require("../lib/ai-rate-limit");   // D3: per-teacher AI rate limit at registration
 const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
@@ -156,5 +157,5 @@ async function handler(request, deps = {}, obs = null) {
     }
 }
 
-app.http("teacherAnalyticsAi", { methods: ["POST"], authLevel: "anonymous", route: "teacher-analytics-ai", handler: withAiRateLimit("teacher-analytics-ai", "ai-general", withObservability("teacher-analytics-ai", handler)) });
+app.http("teacherAnalyticsAi", { methods: ["POST"], authLevel: "anonymous", route: "teacher-analytics-ai", handler: withCachePolicy(withAiRateLimit("teacher-analytics-ai", "ai-general", withObservability("teacher-analytics-ai", handler))) });
 module.exports = { handler };
