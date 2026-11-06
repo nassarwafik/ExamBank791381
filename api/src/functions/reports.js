@@ -185,7 +185,12 @@ async function handler(request, deps = {}, obs = null) {
         if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
         const u = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
         if (!u || u.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
-        const sClassId = String(u.classId || "");
+        // Tadris+ P10-H (closes security review O13; owner decision §19.45) — the student passed the student check (possibly through
+        // their own owner stamp), but their CURRENT class must be this teacher's too before anything of it is read: another
+        // teacher's class is treated as no class at all — no id, name, school year, assignments, results or projects.
+        const rawClassId = String(u.classId || "");
+        const classOk = !tenant || !rawClassId || await classAccessible(name => downloadJsonOrNull(container, name), rawClassId, tenant);
+        const sClassId = classOk ? rawClassId : "";
         const c = sClassId ? await loadClass(container, sClassId) : null;
         const assignments = c && academic ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
         // Roadmap #27: the student's per-assignment submissions are independent reads → bounded concurrency, aligned.
