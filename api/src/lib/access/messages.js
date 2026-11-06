@@ -5,6 +5,7 @@ const ACCESS_REFUSAL = Object.freeze({
   CAPABILITY_UNKNOWN: "صلاحية غير معروفة.",
   CAPABILITY_DUPLICATE: "صلاحية مكررة في القائمة.",
   CAPABILITY_CONFLICT: "لا يمكن منح صلاحية ومنعها في الوقت نفسه.",
+  CAPABILITY_RESERVED: "هذه الصلاحية محجوزة: لا يطبّقها أي جزء من المنصة بعد، فلا تُمنح ولا تُمنع.",   // Tadris+ P10-K
   PLATFORM_CAPABILITY_FORBIDDEN: "صلاحيات المنصة للمالك وحده، ولا تُمنح لمعلم.",
   DEPENDENCY_UNMET: "صلاحية تحتاج صلاحية أخرى غير ممنوحة.",
   RESOURCES_NOT_SUPPORTED: "تخصيص هذا النوع من الموارد يأتي في مرحلة لاحقة.",

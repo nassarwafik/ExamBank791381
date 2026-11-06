@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
@@ -18,7 +18,7 @@ import AppearanceChoice, { type AppearanceDraft } from "./AppearanceChoice";   /
 import OwnerTeacherExams from "./OwnerTeacherExams";   // Tadris+ P6-D
 import {
   STATUS_LABEL, ACTION_LABEL, CONFIRM_TEXT, formatDate, actionsFor, trialLabel, trialBadgeClass, accessLabel, startingPresetId, withCapability, withoutCapability,
-  grantsAndDenies, actorLabel
+  grantsAndDenies, actorLabel, settleReserved
 } from "./teacherShared";
 
 /**
@@ -290,7 +290,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     const p = r.data.preset ? catalog.presets.find(x => x.id === r.data.preset!.id && x.version === r.data.preset!.version) : undefined;
     if (!p) { setCopyNote({ error: true, text: "حزمة ذلك المعلم غير معروفة هنا، فلا يمكن نسخها." }); return; }
     setKey(presetKey(p));
-    setChosen(new Set(r.data.capabilities));
+    setChosen(settleReserved(new Set(r.data.capabilities), p.capabilities, catalog.capabilities));   // P10-K
     setCourseMode(Array.isArray(r.data.courses) ? "some" : "all");
     setChosenCourses(new Set(Array.isArray(r.data.courses) ? r.data.courses : []));
     setWidgetMode(Array.isArray(r.data.widgets) ? "some" : "all");
@@ -317,7 +317,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const appearanceOut = (d: AppearanceDraft) => { const out: AppearanceRestriction = {}; for (const [k, v] of Object.entries(d)) if (Array.isArray(v)) out[k] = [...v]; return out; };
   const appearanceUnchanged = JSON.stringify(appearanceOut(appearanceDraft)) === JSON.stringify(appearanceOut(initialAppearance));
   const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged && widgetsUnchanged && gamesUnchanged && appearanceUnchanged);
-  const reachable = modules.filter(m => m.caps.some(c => chosen.has(c.id)));
+  const reachable = modules.filter(m => m.caps.some(c => !c.reserved && chosen.has(c.id)));   // P10-K: a reserved one grants nothing
 
   return (
     <div className="eb-owner-access-editor">
@@ -350,12 +350,16 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
           <div className="eb-owner-cap-groups">
             {modules.map(m => (
               <fieldset key={m.module} className="eb-owner-cap-group">
-                <legend>{m.label} <small>({m.caps.filter(c => chosen.has(c.id)).length}/{m.caps.length})</small></legend>
+                <legend>{m.label} <small>({m.caps.filter(c => !c.reserved && chosen.has(c.id)).length}/{m.caps.filter(c => !c.reserved).length})</small></legend>
                 {m.caps.map(c => (
-                  <label key={c.id} className="eb-owner-check">
-                    <input type="checkbox" checked={chosen.has(c.id)} onChange={e => setChosen(s => (e.target.checked ? withCapability(s, c.id, catalog.capabilities) : withoutCapability(s, c.id, catalog.capabilities)))} />
-                    <span>{c.label}</span>
-                  </label>
+                  <Fragment key={c.id}>
+                    <label className={"eb-owner-check" + (c.reserved ? " is-reserved" : "")}>
+                      {/* Tadris+ P10-K — a reserved capability is not a choice: no route enforces it, so its box follows the preset */}
+                      <input type="checkbox" checked={chosen.has(c.id)} disabled={c.reserved} aria-describedby={c.reserved ? "reserved-" + c.id : undefined} onChange={e => setChosen(s => (e.target.checked ? withCapability(s, c.id, catalog.capabilities) : withoutCapability(s, c.id, catalog.capabilities)))} />
+                      <span>{c.label}</span>
+                    </label>
+                    {c.reserved && <small id={"reserved-" + c.id} className="eb-owner-reserved"><span className="eb-chip is-muted">محجوزة</span> لا تُطبَّق بعد. {c.reservedNote}</small>}
+                  </Fragment>
                 ))}
               </fieldset>
             ))}
@@ -366,7 +370,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
           <div className="eb-owner-preview" role="region" aria-label="ما سيتمكن منه المعلم">
             <strong>ما سيتمكن منه المعلم:</strong>
             {reachable.length === 0 ? <p className="eb-owner-hint">لا شيء: لن تظهر له أي أداة أثناء التطبيق.</p> : (
-              <ul>{reachable.map(m => <li key={m.module}>{m.label}: {m.caps.filter(c => chosen.has(c.id)).length} من {m.caps.length}</li>)}</ul>
+              <ul>{reachable.map(m => <li key={m.module}>{m.label}: {m.caps.filter(c => !c.reserved && chosen.has(c.id)).length} من {m.caps.filter(c => !c.reserved).length}</li>)}</ul>
             )}
           </div>
           {catalog.courses && (

@@ -14,6 +14,7 @@ const { legacyDataOwner } = require("../lib/teacher-tenancy");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { profileDocName, normalizeDisplayName, VALID_AVATARS } = require("../lib/teacher-profile");
 const { AccessError, buildRevision, writeRevision } = require("../lib/access/revisions");
+const { reservedAdditions } = require("../lib/access/capabilities");   // Tadris+ P10-K
 const { readAccessMode } = require("../lib/access/access-mode");
 const { ACCESS_REFUSAL } = require("../lib/access/messages");
 
@@ -157,7 +158,7 @@ async function handler(request, deps = {}, obs = null) {
         } else {
           try {
             const note = text(body.accessReason, 200);
-            initialAccess = buildRevision({
+            const built = buildRevision({
               accountId, parentRevisionId: null, presetId: body.presetId, presetVersion: body.presetVersion,
               grants: body.grants === undefined ? [] : body.grants, denies: body.denies === undefined ? [] : body.denies,
               resources: {   // P5-A courses, P7-A2 widgets (absent / null = all)
@@ -167,7 +168,11 @@ async function handler(request, deps = {}, obs = null) {
                 ...(body.appearance === undefined || body.appearance === null ? {} : { appearance: body.appearance })   // P8-A2
               },
               reason: "initial access at creation" + (note ? " — " + note : ""), createdBy: actor, nowMs
-            }).revision;
+            });
+            // Tadris+ P10-K (O11) — a new teacher holds no revision yet, so every reserved grant or deny is a new one.
+            const added = reservedAdditions(built.revision, {}, built.capabilities);
+            if (added.length) return reply(400, { ok: false, code: "CAPABILITY_RESERVED", error: ACCESS_REFUSAL.CAPABILITY_RESERVED, details: { capabilities: added } });
+            initialAccess = built.revision;
           } catch (e) {
             if (e instanceof AccessError) return bad(e.code, ACCESS_REFUSAL[e.code] || ACCESS_REFUSAL.REVISION_MALFORMED);
             throw e;
