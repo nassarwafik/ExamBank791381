@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { getContainer, downloadJsonOrNull, uploadJson, deleteBlob } = require("../lib/platform-storage");
 const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require("../lib/login-throttle");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange } = require("../lib/audit-log");   // Tadris+ P10-L: recorded before the commit
 const { hashSecret } = require("../lib/identity/password-hash");
 const { checkPassword, passwordPolicyMessage } = require("../lib/identity/password-policy");
 const { generateTotpSecret, verifyTotp, otpauthUri, base32Encode } = require("../lib/identity/totp");
@@ -126,7 +126,9 @@ async function handleConfirm(container, request, body, deps, env, nowMs) {
     return reply(409, { ok: false, code: "USERNAME_TAKEN", error: "اسم المستخدم مستخدم. ابدأ من جديد باسم آخر." });
   }
 
-  // Commit point.
+  // Commit point. Tadris+ P10-L (O14) — the completion is recorded (strict) BEFORE it: no record → 503, nothing is committed, and the
+  // same confirmation can be sent again (every write below is create-only).
+  return await recordOwnerChange(container, { actor: "owner:" + pending.accountId, action: "owner.bootstrap.completed", targetType: "owner-account", targetId: pending.accountId }, async () => {
   if (!marker) {
     const created = await createOnly(container, BOOTSTRAP_MARKER, { schemaVersion: 1, accountId: pending.accountId, completedAtMs: nowMs });
     if (!created) {
@@ -159,14 +161,12 @@ async function handleConfirm(container, request, body, deps, env, nowMs) {
   if (!created) return gone();                     // a concurrent confirm finished first and showed the codes
   await deleteBlob(container, BOOTSTRAP_PENDING);
   await (deps.clearLoginThrottle || clearLoginThrottle)(container, THROTTLE_ID, g.clientId, deps);
-  await (deps.recordOwnerAuditEvent || recordOwnerAuditEvent)(container, {
-    actor: "owner:" + pending.accountId, action: "owner.bootstrap.completed", targetType: "owner-account", targetId: pending.accountId
-  });
   return reply(201, {
     ok: true,
     owner: { accountId: pending.accountId, username: pending.username, displayName: pending.displayName },
     recoveryCodes: recovery.codes
   });
+  }, { write: deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict });
 }
 
 // DI seam for tests (production passes nothing → real implementations; Azure's InvocationContext carries none of these keys).

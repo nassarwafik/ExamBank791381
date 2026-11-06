@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent, recordAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange, recordAuditEvent } = require("../lib/audit-log");   // Tadris+ P10-L
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { ownerSessionName, readOwnerAccount, mutateOwnerAccount, createOnly } = require("../lib/identity/owner-store");
 const { isTeacherAccountId, createManagedTeacherToken, newTeacherSessionId } = require("../lib/identity/teacher-token");
@@ -104,7 +104,7 @@ async function redeem(request, deps, obs, nowMs) {
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;   // Tadris+ P10-L: every owner change is recorded BEFORE it happens
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -133,10 +133,11 @@ async function handler(request, deps = {}, obs = null) {
       const wanted = body.accountId === null || body.accountId === "" ? null : String(body.accountId || "");
       if (wanted !== null && !isTeacherAccountId(wanted)) return reply(400, { ok: false, code: "ACCOUNT_ID_INVALID", error: "معرّف الحساب غير صالح." });
       if (wanted !== null && !(await readTeacherAccount(container, wanted))) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود." });
-      let previous = null;
-      const next = await mutateOwnerAccount(container, owner.accountId, o => { previous = isTeacherAccountId(o.linkedTeacherAccountId) ? o.linkedTeacherAccountId : null; return { ...o, linkedTeacherAccountId: wanted }; });
-      await audit(container, { actor, action: wanted ? "owner.teacher-link.set" : "owner.teacher-link.cleared", targetType: "teacher-account", targetId: wanted || previous || "", details: { from: previous, to: wanted } });
-      return reply(200, { ok: true, linked: await linkedView(container, next, nowMs) });
+      const previous = isTeacherAccountId(owner.linkedTeacherAccountId) ? owner.linkedTeacherAccountId : null;
+      return await recordOwnerChange(container, { actor, action: wanted ? "owner.teacher-link.set" : "owner.teacher-link.cleared", targetType: "teacher-account", targetId: wanted || previous || "", details: { from: previous, to: wanted } }, async () => {
+        const next = await mutateOwnerAccount(container, owner.accountId, o => ({ ...o, linkedTeacherAccountId: wanted }));
+        return reply(200, { ok: true, linked: await linkedView(container, next, nowMs) });
+      }, { write });
     }
 
     if (action === "issue") {
@@ -145,9 +146,11 @@ async function handler(request, deps = {}, obs = null) {
       if (!linked.usable) return reply(409, { ok: false, code: linked.reason, error: USABILITY_MESSAGE[linked.reason] || "لا يمكن فتح مساحة المعلم الآن." });
       const token = crypto.randomBytes(32).toString("base64url");
       const ticket = { schemaVersion: 1, ownerId: owner.accountId, ownerSid: session.sid, ownerAuthVersion: owner.authVersion, accountId: linked.accountId, createdAtMs: nowMs, expiresAtMs: nowMs + HANDOFF_TTL_MS, usedAtMs: null };
-      if (!(await createOnly(container, handoffName(token), ticket))) return unavailable();
-      await audit(container, { actor, action: "owner.teacher-handoff.issued", targetType: "teacher-account", targetId: linked.accountId, targetLabel: linked.username, details: { expiresAt: new Date(ticket.expiresAtMs).toISOString() } });
-      return reply(200, { ok: true, handoffPath: "#/handoff/" + token, expiresAt: new Date(ticket.expiresAtMs).toISOString() });
+      // the owner opening a teacher's workspace is recorded BEFORE the ticket exists (like opening a conversation, D14)
+      return await recordOwnerChange(container, { actor, action: "owner.teacher-handoff.issued", targetType: "teacher-account", targetId: linked.accountId, targetLabel: linked.username, details: { expiresAt: new Date(ticket.expiresAtMs).toISOString() } }, async () => {
+        if (!(await createOnly(container, handoffName(token), ticket))) return unavailable();
+        return reply(200, { ok: true, handoffPath: "#/handoff/" + token, expiresAt: new Date(ticket.expiresAtMs).toISOString() });
+      }, { write });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
