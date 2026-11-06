@@ -35,12 +35,22 @@ function clean(v){
 }
 function round(n){return Number(Number(n||0).toFixed(2))}
 function marks(question){return Math.max(0,Number(question?.marks??question?.points??0)||0)}
+// Tadris+ O18 (docs/enterprise-security-review-p9b3.md; owner decision «أوافق على إصلاح O18») — a choice key is a non-negative whole
+// number, or its digits as a string (as before). Number(null) / Number("") / Number(false) are 0 and Number(true) is 1, so the old
+// Number.isInteger(Number(v)) made a missing key count option 0 (or 1) correct. Anything else is now treated like a MISSING key: the
+// other key forms below and, for true/false, answer.correct decide. Every whole-number key grades exactly as before.
+function choiceKey(value){
+  if(typeof value==="number")return Number.isInteger(value)&&value>=0?value:null;
+  if(typeof value==="string"&&/^\d+$/.test(value.trim()))return Number(value.trim());
+  return null;
+}
 function gradeChoice(question,response,answer){
   const idx=Number(response?.index);
   if(!Number.isInteger(idx)||idx<0)return false;
   const options=Array.isArray(question?.options)?question.options:[];
   const option=options[idx]||{};
-  if(Number.isInteger(Number(answer?.correctOptionIndex))&&idx===Number(answer.correctOptionIndex))return true;
+  const key=choiceKey(answer?.correctOptionIndex);
+  if(key!==null&&idx===key)return true;
   if(answer?.correctText&&clean(option.text??option.label??option.value)===clean(answer.correctText))return true;
   const eng=["a","b","c","d","e","f","g","h"],ar=["أ","ب","ج","د","هـ","و","ز","ح"];
   const candidates=[
@@ -297,7 +307,7 @@ function gradeLegacyQuestion(question,response,max,placement){
     let gq=question,ans=answer;
     if(type==="truefalse"){
       if(!Array.isArray(question.options)||!question.options.length)gq={...question,options:defaultTrueFalseOptions()};
-      if(!Number.isInteger(Number(answer?.correctOptionIndex))&&typeof answer?.correct==="boolean")ans={...answer,correctOptionIndex:answer.correct?0:1};
+      if(choiceKey(answer?.correctOptionIndex)===null&&typeof answer?.correct==="boolean")ans={...answer,correctOptionIndex:answer.correct?0:1};   // O18
     }
     const correct=gradeChoice(gq,response,ans);
     return {score:correct?max:0,maxMarks:max,correct,manualReview:false};
