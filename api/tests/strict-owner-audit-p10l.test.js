@@ -167,6 +167,20 @@ describe("P10-L the order and what stays as it was", () => {
     const ok = await recordOwnerChange(ctx.mem.container, { action: "owner.test" }, async opId => { applied++; return { status: 201, jsonBody: { opId } }; }, { write: async (c, e) => { written.push(e); } });
     expect([ok.status, applied, written.length, written[0].opId === ok.jsonBody.opId]).toEqual([201, 1, 1, true]);
   });
+
+  it("recordOwnerChange: a change that answers ≥ 400, or succeeds without changing anything, is marked «not applied» (same opId)", async () => {
+    const written = [];
+    const sink = { write: async (c, e) => { written.push(e); } };
+    const refused = await recordOwnerChange(ctx.mem.container, { action: "owner.test", targetId: "x" }, async () => ({ status: 409, jsonBody: { ok: false, code: "TRANSFER_STALE" } }), sink);
+    expect(refused.status).toBe(409);
+    expect(written.map(e => [e.action, e.details && e.details.reason])).toEqual([["owner.test", undefined], ["owner.test.not-applied", "TRANSFER_STALE"]]);
+    expect(written[1].opId).toBe(written[0].opId);
+    written.length = 0;
+    const repeat = await recordOwnerChange(ctx.mem.container, { action: "owner.test" }, async () => ({ status: 200, jsonBody: { ok: true, duplicate: true }, notApplied: "duplicate" }), sink);
+    expect(repeat).toEqual({ status: 200, jsonBody: { ok: true, duplicate: true } });   // the marker field never reaches the client
+    expect(written.map(e => e.action)).toEqual(["owner.test", "owner.test.not-applied"]);
+    expect(written[1].details).toEqual({ reason: "duplicate" });
+  });
 });
 
 describe("P10-L static guard: an owner change cannot be recorded best effort by accident", () => {
