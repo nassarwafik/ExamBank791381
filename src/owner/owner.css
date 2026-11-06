@@ -292,3 +292,62 @@
   .eb-owner-cell-label { display: inline; }
   .eb-owner-teacher-panel > td { border-top: 1px solid var(--eb-line); border-radius: 0 0 var(--eb-r-lg) var(--eb-r-lg); padding: var(--eb-space-3); }
 }
+
+/* ── UX-O2 (docs/enterprise-ux-owner-console-o2.md) — the access editor in sections with a sticky save bar, and the access-mode
+   stages. Tokens only, so both themes and RTL are covered. ── */
+.eb-owner-access-editor { gap: var(--eb-space-2); }
+.eb-owner-access-kpis { grid-template-columns: 1.4fr 1fr 1.2fr 1fr; margin-bottom: var(--eb-space-2); }
+.eb-owner-access-kpis .eb-kpi-value { font-size: var(--eb-fs-16); }
+.eb-owner-access-kpis .eb-kpi:nth-child(2) .eb-kpi-value { font-size: var(--eb-fs-24); }
+.eb-owner-access-delta { display: inline-flex; flex-wrap: wrap; gap: var(--eb-space-1); align-items: center; font-size: var(--eb-fs-14); }
+.eb-owner-access-delta .is-added { color: var(--eb-success-tx); }
+.eb-owner-access-delta .is-removed { color: var(--eb-danger-tx); }
+.eb-owner-access-when { font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); color: var(--eb-text); }
+
+.eb-owner-section { border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); background: var(--eb-surface); }
+.eb-owner-section-title { margin: 0; font-size: inherit; }
+.eb-owner-section-head { width: 100%; display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; background: none; border: 0; border-radius: var(--eb-r-lg); padding: var(--eb-space-3) var(--eb-space-4); font: inherit; color: var(--eb-text); text-align: start; cursor: pointer; }
+.eb-owner-section-head:hover { background: var(--eb-surface-2); }
+.eb-owner-section-head:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-owner-section-name { font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.eb-owner-section-summary { flex: 1 1 auto; display: inline-flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.eb-owner-section-chevron { flex: none; color: var(--eb-muted); transition: transform var(--eb-dur) var(--eb-ease); transform: rotate(90deg); }
+.eb-owner-section-chevron.is-open { transform: rotate(0deg); }
+.eb-owner-changed { background: var(--eb-warn-bg); color: var(--eb-warn-tx); border-radius: var(--eb-pill); padding: 2px 9px; font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); white-space: nowrap; }
+.eb-owner-section-body { border-top: 1px solid var(--eb-line); padding: var(--eb-space-3) var(--eb-space-4); display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-owner-section-body[hidden] { display: none; }
+.eb-owner-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--eb-space-2); }
+.eb-owner-presets legend { grid-column: 1 / -1; position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.eb-owner-presets .eb-owner-access-option { border: 1px solid var(--eb-line); border-radius: var(--eb-r); padding: var(--eb-space-2) var(--eb-space-3); }
+.eb-owner-presets .eb-owner-access-option.is-selected { border-color: var(--eb-primary); background: var(--eb-primary-050); }
+.eb-owner-cap-group.is-changed { border-color: var(--eb-warn); }
+.eb-owner-cap-group[hidden] { display: none; }
+
+.eb-owner-savebar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--eb-space-3); background: var(--eb-surface); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-lg); padding: var(--eb-space-3) var(--eb-space-4); padding-bottom: calc(var(--eb-space-3) + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -6px 20px color-mix(in srgb, var(--eb-scrim) 10%, transparent); }
+.eb-owner-savebar.is-dirty { border-color: var(--eb-warn); }
+.eb-owner-savebar-state { margin: 0; flex: 1 1 200px; align-self: center; color: var(--eb-muted); }
+.eb-owner-savebar.is-dirty .eb-owner-savebar-state strong { color: var(--eb-warn-tx); }
+.eb-owner-savebar-reason { flex: 2 1 260px; margin: 0; }
+.eb-owner-savebar .eb-owner-actions { margin: 0; }
+
+/* «وضع الصلاحيات»: the stages, the readiness checklist and what observe recorded */
+.eb-owner-mode-steps { margin: var(--eb-space-2) 0; }
+.eb-owner-mode-steps .eb-stepper { width: 100%; }
+.eb-owner-checklist { list-style: none; margin: 0; padding: 0; }
+.eb-owner-checklist li { display: flex; gap: var(--eb-space-2); align-items: flex-start; padding: var(--eb-space-2) 0; border-top: 1px solid var(--eb-line); }
+.eb-owner-checklist li:first-child { border-top: 0; }
+.eb-owner-check-mark { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-12); }
+.eb-owner-check-mark.is-ok { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-owner-check-mark.is-no { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-owner-check-mark.is-info { background: var(--eb-surface-2); color: var(--eb-muted); }
+.eb-owner-checklist .eb-owner-check-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.eb-owner-checklist .eb-owner-check-text small { color: var(--eb-muted); }
+.eb-owner-mode-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); margin-top: var(--eb-space-3); }
+
+@media (max-width: 860px) {
+  .eb-owner-access-kpis { grid-template-columns: 1fr 1fr; }
+  .eb-owner-savebar { position: sticky; bottom: 0; margin-inline: calc(-1 * var(--eb-space-1)); padding: var(--eb-space-2) var(--eb-space-3); padding-bottom: calc(var(--eb-space-2) + env(safe-area-inset-bottom, 0px)); }
+  .eb-owner-savebar-reason { flex-basis: 100%; order: 3; }
+  .eb-owner-section-head, .eb-owner-section-body { padding-inline: var(--eb-space-3); }
+}
+@media (prefers-reduced-motion: reduce) { .eb-owner-section-chevron { transition: none; } }

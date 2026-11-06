@@ -10,6 +10,7 @@ import OwnerApp from "./OwnerApp";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
 import { isOwnerLocation, ownerViewFromHash, ownerTeacherFromHash, ownerTeacherHash } from "./ownerRoute";
 import { withCapability, withoutCapability, grantsAndDenies } from "./teacherShared";
+import { openAccessSections } from "./accessEditor.testkit";   // UX-O2 — the editor's sections are folded at first
 
 type Call = { url: string; method: string; body: Record<string, unknown> | undefined };
 let calls: Call[] = [];
@@ -65,7 +66,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 const openPage = async () => { render(<OwnerApp />); return screen.findByRole("heading", { name: "سارة" }); };
-const tab = (name: string) => fireEvent.click(screen.getByRole("tab", { name }));
+const tab = (name: string) => { fireEvent.click(screen.getByRole("tab", { name })); if (name === "الصلاحيات") openAccessSections(); };
 const box = (name: string) => screen.getByRole("checkbox", { name }) as HTMLInputElement;
 const posted = (path: string) => calls.filter(c => c.method === "POST" && c.url === path);
 

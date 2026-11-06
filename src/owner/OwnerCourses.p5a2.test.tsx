@@ -11,6 +11,7 @@ import OwnerApp from "./OwnerApp";
 import LearningMaterialsPage from "../learning/LearningMaterialsPage";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
 import { ownerTeacherHash } from "./ownerRoute";
+import { openAccessSections } from "./accessEditor.testkit";   // UX-O2 — the editor's sections are folded at first
 
 type Call = { url: string; method: string; body: Record<string, unknown> | undefined };
 let calls: Call[] = [];
@@ -83,7 +84,7 @@ describe("P5-A2 «المقررات»", () => {
 });
 
 describe("P5-A2 the teacher's courses", () => {
-  const open = async () => { window.location.hash = ownerTeacherHash(SARA); render(<OwnerApp />); await screen.findByRole("heading", { name: "سارة" }); fireEvent.click(screen.getByRole("tab", { name: "الصلاحيات" })); };
+  const open = async () => { window.location.hash = ownerTeacherHash(SARA); render(<OwnerApp />); await screen.findByRole("heading", { name: "سارة" }); fireEvent.click(screen.getByRole("tab", { name: "الصلاحيات" })); openAccessSections(); };
   const radio = (name: RegExp) => screen.getByRole("radio", { name }) as HTMLInputElement;
   const box = (name: RegExp) => screen.getByRole("checkbox", { name }) as HTMLInputElement;
 

@@ -12,6 +12,7 @@ import OwnerTeachers from "./OwnerTeachers";
 import OwnerApp from "./OwnerApp";
 import { OWNER_TOKEN_KEY, type ManagedTeacher } from "./ownerApi";
 import { ownerTeacherHash } from "./ownerRoute";
+import { openAccessSections } from "./accessEditor.testkit";   // UX-O2 — the editor's sections are folded at first
 
 type Call = { url: string; method: string; body: Record<string, unknown> | undefined };
 let calls: Call[] = [];
@@ -194,6 +195,7 @@ describe("P4-B2 «ابدأ من صلاحيات معلم آخر» on a teacher's 
     render(<OwnerApp />);
     await screen.findByRole("heading", { name: "سارة" });
     fireEvent.click(screen.getByRole("tab", { name: "الصلاحيات" }));
+    openAccessSections();
     expect((screen.getByRole("checkbox", { name: "قراءة الرسائل" }) as HTMLInputElement).checked).toBe(false);
     const source = screen.getByLabelText("ابدأ من صلاحيات معلم آخر") as HTMLSelectElement;
     expect([...source.options].map(o => o.textContent)).toEqual(["—", "عمر (t.omar)", "هدى (t.huda)"]);
@@ -212,6 +214,7 @@ describe("P4-B2 «ابدأ من صلاحيات معلم آخر» on a teacher's 
     render(<OwnerApp />);
     await screen.findByRole("heading", { name: "سارة" });
     fireEvent.click(screen.getByRole("tab", { name: "الصلاحيات" }));
+    openAccessSections();
     fireEvent.change(screen.getByLabelText("ابدأ من صلاحيات معلم آخر"), { target: { value: HUDA } });
     expect((await screen.findByRole("alert")).textContent).toContain("غير صالحة، فلا يمكن نسخها");
     expect((screen.getByRole("radio", { name: /التعلّم فقط/ }) as HTMLInputElement).checked).toBe(true);

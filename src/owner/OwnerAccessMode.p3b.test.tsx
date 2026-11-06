@@ -3,7 +3,7 @@
 // can be switched on and off (step-up when asked); readiness names the teachers left without access and lists what observe
 // recorded, with the capability labels; enforcement is never offered here.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 import OwnerAccessMode from "./OwnerAccessMode";
 
 type Call = { url: string; method: string; body: unknown };
@@ -59,7 +59,7 @@ describe("P3-B owner — access mode and readiness", () => {
     expect(region.textContent).toContain("بلا حزمة صلاحيات");
     expect(region.textContent).toContain("عمر");
     expect(region.textContent).not.toContain("وفيق");
-    const list = within(region).getByRole("list", { name: "ما كان سيُمنع" });
+    const list = screen.getByRole("table", { name: "ما كان سيُمنع" });   // UX-O2 — a table of what observe recorded (it was a list)
     expect(list.textContent).toContain("سارة");
     expect(list.textContent).toContain("منشئ الامتحانات — التأليف بالذكاء الاصطناعي");
     expect(list.textContent).toContain("3 مرة");

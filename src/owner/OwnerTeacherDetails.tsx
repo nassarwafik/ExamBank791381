@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import {
@@ -9,6 +9,9 @@ import Tabs from "../ui/Tabs";
 import TrialControls from "./TrialControls";
 import DataTable, { type DataColumn } from "../ui/DataTable";
 import DiffView from "../ui/DiffView";
+import KpiStrip from "../ui/KpiStrip";
+import { diffSets } from "../ui/diffSets";
+import AccessSection from "./AccessSection";   // UX-O2
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import OwnerTeacherClasses from "./OwnerTeacherClasses";   // Tadris+ P5-B2
@@ -77,6 +80,12 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
   const [issued, setIssued] = useState<Issued | null>(null);
   const signedOut = useRef(onSignedOut);
   useEffect(() => { signedOut.current = onSignedOut; }, [onSignedOut]);
+  // UX-O2 — the access draft's unsaved state (reported by the editor), «تراجع عن التغييرات» (a fresh editor on the same revision), and
+  // the inline question before leaving the tab or the page with unsaved changes. Presentation only: nothing is saved automatically.
+  const accessDirty = useRef(false);
+  const reportDirty = useCallback((dirty: boolean) => { accessDirty.current = dirty; }, []);
+  const [revertNonce, setRevertNonce] = useState(0);
+  const [leaving, setLeaving] = useState<{ to: TabId } | { back: true } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -105,7 +114,18 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
     if (refreshOnConflict && r.status === 409) reload();
   }
 
-  const back = <button type="button" className="eb-owner-secondary" onClick={onBack}>→ كل المعلمين</button>;
+  const guarded = (go: { to: TabId } | { back: true }) => {
+    if (tab === "access" && accessDirty.current && !("to" in go && go.to === "access")) { setLeaving(go); return; }
+    setLeaving(null);
+    if ("to" in go) setTab(go.to); else onBack();
+  };
+  const discardAndLeave = () => {
+    const go = leaving;
+    accessDirty.current = false;
+    setLeaving(null);
+    if (go && "to" in go) setTab(go.to); else if (go) onBack();
+  };
+  const back = <button type="button" className="eb-owner-secondary" onClick={() => guarded({ back: true })}>→ كل المعلمين</button>;
   if (state.kind === "loading") return <section className="eb-owner-panel" aria-label="صفحة المعلم"><p className="eb-owner-hint" role="status">جارٍ تحميل صفحة المعلم…</p></section>;
   if (state.kind === "missing") return (
     <section className="eb-owner-panel" aria-label="صفحة المعلم">
@@ -136,7 +156,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
       <OwnerTeacherExams token={token} accountId={accountId} teacherName={teacher.displayName} busy={busy} send={send} onSignedOut={onSignedOut} />
     ) },
     { id: "access", label: "الصلاحيات", content: (
-      <AccessEditor key={history.currentRevisionId || "none"} teacher={teacher} catalog={catalog} history={history} effective={effective} labels={labels} busy={busy}
+      <AccessEditor key={(history.currentRevisionId || "none") + ":" + revertNonce} onDirty={reportDirty} onRevert={() => setRevertNonce(n => n + 1)} teacher={teacher} catalog={catalog} history={history} effective={effective} labels={labels} busy={busy}
         others={others} onSignedOut={onSignedOut} loadSource={id => currentAccessOf(token, id)}
         onSave={draft => send(() => ownerAccessApi.assign(token, { accountId, ...draft, baseRevisionId: history.currentRevisionId }), () => { setNotice("حُفظت الصلاحيات (نسخة جديدة في السجل)."); reload(); }, true)} />
     ) },
@@ -178,7 +198,16 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
       {notice && <p className="eb-owner-hint eb-owner-done" role="status">{notice}</p>}
       {issued && <InvitationPanel issued={issued} onClose={() => setIssued(null)} />}
 
-      <Tabs label={"صفحة " + teacher.displayName} tabs={tabs} selectedId={tab} onSelect={id => setTab(id as TabId)} />
+      {leaving && (
+        <div className="eb-owner-confirm" role="group" aria-label="تغييرات غير محفوظة">
+          <p>لديك تغييرات غير محفوظة في الصلاحيات. إن تابعت فلن تُحفظ.</p>
+          <div className="eb-owner-actions">
+            <button type="button" className="eb-owner-secondary" onClick={() => setLeaving(null)}>البقاء</button>
+            <button type="button" className="eb-owner-secondary eb-owner-danger" onClick={discardAndLeave}>تجاهل التغييرات</button>
+          </div>
+        </div>
+      )}
+      <Tabs label={"صفحة " + teacher.displayName} tabs={tabs} selectedId={tab} onSelect={id => guarded({ to: id as TabId })} />
     </section>
   );
 }
@@ -242,9 +271,18 @@ function modeNote(effective: EffectiveAccess): string {
     : "لن يتغير شيء الآن عند المعلم: تُطبَّق الصلاحيات حين تفعّل «التطبيق» في قسم «الصلاحيات».";
 }
 
-function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSave, others, loadSource, onSignedOut }: {
+type SectionId = "preset" | "details" | "content" | "appearance" | "review";
+
+/** UX-O2 — the «يسري» cell of the summary: when a saved change reaches the teacher (the long form stays in `modeNote`). */
+function whenText(effective: EffectiveAccess): string {
+  if (effective.accountStatus === "suspended") return "الحساب موقوف";
+  return effective.enforced ? "من الطلب التالي" : "حين تفعّل «التطبيق»";
+}
+
+function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSave, others, loadSource, onSignedOut, onDirty, onRevert }: {
   teacher: ManagedTeacher; catalog: Catalog; history: History; effective: EffectiveAccess; labels: Record<string, string>; busy: boolean; onSave: (d: AccessDraft) => void;
   others: ManagedTeacher[]; loadSource: (accountId: string) => Promise<ApiResult<AccessHistoryEntry>>; onSignedOut: () => void;
+  onDirty: (dirty: boolean) => void; onRevert: () => void;
 }) {
   const head = history.currentRevisionId ? history.entries.find(e => e.revisionId === history.currentRevisionId) : undefined;
   const headBroken = Boolean(history.currentRevisionId) && (!head || !head.valid);
@@ -275,6 +313,8 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const [reason, setReason] = useState("");
   const [copyFrom, setCopyFrom] = useState("");
   const [copyNote, setCopyNote] = useState<{ error: boolean; text: string } | null>(null);
+  const [open, setOpen] = useState<Partial<Record<SectionId, boolean>>>({});   // UX-O2 — a section the owner opened or folded
+  const [changedOnly, setChangedOnly] = useState(false);
   const picked = catalog.presets.find(p => presetKey(p) === key);
   const copyable = others.filter(t => t.access);
 
@@ -299,6 +339,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
     setChosenGames(new Set(Array.isArray(r.data.games) ? r.data.games : []));
     setAppearanceDraft(r.data.appearance ? { ...r.data.appearance } : {});
     if (source) setReason("نسخ من " + source.username);
+    setOpen(o => ({ ...o, details: true, review: true }));   // UX-O2 — show what was loaded
     setCopyNote({ error: false, text: "حُمّلت صلاحيات " + (source ? source.displayName : "") + ". راجعها ثم احفظ." });
   }
   const modules = useMemo(() => {
@@ -319,92 +360,151 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
   const unchanged = Boolean(head && head.valid && key === initialKey && chosen.size === initialSet.size && [...chosen].every(c => initialSet.has(c)) && coursesUnchanged && widgetsUnchanged && gamesUnchanged && appearanceUnchanged);
   const reachable = modules.filter(m => m.caps.some(c => !c.reserved && chosen.has(c.id)));   // P10-K: a reserved one grants nothing
 
+  // UX-O2 — presentation only: what differs from what this page was opened on (the saved revision, or the starting preset), and the
+  // summaries of the sections. Nothing here changes what «حفظ الصلاحيات» sends.
+  const capsChanged = chosen.size !== initialSet.size || [...chosen].some(c => !initialSet.has(c));
+  const contentChanged = !coursesUnchanged || !widgetsUnchanged || !gamesUnchanged;
+  const dirty = key !== initialKey || capsChanged || contentChanged || !appearanceUnchanged;
+  useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
+  const changedModule = (m: { caps: AccessCapability[] }) => m.caps.some(c => chosen.has(c.id) !== initialSet.has(c.id));
+  const changedModules = modules.filter(changedModule);
+  const grantable = modules.flatMap(m => m.caps.filter(c => !c.reserved));
+  const enabledCount = grantable.filter(c => chosen.has(c.id)).length;
+  const { added, removed } = diffSets(nowCapabilities(effective), [...chosen]);
+  const isOpen = (id: SectionId) => (id === "preset" && (headBroken || !picked)) || (open[id] ?? (id === "preset" ? true : id === "review" ? dirty : false));
+  const toggle = (id: SectionId) => setOpen(o => ({ ...o, [id]: !isOpen(id) }));
+  const shownModules = changedOnly ? changedModules : modules;
+  const choice = (mode: "all" | "some", n: number) => (mode === "all" ? "كلها" : String(n));
+  const contentSummary = [
+    catalog.courses ? "المقررات: " + choice(courseMode, chosenCourses.size) : "",
+    catalog.games ? "الألعاب: " + choice(gameMode, chosenGames.size) : "",
+    catalog.widgets ? "البطاقات: " + choice(widgetMode, chosenWidgets.size) : ""
+  ].filter(Boolean).join(" · ");
+  const restrictedParts = Object.keys(appearanceOut(appearanceDraft)).length;
+  const save = () => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}), ...(widgetMode === "some" ? { widgets: [...chosenWidgets].sort() } : {}), ...(gameMode === "some" ? { games: [...chosenGames].sort() } : {}), ...(Object.keys(appearanceOut(appearanceDraft)).length ? { appearance: appearanceOut(appearanceDraft) } : {}) });
+
   return (
     <div className="eb-owner-access-editor">
       {headBroken && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />نسخة الصلاحيات الحالية غير صالحة، فالخادم يمنع هذا المعلم أثناء التطبيق. اختر حزمة واحفظ لإصلاحها.</div>}
-      {copyable.length > 0 && (
-        <label className="auth-field"><span>ابدأ من صلاحيات معلم آخر</span>
-          <div className="auth-input">
-            <select value={copyFrom} onChange={e => void copyFromTeacher(e.target.value)}>
-              <option value="">—</option>
-              {copyable.map(t => <option key={t.accountId} value={t.accountId}>{t.displayName + " (" + t.username + ")"}</option>)}
-            </select>
-          </div>
-        </label>
-      )}
-      {copyNote && (copyNote.error
-        ? <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{copyNote.text}</div>
-        : <p className="eb-owner-hint" role="status">{copyNote.text}</p>)}
-      <fieldset className="eb-owner-access-options">
-        <legend>الحزمة الأساسية</legend>
-        {catalog.presets.filter(p => p.current !== false || presetKey(p) === initialKey).map(p => (   /* P5-B4: superseded versions only for the teacher already on one */
-          <label key={presetKey(p)} className="eb-owner-access-option">
-            <input type="radio" name={"preset-" + teacher.accountId} value={presetKey(p)} checked={key === presetKey(p)} onChange={() => { setKey(presetKey(p)); setChosen(new Set(p.capabilities)); }} />
-            <span><strong>{p.label}{p.current === false ? " (نسخة سابقة)" : ""}</strong><small>{p.current === false ? "حزمة هذا المعلم الحالية. توجد نسخة أحدث منها في القائمة. " : ""}{p.description}</small></span>
+      <KpiStrip className="eb-owner-access-kpis" label="ملخص الصلاحيات" items={[
+        { label: "الحزمة", value: picked ? picked.label : "—" },
+        { label: "صلاحيات مفعّلة", value: picked ? String(enabledCount) : "—", hint: picked ? "من " + grantable.length : undefined },
+        { label: "مقارنة بالحزمة", value: picked ? <span className="eb-owner-access-delta"><span className="is-added">{grants.length} مضافة</span> · <span className="is-removed">{denies.length} محجوبة</span></span> : "—" },
+        { label: "يسري", value: <span className="eb-owner-access-when">{whenText(effective)}</span> }
+      ]} />
+
+      <AccessSection title="الحزمة الأساسية" summary={picked ? picked.label : "لم تُختر حزمة"} changed={key !== initialKey} open={isOpen("preset")} onToggle={() => toggle("preset")}>
+        {copyable.length > 0 && (
+          <label className="auth-field"><span>ابدأ من صلاحيات معلم آخر</span>
+            <div className="auth-input">
+              <select value={copyFrom} onChange={e => void copyFromTeacher(e.target.value)}>
+                <option value="">—</option>
+                {copyable.map(t => <option key={t.accountId} value={t.accountId}>{t.displayName + " (" + t.username + ")"}</option>)}
+              </select>
+            </div>
           </label>
-        ))}
-      </fieldset>
+        )}
+        {copyNote && (copyNote.error
+          ? <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{copyNote.text}</div>
+          : <p className="eb-owner-hint" role="status">{copyNote.text}</p>)}
+        <fieldset className="eb-owner-access-options eb-owner-presets">
+          <legend>الحزمة الأساسية</legend>
+          {catalog.presets.filter(p => p.current !== false || presetKey(p) === initialKey).map(p => (   /* P5-B4: superseded versions only for the teacher already on one */
+            <label key={presetKey(p)} className={"eb-owner-access-option" + (key === presetKey(p) ? " is-selected" : "")}>
+              <input type="radio" name={"preset-" + teacher.accountId} value={presetKey(p)} checked={key === presetKey(p)} onChange={() => { setKey(presetKey(p)); setChosen(new Set(p.capabilities)); }} />
+              <span><strong>{p.label}{p.current === false ? " (نسخة سابقة)" : ""}</strong><small>{p.current === false ? "حزمة هذا المعلم الحالية. توجد نسخة أحدث منها في القائمة. " : ""}{p.description}</small></span>
+            </label>
+          ))}
+        </fieldset>
+      </AccessSection>
       {picked ? (
         <>
-          <p className="eb-owner-hint">عدّل الصلاحيات واحدة واحدة. تشغيل صلاحية يشغّل ما تحتاجه، وإيقافها يوقف ما يعتمد عليها. تغيير الحزمة يلغي التعديلات.</p>
-          <div className="eb-owner-cap-groups">
-            {modules.map(m => (
-              <fieldset key={m.module} className="eb-owner-cap-group">
-                <legend>{m.label} <small>({m.caps.filter(c => !c.reserved && chosen.has(c.id)).length}/{m.caps.filter(c => !c.reserved).length})</small></legend>
-                {m.caps.map(c => (
-                  <Fragment key={c.id}>
-                    <label className={"eb-owner-check" + (c.reserved ? " is-reserved" : "")}>
-                      {/* Tadris+ P10-K — a reserved capability is not a choice: no route enforces it, so its box follows the preset */}
-                      <input type="checkbox" checked={chosen.has(c.id)} disabled={c.reserved} aria-describedby={c.reserved ? "reserved-" + c.id : undefined} onChange={e => setChosen(s => (e.target.checked ? withCapability(s, c.id, catalog.capabilities) : withoutCapability(s, c.id, catalog.capabilities)))} />
-                      <span>{c.label}</span>
-                    </label>
-                    {c.reserved && <small id={"reserved-" + c.id} className="eb-owner-reserved"><span className="eb-chip is-muted">محجوزة</span> لا تُطبَّق بعد. {c.reservedNote}</small>}
-                  </Fragment>
-                ))}
-              </fieldset>
-            ))}
-          </div>
-          <p className="eb-owner-hint">مقارنة بالحزمة: <strong>{grants.length}</strong> مضافة · <strong>{denies.length}</strong> محجوبة</p>
-          <DiffView label={"تغيّر صلاحيات " + teacher.displayName} before={nowCapabilities(effective)} after={[...chosen]} labelOf={id => labels[id] || id}
-            addedTitle="سيكسبها المعلم" removedTitle="سيفقدها المعلم" emptyText="لا فرق عمّا يملكه المعلم الآن." />
-          <div className="eb-owner-preview" role="region" aria-label="ما سيتمكن منه المعلم">
-            <strong>ما سيتمكن منه المعلم:</strong>
-            {reachable.length === 0 ? <p className="eb-owner-hint">لا شيء: لن تظهر له أي أداة أثناء التطبيق.</p> : (
-              <ul>{reachable.map(m => <li key={m.module}>{m.label}: {m.caps.filter(c => !c.reserved && chosen.has(c.id)).length} من {m.caps.filter(c => !c.reserved).length}</li>)}</ul>
-            )}
-          </div>
-          {catalog.courses && (
-            <fieldset className="eb-owner-access-options eb-owner-courses-choice">
-              <legend>المقررات المخوَّلة</legend>
-              <label className="eb-owner-access-option">
-                <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "all"} onChange={() => setCourseMode("all")} />
-                <span><strong>كل المقررات المنشورة</strong><small>ومعها كل مقرر يُنشر لاحقًا.</small></span>
-              </label>
-              <label className="eb-owner-access-option">
-                <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "some"} onChange={() => setCourseMode("some")} />
-                <span><strong>مقررات محددة فقط</strong><small>لا يرى المعلم غيرها، ولا يقرؤها طلابه.</small></span>
-              </label>
-              {courseMode === "some" && catalog.courses.map(c => (
-                <label key={c.courseId} className="eb-owner-check">
-                  <input type="checkbox" checked={chosenCourses.has(c.courseId)} onChange={e => setChosenCourses(set => { const n = new Set(set); if (e.target.checked) n.add(c.courseId); else n.delete(c.courseId); return n; })} />
-                  <span><bdi>{c.title}</bdi>{c.status === "archived" ? " (مؤرشف: مغلق للجميع حاليًا)" : ""}</span>
-                </label>
+          <AccessSection title="الصلاحيات التفصيلية" summary={modules.length + " قسمًا" + (changedModules.length ? " · " + changedModules.length + " معدّلة" : "")} changed={capsChanged} open={isOpen("details")} onToggle={() => toggle("details")}>
+            <div className="eb-owner-toolbar">
+              <div className="eb-owner-chips" role="group" aria-label="عرض الأقسام">
+                <button type="button" className={"eb-owner-chip" + (!changedOnly ? " is-on" : "")} aria-pressed={!changedOnly} onClick={() => setChangedOnly(false)}>كل الأقسام</button>
+                <button type="button" className={"eb-owner-chip" + (changedOnly ? " is-on" : "")} aria-pressed={changedOnly} onClick={() => setChangedOnly(true)}>المعدّلة فقط<span className="eb-owner-chip-count">{changedModules.length}</span></button>
+              </div>
+              <p className="eb-owner-hint">عدّل الصلاحيات واحدة واحدة. تشغيل صلاحية يشغّل ما تحتاجه، وإيقافها يوقف ما يعتمد عليها. تغيير الحزمة يلغي التعديلات.</p>
+            </div>
+            {changedOnly && changedModules.length === 0 && <p className="eb-owner-hint">لا قسم معدّل عمّا فُتحت عليه الصفحة.</p>}
+            <div className="eb-owner-cap-groups">
+              {modules.map(m => (
+                <fieldset key={m.module} className={"eb-owner-cap-group" + (changedModule(m) ? " is-changed" : "")} hidden={!shownModules.includes(m)}>
+                  <legend>{m.label} <small>({m.caps.filter(c => !c.reserved && chosen.has(c.id)).length}/{m.caps.filter(c => !c.reserved).length})</small></legend>
+                  {m.caps.map(c => (
+                    <Fragment key={c.id}>
+                      <label className={"eb-owner-check" + (c.reserved ? " is-reserved" : "")}>
+                        {/* Tadris+ P10-K — a reserved capability is not a choice: no route enforces it, so its box follows the preset */}
+                        <input type="checkbox" checked={chosen.has(c.id)} disabled={c.reserved} aria-describedby={c.reserved ? "reserved-" + c.id : undefined} onChange={e => setChosen(s => (e.target.checked ? withCapability(s, c.id, catalog.capabilities) : withoutCapability(s, c.id, catalog.capabilities)))} />
+                        <span>{c.label}</span>
+                      </label>
+                      {c.reserved && <small id={"reserved-" + c.id} className="eb-owner-reserved"><span className="eb-chip is-muted">محجوزة</span> لا تُطبَّق بعد. {c.reservedNote}</small>}
+                    </Fragment>
+                  ))}
+                </fieldset>
               ))}
-              {courseMode === "some" && chosenCourses.size === 0 && <p className="eb-owner-hint">لم تختر أي مقرر: لن يتمكن المعلم وطلابه من أي مقرر أثناء التطبيق.</p>}
-            </fieldset>
+            </div>
+          </AccessSection>
+          {(catalog.courses || catalog.games || catalog.widgets) && (
+            <AccessSection title="المحتوى المخوَّل" summary={contentSummary} changed={contentChanged} open={isOpen("content")} onToggle={() => toggle("content")}>
+              {catalog.courses && (
+                <fieldset className="eb-owner-access-options eb-owner-courses-choice">
+                  <legend>المقررات المخوَّلة</legend>
+                  <label className="eb-owner-access-option">
+                    <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "all"} onChange={() => setCourseMode("all")} />
+                    <span><strong>كل المقررات المنشورة</strong><small>ومعها كل مقرر يُنشر لاحقًا.</small></span>
+                  </label>
+                  <label className="eb-owner-access-option">
+                    <input type="radio" name={"courses-" + teacher.accountId} checked={courseMode === "some"} onChange={() => setCourseMode("some")} />
+                    <span><strong>مقررات محددة فقط</strong><small>لا يرى المعلم غيرها، ولا يقرؤها طلابه.</small></span>
+                  </label>
+                  {courseMode === "some" && catalog.courses.map(c => (
+                    <label key={c.courseId} className="eb-owner-check">
+                      <input type="checkbox" checked={chosenCourses.has(c.courseId)} onChange={e => setChosenCourses(set => { const n = new Set(set); if (e.target.checked) n.add(c.courseId); else n.delete(c.courseId); return n; })} />
+                      <span><bdi>{c.title}</bdi>{c.status === "archived" ? " (مؤرشف: مغلق للجميع حاليًا)" : ""}</span>
+                    </label>
+                  ))}
+                  {courseMode === "some" && chosenCourses.size === 0 && <p className="eb-owner-hint">لم تختر أي مقرر: لن يتمكن المعلم وطلابه من أي مقرر أثناء التطبيق.</p>}
+                </fieldset>
+              )}
+              {catalog.games && <GameChoice teacherId={teacher.accountId} games={catalog.games} chosenCapabilities={chosen} mode={gameMode} onMode={setGameMode} chosen={chosenGames} onChosen={setChosenGames} />}
+              {catalog.widgets && <WidgetChoice teacherId={teacher.accountId} widgets={catalog.widgets} chosenCapabilities={chosen} mode={widgetMode} onMode={setWidgetMode} chosen={chosenWidgets} onChosen={setChosenWidgets} />}
+            </AccessSection>
           )}
-          {catalog.appearance && <AppearanceChoice teacherId={teacher.accountId} parts={catalog.appearance} draft={appearanceDraft} onDraft={setAppearanceDraft} />}
-          {catalog.games && <GameChoice teacherId={teacher.accountId} games={catalog.games} chosenCapabilities={chosen} mode={gameMode} onMode={setGameMode} chosen={chosenGames} onChosen={setChosenGames} />}
-          {catalog.widgets && <WidgetChoice teacherId={teacher.accountId} widgets={catalog.widgets} chosenCapabilities={chosen} mode={widgetMode} onMode={setWidgetMode} chosen={chosenWidgets} onChosen={setChosenWidgets} />}
-          <label className="auth-field"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
-            <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} /></div>
-          </label>
+          {catalog.appearance && (
+            <AccessSection title="المظهر" summary={restrictedParts ? "مقيّد في " + restrictedParts : "كل الخيارات"} changed={!appearanceUnchanged} open={isOpen("appearance")} onToggle={() => toggle("appearance")}>
+              <AppearanceChoice teacherId={teacher.accountId} parts={catalog.appearance} draft={appearanceDraft} onDraft={setAppearanceDraft} />
+            </AccessSection>
+          )}
+          <AccessSection title="مراجعة التغيير" summary={"سيكسب " + added.length + " · سيفقد " + removed.length} open={isOpen("review")} onToggle={() => toggle("review")}>
+            <DiffView label={"تغيّر صلاحيات " + teacher.displayName} before={nowCapabilities(effective)} after={[...chosen]} labelOf={id => labels[id] || id}
+              addedTitle="سيكسبها المعلم" removedTitle="سيفقدها المعلم" emptyText="لا فرق عمّا يملكه المعلم الآن." />
+            <div className="eb-owner-preview" role="region" aria-label="ما سيتمكن منه المعلم">
+              <strong>ما سيتمكن منه المعلم:</strong>
+              {reachable.length === 0 ? <p className="eb-owner-hint">لا شيء: لن تظهر له أي أداة أثناء التطبيق.</p> : (
+                <ul>{reachable.map(m => <li key={m.module}>{m.label}: {m.caps.filter(c => !c.reserved && chosen.has(c.id)).length} من {m.caps.filter(c => !c.reserved).length}</li>)}</ul>
+              )}
+            </div>
+          </AccessSection>
         </>
       ) : <p className="eb-owner-hint">اختر حزمة أساسية أولًا.</p>}
       <p className="eb-owner-hint">{modeNote(effective)}</p>
-      <div className="eb-owner-actions">
-        <button type="button" className="auth-submit" disabled={busy || !picked || unchanged}
-          onClick={() => picked && onSave({ presetId: picked.id, presetVersion: picked.version, grants, denies, reason: reason.trim(), ...(courseMode === "some" ? { courses: [...chosenCourses].sort() } : {}), ...(widgetMode === "some" ? { widgets: [...chosenWidgets].sort() } : {}), ...(gameMode === "some" ? { games: [...chosenGames].sort() } : {}), ...(Object.keys(appearanceOut(appearanceDraft)).length ? { appearance: appearanceOut(appearanceDraft) } : {}) })}>حفظ الصلاحيات</button>
+      <div className={"eb-owner-savebar" + (dirty ? " is-dirty" : "")} role="region" aria-label="حفظ الصلاحيات">
+        <p className="eb-owner-savebar-state" aria-live="polite">
+          {dirty ? <><strong>تغييرات غير محفوظة</strong>{picked && <span> · سيكسب <bdi>{added.length}</bdi> وسيفقد <bdi>{removed.length}</bdi></span>}</>
+            : unchanged ? "لا تغييرات غير محفوظة" : "لم تُحفظ صلاحيات لهذا المعلم بعد"}
+        </p>
+        {picked && (
+          <label className="auth-field eb-owner-savebar-reason"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
+            <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} /></div>
+          </label>
+        )}
+        <div className="eb-owner-actions">
+          {dirty && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={onRevert}>تراجع عن التغييرات</button>}
+          <button type="button" className="auth-submit" disabled={busy || !picked || unchanged}
+            onClick={save}>حفظ الصلاحيات</button>
+        </div>
       </div>
     </div>
   );
