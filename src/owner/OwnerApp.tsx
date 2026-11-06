@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import "../ui/kit.css";
 import "./owner.css";
 import { BRAND_NAME } from "../brand";
@@ -23,6 +23,7 @@ import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 import OwnerLoginHero from "./OwnerLoginHero";   // Tadris+ P10-B
 import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
 import OwnerOverview from "./OwnerOverview";         // UX-O1
+import OwnerAccountMenu from "./OwnerAccountMenu";   // UX-O3
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -77,6 +78,7 @@ export default function OwnerApp() {
   const goHome = () => { if (window.location.hash !== OWNER_HOME_HASH) window.location.hash = OWNER_HOME_HASH; setRoute("home"); };
 
   let body;
+  let account: ReactNode = null;   // UX-O3 — the header account menu, once signed in
   if (boot.kind === "loading") body = <section className="auth-card eb-owner-card"><p className="auth-sub" role="status">جارٍ التحميل…</p></section>;
   else if (boot.kind === "error") body = (
     <section className="auth-card eb-owner-card">
@@ -88,9 +90,11 @@ export default function OwnerApp() {
   else if (boot.kind === "signed-in") {
     const section: OwnerSection = route.view === "teachers" || route.view === "access" || route.view === "schools" || route.view === "courses" || route.view === "exams" || route.view === "legacy" ? route.view : "home";   // P9-A2: legacy
     const go = (h: string, view: OwnerView, teacherId: string | null = null) => { if (window.location.hash !== h) window.location.hash = h; setRoute(view, teacherId); };
+    const signedOut = () => { clearOwnerToken(); load(); };
+    account = <OwnerAccountMenu token={boot.token} view={boot.view} onAccount={() => go(ownerSectionHash("home"), "home")} onSignedOut={signedOut} />;
     body = <OwnerConsole token={boot.token} view={boot.view} section={section} teacherId={section === "teachers" ? route.teacherId : null}
       onSection={next => go(ownerSectionHash(next), next)} onTeacher={id => go(ownerTeacherHash(id), "teachers", id)}
-      onSignedOut={() => { clearOwnerToken(); load(); }} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })}
+      onSignedOut={signedOut} onView={view => setBoot({ kind: "signed-in", token: boot.token, view })}
       onToken={async next => {   // Tadris+ P10-C — this device's new session after a credential change
         writeOwnerToken(next);
         const s = await ownerApi.session(next);
@@ -119,7 +123,10 @@ export default function OwnerApp() {
     <main className="eb-owner-page" dir="rtl">
       <header className="eb-owner-top">
         <span className="eb-owner-brand"><BrandMark size={32} /><bdi dir="ltr">{BRAND_NAME}</bdi><span className="eb-owner-tag">مالك المنصة</span></span>
-        {DARK_MODE_RELEASED && <ThemeSwitch />}
+        <span className="eb-owner-top-tools">
+          {DARK_MODE_RELEASED && <ThemeSwitch />}
+          {account}
+        </span>
       </header>
       <div className="eb-owner-body">{body}</div>
     </main>

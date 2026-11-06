@@ -49,25 +49,26 @@ beforeEach(() => {
   }));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+const exams = (table: HTMLElement) => within(table).getAllByRole("rowgroup").map(g => g.getAttribute("aria-label")).filter(Boolean);   // UX-O3
 const posted = (path: string) => calls.filter(c => c.method === "POST" && c.url === path);
 
 async function openSection() {
   window.location.hash = ownerSectionHash("exams");
   render(<OwnerApp />);
-  return screen.findByRole("list", { name: "امتحانات المكتبة" });
+  return screen.findByRole("table", { name: "امتحانات المكتبة" });   // UX-O3 — a table: one row group per exam, named after it
 }
 
 describe("P6-D «بنك الامتحانات»", () => {
   it("lists every exam with its audience; search and category narrow the list", async () => {
     const list = await openSection();
-    expect(within(within(list).getByRole("listitem", { name: "نموذج A — 2025" })).getByText("لكل المعلمين")).toBeTruthy();
-    expect(within(within(list).getByRole("listitem", { name: "أنظمة العد" })).getByText("معلم واحد")).toBeTruthy();
-    expect(within(within(list).getByRole("listitem", { name: "عناوين IP" })).getByText("لا يراه أي معلم")).toBeTruthy();
-    expect(within(within(list).getByRole("listitem", { name: "امتحان جديد" })).getByText("لم يُحدَّد بعد — لا يراه أحد")).toBeTruthy();
+    expect(within(within(list).getByRole("rowgroup", { name: "نموذج A — 2025" })).getByText("لكل المعلمين")).toBeTruthy();
+    expect(within(within(list).getByRole("rowgroup", { name: "أنظمة العد" })).getByText("معلم واحد")).toBeTruthy();
+    expect(within(within(list).getByRole("rowgroup", { name: "عناوين IP" })).getByText("لا يراه أي معلم")).toBeTruthy();
+    expect(within(within(list).getByRole("rowgroup", { name: "امتحان جديد" })).getByText("لم يُحدَّد بعد — لا يراه أحد")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("بحث"), { target: { value: "t0" } });
-    expect(within(list).getAllByRole("listitem").map(li => li.getAttribute("aria-label"))).toEqual(["أنظمة العد", "عناوين IP"]);
+    expect(exams(list)).toEqual(["أنظمة العد", "عناوين IP"]);
     fireEvent.change(screen.getByLabelText("التصنيف"), { target: { value: "infra" } });
-    expect(within(list).getAllByRole("listitem").map(li => li.getAttribute("aria-label"))).toEqual(["عناوين IP"]);
+    expect(exams(list)).toEqual(["عناوين IP"]);
   });
 
   it("one exam for a chosen group of teachers; after the second-factor check the SAME request is retried", async () => {
@@ -75,7 +76,7 @@ describe("P6-D «بنك الامتحانات»", () => {
     routes["POST /api/owner-library/set-audience"] = c => (++n === 1 ? { status: 403, body: { ok: false, code: "STEP_UP_REQUIRED", error: "تحقق" } } : { status: 200, body: { ok: true, item: { libraryItemId: "T07", audience: "selected", teachers: c.body?.teachers, decided: true } } });
     routes["POST /api/owner-session/step-up"] = () => ({ status: 200, body: VIEW });
     const list = await openSection();
-    fireEvent.click(within(within(list).getByRole("listitem", { name: "عناوين IP" })).getByRole("button", { name: "تحديد الجمهور" }));
+    fireEvent.click(within(within(list).getByRole("rowgroup", { name: "عناوين IP" })).getByRole("button", { name: "تحديد الجمهور" }));
     const form = screen.getByRole("form", { name: "جمهور عناوين IP" });
     fireEvent.click(within(form).getByRole("checkbox", { name: /عمر/ }));
     fireEvent.click(within(form).getByRole("checkbox", { name: /سارة/ }));
@@ -93,7 +94,7 @@ describe("P6-D «بنك الامتحانات»", () => {
   it("one exam for every teacher", async () => {
     routes["POST /api/owner-library/set-audience"] = () => ({ status: 200, body: { ok: true, item: { libraryItemId: "T05", audience: "all", teachers: [], decided: true } } });
     const list = await openSection();
-    fireEvent.click(within(within(list).getByRole("listitem", { name: "أنظمة العد" })).getByRole("button", { name: "تحديد الجمهور" }));
+    fireEvent.click(within(within(list).getByRole("rowgroup", { name: "أنظمة العد" })).getByRole("button", { name: "تحديد الجمهور" }));
     const form = screen.getByRole("form", { name: "جمهور أنظمة العد" });
     fireEvent.click(within(form).getByRole("radio", { name: /لكل المعلمين/ }));
     fireEvent.click(within(form).getByRole("button", { name: "حفظ التغييرات" }));

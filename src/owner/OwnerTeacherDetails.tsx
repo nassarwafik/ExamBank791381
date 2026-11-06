@@ -12,6 +12,7 @@ import DiffView from "../ui/DiffView";
 import KpiStrip from "../ui/KpiStrip";
 import { diffSets } from "../ui/diffSets";
 import AccessSection from "./AccessSection";   // UX-O2
+import Breadcrumb from "../ui/Breadcrumb";   // UX-O3
 import { SAVE_STATE_LABELS } from "../teacher/saveLabels";   // UX-O2 — the one save-status vocabulary (21E.2 F)
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
@@ -182,6 +183,8 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
 
   return (
     <section className="eb-owner-panel eb-owner-details" aria-labelledby="eb-owner-details-title">
+      {/* UX-O3 — where the owner is; «المعلمون» goes through the same unsaved-changes question as «→ كل المعلمين» */}
+      <Breadcrumb items={[{ label: "المعلمون", onSelect: () => guarded({ back: true }) }, { label: teacher.displayName }]} />
       <div className="eb-owner-panel-head">
         <div className="eb-owner-teacher-main">
           <h2 id="eb-owner-details-title" className="eb-owner-h2"><bdi>{teacher.displayName}</bdi></h2>

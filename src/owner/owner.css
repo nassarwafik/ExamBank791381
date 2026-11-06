@@ -360,3 +360,65 @@
   .eb-owner-section-head, .eb-owner-section-body { padding-inline: var(--eb-space-3); }
 }
 @media (prefers-reduced-motion: reduce) { .eb-owner-section-chevron { transition: none; } }
+
+/* ── UX-O3 (docs/enterprise-ux-owner-console-o3.md) — selects, form buttons, the header account menu, the breadcrumb and the exam
+   bank table. Scoped to the owner page; tokens only, so both themes and RTL are covered. ── */
+/* §2.2 every select in the console: the height, border, radius and font of the text fields, a token-coloured chevron */
+.eb-owner-page select {
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; min-height: 44px; min-width: 160px; max-width: 100%;
+  font: inherit; font-size: var(--eb-fs-14); color: var(--eb-text); background-color: var(--eb-surface);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); cursor: pointer;
+  padding-block: 9px; padding-inline-start: 12px; padding-inline-end: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--eb-muted) 50%), linear-gradient(135deg, var(--eb-muted) 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  background-position: left 13px center, left 18px center;   /* a down chevron at the inline end, which is the left in RTL */
+}
+.eb-owner-page[dir="ltr"] select { background-position: right 18px center, right 13px center; }
+.eb-owner-page select:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); border-color: var(--eb-primary); }
+.eb-owner-page select:disabled { cursor: not-allowed; opacity: .6; }
+.eb-owner-page .auth-input select { width: 100%; }
+/* §2.5 a form's primary button is as wide as its label inside the console, next to «إلغاء» / «السابق» (the sign-in pages are
+   outside .eb-owner-console and keep theirs) */
+.eb-owner-console .auth-submit { width: auto; padding-block: 10px; padding-inline: var(--eb-space-5); }
+.eb-owner-console .auth-form > .auth-submit { align-self: flex-start; }
+/* §2.3 the header's tools and the account menu */
+.eb-owner-top-tools { display: inline-flex; align-items: center; gap: var(--eb-space-2); }
+.eb-owner-account.eb-menu-trigger { display: inline-flex; align-items: center; gap: var(--eb-space-2); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); padding: 3px var(--eb-space-3) 3px 3px; background: var(--eb-surface); color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
+[dir="rtl"] .eb-owner-account.eb-menu-trigger { padding: 3px 3px 3px var(--eb-space-3); }
+.eb-owner-avatar { width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--eb-primary-100); color: var(--eb-primary); font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-13); flex: none; }
+.eb-owner-account-info { margin: 0; padding: var(--eb-space-2) var(--eb-space-3); color: var(--eb-muted); font-size: var(--eb-fs-12); border-bottom: 1px solid var(--eb-line); }
+/* §2.4 the breadcrumb (the shared component's rules, here because the owner page does not load the teacher shell's sheet) */
+.eb-owner-page .eb-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1); list-style: none; margin: 0 0 var(--eb-space-2); padding: 0; font-size: var(--eb-fs-13); color: var(--eb-muted); }
+.eb-owner-page .eb-breadcrumb li { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-owner-page .eb-breadcrumb [aria-current="page"] { color: var(--eb-text); font-weight: var(--eb-fw-medium); }
+.eb-owner-page .eb-breadcrumb-link { border: 0; background: transparent; padding: 2px var(--eb-space-1); margin: 0; color: var(--eb-primary); font: inherit; font-weight: var(--eb-fw-semibold); cursor: pointer; border-radius: var(--eb-r-xs); }
+.eb-owner-page .eb-breadcrumb-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.eb-owner-page .eb-breadcrumb-link:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-owner-page .eb-breadcrumb-sep { color: var(--eb-faint); flex: 0 0 auto; }
+.eb-owner-page[dir="rtl"] .eb-flip-rtl { transform: scaleX(-1); }
+/* §2.1 the exam bank table */
+.eb-owner-h2-count { color: var(--eb-muted); font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-14); }
+.eb-owner-library .eb-owner-toolbar { align-items: flex-end; }
+.eb-owner-library .eb-owner-toolbar .auth-field { margin: 0; }
+.eb-owner-library-category { flex: 0 0 auto; }
+.eb-owner-library-meta { white-space: nowrap; }
+.eb-owner-library-meta .eb-owner-status { white-space: normal; }
+.eb-owner-library-table .eb-owner-teacher-who strong { display: block; color: var(--eb-text-heading); }
+.eb-owner-library-table .eb-owner-teacher-who .eb-owner-teacher-user { display: block; font-size: var(--eb-fs-12); color: var(--eb-muted); }
+[dir="rtl"] .eb-owner-library-table .eb-owner-teacher-who .eb-owner-teacher-user { text-align: right; }
+.eb-owner-library-unit { display: none; }
+@media (min-width: 641px) { .eb-owner-library-table .eb-owner-teacher-row.is-open > td { background: var(--eb-primary-050); } }
+.eb-owner-library-action { width: auto; white-space: nowrap; }
+@media (max-width: 640px) {
+  .eb-owner-console .auth-submit { width: 100%; }
+  .eb-owner-account > span:not(.eb-owner-avatar) { display: none; }
+  .eb-owner-account.eb-menu-trigger, [dir="rtl"] .eb-owner-account.eb-menu-trigger { padding: 3px; }
+  .eb-owner-library-table td.eb-owner-library-meta { display: inline-block; width: auto; margin-inline-end: var(--eb-space-3); font-size: var(--eb-fs-13); color: var(--eb-muted); }
+  .eb-owner-library-table td.eb-owner-library-action { position: absolute; inset-inline-end: var(--eb-space-3); top: var(--eb-space-3); width: auto; padding: 0; }
+  .eb-owner-library-table .eb-owner-teacher-row { padding-inline-end: 130px; padding-block: var(--eb-space-2); }
+  .eb-owner-library-table td.eb-owner-library-meta:last-of-type { margin-inline-end: 0; }
+  .eb-owner-library-unit { display: inline; }
+  .eb-owner-library-table td.eb-owner-library-count::before { content: "· "; }
+  .eb-owner-library-table td.eb-owner-library-meta { margin-inline-end: var(--eb-space-2); }
+}
+@media (max-width: 860px) { .eb-owner-page select { min-width: 0; } }
