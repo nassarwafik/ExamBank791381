@@ -12,6 +12,7 @@ import DiffView from "../ui/DiffView";
 import KpiStrip from "../ui/KpiStrip";
 import { diffSets } from "../ui/diffSets";
 import AccessSection from "./AccessSection";   // UX-O2
+import { SAVE_STATE_LABELS } from "../teacher/saveLabels";   // UX-O2 — the one save-status vocabulary (21E.2 F)
 import StepUpPrompt from "./StepUpPrompt";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import OwnerTeacherClasses from "./OwnerTeacherClasses";   // Tadris+ P5-B2
@@ -199,7 +200,7 @@ export default function OwnerTeacherDetails({ token, accountId, onSignedOut, onB
       {issued && <InvitationPanel issued={issued} onClose={() => setIssued(null)} />}
 
       {leaving && (
-        <div className="eb-owner-confirm" role="group" aria-label="تغييرات غير محفوظة">
+        <div className="eb-owner-confirm" role="group" aria-label={SAVE_STATE_LABELS.dirty}>
           <p>لديك تغييرات غير محفوظة في الصلاحيات. إن تابعت فلن تُحفظ.</p>
           <div className="eb-owner-actions">
             <button type="button" className="eb-owner-secondary" onClick={() => setLeaving(null)}>البقاء</button>
@@ -492,7 +493,7 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
       <p className="eb-owner-hint">{modeNote(effective)}</p>
       <div className={"eb-owner-savebar" + (dirty ? " is-dirty" : "") + (unchanged ? "" : " can-save")} role="region" aria-label="حفظ الصلاحيات">
         <p className="eb-owner-savebar-state" aria-live="polite">
-          {dirty ? <><strong>تغييرات غير محفوظة</strong>{picked && <span> · سيكسب <bdi>{added.length}</bdi> وسيفقد <bdi>{removed.length}</bdi></span>}</>
+          {dirty ? <><strong>{SAVE_STATE_LABELS.dirty}</strong>{picked && <span> · سيكسب <bdi>{added.length}</bdi> وسيفقد <bdi>{removed.length}</bdi></span>}</>
             : unchanged ? "لا تغييرات غير محفوظة" : "لم تُحفظ صلاحيات لهذا المعلم بعد"}
         </p>
         {picked && (

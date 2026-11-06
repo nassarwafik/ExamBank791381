@@ -20,7 +20,7 @@ export const MUTANTS = [
   { id: "UXO2-M2", what: "«تراجع عن التغييرات» restores the boxes only, not the preset", edits: [{ file: D, find: "onClick={onRevert}>تراجع عن التغييرات", replace: "onClick={() => setChosen(new Set(initialSet))}>تراجع عن التغييرات" }] },
   { id: "UXO2-M3", what: "leaving the tab with unsaved changes asks nothing (the draft is lost silently)", edits: [{ file: D, find: "if (tab === \"access\" && accessDirty.current &&", replace: "if (false && tab === \"access\" && accessDirty.current &&" }] },
   { id: "UXO2-M4", what: "a button label the runbook quotes is shortened when it moved under the checklist", edits: [{ file: M, find: ">إيقاف التطبيق (العودة إلى المراقبة)<", replace: ">إيقاف التطبيق<" }] },
-  { id: "UXO2-M5", what: "the save bar says there is nothing to save while the draft differs", edits: [{ file: D, find: "{dirty ? <><strong>تغييرات غير محفوظة</strong>", replace: "{false ? <><strong>تغييرات غير محفوظة</strong>" }] }
+  { id: "UXO2-M5", what: "the save bar says there is nothing to save while the draft differs", edits: [{ file: D, find: "{dirty ? <><strong>{SAVE_STATE_LABELS.dirty}</strong>", replace: "{false ? <><strong>{SAVE_STATE_LABELS.dirty}</strong>" }] }
 ];
 const originals = new Map();
 const restoreAll = () => {
