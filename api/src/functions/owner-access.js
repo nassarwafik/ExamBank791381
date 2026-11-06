@@ -6,7 +6,7 @@ const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { readTeacherAccount, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
 const { computeReadiness } = require("../lib/access/readiness");
 const { ACCESS_REFUSAL: REFUSAL } = require("../lib/access/messages");
-const { CAPABILITIES } = require("../lib/access/capabilities");
+const { CAPABILITIES, reservedAdditions } = require("../lib/access/capabilities");
 const { PRESETS, isCurrentPreset } = require("../lib/access/presets");
 const { AccessError, REVISION_ID_RE, buildRevision, writeRevision, readRevision } = require("../lib/access/revisions");
 const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode");
@@ -49,7 +49,7 @@ const { findLearningCourse } = require("../lib/learning-materials-registry");
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 
-const publicCapabilities = () => CAPABILITIES.map(c => ({ id: c.id, module: c.module, moduleLabel: c.moduleLabel, label: c.label, ownerOnly: c.ownerOnly, requires: [...c.requires] }));
+const publicCapabilities = () => CAPABILITIES.map(c => ({ id: c.id, module: c.module, moduleLabel: c.moduleLabel, label: c.label, ownerOnly: c.ownerOnly, requires: [...c.requires], reserved: c.reserved, reservedNote: c.reservedNote }));   // P10-K: reserved
 const publicPresets = () => PRESETS.map(p => ({ id: p.id, version: p.version, label: p.label, description: p.description, capabilities: [...p.capabilities], current: isCurrentPreset(p) }));   // P5-B4: `current`
 
 /** A query parameter (Azure Functions `request.query`, or parsed from the URL). */
@@ -188,6 +188,12 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const rev = built.revision;
+      // Tadris+ P10-K (O11) — a NEW grant or deny of a reserved capability is refused before anything is written; an entry the
+      // current revision already holds stays. An unreadable current revision counts as holding none (the owner re-chooses).
+      let parent = {};
+      if (currentRevision) { try { parent = (await readRevision(container, currentRevision, accountId)).revision || {}; } catch (e) { if (!(e instanceof AccessError)) throw e; } }
+      const added = reservedAdditions(rev, parent, built.capabilities);
+      if (added.length) return reply(400, { ok: false, code: "CAPABILITY_RESERVED", error: REFUSAL.CAPABILITY_RESERVED, details: { capabilities: added } });
       const applied = await applyRevision(container, accountId, currentRevision, rev);
       if (!applied.ok) return applied.response;
       await audit(container, {

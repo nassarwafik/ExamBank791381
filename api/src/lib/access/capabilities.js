@@ -88,11 +88,26 @@ const LIST = [
   ["platform.legacyData.assign", "إسناد البيانات القديمة"]
 ];
 
+// Tadris+ P10-K (O11, owner decision §19.48) — RESERVED: a capability no route enforces yet. The Owner Console shows it «محجوزة»
+// with this reason, and the owner's save refuses a NEW grant or deny of it (reservedAdditions): a choice that changes nothing is
+// not offered as one. Reading a stored revision never looks at this, so no teacher is ever blocked by it. When a route starts to
+// ask one of these, it leaves this list in that phase (the static guard api/tests/reserved-capabilities-p10k.test.js holds both
+// directions: every other teacher capability is asked somewhere in the API, and a reserved one nowhere).
+const RESERVED = Object.freeze({
+  "examLibrary.item.copy": "النسخة تُفتح في المنشئ، والحفظ يحكمه «حفظ امتحان».",
+  "examLibrary.item.assign": "يحكم الإسناد من المكتبة: «إسناد واجب جاهز من المكتبة».",
+  "examBuilder.exam.publish": "النشر في حوكمة الامتحانات، بصلاحية «حوكمة: نشر».",
+  "games.results.view": "لا عرض مستقلًا لنتائج الألعاب بعد.",
+  "messages.history.view": "سجل الرسائل هو صندوق الرسائل نفسه: «قراءة الرسائل».",
+  "reports.export.use": "التصدير يُبنى في المتصفح من تقرير يراه المعلم أصلًا: «لوحات التقارير»."
+});
+
 const NAME_RE = /^[a-z][A-Za-z]*\.[a-z][A-Za-z]*\.[a-z][A-Za-z]*$/;
 
 const CAPABILITIES = Object.freeze(LIST.map(([id, label, requires = []]) => {
   const module = id.split(".")[0];
-  return Object.freeze({ id, module, moduleLabel: MODULE_LABEL[module], label, ownerOnly: module === "platform", requires: Object.freeze([...requires]) });
+  const reserved = Object.prototype.hasOwnProperty.call(RESERVED, id);
+  return Object.freeze({ id, module, moduleLabel: MODULE_LABEL[module], label, ownerOnly: module === "platform", requires: Object.freeze([...requires]), reserved, reservedNote: reserved ? RESERVED[id] : "" });
 }));
 const BY_ID = new Map(CAPABILITIES.map(c => [c.id, c]));
 
@@ -114,4 +129,22 @@ function unmetDependencies(set) {
   return out;
 }
 
-module.exports = { CAPABILITIES, TEACHER_CAPABILITIES, MODULE_LABEL, NAME_RE, isCapability, capability, isOwnerOnly, unmetDependencies };
+const isReserved = id => Boolean(BY_ID.get(id) && BY_ID.get(id).reserved);
+
+/**
+ * Tadris+ P10-K — the reserved entries a SAVE would add by the owner's own choice (empty = acceptable):
+ *   a grant not already granted by the teacher's current revision (`parent`);
+ *   a deny not already denied by it, unless a dependency forces it (one of its requirements is missing from the new effective set).
+ * Removing an entry is always acceptable; `parent` is { grants, denies } of the current revision ({} for a new teacher).
+ */
+function reservedAdditions({ grants = [], denies = [] }, parent, effective) {
+  const prev = { grants: new Set((parent && parent.grants) || []), denies: new Set((parent && parent.denies) || []) };
+  const has = effective instanceof Set ? effective : new Set(effective || []);
+  const forced = id => BY_ID.get(id).requires.some(r => !has.has(r));
+  return [
+    ...grants.filter(id => isReserved(id) && !prev.grants.has(id)),
+    ...denies.filter(id => isReserved(id) && !prev.denies.has(id) && !forced(id))
+  ];
+}
+
+module.exports = { CAPABILITIES, TEACHER_CAPABILITIES, MODULE_LABEL, NAME_RE, RESERVED, isCapability, capability, isOwnerOnly, isReserved, reservedAdditions, unmetDependencies };

@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { IconWarning } from "../icons";
 import Stepper from "../ui/Stepper";
 import { currentAccessOf, TRIAL_DAY_OPTIONS, type AccessCapability, type AccessHistoryEntry, type AccessPreset, type ManagedTeacher, type TeacherDraft } from "./ownerApi";
+import { grantsAndDenies, settleReserved } from "./teacherShared";   // Tadris+ P10-K
 
 /**
  * Tadris+ P4-B2 — «إضافة معلم» as a guided wizard (replaces the single form of P2-A2b; same fields, same rules, same request):
@@ -88,7 +89,11 @@ export default function TeacherWizard({ initialTrial = false, token, busy, prese
       ...(trial ? { trialDays } : {})
     };
     if (copied && copied.preset && sourceTeacher) {
-      return { ...base, presetId: copied.preset.id, presetVersion: copied.preset.version, grants: [...copied.grants], denies: [...copied.denies], accessReason: "نسخ من " + sourceTeacher.username, ...(Array.isArray(copied.courses) ? { courses: [...copied.courses] } : {}) };
+      // Tadris+ P10-K — the source's reserved entries are not carried: a reserved capability follows the preset (the server refuses
+      // a new teacher's reserved grant or deny). Everything else is copied exactly.
+      const p = presets.find(x => x.id === copied.preset!.id && x.version === copied.preset!.version);
+      const lists = p ? grantsAndDenies(p.capabilities, settleReserved(new Set(copied.capabilities), p.capabilities, capabilities)) : { grants: [...copied.grants], denies: [...copied.denies] };
+      return { ...base, presetId: copied.preset.id, presetVersion: copied.preset.version, grants: lists.grants, denies: lists.denies, accessReason: "نسخ من " + sourceTeacher.username, ...(Array.isArray(copied.courses) ? { courses: [...copied.courses] } : {}) };
     }
     if (chosenPreset) return { ...base, presetId: chosenPreset.id, presetVersion: chosenPreset.version };
     return base;
@@ -227,7 +232,7 @@ function AccessPreview({ caps, capabilities }: { caps: string[]; capabilities: A
   const set = new Set(caps);
   const modules: { module: string; label: string; total: number; held: number }[] = [];
   for (const c of capabilities) {
-    if (c.ownerOnly) continue;
+    if (c.ownerOnly || c.reserved) continue;   // P10-K: a reserved capability grants nothing
     let m = modules.find(x => x.module === c.module);
     if (!m) { m = { module: c.module, label: c.moduleLabel, total: 0, held: 0 }; modules.push(m); }
     m.total += 1;

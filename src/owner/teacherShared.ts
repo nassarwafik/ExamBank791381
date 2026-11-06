@@ -94,5 +94,21 @@ export function grantsAndDenies(presetCapabilities: readonly string[], chosen: R
   return { grants: [...chosen].filter(c => !base.has(c)).sort(), denies: [...base].filter(c => !chosen.has(c)).sort() };
 }
 
+/**
+ * Tadris+ P10-K — a RESERVED capability (no route enforces it yet) is never the owner's choice: it follows the preset, and is off
+ * only where a dependency forces it off (its requirement is missing). Used when a whole set is taken from another teacher, so the
+ * save never carries a new reserved grant or deny, which the server refuses (CAPABILITY_RESERVED).
+ */
+export function settleReserved(chosen: ReadonlySet<string>, presetCapabilities: readonly string[], caps: AccessCapability[]): Set<string> {
+  const out = new Set(chosen);
+  const inPreset = new Set(presetCapabilities);
+  for (const c of caps) {
+    if (!c.reserved) continue;
+    if (inPreset.has(c.id) && (c.requires || []).every(r => out.has(r))) out.add(c.id);
+    else out.delete(c.id);
+  }
+  return out;
+}
+
 /** Who made a revision, for the owner: their own changes, or the id as stored. */
 export const actorLabel = (createdBy: string): string => (createdBy.startsWith("owner:") ? "المالك" : createdBy || "—");

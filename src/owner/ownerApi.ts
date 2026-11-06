@@ -126,7 +126,7 @@ export const ownerTeachersApi = {
 };
 
 // Tadris+ P3-A — teacher capabilities (/api/owner-access). Assigning needs a recent step-up like every owner change.
-export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean; requires?: string[] };
+export type AccessCapability = { id: string; module: string; moduleLabel: string; label: string; ownerOnly: boolean; requires?: string[]; reserved?: boolean; reservedNote?: string };   // P10-K: reserved
 /** P7-A2 — a dashboard widget of the server's registry (lib/dashboard-widgets.js): the page that shows it and what it needs. */
 export type DashboardWidget = { id: string; page: "today" | "analytics"; label: string; capabilities: string[] };
 /** P7-B2 — an educational game of the server's registry (lib/game-catalog.js) and the capability it needs. */
