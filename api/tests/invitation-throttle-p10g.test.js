@@ -100,6 +100,15 @@ describe("P10-G a flood of random links never blocks a teacher's real link (O7)"
     expect(again.jsonBody.code).toBe("INVITATION_INVALID");
   });
 
+  it("the limit itself unavailable (its reservation throws) → 429 for a valid and an unknown link alike — never a free pass", async () => {
+    const token = ctx.invite("t_00000000000000c6", "mr.adel");
+    const broken = { ...ctx.deps, reserveLoginAttempt: async () => { throw new Error("lease busy"); } };
+    const valid = await invitation(req("accept", { token, password: PASSWORD }), broken);
+    expect(valid.status).toBe(429);
+    expect(ctx.mem.getJson(accounts.teacherAccountName("t_00000000000000c6")).status).toBe("invited");   // no password was set
+    expect((await invitation(req("inspect", { token: randomLink() }), broken)).status).toBe(429);
+  });
+
   it("storage down → 503 (never a free pass)", async () => {
     const r = await invitation(req("inspect", { token: randomLink() }), { ...ctx.deps, getContainer: () => { throw new Error("down"); } });
     expect(r.status).toBe(503);
