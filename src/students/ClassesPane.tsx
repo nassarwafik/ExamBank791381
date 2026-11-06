@@ -113,7 +113,7 @@ export default function ClassesPane(p: ClassesPaneProps) {
                 })()}
               </button>
               <ActionMenu label={"إجراءات الصف " + classroom.name} className="eb-class-menu">
-                {active && p.projects.length > 0 && can("learning.course.assign") && (
+                {active && p.projects.length > 0 && can("projects.tracker.manage") && (   /* Tadris+ P10-J: the server asks the projects capability */
                   <div className="eb-menu-group" role="group" aria-label="المشاريع">
                     <span className="eb-menu-label">المشاريع</span>
                     {p.projects.map(project => {
