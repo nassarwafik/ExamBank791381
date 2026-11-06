@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange } = require("../lib/audit-log");   // Tadris+ P10-L: recorded before the change
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { readTeacherAccount, mutateTeacherAccount } = require("../lib/identity/teacher-accounts");
@@ -9,10 +9,10 @@ const { ACCESS_REFUSAL: REFUSAL } = require("../lib/access/messages");
 const { CAPABILITIES, reservedAdditions } = require("../lib/access/capabilities");
 const { PRESETS, isCurrentPreset } = require("../lib/access/presets");
 const { AccessError, REVISION_ID_RE, buildRevision, writeRevision, readRevision } = require("../lib/access/revisions");
-const { readAccessMode, writeAccessMode } = require("../lib/access/access-mode");
+const { readAccessMode, writeAccessMode, SETTABLE_MODES } = require("../lib/access/access-mode");
 const { readAccessHistory, MAX_HISTORY } = require("../lib/access/history");
 const { resolveTeacherAccess } = require("../lib/access/resolver");
-const { listCatalog, writeCourseStatus, STATUSES } = require("../lib/access/course-access");
+const { listCatalog, readCourseStatus, writeCourseStatus, STATUSES } = require("../lib/access/course-access");
 const { publicWidgets } = require("../lib/dashboard-widgets");   // Tadris+ P7-A2
 const { publicGames } = require("../lib/game-catalog");          // Tadris+ P7-B2
 const { APPEARANCE } = require("../lib/appearance-registry");     // Tadris+ P8-A2
@@ -93,7 +93,7 @@ const appearanceOfRev = rev => (rev.resources && rev.resources.appearance && typ
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -101,6 +101,8 @@ async function handler(request, deps = {}, obs = null) {
   if (!auth.ok) return auth.response;
   const { owner, session, container } = auth;
   const actor = "owner:" + owner.accountId;
+  // Tadris+ P10-L (O14) — every change below is recorded (strict) BEFORE it happens; no record → 503 and nothing changes.
+  const change = (event, apply) => recordOwnerChange(container, event, apply, { write });
 
   try {
     if (method === "GET" && !action) {
@@ -145,20 +147,24 @@ async function handler(request, deps = {}, obs = null) {
 
     if (action === "mode") {
       const wanted = String(body.mode || "");
+      if (!SETTABLE_MODES.includes(wanted) && wanted !== "enforce") return reply(409, { ok: false, code: "ACCESS_MODE_NOT_SETTABLE", error: "هذا الوضع غير معروف." });
       let enforceReady = false;
       if (wanted === "enforce") {
         const r = await computeReadiness(container);
         if (!r.ready) return reply(409, { ok: false, code: "ACCESS_NOT_READY", error: "لا يمكن تفعيل التطبيق: معلمون بلا حزمة صلاحيات سيُمنعون من كل شيء. اختر لهم حزمة أولًا.", missing: r.missing });
         enforceReady = true;
       }
-      try {
-        const r = await writeAccessMode(container, wanted, actor, nowMs, {}, { enforceReady });
-        await audit(container, { actor, action: "owner.access.mode", targetType: "platform", targetId: "access-control", details: { from: r.previous, to: r.mode } });
-        return reply(200, { ok: true, mode: r.mode });
-      } catch (e) {
-        if (e instanceof AccessError) return reply(409, { ok: false, code: e.code, error: "هذا الوضع غير معروف." });
-        throw e;
-      }
+      let from = "legacy";   // an unreadable mode document is replaced like an absent one (writeAccessMode)
+      try { from = (await readAccessMode(container)).mode; } catch (e) { if (!(e instanceof AccessError)) throw e; }
+      return await change({ actor, action: "owner.access.mode", targetType: "platform", targetId: "access-control", details: { from, to: wanted } }, async () => {
+        try {
+          const r = await writeAccessMode(container, wanted, actor, nowMs, {}, { enforceReady });
+          return reply(200, { ok: true, mode: r.mode });
+        } catch (e) {
+          if (e instanceof AccessError) return reply(409, { ok: false, code: e.code, error: "هذا الوضع غير معروف." });
+          throw e;
+        }
+      });
     }
 
     // Tadris+ P5-A — the course catalog (owner decision D12): publish / archive a course for every teacher and student at once.
@@ -167,9 +173,11 @@ async function handler(request, deps = {}, obs = null) {
       if (!findLearningCourse(courseId) || findLearningCourse(courseId).courseId !== courseId) return reply(404, { ok: false, code: "COURSE_UNKNOWN", error: "المقرر غير موجود." });
       const status = String(body.status || "");
       if (!STATUSES.includes(status)) return reply(400, { ok: false, code: "COURSE_STATUS_INVALID", error: "الحالة غير صالحة." });
-      const r = await writeCourseStatus(container, courseId, status, actor, nowMs);
-      await audit(container, { actor, action: "owner.catalog.course-status", targetType: "course", targetId: courseId, targetLabel: findLearningCourse(courseId).title, details: { from: r.previous, to: r.status } });
-      return reply(200, { ok: true, courseId, status: r.status });
+      const from = await readCourseStatus(container, courseId);
+      return await change({ actor, action: "owner.catalog.course-status", targetType: "course", targetId: courseId, targetLabel: findLearningCourse(courseId).title, details: { from, to: status } }, async () => {
+        const r = await writeCourseStatus(container, courseId, status, actor, nowMs);
+        return reply(200, { ok: true, courseId, status: r.status });
+      });
     }
 
     if (action === "assign") {
@@ -194,13 +202,14 @@ async function handler(request, deps = {}, obs = null) {
       if (currentRevision) { try { parent = (await readRevision(container, currentRevision, accountId)).revision || {}; } catch (e) { if (!(e instanceof AccessError)) throw e; } }
       const added = reservedAdditions(rev, parent, built.capabilities);
       if (added.length) return reply(400, { ok: false, code: "CAPABILITY_RESERVED", error: REFUSAL.CAPABILITY_RESERVED, details: { capabilities: added } });
-      const applied = await applyRevision(container, accountId, currentRevision, rev);
-      if (!applied.ok) return applied.response;
-      await audit(container, {
-        actor, action: "owner.access.assigned", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
+      return await change({
+        actor, action: "owner.access.assigned", targetType: "teacher-account", targetId: accountId, targetLabel: current.username,
         details: { revisionId: rev.revisionId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) }
+      }, async () => {
+        const applied = await applyRevision(container, accountId, currentRevision, rev);
+        if (!applied.ok) return applied.response;
+        return reply(200, { ok: true, accountId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) });
       });
-      return reply(200, { ok: true, accountId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) });
     }
 
     if (action === "rollback") {
@@ -232,13 +241,14 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const rev = built.revision;
-      const applied = await applyRevision(container, accountId, currentRevision, rev);
-      if (!applied.ok) return applied.response;
-      await audit(container, {
-        actor, action: "owner.access.rolled-back", targetType: "teacher-account", targetId: accountId, targetLabel: applied.next.username,
+      return await change({
+        actor, action: "owner.access.rolled-back", targetType: "teacher-account", targetId: accountId, targetLabel: current.username,
         details: { revisionId: rev.revisionId, restoredFrom: targetId, parentRevisionId: rev.parentRevisionId, preset: rev.preset, grants: rev.grants, denies: rev.denies, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) }
+      }, async () => {
+        const applied = await applyRevision(container, accountId, currentRevision, rev);
+        if (!applied.ok) return applied.response;
+        return reply(200, { ok: true, accountId, restoredFrom: targetId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) });
       });
-      return reply(200, { ok: true, accountId, restoredFrom: targetId, access: accessOut(rev), capabilities: built.capabilities, courses: coursesOf(rev), widgets: entitledWidgetsOf(rev), games: entitledGamesOf(rev), appearance: appearanceOfRev(rev) });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });

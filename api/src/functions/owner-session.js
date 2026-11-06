@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { deleteBlob, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require("../lib/login-throttle");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEvent, recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite } = require("../lib/audit-log");   // Tadris+ P10-L
 const { verifyAndConsumeSecondFactor } = require("../lib/identity/owner-mfa");
 const { ownerSessionName, mutateOwnerAccount, newSessionId, createOnly } = require("../lib/identity/owner-store");
 const { requireOwnerSession, stepUpValidUntilMs, stepUpDenial, createOwnerToken, OWNER_TOKEN_TTL_SECONDS, NO_STORE } = require("../lib/identity/owner-session");
@@ -79,7 +79,7 @@ function assertSameAccountState(current, session) {
   if (current.status !== "active" || current.authVersion !== session.authVersion) throw sessionGone();
 }
 
-async function changeCredentials(action, request, { owner, session, container, actor, audit, nowMs, env, deps }) {
+async function changeCredentials(action, request, { owner, session, container, actor, auditBestEffort, write, nowMs, env, deps }) {
   const denial = stepUpDenial(session, nowMs);
   if (denial) return denial;
   const body = await readBody(request);
@@ -97,7 +97,7 @@ async function changeCredentials(action, request, { owner, session, container, a
   const cleared = () => (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
 
   if (action !== "totp-confirm" && !(await verifySecret(currentPassword, owner.credential))) {
-    await audit(container, { actor, action: action === "password" ? "owner.password.change-failed" : "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "current-password" } });
+    await auditBestEffort(container, { actor, action: action === "password" ? "owner.password.change-failed" : "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "current-password" } });
     return reply(401, { ok: false, code: "CURRENT_PASSWORD_INVALID", error: "كلمة المرور الحالية غير صحيحة." });
   }
 
@@ -107,39 +107,45 @@ async function changeCredentials(action, request, { owner, session, container, a
     if (await verifySecret(newPassword, owner.credential)) return reply(400, { ok: false, code: "PASSWORD_SAME", error: "كلمة المرور الجديدة يجب أن تختلف عن الحالية." });
     const credential = await hashSecret(newPassword, deps.hashParams ? { params: deps.hashParams } : {});
     const iso = new Date(nowMs).toISOString();
-    const updated = await mutateOwnerAccount(container, owner.accountId, current => {
-      assertSameAccountState(current, session);
-      return { ...current, credential, authVersion: Number(current.authVersion) + 1, passwordChangedAt: iso, updatedAt: iso };
-    });
-    await cleared();
-    await audit(container, { actor, action: "owner.password.changed", targetType: "owner-account", targetId: owner.accountId });
-    const device = await reissueThisDevice(container, updated, session, nowMs, env);
-    return reply(200, device ? { ok: true, ...device } : { ok: true, signInAgain: true });
+    // Tadris+ P10-L (O14) — recorded BEFORE the password changes: no record → 503 and the password stays as it was.
+    return await recordOwnerChange(container, { actor, action: "owner.password.changed", targetType: "owner-account", targetId: owner.accountId }, async () => {
+      const updated = await mutateOwnerAccount(container, owner.accountId, current => {
+        assertSameAccountState(current, session);
+        return { ...current, credential, authVersion: Number(current.authVersion) + 1, passwordChangedAt: iso, updatedAt: iso };
+      });
+      await cleared();
+      const device = await reissueThisDevice(container, updated, session, nowMs, env);
+      return reply(200, device ? { ok: true, ...device } : { ok: true, signInAgain: true });
+    }, { write });
   }
 
   if (action === "totp-begin") {
     const secret = generateTotpSecret();
     const sealed = sealSecret(secret, { purpose: TOTP_PURPOSE, aad: owner.accountId, env });
-    await mutateOwnerAccount(container, owner.accountId, current => {
-      assertSameAccountState(current, session);
-      const mfa = current.mfa || {};
-      return { ...current, mfa: { ...mfa, pendingTotp: { sealed, createdAtMs: nowMs, expiresAtMs: nowMs + PENDING_TOTP_MS } }, updatedAt: new Date(nowMs).toISOString() };
-    });
-    await cleared();
-    await audit(container, { actor, action: "owner.totp.reenrol-started", targetType: "owner-account", targetId: owner.accountId });
-    return reply(200, {
-      ok: true,
-      totp: { issuer: TOTP_ISSUER, account: owner.username, secret: base32Encode(secret), uri: otpauthUri({ issuer: TOTP_ISSUER, account: owner.username, secret }) },
-      expiresInSeconds: PENDING_TOTP_MS / 1000
-    });
+    return await recordOwnerChange(container, { actor, action: "owner.totp.reenrol-started", targetType: "owner-account", targetId: owner.accountId }, async () => {
+      await mutateOwnerAccount(container, owner.accountId, current => {
+        assertSameAccountState(current, session);
+        const mfa = current.mfa || {};
+        return { ...current, mfa: { ...mfa, pendingTotp: { sealed, createdAtMs: nowMs, expiresAtMs: nowMs + PENDING_TOTP_MS } }, updatedAt: new Date(nowMs).toISOString() };
+      });
+      await cleared();
+      return reply(200, {
+        ok: true,
+        totp: { issuer: TOTP_ISSUER, account: owner.username, secret: base32Encode(secret), uri: otpauthUri({ issuer: TOTP_ISSUER, account: owner.username, secret }) },
+        expiresInSeconds: PENDING_TOTP_MS / 1000
+      });
+    }, { write });
   }
 
   // totp-confirm: the new authenticator is proved and swapped in, with new recovery codes, in ONE compare-and-set write
   // against the freshest account (a second, concurrent confirm finds pendingTotp gone).
+  // Tadris+ P10-L (O14) — the code is checked inside that write's preparation, so the record is written at the write itself: a wrong
+  // or expired code writes, and records, nothing; a record that cannot be written stops the swap (503).
+  return await recordOwnerChangeAtWrite(container, { actor, action: "owner.totp.reenrolled", targetType: "owner-account", targetId: owner.accountId }, async guarded => {
   let fresh = null;
   let updated;
   try {
-    updated = await mutateOwnerAccount(container, owner.accountId, current => {
+    updated = await mutateOwnerAccount(guarded, owner.accountId, current => {
       assertSameAccountState(current, session);
       const mfa = current.mfa || {};
       const pending = mfa.pendingTotp;
@@ -161,21 +167,24 @@ async function changeCredentials(action, request, { owner, session, container, a
   } catch (e) {
     if (e?.code === "TOTP_REENROL_NOT_STARTED") return reply(409, { ok: false, code: "TOTP_REENROL_NOT_STARTED", error: "انتهت مهلة ربط التطبيق الجديد. ابدأ من جديد." });
     if (e?.code === "TOTP_INVALID") {
-      await audit(container, { actor, action: "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "new-code" } });
+      await auditBestEffort(container, { actor, action: "owner.totp.reenrol-failed", targetType: "owner-account", targetId: owner.accountId, details: { stage: "new-code" } });
       return reply(401, { ok: false, code: "TOTP_INVALID", error: "رمز التحقق غير صحيح. أدخل الرمز الذي يظهر في التطبيق الجديد." });
     }
     throw e;
   }
   await cleared();
-  await audit(container, { actor, action: "owner.totp.reenrolled", targetType: "owner-account", targetId: owner.accountId });
   const device = await reissueThisDevice(container, updated, session, nowMs, env);
   return reply(200, device ? { ok: true, ...device, recoveryCodes: fresh.codes } : { ok: true, signInAgain: true, recoveryCodes: fresh.codes });
+  }, { write });
 }
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const env = deps.env || process.env;
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  // Tadris+ P10-L (O14) — owner changes are recorded strictly BEFORE they happen (`write`); signing out, the recent step-up and failed
+  // attempts stay best effort (owner decision §19.49: «صارم لكل تغيير، لا للدخول»).
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;
+  const auditBestEffort = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -190,7 +199,7 @@ async function handler(request, deps = {}, obs = null) {
 
     if (action === "logout") {
       await deleteBlob(container, ownerSessionName(session.sid));
-      await audit(container, { actor, action: "owner.logout", targetType: "owner-session", targetId: owner.accountId });
+      await auditBestEffort(container, { actor, action: "owner.logout", targetType: "owner-session", targetId: owner.accountId });
       return reply(200, { ok: true });
     }
 
@@ -205,7 +214,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!gate.allowed) return reply(429, { ok: false, code: "RATE_LIMITED", error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }, { "Retry-After": String(gate.retryAfterSeconds || 5) });
       const factor = await verifyAndConsumeSecondFactor(container, owner.accountId, { code, recoveryCode }, { nowMs, env });
       if (!factor.ok) {
-        await audit(container, { actor, action: "owner.step-up.failed", targetType: "owner-session", targetId: owner.accountId });
+        await auditBestEffort(container, { actor, action: "owner.step-up.failed", targetType: "owner-session", targetId: owner.accountId });
         return reply(401, { ok: false, code: "TOTP_INVALID", error: "رمز التحقق غير صحيح." });
       }
       const updated = await mutateJsonWithRetry(container, ownerSessionName(session.sid), current => {
@@ -213,24 +222,26 @@ async function handler(request, deps = {}, obs = null) {
         return { ...current, stepUpAtMs: nowMs };
       });
       await (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
-      await audit(container, { actor, action: "owner.step-up.succeeded", targetType: "owner-session", targetId: owner.accountId, details: { factor: factor.method } });
+      await auditBestEffort(container, { actor, action: "owner.step-up.succeeded", targetType: "owner-session", targetId: owner.accountId, details: { factor: factor.method } });
       return reply(200, view(factor.account, updated));
     }
 
-    if (CREDENTIALS_ACTIONS.has(action)) return await changeCredentials(action, request, { owner, session, container, actor, audit, nowMs, env, deps });
+    if (CREDENTIALS_ACTIONS.has(action)) return await changeCredentials(action, request, { owner, session, container, actor, auditBestEffort, write, nowMs, env, deps });
 
     if (action === "revoke-all" || action === "recovery-codes") {
       const denial = stepUpDenial(session, nowMs);
       if (denial) return denial;
       if (action === "revoke-all") {
-        await mutateOwnerAccount(container, owner.accountId, current => ({ ...current, authVersion: Number(current.authVersion) + 1, updatedAt: new Date(nowMs).toISOString() }));
-        await audit(container, { actor, action: "owner.sessions.revoked", targetType: "owner-account", targetId: owner.accountId });
-        return reply(200, { ok: true });
+        return await recordOwnerChange(container, { actor, action: "owner.sessions.revoked", targetType: "owner-account", targetId: owner.accountId }, async () => {
+          await mutateOwnerAccount(container, owner.accountId, current => ({ ...current, authVersion: Number(current.authVersion) + 1, updatedAt: new Date(nowMs).toISOString() }));
+          return reply(200, { ok: true });
+        }, { write });
       }
       const fresh = generateRecoveryCodes();
-      await mutateOwnerAccount(container, owner.accountId, current => ({ ...current, mfa: { ...(current.mfa || {}), recoveryCodes: fresh.records }, updatedAt: new Date(nowMs).toISOString() }));
-      await audit(container, { actor, action: "owner.recovery-codes.regenerated", targetType: "owner-account", targetId: owner.accountId });
-      return reply(200, { ok: true, recoveryCodes: fresh.codes });
+      return await recordOwnerChange(container, { actor, action: "owner.recovery-codes.regenerated", targetType: "owner-account", targetId: owner.accountId }, async () => {
+        await mutateOwnerAccount(container, owner.accountId, current => ({ ...current, mfa: { ...(current.mfa || {}), recoveryCodes: fresh.records }, updatedAt: new Date(nowMs).toISOString() }));
+        return reply(200, { ok: true, recoveryCodes: fresh.codes });
+      }, { write });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });

@@ -66,7 +66,9 @@ describe("P5-B4 the owner adds one student to a teacher's class", () => {
     expect((await roster(ctx, ctx.sara, "?classId=cA")).map(s => s.userId)).toEqual([student.userId]);
     expect((await roster(ctx, ctx.omar)).map(s => s.userId)).toEqual([]);
     expect(JSON.stringify([...ownerAudits(ctx), ...ctx.platformAudit])).not.toContain(temporaryPassword);
-    expect(ownerAudits(ctx).map(a => [a.actor, a.action, a.details.accountId])).toEqual([["owner:" + OWNER_ID, "owner.student.create", SARA]]);
+    // Tadris+ P10-L (O14, approved design §3.2) — the request is recorded (strict) at the library's first write, then the library's own
+    // result record follows as before; both carry the teacher's account.
+    expect(ownerAudits(ctx).map(a => [a.actor, a.action, a.details.accountId])).toEqual([["owner:" + OWNER_ID, "owner.student.add.requested", SARA], ["owner:" + OWNER_ID, "owner.student.create", SARA]]);
     expect(ctx.platformAudit.map(a => [a.actor, a.action])).toEqual([["owner:" + OWNER_ID, "student.create"]]);
   });
   it("then the teacher edits, archives and restores that student, and adds others herself", async () => {

@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEvent, recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite } = require("../lib/audit-log");   // Tadris+ P10-L
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { readTeacherAccount } = require("../lib/identity/teacher-accounts");
@@ -92,7 +92,11 @@ async function studentTransferContext(container, userId, toClassId, deps) {
 
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;          // Tadris+ P10-L: the record BEFORE a change
+  // P10-L completion detail: a shared library below records the RESULT after its change, best effort — the change itself was
+  // recorded strictly before its first write (adding / importing students), or carries its own record in that very write
+  // (a transfer: the class's ownerHistory / the student's transferHistory with who, when and why, and its ledger).
+  const auditBestEffort = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const ls = deps.listJson || loadDocs;
@@ -103,6 +107,10 @@ async function handler(request, deps = {}, obs = null) {
   if (!auth.ok) return auth.response;
   const { owner, session, container } = auth;
   const actor = "owner:" + owner.accountId;
+  // Tadris+ P10-L (O14) — every change below is recorded (strict) BEFORE it happens; no record → 503 and nothing changes. A change
+  // made by a shared library is recorded at its FIRST write (atWrite), so a refusal or a no-op the library finds records nothing.
+  const change = (event, apply) => recordOwnerChange(container, event, apply, { write });
+  const atWrite = (event, apply) => recordOwnerChangeAtWrite(container, event, apply, { write });
 
   try {
     if (method === "GET" && !action) {
@@ -152,16 +160,21 @@ async function handler(request, deps = {}, obs = null) {
       const keyedId = classIdForRequestKey(body.requestKey, accountId);
       const iso = new Date(nowMs).toISOString();
       const classroom = buildNewClassroomDocument({ ...fields.value, programCode: "" }, iso, accountId, keyedId);
-      try {
-        await (deps.uploadJsonConditional || uploadJsonConditional)(container, CLASS_PREFIX + classroom.classId + ".json", classroom, null);
-      } catch (e) {
-        if (!isConcurrencyConflict(e)) throw e;
-        const existing = keyedId ? await dl(container, CLASS_PREFIX + classroom.classId + ".json") : null;   // the same submission, repeated
-        if (!existing || existing.ownerId !== accountId) throw e;
-        return reply(200, { ok: true, duplicate: true, classroom: ownerClassView(existing) });
+      if (keyedId) {   // the same submission, repeated: answered before any record (nothing changes)
+        const existing = await dl(container, CLASS_PREFIX + classroom.classId + ".json");
+        if (existing && existing.ownerId === accountId) return reply(200, { ok: true, duplicate: true, classroom: ownerClassView(existing) });
       }
-      await audit(container, { actor, action: "owner.class.created", targetType: "class", targetId: classroom.classId, targetLabel: classroom.name, details: { accountId, grade: classroom.grade, schoolYear: classroom.schoolYear } });
-      return reply(201, { ok: true, classroom: ownerClassView(classroom) });
+      return await change({ actor, action: "owner.class.created", targetType: "class", targetId: classroom.classId, targetLabel: classroom.name, details: { accountId, grade: classroom.grade, schoolYear: classroom.schoolYear } }, async () => {
+        try {
+          await (deps.uploadJsonConditional || uploadJsonConditional)(container, CLASS_PREFIX + classroom.classId + ".json", classroom, null);
+        } catch (e) {
+          if (!isConcurrencyConflict(e)) throw e;
+          const existing = keyedId ? await dl(container, CLASS_PREFIX + classroom.classId + ".json") : null;   // the same submission, repeated
+          if (!existing || existing.ownerId !== accountId) throw e;
+          return { ...reply(200, { ok: true, duplicate: true, classroom: ownerClassView(existing) }), notApplied: "duplicate" };
+        }
+        return reply(201, { ok: true, classroom: ownerClassView(classroom) });
+      });
     }
 
     if (action === "update" || Object.prototype.hasOwnProperty.call(LIFECYCLE, action)) {
@@ -171,11 +184,20 @@ async function handler(request, deps = {}, obs = null) {
       // only a class that belongs to an existing teacher account (never an unowned / pre-tenancy class)
       if (!current || String(current.classId || classId) !== classId || !(await teacherOf(container, String(current.ownerId || ""), deps))) return CLASS_NOT_FOUND();
       const accountId = String(current.ownerId);
-      const record = ev => audit(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });
-      const r = action === "update"
-        ? await updateClassLabels(container, classId, body, { mut, record })
-        : await changeClassLifecycle(container, classId, LIFECYCLE[action], { mut, ls, record, actor });
-      return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+      // The record is the event the library used to write AFTER the change — the same name and details — written at its first write.
+      const event = ({ json }) => {
+        const next = json && typeof json === "object" ? json : {};
+        if (action === "update") return { actor, action: "owner.class.update", targetType: "class", targetId: classId, targetLabel: String(next.name || ""), details: { fields: ["name", "grade", "schoolYear"].filter(k => String(current[k] || "") !== String(next[k] || "")), previousName: String(current.name || ""), accountId } };
+        const kind = LIFECYCLE[action];
+        return { actor, action: "owner." + (kind === "unarchive" ? "class.unarchive" : kind === "graduateandarchive" ? "class.graduate" : "class.archive"), targetType: "class", targetId: classId, targetLabel: String(next.name || ""), details: { ...(next.graduationYear ? { graduationYear: next.graduationYear } : {}), accountId } };
+      };
+      const recorded = () => {};   // already recorded at the write (above)
+      return await atWrite(event, async guarded => {
+        const r = action === "update"
+          ? await updateClassLabels(guarded, classId, body, { mut, record: recorded })
+          : await changeClassLifecycle(guarded, classId, LIFECYCLE[action], { mut, ls, record: recorded, actor });
+        return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+      });
     }
 
     if (action === "student-transfer") {
@@ -184,6 +206,7 @@ async function handler(request, deps = {}, obs = null) {
       const found = await studentTransferContext(container, userId, toClassId, deps);
       if (found.refusal) return found.refusal;
       if (String(found.fromClass.classId) !== fromClassId) return reply(409, { ok: false, code: "TRANSFER_STALE", error: "نُقل الطالب أو تغيّر صفه منذ المعاينة. أعد فتح النقل." });
+      // P10-L: the move itself writes its record (the student's transferHistory: from, to, at, by, reason) and a ledger.
       let result;
       try {
         result = await transferStudent(container, { userId, fromClassId, toClassId, from: found.from, to: String(found.target.ownerId), actor, reason: body.reason, nowMs }, { ...deps, mutateJsonWithRetry: mut, obs });
@@ -191,7 +214,7 @@ async function handler(request, deps = {}, obs = null) {
         if (e instanceof TransferRefusal) return reply(e.status, { ok: false, code: e.code, error: e.message });
         throw e;
       }
-      await audit(container, { actor, action: "owner.student.transferred", targetType: "student", targetId: userId, targetLabel: userId, details: { from: found.from, to: String(found.target.ownerId), fromClassId, toClassId, transferId: result.ledger.transferId } });
+      await auditBestEffort(container, { actor, action: "owner.student.transferred", targetType: "student", targetId: userId, targetLabel: userId, details: { from: found.from, to: String(found.target.ownerId), fromClassId, toClassId, transferId: result.ledger.transferId } });   // P10-L completion detail
       return reply(200, { ok: true, ledger: result.ledger });
     }
 
@@ -202,6 +225,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!(await teacherOf(container, toAccountId, deps))) return TEACHER_NOT_FOUND();
       if (!(await teacherOf(container, from, deps))) return reply(409, { ok: false, code: "TRANSFER_STALE", error: "تغيّر مالك الصف منذ المعاينة. أعد فتح النقل." });
       if (typeof body.reason === "string" && body.reason.length > MAX_REASON) return bad("REASON_TOO_LONG", "سبب النقل طويل جدًا.");
+      // P10-L: the move itself writes its record (the class's ownerHistory: from, to, at, by, reason) and a resumable ledger.
       let result;
       try {
         result = await transferClass(container, { classId, from, to: toAccountId, actor, reason: body.reason, nowMs }, { ...deps, mutateJsonWithRetry: mut, listJson: deps.listJson, obs });
@@ -210,7 +234,7 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const { ledger } = result;
-      await audit(container, { actor, action: "owner.class.transferred", targetType: "class", targetId: classId, targetLabel: classId, details: { from, to: toAccountId, transferId: ledger.transferId, moved: ledger.students.moved, failed: ledger.students.failed, resumed: ledger.resumed } });
+      await auditBestEffort(container, { actor, action: "owner.class.transferred", targetType: "class", targetId: classId, targetLabel: classId, details: { from, to: toAccountId, transferId: ledger.transferId, moved: ledger.students.moved, failed: ledger.students.failed, resumed: ledger.resumed } });   // P10-L completion detail
       return reply(200, { ok: true, ledger });
     }
 
@@ -223,13 +247,16 @@ async function handler(request, deps = {}, obs = null) {
       const studentAudit = deps.recordAuditEvent || recordAuditEvent;
       // the event goes to the owner audit AND to the platform audit the teacher's own actions use (actor: the owner)
       const record = async ev => {
-        await audit(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });
+        await auditBestEffort(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });   // P10-L completion detail
         try { await studentAudit(container, { actor, ...ev }); } catch { /* audit is secondary */ }
       };
+      const requested = (what, details) => ({ actor, action: "owner." + what + ".requested", targetType: "class", targetId: classId, targetLabel: String(classroom.name || classId), details: { accountId, ...details } });
       try {
         if (action === "add-student") {
-          const r = await addStudentToClass(container, { ...classroom, classId }, body, { visible: null, record, obs });
-          return { ...r, status: r.status === 200 ? 201 : r.status, headers: { ...NO_STORE, ...(r.headers || {}) } };
+          return await atWrite(requested("student.add", {}), async guarded => {
+            const r = await addStudentToClass(guarded, { ...classroom, classId }, body, { visible: null, record, obs });
+            return { ...r, status: r.status === 200 ? 201 : r.status, headers: { ...NO_STORE, ...(r.headers || {}) } };
+          });
         }
         const students = normalizeBulkStudents(body.students);
         if (!students.length) return bad("STUDENTS_EMPTY", "القائمة لا تحتوي بيانات طلاب صالحة.");
@@ -238,8 +265,10 @@ async function handler(request, deps = {}, obs = null) {
           const preview = await buildImportPreview(container, students, null);
           return reply(200, { ok: true, preview, valid: preview.filter(x => x.status === "valid").length, duplicates: preview.filter(x => x.status === "duplicate").length, invalid: preview.filter(x => x.status === "invalid").length });
         }
-        const r = await importStudentsToClass(container, { ...classroom, classId }, students, { importId: body.importId, visible: null, record, obs });
-        return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+        return await atWrite(requested("students.import", { rows: students.length }), async guarded => {
+          const r = await importStudentsToClass(guarded, { ...classroom, classId }, students, { importId: body.importId, visible: null, record, obs });
+          return { ...r, headers: { ...NO_STORE, ...(r.headers || {}) } };
+        });
       } catch (e) {
         const refused = studentErrorReply(e);
         if (refused) return { ...refused, headers: { ...NO_STORE, ...refused.headers } };

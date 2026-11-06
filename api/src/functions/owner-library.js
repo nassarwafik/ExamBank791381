@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange } = require("../lib/audit-log");   // Tadris+ P10-L: recorded before the change
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 const { listTeacherAccounts } = require("../lib/identity/teacher-accounts");
@@ -35,7 +35,7 @@ const idList = (value, max) => {
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const iso = new Date(nowMs).toISOString();
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -75,17 +75,16 @@ async function handler(request, deps = {}, obs = null) {
       const unknown = list.filter(t => !isTeacherAccountId(t) || !known.has(t));
       if (unknown.length) return reply(404, { ok: false, code: "TEACHER_NOT_FOUND", error: "حساب المعلم غير موجود.", unknown });
       const teachers = list.sort();
+      // Tadris+ P10-L (O14) — the record states the change before it happens: the current audience is read first.
       let before;
-      try {
-        before = await mutateAudience(container, doc => {
-          const prev = audienceOf(doc, itemId);
-          doc.items[itemId] = { audience: body.audience, teachers, updatedAt: iso, updatedBy: actor };
-          return prev;
-        }, deps);
-      } catch (e) { if (e instanceof LibraryAccessError) return UNAVAILABLE(); throw e; }
+      try { before = audienceOf(await readAudienceDoc(container, deps), itemId); } catch (e) { if (e instanceof LibraryAccessError) return UNAVAILABLE(); throw e; }
       const added = teachers.filter(t => !before.teachers.includes(t)), removed = before.teachers.filter(t => !teachers.includes(t));
-      await audit(container, { actor, action: "owner.library.audience-set", targetType: "library-item", targetId: itemId, targetLabel: itemId, details: { audience: body.audience, previousAudience: before.audience, teachers: teachers.length, added, removed } });
-      return reply(200, { ok: true, item: { libraryItemId: itemId, audience: body.audience, teachers, decided: true } });
+      return await recordOwnerChange(container, { actor, action: "owner.library.audience-set", targetType: "library-item", targetId: itemId, targetLabel: itemId, details: { audience: body.audience, previousAudience: before.audience, teachers: teachers.length, added, removed } }, async () => {
+        try {
+          await mutateAudience(container, doc => { doc.items[itemId] = { audience: body.audience, teachers, updatedAt: iso, updatedBy: actor }; }, deps);
+        } catch (e) { if (e instanceof LibraryAccessError) return UNAVAILABLE(); throw e; }
+        return reply(200, { ok: true, item: { libraryItemId: itemId, audience: body.audience, teachers, decided: true } });
+      }, { write });
     }
 
     if (action === "set-teacher") {
@@ -95,9 +94,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!include || !exclude || include.some(id => exclude.includes(id))) return bad("ITEMS_INVALID", "قائمة الامتحانات غير صالحة.");
       const unknown = [...include, ...exclude].filter(id => !knownItem(id));
       if (unknown.length) return reply(404, { ok: false, code: "LIBRARY_ITEM_NOT_FOUND", error: "الامتحان غير موجود في المكتبة.", unknown });
-      let changed;
-      try {
-        changed = await mutateAudience(container, doc => {
+      // Tadris+ P10-L (O14) — what changes (and a refusal) is worked out from the current document BEFORE the record; the write below
+      // applies the same rule again under compare-and-set. Nothing to change → nothing written, nothing recorded.
+      const plan = doc => {
           const forAll = exclude.filter(id => audienceOf(doc, id).audience === "all");
           if (forAll.length) throw new Refusal(409, "ITEM_FOR_ALL", "هذا الامتحان لكل المعلمين. غيّر جمهوره من «بنك الامتحانات» لإزالته عن معلم بعينه.", { items: forAll });
           const added = [], removed = [];
@@ -114,14 +113,23 @@ async function handler(request, deps = {}, obs = null) {
             removed.push(id);
           }
           return { added, removed };
-        }, deps);
-      } catch (e) {
+      };
+      let planned;
+      try { planned = plan(JSON.parse(JSON.stringify(await readAudienceDoc(container, deps)))); } catch (e) {
         if (e instanceof Refusal) return reply(e.status, { ok: false, code: e.code, error: e.error, ...e.extra });
         if (e instanceof LibraryAccessError) return UNAVAILABLE();
         throw e;
       }
-      if (changed.added.length || changed.removed.length) await audit(container, { actor, action: "owner.library.teacher-set", targetType: "teacher-account", targetId: accountId, targetLabel: accountId, details: changed });
-      return reply(200, { ok: true, accountId, ...changed });
+      if (!planned.added.length && !planned.removed.length) return reply(200, { ok: true, accountId, added: [], removed: [] });
+      return await recordOwnerChange(container, { actor, action: "owner.library.teacher-set", targetType: "teacher-account", targetId: accountId, targetLabel: accountId, details: planned }, async () => {
+        let changed;
+        try { changed = await mutateAudience(container, plan, deps); } catch (e) {
+          if (e instanceof Refusal) return reply(e.status, { ok: false, code: e.code, error: e.error, ...e.extra });
+          if (e instanceof LibraryAccessError) return UNAVAILABLE();
+          throw e;
+        }
+        return reply(200, { ok: true, accountId, ...changed });
+      }, { write });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });

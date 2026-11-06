@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { recordOwnerAuditEvent } = require("../lib/audit-log");
+const { recordOwnerAuditEventStrict, recordOwnerChange } = require("../lib/audit-log");   // Tadris+ P10-L: recorded before the change
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { isTeacherAccountId, LEGACY_TEACHER_ACCOUNT_ID } = require("../lib/identity/teacher-token");
 const {
@@ -87,8 +87,8 @@ const LEGACY_REFUSAL = {
   ALREADY_IMPORTED: "المساحة القديمة استُوردت من قبل. لا يمكن استيرادها لحساب ثانٍ."
 };
 
-/** The shared-password workspace's own profile (name / preset avatar), copied once when it is a known subject. Best effort. */
-async function copyLegacyProfile(container, env, iso) {
+/** The shared-password workspace's own profile (name / preset avatar) to copy once when it is a known subject, or false. Reads only. */
+async function legacyProfileDoc(container, env, iso) {
   const code = String(env.BUILDER_USER_CODE || "").trim();
   if (!code) return false;
   const doc = await downloadJsonOrNull(container, profileDocName(code));
@@ -98,7 +98,7 @@ async function copyLegacyProfile(container, env, iso) {
   if (name) out.displayName = name;
   if (VALID_AVATARS.has(String(doc.avatarId || ""))) out.avatarId = String(doc.avatarId);
   if (!out.displayName && !out.avatarId) return false;
-  return createOnly(container, profileDocName(LEGACY_TEACHER_ACCOUNT_ID), out);
+  return out;
 }
 
 const invitationOut = (token, record) => ({ invitationPath: "#/invite/" + token, purpose: record.purpose, expiresAt: new Date(record.expiresAtMs).toISOString() });
@@ -106,7 +106,7 @@ const invitationOut = (token, record) => ({ invitationPath: "#/invite/" + token,
 async function handler(request, deps = {}, obs = null) {
   const nowMs = deps.now ? deps.now() : Date.now();
   const env = deps.env || process.env;
-  const audit = deps.recordOwnerAuditEvent || recordOwnerAuditEvent;
+  const write = deps.recordOwnerAuditEvent || recordOwnerAuditEventStrict;
   const method = String(request.method || "GET").toUpperCase();
   const action = String(request.params?.action || "").toLowerCase();
 
@@ -115,6 +115,8 @@ async function handler(request, deps = {}, obs = null) {
   const { owner, session, container } = auth;
   const actor = "owner:" + owner.accountId;
   const iso = new Date(nowMs).toISOString();
+  // Tadris+ P10-L (O14) — every change below is recorded (strict) BEFORE it happens; no record → 503 and nothing changes.
+  const change = (event, apply) => recordOwnerChange(container, event, apply, { write });
 
   try {
     if (method === "GET" && !action) {
@@ -190,24 +192,26 @@ async function handler(request, deps = {}, obs = null) {
         ...(initialAccess ? { accessRevisionId: initialAccess.revisionId, accessPreset: { ...initialAccess.preset }, accessGrants: initialAccess.grants.length, accessDenies: initialAccess.denies.length } : {}),
         createdAt: iso, createdBy: actor, updatedAt: iso
       };
-      if (initialAccess) await writeRevision(container, initialAccess);   // an orphan if the account below is refused (harmless)
-      const created = await createTeacherAccount(container, account);
-      if (!created.ok) {
-        // Create-only: a second (even concurrent) import finds the account already there and is refused.
-        if (importing && created.code === "ACCOUNT_EXISTS") return reply(409, { ok: false, code: "LEGACY_IMPORT_ALREADY_IMPORTED", error: LEGACY_REFUSAL.ALREADY_IMPORTED });
-        return reply(409, { ok: false, code: "USERNAME_TAKEN", error: "اسم المستخدم مستخدم. اختر اسمًا آخر." });
-      }
-      await writeInvitationPointer(container, inv.token, accountId);
-      let profileCopied = false;
-      if (importing) { try { profileCopied = await copyLegacyProfile(container, env, iso); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
-      await audit(container, {
+      let profile = false;   // read BEFORE the record, so the record says whether the workspace profile is copied (best effort)
+      if (importing) { try { profile = await legacyProfileDoc(container, env, iso); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
+      return await change({
         actor, action: importing ? "owner.teacher.legacy-imported" : "owner.teacher.created", targetType: "teacher-account", targetId: accountId, targetLabel: account.username,
-        ...(importing ? { details: { profileCopied } } : (initialAccess || trialDays) ? { details: {
+        ...(importing ? { details: { profileCopied: Boolean(profile) } } : (initialAccess || trialDays) ? { details: {
           ...(initialAccess ? { revisionId: initialAccess.revisionId, preset: initialAccess.preset, ...(initialAccess.grants.length || initialAccess.denies.length ? { grants: initialAccess.grants, denies: initialAccess.denies } : {}) } : {}),
           ...(trialDays ? { trialDays, trialEndsAt: new Date(account.trial.endsAtMs).toISOString() } : {})
         } } : {})
+      }, async () => {
+        if (initialAccess) await writeRevision(container, initialAccess);   // an orphan if the account below is refused (harmless)
+        const created = await createTeacherAccount(container, account);
+        if (!created.ok) {
+          // Create-only: a second (even concurrent) import finds the account already there and is refused.
+          if (importing && created.code === "ACCOUNT_EXISTS") return reply(409, { ok: false, code: "LEGACY_IMPORT_ALREADY_IMPORTED", error: LEGACY_REFUSAL.ALREADY_IMPORTED });
+          return reply(409, { ok: false, code: "USERNAME_TAKEN", error: "اسم المستخدم مستخدم. اختر اسمًا آخر." });
+        }
+        await writeInvitationPointer(container, inv.token, accountId);
+        if (profile) { try { await createOnly(container, profileDocName(LEGACY_TEACHER_ACCOUNT_ID), profile); } catch (e) { obs?.logWarn("owner.teachers.legacy_profile_copy_failed", { reason: String(e?.code || "error") }); } }
+        return reply(201, { ok: true, teacher: ownerView(account, nowMs), invitation: invitationOut(inv.token, inv.record) });
       });
-      return reply(201, { ok: true, teacher: ownerView(account, nowMs), invitation: invitationOut(inv.token, inv.record) });
     }
 
     const accountId = String(body.accountId || "");
@@ -219,30 +223,33 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "reinvite" && current.credential) return reply(409, { ok: false, code: "ALREADY_ACTIVE", error: "المعلم وضع كلمة مروره. استخدم «إعادة تعيين كلمة المرور»." });
       if (current.status === "suspended") return reply(409, { ok: false, code: "SUSPENDED", error: "الحساب موقوف. أعد تفعيله أولًا." });
       const inv = newInvitation(action === "reset" ? "reset" : "invite", nowMs);
-      const next = await mutateTeacherAccount(container, accountId, a => ({
-        ...(action === "reset" ? withNoTeacherSessions(a) : a), invitation: inv.record, updatedAt: iso,
-        ...(action === "reset" ? { credential: null, authVersion: Number(a.authVersion) + 1 } : {})
-      }));
-      await writeInvitationPointer(container, inv.token, accountId);
-      await audit(container, { actor, action: action === "reset" ? "owner.teacher.password-reset" : "owner.teacher.reinvited", targetType: "teacher-account", targetId: accountId, targetLabel: current.username });
-      return reply(200, { ok: true, teacher: ownerView(next, nowMs), invitation: invitationOut(inv.token, inv.record) });
+      return await change({ actor, action: action === "reset" ? "owner.teacher.password-reset" : "owner.teacher.reinvited", targetType: "teacher-account", targetId: accountId, targetLabel: current.username }, async () => {
+        const next = await mutateTeacherAccount(container, accountId, a => ({
+          ...(action === "reset" ? withNoTeacherSessions(a) : a), invitation: inv.record, updatedAt: iso,
+          ...(action === "reset" ? { credential: null, authVersion: Number(a.authVersion) + 1 } : {})
+        }));
+        await writeInvitationPointer(container, inv.token, accountId);
+        return reply(200, { ok: true, teacher: ownerView(next, nowMs), invitation: invitationOut(inv.token, inv.record) });
+      });
     }
 
     if (action === "extend-trial" || action === "end-trial") {
       if (!isTrial(current)) return reply(409, { ok: false, code: "NOT_A_TRIAL", error: "هذا الحساب دائم وليس حسابًا تجريبيًا." });
       let days = null;
       if (action === "extend-trial") { days = validTrialDays(body.days); if (!days) return bad("TRIAL_DAYS_INVALID", TRIAL_DAYS_ERROR); }
-      const next = await mutateTeacherAccount(container, accountId, a => {
-        if (!isTrial(a)) { const e = new Error("not a trial"); e.code = "NOT_A_TRIAL"; throw e; }
-        return action === "end-trial"
-          ? { ...a, trial: null, trialConvertedAt: iso, updatedAt: iso }
-          : { ...a, trial: extendedTrial(a.trial, days, nowMs), updatedAt: iso };
-      });
-      await audit(container, {
+      const planned = days ? extendedTrial(current.trial, days, nowMs) : null;   // what the record states; the write recomputes it
+      return await change({
         actor, action: action === "end-trial" ? "owner.teacher.trial-converted" : "owner.teacher.trial-extended", targetType: "teacher-account", targetId: accountId, targetLabel: current.username,
-        ...(days ? { details: { days, trialEndsAt: new Date(next.trial.endsAtMs).toISOString() } } : {})
+        ...(days ? { details: { days, trialEndsAt: new Date(planned.endsAtMs).toISOString() } } : {})
+      }, async () => {
+        const next = await mutateTeacherAccount(container, accountId, a => {
+          if (!isTrial(a)) { const e = new Error("not a trial"); e.code = "NOT_A_TRIAL"; throw e; }
+          return action === "end-trial"
+            ? { ...a, trial: null, trialConvertedAt: iso, updatedAt: iso }
+            : { ...a, trial: extendedTrial(a.trial, days, nowMs), updatedAt: iso };
+        });
+        return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
       });
-      return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
     }
 
     if (action === "suspend" || action === "reactivate" || action === "end-sessions" || action === "update") {
@@ -253,14 +260,15 @@ async function handler(request, deps = {}, obs = null) {
         if (problem) return bad(problem, problem === "EMAIL_INVALID" ? "البريد الإلكتروني غير صالح." : "اسم العرض مطلوب (60 حرفًا على الأكثر).");
       }
       const reason = action === "suspend" ? text(body.reason, MAX_SUSPEND_REASON) : "";
-      const next = await mutateTeacherAccount(container, accountId, a => {
-        if (action === "suspend") return { ...withNoTeacherSessions(a), status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, suspendedReason: reason, updatedAt: iso };
-        if (action === "reactivate") return { ...a, status: a.credential ? "active" : "invited", suspendedAt: null, suspendedReason: null, updatedAt: iso };
-        if (action === "end-sessions") return { ...withNoTeacherSessions(a), authVersion: Number(a.authVersion) + 1, updatedAt: iso };
-        return { ...a, ...fields, updatedAt: iso };
+      return await change({ actor, action: "owner.teacher." + action, targetType: "teacher-account", targetId: accountId, targetLabel: current.username, ...(reason ? { details: { reason } } : {}) }, async () => {
+        const next = await mutateTeacherAccount(container, accountId, a => {
+          if (action === "suspend") return { ...withNoTeacherSessions(a), status: "suspended", authVersion: Number(a.authVersion) + 1, suspendedAt: iso, suspendedReason: reason, updatedAt: iso };
+          if (action === "reactivate") return { ...a, status: a.credential ? "active" : "invited", suspendedAt: null, suspendedReason: null, updatedAt: iso };
+          if (action === "end-sessions") return { ...withNoTeacherSessions(a), authVersion: Number(a.authVersion) + 1, updatedAt: iso };
+          return { ...a, ...fields, updatedAt: iso };
+        });
+        return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
       });
-      await audit(container, { actor, action: "owner.teacher." + action, targetType: "teacher-account", targetId: accountId, targetLabel: current.username, ...(reason ? { details: { reason } } : {}) });
-      return reply(200, { ok: true, teacher: ownerView(next, nowMs) });
     }
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
