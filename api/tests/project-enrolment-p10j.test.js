@@ -73,6 +73,21 @@ describe("P10-J fail-first: the projects capability, not course assignment, deci
   });
 });
 
+describe("P10-J the projects capability alone: managing the class is neither needed nor enough", () => {
+  it("a teacher who manages classes but was refused the projects capability is refused 403; nothing stored changes", async () => {
+    const p = platform({ preset: "full-teaching", version: 2, denies: ["projects.tracker.manage"] });
+    const before = p.snapshot();
+    expect(denied(await p.post({ action: "setPrograms", classId: "c1", programCodes: [PROJECT], baseProgramCodes: [] }))).toBe(true);
+    expect(p.snapshot()).toBe(before);
+  });
+
+  it("«التعليم الكامل» v1 (projects, but not classes.class.manage) enrols its class", async () => {
+    const p = platform({ preset: "full-teaching", version: 1 });
+    expect((await p.post({ action: "setPrograms", classId: "c1", programCodes: [PROJECT], baseProgramCodes: [] })).status).toBe(200);
+    expect(p.codes()).toEqual([PROJECT]);
+  });
+});
+
 describe("P10-J what does not change", () => {
   it("«التعليم الكامل» (both capabilities) enrols and removes exactly as before", async () => {
     const p = platform({ preset: "full-teaching", version: 2 });
