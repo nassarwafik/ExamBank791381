@@ -7,6 +7,7 @@
 //   for the teacher already on it, labelled «(نسخة سابقة)».
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { findTeachersTable } from "./teacherTable.testkit";   // UX-O1: the teachers list is a table
 import OwnerApp from "./OwnerApp";
 import OwnerTeachers from "./OwnerTeachers";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
@@ -115,7 +116,7 @@ describe("P5-B4 the owner adds students to a teacher's class", () => {
 describe("P5-B4 preset versions in the console", () => {
   it("the new-teacher wizard offers current versions only", async () => {
     render(<OwnerTeachers token="owner-tok" onSignedOut={vi.fn()} />);
-    await screen.findByRole("list", { name: "المعلمون" });
+    await findTeachersTable();
     await waitFor(() => expect(calls.some(c => c.url === "/api/owner-access")).toBe(true));
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.new" } });

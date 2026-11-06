@@ -3,8 +3,9 @@
 // account's default is shown; «تغيير الصلاحيات» picks a preset and saves it with the revision the screen was opened on; a
 // STEP_UP_REQUIRED answer asks for the code and retries; a conflict is shown as worded.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import OwnerTeachers from "./OwnerTeachers";
+import { findTeachersTable, teacherGroups, teacherAction, teacherActionLabels } from "./teacherTable.testkit";   // UX-O1: the list is a table
 import type { ManagedTeacher, AccessPreset } from "./ownerApi";
 
 type Call = { url: string; method: string; body: unknown };
@@ -44,9 +45,10 @@ describe("P3-A owner — teacher capabilities", () => {
     ] } });
     routes["GET /api/owner-access"] = () => ({ status: 200, body: { ok: true, mode: "legacy", presets: PRESETS } });
     show();
-    const items = within(await screen.findByRole("list", { name: "المعلمون" })).getAllByRole("listitem");
+    const items = teacherGroups(await findTeachersTable());
     const text = (name: string) => items.find(i => i.textContent!.includes(name))!.textContent!;
-    expect(await screen.findAllByRole("button", { name: "تغيير الصلاحيات" })).toHaveLength(3);
+    await waitFor(() => expect(teacherActionLabels("سارة")).toContain("تغيير الصلاحيات"));
+    for (const name of ["وفيق", "عمر"]) expect(teacherActionLabels(name)).toContain("تغيير الصلاحيات");
     expect(text("سارة")).toContain("الصلاحيات: لم تُحدَّد بعد");
     expect(text("وفيق")).toContain("الصلاحيات: الوصول الحالي (افتراضي)");
     expect(text("عمر")).toContain("الصلاحيات: التعلّم فقط (مع تعديلات)");
@@ -57,7 +59,9 @@ describe("P3-A owner — teacher capabilities", () => {
     routes["GET /api/owner-access"] = () => ({ status: 200, body: { ok: true, mode: "legacy", presets: PRESETS } });
     routes["POST /api/owner-access/assign"] = () => ({ status: 200, body: { ok: true, accountId: "t_00112233445566aa", access: { revisionId: "ar_000000002_0011223344556677", preset: { id: "full-teaching", version: 1 }, grants: 0, denies: 0 }, capabilities: [] } });
     show();
-    fireEvent.click(await screen.findByRole("button", { name: "تغيير الصلاحيات" }));
+    await findTeachersTable();
+    await waitFor(() => expect(teacherActionLabels("سارة")).toContain("تغيير الصلاحيات"));
+    teacherAction("سارة", "تغيير الصلاحيات");
     const group = screen.getByRole("group", { name: "صلاحيات سارة" });
     expect(group.textContent).toContain("لن يتغير شيء الآن");
     const save = within(group).getByRole("button", { name: "حفظ الصلاحيات" }) as HTMLButtonElement;
@@ -78,7 +82,9 @@ describe("P3-A owner — teacher capabilities", () => {
       : { status: 403, body: { ok: false, code: "STEP_UP_REQUIRED", error: "هذا الإجراء يتطلب إدخال رمز التحقق مرة أخرى." } };
     routes["POST /api/owner-session/step-up"] = () => { stepped = true; return { status: 200, body: { ok: true } }; };
     show();
-    fireEvent.click(await screen.findByRole("button", { name: "تغيير الصلاحيات" }));
+    await findTeachersTable();
+    await waitFor(() => expect(teacherActionLabels("سارة")).toContain("تغيير الصلاحيات"));
+    teacherAction("سارة", "تغيير الصلاحيات");
     fireEvent.click(screen.getByRole("radio", { name: /التعلّم فقط/ }));
     fireEvent.click(screen.getByRole("button", { name: "حفظ الصلاحيات" }));
     fireEvent.change(await screen.findByLabelText(/هذا الإجراء حساس/), { target: { value: "123456" } });
@@ -90,8 +96,8 @@ describe("P3-A owner — teacher capabilities", () => {
   it("without the presets (the access API unavailable) the change button is not offered", async () => {
     routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [T()] } });
     show();
-    await screen.findByRole("list", { name: "المعلمون" });
-    expect(screen.queryByRole("button", { name: "تغيير الصلاحيات" })).toBeNull();
+    await findTeachersTable();
+    expect(teacherActionLabels("سارة")).not.toContain("تغيير الصلاحيات");
   });
 });
 

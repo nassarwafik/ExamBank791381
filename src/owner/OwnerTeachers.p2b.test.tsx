@@ -5,6 +5,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import OwnerTeachers from "./OwnerTeachers";
+import { findTeachersTable, teacherGroups } from "./teacherTable.testkit";
 import type { ManagedTeacher } from "./ownerApi";
 
 type Call = { url: string; method: string; body: unknown };
@@ -52,7 +53,7 @@ describe("P2-B owner — import of the shared-password workspace", () => {
     expect(await screen.findByRole("region", { name: "رابط الدعوة" })).toBeTruthy();
     expect(calls.find(c => c.url === "/api/owner-teachers/import-legacy")!.body).toEqual({ username: "w.nassar", displayName: "الأستاذ وفيق" });
     expect(screen.queryByRole("region", { name: "مساحتك القديمة" })).toBeNull();
-    const item = within(screen.getByRole("list", { name: "المعلمون" })).getByRole("listitem");
+    const [item] = teacherGroups(await findTeachersTable());   // UX-O1: a teacher is a row group of the table
     expect(within(item).getByText("المساحة القديمة")).toBeTruthy();
   });
 

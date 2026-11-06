@@ -6,6 +6,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import OwnerTeachers from "./OwnerTeachers";
+import { findTeachersTable, teacherGroups, teacherAction, teacherActionLabels } from "./teacherTable.testkit";
 import type { ManagedTeacher } from "./ownerApi";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: unknown };
@@ -33,7 +34,8 @@ const T = (over: Partial<ManagedTeacher> = {}): ManagedTeacher => ({
 const LINK = { invitationPath: "#/invite/" + "A".repeat(43), purpose: "invite" as const, expiresAt: "2026-11-04T10:00:00Z" };
 const RUNNING = { days: 14, endsAt: "2026-11-15T10:00:00Z", ended: false };
 const show = () => render(<OwnerTeachers token="owner-tok" onSignedOut={vi.fn()} />);
-const listItem = async () => within(await screen.findByRole("list", { name: "المعلمون" })).getAllByRole("listitem")[0];
+const listItem = async () => teacherGroups(await findTeachersTable())[0];   // UX-O1: a teacher is a row group of the table
+const openTrial = (name = "سارة") => teacherAction(name, "التجربة: تمديد أو تحويل");   // UX-O1: the trial controls open from the «⋯» menu
 
 describe("trial teacher accounts — owner console", () => {
   it("«معلم تجريبي جديد» opens the add-teacher wizard as a trial with a duration; the review says so; the request carries trialDays", async () => {
@@ -82,6 +84,7 @@ describe("trial teacher accounts — owner console", () => {
     routes["GET /api/owner-teachers"] = () => ({ status: 200, body: { ok: true, teachers: [T()] } });
     show();
     const item = await listItem();
+    expect(teacherActionLabels("سارة")).not.toContain("التجربة: تمديد أو تحويل");
     expect(within(item).queryByRole("button", { name: "تمديد التجربة" })).toBeNull();
     expect(within(item).queryByText(/تجريبي/)).toBeNull();
   });
@@ -91,6 +94,7 @@ describe("trial teacher accounts — owner console", () => {
     routes["POST /api/owner-teachers/extend-trial"] = () => ({ status: 200, body: { ok: true, teacher: T({ trial: { days: 21, endsAt: "2026-11-22T10:00:00Z", ended: false } }) } });
     show();
     const item = await listItem();
+    openTrial();
     fireEvent.click(within(item).getByRole("button", { name: "تمديد التجربة" }));
     fireEvent.change(within(item).getByLabelText("مدة التمديد"), { target: { value: "7" } });
     fireEvent.click(within(item).getByRole("button", { name: "تأكيد التمديد" }));
@@ -105,10 +109,11 @@ describe("trial teacher accounts — owner console", () => {
     routes["POST /api/owner-teachers/end-trial"] = () => ({ status: 200, body: { ok: true, teacher: T({ trial: null }) } });
     show();
     const item = await listItem();
+    openTrial();
     fireEvent.click(within(item).getByRole("button", { name: "تحويل إلى حساب دائم" }));
     expect(calls.some(c => c.url === "/api/owner-teachers/end-trial")).toBe(false);
     fireEvent.click(within(item).getByRole("button", { name: "تأكيد: تحويل إلى حساب دائم" }));
-    const after = await screen.findByRole("list", { name: "المعلمون" });
+    const after = await findTeachersTable();
     await vi.waitFor(() => expect(within(after).queryByRole("button", { name: "تمديد التجربة" })).toBeNull());
     expect(calls.find(c => c.url === "/api/owner-teachers/end-trial")!.body).toEqual({ accountId: "t_00112233445566aa" });
   });
@@ -118,6 +123,7 @@ describe("trial teacher accounts — owner console", () => {
     show();
     const item = await listItem();
     expect(within(item).getByText("انتهت التجربة")).toBeTruthy();
+    openTrial();
     expect(within(item).getByText(/لا يستطيع المعلم الدخول حتى تمدّدها/)).toBeTruthy();
   });
 
@@ -130,6 +136,7 @@ describe("trial teacher accounts — owner console", () => {
     routes["POST /api/owner-session/step-up"] = () => ({ status: 200, body: { ok: true } });
     show();
     const item = await listItem();
+    openTrial();
     fireEvent.click(within(item).getByRole("button", { name: "تحويل إلى حساب دائم" }));
     fireEvent.click(within(item).getByRole("button", { name: "تأكيد: تحويل إلى حساب دائم" }));
     const code = await screen.findByLabelText(/أدخل رمز التحقق/);
@@ -150,9 +157,10 @@ describe("trial teacher accounts — owner console", () => {
     expect(alert.textContent).toContain("حساب تجريبي ينتهي خلال أسبوع");
     expect(alert.textContent).toContain("سارة");
     expect(alert.textContent).not.toContain("عمر");
-    const items = within(screen.getByRole("list", { name: "المعلمون" })).getAllByRole("listitem");
+    const items = teacherGroups();
     const sara = items.find(i => i.textContent?.includes("سارة"))!;
     expect(within(sara).getByText("ينتهي خلال يومين").className).toContain("eb-owner-status--trial-soon");
+    openTrial();
     expect(within(sara).getByText(/ينتهي قريبًا/)).toBeTruthy();
   });
 

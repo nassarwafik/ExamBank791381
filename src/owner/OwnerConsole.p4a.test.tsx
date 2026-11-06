@@ -4,6 +4,7 @@
 // same section; the overview keeps the account security; «تغيير الصلاحيات» shows what a change adds and removes before saving.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { findTeachersTable, teacherAction, teacherActionLabels } from "./teacherTable.testkit";   // UX-O1: the teachers list is a table
 import OwnerApp from "./OwnerApp";
 import OwnerTeachers from "./OwnerTeachers";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
@@ -106,7 +107,9 @@ describe("P4-A «تغيير الصلاحيات» shows the change before it is s
       access: { revisionId: "ar_000000001_0011223344556677", preset: { id: "full-teaching", version: 1 }, grants: 0, denies: 0 }
     }] } });
     render(<OwnerTeachers token="owner-tok" onSignedOut={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "تغيير الصلاحيات" }));
+    await findTeachersTable();
+    await waitFor(() => expect(teacherActionLabels("سارة")).toContain("تغيير الصلاحيات"));
+    teacherAction("سارة", "تغيير الصلاحيات");
     fireEvent.click(screen.getByRole("radio", { name: /التعلّم فقط/ }));
     const diff = await screen.findByRole("region", { name: "تغيّر صلاحيات سارة" });
     expect(within(diff).getByRole("list", { name: "صلاحيات ستُضاف" }).textContent).toContain("التعلّم — رؤية المقررات");

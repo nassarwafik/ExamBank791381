@@ -5,6 +5,7 @@
 //   page was opened on · history with restore (a confirmation showing the difference) · suspension with a reason · step-up retry.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { findTeachersTable, teacherAction } from "./teacherTable.testkit";   // UX-O1: the teachers list is a table
 import OwnerApp from "./OwnerApp";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
 import { isOwnerLocation, ownerViewFromHash, ownerTeacherFromHash, ownerTeacherHash } from "./ownerRoute";
@@ -83,7 +84,8 @@ describe("P4-B1 the teacher's address", () => {
   it("«صفحة المعلم» in the list opens it at its address; a reload opens it; «كل المعلمين» returns to the list", async () => {
     window.location.hash = "#/owner/teachers";
     render(<OwnerApp />);
-    fireEvent.click(await screen.findByRole("button", { name: "صفحة سارة" }));
+    await findTeachersTable();
+    teacherAction("سارة", "صفحة المعلم");   // UX-O1: «صفحة المعلم» is in the teacher's «⋯» menu
     expect(await screen.findByRole("heading", { name: "سارة" })).toBeTruthy();
     expect(window.location.hash).toBe(ownerTeacherHash(SARA));
     expect(screen.getAllByRole("tab").map(t => t.textContent)).toEqual(["البيانات", "الصفوف", "الامتحانات", "الصلاحيات", "السجل", "الأمان"]);   // Tadris+ P5-B2 added «الصفوف», P6-D «الامتحانات»
