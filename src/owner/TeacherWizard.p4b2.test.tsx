@@ -7,6 +7,7 @@
 //   with «حفظ الصلاحيات».
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { findTeachersTable } from "./teacherTable.testkit";   // UX-O1: the teachers list is a table
 import OwnerTeachers from "./OwnerTeachers";
 import OwnerApp from "./OwnerApp";
 import { OWNER_TOKEN_KEY, type ManagedTeacher } from "./ownerApi";
@@ -63,7 +64,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 async function openWizard(onOpen?: (id: string) => void) {
   render(<OwnerTeachers token="owner-tok" onSignedOut={vi.fn()} onOpen={onOpen} />);
-  await screen.findByRole("list", { name: "المعلمون" });
+  await findTeachersTable();
   await waitFor(() => expect(calls.some(c => c.url === "/api/owner-access")).toBe(true));
   fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
 }

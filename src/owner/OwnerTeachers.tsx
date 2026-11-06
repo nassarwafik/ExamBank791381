@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { IconKey, IconPlus, IconWarning } from "../icons";
-import { ownerApi, ownerTeachersApi, ownerAccessApi, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset, type AccessCapability } from "./ownerApi";
+import ActionMenu from "../ui/ActionMenu";
+import { ownerApi, ownerTeachersApi, ownerAccessApi, ownerSchoolsApi, type ManagedTeacher, type TeacherAction, type TeacherInvitationLink, type ApiResult, type LegacyImportState, type TeacherDraft, type AccessPreset, type AccessCapability } from "./ownerApi";
 import DiffView from "../ui/DiffView";
 import InvitationPanel, { type Issued } from "./InvitationPanel";
 import TeacherWizard from "./TeacherWizard";
@@ -26,6 +27,10 @@ import TrialControls from "./TrialControls";
  *     security.
  *   - Trial accounts «معلم تجريبي جديد»: the same wizard, starting as a TRIAL account that ends after the chosen number of days (the
  *     server refuses its sign-in from then on); each trial teacher shows its end date, «تمديد التجربة» and «تحويل إلى حساب دائم».
+ * UX-O1 (docs/enterprise-ux-owner-console-o1.md) — the list is a TABLE: search (name, username, e-mail) and status filters with their
+ * counts, worked out in the browser on the list already loaded; every action of a teacher sits in its «⋯» menu with the same
+ * conditions and confirmations as before; a panel an action opens (permissions, a confirmation, the trial) is a full-width row
+ * right under the teacher. Each teacher is one row group named after them. On a phone the rows become compact blocks.
  * The server decides everything; a 401 signs the owner out.
  */
 
@@ -33,7 +38,17 @@ type Pending = { kind: "create"; draft: TeacherDraft } | { kind: "import"; draft
   | { kind: "access"; teacher: ManagedTeacher; preset: AccessPreset }
   | { kind: "trial"; teacher: ManagedTeacher; action: "extend-trial" | "end-trial"; days?: number };
 
-export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void }) {
+type Filter = "all" | "active" | "invited" | "suspended" | "trial";
+const FILTERS: { id: Filter; label: string; test: (t: ManagedTeacher) => boolean }[] = [
+  { id: "all", label: "الكل", test: () => true },
+  { id: "active", label: "نشط", test: t => t.status === "active" },
+  { id: "invited", label: "بانتظار كلمة المرور", test: t => t.status === "invited" },
+  { id: "suspended", label: "موقوف", test: t => t.status === "suspended" },
+  { id: "trial", label: "تجريبي", test: t => Boolean(t.trial) }
+];
+const searchable = (t: ManagedTeacher) => [t.displayName, t.fullName, t.username, t.email].join(" ").toLowerCase();
+
+export default function OwnerTeachers({ token, onSignedOut, onOpen, startCreate = null, onCreateStarted }: { token: string; onSignedOut: () => void; onOpen?: (accountId: string) => void; startCreate?: "permanent" | "trial" | null; onCreateStarted?: () => void }) {
   const [teachers, setTeachers] = useState<ManagedTeacher[] | null>(null);
   const [legacy, setLegacy] = useState<LegacyImportState | null>(null);
   const [showImport, setShowImport] = useState(false);
@@ -44,12 +59,25 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
   const [choosing, setChoosing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [showCreate, setShowCreate] = useState<false | "permanent" | "trial">(false);
+  // UX-O1 — «إضافة معلم» / «معلم تجريبي» pressed on «نظرة عامة» opens the same wizard here (this section mounts with the intent).
+  const [showCreate, setShowCreate] = useState<false | "permanent" | "trial">(startCreate || false);
   const [issued, setIssued] = useState<Issued | null>(null);
   const [confirming, setConfirming] = useState<{ action: TeacherAction; teacher: ManagedTeacher } | null>(null);
   const [stepUp, setStepUp] = useState<Pending | null>(null);
   const [stepCode, setStepCode] = useState("");
   const stepInput = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [trialFor, setTrialFor] = useState<string | null>(null);
+  const [schoolNames, setSchoolNames] = useState<Record<string, string>>({});
+
+  // the intent is used once: the console forgets it, so a later visit to «المعلمون» opens the list as usual
+  useEffect(() => { if (startCreate) onCreateStarted?.(); }, [startCreate, onCreateStarted]);
+  useEffect(() => {
+    let live = true;
+    void ownerSchoolsApi.list(token).then(r => { if (live && r.ok) setSchoolNames(Object.fromEntries(r.data.schools.map(x => [x.schoolId, x.name]))); });
+    return () => { live = false; };
+  }, [token]);
 
   useEffect(() => {
     let live = true;
@@ -143,7 +171,7 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
         <h2 id="eb-owner-teachers-title" className="eb-owner-h2">المعلمون</h2>
         {!showCreate && (
           <div className="eb-owner-actions">
-            <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate("permanent"); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>
+            <button type="button" className="eb-owner-primary" onClick={() => { setShowCreate("permanent"); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>
             <button type="button" className="eb-owner-secondary" onClick={() => { setShowCreate("trial"); setIssued(null); }}><IconPlus size={16} aria-hidden="true" /> معلم تجريبي جديد</button>
           </div>
         )}
@@ -190,54 +218,109 @@ export default function OwnerTeachers({ token, onSignedOut, onOpen }: { token: s
       {teachers === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل المعلمين…</p>}
       {teachers && teachers.length === 0 && <p className="eb-owner-hint">لا يوجد معلمون مُدارون بعد. أضف أول معلم، ثم أرسل له رابط الدعوة.</p>}
       {teachers && teachers.length > 0 && (
-        <ul className="eb-owner-teacher-list" aria-label="المعلمون">
-          {teachers.map(t => (
-            <li key={t.accountId} className="eb-owner-teacher">
-              <div className="eb-owner-teacher-main">
-                <strong><bdi>{t.displayName}</bdi></strong>
-                <span className="eb-owner-teacher-user" dir="ltr">{t.username}</span>
-                <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
-                {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
-                {t.trial && <span className={trialBadgeClass(t)}>{trialLabel(t)}</span>}
-              </div>
-              <p className="eb-owner-hint eb-owner-access-line">الصلاحيات: <strong>{accessLabel(t, presets)}</strong></p>
-              {choosing === t.accountId && (
-                <AccessChooser teacher={t} presets={presets} labels={capabilityLabels} enforcing={accessMode === "enforce"} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
+        <TeacherTable teachers={teachers} query={query} filter={filter} onQuery={setQuery} onFilter={setFilter}
+          row={t => (
+            <tbody key={t.accountId} className="eb-owner-teacher-group" aria-label={t.displayName}>
+              <tr className="eb-owner-teacher-row">
+                <th scope="row" className="eb-owner-teacher-who">
+                  {onOpen ? <button type="button" className="eb-owner-name-link" onClick={() => onOpen(t.accountId)}><bdi>{t.displayName}</bdi></button> : <strong><bdi>{t.displayName}</bdi></strong>}
+                  <span className="eb-owner-teacher-user" dir="ltr">{t.username}</span>
+                </th>
+                <td className="eb-owner-teacher-badges">
+                  <span className={"eb-owner-status eb-owner-status--" + t.status}>{STATUS_LABEL[t.status]}</span>
+                  {t.origin === "shared-password-workspace" && <span className="eb-owner-status eb-owner-status--legacy">المساحة القديمة</span>}
+                  {t.trial && <span className={trialBadgeClass(t)}>{trialLabel(t)}</span>}
+                </td>
+                <td className="eb-owner-teacher-access"><span className="eb-owner-cell-label">الصلاحيات: </span>{accessLabel(t, presets)}</td>
+                <td className="eb-owner-teacher-school">{t.schoolId && schoolNames[t.schoolId] ? schoolNames[t.schoolId] : <span className="eb-owner-muted">بلا مدرسة</span>}</td>
+                <td className="eb-owner-teacher-login">
+                  {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : <span className="eb-owner-muted">لم يدخل بعد</span>}
+                  {t.invitation && <small className="eb-owner-muted">رابط {t.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"} صالح حتى <bdi>{formatDate(t.invitation.expiresAt)}</bdi></small>}
+                </td>
+                <td className="eb-owner-teacher-menu">
+                  <ActionMenu label={"إجراءات " + t.displayName} disabled={busy}>
+                    {onOpen && <button type="button" className="eb-menu-item" onClick={() => onOpen(t.accountId)}>صفحة المعلم</button>}
+                    {presets.length > 0 && <button type="button" className="eb-menu-item" onClick={() => { setChoosing(t.accountId); setConfirming(null); setTrialFor(null); }}>تغيير الصلاحيات</button>}
+                    {t.trial && <button type="button" className="eb-menu-item" onClick={() => { setTrialFor(t.accountId); setChoosing(null); setConfirming(null); }}>التجربة: تمديد أو تحويل</button>}
+                    {actionsFor(t).map(action => (
+                      <button key={action} type="button" className={"eb-menu-item" + (action === "suspend" ? " is-danger" : "")}
+                        onClick={() => { setChoosing(null); setTrialFor(null); if (CONFIRM_TEXT[action]) setConfirming({ action, teacher: t }); else void run({ kind: "act", action, teacher: t }); }}>
+                        {ACTION_LABEL[action]}
+                      </button>
+                    ))}
+                  </ActionMenu>
+                </td>
+              </tr>
+              {(choosing === t.accountId || (trialFor === t.accountId && t.trial) || (confirming && confirming.teacher.accountId === t.accountId)) && (
+                <tr className="eb-owner-teacher-panel">
+                  <td colSpan={6}>
+                    {choosing === t.accountId && (
+                      <AccessChooser teacher={t} presets={presets} labels={capabilityLabels} enforcing={accessMode === "enforce"} busy={busy} onCancel={() => setChoosing(null)} onSave={preset => run({ kind: "access", teacher: t, preset })} />
+                    )}
+                    {trialFor === t.accountId && t.trial && (
+                      <div className="eb-owner-trial-panel" role="group" aria-label={"تجربة " + t.displayName}>
+                        <TrialControls teacher={t} busy={busy}
+                          onExtend={days => run({ kind: "trial", teacher: t, action: "extend-trial", days })}
+                          onMakePermanent={() => run({ kind: "trial", teacher: t, action: "end-trial" })} />
+                        <button type="button" className="eb-owner-link" onClick={() => setTrialFor(null)}>إغلاق</button>
+                      </div>
+                    )}
+                    {confirming && confirming.teacher.accountId === t.accountId && (
+                      <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + ACTION_LABEL[confirming.action]}>
+                        <p>{CONFIRM_TEXT[confirming.action]}</p>
+                        <div className="eb-owner-actions">
+                          <button type="button" className="eb-owner-secondary eb-owner-danger" disabled={busy} onClick={() => run({ kind: "act", action: confirming.action, teacher: t })}>تأكيد: {ACTION_LABEL[confirming.action]}</button>
+                          <button type="button" className="eb-owner-secondary" onClick={() => setConfirming(null)}>إلغاء</button>
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                </tr>
               )}
-              <p className="eb-owner-hint">
-                {t.lastLoginAt ? <>آخر دخول: <bdi>{formatDate(t.lastLoginAt)}</bdi></> : "لم يدخل بعد."}
-                {t.invitation && <> · رابط {t.invitation.purpose === "reset" ? "إعادة التعيين" : "الدعوة"} صالح حتى <bdi>{formatDate(t.invitation.expiresAt)}</bdi></>}
-              </p>
-              {t.trial && (
-                <TrialControls teacher={t} busy={busy}
-                  onExtend={days => run({ kind: "trial", teacher: t, action: "extend-trial", days })}
-                  onMakePermanent={() => run({ kind: "trial", teacher: t, action: "end-trial" })} />
-              )}
-              {confirming && confirming.teacher.accountId === t.accountId ? (
-                <div className="eb-owner-confirm" role="group" aria-label={"تأكيد " + ACTION_LABEL[confirming.action]}>
-                  <p>{CONFIRM_TEXT[confirming.action]}</p>
-                  <div className="eb-owner-actions">
-                    <button type="button" className="eb-owner-secondary eb-owner-danger" disabled={busy} onClick={() => run({ kind: "act", action: confirming.action, teacher: t })}>تأكيد: {ACTION_LABEL[confirming.action]}</button>
-                    <button type="button" className="eb-owner-secondary" onClick={() => setConfirming(null)}>إلغاء</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="eb-owner-actions">
-                  {onOpen && <button type="button" className="eb-owner-secondary" onClick={() => onOpen(t.accountId)} aria-label={"صفحة " + t.displayName}>صفحة المعلم</button>}
-                  {presets.length > 0 && choosing !== t.accountId && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => { setChoosing(t.accountId); setConfirming(null); }}>تغيير الصلاحيات</button>}
-                  {actionsFor(t).map(action => (
-                    <button key={action} type="button" className={"eb-owner-secondary" + (action === "suspend" ? " eb-owner-danger" : "")} disabled={busy}
-                      onClick={() => CONFIRM_TEXT[action] ? setConfirming({ action, teacher: t }) : run({ kind: "act", action, teacher: t })}>
-                      {ACTION_LABEL[action]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+            </tbody>
+          )} />
       )}
     </section>
+  );
+}
+
+/** UX-O1 — the toolbar (search + status filters with counts) and the table frame; each teacher's row group comes from `row`. */
+function TeacherTable({ teachers, query, filter, onQuery, onFilter, row }: { teachers: ManagedTeacher[]; query: string; filter: Filter; onQuery: (q: string) => void; onFilter: (f: Filter) => void; row: (t: ManagedTeacher) => ReactNode }) {
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f.id, teachers.filter(f.test).length])) as Record<Filter, number>, [teachers]);
+  const q = query.trim().toLowerCase();
+  const active = FILTERS.find(f => f.id === filter) || FILTERS[0];
+  const visible = teachers.filter(t => active.test(t) && (!q || searchable(t).includes(q)));
+  return (
+    <>
+      <div className="eb-owner-toolbar">
+        <label className="eb-owner-search">
+          <span className="eb-visually-hidden">بحث في المعلمين</span>
+          <input type="search" value={query} onChange={e => onQuery(e.target.value)} placeholder="بحث بالاسم أو اسم المستخدم أو البريد" />
+        </label>
+        <div className="eb-owner-chips" role="group" aria-label="تصفية حسب الحالة">
+          {FILTERS.filter(f => f.id === "all" || counts[f.id] > 0).map(f => (
+            <button key={f.id} type="button" className={"eb-owner-chip" + (filter === f.id ? " is-on" : "")} aria-pressed={filter === f.id} onClick={() => onFilter(f.id)}>
+              {f.label} <span className="eb-owner-chip-count">{counts[f.id]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="eb-visually-hidden" role="status">{visible.length === teachers.length ? teachers.length + " معلمين" : "يظهر " + visible.length + " من " + teachers.length}</p>
+      <div className="eb-table-wrap eb-owner-teacher-table-wrap">
+        <table className="eb-table eb-owner-teacher-table">
+          <caption className="eb-visually-hidden">المعلمون</caption>
+          <thead>
+            <tr><th scope="col">المعلم</th><th scope="col">الحالة</th><th scope="col">الصلاحيات</th><th scope="col">المدرسة</th><th scope="col">آخر دخول</th><th scope="col"><span className="eb-visually-hidden">الإجراءات</span></th></tr>
+          </thead>
+          {visible.map(row)}
+          {visible.length === 0 && (
+            <tbody>
+              <tr><td className="eb-table-empty" colSpan={6}>لا معلم يطابق البحث. <button type="button" className="eb-owner-link" onClick={() => { onQuery(""); onFilter("all"); }}>مسح التصفية</button></td></tr>
+            </tbody>
+          )}
+        </table>
+      </div>
+    </>
   );
 }
 

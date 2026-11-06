@@ -6,7 +6,7 @@ import { BRAND_NAME } from "../brand";
 import BrandMark from "../ui/BrandMark";
 import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
-import { IconKey, IconLock, IconLogout, IconUser, IconWarning, IconRefresh } from "../icons";
+import { IconKey, IconLock, IconLogout, IconUser, IconWarning, IconRefresh, IconPlus } from "../icons";
 import { ownerApi, readOwnerToken, writeOwnerToken, clearOwnerToken, type BootstrapState, type OwnerSessionView } from "./ownerApi";
 import { ownerViewFromHash, ownerTeacherFromHash, ownerSectionHash, ownerTeacherHash, OWNER_HOME_HASH, OWNER_SETUP_HASH, type OwnerSection, type OwnerView } from "./ownerRoute";
 import SubNav from "../ui/SubNav";
@@ -22,6 +22,7 @@ import OwnerLegacyClasses from "./OwnerLegacyClasses";   // Tadris+ P9-A2
 import OwnerTeacherWorkspace from "./OwnerTeacherWorkspace";
 import OwnerLoginHero from "./OwnerLoginHero";   // Tadris+ P10-B
 import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
+import OwnerOverview from "./OwnerOverview";         // UX-O1
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -197,14 +198,28 @@ const SECTIONS: { id: OwnerSection; label: string }[] = [
 
 /** Tadris+ P4-A — the console layout: the side menu (a named <nav>, the current section marked) and the section itself. */
 function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, onSignedOut, onView, onToken }: { token: string; view: OwnerSessionView; section: OwnerSection; teacherId: string | null; onSection: (s: OwnerSection) => void; onTeacher: (accountId: string) => void; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onToken: (token: string) => Promise<void> }) {
+  // UX-O1 — «إضافة معلم» / «معلم تجريبي» on «نظرة عامة» open the same wizard of «المعلمون» (one hand-off, then cleared).
+  const [createIntent, setCreateIntent] = useState<"permanent" | "trial" | null>(null);
+  const addTeacher = (kind: "permanent" | "trial") => { setCreateIntent(kind); onSection("teachers"); };
+  // UX-O1 — on a phone the section menu is a horizontal bar: keep the current section in view by scrolling the BAR only (never
+  // the page). On a wider screen the menu does not overflow and nothing moves.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const bar = navRef.current?.querySelector<HTMLElement>(".eb-subnav");
+    const current = bar?.querySelector<HTMLElement>("[aria-current='page']");
+    if (!bar || !current || bar.scrollWidth <= bar.clientWidth || typeof bar.scrollBy !== "function") return;
+    const b = bar.getBoundingClientRect(), c = current.getBoundingClientRect();
+    if (c.left < b.left) bar.scrollBy({ left: c.left - b.left - 12 });
+    else if (c.right > b.right) bar.scrollBy({ left: c.right - b.right + 12 });
+  }, [section]);
   return (
     <div className="eb-owner-console">
-      <aside className="eb-owner-console-nav">
+      <aside className="eb-owner-console-nav" ref={navRef}>
         <SubNav label="أقسام لوحة المالك" groups={[{ items: SECTIONS.map(s => ({ id: s.id, label: s.label })) }]} currentId={section} onSelect={id => onSection(id as OwnerSection)} />
       </aside>
       <div className="eb-owner-console-main">
-        {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} onToken={onToken} />}
-        {section === "teachers" && !teacherId && <OwnerTeachers token={token} onSignedOut={onSignedOut} onOpen={onTeacher} />}
+        {section === "home" && <OwnerHome token={token} view={view} onSignedOut={onSignedOut} onView={onView} onSection={onSection} onToken={onToken} onAddTeacher={addTeacher} />}
+        {section === "teachers" && !teacherId && <OwnerTeachers token={token} onSignedOut={onSignedOut} onOpen={onTeacher} startCreate={createIntent} onCreateStarted={() => setCreateIntent(null)} />}
         {section === "teachers" && teacherId && <OwnerTeacherDetails key={teacherId} token={token} accountId={teacherId} onSignedOut={onSignedOut} onBack={() => onSection("teachers")} />}
         {section === "access" && <OwnerAccessMode token={token} onSignedOut={onSignedOut} />}
         {section === "schools" && <OwnerSchools token={token} onSignedOut={onSignedOut} />}
@@ -216,7 +231,7 @@ function OwnerConsole({ token, view, section, teacherId, onSection, onTeacher, o
   );
 }
 
-function OwnerHome({ token, view, onSignedOut, onView, onSection, onToken }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onSection: (s: OwnerSection) => void; onToken: (token: string) => Promise<void> }) {
+function OwnerHome({ token, view, onSignedOut, onView, onSection, onToken, onAddTeacher }: { token: string; view: OwnerSessionView; onSignedOut: () => void; onView: (v: OwnerSessionView) => void; onSection: (s: OwnerSection) => void; onToken: (token: string) => Promise<void>; onAddTeacher: (kind: "permanent" | "trial") => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [stepUpFor, setStepUpFor] = useState<Pending>(null);
@@ -269,19 +284,24 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection, onToken }: { t
     await run(stepUpFor);
   }
 
-  return (
-    <section className="eb-owner-home" aria-labelledby="eb-owner-home-title">
-      <div className="eb-owner-panel">
-        <h1 id="eb-owner-home-title" className="auth-welcome">أهلًا، <bdi>{view.owner.displayName}</bdi></h1>
-        <p className="auth-sub">أنت داخل بحساب مالك المنصة (<bdi dir="ltr">{view.owner.username}</bdi>).{expiresText && <> تنتهي الجلسة عند الساعة <bdi>{expiresText}</bdi>.</>}</p>
-        <button type="button" className="eb-owner-secondary" onClick={signOut} disabled={busy}><IconLogout size={16} aria-hidden="true" /> تسجيل الخروج</button>
-      </div>
+  const [today] = useState(() => new Date().toLocaleDateString("ar", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
 
-      {/* Tadris+ P4-D — owner decision D19: the owner's own teacher workspace, one click away. */}
-      <OwnerTeacherWorkspace token={token} onSignedOut={onSignedOut} />
+  // UX-O1 — «نظرة عامة»: the numbers and «يحتاج انتباهك» (OwnerOverview), with the owner's own account beside them. Every control of
+  // the account is the one it was (sign-out, recovery codes, ending every session, password and authenticator, the teacher workspace).
+  const account = (
+    <>
+      <section className="eb-owner-panel" aria-labelledby="eb-owner-quick-title">
+        <h2 id="eb-owner-quick-title" className="eb-owner-h2">إجراءات سريعة</h2>
+        <div className="eb-owner-quick">
+          <button type="button" className="eb-owner-secondary" onClick={() => onSection("schools")}><IconPlus size={16} aria-hidden="true" /> إضافة مدرسة</button>
+          <button type="button" className="eb-owner-secondary" onClick={() => onSection("access")}>الصلاحيات</button>
+          <button type="button" className="eb-owner-secondary" onClick={() => onSection("exams")}>بنك الامتحانات</button>
+        </div>
+      </section>
 
-      <div className="eb-owner-panel">
-        <h2 className="eb-owner-h2">أمان الحساب</h2>
+      <section className="eb-owner-panel eb-owner-account" aria-labelledby="eb-owner-account-title">
+        <h2 id="eb-owner-account-title" className="eb-owner-h2">حسابك وأمانه</h2>
+        <p className="eb-owner-hint">أنت داخل بحساب مالك المنصة (<bdi dir="ltr">{view.owner.username}</bdi>).{expiresText && <> تنتهي الجلسة عند الساعة <bdi>{expiresText}</bdi>.</>}</p>
         <p className="eb-owner-hint">رموز الاسترداد المتبقية: <strong>{view.recoveryCodesRemaining}</strong> من 10.</p>
         {newCodes && (
           <div className="eb-owner-notice">
@@ -309,16 +329,27 @@ function OwnerHome({ token, view, onSignedOut, onView, onSection, onToken }: { t
         )}
         {error && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
         <OwnerCredentials token={token} username={view.owner.username} onToken={onToken} onSignedOut={onSignedOut} />
-      </div>
+        <button type="button" className="eb-owner-secondary" onClick={signOut} disabled={busy}><IconLogout size={16} aria-hidden="true" /> تسجيل الخروج</button>
+      </section>
 
-      <div className="eb-owner-panel">
-        <h2 className="eb-owner-h2">لوحة المالك</h2>
-        <div className="eb-owner-actions">
-          <button type="button" className="eb-owner-secondary" onClick={() => onSection("teachers")}>المعلمون</button>
-          <button type="button" className="eb-owner-secondary" onClick={() => onSection("access")}>الصلاحيات</button>
+      {/* Tadris+ P4-D — owner decision D19: the owner's own teacher workspace, one click away. */}
+      <OwnerTeacherWorkspace token={token} onSignedOut={onSignedOut} />
+    </>
+  );
+
+  return (
+    <section className="eb-owner-home" aria-labelledby="eb-owner-home-title">
+      <header className="eb-owner-home-head">
+        <div>
+          <h1 id="eb-owner-home-title" className="eb-owner-page-title">أهلًا، <bdi>{view.owner.displayName}</bdi></h1>
+          <p className="eb-owner-hint">نظرة عامة على المنصة · {today}</p>
         </div>
-        <p className="eb-owner-hint">مكتبة الواجبات الجاهزة تُضاف هنا في مرحلة قادمة.</p>
-      </div>
+        <div className="eb-owner-actions">
+          <button type="button" className="eb-owner-secondary" onClick={() => onAddTeacher("trial")}><IconPlus size={16} aria-hidden="true" /> معلم تجريبي</button>
+          <button type="button" className="eb-owner-primary" onClick={() => onAddTeacher("permanent")}><IconPlus size={16} aria-hidden="true" /> إضافة معلم</button>
+        </div>
+      </header>
+      <OwnerOverview token={token} onSignedOut={onSignedOut} onSection={onSection} aside={account} />
     </section>
   );
 }

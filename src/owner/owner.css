@@ -194,3 +194,101 @@
 /* Tadris+ P10-K — a reserved capability: not a choice (no route enforces it yet); its reason under the label */
 .eb-owner-check.is-reserved { color: var(--eb-muted); }
 .eb-owner-reserved { display: block; color: var(--eb-muted); font-size: var(--eb-fs-12); margin-inline-start: var(--eb-space-5); }
+
+/* ── UX-O1 (docs/enterprise-ux-owner-console-o1.md) — «نظرة عامة», the teachers table and the phone section bar. Tokens only. ── */
+.eb-owner-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2); padding: 9px 16px;
+  border: 1px solid var(--eb-primary); border-radius: var(--eb-r); background: var(--eb-primary); color: var(--eb-surface);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-owner-primary:hover:not(:disabled) { background: var(--eb-primary-strong); border-color: var(--eb-primary-strong); }
+.eb-owner-primary:focus-visible, .eb-owner-chip:focus-visible, .eb-owner-name-link:focus-visible, .eb-owner-search input:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
+.eb-owner-small { padding: 6px 12px; font-size: var(--eb-fs-13); }
+.eb-owner-muted { color: var(--eb-muted); }
+
+/* «نظرة عامة» */
+.eb-owner-home-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--eb-space-3); flex-wrap: wrap; }
+.eb-owner-page-title { margin: 0 0 var(--eb-space-1); font-size: var(--eb-fs-24); color: var(--eb-text-heading); }
+.eb-owner-kpis { width: 100%; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.eb-owner-kpis .eb-kpi { padding: var(--eb-space-4) var(--eb-space-3); }
+@media (max-width: 1180px) {
+  .eb-owner-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .eb-owner-kpis .eb-kpi:nth-child(3n + 1) { border-inline-start: 0; }
+  .eb-owner-kpis .eb-kpi:nth-child(n + 4) { border-block-start: 1px solid var(--eb-line); }
+}
+@media (max-width: 639px) {
+  .eb-owner-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eb-owner-kpis .eb-kpi { border-inline-start: 1px solid var(--eb-line); border-block-start: 0; }
+  .eb-owner-kpis .eb-kpi:nth-child(odd) { border-inline-start: 0; }
+  .eb-owner-kpis .eb-kpi:nth-child(n + 3) { border-block-start: 1px solid var(--eb-line); }
+}
+.eb-owner-mode { display: inline-block; padding: 2px 12px; border-radius: var(--eb-pill); font-size: var(--eb-fs-15); font-weight: var(--eb-fw-semibold); }
+.eb-owner-mode--legacy { background: var(--eb-surface-2); color: var(--eb-text); }
+.eb-owner-mode--observe { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+.eb-owner-mode--enforce { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-owner-mode--invalid { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-owner-overview-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--eb-space-4); align-items: start; }
+.eb-owner-overview-aside { display: flex; flex-direction: column; gap: var(--eb-space-4); min-width: 0; }
+.eb-owner-attention { align-items: stretch; }
+.eb-owner-count { display: inline-block; margin-inline-start: var(--eb-space-2); padding: 0 8px; border-radius: var(--eb-pill); background: var(--eb-warn-bg); color: var(--eb-warn-tx); font-size: var(--eb-fs-13); vertical-align: middle; }
+.eb-owner-attention-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.eb-owner-attention-item { display: flex; align-items: center; gap: var(--eb-space-3); padding: var(--eb-space-3) 0; border-top: 1px solid var(--eb-line); }
+.eb-owner-attention-item:first-child { border-top: 0; }
+.eb-owner-attention-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--eb-muted); }
+.eb-owner-attention-item.is-info .eb-owner-attention-dot { background: var(--eb-info); }
+.eb-owner-attention-item.is-warn .eb-owner-attention-dot { background: var(--eb-warn); }
+.eb-owner-attention-item.is-danger .eb-owner-attention-dot { background: var(--eb-danger); }
+.eb-owner-attention-item.is-primary .eb-owner-attention-dot { background: var(--eb-primary-strong); }
+.eb-owner-attention-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.eb-owner-attention-text strong { color: var(--eb-text-heading); }
+.eb-owner-attention-text span { color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.eb-owner-quick { width: 100%; display: grid; gap: var(--eb-space-2); }
+.eb-owner-quick .eb-owner-secondary { justify-content: flex-start; }
+@media (max-width: 1100px) { .eb-owner-overview-grid { grid-template-columns: 1fr; } }
+
+/* «المعلمون» — the toolbar and the table */
+.eb-owner-toolbar { width: 100%; display: flex; flex-wrap: wrap; gap: var(--eb-space-3); align-items: center; }
+.eb-owner-search { flex: 1 1 260px; min-width: 0; }
+.eb-owner-search input { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--eb-fs-14); color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r); padding: 9px 12px; }
+.eb-owner-chips { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.eb-owner-chip { font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); color: var(--eb-text); background: var(--eb-surface); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); padding: 5px 12px; cursor: pointer; }
+.eb-owner-chip.is-on { background: var(--eb-primary); border-color: var(--eb-primary); color: var(--eb-surface); }
+.eb-owner-chip-count { opacity: .75; margin-inline-start: 2px; font-variant-numeric: tabular-nums; }
+.eb-owner-teacher-table-wrap { border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); }
+.eb-owner-teacher-table thead th { background: var(--eb-surface-2); font-size: var(--eb-fs-13); }
+.eb-owner-teacher-table th, .eb-owner-teacher-table td { vertical-align: middle; padding: var(--eb-space-3); }
+.eb-owner-teacher-table tbody:last-of-type tr:last-child > * { border-bottom: 0; }
+.eb-owner-teacher-who { white-space: normal; }
+.eb-owner-name-link { display: block; background: none; border: 0; padding: 0; font: inherit; font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); cursor: pointer; text-align: start; }
+.eb-owner-name-link:hover { color: var(--eb-primary-strong); text-decoration: underline; text-underline-offset: 3px; }
+.eb-owner-teacher-badges { display: table-cell; }
+.eb-owner-teacher-badges .eb-owner-status { display: inline-block; margin: 2px 0 2px var(--eb-space-1); white-space: nowrap; }
+.eb-owner-teacher-login small { display: block; font-size: var(--eb-fs-12); }
+.eb-owner-cell-label { display: none; color: var(--eb-muted); }
+.eb-owner-teacher-menu { width: 48px; }
+.eb-owner-teacher-panel > td { background: var(--eb-surface-2); }
+.eb-owner-trial-panel { display: flex; flex-direction: column; gap: var(--eb-space-2); align-items: flex-start; }
+.eb-owner-legacy p { font-weight: var(--eb-fw-medium); }
+
+/* Phones: the section menu is a horizontal bar that scrolls; the table rows become compact blocks. */
+@media (max-width: 860px) {
+  /* minmax(0, 1fr): a plain 1fr column grows to the bar's unwrapped width and pushes the whole page sideways */
+  .eb-owner-console { grid-template-columns: minmax(0, 1fr); }
+  .eb-owner-console-nav { min-width: 0; max-width: 100%; }
+  .eb-owner-console-nav .eb-subnav { flex-direction: row; overflow-x: auto; scrollbar-width: none; max-width: 100%; padding-bottom: 2px; }
+  .eb-owner-console-nav .eb-subnav-group { display: flex; flex-direction: row; gap: var(--eb-space-2); flex-wrap: nowrap; }
+  .eb-owner-console-nav .eb-subnav-item { flex: none; width: auto; white-space: nowrap; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); padding: 6px 14px; }
+  .eb-owner-console-nav .eb-subnav-item.is-current { background: var(--eb-primary); border-color: var(--eb-primary); color: var(--eb-surface); }
+}
+@media (max-width: 640px) {
+  .eb-owner-teacher-table-wrap { border: 0; overflow: visible; }
+  .eb-owner-teacher-table, .eb-owner-teacher-table tbody, .eb-owner-teacher-table tr, .eb-owner-teacher-table th, .eb-owner-teacher-table td { display: block; width: 100%; box-sizing: border-box; }
+  .eb-owner-teacher-table thead { display: none; }
+  .eb-owner-teacher-group { border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); margin-bottom: var(--eb-space-2); background: var(--eb-surface); }
+  .eb-owner-teacher-row { position: relative; padding: var(--eb-space-3); padding-inline-end: 56px; }
+  .eb-owner-teacher-table .eb-owner-teacher-row > * { padding: 2px 0; border: 0; }
+  .eb-owner-teacher-menu { position: absolute; inset-inline-end: var(--eb-space-3); top: var(--eb-space-3); width: auto !important; }
+  .eb-owner-teacher-school, .eb-owner-teacher-login { font-size: var(--eb-fs-13); color: var(--eb-muted); }
+  .eb-owner-cell-label { display: inline; }
+  .eb-owner-teacher-panel > td { border-top: 1px solid var(--eb-line); border-radius: 0 0 var(--eb-r-lg) var(--eb-r-lg); padding: var(--eb-space-3); }
+}

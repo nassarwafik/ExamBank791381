@@ -6,6 +6,7 @@
 //   the teacher's library shows only the courses the server says this teacher may use (a failure → the list as before).
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { findTeachersTable } from "./teacherTable.testkit";   // UX-O1: the teachers list is a table
 import OwnerApp from "./OwnerApp";
 import LearningMaterialsPage from "../learning/LearningMaterialsPage";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
@@ -161,7 +162,7 @@ describe("P5-A2 the add-teacher wizard copies the courses", () => {
     routes["POST /api/owner-teachers/create"] = () => ({ status: 201, body: { ok: true, teacher: T("t_00112233445566cc", "جديد", { status: "invited", hasPassword: false, access: null }), invitation: { invitationPath: "#/invite/" + "A".repeat(43), purpose: "invite", expiresAt: "2026-11-05T10:00:00Z" } } });
     window.location.hash = "#/owner/teachers";
     render(<OwnerApp />);
-    await screen.findByRole("list", { name: "المعلمون" });
+    await findTeachersTable();
     await waitFor(() => expect(calls.some(c => c.url === "/api/owner-access")).toBe(true));
     fireEvent.click(screen.getByRole("button", { name: /إضافة معلم/ }));
     fireEvent.change(screen.getByLabelText(/^اسم المستخدم/), { target: { value: "t.new" } });
