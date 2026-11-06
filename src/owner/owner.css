@@ -328,7 +328,8 @@
 .eb-owner-savebar-state { margin: 0; flex: 1 1 200px; align-self: center; color: var(--eb-muted); }
 .eb-owner-savebar.is-dirty .eb-owner-savebar-state strong { color: var(--eb-warn-tx); }
 .eb-owner-savebar-reason { flex: 2 1 260px; margin: 0; }
-.eb-owner-savebar .eb-owner-actions { margin: 0; }
+.eb-owner-savebar .eb-owner-actions { margin: 0; flex-wrap: nowrap; }
+.eb-owner-savebar .auth-submit, .eb-owner-savebar .eb-owner-secondary { width: auto; white-space: nowrap; }
 
 /* «وضع الصلاحيات»: the stages, the readiness checklist and what observe recorded */
 .eb-owner-mode-steps { margin: var(--eb-space-2) 0; }
@@ -347,7 +348,15 @@
 @media (max-width: 860px) {
   .eb-owner-access-kpis { grid-template-columns: 1fr 1fr; }
   .eb-owner-savebar { position: sticky; bottom: 0; margin-inline: calc(-1 * var(--eb-space-1)); padding: var(--eb-space-2) var(--eb-space-3); padding-bottom: calc(var(--eb-space-2) + env(safe-area-inset-bottom, 0px)); }
-  .eb-owner-savebar-reason { flex-basis: 100%; order: 3; }
+  /* compact on phones: the state on one line, the two buttons on the next, the reason only when there is something to save */
+  .eb-owner-savebar { gap: var(--eb-space-2); align-items: center; }
+  .eb-owner-savebar-state { flex: 1 1 100%; font-size: var(--eb-fs-13); }
+  .eb-owner-savebar .eb-owner-actions { flex-wrap: nowrap; margin-inline-start: auto; }
+  .eb-owner-savebar .auth-submit, .eb-owner-savebar .eb-owner-secondary { width: auto; min-height: 40px; padding-block: 8px; padding-inline: 14px; }
+  .eb-owner-savebar-reason { flex: 1 1 140px; order: 2; }
+  .eb-owner-savebar-reason > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .eb-owner-savebar:not(.can-save) .eb-owner-savebar-reason { display: none; }
+  .eb-owner-savebar .eb-owner-actions { order: 3; }
   .eb-owner-section-head, .eb-owner-section-body { padding-inline: var(--eb-space-3); }
 }
 @media (prefers-reduced-motion: reduce) { .eb-owner-section-chevron { transition: none; } }

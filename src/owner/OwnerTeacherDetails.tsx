@@ -490,14 +490,14 @@ function AccessEditor({ teacher, catalog, history, effective, labels, busy, onSa
         </>
       ) : <p className="eb-owner-hint">اختر حزمة أساسية أولًا.</p>}
       <p className="eb-owner-hint">{modeNote(effective)}</p>
-      <div className={"eb-owner-savebar" + (dirty ? " is-dirty" : "")} role="region" aria-label="حفظ الصلاحيات">
+      <div className={"eb-owner-savebar" + (dirty ? " is-dirty" : "") + (unchanged ? "" : " can-save")} role="region" aria-label="حفظ الصلاحيات">
         <p className="eb-owner-savebar-state" aria-live="polite">
           {dirty ? <><strong>تغييرات غير محفوظة</strong>{picked && <span> · سيكسب <bdi>{added.length}</bdi> وسيفقد <bdi>{removed.length}</bdi></span>}</>
             : unchanged ? "لا تغييرات غير محفوظة" : "لم تُحفظ صلاحيات لهذا المعلم بعد"}
         </p>
         {picked && (
           <label className="auth-field eb-owner-savebar-reason"><span>سبب التغيير (اختياري، يظهر في السجل)</span>
-            <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} /></div>
+            <div className="auth-input"><input type="text" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} placeholder="سبب التغيير (اختياري)" /></div>
           </label>
         )}
         <div className="eb-owner-actions">
