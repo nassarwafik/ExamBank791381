@@ -91,9 +91,12 @@ const progressPage = () => api.mem.getJson("platform/learning-progress/u1.json")
 console.log("1. student journey");
 {
   const { ctx, page } = await session("student", { width: 1440, height: 900 });
-  await page.goto(origin + "/");
+  // UX-S2 (docs/enterprise-ux-student-s2.md): the portal is five linked views — «موادي التعليمية» is the «المواد» view (#/s/learning)
+  // and the Today Hub's «ابدأ القراءة» is on «اليوم» (#/s/today); the student goes from one to the other by its link.
+  await page.goto(origin + "/#/s/learning");
   await page.getByText("موادي التعليمية").first().waitFor({ timeout: 15000 });
   pass("portal", "the book is listed under «موادي التعليمية»");
+  await page.goto(origin + "/#/s/today");
   await page.getByRole("button", { name: "ابدأ القراءة" }).first().click();
   await readerReady(page);
   const first = await pageTitle(page);
@@ -217,10 +220,15 @@ async function audit(page, screen, vp) {
 }
 for (const vp of VIEWPORTS) {
   const s = await session("student", { width: vp.width, height: vp.height }, vp.touch);
-  await s.page.goto(origin + "/");
+  // UX-S2 (docs/enterprise-ux-student-s2.md): the portal is five linked views — «موادي التعليمية» is the «المواد» view (#/s/learning)
+  // and «اليوم» (#/s/today) holds the Today Hub: both views are audited.
+  await s.page.goto(origin + "/#/s/learning");
   await s.page.getByText("موادي التعليمية").first().waitFor({ timeout: 15000 });
   await s.page.getByText("موادي التعليمية").first().scrollIntoViewIfNeeded();
-  await audit(s.page, "student portal", vp);
+  await audit(s.page, "student portal «المواد»", vp);
+  await s.page.goto(origin + "/#/s/today");
+  await s.page.getByText("أكمل من حيث توقفت").first().waitFor({ timeout: 15000 });
+  await audit(s.page, "student portal «اليوم»", vp);
   await s.page.getByRole("button", { name: /تابع القراءة|ابدأ القراءة/ }).first().click();
   await readerReady(s.page);
   await audit(s.page, "student reader", vp);

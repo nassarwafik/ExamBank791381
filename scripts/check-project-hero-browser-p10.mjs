@@ -181,7 +181,8 @@ for (const vp of VIEWPORTS) {
   await ctx.addInitScript(([t, n]) => { sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", "student"); sessionStorage.setItem("examBankSessionDisplayName", n); }, [api.studentToken(firstStudent), firstStudent.displayName || "طالب"]);
   const page = await ctx.newPage();
   page.on("pageerror", e => fail("page error " + at, e.message));
-  await page.goto(origin + "/");
+  // UX-S2 (docs/enterprise-ux-student-s2.md): «مشاريعي» is the «المشاريع» view of the student portal — opened by its link.
+  await page.goto(origin + "/#/s/projects");
   await page.locator(".eb-prh").first().waitFor({ timeout: 20000 });
   await page.locator(".eb-prh").first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
