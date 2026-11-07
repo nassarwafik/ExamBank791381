@@ -16,6 +16,7 @@ import "../shell.css";
 import SchoolBadge from "../ui/SchoolBadge";
 import type { SchoolBadgeView } from "./schoolIdentity";
 import { QR_SCAN_HASH } from "../qrLogin/qrRoute";   // Tadris+ QR-2
+import { endStudentServerSession } from "../student/studentServerLogout";   // Tadris+ QR-3
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps
 // styling it) plus a small identity area (name · class) and the main content container. The top bar is the
@@ -39,7 +40,8 @@ type Props = { studentName: string; className?: string; onLogout: () => void; on
 export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, quickNav, school = null, children }: Props) {
   const install = useInstallEntry();
   // D1 — the explicit logout removes every device copy of unsent exam answers (a 401 keeps them for the next sign-in).
-  const logout = () => { clearAllJournals(); onLogout(); };
+  // Tadris+ QR-3 — the session also ends on the server (it leaves «الأجهزة المرتبطة» and its token is refused from then on).
+  const logout = () => { clearAllJournals(); endStudentServerSession(); onLogout(); };
   // Tadris+ QR-2 — «ربط جهاز آخر بالباركود»: this tab's student session approves a sign-in on another device (the QR page, its own surface).
   const openQrScan = () => { window.location.hash = QR_SCAN_HASH; };
   return (

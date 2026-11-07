@@ -8,6 +8,7 @@ import { IconWarning, IconCheck } from "../icons";
 import { approverToken, deviceLabel, qrApi, type QrInspect } from "./qrApi";
 import { OWNER_QR_SCAN_HASH, QR_SCAN_HASH, parseScannedQr, qrRouteFromHash, type QrNamespace } from "./qrRoute";
 import { cameraAvailable, decodeQr, decodeQrFile } from "./qrScanner";
+import LinkedDevices from "./LinkedDevices";   // Tadris+ QR-3
 
 /**
  * Tadris+ QR-2 — the SIGNED-IN device's page (design docs/enterprise-qr-login-qr1.md): scan the QR a new device shows, see what is
@@ -98,6 +99,8 @@ export default function QrApp() {
           )}
 
           {view.kind === "scan" && <Scanner note={view.note} onScanned={onScanned} />}
+          {/* Tadris+ QR-3 — the teacher / student account's own devices (the owner's are not listed here, owner decision). */}
+          {view.kind === "scan" && ns === "platform" && session && <LinkedDevices token={session} onSignedOut={() => { setSession(""); setView({ kind: "no-session" }); }} />}
 
           {(view.kind === "checking" || view.kind === "working") && <p className="auth-sub" role="status">لحظة…</p>}
 
