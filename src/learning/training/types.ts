@@ -56,6 +56,8 @@ export type TrainingResult = {
   totalMarks: number;
   percentage: number;
   review: TrainingReviewRow[];
+  /** Tadris+ O5 — the review was withheld (score only): an open official homework of the class, or no «رؤية مفاتيح الإجابة». */
+  reviewWithheld?: "assignment" | "keys";
 };
 export type TrainingSubmitResponse = {
   ok: true;
