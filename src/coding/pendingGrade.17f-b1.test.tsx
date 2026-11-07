@@ -153,11 +153,11 @@ describe("17F-B1 UX-card — the portal card uses the same resolver", () => {
   const lr = (over: R = {}) => ({ attemptNumber: 1, score: 0, totalMarks: 30, percentage: 0, submittedAt: "2026-10-03T10:00:00.000Z", manualReviewMarks: 30, gradingStatus: "pendingReview", teacherFeedback: "", ...over });
   const assignment = (latestResult: R) => ({ assignmentId: "a1", title: "واجب", instructions: "", openAt: "", dueAt: "", effectiveDueAt: "", sourceExamTitle: "", questionCount: 1, totalMarks: 30, durationMinutes: 0, attemptModelVersion: 3, attemptStatus: "submitted", hasActiveAttempt: false, availability: "open", dashboardState: "awaitingReview", gradingStatus: "pendingReview", attemptsUsed: 1, allowedAttempts: 1, canAttempt: false, latestScore: 0, latestPercentage: 0, latestResult, createdAt: "" });
   it("open coding grading → — / 30 on the card; complete 0 → 0/30", () => {
-    const { container, unmount } = render(<StudentAssignmentCard item={assignment(lr({ autoGradingStatus: "retrying", autoGradingPending: true })) as never} busy={false} onOpen={() => {}} />);
+    const { container, unmount } = render(<StudentAssignmentCard item={assignment(lr({ autoGradingStatus: "retrying", autoGradingPending: true })) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     expect(container.textContent).toMatch(/—\s*\/\s*30/);
     expect(container.textContent).not.toMatch(/(^|[^0-9.])0\s*\/\s*30/);
     unmount();
-    const { container: c2 } = render(<StudentAssignmentCard item={assignment(lr({ autoGradingStatus: "complete", gradingStatus: "final", manualReviewMarks: 0, finalized: true })) as never} busy={false} onOpen={() => {}} />);
+    const { container: c2 } = render(<StudentAssignmentCard item={assignment(lr({ autoGradingStatus: "complete", gradingStatus: "final", manualReviewMarks: 0, finalized: true })) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     expect(c2.textContent).toMatch(/(^|[^0-9.])0\s*\/\s*30/);
     expect(c2.textContent).not.toMatch(/—/);
   });

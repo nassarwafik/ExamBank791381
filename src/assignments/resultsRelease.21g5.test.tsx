@@ -38,7 +38,7 @@ describe("the student's view of an unreleased result", () => {
   it("the task card shows the reason, a dash, no percentage, no feedback — never a zero", () => {
     const item = { assignmentId: "a1", title: "واجب", instructions: "", openAt: "", dueAt: "2026-10-20T10:00:00Z", questionCount: 5, totalMarks: 20, attemptsUsed: 1, allowedAttempts: 1, availability: "closed", dashboardState: "completed", gradingStatus: "final", latestScore: null, latestPercentage: null,
       latestResult: { attemptNumber: 1, totalMarks: 20, submittedAt: "2026-10-15T10:00:00Z", gradingStatus: "final", resultsVisible: false, resultsVisibility: "manual" } };
-    render(<StudentAssignmentCard item={item as never} busy={false} onOpen={() => {}} />);
+    render(<StudentAssignmentCard item={item as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     const line = document.querySelector(".eb-sp-task-result") as HTMLElement;
     expect(line.textContent).toContain("—");
     expect(line.textContent).not.toMatch(/\b0\b|%|undefined|NaN/);

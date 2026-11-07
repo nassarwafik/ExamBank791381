@@ -137,7 +137,7 @@ describe("the student", () => {
   });
   it("the task card says the late window is open", () => {
     const item = { assignmentId: "a", title: "واجب", instructions: "", openAt: "", dueAt: iso(NOW), questionCount: 1, totalMarks: 10, availability: "open", attemptsUsed: 0, allowedAttempts: 1, canAttempt: true, latestScore: null, latestPercentage: null, createdAt: "", inLateWindow: true, lateUntil: iso(NOW + 24 * H), lateDeductionPercent: 10 } as Summary;
-    render(<StudentAssignmentCard item={item} busy={false} onOpen={() => {}} />);
+    render(<StudentAssignmentCard item={item} busy={false} onOpen={() => {}} now={Date.now()} />);
     expect(screen.getByTestId("card-late-window").textContent).toMatch(/^تسليم متأخر حتى .+ · خصم 10٪$/);
   });
 });

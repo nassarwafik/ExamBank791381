@@ -38,7 +38,9 @@ describe("D4 — per-question breakdown on the result card", () => {
     const r = mount(result());
     const details = await r.findByTestId("result-breakdown");
     expect(details.hasAttribute("open")).toBe(false);
-    expect(details.querySelector("summary")!.textContent).toBe("تفصيل العلامات حسب السؤال · ملاحظة واحدة من المعلم");
+    // UX-S3 (docs/enterprise-ux-student-s3.md §2.3): the summary keeps its title and now also says that it opens.
+    expect(details.querySelector(".iex-breakdown-title")!.textContent).toBe("تفصيل العلامات حسب السؤال · ملاحظة واحدة من المعلم");
+    expect(details.querySelector("[data-testid='breakdown-hint']")!.textContent).toBe("اضغط لعرض علامة كل سؤال");
     fireEvent.click(details.querySelector("summary")!);
     expect([...details.querySelectorAll("h3")].map(h => h.textContent)).toEqual(["القسم الأول", "القسم الثاني — تُحتسب فيه أفضل الإجابات حتى حدّ القسم"]);
     const rows = [...details.querySelectorAll("li")].map(li => [li.getAttribute("data-status"), li.querySelector(".iex-breakdown-mark")!.textContent, li.querySelector(".iex-breakdown-status")!.textContent]);
