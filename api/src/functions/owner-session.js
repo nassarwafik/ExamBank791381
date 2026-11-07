@@ -1,10 +1,11 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
-const { deleteBlob, mutateJsonWithRetry } = require("../lib/platform-storage");
+const { deleteBlob, mutateJsonWithRetry, listBlobNames, downloadManyJson } = require("../lib/platform-storage");
+const { safeDevice } = require("../lib/identity/qr-login");   // Tadris+ QR-4
 const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require("../lib/login-throttle");
 const { recordOwnerAuditEvent, recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite } = require("../lib/audit-log");   // Tadris+ P10-L
 const { verifyAndConsumeSecondFactor } = require("../lib/identity/owner-mfa");
-const { ownerSessionName, mutateOwnerAccount, newSessionId, createOnly } = require("../lib/identity/owner-store");
+const { ownerSessionName, mutateOwnerAccount, newSessionId, createOnly, OWNER_SESSION_PREFIX } = require("../lib/identity/owner-store");
 const { requireOwnerSession, stepUpValidUntilMs, stepUpDenial, createOwnerToken, OWNER_TOKEN_TTL_SECONDS, NO_STORE } = require("../lib/identity/owner-session");
 const { generateRecoveryCodes, remainingRecoveryCodes } = require("../lib/identity/recovery-codes");
 const { hashSecret, verifySecret } = require("../lib/identity/password-hash");
@@ -30,6 +31,11 @@ const { TOTP_PURPOSE } = require("../lib/identity/owner-mfa");
 //   After password / totp-confirm: authVersion + 1 ends every owner session, and THIS device gets a new session + token
 //   (owner decision: other devices end, this one stays). If that new session cannot be created the change still stands and
 //   the answer is { ok: true, signInAgain: true } — never access with the old credentials.
+//   Tadris+ QR-4 — «الأجهزة المرتبطة» for the owner (design docs/enterprise-qr-login-qr4.md, owner request):
+//   POST devices               → this owner's live sessions, newest first: { id (SHA-256 of the session id, never the id), via,
+//                                device (fixed words), createdAt, expiresAt, current }. Reads only.
+//   POST end-device { id }     (needs step-up) → that one session ends (its document is deleted: refused from the next request);
+//                                recorded strictly BEFORE it happens (P10-L). 404 when it is not one of this owner's live sessions.
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 const PENDING_TOTP_MS = 15 * 60 * 1000;
@@ -48,6 +54,21 @@ function view(owner, session) {
   };
 }
 
+const crypto = require("crypto");
+const ownerSessionHash = sid => crypto.createHash("sha256").update("tadris-owner-session|" + String(sid), "utf8").digest("hex");
+/** Tadris+ QR-4 — this owner's LIVE sessions (same account, current authVersion, unexpired), newest first. */
+async function liveOwnerSessions(container, owner, nowMs, deps) {
+  const names = await (deps.listBlobNames || listBlobNames)(container, OWNER_SESSION_PREFIX);
+  const docs = await (deps.downloadManyJson || downloadManyJson)(container, names);
+  return docs
+    .filter(d => d && d.accountId === owner.accountId && /^[a-f0-9]{32}$/.test(String(d.sid)) && d.authVersion === owner.authVersion && Number(d.expiresAtMs) > nowMs)
+    .sort((a, b) => Number(b.createdAtMs) - Number(a.createdAtMs));
+}
+const deviceView = (d, currentSid) => ({
+  id: ownerSessionHash(d.sid), via: d.factor === "qr" ? "qr" : "login", device: safeDevice(d.device),
+  createdAt: new Date(Number(d.createdAtMs)).toISOString(), expiresAt: new Date(Number(d.expiresAtMs)).toISOString(), current: d.sid === currentSid
+});
+
 async function readBody(request) {
   try { const b = await request.json(); return b && typeof b === "object" ? b : {}; } catch { return {}; }
 }
@@ -63,7 +84,8 @@ async function reissueThisDevice(container, account, session, nowMs, env) {
     const sid = newSessionId();
     const created = await createOnly(container, ownerSessionName(sid), {
       schemaVersion: 1, sid, accountId: account.accountId, authVersion: account.authVersion,
-      createdAtMs: nowMs, expiresAtMs: nowMs + OWNER_TOKEN_TTL_SECONDS * 1000, stepUpAtMs: Number(session.stepUpAtMs) || 0, factor: session.factor
+      createdAtMs: nowMs, expiresAtMs: nowMs + OWNER_TOKEN_TTL_SECONDS * 1000, stepUpAtMs: Number(session.stepUpAtMs) || 0, factor: session.factor,
+      device: safeDevice(session.device)   // Tadris+ QR-4 — the same device keeps its words
     });
     if (!created) return null;
     const { token } = createOwnerToken({ accountId: account.accountId, sid, authVersion: account.authVersion }, { nowMs, env });
@@ -224,6 +246,26 @@ async function handler(request, deps = {}, obs = null) {
       await (deps.clearLoginThrottle || clearLoginThrottle)(container, throttleId, clientId, deps);
       await auditBestEffort(container, { actor, action: "owner.step-up.succeeded", targetType: "owner-session", targetId: owner.accountId, details: { factor: factor.method } });
       return reply(200, view(factor.account, updated));
+    }
+
+    // Tadris+ QR-4 — «الأجهزة المرتبطة»: list (reads only) and end one (step-up, recorded first).
+    if (action === "devices") {
+      const live = await liveOwnerSessions(container, owner, nowMs, deps);
+      return reply(200, { ok: true, role: "owner", devices: live.map(d => deviceView(d, session.sid)), untracked: false });
+    }
+    if (action === "end-device") {
+      const denial = stepUpDenial(session, nowMs);
+      if (denial) return denial;
+      const body = await readBody(request);
+      const id = String(body.id || "");
+      if (!/^[a-f0-9]{64}$/.test(id)) return reply(404, { ok: false, code: "DEVICE_NOT_FOUND", error: "لم يعد هذا الجهاز مرتبطًا بحسابك." });
+      const target = (await liveOwnerSessions(container, owner, nowMs, deps)).find(d => ownerSessionHash(d.sid) === id);
+      if (!target) return reply(404, { ok: false, code: "DEVICE_NOT_FOUND", error: "لم يعد هذا الجهاز مرتبطًا بحسابك." });
+      const current = target.sid === session.sid;
+      return await recordOwnerChange(container, { actor, action: "owner.session.device-ended", targetType: "owner-session", targetId: owner.accountId, details: { current, device: safeDevice(target.device) } }, async () => {
+        await deleteBlob(container, ownerSessionName(target.sid));
+        return reply(200, { ok: true, ended: true, current });
+      }, { write });
     }
 
     if (CREDENTIALS_ACTIONS.has(action)) return await changeCredentials(action, request, { owner, session, container, actor, auditBestEffort, write, nowMs, env, deps });

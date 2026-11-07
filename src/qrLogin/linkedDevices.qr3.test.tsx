@@ -84,13 +84,37 @@ describe("QR-3 «الأجهزة المرتبطة»", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("سجّل الدخول إلى تدريس+ على هذا الجهاز أولًا");
   });
 
-  it("the owner's QR page shows no device list (owner decision)", async () => {
+  // Tadris+ QR-4 (owner request) — the owner's QR page lists the owner's devices too, through the owner's routes only.
+  it("the owner's QR page lists the owner's devices with the owner token only", async () => {
+    sessionStorage.setItem("tadrisOwnerToken", "owner-session");
+    sessionStorage.setItem("examBankBuilderToken", "teacher-session-must-not-be-sent");
+    window.history.replaceState(null, "", "/#/owner-qr-scan");
+    answer("/api/owner-session/devices", { status: 200, body: { ...devices(), role: "owner" } });
+    render(<QrApp />);
+    const section = await screen.findByRole("region", { name: "الأجهزة المرتبطة" });
+    expect(await within(section).findAllByRole("listitem")).toHaveLength(2);
+    expect(calls.map(c => [c.url, c.headers["x-owner-token"], c.headers.Authorization])).toEqual([["/api/owner-session/devices", "owner-session", undefined]]);
+  });
+
+  it("ending an owner device asks for the authenticator code when the server requires a step-up, then ends the same device", async () => {
     sessionStorage.setItem("tadrisOwnerToken", "owner-session");
     window.history.replaceState(null, "", "/#/owner-qr-scan");
+    answer("/api/owner-session/devices", { status: 200, body: { ...devices(), role: "owner" } }, { status: 200, body: { ...devices(), role: "owner", devices: [devices().devices[1]] } });
+    answer("/api/owner-session/end-device", { status: 403, body: { ok: false, code: "STEP_UP_REQUIRED", error: "هذا الإجراء يتطلب إدخال رمز التحقق مرة أخرى." } }, { status: 200, body: { ok: true, ended: true, current: false } });
+    answer("/api/owner-session/step-up", { status: 200, body: { ok: true } });
     render(<QrApp />);
-    await screen.findByRole("heading", { name: "ربط جهاز آخر بحساب المالك" });
-    expect(screen.queryByRole("region", { name: "الأجهزة المرتبطة" })).toBeNull();
-    expect(calls.filter(c => c.url.startsWith("/api/session-devices"))).toEqual([]);
+    fireEvent.click(await screen.findByRole("button", { name: "إنهاء" }));
+    fireEvent.change(await screen.findByLabelText(/رمز التحقق من تطبيق المصادقة/), { target: { value: "123 456" } });
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد وإنهاء الجلسة" }));
+    expect((await screen.findByText(/انتهت جلسة/)).textContent).toContain("Edge على Windows");
+    expect(calls.map(c => [c.url, c.body])).toEqual([
+      ["/api/owner-session/devices", {}],
+      ["/api/owner-session/end-device", { id: H("2") }],
+      ["/api/owner-session/step-up", { code: "123456" }],
+      ["/api/owner-session/end-device", { id: H("2") }],
+      ["/api/owner-session/devices", {}]
+    ]);
+    for (const c of calls) expect(c.headers.Authorization).toBeUndefined();
   });
 });
 

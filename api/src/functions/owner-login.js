@@ -1,5 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { deviceFromUserAgent } = require("../lib/identity/qr-login");   // Tadris+ QR-4
 const { getContainer } = require("../lib/platform-storage");
 const { reserveLoginAttempt, clearLoginThrottle, clientIdFromRequest } = require("../lib/login-throttle");
 const { recordOwnerAuditEvent } = require("../lib/audit-log");
@@ -124,7 +125,9 @@ async function handler(request, deps = {}, obs = null) {
     const expiresAtMs = nowMs + OWNER_TOKEN_TTL_SECONDS * 1000;
     const created = await createOnly(container, ownerSessionName(sid), {
       schemaVersion: 1, sid, accountId: fresh.accountId, authVersion: fresh.authVersion,
-      createdAtMs: nowMs, expiresAtMs, stepUpAtMs: nowMs, factor: factor.method
+      createdAtMs: nowMs, expiresAtMs, stepUpAtMs: nowMs, factor: factor.method,
+      // Tadris+ QR-4 — the device words this sign-in saw (fixed vocabulary), for «الأجهزة المرتبطة»
+      device: deviceFromUserAgent(request.headers && typeof request.headers.get === "function" ? request.headers.get("user-agent") : "")
     });
     if (!created) return reply(503, { ok: false, code: "OWNER_AUTH_UNAVAILABLE", error: "تعذر تسجيل الدخول حاليًا." }, { "Retry-After": "1" });
     const { token } = createOwnerToken({ accountId: fresh.accountId, sid, authVersion: fresh.authVersion }, { nowMs, env });
