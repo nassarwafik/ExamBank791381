@@ -40,7 +40,12 @@ import path from "node:path";
 describe("UX-S2 — the views' CSS contract", () => {
   const css = readFileSync(path.join(process.cwd(), "src/student/student-portal-v2.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   it("a view's own display is scoped to :not([hidden]), so a hidden view is really display:none (the UA rule wins)", () => {
-    const viewRules = [...css.matchAll(/([^{}]*\.eb-sp-view(?![a-z-])[^{}]*)\{([^}]*display:[^}]*)\}/g)].map(m => m[1].trim());
+    // Only rules whose TARGET (the last compound of a selector) is a view container: a rule styling something INSIDE a view
+    // (e.g. «اليوم»'s install card) is not about the view's own display.
+    const target = (sel: string) => sel.trim().split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop() || "";
+    const viewRules = [...css.matchAll(/([^{}]*)\{([^}]*display:[^}]*)\}/g)]
+      .flatMap(m => m[1].split(",").map(x => x.trim()))
+      .filter(sel => /\.eb-sp-view(?![a-z-])/.test(target(sel)));
     expect(viewRules.length).toBeGreaterThan(1);
     for (const sel of viewRules) expect(sel, sel).toContain(":not([hidden])");
   });
