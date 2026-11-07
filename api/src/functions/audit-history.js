@@ -3,8 +3,8 @@ const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { tenantOf } = require("../lib/teacher-tenancy");
-const { getContainer, downloadJsonOrNull, listBlobNames } = require("../lib/platform-storage");
-const { AUDIT_PREFIX } = require("../lib/audit-log");
+const { getContainer, downloadJsonOrNull, listBlobNames, listBlobNamesPage } = require("../lib/platform-storage");
+const { AUDIT_PREFIX, AUDIT_INDEX_PREFIX, indexableId, eventKeyFromIndexName } = require("../lib/audit-log");
 const { toPublicAuditEvent } = require("../lib/audit-redact");
 
 // Roadmap #19 — builder-only reader over the append-only audit history written by audit-log.js.
@@ -72,6 +72,7 @@ async function handler(request, deps = {}, obs = null) {
   const getC = deps.getContainer || getContainer;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const lbn = deps.listBlobNames || listBlobNames;
+  const lbnp = deps.listBlobNamesPage || listBlobNamesPage;
   try {
     const auth = await authFn(request, deps);
     if (!auth.ok) return auth.response;               // 401, no student access
@@ -84,21 +85,51 @@ async function handler(request, deps = {}, obs = null) {
     const limit = clampLimit(url.searchParams.get("limit"));
     const filters = parseFilters(url);
 
-    // Newest-first by blob name (ISO stamp) WITHOUT downloading; then download only the newest window.
-    const names = (await lbn(container, AUDIT_PREFIX)).sort((a, b) => String(b).localeCompare(String(a)));
-    const window = names.slice(0, HARD_MAX);
-
+    // Tadris+ P7-B1 / 21G.0 — whose event this is: the actor, or the teacher it is about (forTeacher, D14).
+    const mine = stored => !tenant || String(stored.actor || "") === tenant || String(stored.forTeacher || "") === tenant;
     const events = [];
-    for (const name of window) {
-      const stored = await dl(container, name);
-      if (!stored) continue;
-      // Phase 21G.0 — teacher tenancy: a teacher reads only the record of their own actions — and, Tadris+ P7-B1 (D14), the events
-      // about them that they did not perform (`forTeacher`: the platform's administration read one of their students' conversations).
-      if (tenant && String(stored.actor || "") !== tenant && String(stored.forTeacher || "") !== tenant) continue;
-      const ev = toPublicAuditEvent(stored, eventIdFromName(name));
+    const seen = new Set();
+    const take = (stored, key) => {
+      seen.add(key);
+      const ev = toPublicAuditEvent(stored, key);
       if (matchesFilters(ev, filters)) events.push(ev);
-      if (events.length >= limit) break;
+    };
+
+    // Tadris+ O4 (docs/enterprise-teacher-activity-log-o4.md) — a teacher reads ONE page of their own index first (newest first,
+    // at most HARD_MAX pointers). The pointer only leads to the event; ownership is checked again on the event itself, so a pointer
+    // in the wrong place reveals nothing. A pointer whose event is missing is skipped.
+    if (tenant && indexableId(tenant)) {
+      const page = await lbnp(container, AUDIT_INDEX_PREFIX + tenant + "/", { maxPageSize: HARD_MAX });
+      for (const pointer of page.names) {
+        if (events.length >= limit) break;
+        const key = eventKeyFromIndexName(tenant, pointer);
+        if (!key || seen.has(key)) continue;
+        const stored = await dl(container, AUDIT_PREFIX + key + ".json");
+        if (!stored || !mine(stored)) continue;
+        take(stored, key);
+      }
     }
+
+    // Today's window — the only source for a user without a tenant, and for a teacher only while their index holds fewer than
+    // `limit` matches (events written before the index existed). Newest-first by blob name (ISO stamp) WITHOUT downloading; then
+    // download only the newest window.
+    if (events.length < limit) {
+      const names = (await lbn(container, AUDIT_PREFIX)).sort((a, b) => String(b).localeCompare(String(a)));
+      const window = names.slice(0, HARD_MAX);
+      for (const name of window) {
+        if (events.length >= limit) break;
+        const key = eventIdFromName(name);
+        if (seen.has(key)) continue;
+        const stored = await dl(container, name);
+        if (!stored) continue;
+        // Phase 21G.0 — teacher tenancy: a teacher reads only the record of their own actions — and, Tadris+ P7-B1 (D14), the events
+        // about them that they did not perform (`forTeacher`: the platform's administration read one of their students' conversations).
+        if (!mine(stored)) continue;
+        take(stored, key);
+      }
+    }
+    // One order for both sources: the event key starts with its ISO stamp, so it sorts chronologically.
+    events.sort((x, y) => String(y.eventId || "").localeCompare(String(x.eventId || "")));
 
     return {
       status: 200,
