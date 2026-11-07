@@ -680,6 +680,56 @@
       "page": "student-progress",
       "viewport": "all",
       "reason": "Tadris+ UX-S2 (approved design docs/enterprise-ux-student-s2.md) — new scene: the «التقدم» view of the student portal («تقدّمي وقوتي» then «إنجازات الصف», full width, view bar from 768px); the base build has no views and shows its whole page."
+    },
+    {
+      "page": "login",
+      "viewport": "all",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the shared teacher / student sign-in card gains «الدخول بالباركود» under the password form (a quiet full-width secondary button); the form itself is unchanged. The QR panel opens only on click."
+    },
+    {
+      "page": "login-error",
+      "viewport": "all",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the shared teacher / student sign-in card gains «الدخول بالباركود» under the password form (a quiet full-width secondary button); the form itself is unchanged. The QR panel opens only on click."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "desktop",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "tablet",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-learning",
+      "viewport": "desktop",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-learning",
+      "viewport": "tablet",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-tasks",
+      "viewport": "desktop",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-tasks",
+      "viewport": "tablet",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-progress",
+      "viewport": "desktop",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-progress",
+      "viewport": "tablet",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
     }
   ]
 }

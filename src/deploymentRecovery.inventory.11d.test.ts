@@ -5,7 +5,7 @@
 // changing its key, or reusing a key fails here by name.
 import { describe, it, expect } from "vitest";
 
-const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const RAW = import.meta.glob(["./App.tsx", "./teacher/TeacherIdentity.tsx", "./AssignmentReview.tsx", "./TeacherPlatform.tsx", "./StudentPortal.tsx", "./reports/ReportsCenter.tsx", "./learning/LearningMaterialsPage.tsx", "./learning/training/LearningReaderWithTraining.tsx", "./ui/useDeferredConfirm.tsx", "./learning/reader/LearningReader.tsx", "./learning/search/LibrarySearch.tsx", "./owner/OwnerEntry.tsx", "./invite/InviteEntry.tsx", "./handoff/HandoffEntry.tsx", "./qrLogin/QrEntry.tsx", "./qrLogin/QrSignInEntry.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const ALL = import.meta.glob(["./**/*.ts", "./**/*.tsx", "!./**/*.test.ts", "!./**/*.test.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
 /** [file, component, module path, stable key] — the protected lazy views. */
@@ -66,6 +66,9 @@ const PROTECTED: [string, string, string, string][] = [
   ["./invite/InviteEntry.tsx", "InviteApp", "./InviteApp", "invite-app"],
   // Tadris+ P4-D — the owner → own-teacher-workspace handoff page (#/handoff/<ticket>): its own lazy chunk, like the invitation page.
   ["./handoff/HandoffEntry.tsx", "HandoffApp", "./HandoffApp", "handoff-app"],
+  // Tadris+ QR-2 — the QR approval page (its own surface) and the sign-in pages' QR panel load on demand.
+  ["./qrLogin/QrEntry.tsx", "QrApp", "./QrApp", "qr-app"],
+  ["./qrLogin/QrSignInEntry.tsx", "QrSignInPanel", "./QrSignInPanel", "qr-sign-in-panel"],
 ];
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 

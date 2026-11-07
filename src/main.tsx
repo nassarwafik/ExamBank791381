@@ -17,13 +17,17 @@ import { isInviteLocation } from './invite/inviteRoute'
 import InviteEntry from './invite/InviteEntry'
 import { isHandoffLocation } from './handoff/handoffRoute'
 import HandoffEntry from './handoff/HandoffEntry'
+import { isQrLocation } from './qrLogin/qrRoute'
+import QrEntry from './qrLogin/QrEntry'
 
 // Tadris+ P1-A2 — the platform owner's area (#/owner) is its own surface and its own LAZY chunk: the teacher / student app is not
 // mounted there, and teachers / students never download the owner screens (bundle guard). Crossing the boundary reloads, so the
 // two surfaces never share state in one page.
 // Tadris+ P2-A2b — the teacher invitation / reset page (#/invite/<token>) is a third surface with its own lazy chunk.
 // Tadris+ P4-D — the owner → own-teacher-workspace handoff page (#/handoff/<ticket>) is a fourth, also its own lazy chunk.
-const surfaceOf = () => (isOwnerLocation() ? 'owner' : isInviteLocation() ? 'invite' : isHandoffLocation() ? 'handoff' : 'app')
+// Tadris+ QR-2 — the QR approval page (#/qr-scan, #/owner-qr-scan, #/qr-login/<token>, #/owner-qr-login/<token>) is a fifth: the
+// signed-in device scans and approves there, with this tab's own session (the reload keeps sessionStorage).
+const surfaceOf = () => (isOwnerLocation() ? 'owner' : isInviteLocation() ? 'invite' : isHandoffLocation() ? 'handoff' : isQrLocation() ? 'qr' : 'app')
 const surface = surfaceOf()
 window.addEventListener('hashchange', () => { if (surfaceOf() !== surface) window.location.reload() })
 
@@ -42,7 +46,7 @@ installClientErrorReporting()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      {surface === 'owner' ? <OwnerEntry /> : surface === 'invite' ? <InviteEntry /> : surface === 'handoff' ? <HandoffEntry /> : <App />}
+      {surface === 'owner' ? <OwnerEntry /> : surface === 'invite' ? <InviteEntry /> : surface === 'handoff' ? <HandoffEntry /> : surface === 'qr' ? <QrEntry /> : <App />}
     </ErrorBoundary>
   </StrictMode>,
 )

@@ -54,7 +54,7 @@ describe("P1-A2 owner route", () => {
   it("main.tsx mounts the owner entry INSTEAD of the teacher / student app; the owner app itself is only imported lazily", () => {
     const main = readFileSync(path.join(import.meta.dirname, "..", "main.tsx"), "utf8");
     const entry = readFileSync(path.join(import.meta.dirname, "OwnerEntry.tsx"), "utf8");
-    expect(main).toMatch(/surface === 'owner' \? <OwnerEntry \/> : surface === 'invite' \? <InviteEntry \/> : surface === 'handoff' \? <HandoffEntry \/> : <App \/>/);   // P2-A2b: + the invite surface; P4-D: + the handoff surface
+    expect(main).toMatch(/surface === 'owner' \? <OwnerEntry \/> : surface === 'invite' \? <InviteEntry \/> : surface === 'handoff' \? <HandoffEntry \/> : surface === 'qr' \? <QrEntry \/> : <App \/>/);   // P2-A2b: + the invite surface; P4-D: + the handoff surface; QR-2: + the QR approval surface
     expect(main).not.toMatch(/OwnerApp/);
     expect(entry).toMatch(/lazy\(lazyWithRetry\(\(\) => import\("\.\/OwnerApp"\)/);
     expect(entry).not.toMatch(/^import .*OwnerApp/m);

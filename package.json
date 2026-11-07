@@ -23,8 +23,10 @@
   "dependencies": {
     "chart.js": "^4.6.1",
     "echarts": "6.1.0",
+    "jsqr": "1.4.0",
     "monaco-editor": "0.57.0",
     "parse5": "^8.0.1",
+    "qrcode-generator": "1.4.4",
     "react": "^19.3.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.3.1"

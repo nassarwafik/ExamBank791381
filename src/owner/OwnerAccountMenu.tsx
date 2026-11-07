@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ActionMenu from "../ui/ActionMenu";
 import { ownerApi, type OwnerSessionView } from "./ownerApi";
+import { OWNER_QR_SCAN_HASH } from "../qrLogin/qrRoute";   // Tadris+ QR-2
 
 /**
  * UX-O3 — the owner's account menu in the console header (design docs/enterprise-ux-owner-console-o3.md §2.3), on the shared
@@ -26,6 +27,8 @@ export default function OwnerAccountMenu({ token, view, onAccount, onSignedOut }
       icon={<span className="eb-owner-avatar" aria-hidden="true">{Array.from(name.trim())[0] || "؟"}</span>}>
       <p className="eb-owner-account-info"><bdi dir="ltr">{view.owner.username}</bdi>{expiresText && <> · الجلسة حتى <bdi>{expiresText}</bdi></>}</p>
       <button type="button" className="eb-menu-item" onClick={onAccount}>حسابك وأمانه</button>
+      {/* Tadris+ QR-2 — sign the owner in on another device by scanning the QR its owner sign-in page shows. */}
+      <button type="button" className="eb-menu-item" onClick={() => { window.location.hash = OWNER_QR_SCAN_HASH; }}>ربط جهاز آخر بالباركود</button>
       <button type="button" className="eb-menu-item is-danger" onClick={() => void signOut()}>تسجيل الخروج</button>
     </ActionMenu>
   );

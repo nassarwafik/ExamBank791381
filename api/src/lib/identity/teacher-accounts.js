@@ -163,7 +163,7 @@ async function createTeacherAccount(container, account) {
 // sha256, with a context prefix). Logout removes the entry, so a session never comes back (O6). At most 10: a new sign-in ends the
 // oldest. The former `revokedSessions` list is no longer read; every write here drops it.
 const sessionHash = sid => sha256Hex("tadris-teacher-session|" + String(sid));
-const SESSION_VIA = new Set(["login", "owner-handoff"]);
+const SESSION_VIA = new Set(["login", "owner-handoff", "qr"]);   // Tadris+ QR-1: "qr" = signed in by scanning a QR code
 
 /** The account's recorded sessions that are well formed and not expired at nowMs, oldest first. */
 function liveSessions(account, nowMs) {

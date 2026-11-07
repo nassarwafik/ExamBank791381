@@ -24,6 +24,7 @@ import OwnerLoginHero from "./OwnerLoginHero";   // Tadris+ P10-B
 import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
 import OwnerOverview from "./OwnerOverview";         // UX-O1
 import OwnerAccountMenu from "./OwnerAccountMenu";   // UX-O3
+import QrSignInEntry from "../qrLogin/QrSignInEntry";   // Tadris+ QR-2 — the owner's own QR sign-in (owner namespace)
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -186,6 +187,7 @@ function OwnerLogin({ bootstrap, onSignedIn }: { bootstrap: BootstrapState; onSi
         {error && <div id="eb-owner-login-error" className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error}</div>}
         <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الدخول…" : "دخول"}</button>
       </form>
+      <QrSignInEntry ns="owner" onSignedIn={s => onSignedIn(s.token)} />
       {bootstrap === "open" && <p className="auth-note"><a className="eb-owner-link" href={OWNER_SETUP_HASH}>تأسيس حساب المالك لأول مرة</a></p>}
     </section>
   );
