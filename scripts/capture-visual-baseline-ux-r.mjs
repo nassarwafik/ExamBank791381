@@ -426,7 +426,11 @@ const SCRIPTED = [
     if (band !== "none") throw new Error("the teacher game view paints the student background: " + band.slice(0, 60));
   } },
   ...[["student-games", false], ["student-games-join", true]].map(([id, join]) => ({ id, role: "student", run: async page => {
-    await page.getByRole("button", { name: /الألعاب/ }).first().click({ timeout: 15000 });
+    // UX-S1 — on a phone the games entry lives in the top bar's «المزيد» menu (docs/enterprise-ux-student-s1.md §2.2): open it first
+    // when no games button is visible. A build without the menu (the base) keeps its visible button, so both sides reach the games.
+    const games = page.getByRole("button", { name: /الألعاب/ });
+    if (!(await games.count())) await page.getByRole("button", { name: "المزيد" }).click({ timeout: 15000 });
+    await games.first().click({ timeout: 15000 });
     await page.locator(".eb-games-surface").waitFor({ timeout: 15000 });
     if (!join) return;
     await page.getByRole("button", { name: "انضم إلى غرفة" }).click({ timeout: 15000 });
