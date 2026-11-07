@@ -187,36 +187,45 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
             <button type="button" className="eb-button" onClick={onExit}>{exitLabel}</button>
           </div>
         </section>
-        <section className="learning-training-review" aria-label="مراجعة الأسئلة">
-          <h3 className="learning-training-subtitle">مراجعة الإجابات</h3>
-          <ol className="learning-training-review-list">
-            {questions.map((q, i) => {
-              const id = qid(q, i);
-              const row = byId.get(id);
-              const right = row?.correct === true;
-              const manual = row?.manualReview === true && !right;
-              const own = answers[id];
-              const mine = own?.kind === "choice" ? optionText(q, row?.chosenIndex ?? own.index) : answerText(own, q);
-              const key = row?.correctOptionIndex !== null && row?.correctOptionIndex !== undefined ? optionText(q, row.correctOptionIndex) : (row?.correctText || "");
-              return (
-                <li key={id} className={"learning-training-review-item " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
-                  <p className="learning-training-review-head">
-                    <span className={"learning-training-mark " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
-                      {right ? <IconCheck size={14} aria-hidden="true" /> : <IconClose size={14} aria-hidden="true" />}
-                      {right ? "صحيح" : manual ? "لا يُصحَّح تلقائيًا" : "غير صحيح"}
-                    </span>
-                    <span className="learning-training-review-num">السؤال {row?.questionNumber ?? i + 1}</span>
-                  </p>
-                  <p className="learning-training-review-text">{q.text}</p>
-                  <p className="learning-training-review-line"><span className="learning-training-tag">إجابتك</span>{mine || "لم تُجب"}</p>
-                  {!right && key && <p className="learning-training-review-line"><span className="learning-training-tag">الإجابة الصحيحة</span>{key}</p>}
-                  {manual && <p className="learning-training-review-line learning-training-review-manual">سؤال مقالي لا يُصحَّح تلقائيًا؛ علامته غير مُحتسبة في النتيجة التلقائية لهذا التدريب.</p>}
-                  {row?.hint && <p className="learning-training-review-hint"><span className="learning-training-tag">تلميح</span>{row.hint}</p>}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+        {/* Tadris+ O5 — a withheld review: the score above, and why there is no per-question review (docs/enterprise-training-keys-o5.md) */}
+        {result.reviewWithheld ? (
+          <p className="learning-training-note learning-training-note-withheld" role="note">
+            {result.reviewWithheld === "assignment"
+              ? "هذا الامتحان واجب مفتوح لصفك الآن، فتُعرض درجتك فقط. تظهر المراجعة الكاملة بعد إغلاق الواجب."
+              : "تُعرض الدرجة فقط: حسابك لا يتضمن رؤية مفاتيح الإجابة."}
+          </p>
+        ) : (
+          <section className="learning-training-review" aria-label="مراجعة الأسئلة">
+            <h3 className="learning-training-subtitle">مراجعة الإجابات</h3>
+            <ol className="learning-training-review-list">
+              {questions.map((q, i) => {
+                const id = qid(q, i);
+                const row = byId.get(id);
+                const right = row?.correct === true;
+                const manual = row?.manualReview === true && !right;
+                const own = answers[id];
+                const mine = own?.kind === "choice" ? optionText(q, row?.chosenIndex ?? own.index) : answerText(own, q);
+                const key = row?.correctOptionIndex !== null && row?.correctOptionIndex !== undefined ? optionText(q, row.correctOptionIndex) : (row?.correctText || "");
+                return (
+                  <li key={id} className={"learning-training-review-item " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
+                    <p className="learning-training-review-head">
+                      <span className={"learning-training-mark " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
+                        {right ? <IconCheck size={14} aria-hidden="true" /> : <IconClose size={14} aria-hidden="true" />}
+                        {right ? "صحيح" : manual ? "لا يُصحَّح تلقائيًا" : "غير صحيح"}
+                      </span>
+                      <span className="learning-training-review-num">السؤال {row?.questionNumber ?? i + 1}</span>
+                    </p>
+                    <p className="learning-training-review-text">{q.text}</p>
+                    <p className="learning-training-review-line"><span className="learning-training-tag">إجابتك</span>{mine || "لم تُجب"}</p>
+                    {!right && key && <p className="learning-training-review-line"><span className="learning-training-tag">الإجابة الصحيحة</span>{key}</p>}
+                    {manual && <p className="learning-training-review-line learning-training-review-manual">سؤال مقالي لا يُصحَّح تلقائيًا؛ علامته غير مُحتسبة في النتيجة التلقائية لهذا التدريب.</p>}
+                    {row?.hint && <p className="learning-training-review-hint"><span className="learning-training-tag">تلميح</span>{row.hint}</p>}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
       </div>
     );
   }

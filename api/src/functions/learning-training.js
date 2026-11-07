@@ -16,6 +16,8 @@ const { teacherAllowedCourses, classAllowedCourses } = require("../lib/access/co
 const { listLearningCourses } = require("../lib/learning-materials-registry");
 const { trainingReleases } = require("../lib/learning-training-registry");
 const { classCanSeeLearningModule } = require("../lib/class-learning-materials");
+const { loadPublishedAssignmentsForClasses } = require("../lib/class-assignment-index");   // Tadris+ O5
+const { authorize } = require("../lib/access/authorize");                                  // Tadris+ O5
 
 // Learning Practice API — the SAFE delivery of the book's 36 Learning-Practice items (the T-series trainings T01–T30
 // and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading.
@@ -88,6 +90,32 @@ function keyIndex(value) {
   if (typeof value === "number") return Number.isInteger(value) && value >= 0 ? value : null;
   if (typeof value === "string" && /^\d+$/.test(value.trim())) return Number(value.trim());
   return null;
+}
+
+/**
+ * Tadris+ O5 (docs/enterprise-training-keys-o5.md; security review O5, option (a)) — why the post-submit review must be withheld,
+ * or null when it may be shown as before:
+ *   "assignment" — a student whose PERSISTED class has a PUBLISHED official homework built from this very library item (the same
+ *                  item would give the homework's keys); closed / archived homework, another item or another class → null;
+ *   "keys"       — a managed teacher whose account, while access is enforced, does not include «رؤية مفاتيح الإجابة»
+ *                  (examLibrary.item.viewKeys), like the exam bank; legacy / observe → authorize allows, as for every capability.
+ * Failure withholds (access fails closed). Only the review is affected: grading, points and the best score are unchanged.
+ */
+async function reviewWithheldReason(actor, trainingId, deps, obs) {
+  if (actor.kind === "teacher") {
+    if (!actor.user || actor.user.am !== "managed") return null;
+    try {
+      const decision = await (deps.authorizeCapability || authorize)(actor.user, "examLibrary.item.viewKeys", { ...deps, container: actor.container }, obs);
+      return decision && decision.allowed ? null : "keys";
+    } catch { return "keys"; }
+  }
+  const classId = String(actor.student?.classId || "").trim();
+  if (!classId) return null;
+  try {
+    const { byClass } = await (deps.loadPublishedAssignmentsForClasses || loadPublishedAssignmentsForClasses)(actor.container, [classId], deps, obs);
+    const open = byClass.get(classId) || [];
+    return open.some(a => a && a.source && a.source.kind === "library" && String(a.source.itemId || "") === trainingId) ? "assignment" : null;
+  } catch { return "assignment"; }
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -171,7 +199,9 @@ async function handler(request, deps = {}, obs = null) {
         };
       });
       const percentage = Math.round(Number(graded.percentage) || 0);
-      const result = { correctCount: graded.questions.filter(q => q.correct).length, questionCount: graded.questions.length, score: graded.score, totalMarks: graded.totalMarks, percentage, review };
+      // Tadris+ O5 — score only: no key, hint or per-question correctness (retries would reveal the key by elimination).
+      const withheld = await reviewWithheldReason(actor, training.trainingId, deps, obs);
+      const result = { correctCount: graded.questions.filter(q => q.correct).length, questionCount: graded.questions.length, score: graded.score, totalMarks: graded.totalMarks, percentage, review: withheld ? [] : review, ...(withheld ? { reviewWithheld: withheld } : {}) };
       if (actor.kind === "teacher") return { status: 200, jsonBody: { ok: true, actor: "teacher", persisted: false, result } };
 
       const now = new Date().toISOString();
