@@ -69,6 +69,13 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
               )}
             </button>
           )}
+          {/* UX-S1 — the phone menu sits BEFORE the wide group in the DOM, so the bar's last control stays «تسجيل الخروج» (6C);
+              CSS shows exactly one of the two: the menu at ≤ 720px (pushed to the end with margin-inline-start:auto), the group above. */}
+          <ActionMenu label="المزيد" text="المزيد" className="student-topbar-more">
+            {onOpenGames && <button type="button" className="eb-menu-item" onClick={onOpenGames}><IconSparkles size={16} />الألعاب التعليمية</button>}
+            {install.visible && <button type="button" className="eb-menu-item" disabled={install.busy} onClick={install.start}><IconDownload size={16} />تثبيت التطبيق</button>}
+            <button type="button" className="eb-menu-item is-danger" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
+          </ActionMenu>
           <span className="student-topbar-wide">
             {onOpenGames && (
               <button type="button" className="student-topbar-link eb-student-games-entry" onClick={onOpenGames}>
@@ -82,11 +89,6 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
             )}
             <button type="button" className="student-logout" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
           </span>
-          <ActionMenu label="المزيد" text="المزيد" className="student-topbar-more">
-            {onOpenGames && <button type="button" className="eb-menu-item" onClick={onOpenGames}><IconSparkles size={16} />الألعاب التعليمية</button>}
-            {install.visible && <button type="button" className="eb-menu-item" disabled={install.busy} onClick={install.start}><IconDownload size={16} />تثبيت التطبيق</button>}
-            <button type="button" className="eb-menu-item is-danger" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
-          </ActionMenu>
         </div>
         {install.dialog}
       </header>
