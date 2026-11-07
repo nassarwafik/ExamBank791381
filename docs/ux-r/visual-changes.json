@@ -735,6 +735,16 @@
       "page": "student-tasks",
       "viewport": "all",
       "reason": "Tadris+ UX-S3 (approved design docs/enterprise-ux-student-s3.md) — «الواجبات» under «الكل» in labelled groups with counts (تحتاج إجراء · بانتظار التصحيح · قريبًا · مكتملة · انتهت دون تسليم; empty groups hidden), and each card's deadline line reads at a glance («التسليم اليوم / غدًا / بعد N أيام · date», «انتهى التسليم …», «يفتح …»), an actionable one due within 48 h marked by text and icon."
+    },
+    {
+      "page": "login",
+      "viewport": "all",
+      "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
+    },
+    {
+      "page": "login-error",
+      "viewport": "all",
+      "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
     }
   ]
 }

@@ -105,6 +105,7 @@ import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
 import { endTeacherServerSession } from "./teacher/teacherServerLogout";
 import QrSignInEntry from "./qrLogin/QrSignInEntry";   // Tadris+ QR-2
+import AccountTypeSwitch from "./signin/AccountTypeSwitch";   // Tadris+ SIGN-IN-1
 import { signInPlatformAndReload } from "./qrLogin/qrSession";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
@@ -5798,6 +5799,7 @@ function App() {
 
         <div className="auth-form-wrap">
           <section className="auth-card login-card">
+            <AccountTypeSwitch current="platform" />   {/* Tadris+ SIGN-IN-1 — one sign-in screen for every account */}
             <h1 className="auth-welcome"><bdi dir="ltr">{BRAND_NAME}</bdi></h1>
             <p className="auth-sub subtitle">
               منصة الامتحانات والتدريب الذكي لشبكات الاتصال
