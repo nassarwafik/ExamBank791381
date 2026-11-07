@@ -29,7 +29,10 @@ async function approverOf(request, deps) {
   if (requireStudentAuth(request).ok) {
     const auth = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
     if (!auth.ok) return { ok: false, response: unauthorized() };
-    return { ok: true, approval: { role: "student", subject: String(auth.user.sub), authVersion: normalizeAuthVersion(auth.student.authVersion) }, container: auth.container };
+    // Tadris+ QR-3 — the approving session id (a token from before QR-3 has none) is re-checked when the new device is signed in.
+    const approval = { role: "student", subject: String(auth.user.sub), authVersion: normalizeAuthVersion(auth.student.authVersion) };
+    if (auth.user.sid !== undefined) approval.sid = String(auth.user.sid);
+    return { ok: true, approval, container: auth.container };
   }
   const auth = await requireTeacherSession(request, deps);
   if (!auth.ok) return { ok: false, response: auth.response || unauthorized() };

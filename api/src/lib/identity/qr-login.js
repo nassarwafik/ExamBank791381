@@ -58,6 +58,15 @@ function deviceFromUserAgent(ua) {
   return { browser, os };
 }
 
+// Tadris+ QR-3 — the only device words ever stored with a session (sessions keep what the sign-in saw, for «الأجهزة المرتبطة»).
+const BROWSERS = Object.freeze(["Edge", "Opera", "Samsung Internet", "Firefox", "Chrome", "Safari", "unknown"]);
+const OSES = Object.freeze(["iOS", "Android", "Windows", "ChromeOS", "macOS", "Linux", "unknown"]);
+/** `d` when it is exactly { browser, os } from the fixed vocabulary, otherwise null (nothing else is ever stored or shown). */
+function safeDevice(d) {
+  if (!d || typeof d !== "object") return null;
+  return BROWSERS.includes(d.browser) && OSES.includes(d.os) ? { browser: d.browser, os: d.os } : null;
+}
+
 /** Three distinct 2-digit numbers, one of them `code`, in random order. */
 function matchOptionsFor(code, randomInt = crypto.randomInt) {
   const set = new Set([code]);
@@ -93,7 +102,9 @@ function validApproval(a) {
   if (!a || typeof a !== "object" || !ROLES.includes(a.role)) return false;
   if (typeof a.subject !== "string" || !a.subject || a.subject.length > 128) return false;
   if (!Number.isInteger(a.authVersion) || a.authVersion < 1) return false;
-  if (a.role !== "student" && !(typeof a.sid === "string" && /^[a-f0-9]{32}$/.test(a.sid))) return false;
+  const sidOk = typeof a.sid === "string" && /^[a-f0-9]{32}$/.test(a.sid);
+  if (a.role !== "student" && !sidOk) return false;
+  if (a.role === "student" && a.sid !== undefined && !sidOk) return false;   // QR-3: optional for a pre-QR-3 student token, well formed when present
   return true;
 }
 
@@ -119,6 +130,6 @@ function evaluateStartBucket(current, nowMs) {
 
 module.exports = {
   PAIRING_PREFIX, START_BUCKET_PREFIX, PAIRING_TTL_MS, POLL_INTERVAL_MS, START_BUDGET, START_WINDOW_SECONDS, ROLES,
-  pairingName, pollSecretHash, clientHash, startBucketName, validToken, timingSafeEqualHex, deviceFromUserAgent, matchOptionsFor,
+  pairingName, pollSecretHash, clientHash, startBucketName, validToken, timingSafeEqualHex, deviceFromUserAgent, matchOptionsFor, safeDevice,
   newPairing, wellFormed, validApproval, pairingState, evaluateStartBucket
 };

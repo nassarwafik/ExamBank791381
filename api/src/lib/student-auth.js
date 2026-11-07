@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getContainer, downloadJsonOrNull } = require("./platform-storage");
+const { validStudentSessionId, studentSessionActive } = require("./identity/student-sessions");   // Tadris+ QR-3
 
 // Roadmap #8 — Auth / Session Hardening (student side).
 const STUDENT_TOKEN_TTL_SECONDS = 12 * 60 * 60;   // student session lifetime (unchanged)
@@ -88,7 +89,9 @@ function signStudentPayloadV2(encodedPayload, secret) {
   return crypto.createHmac("sha256", deriveRoleKey(secret, STUDENT_CONTEXT)).update(encodedPayload).digest("base64url");
 }
 
-function createStudentToken(student) {
+// Tadris+ QR-3 — `options.sid` (a recorded session id, lib/identity/student-sessions.js) is carried as the `sid` claim; the session
+// is recorded in the student document BEFORE the token is given, and requireActiveStudentSession accepts it only while recorded.
+function createStudentToken(student, options = {}) {
   const secret = getStudentSigningSecret();
   if (!secret) {
     throw new Error("STUDENT_SESSION_SECRET, BUILDER_SESSION_SECRET or BANK_SETUP_KEY is not configured.");
@@ -107,6 +110,7 @@ function createStudentToken(student) {
     name: String(student.displayName || ""),
     classId: String(student.classId || "")
   };
+  if (options && validStudentSessionId(options.sid)) payload.sid = options.sid;
   const encoded = encodePayload(payload);
   const signature = signStudentPayloadV2(encoded, secret);
   return encoded + "." + signature;
@@ -153,6 +157,8 @@ function verifyStudentToken(token) {
     // float / string sv is rejected outright (never silently normalized to 1); only LEGACY tokens with no
     // sv are allowed to normalize to 1 downstream.
     if (!Number.isInteger(payload.sv) || payload.sv < 1) return null;
+    // Tadris+ QR-3 — a session id, when present, must be well formed (a token without one predates QR-3).
+    if (payload.sid !== undefined && !validStudentSessionId(payload.sid)) return null;
     return payload;
   }
 
@@ -217,6 +223,14 @@ async function requireActiveStudentSession(request, deps = {}) {
   }
   if (normalizeAuthVersion(auth.user.sv) !== normalizeAuthVersion(student.authVersion)) {
     return UNAUTHORIZED;
+  }
+  // Tadris+ QR-3 — a token with a session id is accepted only while that session is recorded and live (signed out from
+  // «الأجهزة المرتبطة», from its own sign-out, or ended by the 10-device limit → refused from the next request). A token without
+  // one was issued before QR-3 and is accepted until its own expiry (owner decision: no sign-out at deployment).
+  if (auth.user.sid !== undefined) {
+    const rawNow = deps.now ? deps.now() : Date.now();
+    const nowMs = typeof rawNow === "number" ? rawNow : Date.parse(String(rawNow));
+    if (!Number.isFinite(nowMs) || !studentSessionActive(student, auth.user.sid, nowMs)) return UNAUTHORIZED;
   }
   return { ok: true, user: auth.user, student, container };
 }

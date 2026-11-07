@@ -8,6 +8,7 @@ const { isTeacherAccountId, createManagedTeacherToken, newTeacherSessionId } = r
 const { readTeacherAccount, mutateTeacherAccount, withTeacherSession, trialEnded } = require("../lib/identity/teacher-accounts");
 const { TOKEN_TTL_SECONDS } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
+const { deviceFromUserAgent } = require("../lib/identity/qr-login");   // Tadris+ QR-3 — the device words of the new session
 
 // Tadris+ P4-D — owner decision D19 (blueprint §19.4): «الانتقال إلى مساحة المعلم الخاصة بي». The owner is also a teacher; their
 // classes and students belong to their TEACHER account, which stays a separate account. Route: /api/owner-handoff/{action?}
@@ -95,7 +96,7 @@ async function redeem(request, deps, obs, nowMs) {
   const sid = newTeacherSessionId();
   const { token: teacherToken, payload } = createManagedTeacherToken({ accountId: account.accountId, sid, authVersion: account.authVersion }, { nowMs });
   try {
-    await mutateTeacherAccount(container, account.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "owner-handoff" }), lastLoginAt: new Date(nowMs).toISOString() }));
+    await mutateTeacherAccount(container, account.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "owner-handoff", device: deviceFromUserAgent(request.headers && typeof request.headers.get === "function" ? request.headers.get("user-agent") : "") }), lastLoginAt: new Date(nowMs).toISOString() }));
   } catch { return reply(503, { ok: false, code: "TEACHER_SESSION_UNAVAILABLE", error: "تعذر فتح صفحة المعلم حاليًا. حاول مرة أخرى بعد قليل." }); }
   await (deps.recordAuditEvent || recordAuditEvent)(container, { actor: account.accountId, action: "teacher.session.from-owner", targetType: "teacher-account", targetId: account.accountId, targetLabel: account.username, details: { ownerId: ticket.ownerId } });
   obs?.logInfo?.("auth.login.succeeded", { role: "teacher", kind: "owner-handoff" });

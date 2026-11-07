@@ -10,6 +10,7 @@ const { sessionAccess } = require("../lib/access/session-access");
 const { schoolField, schoolOfAccount, schoolForStudent } = require("../lib/schools");
 const { STUDENT_TOKEN_TTL_SECONDS, createStudentToken, normalizeAuthVersion } = require("../lib/student-auth");
 const { PAIRING_PREFIX } = require("../lib/identity/qr-login");
+const { newStudentSessionId, withStudentSession, studentSessionActive } = require("../lib/identity/student-sessions");   // Tadris+ QR-3
 const { reply, unavailable, notFound, Refusal, startPairing, pollPairing } = require("../lib/identity/qr-pairing");
 
 // Tadris+ QR-1 — the NEW device's side of the QR sign-in for TEACHERS and STUDENTS (design: docs/enterprise-qr-login-qr1.md).
@@ -40,7 +41,7 @@ async function issueTeacher(container, a, record, deps, obs, nowMs) {
     fresh = await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, account.accountId, current => {
       if (!still(current)) throw new Refusal("APPROVER_SESSION_ENDED");
       if (trialEnded(current, nowMs)) throw new Refusal("TEACHER_TRIAL_ENDED");
-      return { ...withTeacherSession(current, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "qr" }), lastLoginAt: new Date(nowMs).toISOString() };
+      return { ...withTeacherSession(current, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "qr", device: record.device }), lastLoginAt: new Date(nowMs).toISOString() };
     });
   } catch (e) {
     if (e instanceof Refusal) throw e;
@@ -59,20 +60,24 @@ async function issueTeacher(container, a, record, deps, obs, nowMs) {
 async function issueStudent(container, a, record, deps, obs, nowMs) {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(a.subject)) throw new Refusal("QR_APPROVAL_INVALID");
   const name = "platform/users/" + a.subject + ".json";
+  const studentSid = newStudentSessionId();
   let fresh;
   try {
     // The student sign-in's rule (QA-5): the stamp is written onto the student document as it is NOW; a student deleted, archived,
     // disabled or whose password was reset since the approval is refused.
     fresh = await (deps.mutateJsonWithRetry || mutateJsonWithRetry)(container, name, current => {
       if (!current || current.active === false || current.archived === true || normalizeAuthVersion(current.authVersion) !== a.authVersion) throw new Refusal("APPROVER_SESSION_ENDED");
+      // Tadris+ QR-3 — the approving session must still be recorded (a phone signed out in between cannot open a new device).
+      if (a.sid !== undefined && !studentSessionActive(current, a.sid, nowMs)) throw new Refusal("APPROVER_SESSION_ENDED");
       const at = new Date(nowMs).toISOString();
-      return { ...current, lastLoginAt: at, updatedAt: at };
+      // ... and the new device's session is RECORDED before its token exists (via "qr", the device words its QR page saw).
+      return withStudentSession({ ...current, lastLoginAt: at, updatedAt: at }, { sid: studentSid, expiresAtMs: nowMs + STUDENT_TOKEN_TTL_SECONDS * 1000, nowMs, via: "qr", device: record.device });
     });
   } catch (e) {
     if (e instanceof Refusal) throw e;
     return unavailable();
   }
-  const token = createStudentToken(fresh);
+  const token = createStudentToken(fresh, { sid: studentSid });
   obs?.logInfo?.("auth.login.succeeded", { role: "student", kind: "qr" });
   const school = await schoolField(() => schoolForStudent(container, fresh, { downloadJsonOrNull: deps.downloadJsonOrNull || downloadJsonOrNull }), obs);
   return reply(200, { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS, ...school });
