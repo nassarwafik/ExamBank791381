@@ -12,6 +12,7 @@
 import { createRequire } from "node:module";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 const nodeRequire = createRequire(import.meta.url);
@@ -138,6 +139,7 @@ describe("8D-1 teacher deadline extension → the student's dashboard on the nex
   it("a closed assignment reappears as startable after a real updateTiming, without logout or a loading screen; the bell shows the extension event", async () => {
     seed({ dueAt: new Date(Date.now() - HOUR).toISOString(), maxAttempts: 2, durationMinutes: 0 });
     const onLogout = await mountPortal();
+    await openStudentView("الواجبات");                                                                // UX-S2: the cards live in «الواجبات»
     expect(screen.getAllByRole("button", { name: "عرض الواجب" }).length).toBeGreaterThan(0);        // closed → view only
     expect(screen.queryByRole("button", { name: "ابدأ الحل" })).toBeNull();
     expect(screen.queryByRole("button", { name: /الإشعارات،/ })).toBeNull();                          // nothing unread yet

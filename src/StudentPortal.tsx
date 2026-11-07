@@ -4,6 +4,8 @@ import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentMobileNav from "./shell/StudentMobileNav";
 import { scrollToStudentSection } from "./shell/studentQuickNav";
+import SubNav from "./ui/SubNav";
+import { STUDENT_VIEWS, viewFromHash, viewHash, viewHeading, isStudentViewHash, type StudentView } from "./student/portalViews";
 import type { StudentProjectDrill, StudentProjectDrillOutcome } from "./projects/studentProjectDrill";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { ProjectEvaluationBrief } from "./projects/projectEvaluation";
@@ -68,6 +70,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase L.2 — a unit chosen in «موادي التعليمية»: the Reader opens at that unit (no page id → its first page).
   const [readerInitialModuleId, setReaderInitialModuleId] = useState<string | undefined>(undefined);
   const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
+  // UX-S2 (docs/enterprise-ux-student-s2.md) — the portal's five views, each with its #/s/<view> link. Every section stays mounted
+  // (the hidden views keep their state and their own reads exactly as before); only the chosen view is shown. «المشاريع» is
+  // offered once the project panel's own read says the student has a project (null = not answered yet).
+  const [projectsAvailable, setProjectsAvailable] = useState<boolean | null>(null);
+  const [view, setView] = useState<StudentView>(() => (typeof window === "undefined" ? "today" : viewFromHash(window.location.hash, true)));
   // Phase 9B — the projects' evaluation brief for the Today Hub chip (from the project panel's own single read).
   const [projectEvaluation, setProjectEvaluation] = useState<ProjectEvaluationBrief[] | null>(null);
   // Phase 12D — the one-shot «open this exact project» intent for the project panel (identifiers only; the panel owns
@@ -226,6 +233,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     if (summary.availability === "scheduled") {
       setNotice("لم يُفتح هذا الواجب بعد. سيظهر في «المهام والواجبات» عند موعد فتحه.");
       setFilter("all");
+      goView("tasks", null);                                                          // UX-S2: the card lives in «الواجبات»
       window.setTimeout(() => { const el = document.getElementById("eb-sp-task-" + assignmentId); el?.scrollIntoView?.({ block: "center", behavior: reducedMotion ? "auto" : "smooth" }); el?.focus?.(); }, 0);
       return;
     }
@@ -254,11 +262,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     if ((item.type === "reader" || item.type === "study") && item.courseId && item.moduleId) { void routeMaterial(item.courseId, item.moduleId, item.pageId); return; }
     if (item.type === "project") {
       if (item.projectCode) routeProject(item.projectCode);                             // Phase 12D: the exact project
-      else scrollToSection("eb-sp-projects-title");                                     // no code: the section, as before
+      else goView("projects");                                                          // no code: the projects view
     }
   }
   /** Phase 12D — ask the (already mounted) project panel to open `projectCode` from its OWN response. No read here. */
   function routeProject(projectCode: string) {
+    goView("projects", null);                                                         // UX-S2: the view first; the drill places focus
     setProjectDrill({ seq: ++projectDrillSeq.current, projectCode });
   }
   /** The panel resolved drill `seq`. Only the newest request acts (an older report is ignored). */
@@ -268,12 +277,29 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     if (outcome !== "opened") setNotice(outcome === "failed" ? "تعذر فتح المشروع حاليًا. حاول مرة أخرى لاحقًا." : "هذا المشروع لم يعد متاحًا.");
     scrollToStudentSection("eb-sp-projects-title", reducedMotion);                      // the opened detail / the list (no-op if absent)
   }
+  /**
+   * UX-S2 — open a view: the link becomes #/s/<view> (a history entry, so the back button returns), the page goes to its top and
+   * focus moves to the view's heading. With `target` the student lands on that element of the view instead (former scroll
+   * actions: a KPI, a notification…); `null` = the caller places focus itself (the project drill).
+   */
+  function goView(next: StudentView, target?: string | null) {
+    setView(next);
+    if (typeof window !== "undefined" && window.location.hash !== viewHash(next)) window.history.pushState(window.history.state, "", viewHash(next));
+    if (target === null) return;
+    window.setTimeout(() => {
+      if (target) { scrollToSection(target); return; }
+      window.scrollTo({ top: 0, behavior: "auto" });
+      const h = document.getElementById(viewHeading(next));
+      if (h) { if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1"); h.focus?.({ preventScroll: true }); }
+    }, 0);
+  }
   function scrollToSection(id: string) {
     window.setTimeout(() => { const el = document.getElementById(id); el?.scrollIntoView?.({ block: "start", behavior: reducedMotion ? "auto" : "smooth" }); el?.focus?.(); }, 0);
   }
   /** Bring the student to their achievement and focus the post the teacher recognized (no second achievement model). */
   function routeRecognition(postId: string) {
     setHighlightPostId(postId);
+    goView("progress", null);                                                         // UX-S2: the achievements live in «التقدم»
     window.setTimeout(() => {
       const post = document.getElementById("eb-sp-post-" + postId);
       const target = post || document.getElementById("eb-sp-feed-title");
@@ -291,6 +317,21 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     if (item.type === "teacher_reaction" || item.type === "teacher_note") { routeRecognition(item.postId); return; }
     if (isAssignmentRoute(item)) routeAssignment(item.assignmentId);
   }
+  // UX-S2 — the back / forward buttons (and a pasted link) move between views; another surface's hash is not ours.
+  useEffect(() => {
+    function onPop() {
+      if (!isStudentViewHash(window.location.hash) && window.location.hash) return;
+      const next = viewFromHash(window.location.hash, true);
+      setView(next);
+      window.setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        const h = document.getElementById(viewHeading(next));
+        if (h) { if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1"); h.focus?.({ preventScroll: true }); }
+      }, 0);
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   // A new session (token) starts clean: every in-flight count/preview of the previous one is dropped.
   useEffect(() => {
     unreadApplied.current = unreadSeq.current;
@@ -429,7 +470,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 12C — the phone quick navigation belongs to the ORDINARY main portal only: it exists once the sections it
   // points at are rendered, and never on the exam / Reader / Messages / Games views (they return above, without it).
   // It stays mounted but hidden under the avatar picker (a screen-takeover dialog), keeping its active item.
-  const quickNav = !loading && data && stats ? <StudentMobileNav reducedMotion={reducedMotion} hidden={avatarPickerOpen} /> : undefined;
+  // UX-S2 — the view shown: «المشاريع» without a project (the panel's read said so) falls back to «اليوم».
+  const shown: StudentView = view === "projects" && projectsAvailable === false ? "today" : view;
+  const unavailableViews: StudentView[] = projectsAvailable ? [] : ["projects"];
+  const quickNav = !loading && data && stats ? <StudentMobileNav active={shown} onSelect={v => goView(v)} unavailable={unavailableViews} hidden={avatarPickerOpen} /> : undefined;
+  const viewProps = (v: StudentView) => ({ className: "eb-sp-view is-" + v, "data-view": v, hidden: shown !== v });
 
   return (
     <StudentShell quickNav={quickNav} school={school} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={openGames && openGames.length === 0 ? undefined : () => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} messagesUnread={messagesService ? messagesUnread : undefined} notifications={{
@@ -459,36 +504,49 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {notice && <div className="platform-notice eb-sp-notice" role="status">{notice}<button type="button" className="eb-notif-retry" onClick={() => setNotice("")}>إغلاق</button></div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
-            <StudentKpiStrip
-              kpis={{ actionable: now_.actionable.length, inProgress: Number(stats.inProgress || 0), pendingReview: Number(stats.pendingReview || 0), averageFinalized, stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25 }}
-              onOpenNow={() => scrollToSection("eb-sp-now-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")} onOpenProgress={() => scrollToSection("eb-sp-progress-title")}
-            />
+            {/* UX-S2 — the views (≥ 768px: this bar; phones: the bottom bar). Every view stays mounted; the hidden ones are inert. */}
+            <SubNav label="أقسام بوابة الطالب" className="eb-sp-viewnav" currentId={shown} onSelect={id => goView(id as StudentView)}
+              groups={[{ items: STUDENT_VIEWS.filter(v => v.key !== "projects" || projectsAvailable).map(v => ({ id: v.key, label: v.label, ...(v.key === "tasks" && now_.actionable.length ? { count: now_.actionable.length, countLabel: "تحتاج إجراءً" } : {}) })) }]} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
-            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")}
-              projectEvaluation={projectEvaluation} onOpenProjects={() => scrollToSection("eb-sp-projects-title")} />
-            <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
-            <InstallAppCard />
-            <MessagePushCard token={token} />
-            <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={(course, moduleId) => { setReaderInitialPageId(undefined); setReaderInitialModuleId(moduleId); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
-            <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
-            <section className="eb-sp-panel eb-sp-tasks-panel" aria-labelledby="eb-sp-tasks-title">
-              <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
-              <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
-                {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
-              </div>
-              <div className="student-assignment-list">
-                {visible.length > 0 && (
-                  <ul className="eb-sp-tasks">
-                    {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
-                  </ul>
-                )}
-                {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}
-                {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
-              </div>
-            </section>
-            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} onEvaluationChange={setProjectEvaluation} drill={projectDrill} onDrillConsumed={projectDrillConsumed} />
-            <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
+            <div {...viewProps("today")}>
+              <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+              <StudentKpiStrip
+                kpis={{ actionable: now_.actionable.length, inProgress: Number(stats.inProgress || 0), pendingReview: Number(stats.pendingReview || 0), averageFinalized, stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25 }}
+                onOpenNow={() => goView("today", "eb-sp-now-title")} onOpenTasks={() => goView("tasks")} onOpenProgress={() => goView("progress")}
+              />
+              <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={messagesService ? () => openMessages("direct") : undefined} progress={todayProgress} onOpenProgress={() => goView("progress")} onOpenTasks={() => goView("tasks")}
+                projectEvaluation={projectEvaluation} onOpenProjects={() => goView("projects")} />
+              <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
+              <InstallAppCard />
+              <MessagePushCard token={token} />
+            </div>
+            <div {...viewProps("learning")}>
+              <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={(course, moduleId) => { setReaderInitialPageId(undefined); setReaderInitialModuleId(moduleId); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+            </div>
+            <div {...viewProps("tasks")}>
+              <section className="eb-sp-panel eb-sp-tasks-panel" aria-labelledby="eb-sp-tasks-title">
+                <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
+                <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
+                  {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
+                </div>
+                <div className="student-assignment-list">
+                  {visible.length > 0 && (
+                    <ul className="eb-sp-tasks">
+                      {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
+                    </ul>
+                  )}
+                  {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}
+                  {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
+                </div>
+              </section>
+            </div>
+            <div {...viewProps("progress")}>
+              <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
+              <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
+            </div>
+            <div {...viewProps("projects")}>
+              <StudentProjectPanel token={token} contributions={strength?.projects ?? []} onEvaluationChange={setProjectEvaluation} drill={projectDrill} onDrillConsumed={projectDrillConsumed} onAvailableChange={setProjectsAvailable} />
+            </div>
           </>
         )}
       </div>

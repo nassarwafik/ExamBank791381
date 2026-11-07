@@ -7,6 +7,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 import { saveReaderPosition } from "./student/today/readerPosition";
 
@@ -138,10 +139,11 @@ describe("9A Student Today Hub — the hero's one continuation", () => {
     const h = await hero();
     expect(h.getAttribute("data-continue-type")).toBe("none");
     expect(within(h).getByText("لا يوجد شيء عاجل الآن")).toBeTruthy();
-    const anchor = document.getElementById("eb-sp-tasks-title") as HTMLElement;
-    const scroll = vi.fn(); (anchor as unknown as { scrollIntoView: () => void }).scrollIntoView = scroll;
+    // UX-S2 (approved design §2.4): the shortcut opens the «الواجبات» view (its link, its heading focused).
     fireEvent.click(within(h).getByRole("button", { name: "المهام والواجبات" }));
-    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-tasks-title"));
+    expect(window.location.hash).toBe("#/s/tasks");
+    expect(screen.getByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
   });
 });
 
@@ -165,10 +167,10 @@ describe("9A Student Today Hub — messages, progress, scoping, failures, mobile
     const strip = h.getByText(/آخر نتيجة: DONE 90%/);
     expect(strip.textContent).toContain("2 ميداليات");
     expect(strip.textContent).toContain("المرحلة 7 من 25");
-    const anchor = document.getElementById("eb-sp-progress-title") as HTMLElement;
-    const scroll = vi.fn(); (anchor as unknown as { scrollIntoView: () => void }).scrollIntoView = scroll;
+    // UX-S2 (approved design §2.4): «تقدمك» opens the «التقدم» view (its link, its heading focused).
     fireEvent.click(h.getByRole("button", { name: "تقدمك" }));
-    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-progress-title"));
+    expect(window.location.hash).toBe("#/s/progress");
   });
 
   it("no cross-student leakage: another student's Reader marker on this device is never offered; switching users starts from the new student's own state", async () => {
@@ -195,6 +197,7 @@ describe("9A Student Today Hub — messages, progress, scoping, failures, mobile
     await waitFor(async () => expect((await hero()).getAttribute("data-continue-type")).toBe("study"));
     expect(within(await hero()).getByRole("heading", { level: 3 }).textContent).toBe("FAR");
     expect((await hub()).getByText("لا رسائل جديدة من المعلم")).toBeTruthy();
+    await openStudentView("الواجبات");                                                  // UX-S2: nothing blanks in the other views either
     expect(screen.getByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
   });
 

@@ -4,10 +4,12 @@
 // (never over the Reader, the exam page, Messages, Games, nor under the avatar picker), it follows the student's
 // EXISTING motion preference, it reads nothing (request parity), and it leaves the neighbours exactly as they were:
 // the top-bar badges, the Today Hub's continuation, assignment opening and the project panel's own state.
+// UX-S2 (approved design docs/enterprise-ux-student-s2.md): every item now OPENS a view (#/s/<view> link, heading focus, page top)
+// instead of scrolling one long page; the back button returns to the previous view; a link opens its view. The former
+// «smooth scroll per motion preference» checks moved to what still scrolls (the project drill, src/StudentPortal.projectDrill.12d).
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor, act } from "@testing-library/react";
 import StudentPortal from "./StudentPortal";
-import { MOTION_OVERRIDE_KEY } from "./ui/motionPreference";
 
 const SLOW = { timeout: 8000 }, T = 20000;
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
@@ -46,14 +48,21 @@ function mount(opts: { assignments?: unknown[]; projects?: unknown } = {}) {
 }
 const quickNav = () => document.querySelector("nav.eb-sp-quicknav");
 const navItem = (label: string) => within(screen.getByRole("navigation", { name: "التنقل السريع في بوابة الطالب" })).getAllByRole("button").find(b => b.textContent === label)!;
-const ready = async () => { await screen.findByRole("navigation", { name: "التنقل السريع في بوابة الطالب" }, SLOW); await screen.findByRole("region", { name: /^مشاريعي/ }, SLOW); };
+const viewOf = (v: string) => document.querySelector(`.eb-sp [data-view="${v}"]`) as HTMLElement;
+const shownView = () => Array.from(document.querySelectorAll(".eb-sp [data-view]")).filter(e => !e.hasAttribute("hidden")).map(e => e.getAttribute("data-view"));
+const ready = async () => {
+  await screen.findByRole("navigation", { name: "التنقل السريع في بوابة الطالب" }, SLOW);
+  await waitFor(() => expect(document.getElementById("eb-sp-projects-title")).toBeTruthy(), SLOW);   // the panel's own read is in…
+  await waitFor(() => expect(navItem("المشاريع").hasAttribute("aria-disabled")).toBe(false), SLOW);   // …and it told the portal
+};
 let scrolls: { id: string; behavior?: string }[] = [];
+let tops: unknown[] = [];
 
 beforeEach(() => {
-  scrolls = [];
+  scrolls = []; tops = [];
   try { localStorage.clear(); } catch { /* ignore */ }
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
-  (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
+  (window as unknown as { scrollTo: (o: unknown) => void }).scrollTo = (o: unknown) => { tops.push(o); };
   HTMLElement.prototype.scrollIntoView = function (this: HTMLElement, o?: boolean | ScrollIntoViewOptions) { scrolls.push({ id: this.id, behavior: (o as ScrollIntoViewOptions)?.behavior }); };
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -70,13 +79,14 @@ describe("12C in the real portal — where the bar exists", () => {
     expect(quickNav()!.parentElement).toBe(main);
     expect(main.querySelector(".student-shell")!.compareDocumentPosition(quickNav()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(quickNav() as HTMLElement).getAllByRole("button").map(b => b.textContent)).toEqual(["اليوم", "المواد", "الواجبات", "التقدم", "المشاريع"]);
-    // every target is a real section heading of this page
-    for (const b of within(quickNav() as HTMLElement).getAllByRole("button")) expect(document.getElementById(b.getAttribute("data-target")!)?.tagName).toBe("H2");
+    // UX-S2: every item is one of the portal's views (a mounted view container of this page)
+    for (const b of within(quickNav() as HTMLElement).getAllByRole("button")) expect(viewOf(b.getAttribute("data-view")!)).toBeTruthy();
   }, T);
 
   it("(13) no bar over the Reader", async () => {
     mount();
     await ready();
+    fireEvent.click(navItem("المواد"));
     const card = await within(await screen.findByRole("region", { name: "موادي التعليمية" })).findByRole("article", { name: "شبكات الاتصال" });
     fireEvent.click(within(card).getByRole("button", { name: "فتح المادة" }));
     await waitFor(() => expect(screen.queryByRole("region", { name: "موادي التعليمية" })).toBeNull(), SLOW);
@@ -87,6 +97,7 @@ describe("12C in the real portal — where the bar exists", () => {
   it("(14 · 23) no bar over the exam page — and opening an assignment is unchanged (one /api/student-assignment read, the exam view replaces the portal)", async () => {
     const m = mount();
     await ready();
+    fireEvent.click(navItem("الواجبات"));
     const card = within(screen.getByRole("region", { name: /المهام والواجبات/ })).getByText("A1", { selector: ".eb-sp-task-title" }).closest(".student-assignment-card") as HTMLElement;
     fireEvent.click(within(card).getByRole("button"));
     await waitFor(() => expect(m.gets("/api/student-assignment/A1")).toBe(1));
@@ -95,14 +106,17 @@ describe("12C in the real portal — where the bar exists", () => {
     expect(document.querySelector(".has-quick-nav")).toBeNull();
   }, T);
 
-  it("(15) no bar over Messages; back on the portal it returns", async () => {
+  it("(15) no bar over Messages; back on the portal it returns — on the same view", async () => {
     mount();
     await ready();
+    fireEvent.click(navItem("التقدم"));
     fireEvent.click(screen.getByRole("button", { name: /^الرسائل/ }));
     await screen.findByRole("heading", { level: 1, name: "الرسائل" }, SLOW);
     expect(quickNav()).toBeNull();
     fireEvent.click(screen.getAllByRole("button").find(b => /العودة/.test(b.textContent || ""))!);
     await screen.findByRole("navigation", { name: "التنقل السريع في بوابة الطالب" }, SLOW);
+    expect(shownView()).toEqual(["progress"]);
+    expect(navItem("التقدم").getAttribute("aria-current")).toBe("page");
   }, T);
 
   it("(16) no bar over Games", async () => {
@@ -124,7 +138,7 @@ describe("12C in the real portal — where the bar exists", () => {
     expect(quickNav()!.hasAttribute("hidden")).toBe(false);
   }, T);
 
-  it("no bar while the portal is still loading (its targets do not exist yet)", async () => {
+  it("no bar while the portal is still loading (its views do not exist yet)", async () => {
     globalThis.fetch = vi.fn(() => new Promise(() => {})) as unknown as typeof fetch;
     render(<StudentPortal token="t" displayName="أحمد" onLogout={vi.fn()} />);
     await screen.findByText("جارٍ تحميل حسابك...");
@@ -133,34 +147,49 @@ describe("12C in the real portal — where the bar exists", () => {
   });
 });
 
-describe("12C motion follows the student's EXISTING preference", () => {
-  it("(8) the device-level «off» choice (examBankMotion) → instant scroll", async () => {
-    localStorage.setItem(MOTION_OVERRIDE_KEY, "off");
+describe("UX-S2 a tap opens a view (link, focus, page top — no smooth scroll)", () => {
+  const cases: [string, string, string][] = [["المواد", "learning", "eb-sp-learning-title"], ["الواجبات", "tasks", "eb-sp-tasks-title"], ["التقدم", "progress", "eb-sp-progress-title"], ["المشاريع", "projects", "eb-sp-projects-title"], ["اليوم", "today", "eb-sp-welcome"]];
+  for (const [label, view, heading] of cases) {
+    it(`«${label}» shows ONLY the ${view} view, writes #/s/${view}, focuses its heading and puts the page at its top`, async () => {
+      mount();
+      await ready();
+      if (view === "today") fireEvent.click(navItem("الواجبات"));
+      tops = [];
+      fireEvent.click(navItem(label));
+      await waitFor(() => expect(document.activeElement?.id).toBe(heading));
+      expect(shownView()).toEqual([view]);
+      expect(window.location.hash).toBe("#/s/" + view);
+      expect(navItem(label).getAttribute("aria-current")).toBe("page");
+      expect(tops.at(-1)).toEqual({ top: 0, behavior: "auto" });
+      expect(document.getElementById(heading)!.getAttribute("tabindex")).toBe("-1");      // focusable, never a Tab stop
+      expect(scrolls).toEqual([]);                                                        // no smooth scroll through a long page any more
+    }, T);
+  }
+
+  it("the back button returns to the previous view; a link (#/s/tasks) opens its view on load; an unknown link opens «اليوم»", async () => {
     mount();
     await ready();
     fireEvent.click(navItem("الواجبات"));
-    expect(scrolls.at(-1)).toEqual({ id: "eb-sp-tasks-title", behavior: "auto" });
-  }, T);
-
-  it("(8b) the OS reduced-motion hint → instant scroll", async () => {
-    window.matchMedia = ((q: string) => ({ matches: q.includes("reduce"), media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
-    mount();
-    await ready();
     fireEvent.click(navItem("التقدم"));
-    expect(scrolls.at(-1)).toEqual({ id: "eb-sp-progress-title", behavior: "auto" });
-  }, T);
-
-  it("(9) no preference → smooth; the heading receives focus", async () => {
+    await waitFor(() => expect(shownView()).toEqual(["progress"]));
+    act(() => { window.history.replaceState(null, "", "#/s/tasks"); window.dispatchEvent(new PopStateEvent("popstate")); });   // the browser's back
+    await waitFor(() => expect(shownView()).toEqual(["tasks"]));
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-tasks-title"));
+    cleanup();
+    window.history.replaceState(null, "", "#/s/tasks");
     mount();
     await ready();
-    fireEvent.click(navItem("المواد"));
-    expect(scrolls.at(-1)).toEqual({ id: "eb-sp-learning-title", behavior: "smooth" });
-    expect(document.activeElement?.id).toBe("eb-sp-learning-title");
+    expect(shownView()).toEqual(["tasks"]);
+    cleanup();
+    window.history.replaceState(null, "", "#/s/nothing");
+    mount();
+    await ready();
+    expect(shownView()).toEqual(["today"]);
   }, T);
 });
 
 describe("12C leaves the neighbours unchanged", () => {
-  it("request parity: tapping all five items reads NOTHING (no API call of any kind)", async () => {
+  it("request parity: tapping all five items reads NOTHING (no API call of any kind) — every view stays mounted", async () => {
     const m = mount();
     await ready();
     await act(async () => { await Promise.resolve(); });
@@ -168,6 +197,7 @@ describe("12C leaves the neighbours unchanged", () => {
     for (const label of ["الواجبات", "المشاريع", "التقدم", "المواد", "اليوم"]) fireEvent.click(navItem(label));
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(m.calls.length).toBe(before);
+    expect(document.querySelectorAll(".eb-sp [data-view]")).toHaveLength(5);
   }, T);
 
   it("(21) the top bar keeps both badges (bell = unified, «الرسائل» = message-only) with the bar present", async () => {
@@ -187,32 +217,37 @@ describe("12C leaves the neighbours unchanged", () => {
     const hero = (await screen.findByRole("region", { name: "أكمل من حيث توقفت" })).querySelector("[data-continue-type]") as HTMLElement;
     expect(hero.getAttribute("data-continue-type")).toBe("assignment");
     fireEvent.click(navItem("المشاريع"));                                   // nav use first: no effect on the hub's choice
+    fireEvent.click(navItem("اليوم"));
     fireEvent.click(within(hero).getByRole("button"));
     await waitFor(() => expect(m.gets("/api/student-assignment/SOON")).toBe(1));
   }, T);
 
-  it("(24) the project panel keeps its own state: «المشاريع» only scrolls to the section; an opened project stays open, cards are never re-read", async () => {
+  it("(24) the project panel keeps its own state across views: an opened project stays open, cards are never re-read", async () => {
     const m = mount();
     await ready();
+    fireEvent.click(navItem("المشاريع"));
     const region = screen.getByRole("region", { name: /^مشاريعي/ });
     fireEvent.click(within(within(region).getByRole("article", { name: "مشروع الشبكة" })).getByRole("button", { name: "فتح المشروع" }));
     expect(region.querySelector('[data-project-code="P2"]')).toBeTruthy();
     const tracker = m.gets("/api/student-project-tracker");
+    fireEvent.click(navItem("الواجبات"));
     fireEvent.click(navItem("المشاريع"));
-    expect(scrolls.at(-1)?.id).toBe("eb-sp-projects-title");
     expect(region.querySelector('[data-project-code="P2"]')).toBeTruthy();       // still the opened project
     expect(m.gets("/api/student-project-tracker")).toBe(tracker);
-    // the Today Hub's own «تقدمك» shortcut still works exactly as before (the portal's existing helper)
+    // the Today Hub's own «تقدمك» shortcut opens «التقدم»
+    fireEvent.click(navItem("اليوم"));
     fireEvent.click(within(screen.getByRole("region", { name: "أكمل من حيث توقفت" })).getByRole("button", { name: "تقدمك" }));
-    await waitFor(() => expect(scrolls.at(-1)?.id).toBe("eb-sp-progress-title"));
+    await waitFor(() => expect(shownView()).toEqual(["progress"]));
   }, T);
 
-  it("a student without projects: «المشاريع» stays in the bar but is marked unavailable", async () => {
+  it("a student without projects: «المشاريع» stays in the bar but is marked unavailable; its link falls back to «اليوم»", async () => {
+    window.history.replaceState(null, "", "#/s/projects");
     mount({ projects: { ok: true, enrolled: false } });
     await screen.findByRole("navigation", { name: "التنقل السريع في بوابة الطالب" }, SLOW);
-    await screen.findByRole("region", { name: /المهام والواجبات/ });
     await waitFor(() => expect(navItem("المشاريع").getAttribute("aria-disabled")).toBe("true"));
+    await waitFor(() => expect(shownView()).toEqual(["today"]));
     fireEvent.click(navItem("المشاريع"));
-    expect(scrolls.some(s => s.id === "eb-sp-projects-title")).toBe(false);
+    expect(shownView()).toEqual(["today"]);
+    expect(within(screen.getByRole("navigation", { name: "أقسام بوابة الطالب" })).queryByRole("button", { name: /^المشاريع/ })).toBeNull();   // the desktop bar omits it
   }, T);
 });

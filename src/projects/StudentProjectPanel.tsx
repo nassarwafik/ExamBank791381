@@ -248,7 +248,7 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
 // against THIS panel's own response for the CURRENT token (never Today's data, never a second read): applied once per
 // `seq`, reported through `onDrillConsumed`, and from then on the cards / back button belong to the student again.
 type LoadResult = { token: string; status: "ready" | "failed"; data: ProjectData | null };
-export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange, drill = null, onDrillConsumed }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void; drill?: StudentProjectDrill | null; onDrillConsumed?: (seq: number, outcome: StudentProjectDrillOutcome) => void }) {
+export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange, drill = null, onDrillConsumed, onAvailableChange }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void; drill?: StudentProjectDrill | null; onDrillConsumed?: (seq: number, outcome: StudentProjectDrillOutcome) => void; /** UX-S2 — whether this panel shows anything (its own read decides): the portal offers «المشاريع» only then. */ onAvailableChange?: (available: boolean) => void }) {
   const [load, setLoad] = useState<LoadResult | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);                            // P2: re-read after the student's own write
   const [openCode, setOpenCode] = useState<string>("");
@@ -290,6 +290,11 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
   }
   // Report after commit (the opened detail is in the DOM when the portal scrolls to it).
   useEffect(() => { if (consumed) onDrillConsumed?.(consumed.seq, consumed.outcome); }, [consumed]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const available = !!(data && data.enrolled && data.projects && data.projects.length);
+  // UX-S2 — report after commit once this session's read has answered (ready or failed), and again whenever it changes.
+  const answered = !!current;
+  useEffect(() => { if (answered) onAvailableChange?.(available); }, [answered, available]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data || !data.enrolled || !data.projects || !data.projects.length) return null;
   const projects = data.projects;

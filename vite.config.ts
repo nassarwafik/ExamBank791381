@@ -20,7 +20,7 @@ export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, '**/.claude/worktrees/**'],
     // Tadris+ P8-B2b — each test starts on a clean device (the remembered table / view preferences are cleared before every test).
-    setupFiles: ['./src/test-setup/devicePrefsReset.ts'],
+    setupFiles: ['./src/test-setup/devicePrefsReset.ts', './src/test-setup/studentViewReset.ts'],
     // happy-dom 21 stopped loading iframe documents by default ("Iframe page loading is disabled"); the print reports / login cards
     // (a same-origin about:blank iframe) and the SmartSim bridge tests (an iframe's contentWindow) rely on the version 20 behaviour.
     environmentOptions: { happyDOM: { settings: { enableIframePageLoading: true } } },

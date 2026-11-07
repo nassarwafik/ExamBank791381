@@ -195,6 +195,9 @@ describe("selecting an event", () => {
     fireEvent.click(itemButtons()[0]);
     expect(await screen.findByText(/لم يُفتح هذا الواجب بعد/)).toBeTruthy();
     await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-task-a2"));
+    // UX-S2 (docs/enterprise-ux-student-s2.md §2.4): the card lives in «الواجبات», which is the view now shown
+    expect(document.getElementById("eb-sp-task-a2")!.closest("[data-view]")!.hasAttribute("hidden")).toBe(false);
+    expect(window.location.hash).toBe("#/s/tasks");
     expect(gets.some(u => u.includes("/api/student-assignment/"))).toBe(false);
   });
 
@@ -230,6 +233,9 @@ describe("selecting an event", () => {
     fireEvent.click(itemButtons()[0]);
     await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-post-p1"));
     expect(document.getElementById("eb-sp-post-p1")!.className).toContain("is-highlighted");
+    // UX-S2 (§2.4): the achievements live in «التقدم», which is the view now shown
+    expect(document.getElementById("eb-sp-post-p1")!.closest("[data-view]")!.hasAttribute("hidden")).toBe(false);
+    expect(window.location.hash).toBe("#/s/progress");
   });
 });
 
