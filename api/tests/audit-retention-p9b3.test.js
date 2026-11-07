@@ -16,7 +16,8 @@ const walk = dir => !existsSync(dir) ? [] : readdirSync(dir, { withFileTypes: tr
 });
 const DELETES = /\b(deleteBlob|deleteBlobConditional|deleteIfExists)\s*\(|\.delete\s*\(\s*\)|\bunlink(Sync)?\s*\(|\brmSync\s*\(/;
 // an audit LOCATION (the prefixes or their paths); importing the writer to record events is not one
-const AUDIT = /AUDIT_PREFIX|platform\/audit\/|platform\/owner-audit\//;
+// Tadris+ O4 — the per-teacher pointers under platform/audit-index/ are audit records too (docs/enterprise-teacher-activity-log-o4.md).
+const AUDIT = /AUDIT_PREFIX|AUDIT_INDEX_PREFIX|platform\/audit\/|platform\/audit-index\/|platform\/owner-audit\//;
 // the platform's code and its operational scripts; certification tooling is not the platform (the `check-*` browser gates delete
 // their own output folder and read in-memory test audits, the `mutate-*` campaigns name the prefixes inside planted defects)
 const TOOLING = /[\\/]scripts[\\/](check-[^\\/]+|mutate-[^\\/]+)$/;
@@ -28,6 +29,7 @@ describe("P9-B3 D17 — audit records are never deleted by the platform", () => 
     expect(text).not.toMatch(DELETES);
     expect(text).toMatch(/const AUDIT_PREFIX = "platform\/audit\/"/);
     expect(text).toMatch(/const OWNER_AUDIT_PREFIX = "platform\/owner-audit\/"/);
+    expect(text).toMatch(/const AUDIT_INDEX_PREFIX = "platform\/audit-index\/"/);   // Tadris+ O4
   });
   it("no source file that deletes from storage refers to an audit location", () => {
     const deleters = sources.filter(f => DELETES.test(readFileSync(f, "utf8")));

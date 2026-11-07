@@ -6,6 +6,33 @@ const AUDIT_PREFIX = "platform/audit/";
 // SEPARATE prefix: the teacher-facing reader (/api/audit-history) lists only AUDIT_PREFIX, so a teacher never sees when
 // or how the owner signs in, and owner events never take a slot in the teacher's newest-100 window.
 const OWNER_AUDIT_PREFIX = "platform/owner-audit/";
+// Tadris+ O4 (docs/enterprise-teacher-activity-log-o4.md) — «سجل نشاطي» per teacher. With every NEW event under AUDIT_PREFIX, a tiny
+// pointer is written for each teacher it concerns (its actor, and forTeacher):
+//   platform/audit-index/<teacher>/<inverted stamp>-<event key>.json   with { schemaVersion: 1 }
+// The event stays the one source of truth (the pointer carries no data; its name leads to the event). The inverted stamp makes the
+// storage's lexicographic listing newest-first, so the reader needs ONE page of the teacher's own index. Only an id made of safe
+// characters is indexed (it becomes part of a storage path); "system" / "builder" are not teachers. Old events are not indexed
+// (no storage migration): the reader falls back to the old window for them. Pointers are audit records too (D17: never deleted).
+const AUDIT_INDEX_PREFIX = "platform/audit-index/";
+const INDEX_ID_RE = /^[A-Za-z0-9_.-]{1,64}$/;
+const NOT_A_TEACHER = new Set(["system", "builder", ".", ".."]);
+const INVERT_BASE = 9999999999999;
+const indexableId = v => typeof v === "string" && INDEX_ID_RE.test(v) && !NOT_A_TEACHER.has(v);
+function indexOwners(event) {
+  const out = [];
+  for (const v of [event?.actor, event?.forTeacher]) if (indexableId(v) && !out.includes(v)) out.push(v);
+  return out;
+}
+/** The pointer's name for a teacher, an event time (ms) and the event key (its name without AUDIT_PREFIX and ".json"). */
+const indexEntryName = (teacher, ms, eventKey) => AUDIT_INDEX_PREFIX + teacher + "/" + String(INVERT_BASE - ms).padStart(13, "0") + "-" + eventKey + ".json";
+/** The event key a pointer leads to, or "" for a name that is not one of this teacher's pointers. */
+function eventKeyFromIndexName(teacher, name) {
+  const head = AUDIT_INDEX_PREFIX + teacher + "/";
+  const s = String(name || "");
+  if (!s.startsWith(head) || !s.endsWith(".json")) return "";
+  const rest = s.slice(head.length, -".json".length);
+  return /^\d{13}-/.test(rest) ? rest.slice(14) : "";
+}
 
 // One independent blob per event (never a shared/appended document), so concurrent sensitive
 // actions never race on the same write — no ETag/retry logic is needed here at all. Audit logging
@@ -35,7 +62,7 @@ async function writeAuditEvent(container, event, prefix, { strict = false } = {}
     const stamp = now.toISOString().replace(/[:.]/g, "-");
     const suffix = crypto.randomBytes(4).toString("hex");
     const name = prefix + stamp + "-" + suffix + ".json";
-    await uploadJson(container, name, {
+    const record = {
       schemaVersion: 1,
       timestamp: now.toISOString(),
       actor: String(event?.actor || "builder"),
@@ -48,7 +75,16 @@ async function writeAuditEvent(container, event, prefix, { strict = false } = {}
       ...(typeof event?.forTeacher === "string" && event.forTeacher ? { forTeacher: event.forTeacher } : {}),
       // Tadris+ P10-L — the owner change this event belongs to (recordOwnerChange): its record and, if any, its «not applied».
       ...(typeof event?.opId === "string" && OP_ID_RE.test(event.opId) ? { opId: event.opId } : {})
-    });
+    };
+    // Tadris+ O4 — the pointers FIRST, then the event: a pointer whose event failed is skipped by the reader; an event is never
+    // written without its pointers. A best-effort write goes on without a failed pointer; a strict one refuses (the caller refuses).
+    if (prefix === AUDIT_PREFIX) {
+      for (const teacher of indexOwners(event)) {
+        try { await uploadJson(container, indexEntryName(teacher, now.getTime(), stamp + "-" + suffix), { schemaVersion: 1 }); }
+        catch (e) { if (strict) throw e; }
+      }
+    }
+    await uploadJson(container, name, record);
   } catch (e) {
     // Recording the event must never break the sensitive action it's describing — unless the caller asked for a strict write.
     if (strict) throw e;
@@ -151,4 +187,4 @@ async function recordOwnerChangeAtWrite(container, event, apply, { write = recor
   return response;
 }
 
-module.exports = { recordAuditEvent, recordOwnerAuditEvent, recordAuditEventStrict, recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite, AuditUnavailableError, auditUnavailable, AUDIT_UNAVAILABLE_ERROR, OP_ID_RE, AUDIT_PREFIX, OWNER_AUDIT_PREFIX };
+module.exports = { recordAuditEvent, recordOwnerAuditEvent, recordAuditEventStrict, recordOwnerAuditEventStrict, recordOwnerChange, recordOwnerChangeAtWrite, AuditUnavailableError, auditUnavailable, AUDIT_UNAVAILABLE_ERROR, OP_ID_RE, AUDIT_PREFIX, AUDIT_INDEX_PREFIX, indexableId, indexEntryName, eventKeyFromIndexName, OWNER_AUDIT_PREFIX };
