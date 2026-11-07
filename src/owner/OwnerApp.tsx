@@ -25,6 +25,7 @@ import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
 import OwnerOverview from "./OwnerOverview";         // UX-O1
 import OwnerAccountMenu from "./OwnerAccountMenu";   // UX-O3
 import QrSignInEntry from "../qrLogin/QrSignInEntry";   // Tadris+ QR-2 — the owner's own QR sign-in (owner namespace)
+import AccountTypeSwitch from "../signin/AccountTypeSwitch";   // Tadris+ SIGN-IN-1
 
 /**
  * Tadris+ P1-A2 — the platform owner's area (lazy chunk, `#/owner`). Owner decisions D3–D5.
@@ -158,8 +159,9 @@ function OwnerLogin({ bootstrap, onSignedIn }: { bootstrap: BootstrapState; onSi
 
   return (
     <section className="auth-card eb-owner-card" aria-labelledby="eb-owner-login-title">
+      <AccountTypeSwitch current="owner" />   {/* Tadris+ SIGN-IN-1 — the same «نوع الحساب» switch as the main sign-in page */}
       <h1 id="eb-owner-login-title" className="auth-welcome">دخول مالك المنصة</h1>
-      <p className="auth-sub">هذه الصفحة لمالك المنصة فقط. المعلمون والطلاب يدخلون من الصفحة الرئيسية.</p>
+      <p className="auth-sub">دخول حساب مالك المنصة. المعلمون والطلاب يختارون «معلم أو طالب» أعلاه.</p>
       <form className="auth-form" onSubmit={submit} noValidate>
         <label className="auth-field">
           <span>اسم المستخدم</span>

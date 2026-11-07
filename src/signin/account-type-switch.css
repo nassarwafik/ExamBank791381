@@ -1,0 +1,15 @@
+/* Tadris+ SIGN-IN-1 — «نوع الحساب» at the top of the sign-in card: a two-part segmented control (links). */
+.eb-account-switch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--eb-space-1);
+  margin: 0 0 var(--eb-space-4); padding: var(--eb-space-1);
+  background: var(--eb-surface-2, var(--eb-surface)); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg);
+}
+.eb-account-switch-item {
+  display: flex; align-items: center; justify-content: center; min-height: 40px; padding: var(--eb-space-2) var(--eb-space-3);
+  border-radius: var(--eb-r); color: var(--eb-muted); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); text-decoration: none;
+}
+.eb-account-switch-item:hover { color: var(--eb-text-heading); }
+.eb-account-switch-item[aria-current="page"] {
+  background: var(--eb-surface); color: var(--eb-primary-strong); border: 1px solid var(--eb-line);
+}
+.eb-account-switch-item:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }

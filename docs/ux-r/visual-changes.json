@@ -730,6 +730,16 @@
       "page": "student-progress",
       "viewport": "tablet",
       "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar (every student view since UX-S2) gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "login",
+      "viewport": "all",
+      "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
+    },
+    {
+      "page": "login-error",
+      "viewport": "all",
+      "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
     }
   ]
 }
