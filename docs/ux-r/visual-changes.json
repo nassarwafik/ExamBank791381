@@ -645,6 +645,21 @@
       "page": "students",
       "viewport": "tablet",
       "reason": "Tadris+ P8-B2b — the «بطاقات / قائمة مضغوطة» view switch (owner decision §19.31, «لكل صفحة») appears in the toolbar of the classes (الصفوف والطلاب) and the assignments page (and the assignment pages opened from it); «بطاقات» is the default and the page's look is otherwise unchanged."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "desktop",
+      "reason": "Tadris+ UX-S1 (approved design docs/enterprise-ux-student-s1.md) — the student portal: the login code is masked but its last 4 characters with «إظهار» / «إخفاء» (a 44px touch target on phones), the «مطلوب الآن» hint reads «متاح للحل الآن» / «لا شيء مطلوب الآن», the Strength breakdown list is styled, and on phones the top bar keeps theme / notifications / messages with games, install and logout in the «المزيد» menu (no sideways scrolling); the desktop bar is unchanged."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "phone",
+      "reason": "Tadris+ UX-S1 (approved design docs/enterprise-ux-student-s1.md) — the student portal: the login code is masked but its last 4 characters with «إظهار» / «إخفاء» (a 44px touch target on phones), the «مطلوب الآن» hint reads «متاح للحل الآن» / «لا شيء مطلوب الآن», the Strength breakdown list is styled, and on phones the top bar keeps theme / notifications / messages with games, install and logout in the «المزيد» menu (no sideways scrolling); the desktop bar is unchanged."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "tablet",
+      "reason": "Tadris+ UX-S1 (approved design docs/enterprise-ux-student-s1.md) — the student portal: the login code is masked but its last 4 characters with «إظهار» / «إخفاء» (a 44px touch target on phones), the «مطلوب الآن» hint reads «متاح للحل الآن» / «لا شيء مطلوب الآن», the Strength breakdown list is styled, and on phones the top bar keeps theme / notifications / messages with games, install and logout in the «المزيد» menu (no sideways scrolling); the desktop bar is unchanged."
     }
   ]
 }

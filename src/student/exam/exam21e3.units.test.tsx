@@ -111,7 +111,7 @@ describe("LTR islands (S-6) — markup only, the text itself unchanged", () => {
     expect(bell).toMatch(/view\.grade \? isolateLtr\(view\.preview, GRADE_LTR, \{ lastOnly: true \}\) : view\.preview/);   // review fix 2: only a composed grade
     // Outside comments, every «Tadris+» the install card / entry renders sits in its own <bdi dir="ltr">.
     const code = (f: string) => fs.readFileSync(path.join(repo, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-    for (const f of ["src/pwa/InstallAppCard.tsx", "src/pwa/InstallAppEntry.tsx"]) {
+    for (const f of ["src/pwa/InstallAppCard.tsx", "src/pwa/useInstallEntry.tsx"]) {   // UX-S1 — the entry's dialog moved into its hook
       const src = code(f);
       expect(src, f).toMatch(/<bdi dir="ltr">Tadris\+<\/bdi>/);
       expect(src.replace(/<bdi dir="ltr">Tadris\+<\/bdi>/g, ""), f).not.toContain("Tadris+");

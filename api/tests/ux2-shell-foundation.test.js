@@ -468,6 +468,7 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
       "src/owner/OwnerTeachers.tsx",                             // UX-O1 — the owner's teachers table: each teacher's «⋯» menu
       "src/projects/ProjectScoreGrid.tsx",                       // Phase G1 — the class matrix's per-stage column menu
       "src/projects/ProjectStudentDetail.tsx", "src/projects/ProjectTracker.tsx",
+      "src/shell/StudentShell.tsx",                              // UX-S1 — the student's phone «المزيد» menu
       "src/students/ActionMenu.tsx", "src/students/ClassesPane.tsx", "src/students/RosterPane.tsx",
       "src/studio/StudioWorkspace.tsx"                           // Phase 21F.3 — the Exam Studio top bar's «إضافة» / «أدوات الامتحان» menus
     ]);

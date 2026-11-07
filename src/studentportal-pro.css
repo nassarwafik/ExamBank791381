@@ -17,6 +17,10 @@
 .eb-sp-identity-text h2{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
 .eb-sp-identity-text p{ margin:0; font-size:var(--eb-fs-13); }
 .eb-sp-code{ flex:0 0 auto; }
+/* UX-S1 — «إظهار» / «إخفاء» beside the masked code: a quiet text button with a full touch target on phones. */
+.eb-sp-code{ display:inline-flex; align-items:center; gap:var(--eb-space-2); }
+.eb-sp-code-toggle{ border:0; background:none; padding:var(--eb-space-1) var(--eb-space-2); min-height:44px; color:inherit; font:inherit; font-weight:var(--eb-fw-semibold); text-decoration:underline; text-underline-offset:3px; cursor:pointer; border-radius:var(--eb-r); }
+.eb-sp-code-toggle:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
 .eb-sp-avatar-frame{ display:inline-flex; flex:0 0 auto; padding:3px; border:3px solid var(--eb-line-2); border-radius:50%; }
 .eb-sp-avatar-frame.is-rank-beginner{ border-color:var(--eb-faint); }
 .eb-sp-avatar-frame.is-rank-bronze{ border-color:var(--eb-medal-bronze); }
@@ -103,6 +107,11 @@
 .eb-sp-stage-final{ font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
 .eb-sp-stage-unavailable{ padding:var(--eb-space-2) 0; }
 .eb-sp-strength-total strong{ font-variant-numeric:tabular-nums; }
+/* UX-S1 — the Strength points breakdown: a plain list, name at the start and number at the end (it had no rule at all). */
+.eb-sp-strength-breakdown{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.eb-sp-strength-breakdown li{ display:flex; align-items:baseline; justify-content:space-between; gap:var(--eb-space-3); padding-block:var(--eb-space-1); border-block-end:1px solid var(--eb-line); color:var(--eb-text-secondary); font-size:var(--eb-fs-14); }
+.eb-sp-strength-breakdown li:last-child{ border-block-end:0; }
+.eb-sp-strength-breakdown li strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
 
 /* ---------- Stats ---------- */
 .eb-sp-stats{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); }
@@ -214,7 +223,7 @@
   .eb-sp-now-item{ flex-direction:row; align-items:center; justify-content:space-between; }
   .eb-sp-now-action{ width:auto; min-height:38px; }
   .eb-sp-task-action{ width:auto; min-height:38px; align-self:flex-start; }
-  .eb-sp-reaction{ min-height:32px; }
+  .eb-sp-reaction{ min-height:32px; } .eb-sp-code-toggle{ min-height:32px; }
   .eb-sp-project-tracks{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-button.eb-sp-done-btn,.eb-button.eb-sp-undo-btn,.eb-button.eb-sp-group-mark,.eb-sp-group-toggle{ min-height:36px; }   /* P3 one-tap marking */
   .eb-sp-rankring{ inline-size:160px; block-size:160px; }

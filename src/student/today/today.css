@@ -10,6 +10,8 @@
 .eb-sp-today-hero.is-assignment{ border-inline-start-color:var(--eb-danger); }
 .eb-sp-today-hero.is-reader, .eb-sp-today-hero.is-study{ border-inline-start-color:var(--eb-success); background:linear-gradient(180deg, var(--eb-success-bg), var(--eb-surface)); }
 .eb-sp-today-hero.is-project{ border-inline-start-color:var(--eb-info); }
+/* UX-S1 — an optional extra attempt: neutral, never the red «موعد قريب». */
+.eb-sp-today-hero.is-retry{ border-inline-start-color:var(--eb-line-2); background:var(--eb-surface-2); }
 .eb-sp-today-hero.is-empty{ border-inline-start-color:var(--eb-line-2); background:var(--eb-surface-2); }
 .eb-sp-today-kicker{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); letter-spacing:.01em; }
 .eb-sp-today-hero-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
