@@ -68,15 +68,24 @@ describe("21E V2 — at-a-glance strip", () => {
     expect(tile(s, "مطلوب الآن").querySelector(".eb-sp-kpi-value")!.textContent).toBe("0");
   });
 
-  it("each tile scrolls to the section that explains it", async () => {
+  // UX-S2 (approved design docs/enterprise-ux-student-s2.md §2.4): each tile opens the VIEW that explains it — «مطلوب الآن» stays on
+  // «اليوم» and lands on its list; the two others open «الواجبات» / «التقدم» (their link, their heading focused).
+  it("each tile opens the view that explains it", async () => {
     const scrolled: string[] = [];
     vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (this: Element) { scrolled.push(this.id); });
     mount([{ status: 200, body: { student, classroom, assignments, stats, strength } }]);
     const s = await strip();
     fireEvent.click(tile(s, "مطلوب الآن"));
+    await waitFor(() => expect(scrolled).toEqual(["eb-sp-now-title"]));
+    expect(window.location.hash).toBe("#/s/today");
     fireEvent.click(tile(s, "بانتظار التصحيح"));
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-tasks-title"));
+    expect(window.location.hash).toBe("#/s/tasks");
+    expect(screen.getByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
     fireEvent.click(tile(s, "معدّلي النهائي"));
-    await waitFor(() => expect(scrolled).toEqual(["eb-sp-now-title", "eb-sp-tasks-title", "eb-sp-progress-title"]));
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-progress-title"));
+    expect(window.location.hash).toBe("#/s/progress");
+    expect(screen.queryByRole("region", { name: /المهام والواجبات/ })).toBeNull();
   });
 });
 

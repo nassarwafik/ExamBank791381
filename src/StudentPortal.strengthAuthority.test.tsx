@@ -6,6 +6,7 @@
 // state (never a client-computed stage).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 import { stageVisual } from "./studentStageVisuals";
 
@@ -31,7 +32,7 @@ function mount(strength: unknown) {
   }) as unknown as typeof fetch;
   render(<StudentPortal token="t" displayName="أحمد" onLogout={vi.fn()} />);
 }
-const progressRegion = () => screen.findByRole("region", { name: /تقدّمي/ });
+const progressRegion = async () => { await openStudentView("التقدم"); /* UX-S2: the section lives in its view */ return screen.findByRole("region", { name: /تقدّمي/ }); };
 
 describe("Strength authority — the portal displays the server's stage, never a recomputed one", () => {
   it("900 points + server stage 17 / 11 / 14% → المرحلة 17 من 25 · تنين الجليد · 11 / 80 · 14% · نقاط القوة: 900 / 2000 · next سيد العواصف", async () => {

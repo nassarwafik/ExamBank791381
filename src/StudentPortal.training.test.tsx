@@ -4,6 +4,7 @@
 // the Reader reloads the dashboard ONCE (never per page, never when nothing was submitted).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -45,6 +46,7 @@ function mount() {
   return { calls, dashboardGets: () => calls.filter(c => c.method === "GET" && c.url === "/api/student-dashboard").length };
 }
 async function openReader() {
+  await openStudentView("المواد");                                    // UX-S2: the materials live in «المواد»
   const s = await screen.findByRole("region", { name: "موادي التعليمية" });
   const card = await within(s).findByRole("article", { name: "شبكات الاتصال" });
   fireEvent.click(within(card).getByRole("button", { name: "فتح المادة" }));

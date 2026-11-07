@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -27,7 +28,7 @@ function mount(dashboard: Record<string, unknown>) {
 }
 // UX-7a: actionable assignments also appear in the primary "ماذا عليّ أن أفعل الآن؟" section, so the card
 // assertions are scoped to the assignments list region.
-const list = async () => within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
+const list = async () => { await openStudentView("الواجبات"); /* UX-S2: the section lives in its view */ return within(await screen.findByRole("region", { name: /المهام والواجبات/ })); };
 const student = { userId: "u1", code: "C1", displayName: "أحمد", classId: "c1", shareAchievements: true };
 const classroom = { classId: "c1", name: "الصف", grade: "11", schoolYear: "2026" };
 
