@@ -99,8 +99,9 @@ export default function QrApp() {
           )}
 
           {view.kind === "scan" && <Scanner note={view.note} onScanned={onScanned} />}
-          {/* Tadris+ QR-3 — the teacher / student account's own devices (the owner's are not listed here, owner decision). */}
-          {view.kind === "scan" && ns === "platform" && session && <LinkedDevices token={session} onSignedOut={() => { setSession(""); setView({ kind: "no-session" }); }} />}
+          {/* Tadris+ QR-3 — the teacher / student account's own devices. */}
+          {/* Tadris+ QR-4 — and the owner's own devices on the owner's QR page (owner request). */}
+          {view.kind === "scan" && session && <LinkedDevices ns={ns} token={session} onSignedOut={() => { setSession(""); setView({ kind: "no-session" }); }} />}
 
           {(view.kind === "checking" || view.kind === "working") && <p className="auth-sub" role="status">لحظة…</p>}
 
