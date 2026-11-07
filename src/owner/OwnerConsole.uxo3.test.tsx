@@ -117,10 +117,17 @@ describe("UX-O3 the header account menu", () => {
     const menu = screen.getByRole("group", { name: "حساب مالك المنصة" });
     expect(menu.textContent).toContain("tadris.owner");
     expect(menu.textContent).toContain("الجلسة حتى");
-    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["حسابك وأمانه", "تسجيل الخروج"]);
+    // Tadris+ QR-2 — «ربط جهاز آخر بالباركود» opens the owner's QR scanner (#/owner-qr-scan); «تسجيل الخروج» stays last.
+    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["حسابك وأمانه", "ربط جهاز آخر بالباركود", "تسجيل الخروج"]);
     fireEvent.click(within(menu).getByRole("button", { name: "حسابك وأمانه" }));
     expect(await screen.findByRole("heading", { name: "أهلًا، مالك المنصة" })).toBeTruthy();
     expect(window.location.hash).toBe(ownerSectionHash("home"));
+  });
+  it("«ربط جهاز آخر بالباركود» opens the owner's QR scanner (Tadris+ QR-2)", async () => {
+    await openExams();
+    fireEvent.click(screen.getByRole("button", { name: "حساب مالك المنصة" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "حساب مالك المنصة" })).getByRole("button", { name: "ربط جهاز آخر بالباركود" }));
+    expect(window.location.hash).toBe("#/owner-qr-scan");
   });
 
   it("«تسجيل الخروج» sends the same request as the button on «نظرة عامة», once, and returns to the sign-in page", async () => {
