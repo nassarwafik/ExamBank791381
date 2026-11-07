@@ -29,7 +29,7 @@ import StudentGamesPage from "./games/StudentGamesPage";
 import StudentMessagesPage, { type StudentMessagesTab } from "./messages/StudentMessagesPage";
 import { fetchNotificationCenter, fetchNotificationCounts, markNotificationEventRead, isMessageNotification, isAssignmentRoute, type NotificationItem, type NotificationCounts } from "./notifications/notificationsClient";
 import type { NotificationCounts as BellCounts } from "./notifications/NotificationBell";
-import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
+import { FILTERS, groupTasks, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { normalizeStrength } from "./student/strengthPresentation";
 import { stageVisual } from "./studentStageVisuals";
 import { normalizeRecognition } from "./student/recognitionPresentation";
@@ -530,9 +530,22 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                   {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
                 </div>
                 <div className="student-assignment-list">
-                  {visible.length > 0 && (
+                  {/* UX-S3 (docs/enterprise-ux-student-s3.md §2.1): «الكل» in groups with headings; any other filter is one group already. */}
+                  {visible.length > 0 && filter === "all" && (
+                    <div className="eb-sp-task-groups">
+                      {groupTasks(visible).map(g => (
+                        <div key={g.key} className={"eb-sp-task-group is-" + g.key} role="group" aria-labelledby={"eb-sp-task-group-" + g.key}>
+                          <h3 id={"eb-sp-task-group-" + g.key} className="eb-sp-task-group-title">{g.label}<span className="eb-sp-task-group-count">{g.items.length}</span></h3>
+                          <ul className="eb-sp-tasks">
+                            {g.items.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} /></li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {visible.length > 0 && filter !== "all" && (
                     <ul className="eb-sp-tasks">
-                      {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
+                      {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} /></li>)}
                     </ul>
                   )}
                   {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}

@@ -1,15 +1,19 @@
 import { dashboardStateLabel, gradingClass, resolveGradingStatus, scoreLabel } from "../gradingStatus";
 import { CODING_GRADING_CARD_OPEN, CODING_GRADING_CARD_REVIEW, PENDING_SCORE_DASH, codingGradingStatusOf, isCodingGradingOpen, isCodingReviewRequired, scoreWithheld, resultsNotReleased, resultsNotReleasedLabel } from "../codingGradingStatus";
 import StatusBadge from "../ui/StatusBadge";
-import { STATE_TONE, actionLabel, formatWhen, stateOf } from "./portalPresentation";
+import { IconHistory } from "../icons";
+import { STATE_TONE, actionLabel, dueText, formatWhen, stateOf } from "./portalPresentation";
 import type { Summary } from "./types";
 
 /** One task card (UX-7). The wording of the result line is unchanged: provisional vs final comes from the result's own grading status. */
-export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Summary; busy: boolean; onOpen: (item: Summary) => void }) {
+export default function StudentAssignmentCard({ item, busy, onOpen, now }: { item: Summary; busy: boolean; onOpen: (item: Summary) => void; /** UX-S3 — the portal's clock (one reading per render of the list). */ now: number }) {
   const st = stateOf(item);
   const lr = item.latestResult || null;
   const lrGs = lr ? resolveGradingStatus(lr) : null;
-  const due = item.effectiveDueAt || item.dueAt;
+  // UX-S3 (docs/enterprise-ux-student-s3.md §2.2) — a deadline read at a glance: «اليوم» / «غدًا» / «بعد N أيام» / «انتهى التسليم»;
+  // a scheduled task says when it opens. The full date stays in the line (or its title).
+  const due = dueText(item, now);
+  const dueFull = formatWhen(st === "scheduled" ? item.openAt : item.effectiveDueAt || item.dueAt);
   return (
     <article className={"student-assignment-card eb-sp-task dash-" + st}>
       <div className="eb-sp-task-head">
@@ -21,7 +25,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen }: { item: Su
         <li>{item.questionCount} سؤال</li>
         <li>{item.totalMarks} علامة</li>
         {!!item.durationMinutes && <li>{item.durationMinutes} دقيقة</li>}
-        <li>التسليم: {formatWhen(due)}</li>
+        <li className={"eb-sp-task-due" + (due.soon ? " is-soon" : "") + (due.past ? " is-past" : "")} title={dueFull} data-testid="card-due">{due.soon && <IconHistory size={14} aria-hidden="true" />}{due.text}</li>
         {item.inLateWindow && item.lateUntil && <li className="eb-sp-task-late" data-testid="card-late-window">تسليم متأخر حتى {formatWhen(item.lateUntil)}{item.lateDeductionPercent ? " · خصم " + item.lateDeductionPercent + "٪" : ""}</li>}
         <li>المحاولات: {item.attemptsUsed}/{item.allowedAttempts}</li>
       </ul>

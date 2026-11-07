@@ -454,12 +454,12 @@ describe("17E-C §50 — student portal card: compact safe line", () => {
   const item = (latestResult: R | null) => ({ assignmentId: "a1", title: "واجب", instructions: "", openAt: "", dueAt: "", effectiveDueAt: "", questionCount: 1, totalMarks: 10, durationMinutes: 0, availability: "open", dashboardState: "awaitingReview", gradingStatus: "pendingReview", attemptsUsed: 1, allowedAttempts: 1, canAttempt: false, latestScore: 2, latestPercentage: 20, latestResult });
   it("open automatic grading is named on the card; complete / absent shows nothing extra; never technical", () => {
     vi.useRealTimers();
-    const { unmount } = render(<StudentAssignmentCard item={item(open("retrying")) as never} busy={false} onOpen={() => {}} />);
+    const { unmount } = render(<StudentAssignmentCard item={item(open("retrying")) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     expect(screen.getByTestId("card-coding-grading").textContent).toMatch(/التصحيح الآلي لأسئلة البرمجة جارٍ/);
     expect(document.body.textContent).not.toMatch(TECH);
     unmount();
     for (const lr of [result({ autoGradingStatus: "complete" }), result()]) {
-      const r = render(<StudentAssignmentCard item={item(lr) as never} busy={false} onOpen={() => {}} />);
+      const r = render(<StudentAssignmentCard item={item(lr) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
       expect(screen.queryByTestId("card-coding-grading")).toBeNull();
       r.unmount();
     }

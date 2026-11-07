@@ -118,12 +118,12 @@ describe("17F-C2 PED11–PED14 — the student result page", () => {
 describe("17F-C2 PED13 — the dashboard card", () => {
   const assignment = (lr: R) => ({ assignmentId: "a1", title: "واجب", instructions: "", openAt: "", dueAt: "2026-10-10T00:00:00.000Z", effectiveDueAt: "", questionCount: 1, totalMarks: 30, durationMinutes: 0, attemptsUsed: 1, allowedAttempts: 2, availability: "open", status: "submitted", canAttempt: false, hasActiveAttempt: false, latestResult: lr });
   it("review required → '— /30', the review wording, no fake zero; complete 0 → '0/30'", () => {
-    const { container, unmount } = render(<StudentAssignmentCard item={assignment(reviewRequired()) as never} busy={false} onOpen={() => {}} />);
+    const { container, unmount } = render(<StudentAssignmentCard item={assignment(reviewRequired()) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     const text = container.textContent!;
     expect(text).toMatch(/—\s*\/\s*30/); expect(text).not.toMatch(/0\/30|0 \/ 30|0%/);
     expect(screen.getByTestId("card-coding-grading").textContent).toBe(CARD);
     unmount();
-    const { container: c2 } = render(<StudentAssignmentCard item={assignment(complete({ score: 0, percentage: 0 })) as never} busy={false} onOpen={() => {}} />);
+    const { container: c2 } = render(<StudentAssignmentCard item={assignment(complete({ score: 0, percentage: 0 })) as never} busy={false} onOpen={() => {}} now={Date.now()} />);
     expect(c2.textContent!).toMatch(/0\/30/);
     expect(screen.queryByTestId("card-coding-grading")).toBeNull();
   });
