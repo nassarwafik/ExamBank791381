@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { IconChevronDown } from "../../icons";
 // D4 (item 7) — the student's per-question mark breakdown under a RELEASED result (api: student-submission pub() → questionBreakdown).
 // Marks and the teacher's comment only (owner decision): no correct answer, no model answer, no hidden-test detail ever reaches this
 // screen — the server sends none. Collapsed by default so the result card keeps its shape; grouped by section when there are several.
@@ -15,14 +17,21 @@ function markText(q: QuestionBreakdown["questions"][number]): string {
   return (q.score ?? 0) + " / " + q.maxMarks;
 }
 
+// UX-S3 (docs/enterprise-ux-student-s3.md §2.3) — the closed summary says that it opens (and how to close it again); still closed by
+// default (D4), still marks and comments only.
 export default function ResultBreakdown({ breakdown }: { breakdown: QuestionBreakdown }) {
+  const [open, setOpen] = useState(false);
   const groups = breakdown.sections.length > 1
     ? breakdown.sections.map(s => ({ section: s, questions: breakdown.questions.filter(q => q.sectionId === s.id) })).filter(g => g.questions.length)
     : [{ section: breakdown.sections[0] || null, questions: breakdown.questions }];
   const commented = breakdown.questions.filter(q => q.comment).length;
   return (
-    <details className="iex-breakdown" data-testid="result-breakdown">
-      <summary>تفصيل العلامات حسب السؤال{commented ? " · " + (commented === 1 ? "ملاحظة واحدة من المعلم" : commented + " ملاحظات من المعلم") : ""}</summary>
+    <details className="iex-breakdown" data-testid="result-breakdown" onToggle={e => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary>
+        <span className="iex-breakdown-title">تفصيل العلامات حسب السؤال{commented ? " · " + (commented === 1 ? "ملاحظة واحدة من المعلم" : commented + " ملاحظات من المعلم") : ""}</span>
+        <span className="iex-breakdown-hint" data-testid="breakdown-hint">{open ? "اضغط للإخفاء" : "اضغط لعرض علامة كل سؤال"}</span>
+        <IconChevronDown size={16} className={"iex-breakdown-chevron" + (open ? " is-open" : "")} aria-hidden="true" />
+      </summary>
       {groups.map((g, gi) => (
         <section key={g.section?.id || gi} className="iex-breakdown-group">
           {breakdown.sections.length > 1 && g.section && <h3>{g.section.title}{g.section.capped && <small> — تُحتسب فيه أفضل الإجابات حتى حدّ القسم</small>}</h3>}

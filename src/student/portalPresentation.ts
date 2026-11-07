@@ -112,3 +112,57 @@ export function kpiNowHint(kpis: { actionable: number; inProgress: number }): st
   if (kpis.inProgress > 0) return kpis.inProgress + " قيد الحل";
   return kpis.actionable > 0 ? "متاح للحل الآن" : "لا شيء مطلوب الآن";
 }
+
+// ── UX-S3 (approved design docs/enterprise-ux-student-s3.md) ─────────────────────────────────────────────────────────────────────
+// «الواجبات» under «الكل» in groups with headings, and a deadline a student reads at a glance. Pure presentation over the server's own
+// dashboardState and dates: no new rule, no new read.
+export type TaskGroupKey = "action" | "scheduled" | "awaitingReview" | "completed" | "closed";
+export const TASK_GROUPS: readonly { key: TaskGroupKey; label: string; states: readonly DashboardState[] }[] = [
+  { key: "action", label: "تحتاج إجراء", states: ["inProgress", "available"] },
+  { key: "awaitingReview", label: "بانتظار التصحيح", states: ["awaitingReview"] },
+  { key: "scheduled", label: "قريبًا", states: ["scheduled"] },
+  { key: "completed", label: "مكتملة", states: ["completed"] },
+  { key: "closed", label: "انتهت دون تسليم", states: ["closedUnsubmitted"] }
+];
+const stamp = (value: string | undefined): number => { const t = Date.parse(String(value || "")); return Number.isFinite(t) ? t : Number.POSITIVE_INFINITY; };
+const dueOf = (item: Summary): string => item.effectiveDueAt || item.dueAt || "";
+
+/**
+ * The non-empty groups in their fixed order. «تحتاج إجراء»: a live attempt first, then the open ones, each by the nearest deadline;
+ * «قريبًا»: by the nearest opening; the others keep the server's order. Ties keep the server's order (stable).
+ */
+export function groupTasks(items: Summary[]): { key: TaskGroupKey; label: string; items: Summary[] }[] {
+  const indexed = items.map((item, index) => ({ item, index, st: stateOf(item) }));
+  return TASK_GROUPS.map(g => {
+    const rows = indexed.filter(r => g.states.includes(r.st));
+    if (g.key === "action") rows.sort((a, b) => (a.st === "inProgress" ? 0 : 1) - (b.st === "inProgress" ? 0 : 1) || stamp(dueOf(a.item)) - stamp(dueOf(b.item)) || a.index - b.index);
+    else if (g.key === "scheduled") rows.sort((a, b) => stamp(a.item.openAt) - stamp(b.item.openAt) || a.index - b.index);
+    return { key: g.key, label: g.label, items: rows.map(r => r.item) };
+  }).filter(g => g.items.length > 0);
+}
+
+const SOON_MS = 48 * 60 * 60 * 1000;
+const hhmm = (d: Date) => two(d.getHours()) + ":" + two(d.getMinutes());
+const dayStart = (ms: number) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+function inDays(n: number): string { return n === 2 ? "بعد يومين" : "بعد " + n + " أيام"; }
+
+/**
+ * The card's deadline line (the device's local calendar days). A scheduled task says when it OPENS; any other says when it is DUE.
+ * `soon` marks an actionable task due within 48 h (never by colour alone: the text says «اليوم» / «غدًا»).
+ */
+export function dueText(item: Summary, now: number): { text: string; soon: boolean; past: boolean } {
+  const scheduled = stateOf(item) === "scheduled";
+  const value = scheduled ? item.openAt : dueOf(item);
+  const t = Date.parse(String(value || ""));
+  if (!Number.isFinite(t)) return { text: scheduled ? "موعد الفتح غير محدد بعد" : "التسليم: بدون موعد", soon: false, past: false };
+  const verb = scheduled ? "يفتح" : "التسليم";
+  if (!scheduled && t < now) return { text: "انتهى التسليم " + formatWhen(value), soon: false, past: true };
+  const days = Math.round((dayStart(t) - dayStart(now)) / 86400000);
+  const st = stateOf(item);
+  const soon = (st === "inProgress" || st === "available") && t >= now && t - now <= SOON_MS;
+  const at = new Date(t);
+  if (days <= 0) return { text: verb + " اليوم " + hhmm(at), soon, past: false };
+  if (days === 1) return { text: verb + " غدًا " + hhmm(at), soon, past: false };
+  if (days <= 6) return { text: verb + " " + inDays(days) + " · " + formatWhen(value), soon, past: false };
+  return { text: (scheduled ? "يفتح في " : "التسليم: ") + formatWhen(value), soon, past: false };
+}

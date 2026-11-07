@@ -200,6 +200,13 @@
   .eb-sp-v2 .eb-sp-view.is-today > .eb-sp-now { grid-column: span 5; }
 }
 
+/* ── UX-S3 — «الواجبات»: group headings and the deadline line (docs/enterprise-ux-student-s3.md §2.1, §2.2) ──────────────── */
+.eb-sp-v2 .eb-sp-task-groups { display: flex; flex-direction: column; gap: var(--eb-space-5); min-width: 0; }
+.eb-sp-v2 .eb-sp-task-group-title { display: flex; align-items: center; gap: var(--eb-space-2); margin: 0 0 var(--eb-space-3); font-size: var(--eb-fs-16); font-weight: var(--eb-fw-bold); color: var(--eb-text-heading); }
+.eb-sp-v2 .eb-sp-task-group-count { display: inline-flex; align-items: center; justify-content: center; min-inline-size: 24px; padding: 0 var(--eb-space-2); border-radius: var(--eb-pill); background: var(--eb-surface-2); color: var(--eb-text-secondary); font-size: var(--eb-fs-12); font-variant-numeric: tabular-nums; }
+.eb-sp-v2 .eb-sp-task-due.is-soon { display: inline-flex; align-items: center; gap: var(--eb-space-1); background: var(--eb-warn-bg); color: var(--eb-warn-tx); font-weight: var(--eb-fw-semibold); }
+.eb-sp-v2 .eb-sp-task-due.is-past { color: var(--eb-text-secondary); }
+
 /* ── UX-S2 — a lighter welcome card: smaller avatar, name and class on one line, the (masked) code beside them. ── */
 .eb-sp-v2 .eb-sp-identity { padding: var(--eb-space-3) var(--eb-space-4); }
 .eb-sp-v2 .eb-sp-identity-text h2 { font-size: var(--eb-fs-18); }

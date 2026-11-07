@@ -100,8 +100,11 @@ describe("UX-7a StudentPortal — task-first home", () => {
     expect(within(sc).getByText("قريبًا").className).toContain("eb-badge");
     expect((within(sc).getByRole("button") as HTMLButtonElement).disabled).toBe(true);
     expect(within(sc).getByRole("button").textContent).toBe("لم يفتح بعد");
-    // ISO / Western-digit due date
-    expect(within(sc).getByText(/التسليم: 2026-05-01 \d\d:30/)).toBeTruthy();
+    // UX-S3 (docs/enterprise-ux-student-s3.md §2.2): a scheduled card says when it OPENS (this one has no opening date yet)…
+    expect(within(sc).getByTestId("card-due").textContent).toBe("موعد الفتح غير محدد بعد");
+    // …and the ISO / Western-digit date stays in every due line (here a past deadline: «انتهى التسليم …»)
+    const cl = (await list()).getByText("CL").closest(".student-assignment-card") as HTMLElement;
+    expect(within(cl).getByTestId("card-due").textContent).toMatch(/^انتهى التسليم 2026-05-01 \d\d:30$/);
   });
 
   it("filters are aria-pressed chips in one labelled group (no tablist) and browsing costs no request", async () => {
