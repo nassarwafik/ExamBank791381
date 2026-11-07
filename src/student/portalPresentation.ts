@@ -100,3 +100,15 @@ export function isRecent(createdAt: string, now: number): boolean {
   const t = new Date(createdAt || "").getTime();
   return Number.isFinite(t) && now - t >= 0 && now - t <= NEW_POST_WINDOW_MS;
 }
+
+/** UX-S1 — the login code shown masked but for its last 4 characters (a code of 4 or fewer is shown as it is). */
+export function maskCode(code: string): string {
+  const chars = Array.from(String(code || ""));
+  return chars.length <= 4 ? chars.join("") : "•".repeat(chars.length - 4) + chars.slice(-4).join("");
+}
+
+/** UX-S1 — the hint under «مطلوب الآن» never reads as a contradiction of its number (docs/enterprise-ux-student-s1.md §2.1). */
+export function kpiNowHint(kpis: { actionable: number; inProgress: number }): string {
+  if (kpis.inProgress > 0) return kpis.inProgress + " قيد الحل";
+  return kpis.actionable > 0 ? "متاح للحل الآن" : "لا شيء مطلوب الآن";
+}

@@ -1,4 +1,5 @@
 import { IconAssignments, IconHistory, IconMedal, IconSparkles } from "../icons";
+import { kpiNowHint } from "./portalPresentation";
 
 /**
  * Phase 21E V2 — the student's at-a-glance strip under the welcome hero: four tiles, each a shortcut to the section
@@ -30,7 +31,7 @@ export default function StudentKpiStrip({ kpis, onOpenNow, onOpenTasks, onOpenPr
           <span className="eb-sp-kpi-icon" aria-hidden="true"><IconAssignments size={20} /></span>
           <span className="eb-sp-kpi-value">{kpis.actionable}</span>
           <span className="eb-sp-kpi-label">مطلوب الآن</span>
-          <span className="eb-sp-kpi-hint">{kpis.inProgress > 0 ? kpis.inProgress + " قيد الحل" : "لا محاولات جارية"}</span>
+          <span className="eb-sp-kpi-hint">{kpiNowHint(kpis)}</span>
         </button>
       </li>
       <li>

@@ -1,10 +1,12 @@
 import { BRAND_NAME, BRAND_TAGLINE } from "../brand";
 import type { ReactNode } from "react";
 import BrandMark from "../ui/BrandMark";
-import { IconLogout, IconMail, IconSparkles } from "../icons";
+import { IconDownload, IconLogout, IconMail, IconSparkles } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import NotificationBell, { type NotificationCenterProps } from "../notifications/NotificationBell";
-import InstallAppEntry from "../pwa/InstallAppEntry";
+import { useInstallEntry } from "../pwa/useInstallEntry";
+import "../pwa/pwa.css";
+import ActionMenu from "../ui/ActionMenu";
 import ThemeSwitch from "../ui/ThemeSwitch";
 import { DARK_MODE_RELEASED } from "../ui/themePreference";
 import { clearAllJournals } from "../student/exam/answerJournal";
@@ -27,9 +29,16 @@ import type { SchoolBadgeView } from "./schoolIdentity";
 // installed; it is independent of the dashboard install card and of that card's temporary dismissal.
 // Phase 12C — `quickNav` (the phone bottom bar, StudentMobileNav) is placed after the content ONLY when StudentPortal
 // hands it over (the ordinary main portal); `has-quick-nav` then gives the content its phone-only bottom clearance.
+// UX-S1 (docs/enterprise-ux-student-s1.md §2.2) — on a phone (≤ 720px) the bar no longer scrolls sideways with the logout off-screen:
+// theme · notifications · messages stay, and «الألعاب التعليمية» / «تثبيت التطبيق» / «تسجيل الخروج» move into the shared ActionMenu
+// «المزيد». The desktop bar is unchanged (CSS decides which of the two is shown). Logout is the SAME action from both places, and the
+// install dialog lives here (useInstallEntry) so it survives the menu closing.
 type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; quickNav?: ReactNode; school?: SchoolBadgeView | null; children: ReactNode };
 
 export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, quickNav, school = null, children }: Props) {
+  const install = useInstallEntry();
+  // D1 — the explicit logout removes every device copy of unsent exam answers (a 401 keeps them for the next sign-in).
+  const logout = () => { clearAllJournals(); onLogout(); };
   return (
     <main className={"student-portal eb-student-shell" + (quickNav ? " has-quick-nav" : "")} dir="rtl">
       <header className="student-topbar">
@@ -60,15 +69,26 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
               )}
             </button>
           )}
-          {onOpenGames && (
-            <button type="button" className="student-topbar-link eb-student-games-entry" onClick={onOpenGames}>
-              <IconSparkles size={16} />الألعاب التعليمية
-            </button>
-          )}
-          <InstallAppEntry />
-          {/* D1 — the explicit logout removes every device copy of unsent exam answers (a 401 keeps them for the next sign-in). */}
-          <button type="button" className="student-logout" onClick={() => { clearAllJournals(); onLogout(); }}><IconLogout size={16} />تسجيل الخروج</button>
+          <span className="student-topbar-wide">
+            {onOpenGames && (
+              <button type="button" className="student-topbar-link eb-student-games-entry" onClick={onOpenGames}>
+                <IconSparkles size={16} />الألعاب التعليمية
+              </button>
+            )}
+            {install.visible && (
+              <button type="button" className="student-topbar-link eb-student-install-entry" disabled={install.busy} onClick={install.start}>
+                <IconDownload size={16} />تثبيت التطبيق
+              </button>
+            )}
+            <button type="button" className="student-logout" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
+          </span>
+          <ActionMenu label="المزيد" text="المزيد" className="student-topbar-more">
+            {onOpenGames && <button type="button" className="eb-menu-item" onClick={onOpenGames}><IconSparkles size={16} />الألعاب التعليمية</button>}
+            {install.visible && <button type="button" className="eb-menu-item" disabled={install.busy} onClick={install.start}><IconDownload size={16} />تثبيت التطبيق</button>}
+            <button type="button" className="eb-menu-item is-danger" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
+          </ActionMenu>
         </div>
+        {install.dialog}
       </header>
       <section className="student-shell">{children}</section>
       {quickNav}

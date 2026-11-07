@@ -29,8 +29,8 @@ describe("UX-S1 — one consistent next step", () => {
     expect(hero?.type).not.toBe("retry");
   });
 
-  it("the hub's assignment is the first row of «ماذا عليّ أن أفعل الآن؟»", () => {
-    const items = [retryable("DONE", 0, 20 * H), asg("LATER", { dueAt: iso(NOW + 9 * 24 * H) }), asg("NEW")];
+  it("the hub's assignment is the first row of «ماذا عليّ أن أفعل الآن؟» (items in the server's order: by deadline)", () => {
+    const items = [retryable("DONE", 0, 20 * H), asg("NEW"), asg("LATER", { dueAt: iso(NOW + 9 * 24 * H) })];
     const hero = selectTodayContinue(base({ assignments: items, courses: [] }));
     expect(hero?.assignmentId).toBe(nowItems(items).actionable[0].assignmentId);
   });

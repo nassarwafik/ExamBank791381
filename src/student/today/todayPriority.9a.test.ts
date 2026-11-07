@@ -112,7 +112,8 @@ describe("9A priority — rules", () => {
     const read = selectTodayContinue(base({}));
     expect(read).toMatchObject({ type: "study", priority: 5, courseId: "791381", moduleId: "791381-m01", label: "ابدأ القراءة", title: "أساسيات الشبكات" });
     expect(selectTodayContinue(base({ courses: [] }))).toBeNull();
-    expect(TODAY_PRIORITY).toEqual({ activeAttempt: 1, assignment: 2, reader: 3, project: 4, study: 5 });
+    // UX-S1 (approved design docs/enterprise-ux-student-s1.md §2.1, §5.2): `retry` added, sharing rule 5 after an unstarted assignment.
+    expect(TODAY_PRIORITY).toEqual({ activeAttempt: 1, assignment: 2, reader: 3, project: 4, study: 5, retry: 5 });
   });
 
   it("never offers: completed without a remaining attempt, awaiting review, scheduled, closed/expired, exhausted attempts", () => {
@@ -129,7 +130,8 @@ describe("9A priority — rules", () => {
 
   it("a remaining attempt after a final result IS offered («ابدأ محاولة جديدة»); a teacher extension reopens a closed one only through the server's own fields", () => {
     const again = asg("AGAIN", { dashboardState: "completed", gradingStatus: "final", latestResult: final(70), canAttempt: true, attemptsUsed: 1, allowedAttempts: 2, dueAt: iso(NOW + 3 * H) });
-    expect(selectTodayContinue(base({ assignments: [again] }))).toMatchObject({ type: "assignment", assignmentId: "AGAIN", label: "ابدأ محاولة جديدة" });
+    // UX-S1 (approved design §2.1, §5.2): still offered, as the optional «محاولة إضافية» (type retry) instead of the «موعد قريب» slot.
+    expect(selectTodayContinue(base({ assignments: [again] }))).toMatchObject({ type: "retry", assignmentId: "AGAIN", label: "ابدأ محاولة جديدة" });
     // Extended: the server now reports open + effectiveDueAt in the future + canAttempt → available again.
     const extended = asg("EXT", { dueAt: iso(NOW - H), effectiveDueAt: iso(NOW + 6 * H), availability: "open", dashboardState: "available", canAttempt: true });
     expect(selectTodayContinue(base({ assignments: [extended] }))).toMatchObject({ type: "assignment", assignmentId: "EXT", dueAt: iso(NOW + 6 * H) });

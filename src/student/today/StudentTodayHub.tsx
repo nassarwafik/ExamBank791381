@@ -29,7 +29,7 @@ type Props = {
   onOpenProjects?: () => void;
 };
 
-const KICKER: Record<TodayContinue["type"], string> = { activeAttempt: "محاولة جارية", assignment: "موعد قريب", reader: "متابعة القراءة", project: "مشروعك", study: "ابدأ الآن" };
+const KICKER: Record<TodayContinue["type"], string> = { activeAttempt: "محاولة جارية", assignment: "موعد قريب", reader: "متابعة القراءة", project: "مشروعك", study: "ابدأ الآن", retry: "محاولة إضافية (اختيارية)" };
 
 export default function StudentTodayHub({ continueItem, busy, onContinue, messagesUnread, onOpenMessages, progress, onOpenProgress, onOpenTasks, projectEvaluation, onOpenProjects }: Props) {
   const evalText = projectEvaluationText(projectEvaluation);

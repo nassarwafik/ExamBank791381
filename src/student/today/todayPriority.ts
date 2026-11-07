@@ -6,8 +6,9 @@
 //
 // Priority (lower wins; ties → earliest deadline, then the server's own order):
 //   1 activeAttempt  — a live/resumable attempt (started / draft / paused). ALWAYS wins.
-//   2 assignment     — an attemptable assignment (server canAttempt, open) whose deadline is within DUE_SOON_MS,
-//                       including a remaining attempt after a final result («محاولة جديدة»).
+//   2 assignment     — an attemptable assignment NOT YET SUBMITTED (server canAttempt, open, state available) whose
+//                       deadline is within DUE_SOON_MS. UX-S1: an extra attempt after a final result is optional, so it
+//                       never takes this slot (docs/enterprise-ux-student-s1.md §2.1).
 //   3 reader         — the Reader continuation: this device's saved page for this student and the server's most
 //                       recent study activity are BOTH validated against the released materials first; when both are
 //                       valid the one with the NEWER timestamp wins (readerPosition.at vs studyLastActivity.completedAt;
@@ -15,8 +16,9 @@
 //                       cross-device authority). A stale device page never hides a newer study activity, and an
 //                       unreleased device page never defeats a valid server continuation.
 //   4 project        — a class project with progress strictly between 0 and 100.
-//   5 study          — the next thing to start: an attemptable assignment without a near deadline, else the first
-//                       released course («ابدأ القراءة»).
+//   5 study / retry  — the next thing to start: an attemptable assignment not yet submitted (any deadline); else (UX-S1)
+//                       an optional extra attempt after a final result («محاولة إضافية (اختيارية)», earliest deadline);
+//                       else the first released course («ابدأ القراءة»).
 //   null             — nothing to continue (the hub shows its empty state).
 // Never offered: completed items without a remaining attempt, awaiting-review items, scheduled/closed assignments
 // (a teacher extension reopens them server-side → they come back as `available`), exhausted attempts
@@ -25,8 +27,9 @@ import type { StudentLearningCourse } from "../StudentLearningMaterials";
 import { isResumable, stateOf } from "../portalPresentation";
 import type { ProjectStrength, Summary } from "../types";
 
-export type TodayCandidateType = "activeAttempt" | "assignment" | "reader" | "project" | "study";
-export const TODAY_PRIORITY: Record<TodayCandidateType, number> = { activeAttempt: 1, assignment: 2, reader: 3, project: 4, study: 5 };
+export type TodayCandidateType = "activeAttempt" | "assignment" | "reader" | "project" | "study" | "retry";
+// UX-S1 — `retry` (an optional extra attempt after a final result) shares rule 5 and is tried after an unstarted assignment.
+export const TODAY_PRIORITY: Record<TodayCandidateType, number> = { activeAttempt: 1, assignment: 2, reader: 3, project: 4, study: 5, retry: 5 };
 /** «قريبًا»: a deadline within the next 48 hours makes an attemptable assignment beat a Reader continuation. */
 export const DUE_SOON_MS = 48 * 60 * 60 * 1000;
 
@@ -77,6 +80,10 @@ export function isAttemptable(item: Summary): boolean {
   // for a pending result, but the card offers the provisional result, not a new attempt — same rule as the task list).
   return st === "available" || st === "completed";
 }
+/** UX-S1 — attemptable and never submitted (required work), as opposed to an optional extra attempt after a final result. */
+export const isUnstarted = (item: Summary): boolean => isAttemptable(item) && stateOf(item) === "available";
+/** UX-S1 — attemptable after a FINAL result: an optional extra attempt. */
+export const isRetry = (item: Summary): boolean => isAttemptable(item) && stateOf(item) === "completed";
 export const isDueSoon = (item: Summary, now: number): boolean => { const t = dueMs(item); return t !== Number.MAX_SAFE_INTEGER && t >= now && t - now <= DUE_SOON_MS; };
 
 /** The module of a Reader page id (`<courseId>-<mNN>-…` → `<courseId>-<mNN>`), or "" when it does not match. */
@@ -92,11 +99,22 @@ function pickAssignment(items: Summary[], pred: (i: Summary) => boolean): Summar
 }
 
 function assignmentCandidate(item: Summary, type: "assignment" | "study"): TodayContinue {
-  const again = stateOf(item) === "completed";
   return {
     type, priority: TODAY_PRIORITY[type], title: item.title, assignmentId: item.assignmentId, dueAt: dueOf(item),
-    label: again ? "ابدأ محاولة جديدة" : isTimed(item) ? "ابدأ الامتحان" : "ابدأ الحل",
-    reason: again ? "لديك محاولة متبقية" + (dueOf(item) ? " · التسليم " + when(dueOf(item)) : "") : dueOf(item) ? "التسليم " + when(dueOf(item)) : "متاح الآن"
+    label: isTimed(item) ? "ابدأ الامتحان" : "ابدأ الحل",
+    reason: dueOf(item) ? "التسليم " + when(dueOf(item)) : "متاح الآن"
+  };
+}
+
+// UX-S1 — the optional extra attempt. The final percentage is shown only for a result the teacher has released
+// (resultsVisible !== false — the same rule the medals follow); the deadline when there is one.
+function retryCandidate(item: Summary): TodayContinue {
+  const lr = item.latestResult;
+  const pct = lr && lr.resultsVisible !== false && Number.isFinite(Number(lr.percentage)) ? "نتيجتك النهائية " + Math.round(Number(lr.percentage)) + "%" : "";
+  return {
+    type: "retry", priority: TODAY_PRIORITY.retry, title: item.title, assignmentId: item.assignmentId, dueAt: dueOf(item),
+    label: "ابدأ محاولة جديدة",
+    reason: [pct, "لديك محاولة متبقية", dueOf(item) ? "التسليم " + when(dueOf(item)) : ""].filter(Boolean).join(" · ")
   };
 }
 
@@ -143,8 +161,8 @@ export function selectTodayContinue(input: TodayInput): TodayContinue | null {
       label: paused ? "استأنف الامتحان" : isTimed(live) ? "تابع الامتحان" : "تابع المحاولة",
       reason: paused ? "محاولتك متوقفة مؤقتًا" : isTimed(live) ? "محاولتك الموقوتة ما زالت جارية" : "لديك محاولة لم تُسلَّم بعد" };
   }
-  // 2 — an attemptable assignment due within 48h.
-  const soon = pickAssignment(assignments, item => isAttemptable(item) && isDueSoon(item, now));
+  // 2 — an assignment not yet submitted, due within 48h (UX-S1: never an optional extra attempt).
+  const soon = pickAssignment(assignments, item => isUnstarted(item) && isDueSoon(item, now));
   if (soon) return assignmentCandidate(soon, "assignment");
   // 3 — the Reader continuation: validate BOTH candidates against the released content, then take the newer one.
   if (courses && courses.length) {
@@ -156,9 +174,11 @@ export function selectTodayContinue(input: TodayInput): TodayContinue | null {
   // 4 — a project in progress.
   const project = projects.find(p => Number(p.overallProgress) > 0 && Number(p.overallProgress) < 100);
   if (project) return { type: "project", priority: 4, title: "مشروع صفك", label: "تابع المشروع", reason: "تقدمك " + Math.round(Number(project.overallProgress)) + "% · الخطوة التالية في «مشاريعي»", projectCode: project.projectCode };
-  // 5 — something to start.
-  const open = pickAssignment(assignments, isAttemptable);
+  // 5 — something to start; else (UX-S1) an optional extra attempt, earliest deadline first.
+  const open = pickAssignment(assignments, isUnstarted);
   if (open) return assignmentCandidate(open, "study");
+  const retry = pickAssignment(assignments, isRetry);
+  if (retry) return retryCandidate(retry);
   const first = courses && courses.length ? courses[0] : null;
   if (first && first.modules.length) {
     const module = first.modules.slice().sort((a, b) => a.order - b.order)[0];

@@ -26,6 +26,9 @@
 .eb-student-shell .student-brand h1 { font-size: var(--eb-fs-20); letter-spacing: .01em; color: var(--eb-chrome-text); }
 .eb-student-shell .student-brand p { color: var(--eb-chrome-text-muted); }
 .eb-student-shell .student-topbar-actions { display: flex; align-items: center; gap: var(--eb-space-2); flex-wrap: wrap; }
+/* UX-S1 — desktop: the wide group is laid out as if its buttons sat directly in the bar; the «المزيد» menu is phone-only. */
+.eb-student-shell .student-topbar-wide { display: contents; }
+.eb-student-shell .student-topbar-more { display: none; }
 .eb-student-shell .student-topbar-link,
 .eb-student-shell .student-logout { border-radius: var(--eb-pill); min-height: 40px; padding-inline: var(--eb-space-3); }
 .eb-student-shell .student-topbar-link,
@@ -43,12 +46,15 @@
   .eb-student-shell .student-brand { flex: 1 1 auto; min-width: 0; }
   .eb-student-shell .student-brand p { display: none; }
   .eb-student-shell .eb-student-identity { display: none; }            /* the welcome hero below names the student */
-  .eb-student-shell .student-topbar-actions {
-    flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
-    padding-block-end: 2px; scrollbar-width: none;
-  }
-  .eb-student-shell .student-topbar-actions::-webkit-scrollbar { display: none; }
+  /* UX-S1 — no sideways scrolling: games / install / logout live in «المزيد»; what stays fits a 360px screen. */
+  .eb-student-shell .student-topbar-actions { flex: 1 1 100%; flex-wrap: nowrap; justify-content: flex-start; }
   .eb-student-shell .student-topbar-actions > * { flex: 0 0 auto; }
+  .eb-student-shell .student-topbar-wide { display: none; }
+  .eb-student-shell .student-topbar-more {
+    display: inline-flex; align-items: center; gap: var(--eb-space-1); margin-inline-start: auto;
+    min-height: 44px; min-width: 44px; padding-inline: var(--eb-space-3); border-radius: var(--eb-pill);
+    border: 1px solid var(--eb-chrome-border); background: var(--eb-chrome-bg); color: var(--eb-chrome-text); font-weight: var(--eb-fw-semibold);
+  }
   .eb-student-shell .student-topbar-link,
   .eb-student-shell .student-logout { min-height: 44px; min-width: 44px; white-space: nowrap; }
 }
