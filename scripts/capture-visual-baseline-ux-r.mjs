@@ -439,6 +439,18 @@ const SCRIPTED = [
     const face = await page.evaluate(() => getComputedStyle(document.querySelector(".eb-lc-code-input")).fontFamily);
     if (!/mono/i.test(face)) throw new Error("the room code field is not monospace: " + face);
   } })),
+  // UX-S2 — the student portal's other views (docs/enterprise-ux-student-s2.md §5.8): «student-portal» is «اليوم»; these open
+  // «المواد» / «الواجبات» / «التقدم» through the bar the build offers (the view bar from 768px, the bottom bar on phones). A build
+  // without views (the base) has no such view to open and shows its whole page. «المشاريع» is not captured: the harness student
+  // has no project, so the view is never offered here.
+  ...[["student-learning", "المواد"], ["student-tasks", "الواجبات"], ["student-progress", "التقدم"]].map(([id, label]) => ({ id, role: "student", run: async page => {
+    const views = page.locator(".eb-sp-viewnav button:visible, .eb-sp-quicknav button[data-view]:visible").filter({ hasText: label });
+    if (await views.count()) {
+      await views.first().click({ timeout: 15000 });
+      await page.waitForFunction(text => [...document.querySelectorAll(".eb-sp [data-view]")].some(v => !v.hidden && v.textContent.includes(text)), label === "المواد" ? "موادي التعليمية" : label === "الواجبات" ? "المهام والواجبات" : "تقدّمي وقوتي", { timeout: 15000 });
+      await page.waitForTimeout(300);
+    }
+  } })),
   // UX-R15 — the student exam, opened from the portal's «ابدأ الحل», and its question navigator.
   ...[["student-exam", false], ["student-exam-navigator", true]].map(([id, nav]) => ({ id, role: "student", run: async page => {
     await page.getByRole("button", { name: "ابدأ الحل" }).first().click({ timeout: 15000 });
