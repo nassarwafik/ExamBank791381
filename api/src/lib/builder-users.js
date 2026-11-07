@@ -19,6 +19,12 @@ const RESERVED_ENV = Object.freeze(["BUILDER_USERS", "BUILDER_PASSWORD", "BUILDE
 const MAX_ACCOUNTS = 200;
 const MAX_DISPLAY_NAME = 60;
 
+// Tadris+ O17 (docs/enterprise-info-items-o15-o17.md) — the id forms reserved for MANAGED accounts: the console's "t_" + 16 hex
+// and the imported shared-password workspace "t_legacy". A teacher's tenant is the token subject in both modes, so a BUILDER_USERS
+// account with one of them would share that managed account's tenant and data. Such an account is skipped ON ITS OWN (counted in
+// `reservedSkipped`, never named); the others keep working, and a configuration left with no account fails closed as an empty one.
+const RESERVED_MANAGED_ID = /^(t_[0-9a-f]{16}|t_legacy)$/;
+function isReservedManagedId(value) { return typeof value === "string" && RESERVED_MANAGED_ID.test(value); }
 function isAccountId(value) { return typeof value === "string" && ACCOUNT_ID.test(value) && !value.includes(".."); }
 function isAllowedPasswordEnv(name) { return typeof name === "string" && ENV_NAME.test(name) && !RESERVED_ENV.includes(name); }
 function normalizeDisplayName(value) {
@@ -42,9 +48,11 @@ function parseBuilderUsers(env = process.env) {
   if (ids.length > MAX_ACCOUNTS) return error("too many accounts");
   const out = {};
   const seenEnv = new Set();
+  let reservedSkipped = 0;
   for (const id of ids) {
     const acct = users[id];
     if (!isAccountId(id)) return error("invalid account id");
+    if (isReservedManagedId(id)) { reservedSkipped++; continue; }   // Tadris+ O17
     if (!acct || typeof acct !== "object" || Array.isArray(acct)) return error("invalid account record");
     if ("password" in acct || "passwordHash" in acct || "secret" in acct) return error("plaintext credential inside BUILDER_USERS");
     if (!isAllowedPasswordEnv(acct.passwordEnv)) return error("passwordEnv not allowed");
@@ -52,7 +60,8 @@ function parseBuilderUsers(env = process.env) {
     seenEnv.add(acct.passwordEnv);
     out[id] = Object.freeze({ actorId: id, passwordEnv: acct.passwordEnv, displayName: normalizeDisplayName(acct.displayName) });
   }
-  return { kind: "configured", users: Object.freeze(out) };
+  if (!Object.keys(out).length) return error("no accounts");                 // Tadris+ O17: nothing left → fails closed
+  return { kind: "configured", users: Object.freeze(out), ...(reservedSkipped ? { reservedSkipped } : {}) };
 }
 
 function isMultiUserMode(env = process.env) { return parseBuilderUsers(env).kind === "configured"; }
@@ -78,4 +87,4 @@ function configuredPasswordFor(env, actorId) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-module.exports = { RESERVED_ENV, parseBuilderUsers, isMultiUserMode, isBuilderUsersConfigurationBroken, listBuilderAccounts, getBuilderAccount, configuredPasswordFor, isAccountId, isAllowedPasswordEnv };
+module.exports = { RESERVED_ENV, isReservedManagedId, parseBuilderUsers, isMultiUserMode, isBuilderUsersConfigurationBroken, listBuilderAccounts, getBuilderAccount, configuredPasswordFor, isAccountId, isAllowedPasswordEnv };

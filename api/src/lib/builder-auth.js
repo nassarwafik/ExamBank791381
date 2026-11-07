@@ -236,7 +236,7 @@ function requireBuilderAuth(request) {
 // BUILDER_USERS: every login is refused with 503 until an operator fixes it — never a silent fallback to the shared password).
 function builderAuthConfigurationStatus(env = process.env) {
   const cfg = parseBuilderUsers(env);
-  if (cfg.kind === "configured") return { mode: "multi-user", broken: false };
+  if (cfg.kind === "configured") return { mode: "multi-user", broken: false, ...(cfg.reservedSkipped ? { reservedSkipped: cfg.reservedSkipped } : {}) };   // O17: a count, never a name
   if (cfg.kind === "configuration-error") return { mode: "configuration-error", broken: true, reason: cfg.reason };
   return { mode: "legacy", broken: false };
 }
