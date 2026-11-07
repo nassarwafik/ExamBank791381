@@ -660,6 +660,26 @@
       "page": "student-portal",
       "viewport": "tablet",
       "reason": "Tadris+ UX-S1 (approved design docs/enterprise-ux-student-s1.md) — the student portal: the login code is masked but its last 4 characters with «إظهار» / «إخفاء» (a 44px touch target on phones), the «مطلوب الآن» hint reads «متاح للحل الآن» / «لا شيء مطلوب الآن», the Strength breakdown list is styled, and on phones the top bar keeps theme / notifications / messages with games, install and logout in the «المزيد» menu (no sideways scrolling); the desktop bar is unchanged."
+    },
+    {
+      "page": "login",
+      "viewport": "all",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the shared teacher / student sign-in card gains «الدخول بالباركود» under the password form (a quiet full-width secondary button); the form itself is unchanged. The QR panel opens only on click."
+    },
+    {
+      "page": "login-error",
+      "viewport": "all",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the shared teacher / student sign-in card gains «الدخول بالباركود» under the password form (a quiet full-width secondary button); the form itself is unchanged. The QR panel opens only on click."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "desktop",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
+    },
+    {
+      "page": "student-portal",
+      "viewport": "tablet",
+      "reason": "Tadris+ QR-2 (docs/enterprise-qr-login-qr2.md, requested by the owner) — the student top bar gains «ربط جهاز آخر بالباركود» before «تسجيل الخروج» (which stays the last control) on tablet / desktop; on phones the same entry is inside the closed «المزيد» menu, so the phone capture is unchanged."
     }
   ]
 }
