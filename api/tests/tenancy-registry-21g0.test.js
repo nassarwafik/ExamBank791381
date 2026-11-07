@@ -39,7 +39,10 @@ const REGISTRY = {
   // platform-session describes the caller's OWN session (role, display name, expiry) and reads only that account.
   ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/,
     // Tadris+ P4-C — the logo of the caller's OWN school (resolved from the verified session; no parameter selects a school).
-    "school-logo.js": /schoolForTeacher\(containerOf\(\), teacher\.user, deps\)/ },
+    "school-logo.js": /schoolForTeacher\(containerOf\(\), teacher\.user, deps\)/,
+    // Tadris+ QR-1 — the caller approves a sign-in of another device AS THEMSELVES: the identity bound to the pairing is the verified
+    // session subject (approverOf), never a value from the request body.
+    "qr-login-approve.js": /approval: \{ role: "teacher", subject: String\(auth\.user\.sub\), sid: String\(auth\.user\.sid\)/ },
   operator: ["assignment-index-control.js", "build-bank-2025.js", "classify-bank-batch.js", "classify-question-preview.js", "import-html-exam.js", "inspect-html.js", "storage-status.js"],
   noData: ["ai-exam-composer.js", "ai-question-author.js", "ai-scenario-author.js", "analyze-global-exam-instruction.js", "exam-quality-fix.js",
     "game-number-conversion-preview.js", "generate-question-image.js", "interpret-exam-request.js", "question-ai-action.js",

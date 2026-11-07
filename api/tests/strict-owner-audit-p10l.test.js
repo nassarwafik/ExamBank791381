@@ -185,7 +185,7 @@ describe("P10-L the order and what stays as it was", () => {
 
 describe("P10-L static guard: an owner change cannot be recorded best effort by accident", () => {
   const FN = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "functions");
-  const STRICT_ROUTES = ["owner-access.js", "owner-teachers.js", "owner-classes.js", "owner-library.js", "owner-schools.js", "owner-handoff.js", "owner-session.js", "owner-bootstrap.js"];
+  const STRICT_ROUTES = ["owner-access.js", "owner-teachers.js", "owner-classes.js", "owner-library.js", "owner-schools.js", "owner-handoff.js", "owner-session.js", "owner-bootstrap.js", "owner-qr-login-approve.js"];
   // The only owner events written best effort in those routes, each with its reason (design §3.3).
   const BEST_EFFORT = {
     "owner.logout": "signing out (owner decision: not for sign-in)",

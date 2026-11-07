@@ -45,6 +45,13 @@ const PUBLIC_BY_DESIGN = {
   // Tadris+ P2-A2 — a teacher sets their own password through the owner's invitation / reset link: the link token (32 random
   // bytes, only its SHA-256 stored, 72 h, single use, superseded by a newer link) is the credential; throttled; one generic 404.
   teacherInvitation: "teacher sets their password through the owner's one-time invitation / reset link (hash-only, 72 h, single use); throttled; unusable link → 404",
+  // Tadris+ QR-1 — the NEW device's side of the QR sign-in: start creates a 90 s pairing (hash-only, budgeted per address) that
+  // grants nothing by itself; poll needs the pairing token AND the poll secret only that browser holds, and yields a session only
+  // after a signed-in device of the same identity approved it (qrLoginApprove, which requires a session and stays under the 401 rule).
+  qrLogin: "QR sign-in pairing (start / poll): no data and no session without an approval from the signed-in device of that identity; hash-only, 90 s, single use; budgeted",
+  // The platform owner's own QR sign-in pairing (its own namespace): approved only by an OWNER session with a recent step-up
+  // (ownerQrLoginApprove, under the 401 rule); the new owner session carries no step-up.
+  ownerQrLogin: "owner QR sign-in pairing (start / poll): no data and no session without an approval from an owner session with a recent step-up; hash-only, 90 s, single use; budgeted",
   ownerBootstrap: "one-time first-owner creation; open only while the owner's own OWNER_BOOTSTRAP_* settings are valid (≤ 24 h) AND the create-only marker is absent, closed for good afterwards; needs the bootstrap token AND a verified authenticator code; throttled; without settings it answers without storage"
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
