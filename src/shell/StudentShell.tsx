@@ -15,6 +15,7 @@ import "../ui/kit.css";
 import "../shell.css";
 import SchoolBadge from "../ui/SchoolBadge";
 import type { SchoolBadgeView } from "./schoolIdentity";
+import { QR_SCAN_HASH } from "../qrLogin/qrRoute";   // Tadris+ QR-2
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps
 // styling it) plus a small identity area (name · class) and the main content container. The top bar is the
@@ -39,6 +40,8 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
   const install = useInstallEntry();
   // D1 — the explicit logout removes every device copy of unsent exam answers (a 401 keeps them for the next sign-in).
   const logout = () => { clearAllJournals(); onLogout(); };
+  // Tadris+ QR-2 — «ربط جهاز آخر بالباركود»: this tab's student session approves a sign-in on another device (the QR page, its own surface).
+  const openQrScan = () => { window.location.hash = QR_SCAN_HASH; };
   return (
     <main className={"student-portal eb-student-shell" + (quickNav ? " has-quick-nav" : "")} dir="rtl">
       <header className="student-topbar">
@@ -74,6 +77,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           <ActionMenu label="المزيد" text="المزيد" className="student-topbar-more">
             {onOpenGames && <button type="button" className="eb-menu-item" onClick={onOpenGames}><IconSparkles size={16} />الألعاب التعليمية</button>}
             {install.visible && <button type="button" className="eb-menu-item" disabled={install.busy} onClick={install.start}><IconDownload size={16} />تثبيت التطبيق</button>}
+            <button type="button" className="eb-menu-item" onClick={openQrScan}>ربط جهاز آخر بالباركود</button>
             <button type="button" className="eb-menu-item is-danger" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
           </ActionMenu>
           <span className="student-topbar-wide">
@@ -87,6 +91,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
                 <IconDownload size={16} />تثبيت التطبيق
               </button>
             )}
+            <button type="button" className="student-topbar-link eb-student-qr-entry" onClick={openQrScan}>ربط جهاز آخر بالباركود</button>
             <button type="button" className="student-logout" onClick={logout}><IconLogout size={16} />تسجيل الخروج</button>
           </span>
         </div>

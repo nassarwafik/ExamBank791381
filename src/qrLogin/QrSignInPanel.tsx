@@ -84,7 +84,7 @@ export default function QrSignInPanel({ ns, onSignedIn, onClose }: { ns: QrNames
   const secondsLeft = showing ? Math.max(0, Math.ceil((showing.expiresAtMs - now) / 1000)) : 0;
   const where = ns === "owner"
     ? "افتح لوحة المالك على هاتفك وأنت مسجّل الدخول، ثم قائمة حسابك ← «ربط جهاز آخر بالباركود»."
-    : "افتح تدريس+ على هاتفك وأنت مسجّل الدخول، ثم «ربط جهاز آخر بالباركود» (للمعلم: من صورتك أعلى الصفحة).";
+    : "افتح تدريس+ على هاتفك وأنت مسجّل الدخول، ثم «ربط جهاز آخر بالباركود» (المعلم: من صورته أعلى الصفحة · الطالب: من «المزيد» أعلى الصفحة).";
 
   return (
     <section className="eb-qr-panel" aria-labelledby="eb-qr-panel-title">

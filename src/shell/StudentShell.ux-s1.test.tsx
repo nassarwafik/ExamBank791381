@@ -21,8 +21,21 @@ describe("UX-S1 — the phone «المزيد» menu", () => {
     expect(screen.getAllByRole("button", { name: /تسجيل الخروج/ })).toHaveLength(1);           // menu closed: only the wide bar's
     const menu = openMore();
     const items = within(menu).getAllByRole("button").map(b => b.textContent);
-    expect(items).toEqual(["الألعاب التعليمية", "تثبيت التطبيق", "تسجيل الخروج"]);
+    // Tadris+ QR-2 — «ربط جهاز آخر بالباركود» joins the menu, before logout (which stays last).
+    expect(items).toEqual(["الألعاب التعليمية", "تثبيت التطبيق", "ربط جهاز آخر بالباركود", "تسجيل الخروج"]);
     expect(within(menu).getByRole("button", { name: "تسجيل الخروج" }).className).toContain("is-danger");
+  });
+
+  it("«ربط جهاز آخر بالباركود» opens the QR page from the menu and from the wide bar (this tab keeps its session)", () => {
+    window.history.replaceState(null, "", "/");
+    render(<StudentShell studentName="ليان" onLogout={() => {}}><p>x</p></StudentShell>);
+    fireEvent.click(within(openMore()).getByRole("button", { name: "ربط جهاز آخر بالباركود" }));
+    expect(window.location.hash).toBe("#/qr-scan");
+    window.history.replaceState(null, "", "/");
+    const wide = document.querySelector(".student-topbar-wide")!;
+    fireEvent.click(within(wide as HTMLElement).getByRole("button", { name: "ربط جهاز آخر بالباركود" }));
+    expect(window.location.hash).toBe("#/qr-scan");
+    window.history.replaceState(null, "", "/");
   });
 
   it("logout from the menu is the same action as the bar button: the device's unsent answers are cleared, then the session ends", () => {
