@@ -201,20 +201,21 @@
 }
 
 /* ── UX-S2 — a lighter welcome card: smaller avatar, name and class on one line, the (masked) code beside them. ── */
-.eb-sp-v2 .eb-sp-identity { flex-wrap: nowrap; padding: var(--eb-space-3) var(--eb-space-4); }
+.eb-sp-v2 .eb-sp-identity { padding: var(--eb-space-3) var(--eb-space-4); }
 .eb-sp-v2 .eb-sp-identity-text h2 { font-size: var(--eb-fs-18); }
 @media (min-width: 768px) {
+  .eb-sp-v2 .eb-sp-identity { flex-wrap: nowrap; }
   .eb-sp-v2 .eb-sp-identity-text h2 { font-size: var(--eb-fs-20); }
 }
 
 /* ── Wide screens: the optional install / notification cards read as one compact row; «الآن» stacks its items
-   (the column is narrow) ───────────────────────────────────────────────────────────────────────────────────────── */
+   (the column is narrow). UX-S2: both now live in the «اليوم» view ───────────────────────────────────────────────────────────────────────────────────────── */
 @media (min-width: 1100px) {
-  .eb-sp-v2 > .eb-install-card { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: var(--eb-space-5); }
-  .eb-sp-v2 > .eb-install-card > * { flex: 1 1 320px; min-width: 0; margin: 0; }
-  .eb-sp-v2 > .eb-install-card > .eb-install-actions { flex: 0 0 auto; }
-  .eb-sp-v2 > .eb-sp-now .eb-sp-now-item { flex-direction: column; align-items: stretch; }
-  .eb-sp-v2 > .eb-sp-now .eb-sp-now-action { inline-size: 100%; min-height: 44px; }
+  .eb-sp-v2 .eb-sp-view.is-today > .eb-install-card { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: var(--eb-space-5); }
+  .eb-sp-v2 .eb-sp-view.is-today > .eb-install-card > * { flex: 1 1 320px; min-width: 0; margin: 0; }
+  .eb-sp-v2 .eb-sp-view.is-today > .eb-install-card > .eb-install-actions { flex: 0 0 auto; }
+  .eb-sp-v2 .eb-sp-view.is-today > .eb-sp-now .eb-sp-now-item { flex-direction: column; align-items: stretch; }
+  .eb-sp-v2 .eb-sp-view.is-today > .eb-sp-now .eb-sp-now-action { inline-size: 100%; min-height: 44px; }
 }
 
 /* ── Preferences ──────────────────────────────────────────────────────────────────────────────────────────── */
