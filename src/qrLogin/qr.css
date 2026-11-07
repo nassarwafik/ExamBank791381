@@ -1,0 +1,37 @@
+/* Tadris+ QR-2 — the QR sign-in: the panel on the sign-in pages and the approval page (design docs/enterprise-qr-login-qr1.md). */
+
+.eb-qr-panel { display: flex; flex-direction: column; gap: var(--eb-space-3); text-align: start; margin-top: var(--eb-space-4); padding-top: var(--eb-space-4); border-top: 1px solid var(--eb-line); }
+/* On the approval page the panel IS the card: no separator. */
+.eb-qr-page .eb-qr-panel { margin-top: 0; padding-top: 0; border-top: 0; }
+.eb-qr-title { margin: 0; font-size: var(--eb-fs-18); color: var(--eb-text-heading); }
+.eb-qr-steps { margin: 0; padding-inline-start: var(--eb-space-5); color: var(--eb-text); font-size: var(--eb-fs-14); line-height: 1.7; }
+/* The code stays dark-on-white in every theme (the SVG draws its own white field and quiet zone): camera readers need that contrast. */
+.eb-qr-frame { align-self: center; border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); overflow: hidden; line-height: 0; }
+.eb-qr-code { display: block; max-width: min(232px, 70vw); height: auto; }
+.eb-qr-match { margin: 0; text-align: center; font-size: var(--eb-fs-15); color: var(--eb-text); }
+.eb-qr-match-code { font-size: var(--eb-fs-28); font-weight: var(--eb-fw-semibold); letter-spacing: .08em; color: var(--eb-text-heading); }
+.eb-qr-hint { margin: 0; text-align: center; font-size: var(--eb-fs-13); color: var(--eb-muted); }
+
+.eb-qr-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-3); align-items: center; justify-content: center; margin-top: var(--eb-space-2); }
+.eb-qr-link { background: none; border: 0; padding: 0; color: var(--eb-primary-strong); font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.eb-qr-link.is-danger { color: var(--eb-danger-tx); }
+
+/* The approval page */
+.eb-qr-confirm { display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-qr-ask { margin: 0; font-size: var(--eb-fs-15); color: var(--eb-text); }
+.eb-qr-numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--eb-space-3); }
+.eb-qr-number {
+  min-height: 64px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-lg); background: var(--eb-surface);
+  color: var(--eb-text-heading); font: inherit; font-size: var(--eb-fs-28); font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-qr-number:hover { border-color: var(--eb-primary); }
+.eb-qr-done { display: flex; gap: var(--eb-space-2); align-items: center; margin: 0; font-size: var(--eb-fs-15); color: var(--eb-text); }
+.eb-qr-scanner { display: flex; flex-direction: column; gap: var(--eb-space-3); }
+.eb-qr-video { width: 100%; max-height: 60vh; border-radius: var(--eb-r-lg); background: var(--eb-surface-2, var(--eb-surface)); object-fit: cover; }
+.eb-qr-photo { position: relative; }
+.eb-qr-photo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.eb-qr-link:focus-visible, .eb-qr-number:focus-visible, .eb-qr-photo:focus-within {
+  outline: var(--eb-focus-ring);
+  outline-offset: var(--eb-focus-offset);
+}

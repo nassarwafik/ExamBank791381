@@ -6,6 +6,7 @@ import ProfileAvatar from "../ui/ProfileAvatar";
 import { AVATAR_OPTIONS } from "../avatars";
 import { IconUpload, IconTrash } from "../icons";
 import { teacherProfileApi, type TeacherProfile } from "./teacherProfile";
+import { QR_SCAN_HASH } from "../qrLogin/qrRoute";   // Tadris+ QR-2
 
 /**
  * «ملف المعلم» — the teacher's OWN identity only (the server acts on the token subject): choose a preset icon,
@@ -73,6 +74,8 @@ export default function TeacherProfileDialog({ open, token, profile, photoUrl, o
         </form>
         <AppearanceSettings token={token} />   {/* Tadris+ P8-A1 */}
         <NavOrderSettings token={token} />     {/* Tadris+ P8-B2a */}
+        {/* Tadris+ QR-2 — sign this teacher in on another device by scanning the QR it shows (this tab's session approves). */}
+        <a className="eb-button is-small eb-teacher-profile-qr" href={QR_SCAN_HASH}>ربط جهاز آخر بالباركود</a>
         {busy && <p className="eb-muted" role="status">جارٍ الحفظ...</p>}
         {notice && !busy && <p className="eb-teacher-profile-notice" role="status">{notice}</p>}
         {error && <p className="platform-error" role="alert">{error}</p>}

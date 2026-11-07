@@ -66,6 +66,9 @@ const PROTECTED: [string, string, string, string][] = [
   ["./invite/InviteEntry.tsx", "InviteApp", "./InviteApp", "invite-app"],
   // Tadris+ P4-D — the owner → own-teacher-workspace handoff page (#/handoff/<ticket>): its own lazy chunk, like the invitation page.
   ["./handoff/HandoffEntry.tsx", "HandoffApp", "./HandoffApp", "handoff-app"],
+  // Tadris+ QR-2 — the QR approval page (its own surface) and the sign-in pages' QR panel load on demand.
+  ["./qrLogin/QrEntry.tsx", "QrApp", "./QrApp", "qr-app"],
+  ["./qrLogin/QrSignInEntry.tsx", "QrSignInPanel", "./QrSignInPanel", "qr-sign-in-panel"],
 ];
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 

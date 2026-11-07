@@ -104,6 +104,8 @@ import { NETWORK_ERROR_TEXT, UNEXPECTED_RESPONSE_TEXT, userFacingMessage } from 
 import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
 import { endTeacherServerSession } from "./teacher/teacherServerLogout";
+import QrSignInEntry from "./qrLogin/QrSignInEntry";   // Tadris+ QR-2
+import { signInPlatformAndReload } from "./qrLogin/qrSession";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
@@ -5855,6 +5857,8 @@ function App() {
                 {loginBusy ? "جارٍ الدخول..." : "دخول"}
               </button>
             </form>
+
+            <QrSignInEntry ns="platform" onSignedIn={signInPlatformAndReload} />
 
             <p className="auth-note login-note">
               نفس شاشة الدخول للمعلم والطالب

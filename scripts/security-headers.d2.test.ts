@@ -89,7 +89,11 @@ describe("static security headers (staticwebapp.config.json)", () => {
     expect(h["X-Frame-Options"]).toBe("SAMEORIGIN");                      // not DENY: the simulator runtime is framed by the app itself
     expect(h["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(h["Strict-Transport-Security"]).toMatch(/^max-age=31536000/);
-    for (const f of ["camera=()", "microphone=()", "geolocation=()", "payment=()", "usb=()"]) expect(h["Permissions-Policy"]).toContain(f);
+    for (const f of ["microphone=()", "geolocation=()", "payment=()", "usb=()"]) expect(h["Permissions-Policy"]).toContain(f);
+    // Tadris+ QR-2 — the camera is allowed to the site's OWN pages only (the QR sign-in scanner, docs/enterprise-qr-login-qr1.md):
+    // never to another origin, and the sandboxed simulator frame (opaque origin) never matches `self`.
+    expect(h["Permissions-Policy"].split(/,\s*/)).toContain("camera=(self)");
+    expect(h["Permissions-Policy"]).not.toMatch(/camera=\*|camera=\([^)]*(\*|https?:)/);
     expect(h["Permissions-Policy"]).toContain("fullscreen=(self)");          // the learning reader's full-screen mode
     expect(h["Cross-Origin-Opener-Policy"]).toBe("same-origin");
   });

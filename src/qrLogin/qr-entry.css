@@ -1,0 +1,11 @@
+/* Tadris+ QR-2 — the «الدخول بالباركود» button on the sign-in pages (ships with the page; the panel's styles load with it). */
+
+.eb-qr-entry {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2);
+  width: 100%; margin-top: var(--eb-space-3); padding: var(--eb-space-2) var(--eb-space-3);
+  background: var(--eb-surface); color: var(--eb-primary-strong); border: 1px solid var(--eb-line); border-radius: var(--eb-r);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-qr-entry:hover { border-color: var(--eb-border-strong); }
+
+.eb-qr-entry:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }
