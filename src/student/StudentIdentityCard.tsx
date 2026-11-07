@@ -24,7 +24,7 @@ export default function StudentIdentityCard({ student, classroom, displayName, s
   return (
     <section className="student-welcome-card eb-sp-identity" aria-labelledby="eb-sp-welcome">
       <span className={"eb-sp-avatar-frame" + (stageGroup ? " is-stage-group-" + stageGroup : "")}>
-        <ProfileAvatar photoUrl={photo} avatarId={student.avatarId} name={name} fallbackLetter={(name || "؟").charAt(0)} size={56} onClick={onChangeAvatar} label="تغيير الأيقونة" />
+        <ProfileAvatar photoUrl={photo} avatarId={student.avatarId} name={name} fallbackLetter={(name || "؟").charAt(0)} size={44} onClick={onChangeAvatar} label="تغيير الأيقونة" />
       </span>
       <div className="eb-sp-identity-text">
         <h2 id="eb-sp-welcome">مرحبًا {name}</h2>

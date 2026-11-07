@@ -6,6 +6,7 @@
 // (evaluation chip, assignment / Reader continuations, 12C mobile nav) and motion from the existing preference.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor, act } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 import { MOTION_OVERRIDE_KEY } from "./ui/motionPreference";
 import { saveReaderPosition } from "./student/today/readerPosition";
@@ -53,11 +54,18 @@ function mount(opts: Opts = {}) {
   const utils = render(<StudentPortal token="t" displayName="أحمد" onLogout={onLogout} />);
   return { ...utils, calls, onLogout, gets: (part: string) => calls.filter(c => c.method === "GET" && c.url.includes(part)).length };
 }
-const hero = async () => (await screen.findByRole("region", { name: "أكمل من حيث توقفت" }, SLOW)).querySelector("[data-continue-type]") as HTMLElement;
+// UX-S2 (approved design docs/enterprise-ux-student-s2.md): the hub lives in «اليوم» and the panel in «المشاريع» — one view at a time.
+// The student goes back to «اليوم» to use the hero again; the panel's read being in is its heading existing (in a hidden view or not).
+const shownView = () => Array.from(document.querySelectorAll(".eb-sp [data-view]")).filter(e => !e.hasAttribute("hidden")).map(e => e.getAttribute("data-view"));
+const hero = async () => {
+  await screen.findByRole("navigation", { name: "أقسام بوابة الطالب" }, SLOW);
+  if (!shownView().includes("today")) await openStudentView("اليوم");
+  return (await screen.findByRole("region", { name: "أكمل من حيث توقفت" }, SLOW)).querySelector("[data-continue-type]") as HTMLElement;
+};
 const heroCta = async () => within(await hero()).getByRole("button");
 const openCode = () => document.querySelector(".eb-sp-project[data-project-code]")?.getAttribute("data-project-code") ?? null;
 const cards = () => [...document.querySelectorAll(".eb-sp-project-card h3")].map(h => h.textContent);
-const projectsReady = () => screen.findByRole("region", { name: /^مشاريعي/ }, SLOW);
+const projectsReady = () => waitFor(() => expect(document.getElementById("eb-sp-projects-title")).toBeTruthy(), SLOW);
 const notice = () => document.querySelector(".eb-sp-notice")?.textContent ?? "";
 let scrolls: { id: string; behavior?: string }[] = [];
 /** Find the hero CTA first, THEN click inside act (never await a findBy* inside act — it deadlocks). */
@@ -94,6 +102,8 @@ describe("12D Today «تابع المشروع» → the exact project", () => {
     expect(scrolls.at(-1)).toEqual({ id: "eb-sp-projects-title", behavior: "smooth" });
     expect(document.activeElement?.id).toBe("eb-sp-projects-title");
     expect(document.getElementById("eb-sp-projects-title")!.getAttribute("tabindex")).toBe("-1");
+    expect(shownView()).toEqual(["projects"]);                                  // UX-S2: the drill opens «المشاريع» first
+    expect(window.location.hash).toBe("#/s/projects");
     expect(notice()).toBe("");
   }, T);
 
@@ -134,17 +144,18 @@ describe("12D Today «تابع المشروع» → the exact project", () => {
 
   it("(9) not enrolled: consumed safely with the calm notice", async () => {
     mount({ tracker: () => res(200, { ok: true, enrolled: false }) });
-    await screen.findByRole("region", { name: /المهام والواجبات/ }, SLOW);
+    await hero();
     await clickCta();
     await waitFor(() => expect(notice()).toContain("هذا المشروع لم يعد متاحًا."));
     expect(document.querySelector(".eb-sp-projects")).toBeNull();
+    expect(shownView()).toEqual(["today"]);                                     // UX-S2: no project → «المشاريع» falls back to «اليوم»
   }, T);
 
   it("(10 · 11) a failed project read (500 / 401) consumes the drill with a calm notice and NEVER logs out", async () => {
     for (const status of [500, 401]) {
       cleanup();
       const m = mount({ tracker: () => res(status, { ok: false }) });
-      await screen.findByRole("region", { name: /المهام والواجبات/ }, SLOW);
+      await hero();
       await clickCta();
       await waitFor(() => expect(notice()).toContain("تعذر فتح المشروع حاليًا"));
       expect(m.onLogout).not.toHaveBeenCalled();
@@ -160,7 +171,9 @@ describe("12D Today «تابع المشروع» → the exact project", () => {
     const cta = await heroCta();
     expect(cta.textContent).toBe("تابع المشروع");
     await act(async () => { fireEvent.click(cta); });
-    await waitFor(() => expect(scrolls.at(-1)?.id).toBe("eb-sp-projects-title"));
+    // UX-S2 (§2.4): no code → the «المشاريع» view itself (its heading focused), no project guessed
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-projects-title"));
+    expect(shownView()).toEqual(["projects"]);
     expect(openCode()).toBeNull();
     expect(cards()).toHaveLength(2);
     expect(notice()).toBe("");
@@ -258,7 +271,7 @@ describe("12D no replay, no snap-back, repeatable", () => {
     const m = mount({ tracker: () => new Promise<Response>(r => { releases.push(() => r({ status: 200, ok: true, json: async () => TWO } as Response)); }) });
     await clickCta();           // drill P2 pending (read in flight)
     m.rerender(<StudentPortal token="t2" displayName="أحمد" onLogout={m.onLogout} />);
-    await screen.findByRole("region", { name: /المهام والواجبات/ }, SLOW);
+    await screen.findByRole("navigation", { name: "أقسام بوابة الطالب" }, SLOW);
     await waitFor(() => expect(releases.length).toBeGreaterThanOrEqual(2));   // the new session's own read started
     // (the portal's ordinary session reload remounts the optional panel: each mount makes its one read, as on main)
     const last = releases.length - 1;
@@ -274,13 +287,15 @@ describe("12D no replay, no snap-back, repeatable", () => {
 });
 
 describe("12D neighbours unchanged", () => {
-  it("(19) the evaluation chip «مشاريعي» still only scrolls to the section (aggregate text, no project guessed)", async () => {
+  // UX-S2 (§2.4): the chip opens the «المشاريع» view (formerly: scrolled to the section) — still no project guessed.
+  it("(19) the evaluation chip «مشاريعي» only opens the projects view (aggregate text, no project guessed)", async () => {
     const ev = { gradedStages: 1, ungradedStages: 1, totalStages: 2, projectScore: 80, stages: [] };
     mount({ tracker: () => res(200, { ...TWO, projects: [project("P1", "مشروع الكتاب", ev), project("P2", "مشروع الشبكة", ev)] }) });
     await projectsReady();
     const chip = await within(await screen.findByRole("region", { name: "أكمل من حيث توقفت" })).findByRole("button", { name: "مشاريعي" }, SLOW);
     fireEvent.click(chip);
-    await waitFor(() => expect(scrolls.at(-1)?.id).toBe("eb-sp-projects-title"));
+    await waitFor(() => expect(document.activeElement?.id).toBe("eb-sp-projects-title"));
+    expect(shownView()).toEqual(["projects"]);
     expect(openCode()).toBeNull();
     expect(cards()).toHaveLength(2);
   }, T);
@@ -303,14 +318,14 @@ describe("12D neighbours unchanged", () => {
     expect(m.gets("/api/student-project-tracker")).toBe(1);
   }, T);
 
-  it("(23 · 24) the 12C bar stays with the exact project open (five items) and «المشاريع» still goes to the section", async () => {
+  it("(23 · 24) the 12C bar stays with the exact project open (five items) and «المشاريع» keeps the projects view", async () => {
     mount();
     await projectsReady();
     await clickCta();
     const nav = screen.getByRole("navigation", { name: "التنقل السريع في بوابة الطالب" });
     expect(within(nav).getAllByRole("button").map(b => b.textContent)).toEqual(["اليوم", "المواد", "الواجبات", "التقدم", "المشاريع"]);
     fireEvent.click(within(nav).getAllByRole("button").find(b => b.textContent === "المشاريع")!);
-    expect(scrolls.at(-1)).toEqual({ id: "eb-sp-projects-title", behavior: "smooth" });
+    expect(shownView()).toEqual(["projects"]);                                  // UX-S2: the bar opens the view
     expect(openCode()).toBe("P2");                                              // the bar never changes the panel
   }, T);
 

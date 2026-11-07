@@ -21,6 +21,7 @@ import TeacherAppShell from "./shell/TeacherAppShell";
 import { NAV_LABELS, type TeacherNavId, type TeacherNavState } from "./shell/teacherNav";
 import StudentMessagesPage from "./messages/StudentMessagesPage";
 import type { MessageView, StudentMessagesClient, StudentUnread } from "./messages/messagesClient";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 import type { FeedPost } from "./achievements";
 
@@ -152,6 +153,7 @@ describe("8B-A achievements in the real portal", () => {
     render(<StudentPortal token="tok" displayName="أحمد" onLogout={() => {}} />);
     await screen.findByText(/مرحبًا أحمد/);
     await flush();
+    await openStudentView("التقدم");                                                  // UX-S2: the achievement feed lives in «التقدم»
     fireEvent.click(await screen.findByRole("button", { name: "عرض المزيد" }));
     expect(feedIds()).toHaveLength(20);
     const feedReads = gets.filter(u => u.includes("/api/achievement-feed")).length;

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 // Grading-authority consistency pass — StudentPortal must be FAIL-SAFE: grading status is only taken from the
@@ -29,6 +30,7 @@ describe("StudentPortal grading authority — never infer final from a score", (
   it("A: an old payload with only latestScore/latestPercentage (no grading metadata) is NOT labeled final", async () => {
     mount({ student, classroom, assignments: [asg("A1", { latestScore: 62, latestPercentage: 62 })], stats: { assigned: 1, completed: 1, average: 62 } });
     // UX-7a: an available assignment is also offered in the primary section — scope to the assignments list.
+    await openStudentView("الواجبات");                                   // UX-S2: the list lives in «الواجبات»
     const card = within(await screen.findByRole("region", { name: /المهام والواجبات/ })).getByText("A1").closest(".student-assignment-card") as HTMLElement;
     // A numeric score must not make the card "final".
     expect(within(card).queryByText(/العلامة النهائية/)).toBeNull();

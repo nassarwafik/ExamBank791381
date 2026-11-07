@@ -102,7 +102,8 @@ async function studentView(vp, student, at, shot) {
   await ctx.addInitScript(([t, n]) => { sessionStorage.setItem("examBankBuilderToken", t); sessionStorage.setItem("examBankSessionRole", "student"); sessionStorage.setItem("examBankSessionDisplayName", n); }, [api.studentToken(student), student.displayName]);
   const page = await ctx.newPage();
   page.on("pageerror", e => fail("page error " + at, e.message));
-  await page.goto(origin + "/");
+  // UX-S2 (docs/enterprise-ux-student-s2.md): «مشاريعي» is the «المشاريع» view of the student portal — opened by its link.
+  await page.goto(origin + "/#/s/projects");
   const filters = page.getByRole("group", { name: "عرض المراحل" });
   await filters.waitFor({ timeout: 20000 });
   await filters.getByRole("button", { name: /^الكل/ }).click();

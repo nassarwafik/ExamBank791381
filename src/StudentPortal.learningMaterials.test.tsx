@@ -9,6 +9,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { readFileSync, existsSync } from "fs";
 import path from "path";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -40,15 +41,18 @@ function mount(opts: { materials?: (n: number) => unknown; dashboardStatus?: num
   const utils = render(<StudentPortal token="t" displayName="أحمد" onLogout={onLogout} />);
   return { ...utils, calls, onLogout, materialGets: () => calls.filter(c => c.method === "GET" && c.url === "/api/student-learning-materials").length };
 }
-const section = () => screen.findByRole("region", { name: "موادي التعليمية" });
+// UX-S2 (docs/enterprise-ux-student-s2.md): «موادي التعليمية» is the «المواد» view — reached the way a student does.
+const section = async () => { await openStudentView("المواد"); return screen.findByRole("region", { name: "موادي التعليمية" }); };
 
 describe("placement, card, empty state, degrade", () => {
-  it("sits right after «ماذا عليّ أن أفعل الآن؟» and before «تقدّمي»; the card shows ONLY the released titles and count (m07 hidden, no hidden count)", async () => {
+  // UX-S2 (approved design §2.1): the panel is the whole «المواد» view (formerly: after «ماذا عليّ أن أفعل الآن؟», before «تقدّمي»).
+  it("is the «المواد» view on its own; the card shows ONLY the released titles and count (m07 hidden, no hidden count)", async () => {
     mount();
     const s = await section();
-    expect(["eb-sp-now-title", "eb-install-title"]).toContain(s.previousElementSibling?.getAttribute("aria-labelledby"));   // Phase 10C: the optional install card may sit between
-    expect(document.getElementById("eb-sp-now-title")!.closest("section")!.compareDocumentPosition(s) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(s.nextElementSibling?.textContent).toContain("تقدّمي");
+    expect(s.closest("[data-view]")?.getAttribute("data-view")).toBe("learning");
+    expect(s.previousElementSibling).toBeNull();
+    expect(s.nextElementSibling).toBeNull();
+    expect(document.getElementById("eb-sp-now-title")!.closest("[data-view]")?.hasAttribute("hidden")).toBe(true);
     const card = await within(s).findByRole("article", { name: "شبكات الاتصال" });
     expect(within(card).getByText("كتاب 791381")).toBeTruthy();
     expect(within(card).getByText(/الوحدات المتاحة الآن:/).textContent).toBe("الوحدات المتاحة الآن: 2");
@@ -72,6 +76,7 @@ describe("placement, card, empty state, degrade", () => {
     expect(await within(s).findByText("تعذر تحميل موادك التعليمية الآن.")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(onLogout).not.toHaveBeenCalled();
+    await openStudentView("الواجبات");                                               // UX-S2: the rest of the portal, view by view
     expect(await screen.findByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
     expect(warn).toHaveBeenCalled();
   });
@@ -88,9 +93,11 @@ describe("placement, card, empty state, degrade", () => {
     const { calls, materialGets } = mount();
     await section();
     expect((await screen.findAllByText("واجب الشبكات")).length).toBeGreaterThan(0);   // now section + task list
+    await openStudentView("المشاريع");                                              // UX-S2: each neighbour in its own view
     expect(await screen.findByRole("region", { name: "مشاريعي" })).toBeTruthy();
+    await openStudentView("التقدم");
     expect(await screen.findByRole("region", { name: "إنجازات الصف" })).toBeTruthy();
-    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(5));   // + the Phase 5D unread-messages summary GET
+    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(5));   // still 5: switching views reads nothing   // + the Phase 5D unread-messages summary GET
     expect(materialGets()).toBe(1);
     expect(calls.filter(c => c.method === "POST")).toEqual([]);
   });
@@ -111,8 +118,11 @@ describe("open flow — the same LearningReader, revalidated entitlement, back t
     const back = screen.getByRole("button", { name: "العودة إلى موادي التعليمية" });
     expect(screen.queryByRole("button", { name: "العودة إلى نظرة الكتاب" })).toBeNull();
     fireEvent.click(back);
-    expect(await section()).toBeTruthy();
+    // UX-S2 (§2.4): back returns to the view the student left — «المواد» is shown again without any navigation.
+    expect(await screen.findByRole("region", { name: "موادي التعليمية" })).toBeTruthy();
+    expect(window.location.hash).toBe("#/s/learning");
     expect(document.querySelector(".learning-reader")).toBeNull();
+    await openStudentView("الواجبات");
     expect(await screen.findByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
   }, T);
   it("Phase L.2 — a released unit is a link: it re-reads the entitlement and opens the Reader at THAT unit", async () => {

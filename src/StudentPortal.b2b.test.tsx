@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 
 // B2B #24 — the assignment card must offer "متابعة المحاولة" whenever the server reports a live active
@@ -27,7 +28,7 @@ function mount(assignment: Record<string, unknown>) {
 }
 // UX-7a: a live attempt is also offered in the primary "ماذا عليّ أن أفعل الآن؟" section; the card assertions
 // below are scoped to the assignments list region.
-const list = async () => within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
+const list = async () => { await openStudentView("الواجبات"); /* UX-S2: the section lives in its view */ return within(await screen.findByRole("region", { name: /المهام والواجبات/ })); };
 const baseAssignment = { assignmentId: "a1", title: "واجب مؤقت", instructions: "x", openAt: "", dueAt: "", questionCount: 1, totalMarks: 10, availability: "open", attemptsUsed: 1, allowedAttempts: 1, canAttempt: false, latestScore: null, latestPercentage: null, createdAt: "" };
 
 describe("StudentPortal — resume label for a live active attempt (B2B #24)", () => {

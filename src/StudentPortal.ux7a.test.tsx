@@ -6,6 +6,7 @@
 // counts (every write maps to one explicit action; browsing costs nothing).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { openStudentView } from "./student/portalViews.testkit";
 import StudentPortal from "./StudentPortal";
 import type { FeedPost } from "./achievements";
 import { stageVisual } from "./studentStageVisuals";
@@ -46,7 +47,9 @@ function mount(dashboard: Record<string, unknown>, opts: { posts?: FeedPost[]; p
   return { ...utils, calls, onLogout };
 }
 const titles = () => Array.from(document.querySelectorAll(".student-assignment-card .eb-sp-task-title")).map(h => h.textContent);
-const list = async () => within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
+// UX-S2 (docs/enterprise-ux-student-s2.md): one view at a time — a section is reached the way a student does, through the view bar.
+const list = async () => { await openStudentView("الواجبات"); return within(await screen.findByRole("region", { name: /المهام والواجبات/ })); };
+const projectsRegion = async () => { await waitFor(() => expect(document.getElementById("eb-sp-projects-title")).toBeTruthy()); await openStudentView("المشاريع"); return screen.findByRole("region", { name: "مشاريعي" }); };
 const nowSection = async () => within(await screen.findByRole("region", { name: /ماذا عليّ أن أفعل الآن؟/ }));
 const PROJECT = {
   ok: true, enrolled: true, className: "الصف",
@@ -86,6 +89,7 @@ describe("UX-7a StudentPortal — task-first home", () => {
     expect(screen.getByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: /المهام والواجبات/ }).textContent).toContain("7");
     // the primary section lists ONLY the actionable ones (live attempt first, then open), the scheduled one as upcoming with no action
+    await openStudentView("اليوم");                                                         // UX-S2: the primary section lives in «اليوم»
     const now = await nowSection();
     expect(Array.from(now.getAllByRole("heading", { level: 3 })).map(h => h.textContent)).toEqual(["IP", "AV2", "AV1", "قريبًا"]);
     expect(now.getAllByRole("button").map(b => b.textContent)).toEqual(["متابعة المحاولة", "ابدأ الحل", "ابدأ الحل"]);
@@ -149,14 +153,21 @@ describe("UX-7a StudentPortal — task-first home", () => {
 describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
   it("renders exactly the seven sections in order under the shell's single h1: identity → now → learning materials → progress → assignments → projects → achievements (Games is a dedicated destination, not an inline section)", async () => {
     mount({ student, classroom, assignments: [asg("AV", { dashboardState: "available" })], stats: { ...baseStats, assigned: 1 } }, { tracker: PROJECT, posts: [post({})] });
-    await screen.findByRole("region", { name: "مشاريعي" });
+    await waitFor(() => expect(document.getElementById("eb-sp-projects-title")).toBeTruthy());
     expect(document.querySelectorAll("h1").length).toBe(1);                                         // the shell's brand title only
     expect(document.querySelector(".eb-sp h1")).toBeNull();
-    const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
+    // UX-S2 (approved design §2.1): the same sections, in the same order, now grouped in five views (one shown at a time).
     // Phase 9A — the Today Hub («أكمل من حيث توقفت») sits right after the identity card, before the actionable list.
-    // Phase 10C — the quiet «تثبيت Tadris+» card is present in a browser with no native install prompt (this test
-    // browser) and sits in the 6A slot after the actionable list; it is optional UI, not a dashboard section.
-    expect(h2s).toEqual(["مرحبًا أحمد", "أكمل من حيث توقفت", "ماذا عليّ أن أفعل الآن؟", "تثبيت Tadris+", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
+    // Phase 10C — the quiet «تثبيت Tadris+» card is present in a browser with no native install prompt (this test browser); UX-S2
+    // keeps it at the end of «اليوم». It is optional UI, not a dashboard section.
+    const h2sOf = (v: string) => Array.from(document.querySelectorAll(`.eb-sp [data-view="${v}"] h2`)).map(h => h.textContent?.replace(/\d+$/, "").trim());
+    expect(h2sOf("today")).toEqual(["مرحبًا أحمد", "أكمل من حيث توقفت", "ماذا عليّ أن أفعل الآن؟", "تثبيت Tadris+"]);
+    expect(h2sOf("learning")).toEqual(["موادي التعليمية"]);
+    expect(h2sOf("tasks")).toEqual(["المهام والواجبات"]);
+    expect(h2sOf("progress")).toEqual(["تقدّمي وقوتي", "إنجازات الصف"]);
+    expect(h2sOf("projects")).toEqual(["مشاريعي"]);
+    expect(Array.from(document.querySelectorAll(".eb-sp [data-view]")).map(v => [v.getAttribute("data-view"), v.hasAttribute("hidden")]))
+      .toEqual([["today", false], ["learning", true], ["tasks", true], ["progress", true], ["projects", true]]);   // «اليوم» first; the games cards are NOT a section
     expect(document.querySelector(".eb-sp .eb-games-hub, .eb-sp .eb-game-cards")).toBeNull();       // no inline games grid on the dashboard
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
@@ -208,7 +219,7 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
 describe("UX-7a StudentPortal — projects (read-only, presentation on the shared primitives)", () => {
   it("shows the server's progress values unchanged, the next stage, stage rows with tonal badges and the teacher note — from the single tracker read", async () => {
     const { calls } = mount({ student, classroom, assignments: [], stats: baseStats }, { tracker: PROJECT });
-    const sectionEl = await screen.findByRole("region", { name: "مشاريعي" });
+    const sectionEl = await projectsRegion();
     const region = within(sectionEl);
     expect(region.getByRole("progressbar", { name: "التقدم العام" }).getAttribute("aria-valuenow")).toBe("64");
     expect(region.getByText("64%")).toBeTruthy();
@@ -233,7 +244,7 @@ describe("UX-7a StudentPortal — projects (read-only, presentation on the share
 
   it("switching tracks is an aria-pressed group (no tablist) and costs no request; a tracker 401 hides the section without ending the session", async () => {
     const { calls, onLogout, unmount } = mount({ student, classroom, assignments: [], stats: baseStats }, { tracker: PROJECT });
-    const region = within(await screen.findByRole("region", { name: "مشاريعي" }));
+    const region = within(await projectsRegion());
     expect(region.queryByRole("tablist")).toBeNull();
     const group = within(region.getByRole("group", { name: "مسارات المشروع" }));
     expect(group.getByRole("button", { name: "الكتاب" }).getAttribute("aria-pressed")).toBe("true");
@@ -271,6 +282,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
       asg("L99", { latestScore: 99, latestPercentage: 99 }),                                             // legacy payload: no result object → no medal
       asg("F60", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR(60), latestPercentage: 60 })
     ], stats: { ...baseStats, assigned: 5, finalized: 3, pendingReview: 1, averageFinalized: 76.7 } });
+    await openStudentView("التقدم");                                                                    // UX-S2: medals live in «التقدم»
     const list = await screen.findByRole("list", { name: "ميدالياتك" });
     const items = within(list).getAllByRole("listitem");
     expect(items.map(li => li.textContent)).toEqual(["×11 ميدالية ذهبية", "×11 ميدالية برونزية"]);   // visible ×n + hidden label; no silver
@@ -281,12 +293,14 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
   it("the average ring is the finalized-only average from the server stats (progressbar), and an explicit empty figure when there is none", async () => {
     const { unmount } = mount({ student, classroom, assignments: [asg("A", { dashboardState: "awaitingReview", gradingStatus: "pendingReview", latestResult: pendingLR(100) })], stats: { ...baseStats, assigned: 1, completed: 1, average: 100, pendingReview: 1, averageFinalized: null } });
     await screen.findByText(/مرحبًا أحمد/);
+    await openStudentView("التقدم");                                                                    // UX-S2: the ring lives in «التقدم»
     expect(screen.queryByRole("progressbar", { name: "المعدل النهائي" })).toBeNull();         // the 100 legacy average is never shown
     expect(screen.getByRole("img", { name: /المعدل النهائي: لا يوجد معدل نهائي بعد/ })).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
     unmount();
     mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 2, finalized: 2, averageFinalized: 84 } });
     await screen.findByText(/مرحبًا أحمد/);
+    await openStudentView("التقدم");
     const ring = screen.getByRole("progressbar", { name: "المعدل النهائي" });
     expect(ring.getAttribute("aria-valuenow")).toBe("84");
     expect((screen.getByText("المعدل النهائي").closest("article") as HTMLElement).textContent).toContain("84%");
@@ -299,7 +313,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
     const stagePoints = Math.min(raw, 2000), max = stagePoints >= 1920, stageNumber = max ? 25 : Math.floor(stagePoints / 80) + 1, floor = (stageNumber - 1) * 80, within = Math.min(80, stagePoints - floor);
     return { rawTotalPoints: raw, totalPoints: raw, examPoints: raw, practicePoints: 0, studyPoints: 0, projectPoints: 0, stagePoints, stageMaxPoints: 2000, stageNumber, stageCount: 25, stageBlockSize: 80, stageFloor: floor, withinStagePoints: within, stagePercent: Math.round(within * 100 / 80), nextStageNumber: max ? null : stageNumber + 1, nextStageRemaining: max ? 0 : 80 - within, pointsToMaximum: 2000 - stagePoints, isMaximumStage: max, pathComplete: stagePoints >= 2000, legacyRank: null, projects: [], ...over };
   };
-  const stageRegion = async () => within(await screen.findByRole("region", { name: /تقدّمي/ }));
+  const stageRegion = async () => { await openStudentView("التقدم"); return within(await screen.findByRole("region", { name: /تقدّمي/ })); };
 
   it("ZERO points is stage 1 — بذرة القوة · المرحلة 1 من 25 · 0 / 2000 · 0 / 80 · 0% · next شعلة صغيرة; never «no rank», never a locked preview", async () => {
     mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 0, pendingReview: 6, averageFinalized: 99 }, strength: serverStrength(0) });
@@ -416,6 +430,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
   it("the share toggle is a real checkbox that posts setShareAchievements once per change", async () => {
     const { calls } = mount({ student, classroom, assignments: [], stats: baseStats });
     await screen.findByText(/مرحبًا أحمد/);
+    await openStudentView("التقدم");                                                         // UX-S2: the achievement feed lives in «التقدم»
     const box = screen.getByRole("checkbox", { name: "شارك إنجازاتي مع الصف" }) as HTMLInputElement;
     expect(box.checked).toBe(true);
     fireEvent.click(box);
@@ -431,6 +446,7 @@ describe("UX-7a StudentPortal — achievement feed", () => {
       post({ postId: "p1", createdAt: new Date().toISOString(), teacherReaction: "cheer", teacherNote: "أحسنت يا ليان", reactionCounts: { heart: 2, clap: 0, cheer: 0, fire: 0 }, myReaction: "heart" }),
       post({ postId: "p2", studentDisplayName: "أحمد", assignmentTitle: "واجب 2", tier: "bronze", createdAt: old, isOwnPost: true })
     ] });
+    await openStudentView("التقدم");                                                         // UX-S2: the achievement feed lives in «التقدم»
     const feedTitle = await screen.findByText("إنجازات الصف");
     expect(feedTitle.tagName).toBe("H2");
     const items = screen.getAllByRole("article").filter(a => a.className.includes("eb-sp-feed-item"));
@@ -455,6 +471,7 @@ describe("UX-7a StudentPortal — achievement feed", () => {
 
   it("reacting posts once and applies the server counts / myReaction without re-reading the feed", async () => {
     const { calls } = mount({ student, classroom, assignments: [], stats: baseStats }, { posts: [post({})], react: body => ({ ok: true, reactionCounts: { heart: 0, clap: 3, cheer: 0, fire: 0 }, myReaction: body.reaction }) });
+    await openStudentView("التقدم");                                                         // UX-S2: the achievement feed lives in «التقدم»
     await screen.findByText("إنجازات الصف");
     const clap = screen.getByRole("button", { name: /أحسنت/ });
     fireEvent.click(clap);
