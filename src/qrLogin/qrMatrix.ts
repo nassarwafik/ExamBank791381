@@ -11,4 +11,3 @@ export function qrPathData(text: string): { size: number; d: string } {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += "M" + (c + quiet) + " " + (r + quiet) + "h1v1h-1z";
   return { size: n + quiet * 2, d };
 }
-
