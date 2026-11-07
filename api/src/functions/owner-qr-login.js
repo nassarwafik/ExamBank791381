@@ -5,6 +5,7 @@ const { recordOwnerAuditEventStrict } = require("../lib/audit-log");
 const { OWNER_TOKEN_TTL_SECONDS, createOwnerToken } = require("../lib/identity/owner-session");
 const { ownerSessionName, readOwnerAccount, createOnly, newSessionId } = require("../lib/identity/owner-store");
 const { reply, unavailable, notFound, Refusal, startPairing, pollPairing } = require("../lib/identity/qr-pairing");
+const { safeDevice } = require("../lib/identity/qr-login");   // Tadris+ QR-4
 
 // Tadris+ QR-1 — the NEW device's side of the QR sign-in for the PLATFORM OWNER (design: docs/enterprise-qr-login-qr1.md).
 // Route: POST /api/owner-qr-login/{action}. No session. The owner's pairings live under the owner's own prefix and are approved only
@@ -26,7 +27,8 @@ async function issueOwner(container, a, record, deps, obs, nowMs) {
   const sid = newSessionId();
   const created = await createOnly(container, ownerSessionName(sid), {
     schemaVersion: 1, sid, accountId: owner.accountId, authVersion: owner.authVersion,
-    createdAtMs: nowMs, expiresAtMs: nowMs + OWNER_TOKEN_TTL_SECONDS * 1000, stepUpAtMs: null, factor: "qr"
+    createdAtMs: nowMs, expiresAtMs: nowMs + OWNER_TOKEN_TTL_SECONDS * 1000, stepUpAtMs: null, factor: "qr",
+    device: safeDevice(record.device)   // Tadris+ QR-4 — the new device's words (fixed vocabulary), for «الأجهزة المرتبطة»
   });
   if (!created) return unavailable();
   const { token } = createOwnerToken({ accountId: owner.accountId, sid, authVersion: owner.authVersion }, { nowMs, env: deps.env || process.env });

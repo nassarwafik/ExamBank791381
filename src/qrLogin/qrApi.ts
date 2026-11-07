@@ -74,11 +74,18 @@ export function deviceLabel(device: { browser: string; os: string } | null | und
 
 // Tadris+ QR-3 — «الأجهزة المرتبطة»: this tab's teacher / student session lists and ends its OWN sessions (/api/session-devices).
 export type LinkedDevice = { id: string; via: "login" | "qr" | "owner-handoff"; device: { browser: string; os: string } | null; createdAt: string; expiresAt: string; current: boolean };
-export type LinkedDevices = { role: "teacher" | "student"; devices: LinkedDevice[]; untracked: boolean };
+export type LinkedDevices = { role: "teacher" | "student" | "owner"; devices: LinkedDevice[]; untracked: boolean };
 const bearer = (token: string) => ({ Authorization: "Bearer " + token });
 export const devicesApi = {
   list: (token: string) => post<LinkedDevices>("/api/session-devices/list", {}, bearer(token)),
   end: (token: string, id: string) => post<{ ended: boolean; current: boolean }>("/api/session-devices/end", { id }, bearer(token))
+};
+
+// Tadris+ QR-4 — the owner's own devices (/api/owner-session/devices, end-device needs a recent step-up), owner token only.
+const ownerHeader = (token: string) => ({ "x-owner-token": token });
+export const ownerDevicesApi = {
+  list: (token: string) => post<LinkedDevices>("/api/owner-session/devices", {}, ownerHeader(token)),
+  end: (token: string, id: string) => post<{ ended: boolean; current: boolean }>("/api/owner-session/end-device", { id }, ownerHeader(token))
 };
 
 /** How the session started, in words. */
