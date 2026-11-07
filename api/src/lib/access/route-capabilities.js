@@ -6,7 +6,7 @@
 // Keys: "GET" / "POST" for single-purpose methods, the action name for multi-action routes, and "*" for any other action of that
 // route (the route then answers its own 400 for an action it does not know). A list means "any one of these".
 //
-// Exempt teacher routes (no capability): the teacher's own session (platform-session, teacher-session-end, qr-login-approve), their own profile
+// Exempt teacher routes (no capability): the teacher's own session (platform-session, teacher-session-end, qr-login-approve, session-devices), their own profile
 // (teacher-profile) and a content-free diagnostic report (client-error-report).
 
 const GOV_ANY = ["examGovernance.exam.author", "examGovernance.exam.review", "examGovernance.exam.approve", "examGovernance.exam.publish"];
@@ -117,6 +117,7 @@ const EXEMPT = Object.freeze({
   "platform-session.js": "the teacher's own session probe",
   "teacher-session-end.js": "the teacher's own sign-out",
   "qr-login-approve.js": "the caller approving a sign-in of ANOTHER device as themselves (QR-1; only the verified session identity is bound)",
+  "session-devices.js": "the caller's OWN signed-in devices («الأجهزة المرتبطة», QR-3): list / end one of the verified subject's own sessions",
   "teacher-profile.js": "the teacher's own display name / avatar / photo",
   "school-logo.js": "the logo of the caller's own school (P4-C, presentation only)",
   "client-error-report.js": "a content-free diagnostic report (one log line, nothing stored is read)"

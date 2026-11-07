@@ -183,6 +183,7 @@ describe("QR-2 the approving device", () => {
     sessionStorage.setItem("examBankBuilderToken", "teacher-session");
     window.history.replaceState(null, "", "/#/qr-scan");
     answer("/api/qr-login-approve/inspect", { status: 200, body: inspect });
+    answer("/api/session-devices/list", { status: 200, body: { ok: true, role: "teacher", devices: [], untracked: false } });   // QR-3
     render(<QrApp />);
     const photo = () => document.querySelector<HTMLInputElement>(".eb-qr-photo input")!;
     const take = async (text: string) => { scanner.text = text; fireEvent.change(photo(), { target: { files: [new File(["x"], "qr.png", { type: "image/png" })] } }); };
@@ -190,9 +191,11 @@ describe("QR-2 the approving device", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("ليس رمز دخول");
     await take(window.location.origin + "/#/owner-qr-login/" + T);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("رمز دخول مالك المنصة"));
-    expect(calls).toEqual([]);
+    // QR-3: the scan page also lists this account's devices (/api/session-devices); no APPROVAL request may happen before a valid scan.
+    const approvals = () => calls.filter(c => c.url.startsWith("/api/qr-login"));
+    expect(approvals()).toEqual([]);
     await take(window.location.origin + "/#/qr-login/" + T2);
-    await waitFor(() => expect(calls.map(c => [c.url, c.body])).toEqual([["/api/qr-login-approve/inspect", { pairingToken: T2 }]]));
+    await waitFor(() => expect(approvals().map(c => [c.url, c.body])).toEqual([["/api/qr-login-approve/inspect", { pairingToken: T2 }]]));
   });
 
   it("the owner: x-owner-token only; a required step-up is asked, then the same number is approved", async () => {

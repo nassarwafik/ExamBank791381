@@ -71,3 +71,17 @@ export function deviceLabel(device: { browser: string; os: string } | null | und
   const o = device && device.os && device.os !== "unknown" ? device.os : "نظام غير معروف";
   return b + " على " + o;
 }
+
+// Tadris+ QR-3 — «الأجهزة المرتبطة»: this tab's teacher / student session lists and ends its OWN sessions (/api/session-devices).
+export type LinkedDevice = { id: string; via: "login" | "qr" | "owner-handoff"; device: { browser: string; os: string } | null; createdAt: string; expiresAt: string; current: boolean };
+export type LinkedDevices = { role: "teacher" | "student"; devices: LinkedDevice[]; untracked: boolean };
+const bearer = (token: string) => ({ Authorization: "Bearer " + token });
+export const devicesApi = {
+  list: (token: string) => post<LinkedDevices>("/api/session-devices/list", {}, bearer(token)),
+  end: (token: string, id: string) => post<{ ended: boolean; current: boolean }>("/api/session-devices/end", { id }, bearer(token))
+};
+
+/** How the session started, in words. */
+export function viaLabel(via: LinkedDevice["via"]): string {
+  return via === "qr" ? "بالباركود" : via === "owner-handoff" ? "من لوحة المالك" : "بكلمة المرور";
+}

@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { safeDevice } = require("./qr-login");   // Tadris+ QR-3
 const { downloadJsonOrNull, listJson, deleteBlob, mutateJsonWithRetry } = require("../platform-storage");
 const { parseBuilderUsers } = require("../builder-users");
 const { validUsername, usernameReservationName, createOnly } = require("./owner-store");
@@ -179,11 +180,14 @@ function sessionActive(account, sid, nowMs) {
   return liveSessions(account, nowMs).some(s => s.sidHash === h);
 }
 /** The account with session `sid` recorded (expired ones dropped; beyond 10, the oldest ended), and without `revokedSessions`. */
-function withTeacherSession(account, { sid, expiresAtMs, nowMs, via }) {
+function withTeacherSession(account, { sid, expiresAtMs, nowMs, via, device }) {
   if (!sid || !Number.isFinite(Number(expiresAtMs))) throw new Error("A recorded teacher session needs its id and its expiry.");
   const h = sessionHash(sid);
   const list = liveSessions(account, nowMs).filter(s => s.sidHash !== h);
-  list.push({ sidHash: h, createdAtMs: nowMs, expiresAtMs: Number(expiresAtMs), via: SESSION_VIA.has(via) ? via : "login" });
+  const entry = { sidHash: h, createdAtMs: nowMs, expiresAtMs: Number(expiresAtMs), via: SESSION_VIA.has(via) ? via : "login" };
+  const d = safeDevice(device);                 // Tadris+ QR-3 — the device words the sign-in saw (fixed vocabulary only)
+  if (d) entry.device = d;
+  list.push(entry);
   const { revokedSessions, ...rest } = account;   // eslint-disable-line no-unused-vars
   return { ...rest, sessions: list.slice(-MAX_TEACHER_SESSIONS) };
 }
@@ -223,5 +227,6 @@ module.exports = {
   TRIAL_ENDED_MESSAGE, TRIAL_WARNING_DAYS, validTrialDays, newTrial, isTrial, trialEnded, trialEndingSoon, teacherTrialView, extendedTrial,
   teacherAccountName, invitationName, newTeacherAccountId, readTeacherAccount, findTeacherByUsername, listTeacherAccounts,
   mutateTeacherAccount, newInvitation, writeInvitationPointer, resolveInvitation, deleteInvitationPointer, usernameAvailable,
-  createTeacherAccount, sessionActive, liveSessions, withTeacherSession, withoutTeacherSession, withNoTeacherSessions, ownerView, sha256Hex
+  createTeacherAccount, sessionActive, liveSessions, withTeacherSession, withoutTeacherSession, withNoTeacherSessions, ownerView, sha256Hex,
+  teacherSessionHash: sessionHash   // Tadris+ QR-3 — «الأجهزة المرتبطة» names a session by this hash
 };

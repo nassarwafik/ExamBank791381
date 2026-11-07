@@ -39,6 +39,8 @@ const { createHeavyCheckGate } = require("../lib/identity/heavy-check-gate");
 const { ownerExists } = require("../lib/identity/owner-presence");
 const { sessionAccess } = require("../lib/access/session-access");
 const { schoolField, schoolOfAccount, schoolForStudent } = require("../lib/schools");
+const { newStudentSessionId, withStudentSession } = require("../lib/identity/student-sessions");   // Tadris+ QR-3
+const { deviceFromUserAgent } = require("../lib/identity/qr-login");                              // Tadris+ QR-3
 // QA-19 — accounts are created with the CANONICAL identity (ASCII digits, a short value left-padded to 9: roster-input), but the
 // login hashed the typed text as-is, so a student typing «١٢٣٤٥٦٧٨٩» (or Persian digits, separators, or the identity without its
 // leading zero) was refused although it is the same identity. A code made only of digits (any of the three scripts) and group
@@ -149,7 +151,7 @@ async function handler(request, deps = {}, obs = null) {
       const sid = newTeacherSessionId();
       const { token, payload } = createManagedTeacherToken({ accountId: managed.accountId, sid, authVersion: managed.authVersion }, { nowMs });
       try {
-        await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "login" }), lastLoginAt: new Date(nowMs).toISOString() }));
+        await (deps.mutateTeacherAccount || mutateTeacherAccount)(container, managed.accountId, a => ({ ...withTeacherSession(a, { sid, expiresAtMs: payload.exp * 1000, nowMs, via: "login", device: deviceFromUserAgent(request.headers && typeof request.headers.get === "function" ? request.headers.get("user-agent") : "") }), lastLoginAt: new Date(nowMs).toISOString() }));
       } catch (e) {
         obs?.logError?.("auth.login.session_record_failed", e, { role: "teacher", kind: "managed" });
         return { status: 503, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, code: "TEACHER_SESSION_UNAVAILABLE", error: "تعذر تسجيل الدخول حاليًا. حاول مرة أخرى بعد قليل." } };
@@ -237,6 +239,12 @@ async function handler(request, deps = {}, obs = null) {
     let stillValid = true;
     const REFUSED = Symbol("refused");
     let fresh;
+    // Tadris+ QR-3 — the new session is RECORDED in the same compare-and-set (before the token exists), with the device words the
+    // sign-in saw (fixed vocabulary), so «الأجهزة المرتبطة» can list it and end it alone.
+    const studentSid = newStudentSessionId();
+    const sessionNowMs = Date.now();
+    let headerUa = "";
+    try { headerUa = String(request.headers.get("user-agent") || ""); } catch { headerUa = ""; }
     try {
       fresh = await mut(container, studentBlobName, current => {
         if (!current || current.active === false || current.archived === true) throw REFUSED;
@@ -244,7 +252,7 @@ async function handler(request, deps = {}, obs = null) {
         if (normalizeAuthVersion(base.authVersion) !== boundVersion) { stillValid = false; return base; }
         base.lastLoginAt = new Date().toISOString();
         base.updatedAt = base.lastLoginAt;
-        return base;
+        return withStudentSession(base, { sid: studentSid, expiresAtMs: sessionNowMs + STUDENT_TOKEN_TTL_SECONDS * 1000, nowMs: sessionNowMs, via: "login", device: deviceFromUserAgent(headerUa) });
       }, storageObserver(obs, { operation: "login.lastLogin" }));
     } catch (e) {
       if (e !== REFUSED) throw e;
@@ -255,7 +263,7 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     await throttleClear(container, throttleKey, clientId, deps);
-    const token = mkStudentToken(fresh);            // sv = fresh.authVersion === boundVersion (verified)
+    const token = mkStudentToken(fresh, { sid: studentSid });   // sv = fresh.authVersion === boundVersion (verified); QR-3: its recorded session
     obs?.logInfo("auth.login.succeeded", { role: "student" });
     const school = await schoolField(() => schoolForStudent(container, fresh, { downloadJsonOrNull: dl }), obs);   // P4-C (only when set)
     return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS, ...school } };
