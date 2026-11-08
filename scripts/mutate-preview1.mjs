@@ -10,6 +10,7 @@ const MUTANTS = [
   { id: "M3", file: "src/structured-builder.css", from: '@import "./exam-preview.css";', to: "", what: "the builder and the import dialogs lose the shared overlay" },
   { id: "M4", file: "src/exam-preview.css", from: ".sb-preview-head{position:sticky;", to: ".sb-preview-head{position:static;", what: "the preview header scrolls away with the exam" }
 ];
+const ANSI = new RegExp(String.fromCharCode(27) + "\\[[0-9;]*m", "g");
 const sha = s => createHash("sha256").update(s).digest("hex");
 let survived = 0;
 for (const m of MUTANTS) {
@@ -21,12 +22,12 @@ for (const m of MUTANTS) {
     const r = spawnSync("npx", ["vitest", "run", ...TESTS], { encoding: "utf8", timeout: 300000 });
     const verdict = r.status === null ? "TIMEOUT" : r.status !== 0 ? "KILLED" : "SURVIVED";
     if (verdict !== "KILLED") survived++;
-    const out = (r.stdout + r.stderr).replace(/\x1b\[[0-9;]*m/g, "");
+    const out = (r.stdout + r.stderr).replace(ANSI, "");
     const killer = [...new Set([...out.matchAll(/FAIL\s+(\S+\.(?:ts|js|tsx|mjs))/g)].map(x => x[1]))].join(", ") || "-";
     console.log(m.id + "  " + verdict.padEnd(8) + "  " + m.what + "  (killed by " + killer + ")");
   } finally {
     writeFileSync(m.file, original);
-    if (sha(readFileSync(m.file)) !== sha(original)) throw new Error(m.id + ": restore mismatch");
   }
+  if (sha(readFileSync(m.file)) !== sha(original)) throw new Error(m.id + ": restore mismatch");
 }
 process.exit(survived ? 1 : 0);
