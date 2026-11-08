@@ -745,6 +745,11 @@
       "page": "login-error",
       "viewport": "all",
       "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "all",
+      "reason": "Phase 21I — multi-subject exam prompt: the «ماذا تريد في الامتحان؟» card explains that networking requests use the classified bank and other subjects (programming, physics, chemistry, mathematics…) go to the AI composer; its placeholder shows one example per subject, the helper line and the button («تحليل الطلب») are reworded. The card grows by a few lines; nothing else on the page moves."
     }
   ]
 }
