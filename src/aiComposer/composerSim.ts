@@ -6,6 +6,8 @@
 //                       by the AI); apex tasks exist only for an upward throw.
 //   functionStudy2d@1 — the AI picks a language-2 expression, a window, the task groups and the expected answers (the academic key, like an
 //                       MCQ index); code PROBES each expected value numerically against the expression and refuses an inconsistent key.
+//   chemistryReactions@1 / chemistryStructure@1 (Phase 21J, composerChemistry.ts) — the AI names a catalog reaction, or an atom / molecule /
+//                       formula subject, and task kinds; code builds config + checks; the chemistry engines derive every expected answer.
 // Then the production validators decide (validateSmartSimEnvelope / validateSmartSimAnswerKey) and the NO-FREE-CREDIT gate runs: the
 // key evaluated on an empty action stream must award nothing.
 import { validateSmartSimEnvelope, validateSmartSimAnswerKey, evaluateSmartSim } from "../trustedSimQuestion";
@@ -16,6 +18,7 @@ import type { ExprNode } from "../parametricEngine";
 import { net2TemplateById } from "../networkTopology2/net2Templates";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_FUNCTION_TASKS, COMPOSER_NET_SCENARIOS, COMPOSER_PHYSICS_MEASUREMENTS, COMPOSER_PHYSICS_POINTS, COMPOSER_SIM_PLUGIN_KEYS, composerSimVersion, type ComposerSimPluginKey } from "./composerCatalog";
+import { buildReactionsSim, buildReactionsSpecSchema, buildStructureSim, buildStructureSpecSchema } from "./composerChemistry";
 import { cleanText, hasExactKeys, isArr, isEnum, isNum, isStr, sArr, sEnum, sNull, sNum, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
 export type SimCheck = { id: string; label: string; weight: number; kind: string } & Record<string, unknown>;
@@ -35,10 +38,17 @@ export function buildSimSpecSchema(): JsonSchema {
       source: sStr(), xMin: sNum(), xMax: sNum(), yMin: sNum(), yMax: sNum(), tasks: sArr(sEnum(COMPOSER_FUNCTION_TASKS), COMPOSER_FUNCTION_TASKS.length),
       domainExclusions: sArr(sNum(), 10), xIntercepts: sArr(sNum(), 10), yIntercept: sNull(sNum()), verticalAsymptotes: sArr(sNum(), 10), horizontalAsymptotes: sArr(sNum(), 2),
       extrema: sArr(sObj({ kind: sEnum(["min", "max"]), x: sNum(), y: sNum() }), 10), intervals: sArr(sObj({ kind: sEnum(INTERVAL_KINDS), from: sStr(), to: sStr() }), 12)
-    }))
+    })),
+    // Phase 21J — the chemistry simulators (composerChemistry.ts): catalog names only; code builds config + checks
+    reactions: sNull(buildReactionsSpecSchema()),
+    structure: sNull(buildStructureSpecSchema())
   });
 }
-const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function"] as const;
+const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure"] as const;
+/** The spec field each simulator fills; every other simulator field must be null. */
+const SPEC_FIELD: Readonly<Record<ComposerSimPluginKey, (typeof SPEC_KEYS)[number]>> = Object.freeze({
+  networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure"
+});
 
 // ── physics: labels / units of the task vocabulary (code-owned) ─────────────────────────────────────────────────────────────────────
 const MEASURE: Record<string, { id: string; label: string; unit: "s" | "m" | "m/s" }> = {
@@ -748,7 +758,7 @@ export function buildSimFromSpec(raw: unknown, path = "smartSim", expectPlugin?:
   if (!hasExactKeys(raw, SPEC_KEYS) || !isEnum(raw.plugin, COMPOSER_SIM_PLUGIN_KEYS) || !isStr(raw.title, L.titleChars) || !isStr(raw.instructions, L.goalChars * 4)) return fail("AI_SIM_SPEC_MALFORMED", "مواصفة المحاكاة غير صالحة البنية.", path);
   const plugin = raw.plugin as ComposerSimPluginKey;
   if (expectPlugin && plugin !== expectPlugin) return fail("AI_SIM_PLUGIN_MISMATCH", "المحاكي المستخدم لا يطابق الخطة.", path);
-  const others = { networkTopology: ["physics", "function"], physicsFreeFall: ["network", "function"], functionStudy2d: ["network", "physics"] }[plugin];
+  const others = Object.values(SPEC_FIELD).filter(k => k !== SPEC_FIELD[plugin]);
   if (others.some(k => raw[k] !== null)) return fail("AI_SIM_SPEC_MALFORMED", "مواصفة المحاكاة تحتوي إعدادات محاكٍ آخر.", path);
   let config: unknown, checks: SimCheck[];
   if (plugin === "networkTopology") {
@@ -759,8 +769,12 @@ export function buildSimFromSpec(raw: unknown, path = "smartSim", expectPlugin?:
     config = t.config(); checks = t.checks() as SimCheck[];
   } else if (plugin === "physicsFreeFall") {
     const b = buildPhysics(raw.physics, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
-  } else {
+  } else if (plugin === "functionStudy2d") {
     const b = buildFunction(raw.function, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
+  } else if (plugin === "chemistryReactions") {
+    const b = buildReactionsSim(raw.reactions, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
+  } else {
+    const b = buildStructureSim(raw.structure, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
   }
   const envelope: SimEnvelope = { schemaVersion: 1, pluginKey: plugin, pluginVersion: composerSimVersion(plugin)!, config };
   const env = validateSmartSimEnvelope(envelope);
