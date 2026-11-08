@@ -358,7 +358,9 @@ describe("UX-2 focus foundation", () => {
     expect(read("shell.css")).toMatch(/z-index:\s*var\(--eb-z-nav\)/);
     expect(read("shell.css")).toMatch(/z-index:\s*var\(--eb-z-drawer\)/);
     expect(read("App.css")).toMatch(/\.structured-builder-overlay\{[^}]*z-index:var\(--eb-z-overlay,60\)/);
-    expect(read("structured-builder.css")).toMatch(/\.sb-preview-overlay\{[^}]*z-index:1000/);
+    // PREVIEW-1 — the preview overlay rule moved, unchanged, to exam-preview.css (ExamPreview imports it; structured-builder.css @imports it).
+    expect(read("exam-preview.css")).toMatch(/\.sb-preview-overlay\{[^}]*z-index:1000/);
+    expect(read("structured-builder.css")).toMatch(/@import "\.\/exam-preview\.css";/);
     expect(read("studentexam-pro.css")).toMatch(/\.exam-theme-preview-overlay\{[^}]*z-index:1000/);
   });
   it("closed mobile drawer is removed from keyboard/accessibility interaction; open restores it; desktop sidebar never hidden", () => {

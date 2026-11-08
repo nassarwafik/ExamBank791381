@@ -11,6 +11,7 @@ import { normalizeExamTheme, previousFocusIndex, nextFocusIndex, focusProgressPe
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import { TeacherPreviewContext } from "./questionTypes/studentAttemptContext";
+import "./exam-preview.css";
 // Phase 20D.1 — an exam WITH a `presentation` object renders through the shared (lazy) presentation root and section shell — the same
 // components the student page uses; without one, the legacy themed preview below is unchanged.
 const PresentationRoot = lazy(() => import("./presentation/PresentationRoot"));

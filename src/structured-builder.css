@@ -1,6 +1,9 @@
 /* Structured Exam Builder — functional teacher-side styling only. Reuses the existing design tokens
    (var(--primary), --line, --surface, --navy, --muted, --pill, --r) so it reads as part of ExamBank.
    No visual redesign; compact editor cards, RTL. */
+/* PREVIEW-1 — the shared preview overlay (.sb-preview-*) lives in exam-preview.css, which ExamPreview imports itself; the builder
+   and the import dialogs keep it through this @import. */
+@import "./exam-preview.css";
 .sb-builder{display:flex;flex-direction:column;gap:14px;padding-block:8px}
 .sb-toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:var(--surface,var(--eb-surface));border:1px solid var(--line,var(--eb-content-ground));border-radius:var(--r,12px);padding:10px 14px;box-shadow:0 6px 20px -16px color-mix(in srgb, var(--eb-scrim) 40%, transparent)}
 .sb-toolbar-main,.sb-toolbar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -111,9 +114,6 @@
 .sb-thumb{max-height:80px;border-radius:8px;border:1px solid var(--line,var(--eb-content-ground))}
 
 /* preview overlay */
-.sb-preview-overlay{position:fixed;inset:0;z-index:1000;background:color-mix(in srgb, var(--eb-scrim) 55%, transparent);overflow:auto;padding:0}
-.sb-preview-head{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--eb-surface);border-bottom:1px solid var(--line,var(--eb-content-ground));padding:12px 16px;z-index:2}
-.sb-preview-note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;margin:12px 0}
 
 @media (max-width:640px){
   .sb-input-sm,.sb-input-xs{min-width:0;width:100%}
@@ -397,7 +397,6 @@
 :where(:root[data-theme="dark"]) .sb-warn-error { color: var(--eb-danger-tx); border-color: color-mix(in srgb, var(--eb-danger) 45%, transparent); }
 :where(:root[data-theme="dark"]) .sb-warn,
 :where(:root[data-theme="dark"]) .sb-bulk-wait { color: var(--eb-warn-tx); background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); }
-:where(:root[data-theme="dark"]) .sb-preview-note { background: var(--eb-warn-bg); border: 1px solid color-mix(in srgb, var(--eb-warn) 45%, transparent); color: var(--eb-warn-tx); }
 :where(:root[data-theme="dark"]) .sb-stat-final,
 :where(:root[data-theme="dark"]) .sb-save-state.is-saved { background: var(--eb-success-bg); border-color: color-mix(in srgb, var(--eb-success) 45%, transparent); color: var(--eb-success-tx); }
 :where(:root[data-theme="dark"]) .sb-media-notice,
