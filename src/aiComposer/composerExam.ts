@@ -16,6 +16,7 @@ import type { AiExamIntentV1 } from "./composerIntent";
 import type { AiExamPlanV1 } from "./composerPlan";
 import type { ComposerItemMeta } from "./composerDraft";
 import { simFreeCreditIssues, type SimEnvelope, type SimCheck } from "./composerSim";
+import { qualityWarnings } from "./composerQuality";
 
 type Rec = Record<string, unknown>;
 export type ComposerHistoryEntry = { at: string; mode: string; summary: string; baseRevision: string; status: "applied"; operations: number; warnings: number };
@@ -162,6 +163,9 @@ export function composerVerdict(exam: StructuredExam, opts: VerdictOptions = {})
     e.marks += marksOf.get(q.examQuestionId) ?? 0; e.questions += 1; cov.set(t, e);
   }
   const coverage = [...cov.values()].map(c => ({ ...c, marks: r2(c.marks) })).sort((a, b) => b.marks - a.marks || a.topic.localeCompare(b.topic));
+  // Phase 21Q — code-computed quality checks (answer position / longest option / leak, true-false balance, near duplicates, marks
+  // concentration, difficulty drift); warnings only, never blocking
+  warnings.push(...qualityWarnings(exam, opts.intent, id => meta?.coverage.find(c => c.questionId === id)?.difficulty));
   if (opts.intent) for (const t of opts.intent.requiredTopics) if (!coverage.some(c => c.topic.toLowerCase().includes(t.toLowerCase())) && !qs.some(q => String(q.text).toLowerCase().includes(t.toLowerCase()))) warnings.push({ code: "COMPOSER_TOPIC_UNCOVERED", message: "الموضوع المطلوب «" + t + "» غير مغطّى في الأسئلة." });
   let automaticMarks = 0, manualMarks = 0;
   for (const q of qs) { const m = marksSplit(q); automaticMarks += m.auto; manualMarks += m.manual; }
