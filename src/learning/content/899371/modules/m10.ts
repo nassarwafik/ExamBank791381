@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m10.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m10.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -570,6 +572,382 @@ const m10: ContentModule = {
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l01-p04",
+          "title": "نحلّ معًا: القطر الرئيسي في لعبة XO",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 108,
+            "printedPage": 108,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m10-l01-p04-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "char[,] board = { { 'X', 'O', 'O' }, { 'O', 'X', ' ' }, { ' ', 'O', 'X' } };\nbool win = true;\nfor (int i = 0; i < 3; i++)\n    if (board[i, i] != 'X')\n        win = false;\nConsole.WriteLine(win);"
+            },
+            {
+              "id": "m10-l01-p04-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "القطر الرئيسي في لعبة XO",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "هل ملأ اللاعب X القطر الرئيسي في اللوحة أعلاه؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m10-l01-p04-g1",
+                  "text": [
+                    {
+                      "text": "القطر الرئيسي: الخانات التي رقم صفها = رقم عمودها: [0, 0] و[1, 1] و[2, 2]."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p04-g2",
+                  "text": [
+                    {
+                      "text": "حلقة واحدة تكفي: "
+                    },
+                    {
+                      "text": "board[i, i]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " لكل i من 0 حتى 2."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p04-g3",
+                  "text": [
+                    {
+                      "text": "نفترض الفوز ("
+                    },
+                    {
+                      "text": "win = true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ")، وأي خانة على القطر ليست "
+                    },
+                    {
+                      "text": "'X'",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تنفيه: "
+                    },
+                    {
+                      "text": "win = false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p04-g4",
+                  "text": [
+                    {
+                      "text": "الخانات الثلاث 'X'، فلا شيء ينفي."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "على القطر الرئيسي يتساوى المؤشران، فنحتاج حلقة واحدة لا حلقتين."
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l01-p05",
+          "title": "نحلّ معًا: عنصر التقاطع",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 108,
+            "printedPage": 108,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m10-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++)\n    {\n        int row = 0, col = 0;\n        for (int k = 0; k < 3; k++)\n        {\n            row += m[i, k];\n            col += m[k, j];\n        }\n        if (row == col)\n            Console.WriteLine(i + \" \" + j + \" \" + m[i, j]);\n    }"
+            },
+            {
+              "id": "m10-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "عنصر التقاطع",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "في المصفوفة أعلاه: أي عنصر يكون مجموع صفه مساويًا لمجموع عموده؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m10-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "مجاميع الصفوف: 1 + 2 + 3 = 6، 4 + 5 + 6 = 15، 7 + 8 + 9 = 24."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "مجاميع الأعمدة: 1 + 4 + 7 = 12، 2 + 5 + 8 = 15، 3 + 6 + 9 = 18."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "الصف 1 والعمود 1 مجموعهما 15."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p05-g4",
+                  "text": [
+                    {
+                      "text": "العنصر في تقاطعهما: "
+                    },
+                    {
+                      "text": "m[1, 1]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " = 5."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "1 1 5",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "مجموع الصف i: حلقة على الأعمدة j مع `m[i, j]`. مجموع العمود j: حلقة على الصفوف i."
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l01-p06",
+          "title": "نحلّ معًا: مجموع كل صف",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 108,
+            "printedPage": 108,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m10-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[,] m = { { 3, 1 }, { 4, 1 }, { 5, 9 } };\nfor (int i = 0; i < m.GetLength(0); i++)\n{\n    int sum = 0;\n    for (int j = 0; j < m.GetLength(1); j++)\n        sum += m[i, j];\n    Console.Write(sum + \" \");\n}"
+            },
+            {
+              "id": "m10-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مجموع كل صف",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نطبع مجموع كل صف من المصفوفة {{3, 1}, {4, 1}, {5, 9}}."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m10-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "عدد الصفوف "
+                    },
+                    {
+                      "text": "GetLength(0)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " = 3، وعدد الأعمدة "
+                    },
+                    {
+                      "text": "GetLength(1)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " = 2."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "لكل صف نبدأ مجموعًا جديدًا بصفر داخل الحلقة الخارجية."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "3 + 1 = 4، و4 + 1 = 5، و5 + 9 = 14."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "4 5 14",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "مكان تهيئة المجموع يحدد معناه: داخل الحلقة الخارجية ← لكل صف، وقبلها ← للمصفوفة كلها."
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l01-p07",
+          "title": "نحلّ معًا: القطر الثانوي",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 108,
+            "printedPage": 108,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m10-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nint n = 3, s = 0;\nfor (int i = 0; i < n; i++)\n    s += m[i, n - 1 - i];\nConsole.WriteLine(s);"
+            },
+            {
+              "id": "m10-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "القطر الثانوي",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما مجموع القطر الثانوي (من الزاوية العليا اليمنى إلى السفلى اليسرى) في المصفوفة 3×3 أعلاه؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m10-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "في القطر الثانوي: رقم العمود = n − 1 − رقم الصف."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "الصف 0 ← العمود 2: 3. الصف 1 ← العمود 1: 5. الصف 2 ← العمود 0: 7."
+                    }
+                  ]
+                },
+                {
+                  "id": "m10-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "المجموع: 3 + 5 + 7 = 15."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "15",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الرئيسي `m[i, i]`، والثانوي `m[i, n - 1 - i]`."
             }
           ]
         }

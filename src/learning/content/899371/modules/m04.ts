@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m04.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m04.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -702,6 +704,442 @@ const m04: ContentModule = {
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m04-l01-p06",
+          "title": "نحلّ معًا: else المعلّقة",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 26,
+            "printedPage": 26,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m04-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int x = 3, y = -1;\nif (x > 0)\n    if (y > 0)\n        Console.WriteLine(\"A\");\nelse\n    Console.WriteLine(\"B\");"
+            },
+            {
+              "id": "m04-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "else المعلّقة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "لمن تتبع else في البرنامج أعلاه؟ الإزاحة مضلِّلة!"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m04-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "القاعدة: كل else تتبع أقرب if قبلها لم تأخذ else بعد، مهما كانت الإزاحة."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "أقرب if قبل else هي "
+                    },
+                    {
+                      "text": "if (y > 0)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " الداخلية، لا الخارجية."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "x > 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " صحيح (3 > 0)، فندخل إلى الـ if الداخلية."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "y > 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " خطأ ("
+                    },
+                    {
+                      "text": "y = -1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ")، فينفّذ فرع else الخاص بها."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "B",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الإزاحة للقارئ فقط، والحاسوب لا يراها. لنتجنب اللبس نضع الأقواس { } دائمًا."
+            }
+          ]
+        },
+        {
+          "id": "899371-m04-l01-p07",
+          "title": "نحلّ معًا: شرائح أجرة الشحن",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 26,
+            "printedPage": 26,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m04-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int w = int.Parse(Console.ReadLine());\nint fee;\nif (w <= 2)\n    fee = 10;\nelse if (w <= 5)\n    fee = 20;\nelse\n    fee = 20 + (w - 5) * 5;\nConsole.WriteLine(fee);"
+            },
+            {
+              "id": "m04-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "شرائح أجرة الشحن",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "أجرة الشحن: حتى 2 كغ ‏10 شواقل، حتى 5 كغ ‏20 شيكلًا، وما فوق 5 كغ: 20 شيكلًا و5 لكل كيلوغرام زائد عن 5. كم أجرة طرد وزنه 8 كغ؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m04-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "نرتّب الشروط من الأصغر: "
+                    },
+                    {
+                      "text": "if (w <= 2)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ثم "
+                    },
+                    {
+                      "text": "else if (w <= 5)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ثم "
+                    },
+                    {
+                      "text": "else",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "8 ليس <= 2، وليس <= 5، فننفّذ else."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "الزائد عن 5: 8 − 5 = 3 كغ، و3 × 5 = 15."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "الأجرة: 20 + 15 = 35."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "35",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "في الشرائح نفحص بالترتيب، وأول شرط يتحقق يوقف الفحص."
+            }
+          ]
+        },
+        {
+          "id": "899371-m04-l01-p08",
+          "title": "نحلّ معًا: أجرة الموقف بالساعات",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 26,
+            "printedPage": 26,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m04-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int h = int.Parse(Console.ReadLine());\nint pay;\nif (h <= 2)\n    pay = h * 6;\nelse\n    pay = 2 * 6 + (h - 2) * 4;\nConsole.WriteLine(pay);"
+            },
+            {
+              "id": "m04-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "أجرة الموقف بالساعات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "الموقف: الساعتان الأوليان 6 شواقل لكل ساعة، وكل ساعة بعدها 4 شواقل. كم يدفع من وقف 5 ساعات؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m04-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "إذا كانت الساعات 2 أو أقل: "
+                    },
+                    {
+                      "text": "h * 6",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "غير ذلك: الساعتان الأوليان "
+                    },
+                    {
+                      "text": "2 * 6",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 12، والباقي "
+                    },
+                    {
+                      "text": "(h - 2) * 4",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "5 ساعات: الباقي 3 ساعات × 4 = 12."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p08-g4",
+                  "text": [
+                    {
+                      "text": "المجموع: 12 + 12 = 24."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "24",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "نقسم المدة إلى جزأين لكل منهما سعر، ونحسب كل جزء وحده ثم نجمع."
+            }
+          ]
+        },
+        {
+          "id": "899371-m04-l01-p09",
+          "title": "نحلّ معًا: الأكبر بين ثلاثة أعداد",
+          "order": 9,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 26,
+            "printedPage": 26,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m04-l01-p09-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int a = 7, b = 12, c = 9;\nint max = a;\nif (b > max)\n    max = b;\nif (c > max)\n    max = c;\nConsole.WriteLine(max);"
+            },
+            {
+              "id": "m04-l01-p09-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "الأكبر بين ثلاثة أعداد",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كيف نجد الأكبر بين 7 و12 و9 بأوامر if بسيطة؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m04-l01-p09-g1",
+                  "text": [
+                    {
+                      "text": "نفترض أن الأول هو الأكبر: "
+                    },
+                    {
+                      "text": "int max = a;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 7."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p09-g2",
+                  "text": [
+                    {
+                      "text": "if (b > max)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 12 > 7 صحيح، فـ "
+                    },
+                    {
+                      "text": "max = 12",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m04-l01-p09-g3",
+                  "text": [
+                    {
+                      "text": "if (c > max)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 9 > 12 خطأ، فيبقى "
+                    },
+                    {
+                      "text": "max = 12",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "12",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "نحتفظ بـ «الأكبر حتى الآن» ونقارن به كل عدد جديد. الفكرة نفسها تعمل لاحقًا مع الحلقات والمصفوفات."
             }
           ]
         }

@@ -2,7 +2,7 @@
 // bound to, how an output and an exception are read, and that the judge refuses a wrong key. The runs themselves are made by
 // `node scripts/prove-899371-practice.mjs` (docs/enterprise-899371-learning-plan.md §16).
 import { describe, it, expect } from "vitest";
-import { wrapProgram, proofSha, outputLine, exceptionOf, judgeItem } from "./prove-899371-practice.mjs";
+import { wrapProgram, proofSha, outputLine, exceptionOf, judgeItem, judgeGuided } from "./prove-899371-practice.mjs";
 
 const mcq = (texts, correct) => ({ kind: "multipleChoice", prompt: "?", options: texts.map((text, i) => ({ text, ...(i === correct ? { correct: true } : {}) })), feedback: { explanation: "e" } });
 const proofFor = (item, run) => ({ sha: proofSha(wrapProgram(item.program), item.stdin), compileExit: 0, exitCode: 0, stdout: "", exception: null, ...run });
@@ -48,5 +48,26 @@ describe("judgeItem refuses a wrong key", () => {
     const crash = { question: { ...mcq(["يطبع 1", "خطأ تنفيذ: خارج الحدود"], 1), feedback: { explanation: "IndexOutOfRangeException" } }, program: "y", prove: "runtime", runtimeError: "IndexOutOfRangeException" };
     expect(judgeItem(crash, proofFor(crash, { exitCode: 134, exception: "IndexOutOfRangeException" }))).toEqual([]);
     expect(judgeItem(crash, proofFor(crash, { exitCode: 0, stdout: "1\n" }))).not.toEqual([]);
+  });
+});
+
+describe("judgeGuided refuses a walkthrough whose result is not what the run printed (P5)", () => {
+  const w = { title: "t", prompt: "p", steps: ["a", "b", "c"], result: "يطبع البرنامج ثلاثة أسطر: `***` ثم `**` ثم `*`", explanation: "e", program: "x", output: "*** | ** | *" };
+  const run = extra => ({ sha: proofSha(wrapProgram(w.program), w.stdin), compileExit: 0, exitCode: 0, stdout: "***\n**\n*\n", exception: null, ...extra });
+  it("accepts the stated output when the run printed it and the result shows every line", () => {
+    expect(judgeGuided(w, run())).toEqual([]);
+  });
+  it("refuses another output, a result that hides a printed line, another program, and no proof", () => {
+    expect(judgeGuided(w, run({ stdout: "***\n**\n" }))).not.toEqual([]);
+    expect(judgeGuided({ ...w, result: "يطبع البرنامج: `***`" }, run())).not.toEqual([]);
+    expect(judgeGuided({ ...w, program: "y" }, run())).toContain("the proof is for another program / input");
+    expect(judgeGuided(w, undefined)).toEqual(["no proof"]);
+  });
+  it("judges a run-time error walkthrough by its exception, named in the result", () => {
+    const crash = { ...w, output: undefined, runtimeError: "FormatException", stdin: "abc", result: "يتوقف بخطأ تنفيذ `FormatException`." };
+    const proof = { sha: proofSha(wrapProgram(crash.program), "abc"), compileExit: 0, exitCode: 134, stdout: "", exception: "FormatException" };
+    expect(judgeGuided(crash, proof)).toEqual([]);
+    expect(judgeGuided(crash, { ...proof, exitCode: 0, exception: null })).not.toEqual([]);
+    expect(judgeGuided({ ...crash, result: "يتوقف." }, proof)).toContain("the result does not name the exception");
   });
 });

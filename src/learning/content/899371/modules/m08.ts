@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m08.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m08.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -959,6 +961,525 @@ const m08: ContentModule = {
                 "rtl",
                 "ltr"
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l01-p06",
+          "title": "نحلّ معًا: تشفير قيصر حرفًا حرفًا",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 84,
+            "printedPage": 84,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m08-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "string s = \"ABZ\";\nstring r = \"\";\nfor (int i = 0; i < s.Length; i++)\n    r += (char)((s[i] - 'A' + 2) % 26 + 'A');\nConsole.WriteLine(r);"
+            },
+            {
+              "id": "m08-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "تشفير قيصر حرفًا حرفًا",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نزيح كل حرف من \"ABZ\" خطوتين في الأبجدية الإنجليزية، ونعود إلى A بعد Z."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m08-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "رقم الحرف في الأبجدية: "
+                    },
+                    {
+                      "text": "c - 'A'",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "A = 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، "
+                    },
+                    {
+                      "text": "B = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، "
+                    },
+                    {
+                      "text": "Z = 25",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "نضيف الإزاحة ونأخذ الباقي من 26 لنعود إلى البداية: "
+                    },
+                    {
+                      "text": "(c - 'A' + 2) % 26",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "A",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " رقمه 0، ومع الإزاحة 2 يصبح "
+                    },
+                    {
+                      "text": "C",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ". ‏"
+                    },
+                    {
+                      "text": "B",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " رقمه 1 فيصبح "
+                    },
+                    {
+                      "text": "D",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ". ‏"
+                    },
+                    {
+                      "text": "Z",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " رقمه 25: "
+                    },
+                    {
+                      "text": "(25 + 2) % 26 = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، فيصبح "
+                    },
+                    {
+                      "text": "B",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "نحوّل الرقم إلى حرف: "
+                    },
+                    {
+                      "text": "(char)(… + 'A')",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ونضيفه إلى النص الناتج."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "CDB",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "% 26 تجعل الأبجدية دائرة: بعد Z تأتي A."
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l01-p07",
+          "title": "نحلّ معًا: ضغط النص",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 84,
+            "printedPage": 84,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m08-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "string s = \"XXXYZZ\";\nstring r = \"\";\nint count = 1;\nfor (int i = 1; i <= s.Length; i++)\n{\n    if (i < s.Length && s[i] == s[i - 1])\n        count++;\n    else\n    {\n        r += s[i - 1] + \"\" + count;\n        count = 1;\n    }\n}\nConsole.WriteLine(r);"
+            },
+            {
+              "id": "m08-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "ضغط النص",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نضغط \"XXXYZZ\": كل حرف يتبعه عدد مرات تكراره المتتالي."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m08-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "نمرّ على النص ونعدّ الحرف ما دام الحرف التالي مثله."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "ثلاث X متتالية: "
+                    },
+                    {
+                      "text": "XXX",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تُكتب "
+                    },
+                    {
+                      "text": "X3",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "Y واحدة: "
+                    },
+                    {
+                      "text": "Y",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تُكتب "
+                    },
+                    {
+                      "text": "Y1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "اثنتان من Z: "
+                    },
+                    {
+                      "text": "ZZ",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تُكتب "
+                    },
+                    {
+                      "text": "Z2",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "X3Y1Z2",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "عندما يتغير الحرف (أو ينتهي النص) نكتب الحرف وعدّاده ونبدأ عدًّا جديدًا."
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l01-p08",
+          "title": "نحلّ معًا: هل النص متناظر؟",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 84,
+            "printedPage": 84,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m08-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "string s = \"level\";\nbool ok = true;\nfor (int i = 0; i < s.Length / 2; i++)\n    if (s[i] != s[s.Length - 1 - i])\n        ok = false;\nConsole.WriteLine(ok);"
+            },
+            {
+              "id": "m08-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "هل النص متناظر؟",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "النص المتناظر يُقرأ من اليمين كما من اليسار. هل \"level\" متناظر؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m08-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "نقارن الحرف الأول بالأخير، والثاني بما قبل الأخير، وهكذا: "
+                    },
+                    {
+                      "text": "s[i]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " مع "
+                    },
+                    {
+                      "text": "s[s.Length - 1 - i]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "l = l",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، "
+                    },
+                    {
+                      "text": "e = e",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، والحرف الأوسط v يقارَن بنفسه."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "يكفي أن نمرّ على نصف النص."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p08-g4",
+                  "text": [
+                    {
+                      "text": "لم نجد اختلافًا، فالنتيجة "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الموقع المقابل لـ i هو `Length - 1 - i`."
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l01-p09",
+          "title": "نحلّ معًا: عدّ حرف في نص",
+          "order": 9,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 84,
+            "printedPage": 84,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m08-l01-p09-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "string s = \"banana\";\nint c = 0;\nfor (int i = 0; i < s.Length; i++)\n    if (s[i] == 'a')\n        c++;\nConsole.WriteLine(c);"
+            },
+            {
+              "id": "m08-l01-p09-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "عدّ حرف في نص",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كم مرة يظهر الحرف 'a' في \"banana\"؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m08-l01-p09-g1",
+                  "text": [
+                    {
+                      "text": "نمرّ على كل الأحرف بمؤشر من 0 حتى Length − 1."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p09-g2",
+                  "text": [
+                    {
+                      "text": "نقارن كل حرف بـ 'a' (حرف بين علامتين مفردتين)."
+                    }
+                  ]
+                },
+                {
+                  "id": "m08-l01-p09-g3",
+                  "text": [
+                    {
+                      "text": "b-a-n-a-n-a",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": الحرف a في المؤشرات 1 و3 و5."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "3",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "s[i] حرف char، ويقارن بحرف بين علامتين مفردتين مثل 'a'."
             }
           ]
         }

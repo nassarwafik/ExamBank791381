@@ -82,6 +82,9 @@
 .learning-reader-term{ font-weight:var(--eb-fw-semibold); }
 .learning-reader-inline-code, .learning-reader-mono{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; }
 .learning-reader-inline-code{ padding:1px 5px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); unicode-bidi:isolate; }
+/* 899371 P5: a code fragment in a walkthrough step never breaks inside (`i--` split at its hyphen on a phone); every such fragment
+   is ≤ 24 characters (guided.p5.test.ts), so it always fits the step. */
+.learning-guided-steptext .learning-reader-inline-code, .learning-guided-prompt .learning-reader-inline-code, .learning-guided-result .learning-reader-inline-code{ white-space:nowrap; }
 
 /* Enrichment surface — clearly, quietly distinguished (never color-only: it carries a text label). */
 .learning-reader-block.is-enrichment{

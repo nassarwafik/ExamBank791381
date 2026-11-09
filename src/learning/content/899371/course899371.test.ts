@@ -4,7 +4,8 @@
 //   • the manifest is exactly the one derived from the bodies; the app's body list, the server registry and the committed page
 //     index agree;
 //   • the whole course passes the content validator; every block of a book page is a BOOK block of a faithful type, and the only
-//     enrichment is the lesson «تدريبات الوحدة» closing chapters 1–11 (P4, §16): exercise pages of code + practice blocks only;
+//     enrichment is the lesson «تدريبات الوحدة» closing chapters 1–11 (P4, §16): exercise pages of code + practice blocks only, and
+//     the walkthrough pages «نحلّ معًا» closing each summary lesson (P5, §17): code + guided blocks only;
 //   • every drawing (the chapter-10 matrices, P3-c) is a protected file that exists, stays small, and no unreferenced file ships;
 //   • every program is a C# code block (Reader P1); the course wears the existing «booklet» skin (presentation only).
 // fidelity.p2.test.ts proves the text equal to the Word source; bookLock.test.ts keeps it from changing.
@@ -25,7 +26,7 @@ import * as apiRegistry from "../../../../api/src/lib/learning-materials-registr
 const CID = "899371";
 const server = apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string; title: string; order: number }[] };
 // @ts-expect-error — plain ESM tool shared with the converter; untyped on purpose.
-import { PRACTICE_NOTE } from "../../../../scripts/convert-899371.mjs";
+import { PRACTICE_NOTE, GUIDED_NOTE } from "../../../../scripts/convert-899371.mjs";
 const BOOK_BLOCKS = new Set(["text", "heading", "list", "table", "code", "unit-opener", "diagram"]);
 const assetDir = fileURLToPath(new URL("../../../../api/src/data/content-assets/learning/" + CID + "/", import.meta.url));
 
@@ -34,7 +35,8 @@ async function loadAll(): Promise<ContentModule[]> {
   for (const m of manifest.modules) out.push(await loadBundledModuleContent(CID, m.id));
   return out;
 }
-const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks.map(b => ({ page: p.id, exercises: p.source?.sourceNote === PRACTICE_NOTE, b })))));
+const ENRICHMENT_NOTES = new Set([PRACTICE_NOTE, GUIDED_NOTE]);
+const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks.map(b => ({ page: p.id, enrichment: ENRICHMENT_NOTES.has(p.source?.sourceNote), note: p.source?.sourceNote, b })))));
 
 describe("899371 — identity and registration", () => {
   it("is the third catalog course, with the card the owner set", () => {
@@ -116,6 +118,7 @@ describe("899371 — identity and registration", () => {
         expect(p.source!.pdfPageStart).toBeGreaterThanOrEqual(3);
         expect(p.source!.pdfPageStart).toBeLessThanOrEqual(140);
         if (l.title === "تدريبات الوحدة") expect(p.source!.sourceNote).toBe(PRACTICE_NOTE);
+        else if (p.title.startsWith("نحلّ معًا: ")) expect(p.source!.sourceNote).toBe(GUIDED_NOTE);
         else expect(p.source!.sourceNote).toMatch(/^¶\d+(–\d+)?$/);
       }
     }
@@ -146,14 +149,15 @@ describe("899371 — the bodies", () => {
     expect(validateLearningCourseContent(content)).toEqual([]);
   }, 30000);
 
-  it("every block of a book page is a book block of a faithful type; the only enrichment is the exercise pages' code + practice", async () => {
+  it("every block of a book page is a book block of a faithful type; the only enrichment is the exercise and walkthrough pages", async () => {
     const all = blocksOf(await loadAll());
-    expect(all.filter(x => !x.exercises).length).toBe(1602);
-    expect(all.filter(x => x.exercises).length).toBe(110 + 77);   // 110 exercises, 77 of them with their program above
-    for (const { page, exercises, b } of all) {
+    expect(all.filter(x => !x.enrichment).length).toBe(1602);
+    expect(all.filter(x => x.note === PRACTICE_NOTE).length).toBe(110 + 77);   // 110 exercises, 77 of them with their program above
+    expect(all.filter(x => x.note === GUIDED_NOTE).length).toBe(44 + 43);      // 44 walkthroughs, 43 of them with their program above
+    for (const { page, enrichment, note, b } of all) {
       const where = page + " / " + b.id;
       expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
-      if (exercises) { expect(b.origin, where).toBe("teacher-enrichment"); expect(["code", "practice"], where).toContain(b.type); continue; }
+      if (enrichment) { expect(b.origin, where).toBe("teacher-enrichment"); expect(note === PRACTICE_NOTE ? ["code", "practice"] : ["code", "guided"], where).toContain(b.type); continue; }
       expect(b.origin, where).toBe("book");
       expect(BOOK_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);
     }
@@ -162,7 +166,7 @@ describe("899371 — the bodies", () => {
   it("every program is a C# code block shown left to right", async () => {
     const code = blocksOf(await loadAll()).filter(x => x.b.type === "code").map(x => x.b as Extract<ContentBlock, { type: "code" }>);
     expect(code.filter(c => c.origin === "book").length).toBe(224);
-    expect(code.length).toBe(224 + 77);
+    expect(code.length).toBe(224 + 77 + 43);
     for (const c of code) expect([c.language, c.dir], c.id).toEqual(["csharp", "ltr"]);
   }, 30000);
 

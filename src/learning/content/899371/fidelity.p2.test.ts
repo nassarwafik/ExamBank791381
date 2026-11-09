@@ -8,8 +8,9 @@
 //   3. coverage: every source paragraph (¶0–3046) is on exactly one page; only the decorative cover picture (¶2) and the decorative
 //      rule (¶1174) are not, and the printed table of contents (¶5) only lends chapter 9 its opener title (P3-a).
 // A question figure is either a table it was transcribed to (P2-c) or the book's own drawing, byte for byte (P3-c).
-// The pages of «تدريبات الوحدة» (P4, §16) are added enrichment, not the book: they name no ¶ (PRACTICE_NOTE) and are proven by
-// practice.p4.test.ts; here they are only set aside, and everything else must still be exactly the book.
+// The pages of «تدريبات الوحدة» (P4, §16) and «نحلّ معًا» (P5, §17) are added enrichment, not the book: they name no ¶ (their own
+// notes) and are proven by practice.p4.test.ts / guided.p5.test.ts; here they are only set aside, and everything else must still be
+// exactly the book.
 // Plus: the source file is the one the owner sent (sha256); only owner-approved corrections exist and each one is in the course.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -21,7 +22,7 @@ import type { ContentBlock, ContentModule } from "../types";
 // @ts-expect-error — plain ESM tools shared with the converter; untyped on purpose.
 import { readDocxBody, readZipEntry } from "../../../../scripts/lib/docx-source.mjs";
 // @ts-expect-error — plain ESM tools shared with the converter; untyped on purpose.
-import { convert, CORRECTIONS, FIGURES, SOURCE_FILE, PRACTICE_NOTE } from "../../../../scripts/convert-899371.mjs";
+import { convert, CORRECTIONS, FIGURES, SOURCE_FILE, PRACTICE_NOTE, GUIDED_NOTE } from "../../../../scripts/convert-899371.mjs";
 
 const CID = "899371";
 const SOURCE_SHA256 = "22ef25cd0c811be565d23472335d5cbaefa9253f52f29a25f3dfb124d5e97d3f";
@@ -48,8 +49,8 @@ async function modules(): Promise<ContentModule[]> {
   for (const m of manifest.modules) out.push(await loadBundledModuleContent(CID, m.id));
   return out;
 }
-/** A page of the book (every page but the added exercises of «تدريبات الوحدة»). */
-const isBookPage = (p: { source?: { sourceNote?: string } }) => p.source?.sourceNote !== PRACTICE_NOTE;
+/** A page of the book (every page but the added exercises «تدريبات الوحدة» and walkthroughs «نحلّ معًا»). */
+const isBookPage = (p: { source?: { sourceNote?: string } }) => p.source?.sourceNote !== PRACTICE_NOTE && p.source?.sourceNote !== GUIDED_NOTE;
 const bookBlocks = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.filter(isBookPage).flatMap(p => p.blocks)));
 const rangeOf = (note: string | undefined) => {
   const m = /^¶(\d+)(?:–(\d+))?$/.exec(note ?? "");

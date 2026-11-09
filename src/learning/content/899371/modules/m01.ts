@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m01.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m01.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -546,6 +548,505 @@ const m01: ContentModule = {
                   "text": "اكتب برنامجًا يطلب من المستخدم إدخال سنة ميلاده، ثم يحسب عمره التقريبي في السنة الحالية ويطبعه. (مثال: استخدم السنة الحالية 2025)."
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m01-l01-p04",
+          "title": "نحلّ معًا: تتبّع صناديق المتغيرات",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 4,
+            "printedPage": 4,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m01-l01-p04-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int a = 5, b = 3;\nint c = a + b;\na = a * 2;\nConsole.WriteLine(a + \" \" + b + \" \" + c);"
+            },
+            {
+              "id": "m01-l01-p04-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "تتبّع صناديق المتغيرات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما الذي يطبعه البرنامج أعلاه؟ ارسم صندوقًا لكل متغير وتتبّع قيمته سطرًا سطرًا."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m01-l01-p04-g1",
+                  "text": [
+                    {
+                      "text": "int a = 5, b = 3;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← صندوق a فيه 5، وصندوق b فيه 3."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p04-g2",
+                  "text": [
+                    {
+                      "text": "int c = a + b;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← نحسب 5 + 3 = 8، فصندوق c فيه 8."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p04-g3",
+                  "text": [
+                    {
+                      "text": "a = a * 2;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← نقرأ القيمة الحالية 5، نضربها في 2، ونضع 10 في صندوق a مكان 5. القيمة القديمة تُمحى."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p04-g4",
+                  "text": [
+                    {
+                      "text": "صندوق c لا يتغير: حُسب مرة واحدة وهو 8، ولا يعود ليُحسب عندما تتغير a."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p04-g5",
+                  "text": [
+                    {
+                      "text": "سطر الطباعة يطبع a ثم b ثم c، وبين كل قيمتين مسافة "
+                    },
+                    {
+                      "text": "\" \"",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "10 3 8",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الإسناد = يضع قيمة جديدة في الصندوق ويمحو القديمة، والمتغير لا «يتذكر» كيف حُسب."
+            }
+          ]
+        },
+        {
+          "id": "899371-m01-l01-p05",
+          "title": "نحلّ معًا: مدخل لا يصلح عددًا",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 4,
+            "printedPage": 4,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m01-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int n = int.Parse(Console.ReadLine());\nConsole.WriteLine(n * 2);"
+            },
+            {
+              "id": "m01-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مدخل لا يصلح عددًا",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "البرنامج أعلاه ينتظر عددًا. ماذا يحدث إذا كتب المستخدم الكلمة abc بدل العدد؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m01-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "Console.ReadLine()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يعيد دائمًا نصًا: هنا النص \"abc\"."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "int.Parse",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يحاول تحويل النص إلى عدد صحيح، لكن \"abc\" ليس فيه أرقام."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "التحويل يفشل أثناء التشغيل، لا أثناء الترجمة: البرنامج سليم الكتابة، والمشكلة في المدخل."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p05-g4",
+                  "text": [
+                    {
+                      "text": "يتوقف البرنامج بخطأ تنفيذ اسمه "
+                    },
+                    {
+                      "text": "FormatException",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ولا يصل إلى سطر الطباعة أبدًا."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "لا يطبع البرنامج أي عدد: يتوقف بخطأ تنفيذ "
+                },
+                {
+                  "text": "FormatException",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "."
+                }
+              ],
+              "explanation": "خطأ الترجمة يظهر قبل التشغيل (كتابة خاطئة)، وخطأ التنفيذ يظهر أثناء التشغيل (مدخل لا يصلح مثلًا). لذلك نطلب من المستخدم بوضوح أن يُدخل عددًا."
+            }
+          ]
+        },
+        {
+          "id": "899371-m01-l01-p06",
+          "title": "نحلّ معًا: مساحة المثلث",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 4,
+            "printedPage": 4,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m01-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int b = int.Parse(Console.ReadLine());\nint h = int.Parse(Console.ReadLine());\nint area = b * h / 2;\nConsole.WriteLine(\"المساحة: \" + area);"
+            },
+            {
+              "id": "m01-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مساحة المثلث",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نريد برنامجًا يقرأ القاعدة والارتفاع ثم يطبع مساحة المثلث. أدخل المستخدم 6 ثم 4. ماذا يطبع؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m01-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "نقرأ القاعدة بـ "
+                    },
+                    {
+                      "text": "ReadLine()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ونحوّلها إلى عدد بـ "
+                    },
+                    {
+                      "text": "int.Parse",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "b = 6",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "نقرأ الارتفاع بالطريقة نفسها: "
+                    },
+                    {
+                      "text": "h = 4",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "قانون مساحة المثلث: القاعدة × الارتفاع ÷ 2."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "int area = b * h / 2;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 6 × 4 = 24، ثم 24 ÷ 2 = 12."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p06-g5",
+                  "text": [
+                    {
+                      "text": "نطبع الناتج مع نص يشرحه."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "المساحة: 12",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "خطوات أي برنامج حسابي: قراءة المدخلات وتحويلها إلى أعداد، ثم الحساب، ثم الطباعة."
+            }
+          ]
+        },
+        {
+          "id": "899371-m01-l01-p07",
+          "title": "نحلّ معًا: تبديل قيمتين",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 4,
+            "printedPage": 4,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m01-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int x = 4, y = 9;\nint t = x;\nx = y;\ny = t;\nConsole.WriteLine(x + \" \" + y);"
+            },
+            {
+              "id": "m01-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "تبديل قيمتين",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كيف نبدّل قيمتي x وy؟ لماذا لا يكفي "
+                },
+                {
+                  "text": "x = y; y = x;",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m01-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "لو كتبنا "
+                    },
+                    {
+                      "text": "x = y;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " أولًا لصار "
+                    },
+                    {
+                      "text": "x = 9",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " وضاعت القيمة 4 إلى الأبد."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "الحل: صندوق ثالث مؤقت يحفظ القيمة قبل أن تُمحى: "
+                    },
+                    {
+                      "text": "int t = x;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "t = 4",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "x = y;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "x = 9",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m01-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "y = t;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "y = 4",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، من الصندوق المؤقت."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "9 4",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "كل إسناد يمحو القيمة القديمة، لذلك نحفظ ما نحتاجه في متغير مؤقت قبل أن نكتب فوقه."
             }
           ]
         }

@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m07.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m07.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -800,6 +802,388 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l01-p07",
+          "title": "نحلّ معًا: by value وref وout على الصناديق",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 63,
+            "printedPage": 63,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m07-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "static void A(int x)\n{\n    x = 10;\n}\nstatic void B(ref int x)\n{\n    x = 20;\n}\nstatic void C(out int x)\n{\n    x = 30;\n}\nstatic void Main()\n{\n    int n = 1;\n    A(n);\n    Console.Write(n + \" \");\n    B(ref n);\n    Console.Write(n + \" \");\n    C(out n);\n    Console.Write(n);\n}"
+            },
+            {
+              "id": "m07-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "by value وref وout على الصناديق",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ثلاث عمليات تغيّر بارامترها. ماذا يطبع Main؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m07-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "A(n)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": تُرسل نسخة من n (by value). A تغيّر نسختها إلى 10، وصندوق n في Main يبقى 1 ← يُطبع 1."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "B(ref n)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": يُرسل المرجع، فصندوق B وصندوق n هما الصندوق نفسه ← n يصبح 20."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "C(out n)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": العملية ملزمة بإعطاء قيمة لـ x قبل أن تنتهي، والقيمة تعود إلى n ← 30."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "1 20 30",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "بدون ref / out تعمل العملية على نسخة. ref للتعديل على الأصل، وout لإعادة قيمة إضافية."
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l01-p08",
+          "title": "نحلّ معًا: عمليات تبني بعضها: فاتورة مقهى",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 63,
+            "printedPage": 63,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m07-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "static int Subtotal(int qty, int price)\n{\n    return qty * price;\n}\nstatic int WithService(int s)\n{\n    return s + s / 10;\n}\nstatic void Show(int qty, int price)\n{\n    Console.WriteLine(\"المجموع: \" + WithService(Subtotal(qty, price)));\n}\nstatic void Main()\n{\n    Show(3, 20);\n}"
+            },
+            {
+              "id": "m07-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "عمليات تبني بعضها: فاتورة مقهى",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ثلاث عمليات: المجموع، ثم إضافة 10% خدمة، ثم العرض. ماذا تطبع "
+                },
+                {
+                  "text": "Show(3, 20)",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m07-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "Subtotal(3, 20)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 3 × 20 = 60."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "WithService(60)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 60 + 60 / 10 = 66."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "Show",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تستدعي الاثنتين وتطبع: الاستدعاء الداخلي يُحسب أولًا."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "المجموع: 66",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "نقسّم المسألة إلى عمليات صغيرة، كل واحدة تعمل شيئًا واحدًا، ثم نركّبها."
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l01-p09",
+          "title": "نحلّ معًا: مكدس الاستدعاءات",
+          "order": 9,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 63,
+            "printedPage": 63,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m07-l01-p09-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "static void G()\n{\n    Console.Write(\"G \");\n}\nstatic void F()\n{\n    Console.Write(\"F1 \");\n    G();\n    Console.Write(\"F2 \");\n}\nstatic void Main()\n{\n    Console.Write(\"M1 \");\n    F();\n    Console.Write(\"M2\");\n}"
+            },
+            {
+              "id": "m07-l01-p09-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مكدس الاستدعاءات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "بأي ترتيب تُطبع الكلمات؟ تتبّع المكدس."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m07-l01-p09-g1",
+                  "text": [
+                    {
+                      "text": "Main تطبع M1 ثم تستدعي F: تدخل F إلى المكدس فوق Main."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p09-g2",
+                  "text": [
+                    {
+                      "text": "F تطبع F1 ثم تستدعي G: تدخل G فوق F."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p09-g3",
+                  "text": [
+                    {
+                      "text": "G تطبع G وتنتهي: تخرج من المكدس وتعود إلى F حيث توقفت."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p09-g4",
+                  "text": [
+                    {
+                      "text": "F تكمل وتطبع F2 وتنتهي وتعود إلى Main، فتطبع M2."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "M1 F1 G F2 M2",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "كل عملية تنتهي تعود إلى السطر الذي يلي استدعاءها. آخر من دخل المكدس أول من يخرج."
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l01-p10",
+          "title": "نحلّ معًا: عملية تعيد bool: هل العدد أولي؟",
+          "order": 10,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 63,
+            "printedPage": 63,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m07-l01-p10-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "static bool IsPrime(int n)\n{\n    for (int i = 2; i < n; i++)\n        if (n % i == 0)\n            return false;\n    return true;\n}\nstatic void Main()\n{\n    Console.WriteLine(IsPrime(7) + \" \" + IsPrime(9));\n}"
+            },
+            {
+              "id": "m07-l01-p10-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "عملية تعيد bool: هل العدد أولي؟",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نكتب IsPrime ونجربها على 7 و9."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m07-l01-p10-g1",
+                  "text": [
+                    {
+                      "text": "العدد أولي إذا لم يقسمه أي عدد من 2 حتى n − 1."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p10-g2",
+                  "text": [
+                    {
+                      "text": "عند أول قاسم نعيد "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " فورًا: return توقف العملية."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p10-g3",
+                  "text": [
+                    {
+                      "text": "7: لا يقسمه 2 ولا 3 ولا … ولا 6 ← "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m07-l01-p10-g4",
+                  "text": [
+                    {
+                      "text": "9: يقسمه 3 ← "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "True False",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "عملية bool تجيب عن سؤال «نعم أو لا»، وreturn داخل الحلقة يوقفها مبكرًا."
             }
           ]
         }

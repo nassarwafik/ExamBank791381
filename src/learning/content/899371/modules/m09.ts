@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m09.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m09.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -792,6 +794,411 @@ const m09: ContentModule = {
                   "تحقق أن المؤشر ضمن النطاق"
                 ]
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l01-p07",
+          "title": "نحلّ معًا: مصفوفة العدّادات: انتخابات",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 95,
+            "printedPage": 95,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m09-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[] votes = { 2, 1, 3, 2, 2, 1 };\nint[] count = new int[4];\nfor (int i = 0; i < votes.Length; i++)\n    count[votes[i]]++;\nConsole.WriteLine(count[1] + \" \" + count[2] + \" \" + count[3]);"
+            },
+            {
+              "id": "m09-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مصفوفة العدّادات: انتخابات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "أصوات لثلاثة مرشحين أرقامهم 1 و2 و3: {2, 1, 3, 2, 2, 1}. كم صوتًا لكل مرشح؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m09-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "مصفوفة عدّادات حجمها 4 لنستعمل المؤشرات 1 و2 و3 مباشرة: "
+                    },
+                    {
+                      "text": "new int[4]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "كل صوت يزيد خانته: "
+                    },
+                    {
+                      "text": "count[votes[i]]++",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "المرشح 1: صوتان، المرشح 2: ثلاثة، المرشح 3: صوت واحد."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "2 3 1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "عندما تكون القيم أرقامًا صغيرة نستعملها مؤشرات لمصفوفة عدّادات بدل سلسلة if."
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l01-p08",
+          "title": "نحلّ معًا: نقطة التوازن",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 95,
+            "printedPage": 95,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m09-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[] a = { 2, 3, 4, 1, 4 };\nint total = 0;\nfor (int i = 0; i < a.Length; i++)\n    total += a[i];\nint left = 0, at = -1;\nfor (int i = 0; i < a.Length; i++)\n{\n    if (left == total - left - a[i])\n    {\n        at = i;\n        break;\n    }\n    left += a[i];\n}\nConsole.WriteLine(at);"
+            },
+            {
+              "id": "m09-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "نقطة التوازن",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "في {2, 3, 4, 1, 4}: أي مؤشر يكون مجموع ما قبله مساويًا لمجموع ما بعده؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m09-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "المجموع الكلي: 2 + 3 + 4 + 1 + 4 = 14."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "نمرّ على المؤشرات ونحتفظ بمجموع اليسار. مجموع اليمين = الكلي − اليسار − العنصر نفسه."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "المؤشر 0: يسار 0، يمين 12. المؤشر 1: يسار 2، يمين 9."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p08-g4",
+                  "text": [
+                    {
+                      "text": "المؤشر 2: يسار 2 + 3 = 5، يمين 14 − 5 − 4 = 5 ← متساويان."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "2",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "بدل حساب المجموعين من جديد لكل مؤشر، نحسب الكلي مرة واحدة ونطرح منه."
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l01-p09",
+          "title": "نحلّ معًا: تدوير المصفوفة يسارًا",
+          "order": 9,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 95,
+            "printedPage": 95,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m09-l01-p09-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[] a = { 1, 2, 3, 4 };\nint first = a[0];\nfor (int i = 0; i < a.Length - 1; i++)\n    a[i] = a[i + 1];\na[a.Length - 1] = first;\nfor (int i = 0; i < a.Length; i++)\n    Console.Write(a[i] + \" \");"
+            },
+            {
+              "id": "m09-l01-p09-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "تدوير المصفوفة يسارًا",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ندوّر {1, 2, 3, 4} خطوة يسارًا: كل عنصر ينتقل مكانًا للأمام، والأول يذهب إلى الآخر."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m09-l01-p09-g1",
+                  "text": [
+                    {
+                      "text": "نحفظ العنصر الأول قبل أن يُكتب فوقه: "
+                    },
+                    {
+                      "text": "int first = a[0];",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p09-g2",
+                  "text": [
+                    {
+                      "text": "ننقل: "
+                    },
+                    {
+                      "text": "a[i] = a[i + 1]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " من "
+                    },
+                    {
+                      "text": "i = 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " حتى "
+                    },
+                    {
+                      "text": "Length − 2",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p09-g3",
+                  "text": [
+                    {
+                      "text": "نضع المحفوظ في الأخير: "
+                    },
+                    {
+                      "text": "a[a.Length - 1] = first;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "2 3 4 1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "كما في تبديل متغيرين: نحفظ القيمة التي سنكتب فوقها أولًا."
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l01-p10",
+          "title": "نحلّ معًا: البحث عن قيمة",
+          "order": 10,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 95,
+            "printedPage": 95,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m09-l01-p10-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int[] a = { 4, 9, 1, 9 };\nint at = -1;\nfor (int i = 0; i < a.Length; i++)\n    if (a[i] == 9)\n    {\n        at = i;\n        break;\n    }\nConsole.WriteLine(at);"
+            },
+            {
+              "id": "m09-l01-p10-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "البحث عن قيمة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "أين يظهر العدد 9 أول مرة في {4, 9, 1, 9}؟ وماذا نطبع لو لم يظهر؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m09-l01-p10-g1",
+                  "text": [
+                    {
+                      "text": "نبدأ بـ "
+                    },
+                    {
+                      "text": "int at = -1;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": «لم نجده بعد»."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p10-g2",
+                  "text": [
+                    {
+                      "text": "نمرّ على العناصر، وعند أول تطابق نحفظ المؤشر ونخرج بـ break."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p10-g3",
+                  "text": [
+                    {
+                      "text": "a[1] = 9",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "at = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ولا نكمل إلى a[3]."
+                    }
+                  ]
+                },
+                {
+                  "id": "m09-l01-p10-g4",
+                  "text": [
+                    {
+                      "text": "لو لم يظهر لبقي "
+                    },
+                    {
+                      "text": "at = -1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، وهو مؤشر غير ممكن يدل على «غير موجود»."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "-1 علامة متعارف عليها لـ «غير موجود»، لأن المؤشرات تبدأ من 0."
             }
           ]
         }

@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m03.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m03.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -492,6 +494,418 @@ const m03: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "double r = rnd.NextDouble();"
+            }
+          ]
+        },
+        {
+          "id": "899371-m03-l01-p04",
+          "title": "نحلّ معًا: لوحة المنازل",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 18,
+            "printedPage": 18,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m03-l01-p04-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int n = 582;\nConsole.WriteLine(n / 100 + \" \" + n / 10 % 10 + \" \" + n % 10);"
+            },
+            {
+              "id": "m03-l01-p04-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "لوحة المنازل",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نستخرج منازل العدد 582: المئات والعشرات والآحاد."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m03-l01-p04-g1",
+                  "text": [
+                    {
+                      "text": "الآحاد: باقي القسمة على 10: "
+                    },
+                    {
+                      "text": "n % 10",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 2."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p04-g2",
+                  "text": [
+                    {
+                      "text": "العشرات: نحذف الآحاد بالقسمة على 10 ثم نأخذ الآحاد الجديدة: "
+                    },
+                    {
+                      "text": "n / 10 % 10",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 58 % 10 ← 8."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p04-g3",
+                  "text": [
+                    {
+                      "text": "المئات: "
+                    },
+                    {
+                      "text": "n / 100",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 5 (القسمة الصحيحة تحذف منزلتين)."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "5 8 2",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "% 10 تأخذ آخر منزلة، و/ 10 تحذفها. بتكرارهما نصل إلى أي منزلة."
+            }
+          ]
+        },
+        {
+          "id": "899371-m03-l01-p05",
+          "title": "نحلّ معًا: المسافة بين نقطتين",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 18,
+            "printedPage": 18,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m03-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "double d = Math.Sqrt(Math.Pow(3 - 0, 2) + Math.Pow(5 - 0, 2));\nConsole.WriteLine(Math.Round(d, 2));"
+            },
+            {
+              "id": "m03-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "المسافة بين نقطتين",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما المسافة بين النقطتين (0, 0) و(3, 5) مقرّبة إلى منزلتين عشريتين؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m03-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "الفرق في x: 3 − 0 = 3، ومربعه "
+                    },
+                    {
+                      "text": "Math.Pow(3, 2)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 9."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "الفرق في y: 5 − 0 = 5، ومربعه 25."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "المجموع 34، والجذر "
+                    },
+                    {
+                      "text": "Math.Sqrt(34)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 5.830951…"
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p05-g4",
+                  "text": [
+                    {
+                      "text": "Math.Round(…, 2)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يقرّب إلى منزلتين عشريتين ← 5.83."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "5.83",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "المسافة = جذر (مربع فرق x + مربع فرق y)، وMath.Round(x, 2) يقرّب إلى منزلتين."
+            }
+          ]
+        },
+        {
+          "id": "899371-m03-l01-p06",
+          "title": "نحلّ معًا: مساحة الدائرة",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 18,
+            "printedPage": 18,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m03-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "double r = 3;\nConsole.WriteLine(Math.Round(Math.PI * r * r, 2));"
+            },
+            {
+              "id": "m03-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مساحة الدائرة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما مساحة دائرة نصف قطرها 3، مقرّبة إلى منزلتين؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m03-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "القانون: π × نق²، و"
+                    },
+                    {
+                      "text": "Math.PI",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " قيمة π الجاهزة (3.14159…)."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "r * r",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 9، ثم "
+                    },
+                    {
+                      "text": "Math.PI * 9",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 28.2743…"
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "Math.Round(…, 2)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 28.27."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "28.27",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "نستعمل Math.PI بدل كتابة 3.14 بأيدينا، فالنتيجة أدق."
+            }
+          ]
+        },
+        {
+          "id": "899371-m03-l01-p07",
+          "title": "نحلّ معًا: حجر نرد عشوائي",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 18,
+            "printedPage": 18,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m03-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "حجر نرد عشوائي",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نريد رمي حجر نرد. ما الأمر الصحيح، وما القيم التي قد يعطيها؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m03-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "ننشئ المولّد مرة واحدة: "
+                    },
+                    {
+                      "text": "new Random()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " في المتغير rnd."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "rnd.Next(a, b)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يعطي عددًا صحيحًا من a حتى b − 1: الحد الأعلى لا يدخل."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "حجر النرد من 1 إلى 6، فنكتب "
+                    },
+                    {
+                      "text": "rnd.Next(1, 7)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " لا "
+                    },
+                    {
+                      "text": "rnd.Next(1, 6)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m03-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "كل تشغيل قد يعطي نتيجة مختلفة، لذلك لا نستطيع توقع الناتج مسبقًا، بل مداه فقط."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "rnd.Next(1, 7)",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " يعطي أحد الأعداد 1، 2، 3، 4، 5، 6."
+                }
+              ],
+              "explanation": "انتبه دائمًا للحد الأعلى في Next: هو خارج المدى."
             }
           ]
         }

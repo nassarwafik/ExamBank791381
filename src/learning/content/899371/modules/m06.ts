@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m06.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m06.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -456,6 +458,462 @@ const m06: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "int number;\nint max = int.MinValue;\nConsole.Write(\"Enter a number (-1 to stop): \");\nnumber = int.Parse(Console.ReadLine());\nwhile (number != -1)\n{\n    if (number > max)\n        max = number;\n    Console.Write(\"Enter a number (-1 to stop): \");\n    number = int.Parse(Console.ReadLine());\n}\nConsole.WriteLine(\"Max number: \" + max);"
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l01-p05",
+          "title": "نحلّ معًا: فخّ القيمة الابتدائية",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 52,
+            "printedPage": 52,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m06-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int min = 0;\nint x = int.Parse(Console.ReadLine());\nwhile (x != 0)\n{\n    if (x < min)\n        min = x;\n    x = int.Parse(Console.ReadLine());\n}\nConsole.WriteLine(min);"
+            },
+            {
+              "id": "m06-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "فخّ القيمة الابتدائية",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "البرنامج أعلاه يريد أصغر عدد موجب أدخله المستخدم (الصفر ينهي الإدخال). أدخل المستخدم 5 ثم 3 ثم 8 ثم 0. ماذا يطبع؟ وهل هذا صحيح؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m06-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "int min = 0;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← نبدأ بصفر."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "5 < 0؟ لا. 3 < 0؟ لا. 8 < 0؟ لا: لا عدد موجب أصغر من 0، فلا يتغير min أبدًا."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "تنتهي الحلقة عند 0 ويُطبع 0، مع أن 0 ليس من الأعداد ولا هو أصغرها."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p05-g4",
+                  "text": [
+                    {
+                      "text": "الإصلاح: نجعل القيمة الابتدائية أول عدد أُدخل: "
+                    },
+                    {
+                      "text": "int min = x;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " بعد القراءة الأولى، فتكون النتيجة 3."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "0",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "، وهذا خطأ منطقي: الجواب الصحيح 3."
+                }
+              ],
+              "explanation": "القيمة الابتدائية لـ «الأصغر» أو «الأكبر» تُؤخذ من البيانات نفسها، لا عدد نختاره نحن."
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l01-p06",
+          "title": "نحلّ معًا: كم مرة ظهر الأكبر؟",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 52,
+            "printedPage": 52,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m06-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int x = int.Parse(Console.ReadLine());\nint max = x, count = 1;\nx = int.Parse(Console.ReadLine());\nwhile (x != -1)\n{\n    if (x > max)\n    {\n        max = x;\n        count = 1;\n    }\n    else if (x == max)\n        count++;\n    x = int.Parse(Console.ReadLine());\n}\nConsole.WriteLine(max + \" \" + count);"
+            },
+            {
+              "id": "m06-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "كم مرة ظهر الأكبر؟",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "يُدخل المستخدم أعدادًا حتى -1. نريد الأكبر وعدد مرات ظهوره. أدخل: 4 7 7 2 7 -1."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m06-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "نبدأ بـ "
+                    },
+                    {
+                      "text": "max = أول",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " عدد (4) و"
+                    },
+                    {
+                      "text": "count = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "عدد أكبر من max ← max يتغير وcount يعود 1: عند 7 ← "
+                    },
+                    {
+                      "text": "max = 7",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، "
+                    },
+                    {
+                      "text": "count = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "عدد يساوي max ← "
+                    },
+                    {
+                      "text": "count++",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": السابعة الثانية ← 2."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "2 أصغر فلا شيء يتغير، ثم 7 ← "
+                    },
+                    {
+                      "text": "count = 3",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p06-g5",
+                  "text": [
+                    {
+                      "text": "-1 قيمة حارسة توقف الحلقة ولا تدخل المقارنة."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "7 3",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "عند ظهور أكبر جديد نبدأ العدّ من جديد، وعند التساوي نزيد العداد."
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l01-p07",
+          "title": "نحلّ معًا: مجموع المنازل الزوجية",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 52,
+            "printedPage": 52,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m06-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int n = 4827, sum = 0;\nwhile (n > 0)\n{\n    int d = n % 10;\n    if (d % 2 == 0)\n        sum += d;\n    n /= 10;\n}\nConsole.WriteLine(sum);"
+            },
+            {
+              "id": "m06-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مجموع المنازل الزوجية",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما مجموع المنازل الزوجية في العدد 4827؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m06-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "كل دورة تأخذ الآحاد: "
+                    },
+                    {
+                      "text": "int d = n % 10;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ثم تحذفها: "
+                    },
+                    {
+                      "text": "n /= 10;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "الآحاد 7 فردية، ثم 2 زوجية ← "
+                    },
+                    {
+                      "text": "sum = 2",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "ثم 8 زوجية ← "
+                    },
+                    {
+                      "text": "sum = 10",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ثم 4 زوجية ← "
+                    },
+                    {
+                      "text": "sum = 14",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "n يصبح 0 فتتوقف الحلقة."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "14",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "while (n > 0) مع % 10 و/= 10 هي الطريقة للمرور على منازل عدد لا نعرف طوله."
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l01-p08",
+          "title": "نحلّ معًا: متى تتوقف الحلقة؟",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 52,
+            "printedPage": 52,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m06-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int n = 6, steps = 0;\nwhile (n != 1)\n{\n    if (n % 2 == 0)\n        n /= 2;\n    else\n        n = n * 3 + 1;\n    steps++;\n}\nConsole.WriteLine(steps);"
+            },
+            {
+              "id": "m06-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "متى تتوقف الحلقة؟",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نكرر: إذا كان n زوجيًا نقسمه على 2، وإلا نضربه في 3 ونضيف 1، حتى يصبح 1. كم خطوة يحتاج "
+                },
+                {
+                  "text": "n = 6",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m06-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "لا نعرف عدد الخطوات مسبقًا، فنستعمل while: "
+                    },
+                    {
+                      "text": "while (n != 1)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "6 ← 3 ← 10 ← 5 ← 16 ← 8 ← 4 ← 2 ← 1."
+                    }
+                  ]
+                },
+                {
+                  "id": "m06-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "نعدّ الأسهم: 8 خطوات."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "8",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "while تناسب كل تكرار يتوقف على شرط لا نعرف متى يتحقق."
             }
           ]
         }

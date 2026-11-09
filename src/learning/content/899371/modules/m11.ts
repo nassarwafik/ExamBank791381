@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m11.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m11.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -440,6 +442,461 @@ const m11: ContentModule = {
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l01-p05",
+          "title": "نحلّ معًا: نبني فئة Book طبقة طبقة",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 126,
+            "printedPage": 126,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m11-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "class Book\n{\n    private string title;\n    private int pages;\n    public Book(string t, int p)\n    {\n        title = t;\n        pages = p;\n    }\n    public string GetTitle()\n    {\n        return title;\n    }\n    public bool IsLong()\n    {\n        return pages > 300;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Book b = new Book(\"Coding\", 320);\n        Console.WriteLine(b.GetTitle() + \" \" + b.IsLong());\n    }\n}"
+            },
+            {
+              "id": "m11-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "نبني فئة Book طبقة طبقة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نبني فئة كتاب: حقول خاصة، ثم منشئ، ثم عمليات. ماذا يطبع البرنامج؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m11-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "الحقول private: "
+                    },
+                    {
+                      "text": "title",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " و"
+                    },
+                    {
+                      "text": "pages",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، فلا يغيّرها أحد من خارج الفئة مباشرة."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "المنشئ اسمه اسم الفئة وبلا نوع إرجاع، ويعطي الحقول قيمها عند "
+                    },
+                    {
+                      "text": "new",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "العمليات public تقرأ الحقول: "
+                    },
+                    {
+                      "text": "GetTitle()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " و"
+                    },
+                    {
+                      "text": "IsLong()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " (صفحاته أكثر من 300)."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p05-g4",
+                  "text": [
+                    {
+                      "text": "new Book(\"Coding\", 320)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← العنوان Coding، و320 > 300 ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "Coding True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الفئة قالب: حقول (ما يعرفه الكائن) + منشئ (كيف يولد) + عمليات (ماذا يفعل)."
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l01-p06",
+          "title": "نحلّ معًا: مصفوفة كائنات لا تنشئ الكائنات",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 126,
+            "printedPage": 126,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m11-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "class Book\n{\n    private string title;\n    public Book(string t)\n    {\n        title = t;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Book[] shelf = new Book[2];\n        shelf[0] = new Book(\"Coding\");\n        Console.WriteLine((shelf[0] == null) + \" \" + (shelf[1] == null));\n    }\n}"
+            },
+            {
+              "id": "m11-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مصفوفة كائنات لا تنشئ الكائنات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "new Book[2]",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " ينشئ رفًّا لكتابين. هل ينشئ الكتابين؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m11-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "new Book[2]",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ينشئ مصفوفة من مرجعين فقط، وقيمة كل مرجع null: رف فارغ."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "shelf[0] = new Book(…)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ينشئ كتابًا فعلًا ويضع مرجعه في الخانة 0."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "الخانة 1 لم نضع فيها كتابًا، فما زالت null."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "لو استدعينا "
+                    },
+                    {
+                      "text": "shelf[1].GetTitle()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " لظهر خطأ تنفيذ، لأنه لا كتاب هناك."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "False True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "لكل كائن نحتاج new خاصة به، ومصفوفة الكائنات تحمل المراجع لا الكائنات."
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l01-p07",
+          "title": "نحلّ معًا: التغليف يحمي الرصيد",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 126,
+            "printedPage": 126,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m11-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "class Account\n{\n    private int balance = 0;\n    public void Deposit(int amount)\n    {\n        if (amount > 0)\n            balance += amount;\n    }\n    public int GetBalance()\n    {\n        return balance;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Account acc = new Account();\n        acc.Deposit(100);\n        acc.Deposit(-40);\n        acc.Deposit(50);\n        Console.WriteLine(acc.GetBalance());\n    }\n}"
+            },
+            {
+              "id": "m11-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "التغليف يحمي الرصيد",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "حساب بنكي يرفض الإيداع السالب. ما الرصيد بعد الإيداعات أعلاه؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m11-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "الرصيد private، فالطريقة الوحيدة لتغييره هي العملية Deposit."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "Deposit(100)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← موجب، الرصيد 100."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "Deposit(-40)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← سالب، ترفضه العملية ولا يتغير الرصيد."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p07-g4",
+                  "text": [
+                    {
+                      "text": "Deposit(50)",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← الرصيد 150."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "150",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "لو كان الرصيد public لاستطاع أي كود أن يكتب فيه قيمة خاطئة. العملية تفحص قبل أن تغيّر."
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l01-p08",
+          "title": "نحلّ معًا: مرجعان لكائن واحد",
+          "order": 8,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 126,
+            "printedPage": 126,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m11-l01-p08-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Counter a = new Counter();\n        Counter b = a;\n        Counter c = new Counter();\n        b.Add();\n        b.Add();\n        c.Add();\n        Console.WriteLine(a.Get() + \" \" + b.Get() + \" \" + c.Get());\n    }\n}"
+            },
+            {
+              "id": "m11-l01-p08-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مرجعان لكائن واحد",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ماذا يطبع البرنامج؟ ارسم سهمًا من كل متغير إلى كائنه."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m11-l01-p08-g1",
+                  "text": [
+                    {
+                      "text": "new Counter()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " الأول ← كائن أول، وa يشير إليه."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p08-g2",
+                  "text": [
+                    {
+                      "text": "Counter b = a;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← لا new: b يشير إلى الكائن نفسه."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p08-g3",
+                  "text": [
+                    {
+                      "text": "new Counter()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " الثاني ← كائن ثانٍ مستقل يشير إليه c."
+                    }
+                  ]
+                },
+                {
+                  "id": "m11-l01-p08-g4",
+                  "text": [
+                    {
+                      "text": "b.Add()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " مرتين تزيد الكائن الأول (a وb معًا) إلى 2، و"
+                    },
+                    {
+                      "text": "c.Add()",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " تزيد الثاني إلى 1."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "2 2 1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الإسناد بين متغيري كائنات ينسخ المرجع لا الكائن. كائن جديد يحتاج new."
             }
           ]
         }

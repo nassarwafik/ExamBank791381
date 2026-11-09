@@ -1,0 +1,59 @@
+{
+ "module": "m07",
+ "walkthroughs": [
+  {
+   "title": "by value وref وout على الصناديق",
+   "prompt": "ثلاث عمليات تغيّر بارامترها. ماذا يطبع Main؟",
+   "steps": [
+    "`A(n)`: تُرسل نسخة من n (by value). A تغيّر نسختها إلى 10، وصندوق n في Main يبقى 1 ← يُطبع 1.",
+    "`B(ref n)`: يُرسل المرجع، فصندوق B وصندوق n هما الصندوق نفسه ← n يصبح 20.",
+    "`C(out n)`: العملية ملزمة بإعطاء قيمة لـ x قبل أن تنتهي، والقيمة تعود إلى n ← 30."
+   ],
+   "result": "يطبع البرنامج: `1 20 30`",
+   "explanation": "بدون ref / out تعمل العملية على نسخة. ref للتعديل على الأصل، وout لإعادة قيمة إضافية.",
+   "program": "static void A(int x)\n{\n    x = 10;\n}\nstatic void B(ref int x)\n{\n    x = 20;\n}\nstatic void C(out int x)\n{\n    x = 30;\n}\nstatic void Main()\n{\n    int n = 1;\n    A(n);\n    Console.Write(n + \" \");\n    B(ref n);\n    Console.Write(n + \" \");\n    C(out n);\n    Console.Write(n);\n}",
+   "output": "1 20 30"
+  },
+  {
+   "title": "عمليات تبني بعضها: فاتورة مقهى",
+   "prompt": "ثلاث عمليات: المجموع، ثم إضافة 10% خدمة، ثم العرض. ماذا تطبع `Show(3, 20)`؟",
+   "steps": [
+    "`Subtotal(3, 20)` ← 3 × 20 = 60.",
+    "`WithService(60)` ← 60 + 60 / 10 = 66.",
+    "`Show` تستدعي الاثنتين وتطبع: الاستدعاء الداخلي يُحسب أولًا."
+   ],
+   "result": "يطبع البرنامج: `المجموع: 66`",
+   "explanation": "نقسّم المسألة إلى عمليات صغيرة، كل واحدة تعمل شيئًا واحدًا، ثم نركّبها.",
+   "program": "static int Subtotal(int qty, int price)\n{\n    return qty * price;\n}\nstatic int WithService(int s)\n{\n    return s + s / 10;\n}\nstatic void Show(int qty, int price)\n{\n    Console.WriteLine(\"المجموع: \" + WithService(Subtotal(qty, price)));\n}\nstatic void Main()\n{\n    Show(3, 20);\n}",
+   "output": "المجموع: 66"
+  },
+  {
+   "title": "مكدس الاستدعاءات",
+   "prompt": "بأي ترتيب تُطبع الكلمات؟ تتبّع المكدس.",
+   "steps": [
+    "Main تطبع M1 ثم تستدعي F: تدخل F إلى المكدس فوق Main.",
+    "F تطبع F1 ثم تستدعي G: تدخل G فوق F.",
+    "G تطبع G وتنتهي: تخرج من المكدس وتعود إلى F حيث توقفت.",
+    "F تكمل وتطبع F2 وتنتهي وتعود إلى Main، فتطبع M2."
+   ],
+   "result": "يطبع البرنامج: `M1 F1 G F2 M2`",
+   "explanation": "كل عملية تنتهي تعود إلى السطر الذي يلي استدعاءها. آخر من دخل المكدس أول من يخرج.",
+   "program": "static void G()\n{\n    Console.Write(\"G \");\n}\nstatic void F()\n{\n    Console.Write(\"F1 \");\n    G();\n    Console.Write(\"F2 \");\n}\nstatic void Main()\n{\n    Console.Write(\"M1 \");\n    F();\n    Console.Write(\"M2\");\n}",
+   "output": "M1 F1 G F2 M2"
+  },
+  {
+   "title": "عملية تعيد bool: هل العدد أولي؟",
+   "prompt": "نكتب IsPrime ونجربها على 7 و9.",
+   "steps": [
+    "العدد أولي إذا لم يقسمه أي عدد من 2 حتى n − 1.",
+    "عند أول قاسم نعيد `false` فورًا: return توقف العملية.",
+    "7: لا يقسمه 2 ولا 3 ولا … ولا 6 ← `true`.",
+    "9: يقسمه 3 ← `false`."
+   ],
+   "result": "يطبع البرنامج: `True False`",
+   "explanation": "عملية bool تجيب عن سؤال «نعم أو لا»، وreturn داخل الحلقة يوقفها مبكرًا.",
+   "program": "static bool IsPrime(int n)\n{\n    for (int i = 2; i < n; i++)\n        if (n % i == 0)\n            return false;\n    return true;\n}\nstatic void Main()\n{\n    Console.WriteLine(IsPrime(7) + \" \" + IsPrime(9));\n}",
+   "output": "True False"
+  }
+ ]
+}

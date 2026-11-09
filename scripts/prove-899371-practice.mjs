@@ -9,13 +9,16 @@
 // class `Program`; one that declares its classes is run as printed. The observed exit code, stdout and exception are recorded with
 // the sha256 of exactly what was run, and judged against the key (judgeItem). The test practice.p4.test.ts re-judges every key
 // against the committed proofs and checks each proof still belongs to the program the course shows, without needing Docker.
+// P5 (§17): the same for the walkthroughs «نحلّ معًا» (guided/mNN.json → guided/proofs.json): a walkthrough's `output` (its printed
+// result, lines joined by « | ») or its `runtimeError` must be what the run gives, and its revealed result must say it (judgeGuided).
+//   node scripts/prove-899371-practice.mjs [--only practice|guided]
 // Exit code: 0 when every key agrees with its run, 1 otherwise, 2 on an environment error.
 import { writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { executeCSharp, csharpEnvironment } from "./run-csharp-probes.mjs";
-import { readPractice, PRACTICE_DIR } from "./convert-899371.mjs";
+import { readPractice, PRACTICE_DIR, readGuided, GUIDED_DIR } from "./convert-899371.mjs";
 
 /** The compilable program for an exercise's printed code. */
 export function wrapProgram(code) {
@@ -59,28 +62,58 @@ export function judgeItem(item, proof) {
   return problems;
 }
 
+/** Judges one walkthrough's stated result against its proof → list of problems (empty when the walkthrough is right). */
+export function judgeGuided(w, proof) {
+  if (!proof) return ["no proof"];
+  const problems = [];
+  if (proof.sha !== proofSha(wrapProgram(w.program), w.stdin)) problems.push("the proof is for another program / input");
+  if (proof.compileExit !== 0) return [...problems, "does not compile: " + proof.compileOutput];
+  const shown = norm(w.result.replace(/`/g, ""));
+  const spans = [...w.result.matchAll(/`([^`]+)`/g)].map(m => norm(m[1]));   // what the result shows as program text, in order
+  if (w.runtimeError !== undefined) {
+    if (proof.exitCode === 0) problems.push("ran without an error");
+    if (proof.exception !== w.runtimeError) problems.push(`exception ${proof.exception} ≠ ${w.runtimeError}`);
+    if (!shown.includes(w.runtimeError) || !spans.includes(w.runtimeError)) problems.push("the result does not name the exception");
+    return problems;
+  }
+  if (proof.exitCode !== 0) return [...problems, `exit ${proof.exitCode}: ${proof.exception}`];
+  const out = outputLine(proof.stdout);
+  if (norm(out) !== norm(w.output)) problems.push(`printed «${out}» ≠ stated output «${w.output}»`);
+  if (JSON.stringify(spans) !== JSON.stringify(out.split(" | ").map(norm))) problems.push(`the result shows ${JSON.stringify(spans)}, not the printed lines`);
+  return problems;
+}
+
+/** Runs one program and records its proof. */
+function prove(env, program, stdin) {
+  const wrapped = wrapProgram(program);
+  const { compile, observed } = executeCSharp(wrapped, [stdin ?? ""], env);
+  const o = observed[0] ?? { exitCode: null, stdout: "", stderr: "" };
+  return { sha: proofSha(wrapped, stdin), ...(stdin !== undefined ? { stdin } : {}), compileExit: compile.exitCode,
+    ...(compile.exitCode !== 0 ? { compileOutput: compile.output.slice(0, 400) } : {}), exitCode: o.exitCode, stdout: o.stdout, exception: exceptionOf(o.stderr) };
+}
+
 function main() {
   let env;
   try { env = csharpEnvironment(); } catch (e) { console.error("environment: " + e.message); process.exit(2); }
-  const practice = readPractice();
-  const proofs = {};
+  const only = (i => (i >= 0 ? process.argv[i + 1] : null))(process.argv.indexOf("--only"));
   let bad = 0, runs = 0;
-  for (const [mid, items] of Object.entries(practice)) {
-    items.forEach((item, i) => {
+  const report = (key, problems, proof) => { runs++; if (problems.length) { bad++; console.log(`✗ ${key}: ${problems.join("; ")}`); } else console.log(`✓ ${key}  «${outputLine(proof.stdout) || proof.exception}»`); };
+  const sets = [
+    ["practice", PRACTICE_DIR, readPractice(), "q", judgeItem],
+    ["guided", GUIDED_DIR, readGuided(), "g", judgeGuided],
+  ];
+  for (const [name, dir, files, letter, judge] of sets) {
+    if (only && only !== name) continue;
+    const proofs = {};
+    for (const [mid, items] of Object.entries(files)) items.forEach((item, i) => {
       if (!item.program) return;
-      const key = `${mid}/q${String(i + 1).padStart(2, "0")}`;
-      const program = wrapProgram(item.program);
-      const { compile, observed } = executeCSharp(program, [item.stdin ?? ""], env);
-      const o = observed[0] ?? { exitCode: null, stdout: "", stderr: "" };
-      proofs[key] = { sha: proofSha(program, item.stdin), ...(item.stdin !== undefined ? { stdin: item.stdin } : {}), compileExit: compile.exitCode,
-        ...(compile.exitCode !== 0 ? { compileOutput: compile.output.slice(0, 400) } : {}), exitCode: o.exitCode, stdout: o.stdout, exception: exceptionOf(o.stderr) };
-      runs++;
-      const problems = judgeItem(item, proofs[key]);
-      if (problems.length) { bad++; console.log(`✗ ${key}: ${problems.join("; ")}`); } else console.log(`✓ ${key}  «${outputLine(o.stdout) || proofs[key].exception}»`);
+      const key = `${mid}/${letter}${String(i + 1).padStart(2, "0")}`;
+      proofs[key] = prove(env, item.program, item.stdin);
+      report(name + " " + key, judge(item, proofs[key]), proofs[key]);
     });
+    writeFileSync(join(dir, "proofs.json"), JSON.stringify({ worker: "csharp@1", image: env.image, proofs }, null, 1) + "\n");
   }
-  writeFileSync(join(PRACTICE_DIR, "proofs.json"), JSON.stringify({ worker: "csharp@1", image: env.image, proofs }, null, 1) + "\n");
-  console.log(`${runs} programs run, ${bad} key(s) disagree`);
+  console.log(`${runs} programs run, ${bad} disagree`);
   process.exit(bad ? 1 : 0);
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

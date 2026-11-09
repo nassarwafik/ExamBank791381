@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m05.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m05.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -394,6 +396,499 @@ const m05: ContentModule = {
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l01-p04",
+          "title": "نحلّ معًا: مثلث نجوم مقلوب",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 41,
+            "printedPage": 41,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m05-l01-p04-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "for (int i = 3; i >= 1; i--)\n{\n    for (int j = 1; j <= i; j++)\n        Console.Write(\"*\");\n    Console.WriteLine();\n}"
+            },
+            {
+              "id": "m05-l01-p04-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "مثلث نجوم مقلوب",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كيف نطبع ثلاثة أسطر: "
+                },
+                {
+                  "text": "***",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " ثم "
+                },
+                {
+                  "text": "**",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " ثم "
+                },
+                {
+                  "text": "*",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": "؟ نستعمل حلقتين متداخلتين."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m05-l01-p04-g1",
+                  "text": [
+                    {
+                      "text": "الحلقة الخارجية للأسطر: i يبدأ من 3 وينزل بـ "
+                    },
+                    {
+                      "text": "i--",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " حتى 1."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p04-g2",
+                  "text": [
+                    {
+                      "text": "الحلقة الداخلية تتكرر i مرة، وفي كل مرة "
+                    },
+                    {
+                      "text": "Console.Write(\"*\")",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " في السطر نفسه."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p04-g3",
+                  "text": [
+                    {
+                      "text": "بعد الحلقة الداخلية ننزل سطرًا: "
+                    },
+                    {
+                      "text": "Console.WriteLine();",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p04-g4",
+                  "text": [
+                    {
+                      "text": "i = 3",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "***",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ثم "
+                    },
+                    {
+                      "text": "i = 2",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "**",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، ثم "
+                    },
+                    {
+                      "text": "i = 1",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "*",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج ثلاثة أسطر: "
+                },
+                {
+                  "text": "***",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " ثم "
+                },
+                {
+                  "text": "**",
+                  "style": "code",
+                  "dir": "ltr"
+                },
+                {
+                  "text": " ثم "
+                },
+                {
+                  "text": "*",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "الحلقة الخارجية تحدد «كم سطرًا»، والداخلية «ماذا في السطر». عدد التكرار الداخلي يعتمد على i."
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l01-p05",
+          "title": "نحلّ معًا: سطر من جدول الضرب",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 41,
+            "printedPage": 41,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m05-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "for (int i = 1; i <= 5; i++)\n    Console.Write(7 * i + \" \");"
+            },
+            {
+              "id": "m05-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "سطر من جدول الضرب",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نطبع مضاعفات 7 من 7 × 1 حتى 7 × 5 في سطر واحد."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m05-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "العدّاد i من 1 حتى 5: الشرط "
+                    },
+                    {
+                      "text": "i <= 5",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " والتحديث "
+                    },
+                    {
+                      "text": "i++",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "في كل دورة نطبع "
+                    },
+                    {
+                      "text": "7 * i",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ثم مسافة: 7، 14، 21، 28، 35."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "Console.Write يبقي الطباعة في السطر نفسه."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "7 14 21 28 35",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "عندما نعرف عدد التكرارات مسبقًا (5 هنا) نستعمل for."
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l01-p06",
+          "title": "نحلّ معًا: المعدّل مع إضافة وسقف",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 41,
+            "printedPage": 41,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m05-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int sum = 0;\nfor (int i = 1; i <= 3; i++)\n{\n    int m = int.Parse(Console.ReadLine()) + 4;\n    if (m > 100)\n        m = 100;\n    sum += m;\n}\nConsole.WriteLine(sum / 3);"
+            },
+            {
+              "id": "m05-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "المعدّل مع إضافة وسقف",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نقرأ 3 علامات، نضيف 4 علامات لكل واحدة على ألا تزيد على 100، ثم نطبع المعدّل. أدخل المستخدم 95 و80 و70."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m05-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "الحلقة تتكرر 3 مرات، وفي كل مرة نقرأ علامة ونضيف إليها 4 فورًا."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "السقف: "
+                    },
+                    {
+                      "text": "if (m > 100) m = 100;",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 95 + 4 = 99 (أقل من 100، تبقى)."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "80 + 4 = 84، و70 + 4 = 74."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p06-g4",
+                  "text": [
+                    {
+                      "text": "نجمع داخل الحلقة: 99 + 84 + 74 = 257."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p06-g5",
+                  "text": [
+                    {
+                      "text": "بعد الحلقة: "
+                    },
+                    {
+                      "text": "sum / 3",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 257 / 3 = 85 (قسمة صحيحة)."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "85",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "المجمّع يُهيَّأ بصفر قبل الحلقة، والقسمة على العدد بعد الحلقة لا داخلها."
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l01-p07",
+          "title": "نحلّ معًا: عدد قواسم 12",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 41,
+            "printedPage": 41,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m05-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int count = 0;\nfor (int i = 1; i <= 12; i++)\n    if (12 % i == 0)\n        count++;\nConsole.WriteLine(count);"
+            },
+            {
+              "id": "m05-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "عدد قواسم 12",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كم عددًا يقسم 12 بلا باقٍ؟"
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m05-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "نجرب كل عدد i من 1 حتى 12."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "القاسم يعطي باقيًا صفرًا: إذا "
+                    },
+                    {
+                      "text": "12 % i == 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " نزيد "
+                    },
+                    {
+                      "text": "count++",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m05-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "القواسم: 1، 2، 3، 4، 6، 12."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "6",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "نمط «العدّاد داخل الحلقة»: نهيّئه بصفر، ونزيده عندما يتحقق الشرط."
             }
           ]
         }

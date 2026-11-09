@@ -20,6 +20,10 @@
 // book text: the self-study exercises authored in src/learning/content/899371/practice/mNN.json (owner decision Q3: questions
 // PARALLEL to the chapter's summary, not the book's assignment questions, with the right answer revealed after an answer). Each
 // program question's key is proven by running the program with the csharp@1 worker (scripts/prove-899371-practice.mjs → proofs.json).
+// P5 (§17): the walkthroughs «نحلّ معًا» of src/learning/content/899371/guided/mNN.json become the LAST pages of the chapter's summary
+// lesson (right after the summary, before the assignments; the book's own pages, lessons and ids are untouched). Each is a teacher-
+// led guided reveal (guided/reveal/v1), PARALLEL to the book (owner, 2026-11-09: never a book assignment's own answer), and the
+// printed result of each walkthrough program is proven by a run (guided/proofs.json).
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
@@ -283,7 +287,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body, practice = readPractice()) {
+export function convert(body, practice = readPractice(), guided = readGuided()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -336,6 +340,8 @@ export function convert(body, practice = readPractice()) {
         const blocks = blocksOf(body, pg, pid, les.kind, corrected, log);
         return { id: pid, title: pg.title, order: i + 1, source: src(les.toc ?? mod.toc, pg.from, pg.to), blocks };
       });
+      const walkthroughs = les.kind === "summary" ? guided[`m${String(mod.n).padStart(2, "0")}`] : undefined;
+      if (walkthroughs) pages.push(...guidedPages(lid, les.toc, pages.length, walkthroughs));
       lessons.push({ id: lid, title: les.title, order: les.order, pages });
     }
     const exercises = practice[`m${String(mod.n).padStart(2, "0")}`];
@@ -344,6 +350,8 @@ export function convert(body, practice = readPractice()) {
   });
   const unused = Object.keys(practice).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k));
   if (unused.length) throw new Error("practice files for no chapter: " + unused.join(", "));
+  const unusedGuided = Object.keys(guided).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k && m.lessons.some(l => l.kind === "summary")));
+  if (unusedGuided.length) throw new Error("walkthrough files for no chapter summary: " + unusedGuided.join(", "));
   if (applied.length !== CORRECTIONS.length) throw new Error("a correction did not apply: " + CORRECTIONS.filter(c => !applied.includes(c)).map(c => c.finding).join(", "));
   return { modules, log, applied };
 }
@@ -542,6 +550,39 @@ function practiceLesson(mid, mod, order, items) {
 /** The source note of an exercise page: added enrichment, parallel to the chapter's summary (it names no ¶ of the book). */
 export const PRACTICE_NOTE = "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)";
 
+// ── P5: «نحلّ معًا» (teacher-led walkthroughs, enrichment) ──────────────────────────────────────────────────────────────────────
+export const GUIDED_DIR = join(OUT, "guided");
+/** The source note of a walkthrough page: added enrichment, parallel to the chapter's summary (it names no ¶ of the book). */
+export const GUIDED_NOTE = "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)";
+/** The authored walkthrough files: { mNN: walkthrough[] }. A walkthrough is { title, prompt, steps[], result, explanation, program?, … }. */
+export function readGuided(dir = GUIDED_DIR) {
+  const out = {};
+  if (!existsSync(dir)) return out;
+  for (const f of readdirSync(dir).filter(f => /^m\d\d\.json$/.test(f)).sort()) {
+    const file = JSON.parse(readFileSync(join(dir, f), "utf8"));
+    if (file.module !== f.slice(0, 3)) throw new Error(f + ": module " + file.module);
+    out[file.module] = file.walkthroughs;
+  }
+  return out;
+}
+/** Authored text → safe spans: `…` is a code span (left to right), everything else plain text. */
+export function guidedSpans(text) {
+  return text.split(/(`[^`]+`)/).filter(Boolean).map(part => (part.startsWith("`") ? { text: part.slice(1, -1), style: "code", dir: "ltr" } : { text: part }));
+}
+/** One page per walkthrough, appended to the summary lesson: the program (if any) as a code block, then the guided reveal. */
+function guidedPages(lid, toc, after, walkthroughs) {
+  const short = lid.slice(CID.length + 1);
+  return walkthroughs.map((w, i) => {
+    const n = String(after + i + 1).padStart(2, "0"), pid = `${lid}-p${n}`, base = `${short}-p${n}`;
+    const blocks = [];
+    if (w.program) blocks.push({ id: base + "-code", type: "code", origin: "teacher-enrichment", language: "csharp", dir: "ltr", code: w.program });
+    blocks.push({ id: base + "-guided", type: "guided", origin: "teacher-enrichment", guidedType: "reveal", version: 1, title: w.title,
+      capabilities: { fullscreen: true, reset: true }, prompt: guidedSpans(w.prompt),
+      steps: w.steps.map((t, k) => ({ id: `${base}-g${k + 1}`, text: guidedSpans(t) })), result: guidedSpans(w.result), explanation: w.explanation });
+    return { id: pid, title: "نحلّ معًا: " + w.title, order: after + i + 1, source: { kind: "book", sourceId: CID, pdfPageStart: toc, printedPage: toc, sourceNote: GUIDED_NOTE }, blocks };
+  });
+}
+
 /** A drawing's protected file name: the first 16 hex of the sha256 of its exact bytes in the Word source. */
 let SOURCE_ZIP = null;
 export const drawingBytes = image => readZipEntry(SOURCE_ZIP ?? (SOURCE_ZIP = readFileSync(SOURCE_FILE)), "word/media/" + image);
@@ -566,7 +607,9 @@ function moduleFile(mod) {
 // corrections (plan §12.4) and the reading of the source's Markdown residue (decision P2-a) are the only differences, and
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.${mod.lessons.some(l => l.title === "تدريبات الوحدة") ? `
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/${n}.json,
-// each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).` : ""}
+// each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).` : ""}${mod.lessons.some(l => l.pages.some(p => p.title.startsWith("نحلّ معًا: "))) ? `
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/${n}.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).` : ""}
 
 import type { ContentModule } from "../../types";
 

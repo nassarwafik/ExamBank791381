@@ -116,6 +116,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 4,
                 "sourceNote": "¶68–72"
               }
+            },
+            {
+              "id": "899371-m01-l01-p04",
+              "title": "نحلّ معًا: تتبّع صناديق المتغيرات",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m01-l01-p05",
+              "title": "نحلّ معًا: مدخل لا يصلح عددًا",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m01-l01-p06",
+              "title": "نحلّ معًا: مساحة المثلث",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m01-l01-p07",
+              "title": "نحلّ معًا: تبديل قيمتين",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -313,6 +361,54 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 9,
                 "printedPage": 9,
                 "sourceNote": "¶150–172"
+              }
+            },
+            {
+              "id": "899371-m02-l01-p04",
+              "title": "نحلّ معًا: أسبقية && على ||",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m02-l01-p05",
+              "title": "نحلّ معًا: جدولا && و||",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m02-l01-p06",
+              "title": "نحلّ معًا: الدقائق إلى ساعات ودقائق",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m02-l01-p07",
+              "title": "نحلّ معًا: شرط القسمة على عددين",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
               }
             }
           ]
@@ -692,6 +788,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 18,
                 "sourceNote": "¶383–396"
               }
+            },
+            {
+              "id": "899371-m03-l01-p04",
+              "title": "نحلّ معًا: لوحة المنازل",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m03-l01-p05",
+              "title": "نحلّ معًا: المسافة بين نقطتين",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m03-l01-p06",
+              "title": "نحلّ معًا: مساحة الدائرة",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m03-l01-p07",
+              "title": "نحلّ معًا: حجر نرد عشوائي",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -997,6 +1141,54 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 26,
                 "printedPage": 26,
                 "sourceNote": "¶588–620"
+              }
+            },
+            {
+              "id": "899371-m04-l01-p06",
+              "title": "نحلّ معًا: else المعلّقة",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m04-l01-p07",
+              "title": "نحلّ معًا: شرائح أجرة الشحن",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m04-l01-p08",
+              "title": "نحلّ معًا: أجرة الموقف بالساعات",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m04-l01-p09",
+              "title": "نحلّ معًا: الأكبر بين ثلاثة أعداد",
+              "order": 9,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
               }
             }
           ]
@@ -1304,6 +1496,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 41,
                 "sourceNote": "¶926–931"
               }
+            },
+            {
+              "id": "899371-m05-l01-p04",
+              "title": "نحلّ معًا: مثلث نجوم مقلوب",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m05-l01-p05",
+              "title": "نحلّ معًا: سطر من جدول الضرب",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m05-l01-p06",
+              "title": "نحلّ معًا: المعدّل مع إضافة وسقف",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m05-l01-p07",
+              "title": "نحلّ معًا: عدد قواسم 12",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -1574,6 +1814,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 52,
                 "sourceNote": "¶1128–1174"
               }
+            },
+            {
+              "id": "899371-m06-l01-p05",
+              "title": "نحلّ معًا: فخّ القيمة الابتدائية",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p06",
+              "title": "نحلّ معًا: كم مرة ظهر الأكبر؟",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p07",
+              "title": "نحلّ معًا: مجموع المنازل الزوجية",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p08",
+              "title": "نحلّ معًا: متى تتوقف الحلقة؟",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -1831,6 +2119,54 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 63,
                 "printedPage": 63,
                 "sourceNote": "¶1453–1461"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p07",
+              "title": "نحلّ معًا: by value وref وout على الصناديق",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p08",
+              "title": "نحلّ معًا: عمليات تبني بعضها: فاتورة مقهى",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p09",
+              "title": "نحلّ معًا: مكدس الاستدعاءات",
+              "order": 9,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p10",
+              "title": "نحلّ معًا: عملية تعيد bool: هل العدد أولي؟",
+              "order": 10,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
               }
             }
           ]
@@ -2150,6 +2486,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 84,
                 "sourceNote": "¶1936–1941"
               }
+            },
+            {
+              "id": "899371-m08-l01-p06",
+              "title": "نحلّ معًا: تشفير قيصر حرفًا حرفًا",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p07",
+              "title": "نحلّ معًا: ضغط النص",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p08",
+              "title": "نحلّ معًا: هل النص متناظر؟",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p09",
+              "title": "نحلّ معًا: عدّ حرف في نص",
+              "order": 9,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -2408,6 +2792,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 95,
                 "sourceNote": "¶2245–2249"
               }
+            },
+            {
+              "id": "899371-m09-l01-p07",
+              "title": "نحلّ معًا: مصفوفة العدّادات: انتخابات",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p08",
+              "title": "نحلّ معًا: نقطة التوازن",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p09",
+              "title": "نحلّ معًا: تدوير المصفوفة يسارًا",
+              "order": 9,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p10",
+              "title": "نحلّ معًا: البحث عن قيمة",
+              "order": 10,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -2654,6 +3086,54 @@ const manifest: LearningCourseManifest = {
                 "printedPage": 108,
                 "sourceNote": "¶2501–2525"
               }
+            },
+            {
+              "id": "899371-m10-l01-p04",
+              "title": "نحلّ معًا: القطر الرئيسي في لعبة XO",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m10-l01-p05",
+              "title": "نحلّ معًا: عنصر التقاطع",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m10-l01-p06",
+              "title": "نحلّ معًا: مجموع كل صف",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m10-l01-p07",
+              "title": "نحلّ معًا: القطر الثانوي",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
             }
           ]
         },
@@ -2899,6 +3379,54 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 126,
                 "printedPage": 126,
                 "sourceNote": "¶2883–2896"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p05",
+              "title": "نحلّ معًا: نبني فئة Book طبقة طبقة",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p06",
+              "title": "نحلّ معًا: مصفوفة كائنات لا تنشئ الكائنات",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p07",
+              "title": "نحلّ معًا: التغليف يحمي الرصيد",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p08",
+              "title": "نحلّ معًا: مرجعان لكائن واحد",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
               }
             }
           ]

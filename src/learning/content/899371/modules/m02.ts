@@ -6,6 +6,8 @@
 // fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
 // The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/m02.json,
 // each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).
+// The pages «نحلّ معًا: …» at the end of the summary lesson are ADDED enrichment (P5, plan §17): teacher-led walkthroughs of
+// guided/m02.json, parallel to the book, each program's printed result proven by a run (guided/proofs.json; guided.p5.test.ts).
 
 import type { ContentModule } from "../../types";
 
@@ -450,6 +452,669 @@ const m02: ContentModule = {
                   "text": "✅ الناتج: True لأن x = 4."
                 }
               ]
+            }
+          ]
+        },
+        {
+          "id": "899371-m02-l01-p04",
+          "title": "نحلّ معًا: أسبقية && على ||",
+          "order": 4,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 9,
+            "printedPage": 9,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m02-l01-p04-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int a = 5, b = 10, c = 15;\nConsole.WriteLine(a > b || b < c && c > 20 || a == 5);"
+            },
+            {
+              "id": "m02-l01-p04-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "أسبقية && على ||",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "ما قيمة التعبير المطبوع؟ قيّمه خطوة خطوة، وانتبه: && تُحسب قبل ||."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m02-l01-p04-g1",
+                  "text": [
+                    {
+                      "text": "نحسب المقارنات أولًا: "
+                    },
+                    {
+                      "text": "a > b",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 5 > 10 ← "
+                    },
+                    {
+                      "text": "False",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ". ‏"
+                    },
+                    {
+                      "text": "b < c",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 10 < 15 ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ". ‏"
+                    },
+                    {
+                      "text": "c > 20",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "False",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ". ‏"
+                    },
+                    {
+                      "text": "a == 5",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p04-g2",
+                  "text": [
+                    {
+                      "text": "نكتب T لـ "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " وF لـ "
+                    },
+                    {
+                      "text": "False",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، فيصبح التعبير: "
+                    },
+                    {
+                      "text": "F || T && F || T",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p04-g3",
+                  "text": [
+                    {
+                      "text": "&&",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " أولًا: "
+                    },
+                    {
+                      "text": "T && F",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← F. يصبح: "
+                    },
+                    {
+                      "text": "F || F || T",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p04-g4",
+                  "text": [
+                    {
+                      "text": "ثم || من اليسار: "
+                    },
+                    {
+                      "text": "F || F",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← F، ثم "
+                    },
+                    {
+                      "text": "F || T",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← T، أي "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "كما يسبق الضرب الجمع، تسبق && (و) العامل || (أو). عند الشك نضع أقواسًا لتوضيح الترتيب."
+            }
+          ]
+        },
+        {
+          "id": "899371-m02-l01-p05",
+          "title": "نحلّ معًا: جدولا && و||",
+          "order": 5,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 9,
+            "printedPage": 9,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m02-l01-p05-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "Console.WriteLine((true && false) + \" \" + (true || false) + \" \" + (false || false));"
+            },
+            {
+              "id": "m02-l01-p05-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "جدولا && و||",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "نكمل معًا جدولي الحقيقة، ثم نتحقق بالبرنامج أعلاه."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m02-l01-p05-g1",
+                  "text": [
+                    {
+                      "text": "&&",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " (و): النتيجة "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " فقط إذا كان الطرفان "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": "
+                    },
+                    {
+                      "text": "true && true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، وأي "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يجعلها "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p05-g2",
+                  "text": [
+                    {
+                      "text": "||",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " (أو): النتيجة "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " فقط إذا كان الطرفان "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": ": "
+                    },
+                    {
+                      "text": "false || false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، وأي "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " يجعلها "
+                    },
+                    {
+                      "text": "true",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p05-g3",
+                  "text": [
+                    {
+                      "text": "البرنامج يطبع ثلاث قيم: "
+                    },
+                    {
+                      "text": "true && false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "False",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، و"
+                    },
+                    {
+                      "text": "true || false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "، و"
+                    },
+                    {
+                      "text": "false || false",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "False",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "False True False",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "تكفي قاعدتان: && يحتاج «الكل»، و|| يكفيه «واحد»."
+            }
+          ]
+        },
+        {
+          "id": "899371-m02-l01-p06",
+          "title": "نحلّ معًا: الدقائق إلى ساعات ودقائق",
+          "order": 6,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 9,
+            "printedPage": 9,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m02-l01-p06-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int m = 135;\nConsole.WriteLine(m / 60 + \":\" + m % 60);"
+            },
+            {
+              "id": "m02-l01-p06-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "الدقائق إلى ساعات ودقائق",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "كم ساعة ودقيقة في 135 دقيقة؟ نستعمل / و% معًا."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m02-l01-p06-g1",
+                  "text": [
+                    {
+                      "text": "القسمة بين عددين صحيحين تعطي الجزء الصحيح فقط: "
+                    },
+                    {
+                      "text": "135 / 60",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 2 ساعتان."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p06-g2",
+                  "text": [
+                    {
+                      "text": "باقي القسمة يعطي ما تبقى: "
+                    },
+                    {
+                      "text": "135 % 60",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 15 دقيقة (لأن 2 × 60 = 120، و135 − 120 = 15)."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p06-g3",
+                  "text": [
+                    {
+                      "text": "نطبع الساعات ثم «:» ثم الدقائق."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "2:15",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "/ تعطي «كم مرة كاملة»، و% تعطي «ماذا بقي». هذا الزوج يتكرر في تحويل الوقت والعملة والمنازل."
+            }
+          ]
+        },
+        {
+          "id": "899371-m02-l01-p07",
+          "title": "نحلّ معًا: شرط القسمة على عددين",
+          "order": 7,
+          "source": {
+            "kind": "book",
+            "sourceId": "899371",
+            "pdfPageStart": 9,
+            "printedPage": 9,
+            "sourceNote": "إثراء: نحلّ معًا — مثال موازٍ لملخص الفصل (ليس من الكتاب)"
+          },
+          "blocks": [
+            {
+              "id": "m02-l01-p07-code",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "int n = 28;\nConsole.WriteLine(n % 2 == 0 && n % 7 == 0);"
+            },
+            {
+              "id": "m02-l01-p07-guided",
+              "type": "guided",
+              "origin": "teacher-enrichment",
+              "guidedType": "reveal",
+              "version": 1,
+              "title": "شرط القسمة على عددين",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true
+              },
+              "prompt": [
+                {
+                  "text": "هل 28 عدد زوجي ويقبل القسمة على 7؟ نكتب الشرط ونقيّمه."
+                }
+              ],
+              "steps": [
+                {
+                  "id": "m02-l01-p07-g1",
+                  "text": [
+                    {
+                      "text": "«زوجي» يعني الباقي من القسمة على 2 صفر: "
+                    },
+                    {
+                      "text": "n % 2 == 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 28 % 2 = 0 ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p07-g2",
+                  "text": [
+                    {
+                      "text": "«يقبل القسمة على 7»: "
+                    },
+                    {
+                      "text": "n % 7 == 0",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← 28 % 7 = 0 ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                },
+                {
+                  "id": "m02-l01-p07-g3",
+                  "text": [
+                    {
+                      "text": "«و» بين الشرطين تعني &&: "
+                    },
+                    {
+                      "text": "True && True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": " ← "
+                    },
+                    {
+                      "text": "True",
+                      "style": "code",
+                      "dir": "ltr"
+                    },
+                    {
+                      "text": "."
+                    }
+                  ]
+                }
+              ],
+              "result": [
+                {
+                  "text": "يطبع البرنامج: "
+                },
+                {
+                  "text": "True",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ],
+              "explanation": "«يقبل القسمة على k» تُكتب دائمًا `n % k == 0`."
             }
           ]
         }
