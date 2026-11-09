@@ -8,16 +8,16 @@
 //      origin-"book" block with all its fields, in order);
 //   2. each module's book pages keep their order (no book page moved, dropped or inserted);
 //   3. a page that is not in the lock carries no book block (new pages are enrichment-only, e.g. «تدريبات الوحدة»);
-//   4. the book ships no drawing (its two question figures are tables, decision P2-c).
+//   4. every drawing of the book (the chapter-10 matrices, P3-c) keeps its exact bytes, and none is added or removed.
 import { describe, it, expect } from "vitest";
-import { existsSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import manifest from "./manifest";
 import lock from "./book-lock.json";
 import { loadBundledModuleContent } from "../bundledModules";
 import type { ContentModule } from "../types";
 // @ts-expect-error — plain ESM helper shared with the lock writer (scripts/book-lock.mjs); untyped on purpose.
-import { buildBookLock, bookPageFingerprint, bookBlocks } from "../../../../scripts/book-lock.mjs";
+import { buildBookLock, bookPageFingerprint, bookBlocks, sha256 } from "../../../../scripts/book-lock.mjs";
 
 const CID = "899371";
 const assetDir = fileURLToPath(new URL("../../../../api/src/data/content-assets/learning/" + CID + "/", import.meta.url));
@@ -32,10 +32,10 @@ async function loadAll(): Promise<ContentModule[]> {
 const sorted = <T extends { order: number }>(xs: T[]) => [...xs].sort((a, b) => a.order - b.order);
 
 describe("899371 — book lock (the converted book never changes)", () => {
-  it("the lock covers the converted book: modules m00–m04 (P2) and every one of their 79 pages", () => {
+  it("the lock covers the whole book: modules m00–m12 and every one of their 194 pages", () => {
     expect(LOCK.courseId).toBe(CID);
     expect(Object.keys(LOCK.order)).toEqual(manifest.modules.map(m => m.id));
-    expect(Object.keys(LOCK.pages)).toHaveLength(79);
+    expect(Object.keys(LOCK.pages)).toHaveLength(194);
   });
 
   it("every locked book page is unchanged — same identity, titles, order, source and book blocks", async () => {
@@ -64,8 +64,10 @@ describe("899371 — book lock (the converted book never changes)", () => {
     expect(offenders).toEqual([]);
   }, 30000);
 
-  it("the book ships no drawing", () => {
-    expect(LOCK.assets).toEqual({});
-    expect(existsSync(assetDir)).toBe(false);
+  it("every drawing keeps its exact bytes, and none is added or removed", () => {
+    const files = readdirSync(assetDir).sort();
+    expect(files).toHaveLength(7);
+    expect(files).toEqual(Object.keys(LOCK.assets));
+    for (const f of files) expect(sha256(readFileSync(assetDir + f)), f).toBe(LOCK.assets[f]);
   });
 });

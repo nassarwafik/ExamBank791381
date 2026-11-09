@@ -59,11 +59,11 @@ describe("registry — the summary booklet course 791381s", () => {
     expect(() => validateLearningModuleIds("791381", ["791381s-m01"])).toThrow();
     expect(canonicalizeLearningModuleIds("791381s", ["791381s-m37", "791381s-m05", "791381-m05"])).toEqual(["791381s-m05"]);
   });
-  it("899371 P2: the C# book's ids are its own — m00–m04 today; a 791381 id or a not-yet-converted chapter is refused", () => {
-    expect(listLearningCourses().find(c => c.courseId === "899371").modules.map(m => m.moduleId)).toEqual(["899371-m00", "899371-m01", "899371-m02", "899371-m03", "899371-m04"]);
-    expect(validateLearningModuleIds("899371", ["899371-m04", "899371-m00"])).toEqual(["899371-m00", "899371-m04"]);
+  it("899371: the C# book's ids are its own — m00–m12 (P2 + P3); a 791381 id or an id past the book is refused", () => {
+    expect(listLearningCourses().find(c => c.courseId === "899371").modules.map(m => m.moduleId)).toEqual(Array.from({ length: 13 }, (_, n) => "899371-m" + String(n).padStart(2, "0")));
+    expect(validateLearningModuleIds("899371", ["899371-m12", "899371-m00"])).toEqual(["899371-m00", "899371-m12"]);
     expect(() => validateLearningModuleIds("899371", ["791381-m01"])).toThrow();
-    expect(() => validateLearningModuleIds("899371", ["899371-m05"])).toThrow();
+    expect(() => validateLearningModuleIds("899371", ["899371-m13"])).toThrow();
     expect(() => validateLearningModuleIds("791381", ["899371-m01"])).toThrow();
   });
 });

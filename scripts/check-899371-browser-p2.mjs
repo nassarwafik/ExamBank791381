@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// 899371 P2 (docs/enterprise-899371-learning-plan.md §14) — the course «أسس علم الحاسوب» in a REAL Chromium on the production build,
+// 899371 P2 + P3 (docs/enterprise-899371-learning-plan.md §14, §15) — the course «أسس علم الحاسوب» in a REAL Chromium on the production build,
 // next to the REAL API in process (browser-harness/learning-l8-api.cjs, the L.8 harness). Certification only; nothing is deployed.
 //
-//   1. TEACHER: the library shows the card (grade 11, 2026–2027) → the overview lists the six sections, b3–b5 «قريبًا» (not
-//      converted yet) → the reader opens the first assignment page: the C# panel loads and shows the module body's code EXACTLY
-//      (compared with the served body); the page wears the course skin; the chapter-4 figure is a table; the opener shows the title.
+//   1. TEACHER: the library shows the card (grade 11, 2026–2027) → the overview lists the six sections, each open or «قريبًا»
+//      exactly as the manifest says (P3: all open) → the reader opens the first assignment page: the C# panel loads and shows the
+//      module body's code EXACTLY (compared with the served body); the page wears the course skin; the chapter-4 figure is a table;
+//      the opener shows the title; a chapter-10 drawing loads through the protected, signed /api/content-asset URL (P3-c).
 //   2. STUDENT (publication gate): a class with only m00–m01 published → the student reads an m01 page; an m02 body is refused (403).
 //   3. axe-core (WCAG 2.1 A/AA) on the overview and on a code page at 390 (touch) and 1440, light and «داكن»: no serious / critical
 //      violation; no page overflow; on touch every visible control ≥ 44 × 44.
@@ -86,8 +87,10 @@ console.log("1. teacher: library → overview → reader");
   await page.waitForFunction(() => !document.querySelector(".eb-lm-batches-status"), null, { timeout: 10000 });
   const sections = await page.evaluate(() => [...document.querySelectorAll("li.eb-lm-batch")].map(li => ({ text: (li.textContent || "").replace(/\s+/g, " ").trim(), open: li.classList.contains("eb-lm-batch--interactive") })));
   const state = sections.map(x => (x.open ? "open" : "soon")).join(",");
-  check(sections.length === 6 && state === "open,open,open,soon,soon,soon" && sections.slice(3).every(x => x.text.includes("قريبًا")),
-    "the overview: المقدمة · الأساسيات · الشرط والتكرار open; العمليات والنصوص · المصفوفات · الكائنات «قريبًا» (" + state + ")");
+  const manifestSrc = fs.readFileSync(path.join(root, "src/learning/content", CID, "manifest.ts"), "utf8");
+  const expectedState = [...manifestSrc.matchAll(/"moduleIds": \[([^\]]*)\]/g)].map(m => (m[1].trim() ? "open" : "soon")).join(",");
+  check(sections.length === 6 && state === expectedState && sections.every(x => x.open || x.text.includes("قريبًا")),
+    "the overview: the six sections open / «قريبًا» exactly as the manifest says (" + state + ")");
   await shot(page, "p2-overview-1440");
 
   await page.goto(origin + "/#/learning/" + CID + "/read/899371-m01-l02-p01");
@@ -110,6 +113,15 @@ console.log("1. teacher: library → overview → reader");
   await page.locator(".learning-reader-table td", { hasText: "c = 5" }).first().waitFor({ timeout: 15000 }).catch(() => {});
   const fig = await page.evaluate(() => [...document.querySelectorAll(".learning-reader-table th, .learning-reader-table td")].map(c => c.textContent.trim()));
   check(fig.includes("3 < a") && fig.includes("c = 5") && fig.includes("b = 7"), "chapter 4, question 10: the figure is a table (3 < a · c = 5 · b = 7)");
+  await page.goto(origin + "/#/learning/" + CID + "/read/899371-m10-l03-p01");
+  await page.reload();
+  const drawn = await page.locator(".learning-reader-page img").first().waitFor({ timeout: 15000 }).then(async () => {
+    await page.waitForFunction(() => { const i = document.querySelector(".learning-reader-page img"); return i && i.complete; }, null, { timeout: 15000 });
+    return page.evaluate(() => { const i = document.querySelector(".learning-reader-page img"); return { w: i.naturalWidth, signed: i.getAttribute("src").startsWith("/api/content-asset?"), alt: i.getAttribute("alt") || "" }; });
+  }, () => null);
+  check(!!drawn && drawn.w > 0 && drawn.signed && drawn.alt.includes("9"), "chapter 10: the matrix drawing loads through the signed /api/content-asset URL, with its alt" + (drawn ? " (" + drawn.w + " px)" : ""));
+  await shot(page, "p3-drawing-1440");
+
   await page.goto(origin + "/#/learning/" + CID + "/read/899371-m01-l00-p01");
   await page.reload();   // a fresh load reads the page from the URL (an outside hash change does not move an open Reader)
   const opener = await page.locator(".learning-reader-page", { hasText: "أوامر الطباعة والمتغيرات" }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
@@ -146,11 +158,12 @@ const TARGETS = () => {
 };
 for (const v of [{ width: 390, height: 844, touch: true }, { width: 1440, height: 900, touch: false }]) {
   for (const readTheme of ["light", "dark"]) {
-    for (const [name, hash] of [["overview", "/#/learning/" + CID], ["code page", "/#/learning/" + CID + "/read/899371-m02-l03-p06"]]) {
+    for (const [name, hash] of [["overview", "/#/learning/" + CID], ["code page", "/#/learning/" + CID + "/read/899371-m02-l03-p06"], ["drawing page", "/#/learning/" + CID + "/read/899371-m10-l03-p01"]]) {
       const { ctx, page } = await session("teacher", { width: v.width, height: v.height }, { touch: v.touch, readTheme });
       await page.goto(origin + hash);
       if (name === "overview") { await page.locator("li.eb-lm-batch").first().waitFor({ timeout: 15000 }); await page.waitForFunction(() => !document.querySelector(".eb-lm-batches-status"), null, { timeout: 10000 }); }
       else { await readerReady(page); await page.getByRole("button", { name: "نسخ الكود" }).first().waitFor({ timeout: 15000 }); }
+      if (name === "drawing page") await page.locator(".learning-reader-page img").first().waitFor({ timeout: 15000 });
       await page.waitForTimeout(400);
       await page.evaluate(axeSource + "\n;0");   // evaluated, not an inline <script>: the production CSP stays in force (as L.8)
       const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length));

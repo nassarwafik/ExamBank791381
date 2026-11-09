@@ -214,7 +214,15 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "899371-m01", title: "الطباعة والمتغيرات", order: 1 },
       { moduleId: "899371-m02", title: "العوامل والتعابير المنطقية", order: 2 },
       { moduleId: "899371-m03", title: "المكتبة الرياضية", order: 3 },
-      { moduleId: "899371-m04", title: "جملة الشرط", order: 4 }
+      { moduleId: "899371-m04", title: "جملة الشرط", order: 4 },
+      { moduleId: "899371-m05", title: "جملة التكرار for", order: 5 },
+      { moduleId: "899371-m06", title: "جملة التكرار while", order: 6 },
+      { moduleId: "899371-m07", title: "العمليات", order: 7 },
+      { moduleId: "899371-m08", title: "النصوص", order: 8 },
+      { moduleId: "899371-m09", title: "المصفوفات", order: 9 },
+      { moduleId: "899371-m10", title: "مصفوفة ثنائية الابعاد", order: 10 },
+      { moduleId: "899371-m11", title: "الكائنات", order: 11 },
+      { moduleId: "899371-m12", title: "الكلمة الختامية", order: 12 }
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m29|pages|lessons|blocks|answer|pdf/i);
   });

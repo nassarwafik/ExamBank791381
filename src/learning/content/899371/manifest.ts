@@ -1115,6 +1115,1645 @@ const manifest: LearningCourseManifest = {
           ]
         }
       ]
+    },
+    {
+      "id": "899371-m05",
+      "title": "جملة التكرار for",
+      "order": 5,
+      "lessons": [
+        {
+          "id": "899371-m05-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m05-l00-p01",
+              "title": "عن جملة التكرار for في لغة #C",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "¶831"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l01",
+          "title": "جملة التكرار for",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m05-l01-p01",
+              "title": "ما هي حلقة التكرار for؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "¶832–842"
+              }
+            },
+            {
+              "id": "899371-m05-l01-p02",
+              "title": "أمثلة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "¶843–925"
+              }
+            },
+            {
+              "id": "899371-m05-l01-p03",
+              "title": "تمارين تدريبية",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "¶926–931"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l02",
+          "title": "الوظيفة الخامسة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m05-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 45,
+                "printedPage": 45,
+                "sourceNote": "¶932–952"
+              }
+            },
+            {
+              "id": "899371-m05-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 45,
+                "printedPage": 45,
+                "sourceNote": "¶953–984"
+              }
+            },
+            {
+              "id": "899371-m05-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 45,
+                "printedPage": 45,
+                "sourceNote": "¶985–1007"
+              }
+            },
+            {
+              "id": "899371-m05-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 45,
+                "printedPage": 45,
+                "sourceNote": "¶1008–1042"
+              }
+            },
+            {
+              "id": "899371-m05-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 45,
+                "printedPage": 45,
+                "sourceNote": "¶1043–1060"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m05-l03",
+          "title": "الوظيفة الخامسة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m05-l03-p01",
+              "title": "الأسئلة 1–2",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1061–1063"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p02",
+              "title": "الأسئلة 3–4",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1064–1066"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p03",
+              "title": "الأسئلة 5–6",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1067–1068"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p04",
+              "title": "السؤال 7",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1069"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p05",
+              "title": "السؤال 8",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1070"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p06",
+              "title": "السؤال 9",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1071"
+              }
+            },
+            {
+              "id": "899371-m05-l03-p07",
+              "title": "السؤال 10",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 49,
+                "printedPage": 49,
+                "sourceNote": "¶1072–1079"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m06",
+      "title": "جملة التكرار while",
+      "order": 6,
+      "lessons": [
+        {
+          "id": "899371-m06-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m06-l00-p01",
+              "title": "حلقة while في لغة C#",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "¶1080"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l01",
+          "title": "جملة التكرار while",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m06-l01-p01",
+              "title": "ما هي حلقة while؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "¶1081–1087"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p02",
+              "title": "أمثلة توضيحية",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "¶1088–1124"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p03",
+              "title": "الفرق بين while و do-while",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "¶1125–1127"
+              }
+            },
+            {
+              "id": "899371-m06-l01-p04",
+              "title": "تمارين محلولة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "¶1128–1174"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l02",
+          "title": "الوظيفة السادسة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m06-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 57,
+                "printedPage": 57,
+                "sourceNote": "¶1175–1201"
+              }
+            },
+            {
+              "id": "899371-m06-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 57,
+                "printedPage": 57,
+                "sourceNote": "¶1202–1227"
+              }
+            },
+            {
+              "id": "899371-m06-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 57,
+                "printedPage": 57,
+                "sourceNote": "¶1228–1249"
+              }
+            },
+            {
+              "id": "899371-m06-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 57,
+                "printedPage": 57,
+                "sourceNote": "¶1250–1270"
+              }
+            },
+            {
+              "id": "899371-m06-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 57,
+                "printedPage": 57,
+                "sourceNote": "¶1271–1298"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l03",
+          "title": "الوظيفة السادسة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m06-l03-p01",
+              "title": "الأسئلة 1–2",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 61,
+                "printedPage": 61,
+                "sourceNote": "¶1299–1303"
+              }
+            },
+            {
+              "id": "899371-m06-l03-p02",
+              "title": "السؤال 3",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 61,
+                "printedPage": 61,
+                "sourceNote": "¶1304–1307"
+              }
+            },
+            {
+              "id": "899371-m06-l03-p03",
+              "title": "السؤال 4",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 61,
+                "printedPage": 61,
+                "sourceNote": "¶1308–1309"
+              }
+            },
+            {
+              "id": "899371-m06-l03-p04",
+              "title": "السؤال 5",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 61,
+                "printedPage": 61,
+                "sourceNote": "¶1310–1316"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m07",
+      "title": "العمليات",
+      "order": 7,
+      "lessons": [
+        {
+          "id": "899371-m07-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m07-l00-p01",
+              "title": "الفصل السابع: العمليات (الدوال)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1317"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l01",
+          "title": "العمليات",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m07-l01-p01",
+              "title": "ما هي العملية (الدالة)؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1318–1325"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p02",
+              "title": "كيف نكتب عملية؟",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1326–1358"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p03",
+              "title": "أنواع إرسال القيم",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1359–1373"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p04",
+              "title": "مثال 1: حساب عدد الأعداد فوق 90",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1374–1397"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p05",
+              "title": "أسئلة تتبع بسيطة للطلاب",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1398–1452"
+              }
+            },
+            {
+              "id": "899371-m07-l01-p06",
+              "title": "نصائح للطلاب",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "¶1453–1461"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l02",
+          "title": "الوظيفة السابعة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m07-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 68,
+                "printedPage": 68,
+                "sourceNote": "¶1462–1480"
+              }
+            },
+            {
+              "id": "899371-m07-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 68,
+                "printedPage": 68,
+                "sourceNote": "¶1481–1510"
+              }
+            },
+            {
+              "id": "899371-m07-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 68,
+                "printedPage": 68,
+                "sourceNote": "¶1511–1541"
+              }
+            },
+            {
+              "id": "899371-m07-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 68,
+                "printedPage": 68,
+                "sourceNote": "¶1542–1584"
+              }
+            },
+            {
+              "id": "899371-m07-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 68,
+                "printedPage": 68,
+                "sourceNote": "¶1585–1612"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m07-l03",
+          "title": "الوظيفة السابعة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m07-l03-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1613–1640"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1641–1654"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1655–1678"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1679–1698"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1699–1719"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p06",
+              "title": "السؤال 6",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1720–1743"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p07",
+              "title": "السؤال 7",
+              "order": 7,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1744–1763"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p08",
+              "title": "السؤال 8",
+              "order": 8,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1764–1785"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p09",
+              "title": "السؤال 9",
+              "order": 9,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1786–1814"
+              }
+            },
+            {
+              "id": "899371-m07-l03-p10",
+              "title": "السؤال 10",
+              "order": 10,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 73,
+                "printedPage": 73,
+                "sourceNote": "¶1815–1845"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m08",
+      "title": "النصوص",
+      "order": 8,
+      "lessons": [
+        {
+          "id": "899371-m08-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m08-l00-p01",
+              "title": "الفصل 8 – النصوص (Strings)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1846"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l01",
+          "title": "النصوص",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m08-l01-p01",
+              "title": "ما هو النص؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1847–1848"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p02",
+              "title": "أهم العمليات والخصائص على النصوص",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1849–1888"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p03",
+              "title": "عمليات تُعيد نصوص جديدة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1889–1915"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p04",
+              "title": "تمارين وأمثلة تطبيقية مهمة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1916–1935"
+              }
+            },
+            {
+              "id": "899371-m08-l01-p05",
+              "title": "ملخص سريع",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "¶1936–1941"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l02",
+          "title": "الوظيفة الثامنة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m08-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 88,
+                "printedPage": 88,
+                "sourceNote": "¶1942–1959"
+              }
+            },
+            {
+              "id": "899371-m08-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 88,
+                "printedPage": 88,
+                "sourceNote": "¶1960–1975"
+              }
+            },
+            {
+              "id": "899371-m08-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 88,
+                "printedPage": 88,
+                "sourceNote": "¶1976–2002"
+              }
+            },
+            {
+              "id": "899371-m08-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 88,
+                "printedPage": 88,
+                "sourceNote": "¶2003–2027"
+              }
+            },
+            {
+              "id": "899371-m08-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 88,
+                "printedPage": 88,
+                "sourceNote": "¶2028–2071"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l03",
+          "title": "الوظيفة الثامنة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m08-l03-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 92,
+                "printedPage": 92,
+                "sourceNote": "¶2072–2084"
+              }
+            },
+            {
+              "id": "899371-m08-l03-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 92,
+                "printedPage": 92,
+                "sourceNote": "¶2085–2097"
+              }
+            },
+            {
+              "id": "899371-m08-l03-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 92,
+                "printedPage": 92,
+                "sourceNote": "¶2098–2112"
+              }
+            },
+            {
+              "id": "899371-m08-l03-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 92,
+                "printedPage": 92,
+                "sourceNote": "¶2113–2131"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m09",
+      "title": "المصفوفات",
+      "order": 9,
+      "lessons": [
+        {
+          "id": "899371-m09-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m09-l00-p01",
+              "title": "المصفوفات",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶5"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l01",
+          "title": "المصفوفات",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m09-l01-p01",
+              "title": "ما هي المصفوفة؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2132–2145"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p02",
+              "title": "كيفية تخزين المصفوفة في ذاكرة الحاسوب",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2146–2156"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p03",
+              "title": "الوصول لعناصر المصفوفة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2157–2183"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p04",
+              "title": "عمليات شائعة على المصفوفات",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2184–2220"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p05",
+              "title": "تمارين وأمثلة تطبيقية",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2221–2244"
+              }
+            },
+            {
+              "id": "899371-m09-l01-p06",
+              "title": "نصائح وأخطاء شائعة",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "¶2245–2249"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l02",
+          "title": "الوظيفة التاسعة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m09-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 100,
+                "printedPage": 100,
+                "sourceNote": "¶2250–2271"
+              }
+            },
+            {
+              "id": "899371-m09-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 100,
+                "printedPage": 100,
+                "sourceNote": "¶2272–2293"
+              }
+            },
+            {
+              "id": "899371-m09-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 100,
+                "printedPage": 100,
+                "sourceNote": "¶2294–2324"
+              }
+            },
+            {
+              "id": "899371-m09-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 100,
+                "printedPage": 100,
+                "sourceNote": "¶2325–2340"
+              }
+            },
+            {
+              "id": "899371-m09-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 100,
+                "printedPage": 100,
+                "sourceNote": "¶2341–2368"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m09-l03",
+          "title": "الوظيفة التاسعة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m09-l03-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2369–2377"
+              }
+            },
+            {
+              "id": "899371-m09-l03-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2378–2385"
+              }
+            },
+            {
+              "id": "899371-m09-l03-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2386–2396"
+              }
+            },
+            {
+              "id": "899371-m09-l03-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2397–2414"
+              }
+            },
+            {
+              "id": "899371-m09-l03-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2415–2438"
+              }
+            },
+            {
+              "id": "899371-m09-l03-p06",
+              "title": "السؤال 6",
+              "order": 6,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 104,
+                "printedPage": 104,
+                "sourceNote": "¶2439–2451"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m10",
+      "title": "مصفوفة ثنائية الابعاد",
+      "order": 10,
+      "lessons": [
+        {
+          "id": "899371-m10-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m10-l00-p01",
+              "title": "المصفوفات الثنائية الأبعاد",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "¶2452"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l01",
+          "title": "مصفوفة ثنائية الابعاد",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m10-l01-p01",
+              "title": "ما هي المصفوفة الثنائية الأبعاد؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "¶2453–2476"
+              }
+            },
+            {
+              "id": "899371-m10-l01-p02",
+              "title": "أمثلة تعليمية مفيدة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "¶2477–2500"
+              }
+            },
+            {
+              "id": "899371-m10-l01-p03",
+              "title": "تمارين تطبيقية مقترحة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "¶2501–2525"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l02",
+          "title": "الوظيفة العاشرة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m10-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 111,
+                "printedPage": 111,
+                "sourceNote": "¶2526–2549"
+              }
+            },
+            {
+              "id": "899371-m10-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 111,
+                "printedPage": 111,
+                "sourceNote": "¶2550–2572"
+              }
+            },
+            {
+              "id": "899371-m10-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 111,
+                "printedPage": 111,
+                "sourceNote": "¶2573–2597"
+              }
+            },
+            {
+              "id": "899371-m10-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 111,
+                "printedPage": 111,
+                "sourceNote": "¶2598–2619"
+              }
+            },
+            {
+              "id": "899371-m10-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 111,
+                "printedPage": 111,
+                "sourceNote": "¶2620–2641"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l03",
+          "title": "الوظيفة العاشرة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m10-l03-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 115,
+                "printedPage": 115,
+                "sourceNote": "¶2642–2650"
+              }
+            },
+            {
+              "id": "899371-m10-l03-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 115,
+                "printedPage": 115,
+                "sourceNote": "¶2651–2660"
+              }
+            },
+            {
+              "id": "899371-m10-l03-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 115,
+                "printedPage": 115,
+                "sourceNote": "¶2661–2672"
+              }
+            },
+            {
+              "id": "899371-m10-l03-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 115,
+                "printedPage": 115,
+                "sourceNote": "¶2673–2694"
+              }
+            },
+            {
+              "id": "899371-m10-l03-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 115,
+                "printedPage": 115,
+                "sourceNote": "¶2695–2723"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m11",
+      "title": "الكائنات",
+      "order": 11,
+      "lessons": [
+        {
+          "id": "899371-m11-l00",
+          "title": "افتتاحية الوحدة",
+          "order": 0,
+          "pages": [
+            {
+              "id": "899371-m11-l00-p01",
+              "title": "ملخّص الكائنات",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "¶2724"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l01",
+          "title": "الكائنات",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m11-l01-p01",
+              "title": "الأساسيات: الفئة والكائن والتغليف",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "¶2725–2739"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p02",
+              "title": "مثال أساسي (Get/Set يدوي بدون خصائص تلقائية)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "¶2740–2788"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p03",
+              "title": "كائنات مُركّبة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "¶2789–2882"
+              }
+            },
+            {
+              "id": "899371-m11-l01-p04",
+              "title": "نقاط يجب تذكّرها",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "¶2883–2896"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l02",
+          "title": "الوظيفة الحادية عشرة بيتية",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899371-m11-l02-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 131,
+                "printedPage": 131,
+                "sourceNote": "¶2897–2905"
+              }
+            },
+            {
+              "id": "899371-m11-l02-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 131,
+                "printedPage": 131,
+                "sourceNote": "¶2906–2916"
+              }
+            },
+            {
+              "id": "899371-m11-l02-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 131,
+                "printedPage": 131,
+                "sourceNote": "¶2917–2942"
+              }
+            },
+            {
+              "id": "899371-m11-l02-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 131,
+                "printedPage": 131,
+                "sourceNote": "¶2943–2952"
+              }
+            },
+            {
+              "id": "899371-m11-l02-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 131,
+                "printedPage": 131,
+                "sourceNote": "¶2953–2961"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l03",
+          "title": "الوظيفة الحادية عشرة برمجة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899371-m11-l03-p01",
+              "title": "السؤال 1",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 138,
+                "printedPage": 138,
+                "sourceNote": "¶2962–2973"
+              }
+            },
+            {
+              "id": "899371-m11-l03-p02",
+              "title": "السؤال 2",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 138,
+                "printedPage": 138,
+                "sourceNote": "¶2974–2997"
+              }
+            },
+            {
+              "id": "899371-m11-l03-p03",
+              "title": "السؤال 3",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 138,
+                "printedPage": 138,
+                "sourceNote": "¶2998–3015"
+              }
+            },
+            {
+              "id": "899371-m11-l03-p04",
+              "title": "السؤال 4",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 138,
+                "printedPage": 138,
+                "sourceNote": "¶3016–3026"
+              }
+            },
+            {
+              "id": "899371-m11-l03-p05",
+              "title": "السؤال 5",
+              "order": 5,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 138,
+                "printedPage": 138,
+                "sourceNote": "¶3027–3031"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899371-m12",
+      "title": "الكلمة الختامية",
+      "order": 12,
+      "lessons": [
+        {
+          "id": "899371-m12-l01",
+          "title": "الكلمة الختامية",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899371-m12-l01-p01",
+              "title": "الكلمة الختامية",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 140,
+                "printedPage": 140,
+                "sourceNote": "¶3032–3046"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "batches": [
@@ -1138,23 +2777,34 @@ const manifest: LearningCourseManifest = {
       "id": "b2",
       "label": "الشرط والتكرار",
       "moduleIds": [
-        "899371-m04"
+        "899371-m04",
+        "899371-m05",
+        "899371-m06"
       ]
     },
     {
       "id": "b3",
       "label": "العمليات والنصوص",
-      "moduleIds": []
+      "moduleIds": [
+        "899371-m07",
+        "899371-m08"
+      ]
     },
     {
       "id": "b4",
       "label": "المصفوفات",
-      "moduleIds": []
+      "moduleIds": [
+        "899371-m09",
+        "899371-m10"
+      ]
     },
     {
       "id": "b5",
       "label": "الكائنات",
-      "moduleIds": []
+      "moduleIds": [
+        "899371-m11",
+        "899371-m12"
+      ]
     }
   ]
 };

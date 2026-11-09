@@ -105,13 +105,21 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "791381s-m35",
     "791381s-m36",
   ],
-  // 899371 P2: the opening and chapters 1–4 (batch A); P3 converts chapters 5–11 and the closing word.
+  // 899371: the opening (m00), chapters 1–11 (m01–m11; P2 m00–m04, P3 m05–m12) and the closing word (m12).
   "899371": [
     "899371-m00",
     "899371-m01",
     "899371-m02",
     "899371-m03",
     "899371-m04",
+    "899371-m05",
+    "899371-m06",
+    "899371-m07",
+    "899371-m08",
+    "899371-m09",
+    "899371-m10",
+    "899371-m11",
+    "899371-m12",
   ],
 };
 
