@@ -1,0 +1,341 @@
+{
+  "libraryItemId": "CL899371-01",
+  "title": "مختبر البرمجة — الفصل 1: الطباعة والمتغيرات",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 1 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 4,
+  "totalMarks": 40,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 4,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "8db14cbe5c662aace94be149b91dbb57c48c78d3087005c63f45aa215650b5fd",
+  "contentHash": "6cf4e280fdd5d8c5184500a48f405e8f91bcc8ea558908d9b278b1f6e02fccdd",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m01.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-01",
+    "title": "مختبر البرمجة — الفصل 1: الطباعة والمتغيرات",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-01-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-01",
+        "sourceQuestionId": "c01-p-q3",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "مربّع عدد\n\nاكتب برنامجًا يقرأ عددًا صحيحًا من المستخدم، ثم يطبع مربّع ذلك العدد فقط.\n(مبني على السؤال 3 من وظيفة البرمجة الأولى.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "7\n",
+              "sampleOutput": "49\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "9\n",
+              "expectedOutput": "81\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "-4\n",
+              "expectedOutput": "16\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "0\n",
+              "expectedOutput": "0\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "12\n",
+              "expectedOutput": "144\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "100\n",
+              "expectedOutput": "10000\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n * n);\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-01-Q02",
+        "origin": "imported",
+        "sourceId": "CL899371-01",
+        "sourceQuestionId": "c01-p-q6",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "مجموع منازل عدد ثلاثي\n\nيقرأ البرنامج عددًا ثلاثي المنازل، ثم يحسب مجموع منازله ويطبعه فقط (مثلًا 123 ← 6).\n(مبني على السؤال 6 من وظيفة البرمجة الأولى.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "123\n",
+              "sampleOutput": "6\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "999\n",
+              "expectedOutput": "27\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "100\n",
+              "expectedOutput": "1\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "507\n",
+              "expectedOutput": "12\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "381\n",
+              "expectedOutput": "12\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "250\n",
+              "expectedOutput": "7\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n / 100 + n / 10 % 10 + n % 10);\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-01-Q03",
+        "origin": "imported",
+        "sourceId": "CL899371-01",
+        "sourceQuestionId": "c01-p-q8",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "منازل عدد رباعي\n\nاكتب برنامجًا يقرأ عددًا رباعي المنازل، ثم يطبع في السطر الأول مجموع منازله، وفي السطر الثاني مجموع آخر منزلتين (العشرات والآحاد).\n(مبني على السؤال 8 من وظيفة البرمجة الأولى.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "1234\n",
+              "sampleOutput": "10\n7\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "9999\n",
+              "expectedOutput": "36\n18\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "1000\n",
+              "expectedOutput": "1\n0\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "4071\n",
+              "expectedOutput": "12\n8\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "5608\n",
+              "expectedOutput": "19\n8\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "2024\n",
+              "expectedOutput": "8\n6\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d1 = n / 1000, d2 = n / 100 % 10, d3 = n / 10 % 10, d4 = n % 10;\n        Console.WriteLine(d1 + d2 + d3 + d4);\n        Console.WriteLine(d3 + d4);\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-01-Q04",
+        "origin": "imported",
+        "sourceId": "CL899371-01",
+        "sourceQuestionId": "c01-p-q9",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "بناء عدد من أربع منازل\n\nيقرأ البرنامج في السطر الأول عددًا ثلاثي المنازل، وفي السطر الثاني منزلة جديدة (رقمًا من 0 إلى 9). يبني البرنامج عددًا جديدًا من أربع منازل، المنزلة الجديدة هي آخر منزلة فيه (منزلة الآحاد)، ثم يطبعه فقط.\nمثال: 123 و4 ← 1234.\n(مبني على السؤال 9 من وظيفة البرمجة الأولى.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "123\n4\n",
+              "sampleOutput": "1234\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "900\n0\n",
+              "expectedOutput": "9000\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "507\n9\n",
+              "expectedOutput": "5079\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "100\n1\n",
+              "expectedOutput": "1001\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "386\n2\n",
+              "expectedOutput": "3862\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d = int.Parse(Console.ReadLine());\n        Console.WriteLine(n * 10 + d);\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 40,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

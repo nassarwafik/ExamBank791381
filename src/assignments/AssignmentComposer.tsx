@@ -97,7 +97,7 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
         <h3 className="eb-subheading" ref={stepHeadingRef} tabIndex={-1}>مصدر الواجب</h3>
         <div className="eb-segmented" role="group" aria-label="مصدر محتوى الواجب">
           {p.sources?.own !== false && <button type="button" aria-pressed={p.sourceMode === "mine"} onClick={() => p.onSourceMode("mine")}>امتحاناتي</button>}
-          {p.sources?.library !== false && <button type="button" aria-pressed={p.sourceMode === "library"} onClick={() => p.onSourceMode("library")}>مكتبة 791381</button>}
+          {p.sources?.library !== false && <button type="button" aria-pressed={p.sourceMode === "library"} onClick={() => p.onSourceMode("library")}>المكتبة الرسمية</button>}
         </div>
         <div className="assignment-source-card eb-source-card">
           <div className="eb-source-card-text"><span>المحتوى المختار</span><strong>{p.sourceExam?.title || "لم يتم اختيار محتوى"}</strong><small>{p.sourceCount ? p.sourceCount + " سؤال" : "اختر محتوى الواجب"}{p.sourceExam?.totalMarks ? " · " + p.sourceExam.totalMarks + " علامة" : ""}</small></div>
@@ -114,7 +114,7 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
         </div>
         {p.sourceMode === "library" && (
           <div className="library-picker eb-library-picker">
-            {p.libraryLoading ? <div className="platform-loading" role="status">جارٍ تحميل مكتبة 791381...</div> : <>
+            {p.libraryLoading ? <div className="platform-loading" role="status">جارٍ تحميل المكتبة الرسمية...</div> : <>
               <div className="library-picker-controls">
                 <label className="eb-field-inline eb-library-search">بحث<input className="library-search" value={p.librarySearch} onChange={e => p.onLibrarySearch(e.target.value)} placeholder="VLAN، DHCP، Subnet، CIDR..." /></label>
                 <div className="library-cat-chips eb-chip-group" role="group" aria-label="تصنيف المكتبة">

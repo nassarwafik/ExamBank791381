@@ -1,0 +1,76 @@
+{
+ "module": "m01",
+ "questions": [
+  {
+   "book": "c01-p-q3",
+   "title": "مربّع عدد",
+   "text": "اكتب برنامجًا يقرأ عددًا صحيحًا من المستخدم، ثم يطبع مربّع ذلك العدد فقط.\n(مبني على السؤال 3 من وظيفة البرمجة الأولى.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n * n);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n * 2);\n    }\n}\n",
+   "public": [
+    "7\n"
+   ],
+   "hidden": [
+    "9\n",
+    "-4\n",
+    "0\n",
+    "12\n",
+    "100\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c01-p-q6",
+   "title": "مجموع منازل عدد ثلاثي",
+   "text": "يقرأ البرنامج عددًا ثلاثي المنازل، ثم يحسب مجموع منازله ويطبعه فقط (مثلًا 123 ← 6).\n(مبني على السؤال 6 من وظيفة البرمجة الأولى.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n / 100 + n / 10 % 10 + n % 10);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Console.WriteLine(n / 100 + n % 10);\n    }\n}\n",
+   "public": [
+    "123\n"
+   ],
+   "hidden": [
+    "999\n",
+    "100\n",
+    "507\n",
+    "381\n",
+    "250\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c01-p-q8",
+   "title": "منازل عدد رباعي",
+   "text": "اكتب برنامجًا يقرأ عددًا رباعي المنازل، ثم يطبع في السطر الأول مجموع منازله، وفي السطر الثاني مجموع آخر منزلتين (العشرات والآحاد).\n(مبني على السؤال 8 من وظيفة البرمجة الأولى.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d1 = n / 1000, d2 = n / 100 % 10, d3 = n / 10 % 10, d4 = n % 10;\n        Console.WriteLine(d1 + d2 + d3 + d4);\n        Console.WriteLine(d3 + d4);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d1 = n / 1000, d2 = n / 100 % 10, d3 = n / 10 % 10, d4 = n % 10;\n        Console.WriteLine(d1 + d2 + d3 + d4);\n        Console.WriteLine(d1 + d2);\n    }\n}\n",
+   "public": [
+    "1234\n"
+   ],
+   "hidden": [
+    "9999\n",
+    "1000\n",
+    "4071\n",
+    "5608\n",
+    "2024\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c01-p-q9",
+   "title": "بناء عدد من أربع منازل",
+   "text": "يقرأ البرنامج في السطر الأول عددًا ثلاثي المنازل، وفي السطر الثاني منزلة جديدة (رقمًا من 0 إلى 9). يبني البرنامج عددًا جديدًا من أربع منازل، المنزلة الجديدة هي آخر منزلة فيه (منزلة الآحاد)، ثم يطبعه فقط.\nمثال: 123 و4 ← 1234.\n(مبني على السؤال 9 من وظيفة البرمجة الأولى.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d = int.Parse(Console.ReadLine());\n        Console.WriteLine(n * 10 + d);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int d = int.Parse(Console.ReadLine());\n        Console.WriteLine(d * 1000 + n);\n    }\n}\n",
+   "public": [
+    "123\n4\n"
+   ],
+   "hidden": [
+    "900\n0\n",
+    "507\n9\n",
+    "100\n1\n",
+    "386\n2\n"
+   ],
+   "version": 2
+  }
+ ]
+}

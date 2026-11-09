@@ -1,0 +1,405 @@
+{
+  "libraryItemId": "CL899371-07",
+  "title": "مختبر البرمجة — الفصل 7: العمليات",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 7 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 4,
+  "totalMarks": 40,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 4,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "bc6a0cf06a745dfbfde694e850553259c5a49c20001d40d6737f2b39d4c2b9a8",
+  "contentHash": "8989e880121ff258281473a920a247f7cfe5700f8e41d222fec497d700da4071",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m07.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-07",
+    "title": "مختبر البرمجة — الفصل 7: العمليات",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-07-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-07",
+        "sourceQuestionId": "c07-p-q1",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "عرض محل الكتب: مجموع السعرين الأعلى\n\nاكتب جسم العملية DiscountMinPrice التي تستقبل ثلاثة أسعار حقيقية موجبة ومختلفة، وتُعيد مجموع السعرين الأعلى بينها (الكتاب الأرخص مجانًا). الدالة Main مقفلة: تقرأ الأسعار الثلاثة وتطبع ما تعيده عمليتك.\n(مبني على القسم 1.1 من السؤال 1 في وظيفة البرمجة السابعة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "40\n25.5\n60\n",
+              "sampleOutput": "100\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static double DiscountMinPrice(double price1, double price2, double price3)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(DiscountMinPrice(a, b, c));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "10\n20\n30\n",
+              "expectedOutput": "50\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "99.5\n12\n45\n",
+              "expectedOutput": "144.5\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "5\n80\n70\n",
+              "expectedOutput": "150\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "11.75\n66.5\n33.25\n",
+              "expectedOutput": "99.75\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static double DiscountMinPrice(double price1, double price2, double price3)\n    {\n        double min = Math.Min(price1, Math.Min(price2, price3));\n        return price1 + price2 + price3 - min;\n    }\n\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(DiscountMinPrice(a, b, c));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-07-Q02",
+        "origin": "imported",
+        "sourceId": "CL899371-07",
+        "sourceQuestionId": "c07-p-q2",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "قناة الموسيقى: مستمع مراهق\n\nاكتب جسم العملية IsTeenListener التي تستقبل عمرًا (عدد صحيح موجب) وتُعيد true إذا كان العمر بين 15 و18 (شامل)، وإلا false. الدالة Main مقفلة: تقرأ العمر وتطبع ما تعيده عمليتك.\n(مبني على القسم 2.1 من السؤال 2 في وظيفة البرمجة السابعة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "16\n",
+              "sampleOutput": "True\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static bool IsTeenListener(int age)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(IsTeenListener(age));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "15\n",
+              "expectedOutput": "True\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "18\n",
+              "expectedOutput": "True\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "14\n",
+              "expectedOutput": "False\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "19\n",
+              "expectedOutput": "False\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "17\n",
+              "expectedOutput": "True\n",
+              "weight": 1
+            },
+            {
+              "id": "h6",
+              "input": "40\n",
+              "expectedOutput": "False\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static bool IsTeenListener(int age)\n    {\n        return age >= 15 && age <= 18;\n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(IsTeenListener(age));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-07-Q03",
+        "origin": "imported",
+        "sourceId": "CL899371-07",
+        "sourceQuestionId": "c07-p-q5",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "السائقون الجدد: السرعة المسموحة\n\nاكتب جسم العملية DriverMaxSpeed التي تستقبل عمر السائق، وعدد سنوات رخصته، والسرعة القصوى في المنطقة، وتُعيد السرعة القصوى المسموحة له: السائق الجديد (رخصته أقل من سنتين) الذي عمره أقل من 24 سنة يُسمح له بسرعة أقل بـ 10 من سرعة المنطقة؛ أي سائق آخر يُسمح له بسرعة المنطقة. الدالة Main مقفلة: تقرأ القيم الثلاث (كل قيمة في سطر) وتطبع ما تعيده عمليتك.\n(مبني على القسم 5.1 من السؤال 5 في وظيفة البرمجة السابعة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "19\n1\n90\n",
+              "sampleOutput": "80\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static int DriverMaxSpeed(int age, int years, int speedLimit)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        int years = int.Parse(Console.ReadLine());\n        int limit = int.Parse(Console.ReadLine());\n        Console.WriteLine(DriverMaxSpeed(age, years, limit));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "19\n2\n90\n",
+              "expectedOutput": "90\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "24\n1\n80\n",
+              "expectedOutput": "80\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "23\n0\n50\n",
+              "expectedOutput": "40\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "30\n5\n110\n",
+              "expectedOutput": "110\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "18\n1\n100\n",
+              "expectedOutput": "90\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static int DriverMaxSpeed(int age, int years, int speedLimit)\n    {\n        if (years < 2 && age < 24)\n            return speedLimit - 10;\n        return speedLimit;\n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        int years = int.Parse(Console.ReadLine());\n        int limit = int.Parse(Console.ReadLine());\n        Console.WriteLine(DriverMaxSpeed(age, years, limit));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-07-Q04",
+        "origin": "imported",
+        "sourceId": "CL899371-07",
+        "sourceQuestionId": "c07-p-q7",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "مسابقة علم الحاسوب: العلامات فوق 90\n\nاكتب جسم العملية GradesAbove90 التي تستقبل ثلاث علامات صحيحة بين 0 و100، وتُعيد عدد العلامات التي هي أعلى من 90. الدالة Main مقفلة: تقرأ العلامات الثلاث وتطبع ما تعيده عمليتك.\n(مبني على القسم 7.1 من السؤال 7 في وظيفة البرمجة السابعة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "95\n88\n100\n",
+              "sampleOutput": "2\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static int GradesAbove90(int grade1, int grade2, int grade3)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(GradesAbove90(a, b, c));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "90\n91\n92\n",
+              "expectedOutput": "2\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "100\n100\n100\n",
+              "expectedOutput": "3\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "0\n50\n90\n",
+              "expectedOutput": "0\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "91\n89\n90\n",
+              "expectedOutput": "1\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static int GradesAbove90(int grade1, int grade2, int grade3)\n    {\n        int count = 0;\n        if (grade1 > 90) count++;\n        if (grade2 > 90) count++;\n        if (grade3 > 90) count++;\n        return count;\n    }\n\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(GradesAbove90(a, b, c));\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 40,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

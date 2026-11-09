@@ -86,7 +86,7 @@ export default function AssignmentList(p: AssignmentListProps) {
   let empty: React.ReactNode = null;
   if (!p.loading && p.items.length === 0) {
     if (p.showArchived) empty = <EmptyState compact title="لا توجد واجبات مؤرشفة." description="الواجبات المؤرشفة تحتفظ بكل التسليمات والنتائج ويمكن استعادتها في أي وقت." />;
-    else if (!p.hasAnyInScope) empty = <EmptyState title="لا توجد واجبات بعد." description="أنشئ أول واجب من امتحان محفوظ أو من مكتبة 791381." action={can(ASSIGNMENT_CREATE_CAPS) ? <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}>إنشاء واجب</button> : undefined} />;
+    else if (!p.hasAnyInScope) empty = <EmptyState title="لا توجد واجبات بعد." description="أنشئ أول واجب من امتحان محفوظ أو من المكتبة الرسمية." action={can(ASSIGNMENT_CREATE_CAPS) ? <button type="button" className="eb-button is-primary is-small" onClick={p.onCreate}>إنشاء واجب</button> : undefined} />;
     else empty = <EmptyState compact title="لا توجد واجبات مطابقة." description="جرّب كلمة بحث أخرى أو غيّر مرشح الصف." />;
   }
   return (

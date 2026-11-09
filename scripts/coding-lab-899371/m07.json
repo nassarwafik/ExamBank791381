@@ -1,0 +1,152 @@
+{
+ "module": "m07",
+ "questions": [
+  {
+   "book": "c07-p-q1",
+   "title": "عرض محل الكتب: مجموع السعرين الأعلى",
+   "version": 3,
+   "text": "اكتب جسم العملية DiscountMinPrice التي تستقبل ثلاثة أسعار حقيقية موجبة ومختلفة، وتُعيد مجموع السعرين الأعلى بينها (الكتاب الأرخص مجانًا). الدالة Main مقفلة: تقرأ الأسعار الثلاثة وتطبع ما تعيده عمليتك.\n(مبني على القسم 1.1 من السؤال 1 في وظيفة البرمجة السابعة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static double DiscountMinPrice(double price1, double price2, double price3)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(DiscountMinPrice(a, b, c));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        double min = Math.Min(price1, Math.Min(price2, price3));\n        return price1 + price2 + price3 - min;\n"
+   },
+   "wrongGaps": {
+    "body": "        return price1 + price2;\n"
+   },
+   "public": [
+    "40\n25.5\n60\n"
+   ],
+   "hidden": [
+    "10\n20\n30\n",
+    "99.5\n12\n45\n",
+    "5\n80\n70\n",
+    "11.75\n66.5\n33.25\n"
+   ]
+  },
+  {
+   "book": "c07-p-q2",
+   "title": "قناة الموسيقى: مستمع مراهق",
+   "version": 3,
+   "text": "اكتب جسم العملية IsTeenListener التي تستقبل عمرًا (عدد صحيح موجب) وتُعيد true إذا كان العمر بين 15 و18 (شامل)، وإلا false. الدالة Main مقفلة: تقرأ العمر وتطبع ما تعيده عمليتك.\n(مبني على القسم 2.1 من السؤال 2 في وظيفة البرمجة السابعة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static bool IsTeenListener(int age)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(IsTeenListener(age));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        return age >= 15 && age <= 18;\n"
+   },
+   "wrongGaps": {
+    "body": "        return age > 15 && age < 18;\n"
+   },
+   "public": [
+    "16\n"
+   ],
+   "hidden": [
+    "15\n",
+    "18\n",
+    "14\n",
+    "19\n",
+    "17\n",
+    "40\n"
+   ]
+  },
+  {
+   "book": "c07-p-q5",
+   "title": "السائقون الجدد: السرعة المسموحة",
+   "version": 3,
+   "text": "اكتب جسم العملية DriverMaxSpeed التي تستقبل عمر السائق، وعدد سنوات رخصته، والسرعة القصوى في المنطقة، وتُعيد السرعة القصوى المسموحة له: السائق الجديد (رخصته أقل من سنتين) الذي عمره أقل من 24 سنة يُسمح له بسرعة أقل بـ 10 من سرعة المنطقة؛ أي سائق آخر يُسمح له بسرعة المنطقة. الدالة Main مقفلة: تقرأ القيم الثلاث (كل قيمة في سطر) وتطبع ما تعيده عمليتك.\n(مبني على القسم 5.1 من السؤال 5 في وظيفة البرمجة السابعة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static int DriverMaxSpeed(int age, int years, int speedLimit)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        int years = int.Parse(Console.ReadLine());\n        int limit = int.Parse(Console.ReadLine());\n        Console.WriteLine(DriverMaxSpeed(age, years, limit));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        if (years < 2 && age < 24)\n            return speedLimit - 10;\n        return speedLimit;\n"
+   },
+   "wrongGaps": {
+    "body": "        if (years <= 2 && age < 24)\n            return speedLimit - 10;\n        return speedLimit;\n"
+   },
+   "public": [
+    "19\n1\n90\n"
+   ],
+   "hidden": [
+    "19\n2\n90\n",
+    "24\n1\n80\n",
+    "23\n0\n50\n",
+    "30\n5\n110\n",
+    "18\n1\n100\n"
+   ]
+  },
+  {
+   "book": "c07-p-q7",
+   "title": "مسابقة علم الحاسوب: العلامات فوق 90",
+   "version": 3,
+   "text": "اكتب جسم العملية GradesAbove90 التي تستقبل ثلاث علامات صحيحة بين 0 و100، وتُعيد عدد العلامات التي هي أعلى من 90. الدالة Main مقفلة: تقرأ العلامات الثلاث وتطبع ما تعيده عمليتك.\n(مبني على القسم 7.1 من السؤال 7 في وظيفة البرمجة السابعة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static int GradesAbove90(int grade1, int grade2, int grade3)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(GradesAbove90(a, b, c));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        int count = 0;\n        if (grade1 > 90) count++;\n        if (grade2 > 90) count++;\n        if (grade3 > 90) count++;\n        return count;\n"
+   },
+   "wrongGaps": {
+    "body": "        int count = 0;\n        if (grade1 >= 90) count++;\n        if (grade2 >= 90) count++;\n        if (grade3 >= 90) count++;\n        return count;\n"
+   },
+   "public": [
+    "95\n88\n100\n"
+   ],
+   "hidden": [
+    "90\n91\n92\n",
+    "100\n100\n100\n",
+    "0\n50\n90\n",
+    "91\n89\n90\n"
+   ]
+  }
+ ]
+}

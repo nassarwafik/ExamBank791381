@@ -72,7 +72,7 @@ describe("P8-B1a fail-first — the «ready assignments» teacher's assignments 
     fireEvent.click(r.getByRole("button", { name: /إنشاء واجب/ }));
     const source = await r.findByRole("group", { name: "مصدر محتوى الواجب" });
     expect(within(source).queryByRole("button", { name: "امتحاناتي" })).toBeNull();
-    await waitFor(() => expect(within(source).getByRole("button", { name: "مكتبة 791381" }).getAttribute("aria-pressed")).toBe("true"));
+    await waitFor(() => expect(within(source).getByRole("button", { name: "المكتبة الرسمية" }).getAttribute("aria-pressed")).toBe("true"));
     await waitFor(() => expect(calls.some(c => c.url === "/api/exam-library")).toBe(true));
   });
 });
@@ -118,7 +118,7 @@ describe("P8-B1a — the assignments page shows only the actions the teacher's a
     fireEvent.click(r.getByRole("button", { name: /إنشاء واجب/ }));
     const source = await r.findByRole("group", { name: "مصدر محتوى الواجب" });
     expect(within(source).getByRole("button", { name: "امتحاناتي" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(source).getByRole("button", { name: "مكتبة 791381" })).toBeTruthy();
+    expect(within(source).getByRole("button", { name: "المكتبة الرسمية" })).toBeTruthy();
   });
   it("own exams but no builder: «امتحاناتي» stays (the open exam), the saved list is not read", async () => {
     const r = await mountAssignments(FULL_ASSIGN.filter(c => c !== "examBuilder.exam.edit"), false);

@@ -1,0 +1,116 @@
+{
+  "libraryItemId": "CL899371-02",
+  "title": "مختبر البرمجة — الفصل 2: العوامل والتعابير المنطقية",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 2 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 1,
+  "totalMarks": 10,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 1,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "54616465e79c1b5bcb9c60d88c0280b274db4a5d9e18a7c5ff3be21f27183dac",
+  "contentHash": "138a4d0669bca44181dd1b77cdc86dff8d9192e067cb01a69952e47350ed9e09",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m02.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-02",
+    "title": "مختبر البرمجة — الفصل 2: العوامل والتعابير المنطقية",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-02-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-02",
+        "sourceQuestionId": "c02-p-q5",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "مجموع وضرب ومتوسط\n\nاكتب برنامجًا يقرأ عددين صحيحين (كل عدد في سطر)، ثم يطبع على ثلاثة أسطر منفصلة باستخدام Console.WriteLine:\n• ناتج جمعهما\n• ناتج ضرب الأول في الثاني\n• المتوسط الحسابي لهما بدقة كاملة (اقسم على 2.0 لا على 2)\n(مبني على السؤال 5 من وظيفة البرمجة الثانية.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "4\n6\n",
+              "sampleOutput": "10\n24\n5\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "3\n4\n",
+              "expectedOutput": "7\n12\n3.5\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "-5\n2\n",
+              "expectedOutput": "-3\n-10\n-1.5\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "0\n0\n",
+              "expectedOutput": "0\n0\n0\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "100\n7\n",
+              "expectedOutput": "107\n700\n53.5\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "9\n9\n",
+              "expectedOutput": "18\n81\n9\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(a + b);\n        Console.WriteLine(a * b);\n        Console.WriteLine((a + b) / 2.0);\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 10,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

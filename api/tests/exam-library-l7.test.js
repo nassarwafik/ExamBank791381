@@ -17,6 +17,8 @@ const { handler, observed } = require("../src/functions/exam-library.js");
 // shared frozen; an unknown id never touches the disk; the teacher endpoint answers with a strong ETag, `private, no-cache` and a
 // 304 only after the builder check, under the shared observability wrapper; the student form of a training is computed once.
 
+// the 36 Book 791381 exams, then the 11 items of the 899371 coding lab «مختبر البرمجة» (P7)
+const WHOLE_LIBRARY = [...["F01", "F02", "F03", "F04", "F05", "F06"], ...Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0")), ...Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0"))];
 const BUILDER_OK = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }) };
 const BUILDER_NO = { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) };
 const get = (deps, id, headers = {}) => handler({ method: "GET", headers: { get: k => headers[k.toLowerCase()] ?? null }, params: id ? { id } : {} }, deps);
@@ -31,7 +33,7 @@ describe("L.7 — the library store reads each file once per process", () => {
   it("the catalog and every item are read from disk once, however often they are asked for", () => {
     const r = reads();
     const ids = store.readLibraryCatalog().map(e => e.libraryItemId);
-    expect(ids).toHaveLength(36);
+    expect(ids).toEqual(WHOLE_LIBRARY);
     for (let round = 0; round < 3; round++) { store.readLibraryCatalog(); for (const id of ids) expect(store.readLibraryItem(id).examSnapshot).toBeTruthy(); }
     const files = r.library();
     expect(files.filter(f => f === "catalog.json")).toHaveLength(1);
@@ -66,7 +68,7 @@ describe("L.7 — GET /api/exam-library: ETag, private revalidation, 304 after t
   it("the catalog: 200 with a strong ETag, `private, no-cache` and Vary; a matching If-None-Match is a 304 with no body", async () => {
     const r = await get(BUILDER_OK);
     expect(r.status).toBe(200);
-    expect(r.jsonBody.catalog).toHaveLength(36);
+    expect(r.jsonBody.catalog.map(e => e.libraryItemId)).toEqual(WHOLE_LIBRARY);
     expect(r.headers).toMatchObject({ "Cache-Control": "private, no-cache", Vary: "Authorization, x-builder-token" });
     expect(r.headers.ETag).toMatch(/^"[A-Za-z0-9_-]{22}"$/);
     const again = await get(BUILDER_OK, undefined, { "if-none-match": 'W/"x", ' + r.headers.ETag });

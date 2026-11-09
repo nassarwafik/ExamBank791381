@@ -1,0 +1,23 @@
+{
+ "module": "m02",
+ "questions": [
+  {
+   "book": "c02-p-q5",
+   "title": "مجموع وضرب ومتوسط",
+   "text": "اكتب برنامجًا يقرأ عددين صحيحين (كل عدد في سطر)، ثم يطبع على ثلاثة أسطر منفصلة باستخدام Console.WriteLine:\n• ناتج جمعهما\n• ناتج ضرب الأول في الثاني\n• المتوسط الحسابي لهما بدقة كاملة (اقسم على 2.0 لا على 2)\n(مبني على السؤال 5 من وظيفة البرمجة الثانية.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(a + b);\n        Console.WriteLine(a * b);\n        Console.WriteLine((a + b) / 2.0);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(a + b);\n        Console.WriteLine(a * b);\n        Console.WriteLine((a + b) / 2);\n    }\n}\n",
+   "public": [
+    "4\n6\n"
+   ],
+   "hidden": [
+    "3\n4\n",
+    "-5\n2\n",
+    "0\n0\n",
+    "100\n7\n",
+    "9\n9\n"
+   ],
+   "version": 2
+  }
+ ]
+}
