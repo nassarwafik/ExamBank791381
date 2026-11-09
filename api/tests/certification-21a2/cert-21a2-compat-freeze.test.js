@@ -114,6 +114,8 @@ const STRUCTURED_21N = ["multipleSelect@1 (several correct options)", "matching@
 const STRUCTURED_21O = ["multiTrueFalse@1 (true / false per statement)", "matrix@1 (one column per row)", "wordBank@1 (blanks filled from a word bank)", "numericResponse@1 (one number, bounded tolerance)"];
 // Phase 21P (owner request): exactly ONE chart question kind, appended after the 21O ones (still before smartSim).
 const CHART_21P = ["chartSelection@1 (select on a chart; code computes the key)"];
+// Phase 21R (owner request): exactly ONE more structured kind, cliFill, after the 21O ones (before the 21P chart question).
+const CLI_21R = ["cliFill@1 (blanks in CLI command text)"];
 function compactItemKinds(baseLine) {
   const entries = baseLine.slice("Item kinds: ".length).split(" | ").map(e => {
     const m = /^(\w+) \((\w+)@(\d+), (auto|manual\/hybrid)(?:; (.*))?\)$/.exec(e);
@@ -122,7 +124,7 @@ function compactItemKinds(baseLine) {
   });
   const at = entries.findIndex(e => e.startsWith("smartSim@"));
   if (at < 0) throw new Error("baseline item kinds without smartSim");
-  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...STRUCTURED_21O, ...CHART_21P, ...entries.slice(at)].join(" | ");
+  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...STRUCTURED_21O, ...CLI_21R, ...CHART_21P, ...entries.slice(at)].join(" | ");
 }
 
 describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e4a5ef)", () => {

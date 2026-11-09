@@ -24,9 +24,9 @@ const composerChart_1 = require("./composerChart");
 const composerGraph_1 = require("./composerGraph");
 const composerChemistry_1 = require("./composerChemistry");
 require("../trustedSimPlugins");
-exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V10";
+exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V11";
 exports.COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"]);
-exports.COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse"]);
+exports.COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse", "cliFill"]);
 exports.COMPOSER_CHART_QUESTION_TYPES = Object.freeze(["chartSelection"]);
 exports.COMPOSER_ITEM_KINDS = Object.freeze([...exports.COMPOSER_DRAFT_TYPES, ...exports.COMPOSER_STRUCTURED_TYPES, ...exports.COMPOSER_CHART_QUESTION_TYPES, "smartSim", "composite"]);
 function composerItemIdentity(kind) {
@@ -104,6 +104,7 @@ const NOTES = Object.freeze({
     matrix: "one column per row",
     wordBank: "blanks filled from a word bank",
     numericResponse: "one number, bounded tolerance",
+    cliFill: "blanks in CLI command text",
     chartSelection: "select on a chart; code computes the key"
 });
 function buildComposerCatalog() {

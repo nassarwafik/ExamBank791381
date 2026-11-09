@@ -37,14 +37,14 @@ const score = (q: Json, a: unknown) => gradeExam(examOf([q]), { q1: a }).score;
 const cfg = (q: Json) => q.chartSelection as { target: string; mode: string; maxSelections: number; chart: { kind: string } };
 
 describe("21P-CAT chartSelection joins the catalog", () => {
-  it("catalog V10, chartSelection is its stored key, auto-graded; the general catalog stays bounded; the rules travel on demand", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V10");
+  it("catalog V11, chartSelection is its stored key, auto-graded; the general catalog stays bounded; the rules travel on demand", () => {
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V11");
     expect(COMPOSER_ITEM_KINDS).toContain("chartSelection");
     const t = buildComposerCatalog().questionTypes.find(x => x.kind === "chartSelection")!;
     expect([t.key, t.version, t.autoGraded]).toEqual(["chartSelection", 1, true]);
     const p = catalogForPrompt();
     expect(p.length).toBeLessThanOrEqual(9000);
-    expect(p).toContain("numericResponse@1 (one number, bounded tolerance) | chartSelection@1 (select on a chart; code computes the key) | smartSim@1");
+    expect(p).toContain("| chartSelection@1 (select on a chart; code computes the key) | smartSim@1");   // 21R inserts cliFill@1 before it
     expect(p).not.toContain("CHART QUESTION RULES");
   });
   it("the wire offers no key field: the task and threshold only; kind / task are code-checked strings", () => {

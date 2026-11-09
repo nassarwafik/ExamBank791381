@@ -815,6 +815,11 @@
       "page": "state-ai-composer",
       "viewport": "all",
       "reason": "Phase 21P — the composer's «امتحان جديد» tab lists one more question type the AI composer can now generate («اختيار من رسم بياني») as a type toggle beside the existing ones; the toggle row may wrap onto one more line. Nothing else in the dialog moves."
+    },
+    {
+      "page": "state-ai-composer",
+      "viewport": "all",
+      "reason": "Phase 21R — the composer's «امتحان جديد» tab lists one more question type the AI composer can now generate («فراغات أوامر CLI») as a type toggle beside the existing ones; the toggle row may wrap onto one more line. Nothing else in the dialog moves."
     }
   ]
 }

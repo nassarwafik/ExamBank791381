@@ -34,8 +34,8 @@ const WB = { text: "يعمل [1] في طبقة النقل، ويعمل [2] في 
 const NUM = { text: "احسب عدد العناوين القابلة للاستخدام في الشبكة /26.", expected: 62, tolerance: 0 };
 
 describe("21O-CAT four more structured kinds join the catalog", () => {
-  it("catalog V10; every new kind is its stored key, auto-graded and composite-capable; the general catalog stays bounded", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V10");
+  it("catalog V11; every new kind is its stored key, auto-graded and composite-capable; the general catalog stays bounded", () => {
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V11");
     const c = buildComposerCatalog();
     for (const k of NEW) { expect(COMPOSER_ITEM_KINDS).toContain(k); const t = c.questionTypes.find(x => x.kind === k)!; expect([t.key, t.version, t.autoGraded, t.compositeChild]).toEqual([k, 1, true, true]); }
     const p = catalogForPrompt(c);
