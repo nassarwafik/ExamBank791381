@@ -58,7 +58,7 @@ export const item = (kind: string, over: Json = {}): Json => {
 };
 export const part = (kind: string, marks: number, over: Json = {}): Json => ({ kind, linked: false, marks, label: "", simChecks: [], simText: "", question: null, structured: null, ...over });
 /** Phase 21N — a structured payload (multipleSelect / matching / ordering / categorization): every list present, the unused ones empty. */
-export const structured = (over: Json = {}): Json => ({ text: "أجب عن السؤال", options: [], correctOptions: [], scoring: "allOrNothing", pairs: [], distractors: [], headers: [], sequence: [], categories: [], entries: [], ...over });
+export const structured = (over: Json = {}): Json => ({ text: "أجب عن السؤال", options: [], correctOptions: [], scoring: "allOrNothing", pairs: [], distractors: [], headers: [], sequence: [], categories: [], entries: [], statements: [], columns: [], rows: [], blanks: [], expected: null, tolerance: null, ...over });   // 21O: + statements / columns / rows / blanks / expected / tolerance
 export const group = (parts: Json[], over: Json = {}): Json => ({ title: "", policy: "all", requiredAnswers: null, parts, ...over });
 export const composite = (text: string, context: Json | null, groups: Json[]): Json => ({ text, context, groups });
 export const simContext = (sim: Json): Json => ({ kind: "smartSim", sim, sourceTitle: "", sourceBlocks: [] });

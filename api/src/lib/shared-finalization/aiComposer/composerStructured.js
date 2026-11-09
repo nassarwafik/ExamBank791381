@@ -11,7 +11,9 @@ const composerLimits_1 = require("./composerLimits");
 const composerSchemaKit_1 = require("./composerSchemaKit");
 exports.STRUCTURED_LIMITS = Object.freeze({
     options: { min: 3, max: 8 }, pairs: { min: 2, max: 10 }, distractors: 4, sequence: { min: 3, max: 10 },
-    categories: { min: 2, max: 6 }, entries: { min: 2, max: 20 }, textChars: 300
+    categories: { min: 2, max: 6 }, entries: { min: 2, max: 20 }, textChars: 300,
+    statements: { min: 2, max: 10 }, columns: { min: 2, max: 5 }, rows: { min: 2, max: 10 }, blanks: { min: 2, max: 10 },
+    numericAbsMax: 1e9, toleranceRatio: 0.05
 });
 exports.COMPOSER_MS_SCORINGS = Object.freeze(["allOrNothing", "partialWithPenalty"]);
 const S = exports.STRUCTURED_LIMITS;
@@ -21,14 +23,19 @@ function buildStructuredSchema() {
         options: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.options.max), correctOptions: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sInt)(0, S.options.max - 1), S.options.max), scoring: (0, composerSchemaKit_1.sEnum)(exports.COMPOSER_MS_SCORINGS),
         pairs: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ left: (0, composerSchemaKit_1.sStr)(), right: (0, composerSchemaKit_1.sStr)() }), S.pairs.max), distractors: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.distractors), headers: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), 2),
         sequence: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.sequence.max),
-        categories: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.categories.max), entries: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), category: (0, composerSchemaKit_1.sInt)(0, S.categories.max - 1) }), S.entries.max)
+        categories: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.categories.max), entries: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), category: (0, composerSchemaKit_1.sInt)(0, S.categories.max - 1) }), S.entries.max),
+        statements: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), correct: (0, composerSchemaKit_1.sBool)() }), S.statements.max),
+        columns: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.columns.max), rows: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ label: (0, composerSchemaKit_1.sStr)(), column: (0, composerSchemaKit_1.sInt)(0, S.columns.max - 1) }), S.rows.max),
+        blanks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), S.blanks.max), expected: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sNum)()), tolerance: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sNum)())
     });
 }
-const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries"];
+const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks", "expected", "tolerance"];
 const USES = Object.freeze({
-    multipleSelect: ["options", "correctOptions"], matching: ["pairs", "distractors", "headers"], ordering: ["sequence"], categorization: ["categories", "entries"]
+    multipleSelect: ["options", "correctOptions"], matching: ["pairs", "distractors", "headers"], ordering: ["sequence"], categorization: ["categories", "entries"],
+    multiTrueFalse: ["statements"], matrix: ["columns", "rows"], wordBank: ["blanks", "distractors"], numericResponse: ["expected", "tolerance"]
 });
-const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries"];
+const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks"];
+const SCALARS = ["expected", "tolerance"];
 function seedOf(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
     h = Math.imul(h, 16777619);
@@ -59,7 +66,10 @@ function buildStructuredBody(raw, kind, seed, path, questionId, part = false) {
     for (const k of LISTS)
         if (!(0, composerSchemaKit_1.isArr)(r[k], 20))
             return bad("AI_STRUCTURED_MALFORMED", "محتوى السؤال غير صالح البنية.", path + "." + k);
-    const foreign = LISTS.filter(k => !USES[kind].includes(k) && r[k].length);
+    for (const k of SCALARS)
+        if (!(r[k] === null || (typeof r[k] === "number" && Number.isFinite(r[k]))))
+            return bad("AI_STRUCTURED_MALFORMED", "محتوى السؤال غير صالح البنية.", path + "." + k);
+    const foreign = [...LISTS.filter(k => !USES[kind].includes(k) && r[k].length), ...SCALARS.filter(k => !USES[kind].includes(k) && r[k] !== null)];
     if (foreign.length)
         return bad("AI_STRUCTURED_FOREIGN_FIELDS", "حقول لا تخص نوع السؤال (" + kind + "): " + foreign.join(", ") + ". اترك قوائم الأنواع الأخرى فارغة.");
     const text = (0, composerSchemaKit_1.cleanText)(r.text);
@@ -112,6 +122,56 @@ function buildStructuredBody(raw, kind, seed, path, questionId, part = false) {
         const fields = patch.fields.map(f => ({ ...f, options }));
         return { ok: true, node: { presentationType: "matching", questionTypeVersion: 1, text: part ? text : text + "\n" + patch.text, fields, answer: patch.answer } };
     }
+    if (kind === "multiTrueFalse") {
+        const st = r.statements;
+        if (st.length < S.statements.min || st.length > S.statements.max || !st.every(x => (0, composerSchemaKit_1.hasExactKeys)(x, ["text", "correct"]) && (0, composerSchemaKit_1.isStr)(x.text, S.textChars, 1) && (0, composerSchemaKit_1.cleanText)(x.text) !== "" && typeof x.correct === "boolean"))
+            return bad("AI_MTF_STATEMENTS", "صح/خطأ متعدد يحتاج " + S.statements.min + "–" + S.statements.max + " عبارات، لكل عبارة نص وحكمها.");
+        const list = st.map(x => ({ text: (0, composerSchemaKit_1.cleanText)(x.text), correct: x.correct }));
+        if (!distinct(list.map(x => x.text)))
+            return bad("AI_MTF_STATEMENTS", "عبارات صح/خطأ متعدد يجب أن تكون مختلفة.");
+        if (list.every(x => x.correct) || list.every(x => !x.correct))
+            return bad("AI_MTF_FREE_CREDIT", "اجعل عبارة صحيحة واحدة وعبارة خاطئة واحدة على الأقل (وإلا نال جواب واحد مكرَّر العلامة كاملة).");
+        return { ok: true, node: { presentationType: "multiTrueFalse", questionTypeVersion: 1, text, fields: list.map((x, i) => ({ id: "r" + (i + 1), statement: x.text, kind: "boolean", correct: x.correct })) } };
+    }
+    if (kind === "matrix") {
+        const columns = texts("columns", 80), rows = r.rows;
+        if (!columns || columns.length < S.columns.min || columns.length > S.columns.max || !distinct(columns))
+            return bad("AI_MATRIX_COLUMNS", "المصفوفة تحتاج " + S.columns.min + "–" + S.columns.max + " أعمدة مختلفة بنصوص غير فارغة.");
+        if (rows.length < S.rows.min || rows.length > S.rows.max || !rows.every(x => (0, composerSchemaKit_1.hasExactKeys)(x, ["label", "column"]) && (0, composerSchemaKit_1.isStr)(x.label, S.textChars, 1) && (0, composerSchemaKit_1.cleanText)(x.label) !== "" && (0, composerSchemaKit_1.isInt)(x.column, 0, columns.length - 1)))
+            return bad("AI_MATRIX_ROWS", "المصفوفة تحتاج " + S.rows.min + "–" + S.rows.max + " صفوف، لكل صف نص ورقم عموده الصحيح (يبدأ من 0).");
+        const list = rows.map(x => ({ label: (0, composerSchemaKit_1.cleanText)(x.label), column: x.column }));
+        if (!distinct(list.map(x => x.label)))
+            return bad("AI_MATRIX_ROWS", "صفوف المصفوفة يجب أن تكون مختلفة.");
+        const unused = columns.filter((_, c) => !list.some(x => x.column === c));
+        if (unused.length)
+            return bad("AI_MATRIX_UNUSED_COLUMN", "كل عمود يحتاج صفًا واحدًا على الأقل إجابته فيه: " + unused.join("، "));
+        const rowIds = list.map((_, i) => "x" + (i + 1)), colIds = columns.map((_, c) => "c" + (c + 1));
+        return { ok: true, node: { presentationType: "matrix", questionTypeVersion: 1, text, matrix: { rows: list.map((x, i) => ({ id: rowIds[i], label: x.label })), columns: columns.map((label, c) => ({ id: colIds[c], label })) }, answer: { correctColumnByRow: Object.fromEntries(list.map((x, i) => [rowIds[i], colIds[x.column]])) } } };
+    }
+    if (kind === "wordBank") {
+        const blanks = texts("blanks", 80), distractors = texts("distractors", 80);
+        if (!blanks || blanks.length < S.blanks.min || blanks.length > S.blanks.max)
+            return bad("AI_WB_BLANKS", "بنك الكلمات يحتاج " + S.blanks.min + "–" + S.blanks.max + " فراغات، لكل فراغ كلمته الصحيحة.");
+        if (!distinct(blanks))
+            return bad("AI_WB_BLANKS", "كلمات الفراغات يجب أن تكون مختلفة (كلمة واحدة لكل فراغ).");
+        if (!distractors || distractors.length < 1 || !distinct([...blanks, ...distractors]))
+            return bad("AI_WB_DISTRACTORS", "أضف كلمة مضلِّلة واحدة على الأقل، مختلفة عن كلمات الفراغات وعن بعضها.");
+        const markers = [...text.matchAll(/\[(\d+)\]/g)].map(m => Number(m[1]));
+        if (markers.length !== blanks.length || markers.some((n, i) => n !== i + 1))
+            return bad("AI_WB_MARKERS", "النص يحتاج علامة لكل فراغ بالترتيب: [1] … [" + blanks.length + "]، مرة واحدة لكل علامة.");
+        const pool = [...blanks, ...distractors];
+        const order = permutation(pool.length, seed + "::bank", p => blanks.every((_, k) => p[k] !== k));
+        const fields = blanks.map((word, k) => ({ id: "f" + (k + 1), label: "[" + (k + 1) + "]", order: k, kind: "select", correct: word }));
+        return { ok: true, node: { presentationType: "wordBank", questionTypeVersion: 1, text, fields, wordBank: order.map(i => pool[i]), answer: (0, examBuilderState_1.syncSequenceAnswer)(fields) } };
+    }
+    if (kind === "numericResponse") {
+        const expected = r.expected, tolerance = r.tolerance;
+        if (typeof expected !== "number" || typeof tolerance !== "number" || Math.abs(expected) > S.numericAbsMax || tolerance < 0)
+            return bad("AI_NUM_KEY", "الإجابة الرقمية تحتاج قيمة متوقعة (|القيمة| ≤ 10⁹) وتسامحًا غير سالب.");
+        if (tolerance > Math.abs(expected) * S.toleranceRatio)
+            return bad("AI_NUM_TOLERANCE", "التسامح لا يتجاوز 5% من القيمة المتوقعة (وصفر إذا كانت القيمة صفرًا)؛ وإلا قُبلت أرقام بعيدة عن الإجابة.");
+        return { ok: true, node: { presentationType: "numericResponse", questionTypeVersion: 1, text, numeric: { unitRequired: false }, answer: { mode: "tolerance", expected, tolerance } } };
+    }
     const categories = texts("categories"), entries = r.entries;
     if (!categories || categories.length < S.categories.min || categories.length > S.categories.max || !distinct(categories))
         return bad("AI_CAT_CATEGORIES", "التصنيف يحتاج " + S.categories.min + "–" + S.categories.max + " فئات مختلفة بنصوص غير فارغة.");
@@ -132,13 +192,17 @@ function buildStructuredQuestion(raw, kind, qid, marks, path) {
 }
 function structuredRulesForPrompt() {
     return [
-        "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
+        "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization, multiTrueFalse, matrix, wordBank, numericResponse): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
         "- multipleSelect: options " + S.options.min + "-" + S.options.max + " distinct texts; correctOptions = zero-based indices of EVERY correct option; at least as many wrong options as correct ones; scoring allOrNothing (default) or partialWithPenalty.",
         "- matching: pairs " + S.pairs.min + "-" + S.pairs.max + " {left, right}, one-to-one (each right differs); up to " + S.distractors + " extra wrong rights in distractors; headers empty or the two column titles; no | = ; or line breaks in any cell.",
         "- ordering: sequence = " + S.sequence.min + "-" + S.sequence.max + " distinct items IN THEIR CORRECT ORDER (code shuffles them for the student; never number them).",
-        "- categorization: categories " + S.categories.min + "-" + S.categories.max + " distinct names; entries " + S.entries.min + "-" + S.entries.max + " {label, category = zero-based index}; every category gets at least one entry."
+        "- categorization: categories " + S.categories.min + "-" + S.categories.max + " distinct names; entries " + S.entries.min + "-" + S.entries.max + " {label, category = zero-based index}; every category gets at least one entry.",
+        "- multiTrueFalse: statements " + S.statements.min + "-" + S.statements.max + " {text, correct}; at least one true AND one false statement.",
+        "- matrix: columns " + S.columns.min + "-" + S.columns.max + " distinct headings; rows " + S.rows.min + "-" + S.rows.max + " {label, column = zero-based index of its correct column}; every column is the answer of at least one row.",
+        "- wordBank: the stem marks each blank [1], [2] … in order; blanks = the distinct correct word of each blank, in order; distractors = 1-" + S.distractors + " extra wrong words (code shuffles the bank).",
+        "- numericResponse: expected = the exact numeric answer (state the unit in the stem); tolerance >= 0 and at most 5% of |expected| (0 when expected is 0). expected and tolerance stay null for every other kind."
     ].join("\n");
 }
-const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization/i;
+const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization|true ?\/ ?false|multiTrueFalse|matrix|word ?bank|wordBank|numeric|صح.{0,3}خطأ|مصفوفة|بنك الكلمات|إجابة رقمية|numericResponse/i;
 const mentionsStructuredKinds = (text) => STRUCTURED_WORDS.test(text);
 exports.mentionsStructuredKinds = mentionsStructuredKinds;

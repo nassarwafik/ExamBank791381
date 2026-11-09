@@ -4,10 +4,10 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `multipleChoice@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21A1, 21C, 21DB3, 21DD3, A, B, C, E, S |
 | `trueFalse@1` | type | auto | — | choice | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | 21DD3, A, B, E, S |
-| `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | B, E, S |
+| `multiTrueFalse@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | B, E, S |
 | `shortAnswer@1` | type | hybrid | — | text | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, S |
 | `fillBlank@1` | type | auto | ✓ | sequence/fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, E, S |
-| `wordBank@1` | type | auto | ✓ | sequence/fields | ✓ | ✓ | — | ✓ | legacy adapter | A | E, S |
+| `wordBank@1` | type | auto | ✓ | sequence/fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | E, S |
 | `matching@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | D, E, S |
 | `ordering@1` | type | auto | ✓ | sequence | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, E, S |
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
@@ -19,8 +19,8 @@
 | `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
 | `meshPartSelection@1` | type | auto | ✓ | meshPartSelection | — | — | — | ✓ | registered | A | 21DB3 |
 | `multipleSelect@1` | type | auto | ✓ | multiChoice | ✓ | ✓ | ✓ | ✓ | registered | A | A, B, E, S |
-| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | — | ✓ | registered | A | 21A1, 21DD3, A, B, D, E, S |
-| `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | registered | A | D, E, S |
+| `numericResponse@1` | type | auto | — | numeric | ✓ | ✓ | ✓ | ✓ | registered | A | 21A1, 21DD3, A, B, D, E, S |
+| `matrix@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | registered | A | D, E, S |
 | `categorization@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | registered | A | D, E, S |
 | `simulation@1` | type | manual | — | simulation | — | ✓ | — | ✓ | registered | B | api/tests/smartsim-guards-16b-a.test.js — teacher-uploaded package (sandboxed, manual grading only); its lifecycle needs a stored package — covered by the 16B-A browser / store suites |
 | `coding@1` | type | hybrid | ✓ | code/codeTemplate | — | ✓ | ✓ | — | registered | A | S |

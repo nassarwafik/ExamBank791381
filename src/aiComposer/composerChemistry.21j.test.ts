@@ -40,7 +40,7 @@ const termIds = (id: string) => { const c = catalogReaction(id)!; return [...c.r
 describe("21J-CAT the chemistry simulators join the composer catalog (derived from the production registries)", () => {
   it("both plugins are registered at exact versions, catalog V5, vocabularies derived from the chemistry catalogs", () => {
     const c = buildComposerCatalog();
-    expect(c.version).toBe("AI_COMPOSER_CATALOG_V8");
+    expect(c.version).toBe("AI_COMPOSER_CATALOG_V9");
     expect(COMPOSER_SIM_PLUGINS.filter(p => p.subject === "chemistry").map(p => p.pluginKey + "@" + p.pluginVersion)).toEqual(["chemistryReactions@1", "chemistryStructure@1", "chemistryLab@1"]);   // 21K adds the virtual lab
     expect(COMPOSER_REACTION_IDS).toEqual(REACTION_CATALOG.map(r => r.id));
     expect(COMPOSER_MOLECULE_IDS).toEqual(MOLECULES.map(m => m.id));
