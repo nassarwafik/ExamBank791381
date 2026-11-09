@@ -32,7 +32,7 @@ describe("21A1-AI-API the chart capability through the composer endpoint", () =>
     expect(r.jsonBody.ok, JSON.stringify(r.jsonBody.issues)).toBe(true);
     expect(ai.calls[0].prompt).toContain("Charts: a dataChart block carries ONE descriptor");
     // 21A.2: the chart contract stays pinned while the additive function-graph catalog advances to V4.
-    expect(ai.calls[0].prompt).toContain("AI_COMPOSER_CATALOG_V7");
+    expect(ai.calls[0].prompt).toContain("AI_COMPOSER_CATALOG_V8");
     expect(JSON.stringify(ai.calls[0].schema)).toContain('"dataOrigin"');
     const q = r.jsonBody.section.questions[0];
     const block = q.richContent.blocks[1];

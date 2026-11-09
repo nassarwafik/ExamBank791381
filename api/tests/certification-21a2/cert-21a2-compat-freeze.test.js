@@ -107,6 +107,20 @@ function snapshot(name, exam) {
 }
 const promptLines = () => catalogForPrompt().split("\n");
 
+// Phase 21N — the declared Item kinds delta, derived from the BASELINE line: "kind (key@v, auto|manual/hybrid[; note])" → "kind@v[ manual][ (note)]"
+// (the kind is its stored key), with exactly the four structured kinds inserted before smartSim.
+const STRUCTURED_21N = ["multipleSelect@1 (several correct options)", "matching@1 (one-to-one pairs)", "ordering@1 (a sequence, given in its correct order)", "categorization@1 (items sorted into categories)"];
+function compactItemKinds(baseLine) {
+  const entries = baseLine.slice("Item kinds: ".length).split(" | ").map(e => {
+    const m = /^(\w+) \((\w+)@(\d+), (auto|manual\/hybrid)(?:; (.*))?\)$/.exec(e);
+    if (!m || m[1] !== m[2]) throw new Error("unexpected baseline item kind entry: " + e);
+    return m[1] + "@" + m[3] + (m[4] === "auto" ? "" : " manual") + (m[5] ? " (" + m[5] + ")" : "");
+  });
+  const at = entries.findIndex(e => e.startsWith("smartSim@"));
+  if (at < 0) throw new Error("baseline item kinds without smartSim");
+  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...entries.slice(at)].join(" | ");
+}
+
 describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e4a5ef)", () => {
   const pins = CAPTURE ? { fixtures: {}, prompt: [] } : JSON.parse(fs.readFileSync(PINS, "utf8"));
   it("the corpus is every committed exam fixture (at least 28: the 21A.1 chart exam included)", () => {
@@ -154,9 +168,12 @@ describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e
       // Phase 21M (owner request: composer headroom): the networkTopology@2 line keeps the scenario ids, titles and topics; its check list
       // moved VERBATIM to networkCatalogForPrompt() (sent with the section / modify prompts that use the network simulator).
       if (line.startsWith("networkTopology@2 scenarios:")) { expect(networkCatalogForPrompt()).toBe(line); expect(now.find(l => l.startsWith("networkTopology@2 scenarios:"))).toBe(networkScenariosLine()); continue; }
+      // Phase 21N (owner request): the Item kinds line is re-rendered compactly (kind@version, "manual" marks manual/hybrid grading, every baseline
+      // note verbatim) and gains ONLY the four structured kinds, inserted before smartSim; every baseline kind keeps its place, version and note.
+      if (line.startsWith("Item kinds:")) { expect(now.find(l => l.startsWith("Item kinds"))).toBe(compactItemKinds(line)); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
-    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("networkTopology@2 scenarios:"));
+    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("networkTopology@2 scenarios:") && !l.startsWith("Item kinds"));
     // Phase 21J adds exactly ONE line: the bounded chemistry pointer (the full chemistry catalog travels only in the prompts that need it)
     for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Function graphs)\b|^Chemistry simulators: their catalogs come with the section task that uses them; expected answers are derived by code\.$/);
   });
