@@ -10,6 +10,7 @@ import { calloutTone, type PageTheme } from "../themes/courseTheme";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
+import CodeBlockView from "./CodeBlockView";
 import VisualBlockView from "../visuals/VisualBlockView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink, ActivityCheck } from "../activities/engine";
@@ -412,11 +413,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
         </div>
       );
     case "code":
-      return (
-        <div className="learning-reader-codewrap">
-          <pre className="learning-reader-code"><code dir="ltr" className={"lang-" + block.language}>{block.code}</code></pre>
-        </div>
-      );
+      return <CodeBlockView block={block} />;
     case "diagram":
       return block.src
         ? (
