@@ -34,8 +34,8 @@
 | `openResponse@1` | type | manual | ✓ | text | — | ✓ | ✓ | ✓ | registered | A | A, B, S |
 | `smartSim@1` | type | auto | ✓ | smartSim | — | ✓ | ✓ | ✓ | registered | A | 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, D, E, S |
 | `plugin:chemistryLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD3 |
-| `plugin:chemistryReactions@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD2 |
-| `plugin:chemistryStructure@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DD1 |
+| `plugin:chemistryReactions@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | 21DD2 |
+| `plugin:chemistryStructure@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | 21DD1 |
 | `plugin:functionStudy2d@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | D, S |
 | `plugin:networkTopology@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | E, S |
 | `plugin:networkTopology@2` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | A, S |
