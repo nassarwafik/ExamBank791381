@@ -170,13 +170,27 @@ export function buildComposerCatalog(): ComposerCatalog {
   };
 }
 
+/** Phase 21M (headroom) — the networkTopology@2 line of the general catalog: scenario ids, titles and topics (what the PLAN stage chooses
+ *  from). The per-scenario CHECK list (what a composite part picks) moved, verbatim, to networkCatalogForPrompt(), sent only with the
+ *  section / modify prompts that use the network simulator — the same on-demand pattern as the chemistry and physics catalogs. */
+export function networkScenariosLine(catalog: ComposerCatalog = buildComposerCatalog()): string {
+  return "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "]").join(" || ") + " (their check ids come with the section task that uses them)";
+}
+/** The FULL networkTopology@2 scenario catalog with every check id (byte-identical to the general catalog's line before 21M). */
+export function networkCatalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog()): string {
+  return "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "] checks: " + s.checks.map(c => c.id + " " + c.label).join("; ")).join(" || ");
+}
+const NETWORK_WORDS = /network|networkTopology|شبك|vlan|dhcp|router|راوتر|موجّ?ه|switch|سويتش|ospf|\bip(v4|v6)?\b|subnet|trunk|vtp|wireless|لاسلك/i;
+/** Whether a modify request or exam involves networking (then its prompt carries the full network scenario catalog). */
+export const mentionsNetworking = (text: string): boolean => NETWORK_WORDS.test(text);
+
 /** A compact, model-facing text of the catalog (the provider sees exactly this vocabulary; enums enforce it). */
 export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog()): string {
   const lines = [
     "CAPABILITY CATALOG " + catalog.version + " (select ONLY from this list; exact versions; never invent a type, plugin, scenario, preset, block or language):",
     "Item kinds: " + catalog.questionTypes.map(t => t.kind + " (" + t.key + "@" + t.version + (t.autoGraded ? ", auto" : ", manual/hybrid") + (t.note ? "; " + t.note : "") + ")").join(" | "),
     "SmartSim plugins: " + catalog.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion + " (" + p.subject + ")").join(", "),
-    "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "] checks: " + s.checks.map(c => c.id + " " + c.label).join("; ")).join(" || "),
+    networkScenariosLine(catalog),
     "physicsFreeFall@1: model initialHeight 0.." + catalog.physics.bounds.heightMax + " m, initialVelocity ±" + catalog.physics.bounds.velocityAbsMax + " m/s (up positive), gravity " + catalog.physics.bounds.gravityMin + ".." + catalog.physics.bounds.gravityMax + " m/s²; measurements: " + catalog.physics.measurements.join(", ") + "; points: " + catalog.physics.points.join(", ") + ". Expected values are computed by code, never by you.",
     CHEMISTRY_POINTER,
     "functionStudy2d@1: expression language 2 in the single variable x (numbers, + - * / % ^, parentheses, abs, round, floor, ceil, min, max, sqrt, pow, log (natural), log10, exp; nothing else); tasks: " + catalog.functionStudy.tasks.join(", ") + "; |x| <= " + catalog.functionStudy.bounds.xAbsMax + ". Your expected answers are checked numerically against the expression.",

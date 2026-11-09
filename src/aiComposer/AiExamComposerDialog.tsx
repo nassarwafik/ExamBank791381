@@ -5,6 +5,7 @@ import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type Ge
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
+import { composerSimulatorsBySubject } from "./composerSimSummary";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
 import type { ComposerScope } from "./composerProjection";
 import { allQuestions, composerMetadataOf, composerVerdict, verifyAiQuestion, withComposerHistory, type ComposerVerdict } from "./composerExam";
@@ -110,6 +111,7 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ generate: null, modifyExam: null, generateSection: null, question: null, presentation: null });
 
   const catalog = useMemo(() => { try { return buildComposerCatalog(); } catch { return null; } }, []);
+  const simGroups = useMemo(() => (catalog ? composerSimulatorsBySubject(catalog) : []), [catalog]);   // 21M
   const kindLabel = (k: string) => catalog?.questionTypes.find(t => t.key === k || t.kind === k)?.label ?? k;
   const presetLabel = (p: string | null) => (p && (PRESENTATION_PRESETS as Record<string, { label: string }>)[p]?.label) || p || "الافتراضي";
 
@@ -485,6 +487,14 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
           ))}
         </div>
       </fieldset>
+      {simGroups.length > 0 && (
+        <details className="ai-composer-sims">
+          <summary>المحاكاة التي يستطيع المؤلف توليدها{form.capabilities.smartSim ? "" : " (المحاكاة غير مفعّلة في الميزات)"}</summary>
+          <ul>
+            {simGroups.map(g => <li key={g.subject}><strong>{g.label}:</strong> {g.simulators.map(x => x.label).join("، ")}</li>)}
+          </ul>
+        </details>
+      )}
       <div className="ai-composer-grid">
         <label className="sb-field"><span>الموضوعات المطلوبة (مفصولة بفواصل)</span><input value={form.requiredTopics} dir="auto" disabled={lockForm} onChange={e => set("requiredTopics", e.target.value)} /></label>
         <label className="sb-field"><span>الموضوعات المستبعدة (مفصولة بفواصل)</span><input value={form.excludedTopics} dir="auto" disabled={lockForm} onChange={e => set("excludedTopics", e.target.value)} /></label>
