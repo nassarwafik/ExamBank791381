@@ -4,7 +4,8 @@
 // authority). No hidden reasoning is requested: only short teacher-facing rationale fields exist in the schemas.
 import { buildAiAuthorPrompt, classifyAuthorRequest } from "../aiQuestionDraft";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
-import { catalogForPrompt, mentionsNetworking, networkCatalogForPrompt } from "./composerCatalog";
+import { catalogForPrompt, COMPOSER_STRUCTURED_TYPES, mentionsNetworking, networkCatalogForPrompt } from "./composerCatalog";
+import { mentionsStructuredKinds, structuredRulesForPrompt } from "./composerStructured";
 import { CHEMISTRY_SIM_KEYS, chemistryCatalogForPrompt, mentionsChemistry } from "./composerChemistry";
 import { PHYSICS_SIM_KEYS, mentionsAdvancedPhysics, physicsCatalogForPrompt } from "./composerPhysics";
 import { intentForPrompt, type AiExamIntentV1 } from "./composerIntent";
@@ -51,6 +52,8 @@ export function buildSectionPrompt(intent: AiExamIntentV1, plan: AiExamPlanV1, s
     ...(s.items.some(it => it.simulator && CHEMISTRY_SIM_KEYS.includes(it.simulator)) ? [chemistryCatalogForPrompt()] : []),
     // Phase 21M — the full network scenario catalog (check ids for composite parts) only when this section plans the network simulator
     ...(s.items.some(it => it.simulator === "networkTopology") ? [networkCatalogForPrompt()] : []),
+    // Phase 21N — the structured-kind rules when this section plans one, or a composite whose child parts may be one
+    ...(s.items.some(it => it.kind === "composite" || (COMPOSER_STRUCTURED_TYPES as readonly string[]).includes(it.kind)) ? [structuredRulesForPrompt()] : []),
     // Phase 21L — the advanced physics catalog only when this section plans physicsMotion / physicsLab
     ...(s.items.some(it => it.simulator && PHYSICS_SIM_KEYS.includes(it.simulator)) ? [physicsCatalogForPrompt()] : []),
     teacher(intent.teacherInstruction)].join("\n\n");
@@ -76,6 +79,8 @@ export function buildModifyPrompt(projection: AiSafeExamProjectionV1, mode: Comp
     // Phase 21J — the full chemistry catalog when the request or the exam involves chemistry
     ...(mentionsChemistry(instruction + " " + JSON.stringify(projection)) ? [chemistryCatalogForPrompt()] : []),
     ...(mentionsNetworking(instruction + " " + JSON.stringify(projection)) ? [networkCatalogForPrompt()] : []),
+    // Phase 21N — the structured-kind rules when the request or the exam involves one
+    ...(mentionsStructuredKinds(instruction + " " + JSON.stringify(projection)) ? [structuredRulesForPrompt()] : []),
     ...(mentionsAdvancedPhysics(instruction + " " + JSON.stringify(projection)) ? [physicsCatalogForPrompt()] : []),
     fence("current exam (answers withheld)", projection), teacher(instruction)].join("\n\n");
 }

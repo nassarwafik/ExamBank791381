@@ -10,31 +10,34 @@ const aiQuestionDraft_1 = require("../aiQuestionDraft");
 const examQuality_1 = require("../examQuality");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
+const composerStructured_1 = require("./composerStructured");
 const composerPlan_1 = require("./composerPlan");
 const composerRich_1 = require("./composerRich");
 const composerSim_1 = require("./composerSim");
 const composerSchemaKit_1 = require("./composerSchemaKit");
 const L = composerLimits_1.COMPOSER_LIMITS;
-const PART_KINDS = Object.freeze([...composerCatalog_1.COMPOSER_DRAFT_TYPES, "smartSim"]);
+const PART_KINDS = Object.freeze([...composerCatalog_1.COMPOSER_DRAFT_TYPES, ...composerCatalog_1.COMPOSER_STRUCTURED_TYPES, "smartSim"]);
+const isStructuredKind = (k) => composerCatalog_1.COMPOSER_STRUCTURED_TYPES.includes(k);
 const POLICIES = ["all", "firstNAnswered"];
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل"];
 function buildItemSchema() {
     const q = (0, aiQuestionDraft_1.buildAiAuthorSchema)();
-    const part = (0, composerSchemaKit_1.sObj)({ group: (0, composerSchemaKit_1.sInt)(1, L.compositeGroups), kind: (0, composerSchemaKit_1.sEnum)(PART_KINDS), linked: (0, composerSchemaKit_1.sBool)(), marks: (0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), label: (0, composerSchemaKit_1.sStr)(), simChecks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), 40), simText: (0, composerSchemaKit_1.sStr)(), question: (0, composerSchemaKit_1.sNull)(q) });
+    const st = (0, composerStructured_1.buildStructuredSchema)();
+    const part = (0, composerSchemaKit_1.sObj)({ group: (0, composerSchemaKit_1.sInt)(1, L.compositeGroups), kind: (0, composerSchemaKit_1.sEnum)(PART_KINDS), linked: (0, composerSchemaKit_1.sBool)(), marks: (0, composerSchemaKit_1.sInt)(1, L.itemMarksMax), label: (0, composerSchemaKit_1.sStr)(), simChecks: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sStr)(), 40), simText: (0, composerSchemaKit_1.sStr)(), question: (0, composerSchemaKit_1.sNull)(q), structured: (0, composerSchemaKit_1.sNull)(st) });
     const group = (0, composerSchemaKit_1.sObj)({ title: (0, composerSchemaKit_1.sStr)(), policy: (0, composerSchemaKit_1.sEnum)(POLICIES), requiredAnswers: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sInt)(1, L.compositeParts)) });
     const context = (0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(["smartSim", "source"]), sim: (0, composerSchemaKit_1.sNull)((0, composerSim_1.buildSimSpecSchema)()), sourceTitle: (0, composerSchemaKit_1.sStr)(), sourceBlocks: (0, composerRich_1.buildRichBlocksSchema)() });
     return (0, composerSchemaKit_1.sObj)({
         kind: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_ITEM_KINDS), topic: (0, composerSchemaKit_1.sStr)(), difficulty: (0, composerSchemaKit_1.sEnum)(composerPlan_1.PLAN_DIFFICULTIES), rationale: (0, composerSchemaKit_1.sStr)(), stem: (0, composerRich_1.buildRichBlocksSchema)(),
-        question: (0, composerSchemaKit_1.sNull)(q), smartSim: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), sim: (0, composerSim_1.buildSimSpecSchema)() })),
+        question: (0, composerSchemaKit_1.sNull)(q), structured: (0, composerSchemaKit_1.sNull)(st), smartSim: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), sim: (0, composerSim_1.buildSimSpecSchema)() })),
         compositeText: (0, composerSchemaKit_1.sStr)(), compositeContext: (0, composerSchemaKit_1.sNull)(context), compositeGroups: (0, composerSchemaKit_1.sArr)(group, L.compositeGroups), compositeParts: (0, composerSchemaKit_1.sArr)(part, L.compositeParts),
         assetRequest: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ description: (0, composerSchemaKit_1.sStr)() }))
     });
 }
 const buildSectionDraftSchema = () => (0, composerSchemaKit_1.sObj)({ items: (0, composerSchemaKit_1.sArr)(buildItemSchema(), L.itemsPerSection) });
 exports.buildSectionDraftSchema = buildSectionDraftSchema;
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"];
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"];
 const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"];
-const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question"];
+const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question", "structured"];
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"];
 const CTX_KEYS = ["kind", "sim", "sourceTitle", "sourceBlocks"];
 const isComposerNonce = (v) => typeof v === "string" && /^[a-z0-9]{6,16}$/.test(v);
@@ -111,7 +114,7 @@ function buildComposite(raw, qid, marks, plan, request, path, chartPolicy) {
                     issues.push(issue("AI_COMPOSITE_SMARTSIM_CONTEXT", "بند المحاكاة يجب أن يرتبط بسياق المحاكاة المشترك.", pp, qid));
                     return;
                 }
-                if (p.question !== null || !p.simChecks.length || new Set(p.simChecks).size !== p.simChecks.length) {
+                if (p.question !== null || p.structured !== null || !p.simChecks.length || new Set(p.simChecks).size !== p.simChecks.length) {
                     issues.push(issue("AI_COMPOSITE_MALFORMED", "بند المحاكاة يحتاج إلى قائمة فحوص من السياق المشترك.", pp, qid));
                     return;
                 }
@@ -132,16 +135,35 @@ function buildComposite(raw, qid, marks, plan, request, path, chartPolicy) {
                 parts.push({ id, label, type: "smartSim", questionTypeVersion: 1, contextId: "ctx1", text: (0, composerSchemaKit_1.cleanText)(p.simText) || label, marks: p.marks, answer: { scoring: "proportional", checks } });
                 return;
             }
-            if (p.question === null || p.simChecks.length) {
+            if (p.simChecks.length) {
                 issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي يحتاج إلى مسودة سؤال.", pp, qid));
                 return;
             }
-            const m = mapDraftQuestion(p.question, p.kind, qid + "::p", p.marks, request, pp + ".question");
-            if (!m.ok) {
-                issues.push(...m.issues);
-                return;
+            let q;
+            if (isStructuredKind(p.kind)) {
+                if (p.question !== null || p.structured === null) {
+                    issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي من هذا النوع يحتاج إلى `structured`.", pp, qid));
+                    return;
+                }
+                const b = (0, composerStructured_1.buildStructuredBody)(p.structured, p.kind, qid + "::" + id, pp + ".structured", qid, true);
+                if (!b.ok) {
+                    issues.push(...b.issues);
+                    return;
+                }
+                q = { ...b.node, marks: p.marks };
             }
-            const q = m.value;
+            else {
+                if (p.question === null || p.structured !== null) {
+                    issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي يحتاج إلى مسودة سؤال.", pp, qid));
+                    return;
+                }
+                const m = mapDraftQuestion(p.question, p.kind, qid + "::p", p.marks, request, pp + ".question");
+                if (!m.ok) {
+                    issues.push(...m.issues);
+                    return;
+                }
+                q = m.value;
+            }
             if (q.codeStimulus !== undefined) {
                 issues.push(issue("AI_COMPOSITE_PART_FIELD", "مثير الكود غير متاح داخل بند فرعي.", pp, qid));
                 return;
@@ -200,8 +222,8 @@ function mapItem(raw, plan, qid, request, path, chartPolicy) {
     const comp = nestedComposite(raw, qid, path + ".composite");
     if (comp.issues)
         return { ok: false, issues: comp.issues };
-    const present = [...["question", "smartSim"].filter(k => raw[k] !== null), ...(comp.present ? ["composite"] : [])];
-    const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : "question";
+    const present = [...["question", "structured", "smartSim"].filter(k => raw[k] !== null), ...(comp.present ? ["composite"] : [])];
+    const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : "question";
     if (present.length !== 1 || present[0] !== want)
         return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
     let q;
@@ -210,6 +232,12 @@ function mapItem(raw, plan, qid, request, path, chartPolicy) {
         if (!m.ok)
             return m;
         q = m.value;
+    }
+    else if (want === "structured") {
+        const b = (0, composerStructured_1.buildStructuredQuestion)(raw.structured, kind, qid, plan.marks, path + ".structured");
+        if (!b.ok)
+            return { ok: false, issues: b.issues };
+        q = b.question;
     }
     else if (want === "smartSim") {
         const s = raw.smartSim;
