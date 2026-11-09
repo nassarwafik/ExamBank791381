@@ -1,0 +1,21 @@
+/* 899371 P8 (docs/enterprise-899371-learning-plan.md §21) — «جرّب الكود»: the editable copy under a book program (CodeRunPanel.tsx).
+   Loaded with that lazy chunk only, so the Reader's first load (budget 40 KB) does not carry it. The page's own surface and type; the
+   code and input boxes, the output and the compiler message use the code panel's tokens (dark in both themes). The loading line
+   shown before the chunk arrives is styled by the page's default paragraph. */
+.learning-run{ display:grid; gap:var(--eb-space-2); margin-block-start:var(--eb-space-2); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.learning-run-note, .learning-run-hint{ margin:0; font-size:var(--eb-read-fs-small); color:var(--eb-text-secondary); }
+.learning-run-hint{ color:var(--eb-text); font-weight:var(--eb-fw-semibold); }
+.learning-run-field{ display:grid; gap:var(--eb-space-1); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-semibold); color:var(--eb-text); }
+.learning-run-field small{ font-weight:var(--eb-fw-medium); color:var(--eb-text-secondary); }
+.learning-run-code, .learning-run-input, .learning-run-out, .learning-run-err{ box-sizing:border-box; inline-size:100%; margin:0; padding:var(--eb-space-2) var(--eb-space-3); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-read-fs-code); line-height:var(--eb-lh-body); color:var(--eb-code-fg); background:var(--eb-code-bg); border:1px solid var(--eb-code-control); border-radius:var(--eb-r-sm); text-align:left; tab-size:4; }
+.learning-run-code, .learning-run-input{ resize:vertical; white-space:pre; overflow-x:auto; }
+.learning-run-out, .learning-run-err{ white-space:pre-wrap; overflow-wrap:anywhere; max-block-size:22em; overflow-y:auto; }
+.learning-run-err{ border-color:var(--eb-danger); }
+.learning-run-code:focus-visible, .learning-run-input:focus-visible, .learning-run-out:focus-visible, .learning-run-err:focus-visible{ outline:2px solid var(--eb-code-type); outline-offset:1px; }
+.learning-run-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.learning-run-status{ margin:0; min-block-size:1.4em; font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-semibold); color:var(--eb-text); }
+.learning-run-status.is-success{ color:var(--eb-success-tx); }
+.learning-run-status.is-compile-error, .learning-run-status.is-runtime-error, .learning-run-status.is-timeout, .learning-run-status.is-error{ color:var(--eb-danger-tx); }
+.learning-run-result{ display:grid; gap:var(--eb-space-1); }
+.learning-run-label{ margin:0; font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+@media (pointer: coarse){ .learning-run-actions .eb-button{ min-block-size:44px; min-inline-size:44px; } }

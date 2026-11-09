@@ -9,6 +9,7 @@ import type { LearningCourseManifest } from "./content/types";
 import { arabicCount, AVAILABLE_BOOKS, LESSONS } from "./arabicCount";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import { createStudyClient } from "./study/studyClient";
+import type { CodeRunAccess } from "./run/runClient";
 import { createClassReadingClient, type ClassReadingClient } from "./classReading/classReadingClient";
 import { createContentApi, registryContentApi } from "./reader/readerContentApi";
 import ClassReadingPanel from "./classReading/ClassReadingPanel";
@@ -61,6 +62,8 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   // Phase L.3 — the teacher preview reads the book exactly as a student does: in-page exercises are judged by the SAME
   // server study authority (a teacher's answers are judged and never stored), so the page shows the student's study line.
   const study = useMemo(() => (token ? createStudyClient(teacherTrainingHeaders(token)) : null), [token]);
+  // 899371 P8 — «جرّب الكود» in the teacher preview (a run is never stored).
+  const codeRun = useMemo<CodeRunAccess | null>(() => (token ? { headers: teacherTrainingHeaders(token) } : null), [token]);
   // Phase L.4 — the book page's «قراءة صفوفي» panel (teacher only; it issues no request until the teacher opens it).
   const classReading = useMemo(() => (token ? createClassReadingClient(teacherTrainingHeaders(token)) : null), [token]);
   // Phase L.6a — the Reader's module bodies come from the API with the teacher's session (any module of the book).
@@ -122,6 +125,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
             exitLabel={view.fromSearch ? "العودة إلى نتائج البحث" : "العودة إلى نظرة الكتاب"}
             client={client}
             study={study}
+            codeRun={codeRun}
             actor="teacher"
             onPageChange={pageId => onReaderPage(course.id, pageId)}
             embedded

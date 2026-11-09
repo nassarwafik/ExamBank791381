@@ -11,6 +11,7 @@ import LearningPageRenderer, { type ReaderPageBody, type ReaderPageHeader } from
 import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
 import type { ExamItemHost, LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
+import type { CodeRunAccess } from "../run/runClient";
 import "./reader.css";
 import "./reader-enterprise-l2a.css";
 import "./reader-enterprise-l2b.css";
@@ -63,7 +64,7 @@ type ManifestState =
  * authority and stays usable when the request is refused or unavailable. Nothing is persisted.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, initialPageId, initialModuleId, onPageChange,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, examItems, study, codeRun, initialPageId, initialModuleId, onPageChange,
   initialPresentation, onPresentationChange, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null,
 }: {
   courseId: string;
@@ -77,6 +78,8 @@ export default function LearningReader({
   examItems?: ExamItemHost;
   /** Study-Practice host seam (completion state + report) for in-page exercises. Absent → practice stays local. */
   study?: StudyHost;
+  /** 899371 P8 — «جرّب الكود» transport for runnable C# blocks. Absent → no run button. */
+  codeRun?: CodeRunAccess;
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
    *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
   initialPageId?: string;
@@ -635,7 +638,7 @@ export default function LearningReader({
               </button>
             </div>
           )}
-          {header ? <LearningPageRenderer header={header} body={body} training={training} examItems={examItems} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {header ? <LearningPageRenderer header={header} body={body} training={training} examItems={examItems} study={study} codeRun={codeRun} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
           {located && body.kind === "ready" && body.page.blocks.some(b => b.type === "unit-opener") && (
             <UnitContents module={located.module} currentLessonId={located.lesson.id} onSelectPage={selectPage} visited={visitedScope ? visited : undefined} />
           )}

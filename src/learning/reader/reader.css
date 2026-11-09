@@ -135,6 +135,7 @@
 /* Phase 12A — tables: larger cells (15/16px, roomier padding), a tinted primary header row and zebra rows so a
    student keeps the line while reading across. Still only the wrapper scrolls. */
 .learning-reader-tablewrap{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); }
+.learning-reader-tablewrap[tabindex]:focus-visible{ outline:2px solid var(--eb-read-accent); outline-offset:2px; }
 .learning-reader-table{ border-collapse:collapse; width:100%; font-size:var(--eb-read-fs-table); line-height:1.5; }
 .learning-reader-table caption{ padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-semibold); text-align:start; }
 .learning-reader-table th, .learning-reader-table td{ padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); text-align:start; white-space:nowrap; }

@@ -4,6 +4,7 @@ import { createRestrictedReaderContentApi } from "../learning/reader/restrictedC
 import { createContentApi } from "../learning/reader/readerContentApi";
 import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
 import { createStudyClient } from "../learning/study/studyClient";
+import type { CodeRunAccess } from "../learning/run/runClient";
 import type { SearchHit } from "../learning/search/searchModel";
 import { fetchReleasedModuleIds } from "./learningRelease";
 import { createProgressClient, type ProgressClient } from "../learning/progress/progressClient";
@@ -52,6 +53,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds, createContentApi(studentTrainingHeaders(token))), [courseId, key, token]);   // eslint-disable-line react-hooks/exhaustive-deps
   const client = useMemo(() => createTrainingClient(studentTrainingHeaders(token)), [token]);
   const study = useMemo(() => createStudyClient(studentTrainingHeaders(token)), [token]);
+  // 899371 P8 — «جرّب الكود»: the server decides which programs this student may run (published units only).
+  const codeRun = useMemo<CodeRunAccess>(() => ({ headers: studentTrainingHeaders(token) }), [token]);
   // Phase 21E L3-B — in-book search is scoped to EXACTLY the released module ids this Reader was opened with (from the
   // authenticated release list the portal re-read on open) — never "all". Opening a result re-reads that list: a
   // module that is no longer released, or an entitlement that cannot be established, does not open.
@@ -100,6 +103,7 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       actor="student"
       onTrainingSubmitted={onTrainingSubmitted}
       study={study}
+      codeRun={codeRun}
       onStudyPointsEarned={onStudyPointsEarned}
       initialPageId={initialPageId ?? resume.pageId}
       initialModuleId={initialModuleId}
