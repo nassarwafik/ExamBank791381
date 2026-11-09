@@ -31,7 +31,9 @@ export const STRUCTURED_LIMITS = Object.freeze({
   categories: { min: 2, max: 6 }, entries: { min: 2, max: 20 }, textChars: 300,
   // Phase 21O
   statements: { min: 2, max: 10 }, columns: { min: 2, max: 5 }, rows: { min: 2, max: 10 }, blanks: { min: 2, max: 10 },
-  numericAbsMax: 1e9, toleranceRatio: 0.05
+  numericAbsMax: 1e9, toleranceRatio: 0.05,
+  // Phase 21R
+  cliLines: { min: 1, max: 15 }, cliLineChars: 120, cliBlanks: { min: 1, max: 8 }, cliAccepted: 4, cliTokenChars: 60, cliOccurrences: 3
 });
 /** The multipleSelect scorings the composer may store: both refuse "select every option" (partialNoPenalty would pay it). */
 export const COMPOSER_MS_SCORINGS = Object.freeze(["allOrNothing", "partialWithPenalty"] as const);
@@ -48,16 +50,18 @@ export function buildStructuredSchema(): JsonSchema {
     // Phase 21O — multiTrueFalse / matrix / wordBank / numericResponse
     statements: sArr(sObj({ text: sStr(), correct: sBool() }), S.statements.max),
     columns: sArr(sStr(), S.columns.max), rows: sArr(sObj({ label: sStr(), column: sInt(0, S.columns.max - 1) }), S.rows.max),
-    blanks: sArr(sStr(), S.blanks.max), expected: sNull(sNum()), tolerance: sNull(sNum())
+    blanks: sArr(sStr(), S.blanks.max), expected: sNull(sNum()), tolerance: sNull(sNum()),
+    // Phase 21R — cliFill: the full command lines and, per blank, its answer token and accepted alternatives
+    cliLines: sArr(sStr(), S.cliLines.max), cliBlanks: sArr(sObj({ answer: sStr(), accepted: sArr(sStr(), S.cliAccepted) }), S.cliBlanks.max)
   });
 }
-const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks", "expected", "tolerance"] as const;
+const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks", "expected", "tolerance", "cliLines", "cliBlanks"] as const;
 /** Which wire lists each kind fills; every other list must be empty (a payload that mixes kinds is refused, never trimmed). */
 const USES: Readonly<Record<ComposerStructuredType, readonly string[]>> = Object.freeze({
   multipleSelect: ["options", "correctOptions"], matching: ["pairs", "distractors", "headers"], ordering: ["sequence"], categorization: ["categories", "entries"],
-  multiTrueFalse: ["statements"], matrix: ["columns", "rows"], wordBank: ["blanks", "distractors"], numericResponse: ["expected", "tolerance"]
+  multiTrueFalse: ["statements"], matrix: ["columns", "rows"], wordBank: ["blanks", "distractors"], numericResponse: ["expected", "tolerance"], cliFill: ["cliLines", "cliBlanks"]
 });
-const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks"] as const;
+const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks", "cliLines", "cliBlanks"] as const;
 const SCALARS = ["expected", "tolerance"] as const;
 
 // ── deterministic, seeded permutations (the question id is the seed: the same draft always yields the same stored question) ──────────
@@ -170,6 +174,36 @@ export function buildStructuredBody(raw: unknown, kind: ComposerStructuredType, 
     return { ok: true, node: { presentationType: "wordBank", questionTypeVersion: 1, text, fields, wordBank: order.map(i => pool[i]), answer: syncSequenceAnswer(fields as never) } };
   }
 
+  // ── Phase 21R — cliFill: code blanks EVERY whole-token occurrence of each answer, so no copy of an answer stays visible ────────────
+  if (kind === "cliFill") {
+    const lines = texts("cliLines", S.cliLineChars), blanks = r.cliBlanks as unknown[];
+    if (!lines || lines.length < S.cliLines.min || lines.length > S.cliLines.max || lines.some(l => /\[\[|\]\]|\n/.test(l)))
+      return bad("AI_CLI_LINES", "أوامر CLI تحتاج " + S.cliLines.min + "–" + S.cliLines.max + " أسطر غير فارغة (حتى " + S.cliLineChars + " حرفًا لكل سطر)، بلا [[ أو ]].");
+    const tokenOk = (t: unknown): t is string => isStr(t, S.cliTokenChars, 1) && !/\s|\[\[|\]\]/.test(cleanText(t)) && cleanText(t).length >= 2;
+    if (blanks.length < S.cliBlanks.min || blanks.length > S.cliBlanks.max || !blanks.every(b => hasExactKeys(b, ["answer", "accepted"]) && tokenOk(b.answer) && isArr(b.accepted, S.cliAccepted) && (b.accepted as unknown[]).every(tokenOk)))
+      return bad("AI_CLI_BLANKS", "فراغات CLI: " + S.cliBlanks.min + "–" + S.cliBlanks.max + " فراغات، لكل فراغ كلمة واحدة (بلا مسافات، حرفان على الأقل) وحتى " + S.cliAccepted + " بدائل مقبولة.");
+    const list = (blanks as { answer: string; accepted: string[] }[]).map(b => ({ answer: cleanText(b.answer), accepted: b.accepted.map(cleanText) }));
+    if (!distinct(list.map(b => b.answer))) return bad("AI_CLI_BLANKS", "إجابات فراغات CLI يجب أن تكون مختلفة.");
+    // a token occurrence: preceded by the start, a space or "." (a sub-interface number), followed by the end or a space
+    const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const occ = (t: string) => new RegExp("(^|[\\s.])" + esc(t) + "(?=$|\\s)", "gi");
+    const count = (t: string, hay: string) => (hay.match(occ(t)) ?? []).length;
+    // in the stem (prose) the answer counts wherever it is not glued to a letter or a digit («VLAN 20.» names 20)
+    const inProse = (t: string, hay: string) => new RegExp("(^|[^\\p{L}\\p{N}])" + esc(t) + "(?![\\p{L}\\p{N}])", "iu").test(hay);
+    const all = lines.join("\n");
+    for (const b of list) {
+      const n = count(b.answer, all);
+      if (n === 0) return bad("AI_CLI_ANSWER_MISSING", "إجابة الفراغ «" + b.answer + "» غير موجودة كلمةً كاملة في أوامر CLI.");
+      if (n > S.cliOccurrences) return bad("AI_CLI_BLANKS", "إجابة الفراغ «" + b.answer + "» تتكرر أكثر من " + S.cliOccurrences + " مرات في الأوامر؛ اختر كلمة أدق.");
+      if (inProse(b.answer, text)) return bad("AI_CLI_LEAK", "نص السؤال يذكر إجابة الفراغ «" + b.answer + "»؛ احذفها منه.");
+    }
+    if (list.some((a, i) => list.some((b, j) => i !== j && count(a.answer, b.answer) > 0))) return bad("AI_CLI_BLANKS", "إجابة فراغ تقع داخل إجابة فراغ آخر؛ اجعل الإجابات منفصلة.");
+    let cli = all;
+    list.forEach((b, k) => { cli = cli.replace(occ(b.answer), (_m, pre: string) => pre + "[[b" + (k + 1) + "]]"); });
+    const fields = list.map((b, k) => ({ id: "b" + (k + 1), label: "[" + (k + 1) + "]", correct: b.accepted.length ? [b.answer, ...b.accepted.filter(a => norm(a) !== norm(b.answer))] : b.answer }));
+    return { ok: true, node: { presentationType: "cliFill", questionTypeVersion: 1, text, cli, fields } };
+  }
+
   if (kind === "numericResponse") {
     const expected = r.expected, tolerance = r.tolerance;
     if (typeof expected !== "number" || typeof tolerance !== "number" || Math.abs(expected) > S.numericAbsMax || tolerance < 0)
@@ -199,7 +233,7 @@ export function buildStructuredQuestion(raw: unknown, kind: ComposerStructuredTy
 /** The model-facing rules, sent only with the prompts that may write these kinds (keeps the general catalog bounded). */
 export function structuredRulesForPrompt(): string {
   return [
-    "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization, multiTrueFalse, matrix, wordBank, numericResponse): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
+    "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization, multiTrueFalse, matrix, wordBank, numericResponse, cliFill): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
     "- multipleSelect: options " + S.options.min + "-" + S.options.max + " distinct texts; correctOptions = zero-based indices of EVERY correct option; at least as many wrong options as correct ones; scoring allOrNothing (default) or partialWithPenalty.",
     "- matching: pairs " + S.pairs.min + "-" + S.pairs.max + " {left, right}, one-to-one (each right differs); up to " + S.distractors + " extra wrong rights in distractors; headers empty or the two column titles; no | = ; or line breaks in any cell.",
     "- ordering: sequence = " + S.sequence.min + "-" + S.sequence.max + " distinct items IN THEIR CORRECT ORDER (code shuffles them for the student; never number them).",
@@ -207,9 +241,10 @@ export function structuredRulesForPrompt(): string {
     "- multiTrueFalse: statements " + S.statements.min + "-" + S.statements.max + " {text, correct}; at least one true AND one false statement.",
     "- matrix: columns " + S.columns.min + "-" + S.columns.max + " distinct headings; rows " + S.rows.min + "-" + S.rows.max + " {label, column = zero-based index of its correct column}; every column is the answer of at least one row.",
     "- wordBank: the stem marks each blank [1], [2] … in order; blanks = the distinct correct word of each blank, in order; distractors = 1-" + S.distractors + " extra wrong words (code shuffles the bank).",
+    "- cliFill: cliLines = the COMPLETE command lines (prompt included, e.g. R1(config-if)# ip address 192.168.1.1 255.255.255.0); cliBlanks = 1-" + S.cliBlanks.max + " {answer = one exact token of those lines, accepted = up to " + S.cliAccepted + " alternative spellings}; code blanks every occurrence; never write the answer in the stem.",
     "- numericResponse: expected = the exact numeric answer (state the unit in the stem); tolerance >= 0 and at most 5% of |expected| (0 when expected is 0). expected and tolerance stay null for every other kind."
   ].join("\n");
 }
-const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization|true ?\/ ?false|multiTrueFalse|matrix|word ?bank|wordBank|numeric|صح.{0,3}خطأ|مصفوفة|بنك الكلمات|إجابة رقمية|numericResponse/i;
+const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization|true ?\/ ?false|multiTrueFalse|matrix|word ?bank|wordBank|numeric|صح.{0,3}خطأ|cli ?fill|cliFill|أكمل الأوامر|فراغات الأوامر|مصفوفة|بنك الكلمات|إجابة رقمية|numericResponse/i;
 /** A modify request (or the exam it edits) that involves a structured kind. */
 export const mentionsStructuredKinds = (text: string): boolean => STRUCTURED_WORDS.test(text);
