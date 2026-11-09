@@ -23,7 +23,11 @@ const someCheck = () => { const s = composerNetScenario(COMPOSER_NET_SCENARIOS[0
 describe("21M-HEADROOM the network check list travels on demand", () => {
   it("the general catalog shrinks by > 1000 characters and keeps every scenario id, title and topic", () => {
     const general = catalogForPrompt();
-    expect(general.length).toBeLessThanOrEqual(7600);
+    // 21O: the saving is measured directly (the general network line vs the full one it replaced) instead of a snapshot of the whole
+    // catalog's length, which later phases grow; the real bound of the general catalog stays 9000.
+    expect(networkCatalogForPrompt().length - networkScenariosLine().length).toBeGreaterThan(1000);
+    expect(general).not.toContain(networkCatalogForPrompt());
+    expect(general.length).toBeLessThanOrEqual(9000);
     const line = general.split("\n").find(l => l.startsWith("networkTopology@2 scenarios:"))!;
     expect(line).toBe(networkScenariosLine());
     for (const id of COMPOSER_NET_SCENARIOS) { const s = composerNetScenario(id)!; expect(line).toContain(id + " = " + s.title + " [" + s.topics.join(", ") + "]"); }

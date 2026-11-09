@@ -35,14 +35,14 @@ const ORDER = { text: "رتّب مراحل DHCP.", sequence: ["Discover", "Offer
 const CAT = { text: "صنّف الأجهزة حسب الطبقة.", categories: ["الطبقة الثانية", "الطبقة الثالثة"], entries: [{ label: "Switch", category: 0 }, { label: "Router", category: 1 }, { label: "Bridge", category: 0 }, { label: "L3 Switch", category: 1 }] };
 
 describe("21N-CAT the four structured kinds join the catalog", () => {
-  it("catalog V8, every kind is its stored key at the authoring version; the Item kinds line is compact and the general catalog stays bounded", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V8");
+  it("catalog V9, every kind is its stored key at the authoring version; the Item kinds line is compact and the general catalog stays bounded", () => {
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V9");
     const c = buildComposerCatalog();
     for (const k of COMPOSER_STRUCTURED_TYPES) { expect(COMPOSER_ITEM_KINDS).toContain(k); const t = c.questionTypes.find(x => x.kind === k)!; expect([t.key, t.version, t.autoGraded, t.compositeChild]).toEqual([k, 1, true, true]); }
     const p = catalogForPrompt(c);
     expect(p.length).toBeLessThanOrEqual(9000);
     const line = p.split("\n").find(l => l.startsWith("Item kinds"))!;
-    expect(line).toContain("multipleSelect@1 (several correct options) | matching@1 (one-to-one pairs) | ordering@1 (a sequence, given in its correct order) | categorization@1 (items sorted into categories) | smartSim@1");
+    expect(line).toContain("multipleSelect@1 (several correct options) | matching@1 (one-to-one pairs) | ordering@1 (a sequence, given in its correct order) | categorization@1 (items sorted into categories) | ");   // 21O appends four more structured kinds after these four, before smartSim
     expect(line).toContain("coding@2 manual (public material only");
     expect(p).not.toContain("STRUCTURED QUESTION RULES");
   });

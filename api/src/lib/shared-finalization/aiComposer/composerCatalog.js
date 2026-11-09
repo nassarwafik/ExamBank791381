@@ -24,9 +24,9 @@ const composerChart_1 = require("./composerChart");
 const composerGraph_1 = require("./composerGraph");
 const composerChemistry_1 = require("./composerChemistry");
 require("../trustedSimPlugins");
-exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V8";
+exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V9";
 exports.COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"]);
-exports.COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization"]);
+exports.COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse"]);
 exports.COMPOSER_ITEM_KINDS = Object.freeze([...exports.COMPOSER_DRAFT_TYPES, ...exports.COMPOSER_STRUCTURED_TYPES, "smartSim", "composite"]);
 function composerItemIdentity(kind) {
     return { key: kind, version: (0, questionTypeCatalog_1.authoringQuestionTypeVersion)(kind) };
@@ -98,7 +98,11 @@ const NOTES = Object.freeze({
     multipleSelect: "several correct options",
     matching: "one-to-one pairs",
     ordering: "a sequence, given in its correct order",
-    categorization: "items sorted into categories"
+    categorization: "items sorted into categories",
+    multiTrueFalse: "true / false per statement",
+    matrix: "one column per row",
+    wordBank: "blanks filled from a word bank",
+    numericResponse: "one number, bounded tolerance"
 });
 function buildComposerCatalog() {
     const questionTypes = exports.COMPOSER_ITEM_KINDS.map(kind => {
