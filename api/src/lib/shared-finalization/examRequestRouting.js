@@ -253,7 +253,7 @@ const DOMAIN_CAPABILITIES = Object.freeze({
     networking: { coding: false, smartSim: true },
     programming: { coding: true, smartSim: false },
     physics: { coding: false, smartSim: true, parametric: true },
-    chemistry: { coding: false, smartSim: false, parametric: true },
+    chemistry: { coding: false, smartSim: true, parametric: true },
     mathematics: { coding: false, smartSim: true, parametric: true, charts: true },
     mixed: {},
     other: { coding: false }
@@ -283,8 +283,6 @@ function buildComposerPrefill(input) {
         capabilities.coding = true;
     if (/محاكا|simulat|סימולצ/.test(normalizeRequestText(input.prompt)))
         capabilities.smartSim = true;
-    if (input.decision.domain === "chemistry" && capabilities.smartSim)
-        notes.push("لا توجد محاكاة كيمياء ضمن المؤلف الذكي بعد؛ أضف محاكاة الكيمياء من الباني بعد التوليد.");
     return {
         v: 1,
         subject: input.decision.subjectLabel.slice(0, composerLimits_1.COMPOSER_LIMITS.shortText),

@@ -6,6 +6,7 @@ import {
 } from "./examRequestRouting";
 import { COMPOSER_CAPABILITY_FLAGS, normalizeComposerIntent } from "./aiComposer/composerIntent";
 import { COMPOSER_LIMITS } from "./aiComposer/composerLimits";
+import { COMPOSER_SIM_PLUGINS } from "./aiComposer/composerCatalog";
 import { formFromPrefill, initialForm, intentInputOf } from "./aiComposer/composerForm";
 
 // Phase 21I — multi-subject routing of the builder prompt. The bank (791381 networking) serves networking requests only; every other subject
@@ -142,14 +143,22 @@ describe("21I composer pre-fill", () => {
     const long = buildComposerPrefill({ decision, prompt: "python code ".repeat(400), plan });
     expect(long.notes.join(" ")).toContain(String(COMPOSER_LIMITS.instructionChars));
   });
-  it("subject defaults: programming turns coding on, chemistry has no composer simulation (noted when one is requested)", () => {
+  it("subject defaults: programming turns coding on; chemistry turns the composer's chemistry simulators on (21J), with no «missing simulator» note", () => {
     const prog = resolveExamRoute({ ai: { domain: "programming" }, prompt: PROGRAMMING_AR });
     expect(buildComposerPrefill({ decision: prog, prompt: PROGRAMMING_AR, plan }).capabilities).toMatchObject({ coding: true, smartSim: false });
     const chem = resolveExamRoute({ ai: { domain: "chemistry" }, prompt: CHEMISTRY });
     const c = buildComposerPrefill({ decision: chem, prompt: CHEMISTRY, plan });
-    expect(c.capabilities.smartSim).toBe(true);                   // «مع محاكاة» explicitly asked
-    expect(c.notes.join(" ")).toContain("الكيمياء");
-    expect(buildComposerPrefill({ decision: chem, prompt: "امتحان كيمياء عن الحموض", plan }).capabilities.smartSim).toBe(false);
+    expect(c.capabilities).toMatchObject({ smartSim: true, coding: false });
+    expect(c.notes).toEqual([]);
+    expect(buildComposerPrefill({ decision: chem, prompt: "امتحان كيمياء عن الحموض", plan }).capabilities.smartSim).toBe(true);
+  });
+  it("a subject whose pre-fill turns smartSim on has a composer simulator of that subject (drift guard against the composer catalog)", () => {
+    for (const domain of EXAM_SUBJECT_DOMAINS) {
+      const decision = resolveExamRoute({ ai: { domain }, prompt: "امتحان" });
+      if (decision.domain !== domain) continue;
+      const p = buildComposerPrefill({ decision, prompt: "امتحان", plan });
+      if (p.capabilities.smartSim === true) expect(COMPOSER_SIM_PLUGINS.map(x => x.subject), domain).toContain(domain);
+    }
   });
   it("difficulty mapping from the 1–5 distribution", () => {
     expect(composerDifficultyFromTargets({ "1": 4, "2": 4, "3": 2 })).toBe("easy");

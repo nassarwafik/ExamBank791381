@@ -340,8 +340,8 @@ const DOMAIN_CAPABILITIES: Readonly<Record<ExamSubjectDomain, Partial<Record<Pre
   networking: { coding: false, smartSim: true },
   programming: { coding: true, smartSim: false },
   physics: { coding: false, smartSim: true, parametric: true },
-  // the composer catalog has no chemistry SmartSim yet: chemistry simulations are added by the teacher in the Builder
-  chemistry: { coding: false, smartSim: false, parametric: true },
+  // 21J: the composer generates chemistryReactions@1 / chemistryStructure@1 (a test pins every smartSim default to a composer plugin)
+  chemistry: { coding: false, smartSim: true, parametric: true },
   mathematics: { coding: false, smartSim: true, parametric: true, charts: true },
   mixed: {},
   other: { coding: false }
@@ -376,7 +376,6 @@ export function buildComposerPrefill(input: {
   // explicit signals in the request itself turn a feature ON (never off): code in a physics exam, a simulation in a chemistry exam…
   if (det.scores.programming > 0) capabilities.coding = true;
   if (/محاكا|simulat|סימולצ/.test(normalizeRequestText(input.prompt))) capabilities.smartSim = true;
-  if (input.decision.domain === "chemistry" && capabilities.smartSim) notes.push("لا توجد محاكاة كيمياء ضمن المؤلف الذكي بعد؛ أضف محاكاة الكيمياء من الباني بعد التوليد.");
   return {
     v: 1,
     subject: input.decision.subjectLabel.slice(0, COMPOSER_LIMITS.shortText),
