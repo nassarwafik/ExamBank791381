@@ -1,0 +1,14 @@
+{
+  "id": "f03-or-always-true",
+  "source": "ف2 جدول العوامل المنطقية: x > 0 || x < 10",
+  "verbatim": false,
+  "finding": "F3",
+  "bookClaim": "صحيح إذا x أكبر من صفر أو أصغر من 10",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "True\nTrue\nTrue\nTrue\nTrue\nTrue"
+      }
+    }
+  ]
+}

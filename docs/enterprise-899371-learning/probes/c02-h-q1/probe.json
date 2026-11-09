@@ -1,0 +1,12 @@
+{
+  "id": "c02-h-q1",
+  "source": "ف2 بيتية س1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "6\n5"
+      }
+    }
+  ]
+}

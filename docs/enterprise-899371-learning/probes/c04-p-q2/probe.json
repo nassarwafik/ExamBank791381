@@ -1,0 +1,31 @@
+{
+  "id": "c04-p-q2",
+  "source": "ف4 برمجة س2",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "567",
+      "expect": {
+        "stdout": "Yes"
+      }
+    },
+    {
+      "stdin": "895",
+      "expect": {
+        "stdout": "No"
+      }
+    },
+    {
+      "stdin": "444",
+      "expect": {
+        "stdout": "No"
+      }
+    },
+    {
+      "stdin": "543",
+      "expect": {
+        "stdout": "No"
+      }
+    }
+  ]
+}

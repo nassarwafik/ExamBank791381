@@ -1,0 +1,12 @@
+{
+  "id": "c08-t-q1",
+  "source": "ف8 تتبع س1.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "olleh"
+      }
+    }
+  ]
+}

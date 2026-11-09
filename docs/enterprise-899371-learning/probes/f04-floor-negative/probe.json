@@ -1,0 +1,14 @@
+{
+  "id": "f04-floor-negative",
+  "source": "ف3 تلخيص: «Math.Floor – تزيل الجزء العشري»",
+  "verbatim": false,
+  "finding": "F4",
+  "bookClaim": "Math.Floor تزيل الجزء العشري",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "7\n-8\n-7"
+      }
+    }
+  ]
+}

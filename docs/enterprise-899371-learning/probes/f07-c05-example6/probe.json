@@ -1,0 +1,15 @@
+{
+  "id": "f07-c05-example6",
+  "source": "ف5 تلخيص for، مثال 6 (الأسطر كما طُبعت داخل Main)",
+  "verbatim": false,
+  "finding": "F7",
+  "bookClaim": "طباعة جدول الضرب لعدد معين",
+  "runs": [
+    {
+      "stdin": "3",
+      "expect": {
+        "stdout": "ادخل عدد: number × i : = 3\nnumber × i : = 6\nnumber × i : = 9\nnumber × i : = 12\nnumber × i : = 15\nnumber × i : = 18\nnumber × i : = 21\nnumber × i : = 24\nnumber × i : = 27\nnumber × i : = 30"
+      }
+    }
+  ]
+}

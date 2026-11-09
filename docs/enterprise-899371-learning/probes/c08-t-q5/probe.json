@@ -1,0 +1,12 @@
+{
+  "id": "c08-t-q5",
+  "source": "ف8 تتبع س5.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "ab*cd*"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "c04-p-q4",
+  "source": "ف4 برمجة س4",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "222",
+      "expect": {
+        "stdout": "Equal"
+      }
+    },
+    {
+      "stdin": "566",
+      "expect": {
+        "stdout": "Not Equal"
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "f06-c04-h-q2",
+  "source": "ف4 بيتية س2 (كما طُبع)",
+  "verbatim": true,
+  "finding": "F6",
+  "expect": {
+    "compile": "error",
+    "diagnostics": [
+      "CS0165"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "c03-p-q1",
+  "source": "ف3 برمجة س1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "5.66"
+      }
+    }
+  ]
+}

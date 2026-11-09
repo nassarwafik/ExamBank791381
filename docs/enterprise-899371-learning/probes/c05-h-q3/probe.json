@@ -1,0 +1,13 @@
+{
+  "id": "c05-h-q3",
+  "source": "ف5 بيتية س3.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "78\n5\n97\n3\n77\n4",
+      "expect": {
+        "stdout": "Enter mark :\nEnter Units :\nEnter mark :\nEnter Units :\nEnter mark :\nEnter Units :\nAvg := 96.16666666666667"
+      }
+    }
+  ]
+}

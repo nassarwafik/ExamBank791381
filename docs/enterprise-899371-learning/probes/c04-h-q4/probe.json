@@ -1,0 +1,25 @@
+{
+  "id": "c04-h-q4",
+  "source": "ف4 بيتية س4 (else المعلّق)",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "1\n-1",
+      "expect": {
+        "stdout": "two"
+      }
+    },
+    {
+      "stdin": "-1\n5",
+      "expect": {
+        "stdout": "three"
+      }
+    },
+    {
+      "stdin": "1\n1",
+      "expect": {
+        "stdout": "one"
+      }
+    }
+  ]
+}
