@@ -24,7 +24,7 @@ const codes = (r: { ok: boolean; issues?: { code: string }[] }) => (r.ok ? [] : 
 const body = (kind: Kind, over: Json, part = false, seed = "aiq-1-1") => buildStructuredBody(F.structured(over), kind, seed, "$.s", "aiq-1-1", part);
 const node = (kind: Kind, over: Json, part = false, seed = "aiq-1-1") => { const b = body(kind, over, part, seed); if (!b.ok) throw new Error(JSON.stringify(b.issues)); return b.node as Json; };
 const examOf = (questions: Json[]) => ({ examId: "E21O", title: "t", sections: [{ id: "s1", title: "s", gradingPolicy: "all", questions }] });
-const asQuestion = (n: Json, id: string, marks: number) => ({ examQuestionId: id, marks, ...n });
+const asQuestion = (n: Json, id: string, marks: number): Json => ({ examQuestionId: id, marks, ...n });
 const blocking = (questions: Json[]) => validateStructuredExam(examOf(questions) as never).filter(i => i.severity === "error");
 const score = (q: Json, answer: unknown) => gradeExam(examOf([q]), { [q.examQuestionId as string]: answer }).score;
 
