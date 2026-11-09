@@ -34,13 +34,13 @@ const WB = { text: "يعمل [1] في طبقة النقل، ويعمل [2] في 
 const NUM = { text: "احسب عدد العناوين القابلة للاستخدام في الشبكة /26.", expected: 62, tolerance: 0 };
 
 describe("21O-CAT four more structured kinds join the catalog", () => {
-  it("catalog V9; every new kind is its stored key, auto-graded and composite-capable; the general catalog stays bounded", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V9");
+  it("catalog V10; every new kind is its stored key, auto-graded and composite-capable; the general catalog stays bounded", () => {
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V10");
     const c = buildComposerCatalog();
     for (const k of NEW) { expect(COMPOSER_ITEM_KINDS).toContain(k); const t = c.questionTypes.find(x => x.kind === k)!; expect([t.key, t.version, t.autoGraded, t.compositeChild]).toEqual([k, 1, true, true]); }
     const p = catalogForPrompt(c);
     expect(p.length).toBeLessThanOrEqual(9000);
-    expect(p.split("\n").find(l => l.startsWith("Item kinds"))).toContain("categorization@1 (items sorted into categories) | multiTrueFalse@1 (true / false per statement) | matrix@1 (one column per row) | wordBank@1 (blanks filled from a word bank) | numericResponse@1 (one number, bounded tolerance) | smartSim@1");
+    expect(p.split("\n").find(l => l.startsWith("Item kinds"))).toContain("categorization@1 (items sorted into categories) | multiTrueFalse@1 (true / false per statement) | matrix@1 (one column per row) | wordBank@1 (blanks filled from a word bank) | numericResponse@1 (one number, bounded tolerance) | ");   // 21P appends chartSelection after these, before smartSim
     const s = buildStructuredSchema() as { properties: Record<string, unknown> };
     for (const k of ["statements", "columns", "rows", "blanks", "expected", "tolerance"]) expect(Object.keys(s.properties)).toContain(k);
   });

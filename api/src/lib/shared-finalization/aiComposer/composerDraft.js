@@ -11,6 +11,7 @@ const examQuality_1 = require("../examQuality");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
 const composerStructured_1 = require("./composerStructured");
+const composerChartQuestion_1 = require("./composerChartQuestion");
 const composerPlan_1 = require("./composerPlan");
 const composerRich_1 = require("./composerRich");
 const composerSim_1 = require("./composerSim");
@@ -28,14 +29,14 @@ function buildItemSchema() {
     const context = (0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(["smartSim", "source"]), sim: (0, composerSchemaKit_1.sNull)((0, composerSim_1.buildSimSpecSchema)()), sourceTitle: (0, composerSchemaKit_1.sStr)(), sourceBlocks: (0, composerRich_1.buildRichBlocksSchema)() });
     return (0, composerSchemaKit_1.sObj)({
         kind: (0, composerSchemaKit_1.sEnum)(composerCatalog_1.COMPOSER_ITEM_KINDS), topic: (0, composerSchemaKit_1.sStr)(), difficulty: (0, composerSchemaKit_1.sEnum)(composerPlan_1.PLAN_DIFFICULTIES), rationale: (0, composerSchemaKit_1.sStr)(), stem: (0, composerRich_1.buildRichBlocksSchema)(),
-        question: (0, composerSchemaKit_1.sNull)(q), structured: (0, composerSchemaKit_1.sNull)(st), smartSim: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), sim: (0, composerSim_1.buildSimSpecSchema)() })),
+        question: (0, composerSchemaKit_1.sNull)(q), structured: (0, composerSchemaKit_1.sNull)(st), chartQuestion: (0, composerSchemaKit_1.sNull)((0, composerChartQuestion_1.buildChartQuestionSchema)()), smartSim: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ text: (0, composerSchemaKit_1.sStr)(), sim: (0, composerSim_1.buildSimSpecSchema)() })),
         compositeText: (0, composerSchemaKit_1.sStr)(), compositeContext: (0, composerSchemaKit_1.sNull)(context), compositeGroups: (0, composerSchemaKit_1.sArr)(group, L.compositeGroups), compositeParts: (0, composerSchemaKit_1.sArr)(part, L.compositeParts),
         assetRequest: (0, composerSchemaKit_1.sNull)((0, composerSchemaKit_1.sObj)({ description: (0, composerSchemaKit_1.sStr)() }))
     });
 }
 const buildSectionDraftSchema = () => (0, composerSchemaKit_1.sObj)({ items: (0, composerSchemaKit_1.sArr)(buildItemSchema(), L.itemsPerSection) });
 exports.buildSectionDraftSchema = buildSectionDraftSchema;
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"];
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "chartQuestion", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"];
 const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"];
 const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question", "structured"];
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"];
@@ -222,8 +223,8 @@ function mapItem(raw, plan, qid, request, path, chartPolicy) {
     const comp = nestedComposite(raw, qid, path + ".composite");
     if (comp.issues)
         return { ok: false, issues: comp.issues };
-    const present = [...["question", "structured", "smartSim"].filter(k => raw[k] !== null), ...(comp.present ? ["composite"] : [])];
-    const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : "question";
+    const present = [...["question", "structured", "chartQuestion", "smartSim"].filter(k => raw[k] !== null), ...(comp.present ? ["composite"] : [])];
+    const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : kind === "chartSelection" ? "chartQuestion" : "question";
     if (present.length !== 1 || present[0] !== want)
         return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
     let q;
@@ -232,6 +233,12 @@ function mapItem(raw, plan, qid, request, path, chartPolicy) {
         if (!m.ok)
             return m;
         q = m.value;
+    }
+    else if (want === "chartQuestion") {
+        const b = (0, composerChartQuestion_1.buildChartSelectionQuestion)(raw.chartQuestion, qid, plan.marks, chartPolicy, path + ".chartQuestion");
+        if (!b.ok)
+            return { ok: false, issues: b.issues };
+        q = b.question;
     }
     else if (want === "structured") {
         const b = (0, composerStructured_1.buildStructuredQuestion)(raw.structured, kind, qid, plan.marks, path + ".structured");

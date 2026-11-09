@@ -36,7 +36,7 @@ export function intentAllowedKinds(intent: AiExamIntentV1): ComposerItemKind[] {
   const c = intent.capabilities;
   return (intent.allowedQuestionTypes ?? [...COMPOSER_ITEM_KINDS]).filter(k =>
     (k !== "composite" || c.composite) && (k !== "smartSim" || c.smartSim) && (k !== "coding" || c.coding) &&
-    (k !== "parametricNumeric" || c.parametric) && (k !== "openResponse" || c.openResponse));
+    (k !== "parametricNumeric" || c.parametric) && (k !== "openResponse" || c.openResponse) && (k !== "chartSelection" || (c.charts && c.richContent)));   // 21P: a chart question needs the same toggles as an AI chart (composerChartPolicy)
 }
 
 export function normalizeComposerIntent(raw: unknown): { ok: true; intent: AiExamIntentV1 } | { ok: false; issues: ComposerIssue[] } {

@@ -10,6 +10,7 @@ const aiQuestionDraft_1 = require("../aiQuestionDraft");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
 const composerStructured_1 = require("./composerStructured");
+const composerChartQuestion_1 = require("./composerChartQuestion");
 const composerChemistry_1 = require("./composerChemistry");
 const composerPhysics_1 = require("./composerPhysics");
 const composerIntent_1 = require("./composerIntent");
@@ -47,6 +48,7 @@ function buildSectionPrompt(intent, plan, sectionIndex) {
         ...(s.items.some(it => it.simulator && composerChemistry_1.CHEMISTRY_SIM_KEYS.includes(it.simulator)) ? [(0, composerChemistry_1.chemistryCatalogForPrompt)()] : []),
         ...(s.items.some(it => it.simulator === "networkTopology") ? [(0, composerCatalog_1.networkCatalogForPrompt)()] : []),
         ...(s.items.some(it => it.kind === "composite" || composerCatalog_1.COMPOSER_STRUCTURED_TYPES.includes(it.kind)) ? [(0, composerStructured_1.structuredRulesForPrompt)()] : []),
+        ...(s.items.some(it => it.kind === "chartSelection") ? [(0, composerChartQuestion_1.chartQuestionRulesForPrompt)()] : []),
         ...(s.items.some(it => it.simulator && composerPhysics_1.PHYSICS_SIM_KEYS.includes(it.simulator)) ? [(0, composerPhysics_1.physicsCatalogForPrompt)()] : []),
         teacher(intent.teacherInstruction)].join("\n\n");
 }
@@ -68,6 +70,7 @@ function buildModifyPrompt(projection, mode, scope, instruction) {
         ...((0, composerChemistry_1.mentionsChemistry)(instruction + " " + JSON.stringify(projection)) ? [(0, composerChemistry_1.chemistryCatalogForPrompt)()] : []),
         ...((0, composerCatalog_1.mentionsNetworking)(instruction + " " + JSON.stringify(projection)) ? [(0, composerCatalog_1.networkCatalogForPrompt)()] : []),
         ...((0, composerStructured_1.mentionsStructuredKinds)(instruction + " " + JSON.stringify(projection)) ? [(0, composerStructured_1.structuredRulesForPrompt)()] : []),
+        ...((0, composerChartQuestion_1.mentionsChartQuestion)(instruction + " " + JSON.stringify(projection)) ? [(0, composerChartQuestion_1.chartQuestionRulesForPrompt)()] : []),
         ...((0, composerPhysics_1.mentionsAdvancedPhysics)(instruction + " " + JSON.stringify(projection)) ? [(0, composerPhysics_1.physicsCatalogForPrompt)()] : []),
         fence("current exam (answers withheld)", projection), teacher(instruction)].join("\n\n");
 }

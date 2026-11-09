@@ -28,7 +28,8 @@ import "../trustedSimPlugins";
 // V7 (Phase 21L): the advanced physics simulators physicsMotion@1 and physicsLab@1.
 // V8 (Phase 21N): the structured kinds multipleSelect@1, matching@1, ordering@1, categorization@1 (compact Item kinds line).
 // V9 (Phase 21O): the structured kinds multiTrueFalse@1, matrix@1, wordBank@1, numericResponse@1.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V9";
+// V10 (Phase 21P): chartSelection@1 with a code-computed key.
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V10";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -38,7 +39,9 @@ export type ComposerDraftType = (typeof COMPOSER_DRAFT_TYPES)[number];
 export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse"] as const);   // 21O: the last four
 export type ComposerStructuredType = (typeof COMPOSER_STRUCTURED_TYPES)[number];
 /** Every item kind a plan / draft may name: a 19A family, a structured family (21N), a trusted SmartSim question, or a composite@1 question. */
-export const COMPOSER_ITEM_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, ...COMPOSER_STRUCTURED_TYPES, "smartSim", "composite"] as const);
+/** Phase 21P — chartSelection@1: a chart descriptor + a closed task; code builds the chart and computes the key from its numbers. */
+export const COMPOSER_CHART_QUESTION_TYPES = Object.freeze(["chartSelection"] as const);
+export const COMPOSER_ITEM_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, ...COMPOSER_STRUCTURED_TYPES, ...COMPOSER_CHART_QUESTION_TYPES, "smartSim", "composite"] as const);
 export type ComposerItemKind = (typeof COMPOSER_ITEM_KINDS)[number];
 
 /** The exact question identity each item kind is stored as (authoring version, never "latest"). */
@@ -150,7 +153,8 @@ const NOTES: Readonly<Partial<Record<ComposerItemKind, string>>> = Object.freeze
   multiTrueFalse: "true / false per statement",
   matrix: "one column per row",
   wordBank: "blanks filled from a word bank",
-  numericResponse: "one number, bounded tolerance"
+  numericResponse: "one number, bounded tolerance",
+  chartSelection: "select on a chart; code computes the key"
 });
 
 /** The catalog, derived from the live registries (throws only if a production registry disagrees — a programming error, caught by tests). */
