@@ -7,6 +7,7 @@ import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, St
 import type { SearchScope } from "../content/searchProvider";
 import type { SearchHit, SearchProviderFactory } from "../search/searchModel";
 import type { AnnotationsClient } from "../annotations/annotationsClient";
+import type { CodeRunAccess } from "../run/runClient";
 
 // The runner (and the exam question primitive it pulls) is code-split: reading never pays for practising.
 const LearningTrainingRunner = lazy(lazyWithRetry(() => import("./LearningTrainingRunner"), "learning-training-runner"));
@@ -24,7 +25,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, codeRun = null, onStudyPointsEarned, initialPageId, initialModuleId, onPageChange: onPageChangeProp, embedded = false, visitedScope, searchScope, onSearchOpen, searchProviderFactory, annotations = null }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -35,6 +36,8 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   onTrainingSubmitted?: () => void;
   /** Study-Practice transport (student sessions). `null` → in-page practice stays local, no study UI, no request. */
   study?: StudyClient | null;
+  /** 899371 P8 — «جرّب الكود» transport. `null` → C# blocks show no run button and no request is made. */
+  codeRun?: CodeRunAccess | null;
   /** Fired when the server awarded study points (hosts use it to refresh Strength on exit). */
   onStudyPointsEarned?: () => void;
   /** The page the Reader should open on FIRST mount (e.g. a Course-Overview section shortcut). Forwarded verbatim
@@ -204,6 +207,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       training={host}
       examItems={examItems}
       study={studyHost}
+      codeRun={codeRun ?? undefined}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
       initialModuleId={initialModuleId}
       onPageChange={onPageChange}

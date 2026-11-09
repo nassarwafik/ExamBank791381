@@ -4399,7 +4399,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "GetLength(0) عدد الصفوف (3)، وGetLength(1) عدد الأعمدة (5)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p01"
             },
             {
               "id": "m10-l04-p01-q02-code",
@@ -4439,7 +4440,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "m[1, 2]: الصف الثاني (مؤشر 1) والعمود الثالث (مؤشر 2) = 6."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p01"
             },
             {
               "id": "m10-l04-p01-q03-code",
@@ -4479,7 +4481,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة تجمع الصف 1 فقط: 2 + 7 + 6 = 15."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p02"
             },
             {
               "id": "m10-l04-p01-q04-code",
@@ -4519,7 +4522,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "القطر الرئيسي هو العناصر التي رقم صفها = رقم عمودها: 1 + 5 + 9 = 15."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p03"
             },
             {
               "id": "m10-l04-p01-q05-code",
@@ -4540,7 +4544,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "نمرّ على كل الخانات بحلقتين: العناصر الأكبر من 4 هي 6 و8 و5."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p02"
             }
           ]
         },
@@ -4595,7 +4600,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "Length لمصفوفة ثنائية الأبعاد هو عدد كل العناصر: 4 × 6 = 24."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p01"
             },
             {
               "id": "m10-l04-p02-q07-code",
@@ -4635,7 +4641,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة تجمع العمود 1 فقط: 1 + 7 = 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p02"
             },
             {
               "id": "m10-l04-p02-q08",
@@ -4692,7 +4699,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "القطر الرئيسي حيث رقم الصف = رقم العمود: [0, 0] و[1, 1] و[2, 2]."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p03"
             },
             {
               "id": "m10-l04-p02-q09",
@@ -4706,7 +4714,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "المؤشرات تبدأ من 0: الصف 1 هو الثاني، والعمود 2 هو الثالث."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p01"
             },
             {
               "id": "m10-l04-p02-q10",
@@ -4748,7 +4757,8 @@ const m10: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة الخارجية على الصفوف (GetLength(0))، والداخلية على الأعمدة (GetLength(1))، والجمع داخل الاثنتين، والطباعة بعدهما."
                 }
-              }
+              },
+              "reviewPageId": "899371-m10-l01-p02"
             }
           ]
         }

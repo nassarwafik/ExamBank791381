@@ -3032,7 +3032,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "Length يعيد عدد الأحرف: p-r-o-g-r-a-m سبعة أحرف."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p02"
             },
             {
               "id": "m08-l04-p01-q02-code",
@@ -3072,7 +3073,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "المؤشر يبدأ من 0: [0] هو h و[1] هو e."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p02"
             },
             {
               "id": "m08-l04-p01-q03-code",
@@ -3112,7 +3114,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "Substring(3, 4) يبدأ من المؤشر 3 (الحرف p) ويأخذ 4 أحرف: pute."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p03"
             },
             {
               "id": "m08-l04-p01-q04-code",
@@ -3152,7 +3155,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "IndexOf يعيد موقع أول ظهور: b(0) a(1) n(2)، فالجواب 2."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p02"
             },
             {
               "id": "m08-l04-p01-q05-code",
@@ -3192,7 +3196,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "Replace يستبدل كل ظهور لـ \"an\": b·an·an·a تصبح bANANa."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p03"
             }
           ]
         },
@@ -3228,7 +3233,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة تمرّ على الأحرف من الأخير إلى الأول وتضيفها: c ثم b ثم a."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p04"
             },
             {
               "id": "m08-l04-p02-q07-code",
@@ -3268,7 +3274,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "\"apple\" قبل \"banana\" أبجديًا، فـ CompareTo يعيد قيمة سالبة (< 0)، والتعبير صحيح: True."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p02"
             },
             {
               "id": "m08-l04-p02-q08-code",
@@ -3308,7 +3315,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "Split(' ') يقسم النص عند كل مسافة: Good و morning و class، فعدد الأجزاء 3."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p04"
             },
             {
               "id": "m08-l04-p02-q09-code",
@@ -3330,7 +3338,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "Equals تقارن النصين حرفًا بحرف مع حالة الأحرف: \"Hi\" و\"hi\" مختلفان، فيُطبع False."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p02"
             },
             {
               "id": "m08-l04-p02-q10",
@@ -3385,7 +3394,8 @@ const m08: ContentModule = {
                 "feedback": {
                   "explanation": "ToUpper تكبّر الأحرف، وInsert تُدخل نصًا، وRemove تحذف جزءًا، وLastIndexOf تعيد موقع آخر ظهور (وIndexOf أول ظهور)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m08-l01-p03"
             }
           ]
         }

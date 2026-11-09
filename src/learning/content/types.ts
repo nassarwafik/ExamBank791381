@@ -230,7 +230,12 @@ export interface ServerCheckMarker {
 export interface RevealMarker {
   reveal?: true;
 }
-export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker, RevealMarker { type: "practice"; question: PracticeQuestion; }
+export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut, ServerCheckMarker, RevealMarker {
+  type: "practice"; question: PracticeQuestion;
+  /** 899371 P9 — the book page that teaches what this exercise practises (a page of the same course): the Reader shows
+   *  «راجع في الكتاب: <title>» and opens it. Absent → no link (every other course, unchanged). */
+  reviewPageId?: string;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Interactive Learning Engine (Phase 3A) — activity descriptor contract.

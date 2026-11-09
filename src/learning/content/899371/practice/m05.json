@@ -25,7 +25,11 @@
     }
    },
    "program": "for (int i = 1; i <= 4; i++)\n    Console.Write(i * 2 + \" \");",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p01",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "int sum = 0;\nfor (int i = 1; i <= 5; i++)\n    sum += i;\nConsole.WriteLine(sum);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p02",
+    "anchor": "+="
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "int count = 0;\nfor (int i = 0; i < 10; i += 3)\n    count++;\nConsole.WriteLine(count);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p01",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "for (int i = 5; i > 0; i -= 2)\n    Console.Write(i);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p01",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -115,7 +131,11 @@
     }
    },
    "program": "int c = 0;\nfor (int i = 1; i <= 3; i++)\n    for (int j = 1; j <= i; j++)\n        c++;\nConsole.WriteLine(c);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p02",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -141,7 +161,11 @@
     }
    },
    "program": "for (int i = 1; i <= 3; i++)\n{\n    for (int j = 1; j <= i; j++)\n        Console.Write(\"*\");\n    Console.WriteLine();\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p02",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -167,7 +191,11 @@
     }
    },
    "program": "int p = 1;\nfor (int i = 1; i <= 4; i++)\n    p *= i;\nConsole.WriteLine(p);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m05-l01-p02",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -180,7 +208,11 @@
    },
    "program": "int c = 0;\nfor (int i = 1; i <= 100; i++)\n    c++;\nConsole.WriteLine(c);",
    "prove": "claim",
-   "claimOutput": "100"
+   "claimOutput": "100",
+   "review": {
+    "pageId": "899371-m05-l01-p01",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -203,6 +235,10 @@
     "feedback": {
      "explanation": "المهيّئ يعيّن العدّاد مرة واحدة، والشرط يُفحص قبل كل دورة، والتحديث يعدّل العدّاد بعد كل دورة."
     }
+   },
+   "review": {
+    "pageId": "899371-m05-l01-p01",
+    "anchor": "for"
    }
   },
   {
@@ -218,6 +254,10 @@
     "feedback": {
      "explanation": "نهيّئ المجمّع بصفر قبل الحلقة، ثم الحلقة وجسمها، ثم نطبع بعد انتهاء الحلقة لا داخلها."
     }
+   },
+   "review": {
+    "pageId": "899371-m05-l01-p02",
+    "anchor": "+="
    }
   }
  ]

@@ -2471,7 +2471,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "القسمة بين عددين صحيحين تعطي عددًا صحيحًا (بدون كسور): 10 / 4 = 2."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p01-q02-code",
@@ -2511,7 +2512,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "% تعطي باقي القسمة: 23 = 4 × 5 + 3، فالباقي 3."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p01-q03-code",
@@ -2551,7 +2553,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "عندما يكون أحد العددين كسريًا (10.0) تكون القسمة كسرية: 10.0 / 4 = 2.5."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p01-q04-code",
@@ -2591,7 +2594,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "a = 6، ثم += 4 تصبح 10، ثم *= 2 تصبح 20، ثم -- تصبح 19."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p01-q05-code",
@@ -2613,7 +2617,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "x > 10 صحيح، لكن x % 5 == 0 خطأ (باقي قسمة 12 على 5 هو 2)، و&& تحتاج الشرطين معًا، فيُطبع False."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             }
           ]
         },
@@ -2668,7 +2673,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "!(x > 3) خطأ لأن 4 > 3 صحيح، لكن x == 4 صحيح، و|| يكفيه شرط واحد صحيح: True."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p02-q07",
@@ -2732,7 +2738,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "% باقي القسمة، && تتحقق إذا تحقق الشرطان، || إذا تحقق أحدهما، != لا يساوي، == للمقارنة (أما = فللإسناد)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p02-q08",
@@ -2789,7 +2796,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "7 فردي فـ x % 2 == 0 خطأ؛ 7 بين 5 و10 صحيح؛ x == 7 صحيح فـ || صحيح؛ x > 0 صحيح فنفيه خطأ؛ 7 >= 7 صحيح؛ x != 7 خطأ."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p03"
             },
             {
               "id": "m02-l04-p02-q09-code",
@@ -2810,7 +2818,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "a يصبح 4 بعد ++، ثم b += a تجعل b = 5 + 4 = 9."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m02-l04-p02-q10",
@@ -2842,7 +2851,8 @@ const m02: ContentModule = {
                 "feedback": {
                   "explanation": "الأقواس أولًا، ثم الضرب قبل الطرح، فالناتج 19."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             }
           ]
         }

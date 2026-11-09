@@ -34,7 +34,10 @@ const REGISTRY = {
   sharedByDesign: ["exam-library.js", "exam-governance.js", "governance-inbox.js", "learning-content.js", "learning-materials-catalog.js", "learning-study.js", "learning-training.js",
     // 791381s Phase 8C-1 — the learning book's advanced exam items: platform course content (a private store under api/data),
     // read-only for teachers (preview), practice for students; nothing stored per teacher is read or written.
-    "learning-exam-item.js"],
+    "learning-exam-item.js",
+    // 899371 P8 — «جرّب الكود»: runs a book program of a platform course in the isolated runner; nothing stored per teacher is read,
+    // and the only write is the caller's own rate-limit bucket (keyed by the verified session subject).
+    "learning-run.js"],
   // Tadris+ P2-A2 — a teacher ends their OWN session (the verified token subject and session id; nothing else is read or written).
   // platform-session describes the caller's OWN session (role, display name, expiry) and reads only that account.
   ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/,

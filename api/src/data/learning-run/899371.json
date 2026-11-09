@@ -1,0 +1,687 @@
+{
+ "schemaVersion": 1,
+ "courseId": "899371",
+ "language": "csharp@1",
+ "pages": {
+  "899371-m01-l02-p01": {
+   "blocks": {
+    "m01-l02-p01-b04": {
+     "moduleId": "899371-m01",
+     "codeSha": "0a40a8d275d451972e7e0425ed0752ca0a19e947dd104443ec5616661eda9134"
+    }
+   }
+  },
+  "899371-m01-l02-p02": {
+   "blocks": {
+    "m01-l02-p02-b02": {
+     "moduleId": "899371-m01",
+     "codeSha": "4b347699cbf4513170c0969154129475df07e73e64822619780d981d9a419ea0"
+    }
+   }
+  },
+  "899371-m01-l02-p03": {
+   "blocks": {
+    "m01-l02-p03-b02": {
+     "moduleId": "899371-m01",
+     "codeSha": "fab58fdadddfbcff01e3efe06f1f418119594b6075de7af447abe385a08d8b79"
+    }
+   }
+  },
+  "899371-m02-l02-p01": {
+   "blocks": {
+    "m02-l02-p01-b05": {
+     "moduleId": "899371-m02",
+     "codeSha": "8f56dd90cead8818bfd1ac7a111dd1e9345be463ce96f531f7b182ae08784786"
+    }
+   }
+  },
+  "899371-m02-l02-p02": {
+   "blocks": {
+    "m02-l02-p02-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "c95769451cfc467772a1a8670009c584b75a051fbc8476939677052d08a52708"
+    }
+   }
+  },
+  "899371-m02-l02-p03": {
+   "blocks": {
+    "m02-l02-p03-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "b428eb0633b9728d6b279feb16c8de86912ab6c63315d8677cfa490a1f0fe6b3"
+    }
+   }
+  },
+  "899371-m02-l02-p04": {
+   "blocks": {
+    "m02-l02-p04-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "a5fa8d6048ed5ef762b57dfa840ec54469d4d6afbf981531ed11d4c190b7f7ee"
+    }
+   }
+  },
+  "899371-m02-l02-p05": {
+   "blocks": {
+    "m02-l02-p05-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "03e49a8e52a6a147a50494c751078721a6076e0d19398f0195796403683ced55"
+    }
+   }
+  },
+  "899371-m02-l02-p08": {
+   "blocks": {
+    "m02-l02-p08-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "b37ffc2d6ed3d75061d0ef6641d1ccae8dba6d8450dc07ee7a833ad8002427c7"
+    }
+   }
+  },
+  "899371-m02-l02-p09": {
+   "blocks": {
+    "m02-l02-p09-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "f79a7d4286a41b82de7c4496c7ee3903245cd1009210dc8aee6baa6d25b78628"
+    }
+   }
+  },
+  "899371-m02-l02-p10": {
+   "blocks": {
+    "m02-l02-p10-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "de23d7ae1c91b232a2cab5aaf304bb475807db8c8273f17dbec9659d5ea0b6dd"
+    }
+   }
+  },
+  "899371-m02-l02-p12": {
+   "blocks": {
+    "m02-l02-p12-b02": {
+     "moduleId": "899371-m02",
+     "codeSha": "5df7e1600acfcd5b74e6065c82293b68f1ce3b98f108c812d07246410a552721"
+    }
+   }
+  },
+  "899371-m02-l03-p01": {
+   "blocks": {
+    "m02-l03-p01-b04": {
+     "moduleId": "899371-m02",
+     "codeSha": "2dcb89a8a44ea99fac2ea62d1e7000dcf7bafb7770a39739d1acbc98afb15758"
+    }
+   }
+  },
+  "899371-m02-l03-p02": {
+   "blocks": {
+    "m02-l03-p02-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "1426fd36463dcd708f3836f0a83b3fd447428bee455158b36448e9fb8126d55b"
+    }
+   }
+  },
+  "899371-m02-l03-p03": {
+   "blocks": {
+    "m02-l03-p03-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "ad695bab3a811df2b92df7a8968b2026d64253180565b1bc5ffd80e201d7d8ee"
+    }
+   }
+  },
+  "899371-m02-l03-p04": {
+   "blocks": {
+    "m02-l03-p04-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "4592b501a3d1517c88a56e6a87ac0f135f314b29a91680b21ddca42d8dda90ab"
+    }
+   }
+  },
+  "899371-m02-l03-p06": {
+   "blocks": {
+    "m02-l03-p06-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "fd105616f5c02b94de5daa6f6c51f7beee9290ab0d1d0fd9fa999929c5755fa3"
+    }
+   }
+  },
+  "899371-m02-l03-p07": {
+   "blocks": {
+    "m02-l03-p07-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "bd27ec0a9cfffb5b76b130c1f3361cc6027108db31c26519c210261e4662a070"
+    }
+   }
+  },
+  "899371-m02-l03-p08": {
+   "blocks": {
+    "m02-l03-p08-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "463c380b722b54e29e317905ebfc542861aa121b59165268f9f1ed372a84b592"
+    }
+   }
+  },
+  "899371-m02-l03-p10": {
+   "blocks": {
+    "m02-l03-p10-b03": {
+     "moduleId": "899371-m02",
+     "codeSha": "15ab6f58c1dbbc340d454b9d1c779306e1f1db0cc32fb059b409f772c83eaab0"
+    }
+   }
+  },
+  "899371-m03-l02-p01": {
+   "blocks": {
+    "m03-l02-p01-b04": {
+     "moduleId": "899371-m03",
+     "codeSha": "0ba464131ff94809eafc00b9a462ab8124daeb7145a276c8a45da8ec28821041"
+    }
+   }
+  },
+  "899371-m03-l02-p02": {
+   "blocks": {
+    "m03-l02-p02-b02": {
+     "moduleId": "899371-m03",
+     "codeSha": "9b26af0ce57866883accf9c68a231881ebf0759e1d4bdbf06d09c1f24ee72d27"
+    }
+   }
+  },
+  "899371-m03-l02-p03": {
+   "blocks": {
+    "m03-l02-p03-b02": {
+     "moduleId": "899371-m03",
+     "codeSha": "6f1445adcad611a62883f73a45b77e9735f923458ac7bd627d18395d5b174f17"
+    }
+   }
+  },
+  "899371-m03-l02-p04": {
+   "blocks": {
+    "m03-l02-p04-b02": {
+     "moduleId": "899371-m03",
+     "codeSha": "81baed50bbabdb6534313de222bd9fc885b0b0c6d792010927e74c2f8ba8cc6b"
+    }
+   }
+  },
+  "899371-m03-l02-p05": {
+   "blocks": {
+    "m03-l02-p05-b02": {
+     "moduleId": "899371-m03",
+     "codeSha": "ef936d5deac99cfb9eae683aace7c1e2505fef705471e638aca68d379e59d59a"
+    }
+   }
+  },
+  "899371-m03-l02-p06": {
+   "blocks": {
+    "m03-l02-p06-b02": {
+     "moduleId": "899371-m03",
+     "codeSha": "e779bb33671ecefb45acd681263c6c7dae4f961a207044dd90d90afd18c37985"
+    }
+   }
+  },
+  "899371-m03-l03-p01": {
+   "blocks": {
+    "m03-l03-p01-b04": {
+     "moduleId": "899371-m03",
+     "codeSha": "c2000183ebfd325476f57ad1dcc8f159271de0cf3b552e241fb2a256095ef1d0"
+    }
+   }
+  },
+  "899371-m03-l03-p02": {
+   "blocks": {
+    "m03-l03-p02-b03": {
+     "moduleId": "899371-m03",
+     "codeSha": "237d90c1d8fb8576730910f8a6a9b7a5cb9506113ad20bd9361a896662f71c25"
+    }
+   }
+  },
+  "899371-m03-l03-p03": {
+   "blocks": {
+    "m03-l03-p03-b03": {
+     "moduleId": "899371-m03",
+     "codeSha": "ca480016437919e725e57d6673cf520c4b246d0c430a8330f120424adbf1e821"
+    }
+   }
+  },
+  "899371-m03-l03-p04": {
+   "blocks": {
+    "m03-l03-p04-b03": {
+     "moduleId": "899371-m03",
+     "codeSha": "ab62e57db9b06ebd23e93de8216608a93367411c003594d8062a1b28f170eeed"
+    }
+   }
+  },
+  "899371-m03-l03-p05": {
+   "blocks": {
+    "m03-l03-p05-b03": {
+     "moduleId": "899371-m03",
+     "codeSha": "302e55789a21b1be45ecda6a064d5a2782c1c5b0c40ff38356cfa8baf7230da3"
+    }
+   }
+  },
+  "899371-m04-l01-p05": {
+   "blocks": {
+    "m04-l01-p05-b06": {
+     "moduleId": "899371-m04",
+     "codeSha": "acd28a29bfe765760814a124f7be479324b296fbaefae82c9bdd2d6d3625d166"
+    }
+   }
+  },
+  "899371-m04-l02-p01": {
+   "blocks": {
+    "m04-l02-p01-b03": {
+     "moduleId": "899371-m04",
+     "codeSha": "0089e1beb6ce51ff82552375cad253f17c40f04e22c8f5788788b40271c1e4d2"
+    }
+   }
+  },
+  "899371-m04-l02-p02": {
+   "blocks": {
+    "m04-l02-p02-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "0264d392519f2bb76b59e4e707a82c06be3c42c8f7ce3da65cae583b677acbc7"
+    }
+   }
+  },
+  "899371-m04-l02-p03": {
+   "blocks": {
+    "m04-l02-p03-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "d1ff259e8d99face7dd624aedf8096dd6e012ed2a52a6f6f38b228532ff7bb25"
+    }
+   }
+  },
+  "899371-m04-l02-p04": {
+   "blocks": {
+    "m04-l02-p04-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "bb3830ab4e026420a6fca154940488dbcd9cd99cbe79af7913b6cfcb88f141c8"
+    }
+   }
+  },
+  "899371-m04-l02-p06": {
+   "blocks": {
+    "m04-l02-p06-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "92ceb8d08492050450fd7dfe73c2c753022af15b40e4fad1ef1b6f10bc9e33dd"
+    }
+   }
+  },
+  "899371-m04-l03-p01": {
+   "blocks": {
+    "m04-l03-p01-b03": {
+     "moduleId": "899371-m04",
+     "codeSha": "f6413a45605f52081312132152c5e41f2bc5a2dbea627326706f978158157260"
+    }
+   }
+  },
+  "899371-m04-l03-p02": {
+   "blocks": {
+    "m04-l03-p02-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "c824ba446894834f6eddfce8cbf91fc0ac519884f3ab1f92060433bddce04f2e"
+    }
+   }
+  },
+  "899371-m04-l03-p03": {
+   "blocks": {
+    "m04-l03-p03-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "bb660d4c1ad17c2dd91e19119956279a2d919c52dc0fd3bb2f732cb090fd3f96"
+    }
+   }
+  },
+  "899371-m04-l03-p04": {
+   "blocks": {
+    "m04-l03-p04-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "28d396e760b44cf5556db003d47b365478d9d63d9be9fad32a498ddf672c9f3e"
+    }
+   }
+  },
+  "899371-m04-l03-p05": {
+   "blocks": {
+    "m04-l03-p05-b02": {
+     "moduleId": "899371-m04",
+     "codeSha": "eb8b0d0fbb5a8df435ff88eff79b13cd003ae40cdfc42d66b9af2237ba3f1161"
+    }
+   }
+  },
+  "899371-m05-l02-p01": {
+   "blocks": {
+    "m05-l02-p01-b03": {
+     "moduleId": "899371-m05",
+     "codeSha": "b841abbd89eb14993c943faa59b6b2477f6fac57d4343222a4b5e20e20165cbd"
+    }
+   }
+  },
+  "899371-m05-l02-p02": {
+   "blocks": {
+    "m05-l02-p02-b02": {
+     "moduleId": "899371-m05",
+     "codeSha": "3a42cbe3205fe3604f2c88a86612b17f3da281e4d9fe4319edcc751dc143b89c"
+    }
+   }
+  },
+  "899371-m05-l02-p03": {
+   "blocks": {
+    "m05-l02-p03-b02": {
+     "moduleId": "899371-m05",
+     "codeSha": "77e7a0fd59749298571ed654c1bc26f1f44d36e047eb1373327df770291be417"
+    }
+   }
+  },
+  "899371-m05-l02-p04": {
+   "blocks": {
+    "m05-l02-p04-b02": {
+     "moduleId": "899371-m05",
+     "codeSha": "073b9b01b51982e866cf04e20eca11acc59209af1a6cbd768635368c98e95f59"
+    }
+   }
+  },
+  "899371-m05-l02-p05": {
+   "blocks": {
+    "m05-l02-p05-b02": {
+     "moduleId": "899371-m05",
+     "codeSha": "2e45784b2623d2891676e9074b1f936f2509b2ac22b1d29c904373c02a234215"
+    }
+   }
+  },
+  "899371-m06-l02-p01": {
+   "blocks": {
+    "m06-l02-p01-b03": {
+     "moduleId": "899371-m06",
+     "codeSha": "881ec0bb665ae8a7c965a8863081cc55a382726e7c5d5ae28f7c324d4bf6ce0b"
+    }
+   }
+  },
+  "899371-m06-l02-p02": {
+   "blocks": {
+    "m06-l02-p02-b02": {
+     "moduleId": "899371-m06",
+     "codeSha": "5a9e8746d66944af2d2b7b5858ea349ce40c1facac19970a4ac67e8f37a2cb43"
+    }
+   }
+  },
+  "899371-m06-l02-p03": {
+   "blocks": {
+    "m06-l02-p03-b02": {
+     "moduleId": "899371-m06",
+     "codeSha": "46b99d25a3660040912ed70df13b0cbf308572602078be1b0d3518abd655538b"
+    }
+   }
+  },
+  "899371-m06-l02-p04": {
+   "blocks": {
+    "m06-l02-p04-b02": {
+     "moduleId": "899371-m06",
+     "codeSha": "8bcb6be71b16c10bf75c0f3043462f26777e331b994a2ac66f326a0af9874d1a"
+    }
+   }
+  },
+  "899371-m06-l02-p05": {
+   "blocks": {
+    "m06-l02-p05-b02": {
+     "moduleId": "899371-m06",
+     "codeSha": "c8983aecd3b4982df9a36393b078000d6d0267f9aee0b5514b43f26fc11c399b"
+    }
+   }
+  },
+  "899371-m07-l01-p05": {
+   "blocks": {
+    "m07-l01-p05-b03": {
+     "moduleId": "899371-m07",
+     "codeSha": "61b60dd54cce1d03ab54641b4676320eb054157633454bb48f97ec7d2cabb0ff"
+    },
+    "m07-l01-p05-b07": {
+     "moduleId": "899371-m07",
+     "codeSha": "8f0870a0d44928bbacdbdf76cf55962d4f0c4df89bcfb12473201835bee64152"
+    },
+    "m07-l01-p05-b11": {
+     "moduleId": "899371-m07",
+     "codeSha": "fb23d82334bd3fd772d6cbed7305286a2eb7241795fa09bcac484c3efcbbd228"
+    },
+    "m07-l01-p05-b15": {
+     "moduleId": "899371-m07",
+     "codeSha": "af9ca5d20066cc023fc29155042b904f598e1c3519746d55d179d4d21130c68b"
+    }
+   }
+  },
+  "899371-m07-l01-p07": {
+   "blocks": {
+    "m07-l01-p07-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "3b62a2afc85673bff3c369da25767ad5b5e12050ff9e24db0ae61f323e8a71e9"
+    }
+   }
+  },
+  "899371-m07-l01-p08": {
+   "blocks": {
+    "m07-l01-p08-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "5f9e141cbf4685f782d08769b220fd9bfdfcb7be8e5577b3637d2b41604804e6"
+    }
+   }
+  },
+  "899371-m07-l01-p09": {
+   "blocks": {
+    "m07-l01-p09-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "cd816d60ba9036316ea7e6de5884fa423811229ec4f42efaaf886c73010a55ba"
+    }
+   }
+  },
+  "899371-m07-l01-p10": {
+   "blocks": {
+    "m07-l01-p10-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "c67744d6da552abec63f29353996c4c984972ff2196e2ec6f57388784bfdc466"
+    }
+   }
+  },
+  "899371-m07-l02-p01": {
+   "blocks": {
+    "m07-l02-p01-b03": {
+     "moduleId": "899371-m07",
+     "codeSha": "f02567d20c37498de78b644982c5625593b1625b7c53c90224e196888ffa27fa"
+    }
+   }
+  },
+  "899371-m07-l02-p02": {
+   "blocks": {
+    "m07-l02-p02-b02": {
+     "moduleId": "899371-m07",
+     "codeSha": "1b862498f809a88f46327afb179daac126e60e88f1b1de631f578ad38e8f4dd2"
+    }
+   }
+  },
+  "899371-m07-l02-p03": {
+   "blocks": {
+    "m07-l02-p03-b02": {
+     "moduleId": "899371-m07",
+     "codeSha": "8e70fc46f2b2ee5f89c58bdddacac2e906f189feda2c04cbc876e60623898395"
+    }
+   }
+  },
+  "899371-m07-l02-p04": {
+   "blocks": {
+    "m07-l02-p04-b02": {
+     "moduleId": "899371-m07",
+     "codeSha": "e3f9a04318ddef77ab01213724292272969d19ed43f3acdc59249cdbad6b6982"
+    }
+   }
+  },
+  "899371-m07-l02-p05": {
+   "blocks": {
+    "m07-l02-p05-b02": {
+     "moduleId": "899371-m07",
+     "codeSha": "13d0f3f03eceb4abac8b92108af0ca3b1ca77b1a5bd6312f71078a69013de83b"
+    }
+   }
+  },
+  "899371-m07-l04-p01": {
+   "blocks": {
+    "m07-l04-p01-q01-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "bbd10841ce155ee1b3889d45216afb64eddbe2f0cc6f86ffc74b23e1c6e99c36"
+    },
+    "m07-l04-p01-q02-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "946052849014d17b2ae94fdee6ccf5cb64f0410e0c3829991cd6d093bf9b4248"
+    },
+    "m07-l04-p01-q03-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "ca5da478fb881eac53cf65bea698147b2883b98421d4ccff7f7b29aa18b7aca3"
+    },
+    "m07-l04-p01-q04-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "767efd9e7288e4322b2d0efdef9b85097efb9ad2a9219da27faa14334aa85a58"
+    },
+    "m07-l04-p01-q05-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "5327276605e7c7e2b7ecca01d80aa71dcb220ab8b35c726984fe181850a41cb5"
+    }
+   }
+  },
+  "899371-m07-l04-p02": {
+   "blocks": {
+    "m07-l04-p02-q06-code": {
+     "moduleId": "899371-m07",
+     "codeSha": "06b6c38f7e321ab311c9cb34e8cbb8a91ca0f24f5dba865c7cf55d9f03ffdd6f"
+    }
+   }
+  },
+  "899371-m08-l02-p01": {
+   "blocks": {
+    "m08-l02-p01-b04": {
+     "moduleId": "899371-m08",
+     "codeSha": "c31f9be9fc740d6ed3cf9a19bc4a03635eb20e64970a6401ae930c0bef0dea05"
+    }
+   }
+  },
+  "899371-m08-l02-p03": {
+   "blocks": {
+    "m08-l02-p03-b03": {
+     "moduleId": "899371-m08",
+     "codeSha": "e135593497d5b41e820e78942a9e4dc50cd3a11b46586be135355f0d17113d58"
+    }
+   }
+  },
+  "899371-m08-l02-p04": {
+   "blocks": {
+    "m08-l02-p04-b03": {
+     "moduleId": "899371-m08",
+     "codeSha": "06d2be2355ed9020c1cfe2d250763cd0bc8fb2764a1ccdd0ee24b3dd3217a8b0"
+    }
+   }
+  },
+  "899371-m08-l02-p05": {
+   "blocks": {
+    "m08-l02-p05-b03": {
+     "moduleId": "899371-m08",
+     "codeSha": "a49c85463c6ddefe2f965270b38e3c0d796606298495f4269498f715844c1e75"
+    }
+   }
+  },
+  "899371-m09-l02-p01": {
+   "blocks": {
+    "m09-l02-p01-b03": {
+     "moduleId": "899371-m09",
+     "codeSha": "d8d2908b8a3cfeb44b3e8e8fcd32fb705798098b3cdd22d8eda51df849437af6"
+    }
+   }
+  },
+  "899371-m09-l02-p02": {
+   "blocks": {
+    "m09-l02-p02-b02": {
+     "moduleId": "899371-m09",
+     "codeSha": "1fd6d21adbcdef821e7f0ac0c8eb98a15f8ff71d012b2f2ea6fb2fea5018f693"
+    }
+   }
+  },
+  "899371-m09-l02-p03": {
+   "blocks": {
+    "m09-l02-p03-b02": {
+     "moduleId": "899371-m09",
+     "codeSha": "cc395a77c348bcd0614290485b61070d7c72274d7b9f9dccabbbf150bff19517"
+    }
+   }
+  },
+  "899371-m09-l02-p05": {
+   "blocks": {
+    "m09-l02-p05-b04": {
+     "moduleId": "899371-m09",
+     "codeSha": "c94e8d82891ce7cbd62344bb58684ce09106255420d78ac2794981e11e94b863"
+    }
+   }
+  },
+  "899371-m09-l04-p01": {
+   "blocks": {
+    "m09-l04-p01-q05-code": {
+     "moduleId": "899371-m09",
+     "codeSha": "c4d4acac1bad0496b8313fd29c8eb65a299d0f5724e4ba5cc3096f8b480ab32e"
+    }
+   }
+  },
+  "899371-m11-l01-p05": {
+   "blocks": {
+    "m11-l01-p05-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "17fbe6056b2de3bad7b4cf4a11a855b32ada2f12401b29832c05abbf5ddf2c92"
+    }
+   }
+  },
+  "899371-m11-l01-p06": {
+   "blocks": {
+    "m11-l01-p06-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "321b187ee062db13d87a4402656a9754706badf9df50f53fd709286d0706e8a8"
+    }
+   }
+  },
+  "899371-m11-l01-p07": {
+   "blocks": {
+    "m11-l01-p07-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "8c3d4f9f5bb430bba0bff0dfa2d6975c1e562792f427e1be99e6ad62bfd41c10"
+    }
+   }
+  },
+  "899371-m11-l01-p08": {
+   "blocks": {
+    "m11-l01-p08-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "01cf8c6933edce6076ff3993d381459a7356df063f86f825d2fdb9943f115f2d"
+    }
+   }
+  },
+  "899371-m11-l04-p01": {
+   "blocks": {
+    "m11-l04-p01-q01-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "051692ecc05a80654f496148b73695df55e1b86cd8e622d9e65bb4d022b27ff0"
+    },
+    "m11-l04-p01-q02-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "05844180339fc6746497fff8c238dc18dc78e27eca7d565a5a7f9a4b9ce3a4f5"
+    },
+    "m11-l04-p01-q03-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "8f8fb07686f3d6145db489b874d954abfbd179d41be03de70f04ff49d9c75a93"
+    },
+    "m11-l04-p01-q04-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "3cdd4aa9cbb2bf5e0c16997a6ca8a4079ae2408655bc1999266bb458c7167c5c"
+    },
+    "m11-l04-p01-q05-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "410e4a62d102fd9e9e590ad5710fb39fde73553e731c0d269905a0983879f3ac"
+    }
+   }
+  },
+  "899371-m11-l04-p02": {
+   "blocks": {
+    "m11-l04-p02-q06-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "5332d086b090e023b9a973761cdc5ba2da320b01dd09010810a3c348186b0050"
+    },
+    "m11-l04-p02-q07-code": {
+     "moduleId": "899371-m11",
+     "codeSha": "31ca12d9bbba165d82c034c14d64f7b2408b8f682c868e1173249bd54d67dccb"
+    }
+   }
+  }
+ }
+}

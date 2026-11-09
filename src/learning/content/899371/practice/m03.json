@@ -25,7 +25,11 @@
     }
    },
    "program": "Console.WriteLine(Math.Abs(-12));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Abs"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "Console.WriteLine(Math.Pow(2, 5));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Pow"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "Console.WriteLine(Math.Max(Math.Min(4, 9), 6));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Max"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "Console.WriteLine(Math.Round(4.7) + Math.Floor(4.7));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Floor"
+   }
   },
   {
    "question": {
@@ -129,7 +145,11 @@
     }
    },
    "program": "int num = 739;\nConsole.WriteLine(num / 100 + num % 10);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "باقي القسمة"
+   }
   },
   {
    "question": {
@@ -141,7 +161,11 @@
     }
    },
    "program": "int n = 4825;\nConsole.WriteLine(n / 10 % 10);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "باقي القسمة"
+   }
   },
   {
    "question": {
@@ -172,6 +196,10 @@
     "feedback": {
      "explanation": "القيمة المطلقة لـ -5 هي 5، و3² = 9، والجذر التربيعي لـ 16 هو 4، وFloor يقرّب 7.9 للأسفل إلى 7، والأكبر بين 3 و8 هو 8."
     }
+   },
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Sqrt"
    }
   },
   {
@@ -196,6 +224,10 @@
     "feedback": {
      "explanation": "Next(1, 7) تعيد عددًا من 1 حتى 6: الحد الأعلى 7 لا يدخل. لهذا نستعملها لحجر النرد."
     }
+   },
+   "review": {
+    "pageId": "899371-m03-l01-p03",
+    "anchor": "Next"
    }
   },
   {
@@ -209,7 +241,11 @@
    },
    "program": "Console.WriteLine(Math.Round(2.5));",
    "prove": "claim",
-   "claimOutput": "3"
+   "claimOutput": "3",
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math.Round"
+   }
   },
   {
    "question": {
@@ -224,6 +260,10 @@
     "feedback": {
      "explanation": "new Random() ينشئ مولّد الأعداد، وrnd.NextDouble() يعيد عددًا عشريًا بين 0 و1، أما rnd.Next(a, b) فيعيد عددًا صحيحًا."
     }
+   },
+   "review": {
+    "pageId": "899371-m03-l01-p02",
+    "anchor": "Math."
    }
   }
  ]

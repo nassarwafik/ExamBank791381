@@ -38,6 +38,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "learning-study.js": { "*": "learning.course.view" },
   "learning-training.js": { "*": "learning.course.view" },
   "learning-exam-item.js": { "*": "learning.course.view" },
+  "learning-run.js": { "*": "learning.course.view" },   // 899371 P8 — «جرّب الكود»: a teacher previewing a course may run its programs
   "learning-class-progress.js": { "*": "learning.progress.view" },
 
   // Exam library, question bank, imports.

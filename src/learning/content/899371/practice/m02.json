@@ -25,7 +25,11 @@
     }
    },
    "program": "Console.WriteLine(10 / 4);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "القسمة الصحيحة"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "Console.WriteLine(23 % 5);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "باقي القسمة"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "Console.WriteLine(10.0 / 4);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "القسمة الكسرية"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "int a = 6;\na += 4;\na *= 2;\na--;\nConsole.WriteLine(a);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "العوامل الحسابية"
+   }
   },
   {
    "question": {
@@ -116,7 +132,11 @@
    },
    "program": "int x = 12;\nConsole.WriteLine(x > 10 && x % 5 == 0);",
    "prove": "claim",
-   "claimOutput": "True"
+   "claimOutput": "True",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "و (AND)"
+   }
   },
   {
    "question": {
@@ -142,7 +162,11 @@
     }
    },
    "program": "int x = 4;\nConsole.WriteLine(!(x > 3) || x == 4);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "ليس (NOT)"
+   }
   },
   {
    "question": {
@@ -173,6 +197,10 @@
     "feedback": {
      "explanation": "% باقي القسمة، && تتحقق إذا تحقق الشرطان، || إذا تحقق أحدهما، != لا يساوي، == للمقارنة (أما = فللإسناد)."
     }
+   },
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "عوامل المقارنة"
    }
   },
   {
@@ -212,6 +240,10 @@
     "feedback": {
      "explanation": "7 فردي فـ x % 2 == 0 خطأ؛ 7 بين 5 و10 صحيح؛ x == 7 صحيح فـ || صحيح؛ x > 0 صحيح فنفيه خطأ؛ 7 >= 7 صحيح؛ x != 7 خطأ."
     }
+   },
+   "review": {
+    "pageId": "899371-m02-l01-p03",
+    "anchor": "age >= 13 && age <= 19"
    }
   },
   {
@@ -224,7 +256,11 @@
     }
    },
    "program": "int a = 3, b = 5;\na++;\nb += a;\nConsole.WriteLine(b);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "العوامل الحسابية"
+   }
   },
   {
    "question": {
@@ -238,6 +274,10 @@
     "feedback": {
      "explanation": "الأقواس أولًا، ثم الضرب قبل الطرح، فالناتج 19."
     }
+   },
+   "review": {
+    "pageId": "899371-m02-l01-p02",
+    "anchor": "العوامل الحسابية"
    }
   }
  ]

@@ -4,6 +4,7 @@ import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, isNetworkLabBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock, type ExamItemBlock } from "../content/types";
 import type { ExamItemHost, LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
+import type { CodeRunAccess } from "../run/runClient";
 import { studyActivityIds } from "../study/eligibility";
 import CalloutToneIcon from "../themes/CalloutToneIcon";
 import { calloutTone, type PageTheme } from "../themes/courseTheme";
@@ -32,6 +33,10 @@ export type ActivityRenderContext = {
   /** Study-Practice seam: the HOST holds the student's completion state and reports a correct answer to the server,
    *  which alone decides correctness and points. Absent (no session / teacher preview) → practice stays local. */
   study?: StudyHost;
+  /** 899371 P8 — «جرّب الكود» transport (absent → C# blocks have no run button). */
+  codeRun?: CodeRunAccess;
+  /** 899371 P9 — the book's own pages: a title by id (null when not in this Reader) and opening one (an exercise's «راجع في الكتاب»). */
+  bookPages?: { title: (pageId: string) => string | null; open: (pageId: string) => void };
   /** The id of the page being rendered (set only for a ready body) — what an exercise reports against. */
   pageId?: string;
   /** The course's visual skin for this page (null/absent → the established Reader look, unchanged DOM). */
@@ -72,7 +77,7 @@ export type ReaderPageBody =
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
  * nothing is regrouped. No answer key reaches the DOM before the student answers (see PracticeBlockView).
  */
-export default function LearningPageRenderer({ header, body, activity, training, examItems, study }: {
+export default function LearningPageRenderer({ header, body, activity, training, examItems, study, codeRun, bookPages }: {
   header: ReaderPageHeader;
   body: ReaderPageBody;
   /** Optional activity-engine injection. Omitted in production → the production allowlist registry + no-op sink. */
@@ -82,8 +87,12 @@ export default function LearningPageRenderer({ header, body, activity, training,
   examItems?: ExamItemHost;
   /** Optional Study-Practice host (completion state + report). Omitted → in-page practice stays local, no points UI. */
   study?: StudyHost;
+  /** 899371 P8 — «جرّب الكود» transport. */
+  codeRun?: CodeRunAccess;
+  /** 899371 P9 — title / open of the book's pages (the exercises' «راجع في الكتاب»). Absent → no link. */
+  bookPages?: ActivityRenderContext["bookPages"];
 }) {
-  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, examItems, study, pageId: body.kind === "ready" ? body.page.id : undefined, theme: header.theme };
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, examItems, study, codeRun, bookPages, pageId: body.kind === "ready" ? body.page.id : undefined, theme: header.theme };
   // Undefined attributes are omitted by React, so an unthemed course renders exactly the markup it always had.
   const themeAttrs = { "data-course-theme": header.theme?.id, "data-theme-tone": header.theme?.tone };
 
@@ -406,7 +415,9 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <ExampleView block={block} />;
     case "table":
       return (
-        <div className="learning-reader-tablewrap">
+        // 899371 P8 (plan §21.4): a table wider than a phone scrolls inside this wrapper, so the keyboard must reach it (axe
+        // scrollable-region-focusable): focusable and named by its caption, like the C# code panel.
+        <div className="learning-reader-tablewrap" tabIndex={0} role="region" aria-label={block.caption || "جدول"}>
           <table className="learning-reader-table" dir={block.dir}>
             {block.caption && <caption>{block.caption}</caption>}
             <thead><tr>{block.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
@@ -416,7 +427,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
         </div>
       );
     case "code":
-      return <CodeBlockView block={block} />;
+      return <CodeBlockView block={block} run={ctx.codeRun && ctx.pageId ? { access: ctx.codeRun, courseId: ctx.courseId, pageId: ctx.pageId } : undefined} />;
     case "diagram":
       return block.src
         ? (
@@ -435,8 +446,14 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <ListView block={block} />;
     case "unit-opener":
       return <UnitOpenerView block={block} />;
-    case "practice":
-      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} serverCheck={block.serverCheck === true} studyEligible={block.studyEligible !== false} reveal={block.reveal === true} onVerdict={ctx.onVerdict} />;
+    case "practice": {
+      const view = <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} serverCheck={block.serverCheck === true} studyEligible={block.studyEligible !== false} reveal={block.reveal === true} onVerdict={ctx.onVerdict} />;
+      // 899371 P9 (plan §22): «راجع في الكتاب» — the lesson page this exercise practises, when that page is in this Reader's book.
+      const target = block.reviewPageId && ctx.bookPages ? ctx.bookPages.title(block.reviewPageId) : null;
+      if (!target) return view;
+      const open = ctx.bookPages!.open, to = block.reviewPageId!;
+      return <>{view}<p className="learning-reader-practice-review"><button type="button" className="learning-reader-practice-reviewlink" onClick={() => open(to)}>راجع في الكتاب: {target}</button></p></>;
+    }
     case "practice-table":
       return <PracticeTableView block={block} pageId={ctx.pageId} study={ctx.study} />;
     case "visual":

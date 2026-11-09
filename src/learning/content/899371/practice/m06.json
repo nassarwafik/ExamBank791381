@@ -25,7 +25,11 @@
     }
    },
    "program": "int n = 1;\nwhile (n < 50)\n    n *= 3;\nConsole.WriteLine(n);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p01",
+    "anchor": "while"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "int num = 9045;\nint s = 0;\nwhile (num > 0)\n{\n    s += num % 10;\n    num /= 10;\n}\nConsole.WriteLine(s);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p02",
+    "anchor": "% 10"
+   }
   },
   {
    "question": {
@@ -64,7 +72,11 @@
    },
    "program": "int sum = 0;\nint x = int.Parse(Console.ReadLine());\nwhile (x != -1)\n{\n    sum += x;\n    x = int.Parse(Console.ReadLine());\n}\nConsole.WriteLine(sum);",
    "stdin": "4\n7\n2\n-1",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p01",
+    "anchor": "while"
+   }
   },
   {
    "question": {
@@ -90,7 +102,11 @@
     }
    },
    "program": "int k = 100;\nint c = 0;\nwhile (k > 1)\n{\n    k /= 2;\n    c++;\n}\nConsole.WriteLine(c);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p01",
+    "anchor": "while"
+   }
   },
   {
    "question": {
@@ -116,7 +132,11 @@
     }
    },
    "program": "int n = 123;\nint r = 0;\nwhile (n > 0)\n{\n    r = r * 10 + n % 10;\n    n /= 10;\n}\nConsole.WriteLine(r);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p02",
+    "anchor": "/= 10"
+   }
   },
   {
    "question": {
@@ -142,7 +162,11 @@
     }
    },
    "program": "int x = 5;\nwhile (x > 0)\n{\n    x -= 2;\n}\nConsole.WriteLine(x);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m06-l01-p01",
+    "anchor": "while"
+   }
   },
   {
    "question": {
@@ -155,7 +179,11 @@
    },
    "program": "int i = 10;\nwhile (i < 5)\n{\n    i++;\n}\nConsole.WriteLine(i);",
    "prove": "claim",
-   "claimOutput": "5"
+   "claimOutput": "5",
+   "review": {
+    "pageId": "899371-m06-l01-p01",
+    "anchor": "while"
+   }
   },
   {
    "question": {
@@ -165,6 +193,10 @@
     "feedback": {
      "explanation": "do-while تنفّذ الأوامر أولًا ثم تفحص الشرط، أما while فتفحص الشرط أولًا وقد لا تنفّذ أبدًا."
     }
+   },
+   "review": {
+    "pageId": "899371-m06-l01-p03",
+    "anchor": "do"
    }
   },
   {
@@ -204,6 +236,10 @@
     "feedback": {
      "explanation": "for عندما نعرف عدد المرات مسبقًا (100، 10، 30). while عندما يتوقف التكرار على شرط لا نعرف متى يتحقق (قيمة حارسة، منازل عدد، كلمة سر)."
     }
+   },
+   "review": {
+    "pageId": "899371-m06-l01-p03",
+    "anchor": "while"
    }
   },
   {
@@ -219,6 +255,10 @@
     "feedback": {
      "explanation": "نهيّئ المجموع، ثم نكرر ما دام في العدد منازل: نضيف الآحاد ونحذفها، وأخيرًا نطبع."
     }
+   },
+   "review": {
+    "pageId": "899371-m06-l01-p02",
+    "anchor": "% 10"
    }
   }
  ]
