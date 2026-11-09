@@ -103,6 +103,8 @@ const promptLines = () => catalogForPrompt().split("\n");
 // Phase 21N — the declared Item kinds delta, derived from the BASELINE line: "kind (key@v, auto|manual/hybrid[; note])" → "kind@v[ manual][ (note)]"
 // (the kind is its stored key), with exactly the four structured kinds inserted before smartSim.
 const STRUCTURED_21N = ["multipleSelect@1 (several correct options)", "matching@1 (one-to-one pairs)", "ordering@1 (a sequence, given in its correct order)", "categorization@1 (items sorted into categories)"];
+// Phase 21O (owner request): exactly four more structured kinds, appended after the 21N ones (still before smartSim).
+const STRUCTURED_21O = ["multiTrueFalse@1 (true / false per statement)", "matrix@1 (one column per row)", "wordBank@1 (blanks filled from a word bank)", "numericResponse@1 (one number, bounded tolerance)"];
 function compactItemKinds(baseLine) {
   const entries = baseLine.slice("Item kinds: ".length).split(" | ").map(e => {
     const m = /^(\w+) \((\w+)@(\d+), (auto|manual\/hybrid)(?:; (.*))?\)$/.exec(e);
@@ -111,7 +113,7 @@ function compactItemKinds(baseLine) {
   });
   const at = entries.findIndex(e => e.startsWith("smartSim@"));
   if (at < 0) throw new Error("baseline item kinds without smartSim");
-  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...entries.slice(at)].join(" | ");
+  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...STRUCTURED_21O, ...entries.slice(at)].join(" | ");
 }
 
 describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff13899)", () => {

@@ -13,16 +13,25 @@
 //   • matching: one-to-one pairs (distinct answers), and the dropdown order is shuffled so that no row's correct answer sits at that
 //     row's own position — "pick option k for row k" earns nothing;
 //   • categorization: every category holds at least one item (no empty decoy, no single-category key).
+// Phase 21O adds multiTrueFalse@1, matrix@1, wordBank@1 and numericResponse@1 under the same rules:
+//   • multiTrueFalse: at least one true and one false statement (one repeated verdict never earns the whole question);
+//   • matrix: every column is the answer of at least one row;
+//   • wordBank: one distinct word per blank, at least one distractor, the bank shuffled so that no blank's word sits at its own position,
+//     and the stem carries exactly the markers [1] … [N] in order;
+//   • numericResponse: the tolerance is at most 5 % of |expected| (0 when the answer is 0), so a far-off number is never accepted.
 import type { BuilderQuestion } from "../examTypes";
 import { buildMatchingPatch, syncSequenceAnswer } from "../examBuilderState";
 import type { ComposerIssue } from "./composerLimits";
 import { COMPOSER_LIMITS } from "./composerLimits";
 import type { ComposerStructuredType } from "./composerCatalog";
-import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sEnum, sInt, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
+import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sBool, sEnum, sInt, sNull, sNum, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
 export const STRUCTURED_LIMITS = Object.freeze({
   options: { min: 3, max: 8 }, pairs: { min: 2, max: 10 }, distractors: 4, sequence: { min: 3, max: 10 },
-  categories: { min: 2, max: 6 }, entries: { min: 2, max: 20 }, textChars: 300
+  categories: { min: 2, max: 6 }, entries: { min: 2, max: 20 }, textChars: 300,
+  // Phase 21O
+  statements: { min: 2, max: 10 }, columns: { min: 2, max: 5 }, rows: { min: 2, max: 10 }, blanks: { min: 2, max: 10 },
+  numericAbsMax: 1e9, toleranceRatio: 0.05
 });
 /** The multipleSelect scorings the composer may store: both refuse "select every option" (partialNoPenalty would pay it). */
 export const COMPOSER_MS_SCORINGS = Object.freeze(["allOrNothing", "partialWithPenalty"] as const);
@@ -35,15 +44,21 @@ export function buildStructuredSchema(): JsonSchema {
     options: sArr(sStr(), S.options.max), correctOptions: sArr(sInt(0, S.options.max - 1), S.options.max), scoring: sEnum(COMPOSER_MS_SCORINGS),
     pairs: sArr(sObj({ left: sStr(), right: sStr() }), S.pairs.max), distractors: sArr(sStr(), S.distractors), headers: sArr(sStr(), 2),
     sequence: sArr(sStr(), S.sequence.max),
-    categories: sArr(sStr(), S.categories.max), entries: sArr(sObj({ label: sStr(), category: sInt(0, S.categories.max - 1) }), S.entries.max)
+    categories: sArr(sStr(), S.categories.max), entries: sArr(sObj({ label: sStr(), category: sInt(0, S.categories.max - 1) }), S.entries.max),
+    // Phase 21O — multiTrueFalse / matrix / wordBank / numericResponse
+    statements: sArr(sObj({ text: sStr(), correct: sBool() }), S.statements.max),
+    columns: sArr(sStr(), S.columns.max), rows: sArr(sObj({ label: sStr(), column: sInt(0, S.columns.max - 1) }), S.rows.max),
+    blanks: sArr(sStr(), S.blanks.max), expected: sNull(sNum()), tolerance: sNull(sNum())
   });
 }
-const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries"] as const;
+const KEYS = ["text", "options", "correctOptions", "scoring", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks", "expected", "tolerance"] as const;
 /** Which wire lists each kind fills; every other list must be empty (a payload that mixes kinds is refused, never trimmed). */
 const USES: Readonly<Record<ComposerStructuredType, readonly string[]>> = Object.freeze({
-  multipleSelect: ["options", "correctOptions"], matching: ["pairs", "distractors", "headers"], ordering: ["sequence"], categorization: ["categories", "entries"]
+  multipleSelect: ["options", "correctOptions"], matching: ["pairs", "distractors", "headers"], ordering: ["sequence"], categorization: ["categories", "entries"],
+  multiTrueFalse: ["statements"], matrix: ["columns", "rows"], wordBank: ["blanks", "distractors"], numericResponse: ["expected", "tolerance"]
 });
-const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries"] as const;
+const LISTS = ["options", "correctOptions", "pairs", "distractors", "headers", "sequence", "categories", "entries", "statements", "columns", "rows", "blanks"] as const;
+const SCALARS = ["expected", "tolerance"] as const;
 
 // ── deterministic, seeded permutations (the question id is the seed: the same draft always yields the same stored question) ──────────
 function seedOf(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -69,7 +84,8 @@ export function buildStructuredBody(raw: unknown, kind: ComposerStructuredType, 
   if (!hasExactKeys(raw, KEYS) || !isStr(raw.text, COMPOSER_LIMITS.richTextChars, 1) || !isEnum(raw.scoring, COMPOSER_MS_SCORINGS)) return bad("AI_STRUCTURED_MALFORMED", "محتوى السؤال غير صالح البنية.");
   const r = raw;
   for (const k of LISTS) if (!isArr(r[k], 20)) return bad("AI_STRUCTURED_MALFORMED", "محتوى السؤال غير صالح البنية.", path + "." + k);
-  const foreign = LISTS.filter(k => !USES[kind].includes(k) && (r[k] as unknown[]).length);
+  for (const k of SCALARS) if (!(r[k] === null || (typeof r[k] === "number" && Number.isFinite(r[k])))) return bad("AI_STRUCTURED_MALFORMED", "محتوى السؤال غير صالح البنية.", path + "." + k);
+  const foreign = [...LISTS.filter(k => !USES[kind].includes(k) && (r[k] as unknown[]).length), ...SCALARS.filter(k => !USES[kind].includes(k) && r[k] !== null)];
   if (foreign.length) return bad("AI_STRUCTURED_FOREIGN_FIELDS", "حقول لا تخص نوع السؤال (" + kind + "): " + foreign.join(", ") + ". اترك قوائم الأنواع الأخرى فارغة.");
   const text = cleanText(r.text as string);
   const texts = (k: string, max: number = S.textChars): string[] | null => { const a = r[k] as unknown[]; return a.every(x => isStr(x, max, 1) && cleanText(x as string) !== "") ? (a as string[]).map(cleanText) : null; };
@@ -116,6 +132,52 @@ export function buildStructuredBody(raw: unknown, kind: ComposerStructuredType, 
     return { ok: true, node: { presentationType: "matching", questionTypeVersion: 1, text: part ? text : text + "\n" + patch.text, fields, answer: patch.answer } };
   }
 
+  // ── Phase 21O ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  if (kind === "multiTrueFalse") {
+    const st = r.statements as unknown[];
+    if (st.length < S.statements.min || st.length > S.statements.max || !st.every(x => hasExactKeys(x, ["text", "correct"]) && isStr(x.text, S.textChars, 1) && cleanText(x.text as string) !== "" && typeof x.correct === "boolean"))
+      return bad("AI_MTF_STATEMENTS", "صح/خطأ متعدد يحتاج " + S.statements.min + "–" + S.statements.max + " عبارات، لكل عبارة نص وحكمها.");
+    const list = (st as { text: string; correct: boolean }[]).map(x => ({ text: cleanText(x.text), correct: x.correct }));
+    if (!distinct(list.map(x => x.text))) return bad("AI_MTF_STATEMENTS", "عبارات صح/خطأ متعدد يجب أن تكون مختلفة.");
+    if (list.every(x => x.correct) || list.every(x => !x.correct)) return bad("AI_MTF_FREE_CREDIT", "اجعل عبارة صحيحة واحدة وعبارة خاطئة واحدة على الأقل (وإلا نال جواب واحد مكرَّر العلامة كاملة).");
+    return { ok: true, node: { presentationType: "multiTrueFalse", questionTypeVersion: 1, text, fields: list.map((x, i) => ({ id: "r" + (i + 1), statement: x.text, kind: "boolean", correct: x.correct })) } };
+  }
+
+  if (kind === "matrix") {
+    const columns = texts("columns", 80), rows = r.rows as unknown[];
+    if (!columns || columns.length < S.columns.min || columns.length > S.columns.max || !distinct(columns)) return bad("AI_MATRIX_COLUMNS", "المصفوفة تحتاج " + S.columns.min + "–" + S.columns.max + " أعمدة مختلفة بنصوص غير فارغة.");
+    if (rows.length < S.rows.min || rows.length > S.rows.max || !rows.every(x => hasExactKeys(x, ["label", "column"]) && isStr(x.label, S.textChars, 1) && cleanText(x.label as string) !== "" && isInt(x.column, 0, columns.length - 1)))
+      return bad("AI_MATRIX_ROWS", "المصفوفة تحتاج " + S.rows.min + "–" + S.rows.max + " صفوف، لكل صف نص ورقم عموده الصحيح (يبدأ من 0).");
+    const list = (rows as { label: string; column: number }[]).map(x => ({ label: cleanText(x.label), column: x.column }));
+    if (!distinct(list.map(x => x.label))) return bad("AI_MATRIX_ROWS", "صفوف المصفوفة يجب أن تكون مختلفة.");
+    const unused = columns.filter((_, c) => !list.some(x => x.column === c));
+    if (unused.length) return bad("AI_MATRIX_UNUSED_COLUMN", "كل عمود يحتاج صفًا واحدًا على الأقل إجابته فيه: " + unused.join("، "));
+    const rowIds = list.map((_, i) => "x" + (i + 1)), colIds = columns.map((_, c) => "c" + (c + 1));
+    return { ok: true, node: { presentationType: "matrix", questionTypeVersion: 1, text, matrix: { rows: list.map((x, i) => ({ id: rowIds[i], label: x.label })), columns: columns.map((label, c) => ({ id: colIds[c], label })) }, answer: { correctColumnByRow: Object.fromEntries(list.map((x, i) => [rowIds[i], colIds[x.column]])) } } };
+  }
+
+  if (kind === "wordBank") {
+    const blanks = texts("blanks", 80), distractors = texts("distractors", 80);
+    if (!blanks || blanks.length < S.blanks.min || blanks.length > S.blanks.max) return bad("AI_WB_BLANKS", "بنك الكلمات يحتاج " + S.blanks.min + "–" + S.blanks.max + " فراغات، لكل فراغ كلمته الصحيحة.");
+    if (!distinct(blanks)) return bad("AI_WB_BLANKS", "كلمات الفراغات يجب أن تكون مختلفة (كلمة واحدة لكل فراغ).");
+    if (!distractors || distractors.length < 1 || !distinct([...blanks, ...distractors])) return bad("AI_WB_DISTRACTORS", "أضف كلمة مضلِّلة واحدة على الأقل، مختلفة عن كلمات الفراغات وعن بعضها.");
+    // the stem carries one marker [1] … [N] per blank, in order, and no other marker
+    const markers = [...text.matchAll(/\[(\d+)\]/g)].map(m => Number(m[1]));
+    if (markers.length !== blanks.length || markers.some((n, i) => n !== i + 1)) return bad("AI_WB_MARKERS", "النص يحتاج علامة لكل فراغ بالترتيب: [1] … [" + blanks.length + "]، مرة واحدة لكل علامة.");
+    const pool = [...blanks, ...distractors];
+    const order = permutation(pool.length, seed + "::bank", p => blanks.every((_, k) => p[k] !== k));
+    const fields = blanks.map((word, k) => ({ id: "f" + (k + 1), label: "[" + (k + 1) + "]", order: k, kind: "select", correct: word }));
+    return { ok: true, node: { presentationType: "wordBank", questionTypeVersion: 1, text, fields, wordBank: order.map(i => pool[i]), answer: syncSequenceAnswer(fields as never) } };
+  }
+
+  if (kind === "numericResponse") {
+    const expected = r.expected, tolerance = r.tolerance;
+    if (typeof expected !== "number" || typeof tolerance !== "number" || Math.abs(expected) > S.numericAbsMax || tolerance < 0)
+      return bad("AI_NUM_KEY", "الإجابة الرقمية تحتاج قيمة متوقعة (|القيمة| ≤ 10⁹) وتسامحًا غير سالب.");
+    if (tolerance > Math.abs(expected) * S.toleranceRatio) return bad("AI_NUM_TOLERANCE", "التسامح لا يتجاوز 5% من القيمة المتوقعة (وصفر إذا كانت القيمة صفرًا)؛ وإلا قُبلت أرقام بعيدة عن الإجابة.");
+    return { ok: true, node: { presentationType: "numericResponse", questionTypeVersion: 1, text, numeric: { unitRequired: false }, answer: { mode: "tolerance", expected, tolerance } } };
+  }
+
   const categories = texts("categories"), entries = r.entries as unknown[];
   if (!categories || categories.length < S.categories.min || categories.length > S.categories.max || !distinct(categories)) return bad("AI_CAT_CATEGORIES", "التصنيف يحتاج " + S.categories.min + "–" + S.categories.max + " فئات مختلفة بنصوص غير فارغة.");
   if (entries.length < S.entries.min || entries.length > S.entries.max || !entries.every(e => hasExactKeys(e, ["label", "category"]) && isStr(e.label, S.textChars, 1) && cleanText(e.label as string) !== "" && isInt(e.category, 0, categories.length - 1)))
@@ -137,13 +199,17 @@ export function buildStructuredQuestion(raw: unknown, kind: ComposerStructuredTy
 /** The model-facing rules, sent only with the prompts that may write these kinds (keeps the general catalog bounded). */
 export function structuredRulesForPrompt(): string {
   return [
-    "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
+    "STRUCTURED QUESTION RULES (multipleSelect, matching, ordering, categorization, multiTrueFalse, matrix, wordBank, numericResponse): fill `structured` (question = null); `text` is the instruction the student reads; leave every list another kind uses EMPTY. Code builds every id, option order and answer key.",
     "- multipleSelect: options " + S.options.min + "-" + S.options.max + " distinct texts; correctOptions = zero-based indices of EVERY correct option; at least as many wrong options as correct ones; scoring allOrNothing (default) or partialWithPenalty.",
     "- matching: pairs " + S.pairs.min + "-" + S.pairs.max + " {left, right}, one-to-one (each right differs); up to " + S.distractors + " extra wrong rights in distractors; headers empty or the two column titles; no | = ; or line breaks in any cell.",
     "- ordering: sequence = " + S.sequence.min + "-" + S.sequence.max + " distinct items IN THEIR CORRECT ORDER (code shuffles them for the student; never number them).",
-    "- categorization: categories " + S.categories.min + "-" + S.categories.max + " distinct names; entries " + S.entries.min + "-" + S.entries.max + " {label, category = zero-based index}; every category gets at least one entry."
+    "- categorization: categories " + S.categories.min + "-" + S.categories.max + " distinct names; entries " + S.entries.min + "-" + S.entries.max + " {label, category = zero-based index}; every category gets at least one entry.",
+    "- multiTrueFalse: statements " + S.statements.min + "-" + S.statements.max + " {text, correct}; at least one true AND one false statement.",
+    "- matrix: columns " + S.columns.min + "-" + S.columns.max + " distinct headings; rows " + S.rows.min + "-" + S.rows.max + " {label, column = zero-based index of its correct column}; every column is the answer of at least one row.",
+    "- wordBank: the stem marks each blank [1], [2] … in order; blanks = the distinct correct word of each blank, in order; distractors = 1-" + S.distractors + " extra wrong words (code shuffles the bank).",
+    "- numericResponse: expected = the exact numeric answer (state the unit in the stem); tolerance >= 0 and at most 5% of |expected| (0 when expected is 0). expected and tolerance stay null for every other kind."
   ].join("\n");
 }
-const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization/i;
+const STRUCTURED_WORDS = /multiple ?select|select all|matching|\bmatch\b|ordering|\border\b|sequence|categor|classif|اختيار متعدد|أكثر من إجابة|مطابقة|طابق|صل |صِل|ترتيب|رتّ?ب|تسلسل|تصنيف|صنّ?ف|multipleSelect|categorization|true ?\/ ?false|multiTrueFalse|matrix|word ?bank|wordBank|numeric|صح.{0,3}خطأ|مصفوفة|بنك الكلمات|إجابة رقمية|numericResponse/i;
 /** A modify request (or the exam it edits) that involves a structured kind. */
 export const mentionsStructuredKinds = (text: string): boolean => STRUCTURED_WORDS.test(text);

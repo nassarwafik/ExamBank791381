@@ -27,14 +27,15 @@ import "../trustedSimPlugins";
 // V5 (Phase 21J): the chemistry simulators chemistryReactions@1 and chemistryStructure@1. V6 (Phase 21K): the virtual lab chemistryLab@1.
 // V7 (Phase 21L): the advanced physics simulators physicsMotion@1 and physicsLab@1.
 // V8 (Phase 21N): the structured kinds multipleSelect@1, matching@1, ordering@1, categorization@1 (compact Item kinds line).
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V8";
+// V9 (Phase 21O): the structured kinds multiTrueFalse@1, matrix@1, wordBank@1, numericResponse@1.
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V9";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
 export type ComposerDraftType = (typeof COMPOSER_DRAFT_TYPES)[number];
 /** Phase 21N — the registered / structured families the composer builds itself (composerStructured: code-owned ids, option lists and keys),
  *  outside the frozen 19A per-question layer. */
-export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization"] as const);
+export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse"] as const);   // 21O: the last four
 export type ComposerStructuredType = (typeof COMPOSER_STRUCTURED_TYPES)[number];
 /** Every item kind a plan / draft may name: a 19A family, a structured family (21N), a trusted SmartSim question, or a composite@1 question. */
 export const COMPOSER_ITEM_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, ...COMPOSER_STRUCTURED_TYPES, "smartSim", "composite"] as const);
@@ -145,7 +146,11 @@ const NOTES: Readonly<Partial<Record<ComposerItemKind, string>>> = Object.freeze
   multipleSelect: "several correct options",
   matching: "one-to-one pairs",
   ordering: "a sequence, given in its correct order",
-  categorization: "items sorted into categories"
+  categorization: "items sorted into categories",
+  multiTrueFalse: "true / false per statement",
+  matrix: "one column per row",
+  wordBank: "blanks filled from a word bank",
+  numericResponse: "one number, bounded tolerance"
 });
 
 /** The catalog, derived from the live registries (throws only if a production registry disagrees — a programming error, caught by tests). */

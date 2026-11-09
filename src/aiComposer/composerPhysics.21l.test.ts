@@ -55,8 +55,8 @@ const CASES: [string, Json, number[]][] = [
 ];
 
 describe("21L-CAT physicsMotion@1 and physicsLab@1 join the composer catalog", () => {
-  it("catalog V8 lists both; the general catalog stays bounded (only the two plugin names are added, no extra line); the full catalog names every experiment and quantity", () => {
-    expect(buildComposerCatalog().version).toBe("AI_COMPOSER_CATALOG_V8");
+  it("catalog V9 lists both; the general catalog stays bounded (only the two plugin names are added, no extra line); the full catalog names every experiment and quantity", () => {
+    expect(buildComposerCatalog().version).toBe("AI_COMPOSER_CATALOG_V9");
     expect(COMPOSER_SIM_PLUGINS.filter(p => p.subject === "physics").map(p => p.pluginKey + "@" + p.pluginVersion)).toEqual(["physicsFreeFall@1", "physicsMotion@1", "physicsLab@1"]);
     const general = catalogForPrompt();
     expect(general.length).toBeLessThanOrEqual(9000);
