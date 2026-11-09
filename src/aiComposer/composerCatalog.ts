@@ -25,7 +25,9 @@ import "../trustedSimPlugins";
 // until its next composer operation; nothing validates or migrates it.
 // Phase 21A.2: explicit-author-formula-only function graphs, not invented mathematics.
 // V5 (Phase 21J): the chemistry simulators chemistryReactions@1 and chemistryStructure@1. V6 (Phase 21K): the virtual lab chemistryLab@1.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V7";
+// V7 (Phase 21L): the advanced physics simulators physicsMotion@1 and physicsLab@1.
+// V8 (Phase 21N): the structured kinds multipleSelect@1, matching@1, ordering@1, categorization@1 (compact Item kinds line).
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V8";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -50,7 +52,9 @@ export const COMPOSER_SIM_PLUGINS = Object.freeze([
   { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" },
   { pluginKey: "chemistryReactions", pluginVersion: 1, subject: "chemistry" },     // Phase 21J
   { pluginKey: "chemistryStructure", pluginVersion: 1, subject: "chemistry" },     // Phase 21J
-  { pluginKey: "chemistryLab", pluginVersion: 1, subject: "chemistry" }            // Phase 21K
+  { pluginKey: "chemistryLab", pluginVersion: 1, subject: "chemistry" },           // Phase 21K
+  { pluginKey: "physicsMotion", pluginVersion: 1, subject: "physics" },            // Phase 21L
+  { pluginKey: "physicsLab", pluginVersion: 1, subject: "physics" }                // Phase 21L
 ] as const);
 export type ComposerSimPluginKey = (typeof COMPOSER_SIM_PLUGINS)[number]["pluginKey"];
 export const COMPOSER_SIM_PLUGIN_KEYS = Object.freeze(COMPOSER_SIM_PLUGINS.map(p => p.pluginKey)) as readonly ComposerSimPluginKey[];

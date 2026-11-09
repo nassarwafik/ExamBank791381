@@ -40,8 +40,8 @@
 | `plugin:networkTopology@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | E, S |
 | `plugin:networkTopology@2` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | A, S |
 | `plugin:physicsFreeFall@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | B, E, S |
-| `plugin:physicsLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA2 |
-| `plugin:physicsMotion@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | — | ✓ | replay + private checks | A | 21DA1 |
+| `plugin:physicsLab@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | 21DA2 |
+| `plugin:physicsMotion@1` | smartSim plugin | auto (server replay) | ✓ | smartSim actions | — | ✓ | ✓ | ✓ | replay + private checks | A | 21DA1 |
 | `child:multipleChoice@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, C, D, E, S |
 | `child:trueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | E, S |
 | `child:multiTrueFalse@1` | composite child | child authority | ✓ | — | — | ✓ | — | ✓ | child grader | A | S |
