@@ -10,6 +10,8 @@
 //                       formula subject, and task kinds; code builds config + checks; the chemistry engines derive every expected answer.
 //   chemistryLab@1 (Phase 21K, composerChemistryLab.ts) — the AI names an experiment, its public data and catalog task ids; code builds ids,
 //                       units, precision, options and the task-reference checks; validateChemLabConfig decides.
+//   physicsMotion@1 / physicsLab@1 (Phase 21L, composerPhysics.ts) — the AI names an experiment, its parameters and the quantities to
+//                       measure; code builds config + measurement checks; the physics cores derive every reference value.
 // Then the production validators decide (validateSmartSimEnvelope / validateSmartSimAnswerKey) and the NO-FREE-CREDIT gate runs: the
 // key evaluated on an empty action stream must award nothing.
 import { validateSmartSimEnvelope, validateSmartSimAnswerKey, evaluateSmartSim } from "../trustedSimQuestion";
@@ -21,6 +23,7 @@ import { net2TemplateById } from "../networkTopology2/net2Templates";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_FUNCTION_TASKS, COMPOSER_NET_SCENARIOS, COMPOSER_PHYSICS_MEASUREMENTS, COMPOSER_PHYSICS_POINTS, COMPOSER_SIM_PLUGIN_KEYS, composerSimVersion, type ComposerSimPluginKey } from "./composerCatalog";
 import { buildLabSim, buildLabSpecSchema } from "./composerChemistryLab";
+import { PHYSICS_FAMILIES, buildMotionSpecSchema, buildPhysicsLabSpecSchema, buildPhysicsSim } from "./composerPhysics";
 import { buildReactionsSim, buildReactionsSpecSchema, buildStructureSim, buildStructureSpecSchema } from "./composerChemistry";
 import { cleanText, hasExactKeys, isArr, isEnum, isNum, isStr, sArr, sEnum, sNull, sNum, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
@@ -46,13 +49,16 @@ export function buildSimSpecSchema(): JsonSchema {
     reactions: sNull(buildReactionsSpecSchema()),
     structure: sNull(buildStructureSpecSchema()),
     // Phase 21K — the virtual chemistry lab (composerChemistryLab.ts)
-    lab: sNull(buildLabSpecSchema())
+    lab: sNull(buildLabSpecSchema()),
+    // Phase 21L — the advanced physics simulators (composerPhysics.ts)
+    motion: sNull(buildMotionSpecSchema()),
+    physicsLab: sNull(buildPhysicsLabSpecSchema())
   });
 }
-const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure", "lab"] as const;
+const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure", "lab", "motion", "physicsLab"] as const;
 /** The spec field each simulator fills; every other simulator field must be null. */
 const SPEC_FIELD: Readonly<Record<ComposerSimPluginKey, (typeof SPEC_KEYS)[number]>> = Object.freeze({
-  networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure", chemistryLab: "lab"
+  networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure", chemistryLab: "lab", physicsMotion: "motion", physicsLab: "physicsLab"
 });
 
 // ── physics: labels / units of the task vocabulary (code-owned) ─────────────────────────────────────────────────────────────────────
@@ -780,6 +786,10 @@ export function buildSimFromSpec(raw: unknown, path = "smartSim", expectPlugin?:
     const b = buildReactionsSim(raw.reactions, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
   } else if (plugin === "chemistryStructure") {
     const b = buildStructureSim(raw.structure, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
+  } else if (plugin === "physicsMotion") {
+    const b = buildPhysicsSim(PHYSICS_FAMILIES.physicsMotion, raw.motion, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
+  } else if (plugin === "physicsLab") {
+    const b = buildPhysicsSim(PHYSICS_FAMILIES.physicsLab, raw.physicsLab, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
   } else {
     const b = buildLabSim(raw.lab, path); if (!b.ok) return b; config = b.value.config; checks = b.value.checks;
   }

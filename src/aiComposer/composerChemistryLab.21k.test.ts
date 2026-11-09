@@ -47,8 +47,8 @@ const RATE = F.labSim({ experiment: "rate", order: 1, k25: "2.0e-3", ea: "75", c
   tasks: [F.labTask("number", "halfLife", { subject: "t1" }), F.labTask("choice", "fastestTrial"), F.labTask("observe", "runAll")] });
 
 describe("21K-CAT chemistryLab@1 joins the composer catalog", () => {
-  it("catalog V6 lists the three chemistry simulators; the general catalog stays bounded; the lab catalog travels with the chemistry catalog", () => {
-    expect(buildComposerCatalog().version).toBe("AI_COMPOSER_CATALOG_V6");
+  it("catalog V7 lists the three chemistry simulators; the general catalog stays bounded; the lab catalog travels with the chemistry catalog", () => {
+    expect(buildComposerCatalog().version).toBe("AI_COMPOSER_CATALOG_V7");
     expect(COMPOSER_SIM_PLUGINS.filter(p => p.subject === "chemistry").map(p => p.pluginKey + "@" + p.pluginVersion)).toEqual(["chemistryReactions@1", "chemistryStructure@1", "chemistryLab@1"]);
     const general = catalogForPrompt();
     expect(general.length).toBeLessThanOrEqual(9000);
