@@ -101,6 +101,7 @@ const PresentationStudio = lazy(() => import("./presentation/PresentationStudio"
 const AiExamComposerDialog = lazy(() => import("./aiComposer/AiExamComposerDialog"));
 const Surface3DLab = lazy(() => import("./functionSurfaces/Surface3DLab"));
 import type { ScenarioV1 } from "./scenarioSource";
+import type { ComposerPrefill } from "./examRequestRouting";   // Phase 21I
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -124,7 +125,7 @@ type Props = {
   onLayoutChange?: (layout: "classic" | "studio") => void;
   /** Phase 21F.7 — open one of the builder's tools as soon as THIS exam opens (e.g. «امتحاناتي» → «المؤلف الذكي»): the key of an
    *  «إضافة» / «أدوات» menu item, run through that item's own handler; reported back once run (or absent) so it never replays. */
-  startTool?: { examId: string; key: string } | null;
+  startTool?: { examId: string; key: string; composerPrefill?: ComposerPrefill | null } | null;
   onStartToolConsumed?: () => void;
   /** Phase 21F.7 — the publish step's hand-off to the assignments workspace (after the unsaved-work guard); absent → not offered. */
   onOpenAssignments?: () => void;
@@ -996,6 +997,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   // Phase 20F — the AI Full Exam Composer: opened FOR one exam id; a staged result is applied as ONE functional update through `update`
   // (one undo step), refused ("stale") when this builder closed or the owner now holds another exam. The dialog re-checks the revision.
   const [composerOpenFor, setComposerOpenFor] = useState("");
+  // Phase 21I — the composer form pre-fill a start tool carried (the builder prompt's composer route); used once, cleared on close.
+  const [composerPrefill, setComposerPrefill] = useState<ComposerPrefill | null>(null);
   const composerOpen = !!aiAuthor?.composeExam && composerOpenFor === exam.examId;
   const applyComposer = (openedFor: string) => (updater: (prev: StructuredExam) => StructuredExam): "ok" | "stale" => {
     if (!alive.current || latestExamRef.current.examId !== openedFor) return "stale";
@@ -1278,6 +1281,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   useLayoutEffect(() => {
     runStartTool.current = () => {
       if (!startTool || startTool.examId !== exam.examId) return;
+      setComposerPrefill(startTool.key === "ai-composer" ? startTool.composerPrefill ?? null : null);
       [...addMenuItems, ...toolMenuItems].find(item => item.key === startTool.key && !item.disabled)?.onSelect();
       onStartToolConsumed?.();
     };
@@ -1312,7 +1316,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
 
       {composerOpen && aiAuthor?.composeExam && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المؤلف الذكي للامتحان…</p>}>
-          <AiExamComposerDialog key={exam.examId} open onClose={() => setComposerOpenFor("")} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
+          <AiExamComposerDialog key={exam.examId} open onClose={() => { setComposerOpenFor(""); setComposerPrefill(null); }} prefill={composerPrefill} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
             onApply={applyComposer(exam.examId)} onPreview={setPreview} onUndo={onUndo} selectedQuestionId={selected.size === 1 ? [...selected][0] : null} disabled={saving} />
         </Suspense>
       )}

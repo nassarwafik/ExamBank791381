@@ -5,6 +5,15 @@ const fs = require("fs");
 const path = require("path");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
+// Phase 21I — multi-subject routing: the SAME rules the Builder runs (src/examRequestRouting.ts, through the lib adapter).
+const {
+  EXAM_SUBJECT_DOMAINS,
+  EXAM_SOURCE_PREFERENCES,
+  EXAM_REQUEST_LANGUAGES,
+  BANK_SUBJECT_DOMAIN,
+  resolveExamRoute,
+  buildComposerPrefill
+} = require("../lib/exam-request-routing");
 
 function loadConfig(fileName) {
   const candidates = [
@@ -226,6 +235,61 @@ function buildSchema(topicCodes) {
       },
       explanation: {
         type: "string"
+      },
+      // Phase 21I — the request's subject. Only networking can be served by the classified bank; every other subject is routed to the
+      // AI Full Exam Composer. Untrusted: re-checked in code (resolveExamRoute) against a deterministic detector.
+      subject: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          domain: {
+            type: "string",
+            enum: [...EXAM_SUBJECT_DOMAINS]
+          },
+          label: {
+            type: "string"
+          },
+          language: {
+            type: "string",
+            enum: [...EXAM_REQUEST_LANGUAGES]
+          },
+          sourcePreference: {
+            type: "string",
+            enum: [...EXAM_SOURCE_PREFERENCES]
+          },
+          questionCountExplicit: {
+            type: "boolean"
+          },
+          durationMinutes: {
+            type: "integer",
+            minimum: 0,
+            maximum: 600
+          },
+          course: {
+            type: "string"
+          },
+          grade: {
+            type: "string"
+          },
+          topics: {
+            type: "array",
+            maxItems: 20,
+            items: {
+              type: "string"
+            }
+          }
+        },
+        required: [
+          "domain",
+          "label",
+          "language",
+          "sourcePreference",
+          "questionCountExplicit",
+          "durationMinutes",
+          "course",
+          "grade",
+          "topics"
+        ]
       }
     },
     required: [
@@ -240,7 +304,8 @@ function buildSchema(topicCodes) {
       "typeTargets",
       "minimums",
       "rules",
-      "explanation"
+      "explanation",
+      "subject"
     ]
   };
 }
@@ -250,12 +315,33 @@ function buildInstructions(topicsConfig) {
 أنت محلل طلبات Tadris+ (منصة الامتحانات).
 
 المستخدم معلم يكتب وصفًا حرًا بالعربية أو العبرية أو الإنجليزية
-للامتحان الذي يريد بناءه من مخزن أسئلة جاهز ومصنف.
+للامتحان الذي يريد بناءه. المنصة تدعم مواضيع متعددة: شبكات الاتصال، البرمجة،
+الفيزياء، الكيمياء، الرياضيات، وغيرها.
 
 مهمتك هنا تحليل الطلب فقط وتحويله إلى خطة منظمة.
 لا تؤلف أي سؤال ولا تجب عن أي سؤال.
 
-المواضيع المسموحة هي فقط:
+أولًا — تصنيف الموضوع (الحقل subject):
+أ. subject.domain هو موضوع الامتحان الذي يطلبه المعلم فعلًا، وليس موضوع هذه التعليمات:
+   networking = شبكات الاتصال (791381، IPv4، VLAN، OSPF، DHCP، CLI...)
+   programming = برمجة (Python، Java، C#، خوارزميات...)
+   physics = فيزياء، chemistry = كيمياء، mathematics = رياضيات
+   mixed = أكثر من موضوع من هذه المواضيع معًا، other = موضوع آخر (تاريخ، لغة، علوم عامة...).
+   لا تصنّف الطلب networking إلا إذا كان عن شبكات الاتصال صراحة.
+ب. subject.label اسم الموضوع كما يفهمه المعلم بلغته (مثل «فيزياء — الحركة» أو «Python»)، قصير.
+ج. subject.language لغة الطلب: ar أو en أو he.
+د. subject.sourcePreference: bank إذا طلب المعلم صراحة أسئلة من المخزن/البنك، newQuestions إذا طلب تأليف أسئلة جديدة، وإلا unspecified.
+هـ. subject.questionCountExplicit=true فقط إذا ذكر المعلم عدد الأسئلة صراحة.
+و. subject.durationMinutes مدة الامتحان بالدقائق إن ذُكرت، وإلا 0.
+ز. subject.course وsubject.grade المساق والصف إن ذُكرا، وإلا نص فارغ.
+ح. subject.topics مواضيع الطلب بكلمات المعلم نفسه (حتى 20، قصيرة)، لأي موضوع كان.
+
+ثانيًا — خطة مخزن الأسئلة: مخزن الأسئلة المصنف يغطي شبكات الاتصال (791381) فقط.
+القواعد التالية (الأقسام BASIC/INFRASTRUCTURE ورموز المواضيع) تخص طلبات الشبكات.
+إذا كان الطلب عن موضوع آخر فاملأ حقول الخطة بالقيم الافتراضية، واترك topicTargets وexcludedTopics فارغة،
+ولا تستخدم رموز مواضيع الشبكات، واستخرج مع ذلك العدد والعلامة والصعوبة والعنوان من الطلب.
+
+المواضيع المسموحة (لطلبات الشبكات) هي فقط:
 ${JSON.stringify(topicsConfig.topics, null, 2)}
 
 قواعد الخطة:
@@ -462,8 +548,11 @@ function normalizePlan(plan, prompt) {
     )
   };
 
+  // Phase 21I — the default title names the request's subject (it used to be «امتحان شبكات» for every request).
+  const defaultTitle = "امتحان " + resolveExamRoute({ ai: plan?.subject, prompt }).subjectLabel;
+
   return {
-    title: String(plan?.title || "امتحان شبكات").trim(),
+    title: String(plan?.title || defaultTitle).trim() || defaultTitle,
     originalRequest: String(prompt || "").trim(),
     totalQuestions,
     requestedQuestionCount,
@@ -492,6 +581,38 @@ function normalizePlan(plan, prompt) {
       )
     },
     explanation: String(plan?.explanation || "").trim()
+  };
+}
+
+/**
+ * Phase 21I — the response for an analysed request: the normalized bank plan (unchanged contract), the code-owned ROUTE decision
+ * (bank | composer, with the reasons the teacher sees and the routes the teacher may switch to) and the composer form pre-fill.
+ * A networking request keeps the bank flow exactly as before; any other subject is never matched against the networking bank.
+ */
+function buildInterpretResult(rawPlan, prompt, topicsConfig, provider, model) {
+  const plan = {
+    ...normalizePlan(rawPlan, prompt),
+    aiProvider: provider,
+    aiModel: model
+  };
+  const route = resolveExamRoute({ ai: rawPlan?.subject, prompt });
+  // A request routed away from the bank never carries networking topic targets into a later bank run: a teacher switching to the bank
+  // for an uncertain subject starts with no topic selected and chooses the topics (as for any request whose topics were not detected),
+  // instead of starting from codes the model guessed.
+  if (route.domain !== BANK_SUBJECT_DOMAIN) {
+    plan.topicTargets = [];
+    plan.excludedTopics = [];
+  }
+  plan.subjectDomain = route.domain;
+  const composerPrefill = buildComposerPrefill({ decision: route, ai: rawPlan?.subject, prompt, plan });
+  return {
+    ok: true,
+    plan,
+    topics: topicsConfig.topics,
+    provider,
+    model,
+    route,
+    composerPrefill
   };
 }
 
@@ -711,20 +832,9 @@ app.http("interpretExamRequest", {
           JSON.parse(response.output_text);
       }
 
-      const plan = {
-        ...normalizePlan(rawPlan, prompt),
-        aiProvider: provider,
-        aiModel: model
-      };
       return {
         status: 200,
-        jsonBody: {
-          ok: true,
-          plan,
-          topics: topicsConfig.topics,
-          provider,
-          model
-        }
+        jsonBody: buildInterpretResult(rawPlan, prompt, topicsConfig, provider, model)
       };
     }
     catch {
@@ -741,6 +851,6 @@ app.http("interpretExamRequest", {
 
 // Exported only for unit testing the question-count clamping rule (clampInteger/normalizePlan
 // have no other external callers — app.http's own route registration above is unaffected).
-module.exports = { clampInteger, normalizePlan };
+module.exports = { clampInteger, normalizePlan, buildSchema, buildInstructions, buildInterpretResult };
 
 

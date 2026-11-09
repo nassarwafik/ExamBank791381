@@ -54,3 +54,7 @@
 .ai-composer-after{font-weight:700}
 .ai-composer-diff-warning{color:var(--eb-warn-tx,#92400e)}
 @media (max-width:640px){.ai-composer-grid,.ai-composer-summary{grid-template-columns:1fr}}
+/* Phase 21I — the generate form was filled from the builder prompt */
+.ai-composer-prefill{ border:1px solid var(--eb-primary); background:var(--eb-primary-050); border-radius:var(--eb-r-lg, 12px); padding:10px 12px; font-size:13px; line-height:1.8; color:var(--eb-text); }
+.ai-composer-prefill p{ margin:0; }
+.ai-composer-prefill ul{ margin:6px 0 0; padding-inline-start:20px; color:var(--eb-warn-tx, var(--eb-text)); }
