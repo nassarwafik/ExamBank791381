@@ -20,8 +20,9 @@ const functionStudyModel_1 = require("../functionStudyModel");
 const chartSpec_1 = require("../charts/chartSpec");
 const composerChart_1 = require("./composerChart");
 const composerGraph_1 = require("./composerGraph");
+const composerChemistry_1 = require("./composerChemistry");
 require("../trustedSimPlugins");
-exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V4";
+exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V5";
 exports.COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"]);
 exports.COMPOSER_ITEM_KINDS = Object.freeze([...exports.COMPOSER_DRAFT_TYPES, "smartSim", "composite"]);
 function composerItemIdentity(kind) {
@@ -30,7 +31,9 @@ function composerItemIdentity(kind) {
 exports.COMPOSER_SIM_PLUGINS = Object.freeze([
     { pluginKey: "networkTopology", pluginVersion: 2, subject: "networking" },
     { pluginKey: "physicsFreeFall", pluginVersion: 1, subject: "physics" },
-    { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" }
+    { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" },
+    { pluginKey: "chemistryReactions", pluginVersion: 1, subject: "chemistry" },
+    { pluginKey: "chemistryStructure", pluginVersion: 1, subject: "chemistry" }
 ]);
 exports.COMPOSER_SIM_PLUGIN_KEYS = Object.freeze(exports.COMPOSER_SIM_PLUGINS.map(p => p.pluginKey));
 const composerSimVersion = (key) => exports.COMPOSER_SIM_PLUGINS.find(p => p.pluginKey === key)?.pluginVersion;
@@ -129,6 +132,7 @@ function catalogForPrompt(catalog = buildComposerCatalog()) {
         "SmartSim plugins: " + catalog.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion + " (" + p.subject + ")").join(", "),
         "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "] checks: " + s.checks.map(c => c.id + " " + c.label).join("; ")).join(" || "),
         "physicsFreeFall@1: model initialHeight 0.." + catalog.physics.bounds.heightMax + " m, initialVelocity ±" + catalog.physics.bounds.velocityAbsMax + " m/s (up positive), gravity " + catalog.physics.bounds.gravityMin + ".." + catalog.physics.bounds.gravityMax + " m/s²; measurements: " + catalog.physics.measurements.join(", ") + "; points: " + catalog.physics.points.join(", ") + ". Expected values are computed by code, never by you.",
+        composerChemistry_1.CHEMISTRY_POINTER,
         "functionStudy2d@1: expression language 2 in the single variable x (numbers, + - * / % ^, parentheses, abs, round, floor, ceil, min, max, sqrt, pow, log (natural), log10, exp; nothing else); tasks: " + catalog.functionStudy.tasks.join(", ") + "; |x| <= " + catalog.functionStudy.bounds.xAbsMax + ". Your expected answers are checked numerically against the expression.",
         "Presentation presets: " + catalog.presets.join(", "),
         "Rich blocks: " + catalog.richBlocks.filter(b => b !== "dataChart" && b !== "functionGraph").join(", ") + " (no images, no HTML, no CSS, no URLs)" + (catalog.richBlocks.includes("dataChart") ? "; dataChart (a declarative data chart — see Charts)" : "") + (catalog.richBlocks.includes("functionGraph") ? "; functionGraph (a declarative mathematical function graph — see Function graphs)." : "."),
