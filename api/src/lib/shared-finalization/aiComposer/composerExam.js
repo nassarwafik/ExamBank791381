@@ -15,6 +15,7 @@ const presentationModel_1 = require("../presentation/presentationModel");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
 const composerSim_1 = require("./composerSim");
+const composerQuality_1 = require("./composerQuality");
 function assembleComposerExam(input) {
     let n = 0;
     const sections = input.sections.map(s => ({ ...s, questions: s.questions.map(q => ({ ...q, displayNumber: String(++n) })) }));
@@ -189,6 +190,7 @@ function composerVerdict(exam, opts = {}) {
         cov.set(t, e);
     }
     const coverage = [...cov.values()].map(c => ({ ...c, marks: r2(c.marks) })).sort((a, b) => b.marks - a.marks || a.topic.localeCompare(b.topic));
+    warnings.push(...(0, composerQuality_1.qualityWarnings)(exam, opts.intent, id => meta?.coverage.find(c => c.questionId === id)?.difficulty));
     if (opts.intent)
         for (const t of opts.intent.requiredTopics)
             if (!coverage.some(c => c.topic.toLowerCase().includes(t.toLowerCase())) && !qs.some(q => String(q.text).toLowerCase().includes(t.toLowerCase())))
