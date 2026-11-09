@@ -14,7 +14,7 @@
 | `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
 | `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, C, D, E, S |
-| `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | — | ✓ | registered | A | 21A1 |
+| `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | ✓ | ✓ | registered | A | 21A1 |
 | `functionGraphSelection@1` | type | auto | ✓ | functionGraphSelection | — | ✓ | — | ✓ | registered | A | 21A2 |
 | `scene3DSelection@1` | type | auto | ✓ | scene3DSelection | — | — | — | ✓ | registered | A | 21C |
 | `meshPartSelection@1` | type | auto | ✓ | meshPartSelection | — | — | — | ✓ | registered | A | 21DB3 |

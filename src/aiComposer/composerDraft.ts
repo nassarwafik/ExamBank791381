@@ -15,6 +15,7 @@ import type { BuilderQuestion, BuilderSection } from "../examTypes";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { COMPOSER_DRAFT_TYPES, COMPOSER_ITEM_KINDS, COMPOSER_STRUCTURED_TYPES, composerItemIdentity, type ComposerItemKind, type ComposerStructuredType } from "./composerCatalog";
 import { buildStructuredBody, buildStructuredQuestion, buildStructuredSchema } from "./composerStructured";
+import { buildChartQuestionSchema, buildChartSelectionQuestion } from "./composerChartQuestion";
 import type { AiExamPlanItem, AiExamPlanSection, PlanDifficulty } from "./composerPlan";
 import { PLAN_DIFFICULTIES } from "./composerPlan";
 import { buildRichBlocksSchema, mapAiRichBlocks } from "./composerRich";
@@ -39,14 +40,14 @@ export function buildItemSchema(): JsonSchema {
   const context = sObj({ kind: sEnum(["smartSim", "source"]), sim: sNull(buildSimSpecSchema()), sourceTitle: sStr(), sourceBlocks: buildRichBlocksSchema() });
   return sObj({
     kind: sEnum(COMPOSER_ITEM_KINDS), topic: sStr(), difficulty: sEnum(PLAN_DIFFICULTIES), rationale: sStr(), stem: buildRichBlocksSchema(),
-    question: sNull(q), structured: sNull(st), smartSim: sNull(sObj({ text: sStr(), sim: buildSimSpecSchema() })),
+    question: sNull(q), structured: sNull(st), chartQuestion: sNull(buildChartQuestionSchema()), smartSim: sNull(sObj({ text: sStr(), sim: buildSimSpecSchema() })),
     compositeText: sStr(), compositeContext: sNull(context), compositeGroups: sArr(group, L.compositeGroups), compositeParts: sArr(part, L.compositeParts),
     assetRequest: sNull(sObj({ description: sStr() }))
   });
 }
 export const buildSectionDraftSchema = (): JsonSchema => sObj({ items: sArr(buildItemSchema(), L.itemsPerSection) });
 
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"] as const;
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "chartQuestion", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"] as const;
 const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"] as const;
 const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question", "structured"] as const;
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"] as const;
@@ -178,11 +179,12 @@ function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: strin
   const kind = raw.kind as ComposerItemKind;
   const comp = nestedComposite(raw, qid, path + ".composite");
   if (comp.issues) return { ok: false, issues: comp.issues };
-  const present = [...(["question", "structured", "smartSim"] as const).filter(k => raw[k] !== null), ...(comp.present ? ["composite" as const] : [])];
-  const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : "question";
+  const present = [...(["question", "structured", "chartQuestion", "smartSim"] as const).filter(k => raw[k] !== null), ...(comp.present ? ["composite" as const] : [])];
+  const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : kind === "chartSelection" ? "chartQuestion" : "question";
   if (present.length !== 1 || present[0] !== want) return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
   let q: BuilderQuestion;
   if (want === "question") { const m = mapDraftQuestion(raw.question, kind, qid, plan.marks, request, path + ".question"); if (!m.ok) return m; q = m.value; }
+  else if (want === "chartQuestion") { const b = buildChartSelectionQuestion(raw.chartQuestion, qid, plan.marks, chartPolicy, path + ".chartQuestion"); if (!b.ok) return { ok: false, issues: b.issues }; q = b.question; }
   else if (want === "structured") { const b = buildStructuredQuestion(raw.structured, kind as ComposerStructuredType, qid, plan.marks, path + ".structured"); if (!b.ok) return { ok: false, issues: b.issues }; q = b.question; }
   else if (want === "smartSim") {
     const s = raw.smartSim;

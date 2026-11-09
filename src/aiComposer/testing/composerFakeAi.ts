@@ -54,7 +54,7 @@ export const flatComposite = (c: Json | null): Json => {
 };
 export const item = (kind: string, over: Json = {}): Json => {
   const { composite: c, ...rest } = over;
-  return { kind, topic: "", difficulty: "medium", rationale: "", stem: [], question: null, structured: null, smartSim: null, ...flatComposite((c as Json | null | undefined) ?? null), assetRequest: null, ...rest };
+  return { kind, topic: "", difficulty: "medium", rationale: "", stem: [], question: null, structured: null, chartQuestion: null, smartSim: null, ...flatComposite((c as Json | null | undefined) ?? null), assetRequest: null, ...rest };
 };
 export const part = (kind: string, marks: number, over: Json = {}): Json => ({ kind, linked: false, marks, label: "", simChecks: [], simText: "", question: null, structured: null, ...over });
 /** Phase 21N — a structured payload (multipleSelect / matching / ordering / categorization): every list present, the unused ones empty. */

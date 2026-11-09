@@ -19,7 +19,7 @@ const EXPLICIT = "ارسم منحنى الدالة f(x) = x^2 - 4x + 3 على ا
 
 describe("21A2-AI1 closed descriptor and strict teacher provenance", () => {
   it("V4 catalog names mathematical function graphs, without exposing plotting-library settings", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V9");
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V10");
     const lines = catalogForPrompt(buildComposerCatalog()).split("\n");
     expect(lines.find(l => l.startsWith("Function graphs: "))).toContain("never infer a formula");
     expect(lines.find(l => l.startsWith("Rich blocks: "))).toContain("functionGraph");
