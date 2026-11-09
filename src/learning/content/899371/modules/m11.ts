@@ -686,6 +686,138 @@ const m11: ContentModule = {
                 }
               ],
               "explanation": "لكل كائن نحتاج new خاصة به، ومصفوفة الكائنات تحمل المراجع لا الكائنات."
+            },
+            {
+              "id": "m11-l01-p06-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "class Book\n{\n    private string title;\n    public Book(string t)\n    {\n        title = t;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Book[] shelf = new Book[2];\n        shelf[0] = new Book(\"Coding\");\n        Console.WriteLine((shelf[0] == null) + \" \" + (shelf[1] == null));\n    }\n}",
+                "steps": [
+                  {
+                    "line": 13,
+                    "note": "مصفوفة من مرجعين، وكلاهما null: لا كتب بعد.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "shelf",
+                            {
+                              "t": "arr",
+                              "items": [
+                                {
+                                  "t": "null"
+                                },
+                                {
+                                  "t": "null"
+                                }
+                              ]
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 14,
+                    "note": "new ينشئ كتابًا، ومرجعه يوضع في الخانة 0. الخانة 1 ما زالت null.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "shelf",
+                            {
+                              "t": "arr",
+                              "items": [
+                                {
+                                  "t": "ref",
+                                  "id": 1
+                                },
+                                {
+                                  "t": "null"
+                                }
+                              ]
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Book",
+                        "fields": [
+                          [
+                            "title",
+                            {
+                              "t": "str",
+                              "s": "Coding"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 15,
+                    "note": "الطباعة: False True.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "shelf",
+                            {
+                              "t": "arr",
+                              "items": [
+                                {
+                                  "t": "ref",
+                                  "id": 1
+                                },
+                                {
+                                  "t": "null"
+                                }
+                              ]
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Book",
+                        "fields": [
+                          [
+                            "title",
+                            {
+                              "t": "str",
+                              "s": "Coding"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": "False True\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -897,6 +1029,411 @@ const m11: ContentModule = {
                 }
               ],
               "explanation": "الإسناد بين متغيري كائنات ينسخ المرجع لا الكائن. كائن جديد يحتاج new."
+            },
+            {
+              "id": "m11-l01-p08-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Counter a = new Counter();\n        Counter b = a;\n        Counter c = new Counter();\n        b.Add();\n        b.Add();\n        c.Add();\n        Console.WriteLine(a.Get() + \" \" + b.Get() + \" \" + c.Get());\n    }\n}",
+                "steps": [
+                  {
+                    "line": 17,
+                    "note": "new ينشئ كائنًا، وa يشير إليه.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 18,
+                    "note": "لا new: b يشير إلى الكائن نفسه.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 19,
+                    "note": "new ثانية: كائن ثانٍ مستقل.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "ref",
+                              "id": 2
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "id": 2,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 20,
+                    "note": "b.Add() تزيد n في الكائن الأول.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "ref",
+                              "id": 2
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "id": 2,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 21,
+                    "note": "مرة ثانية: الكائن الأول n = 2.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "ref",
+                              "id": 2
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "2"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "id": 2,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 22,
+                    "note": "c.Add() تزيد الكائن الثاني.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "ref",
+                              "id": 2
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "2"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "id": 2,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": ""
+                  },
+                  {
+                    "line": 23,
+                    "note": "الطباعة: 2 2 1.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "ref",
+                              "id": 1
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "ref",
+                              "id": 2
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [
+                      {
+                        "id": 1,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "2"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "id": 2,
+                        "type": "Counter",
+                        "fields": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "out": "2 2 1\n"
+                  }
+                ]
+              }
             }
           ]
         }

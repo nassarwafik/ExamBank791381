@@ -669,6 +669,251 @@ const m02: ContentModule = {
                 }
               ],
               "explanation": "كما يسبق الضرب الجمع، تسبق && (و) العامل || (أو). عند الشك نضع أقواسًا لتوضيح الترتيب."
+            },
+            {
+              "id": "m02-l01-p04-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int a = 5, b = 10, c = 15;\nConsole.WriteLine(a > b || b < c && c > 20 || a == 5);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "ثلاثة صناديق.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "15"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نحسب كل مقارنة أولًا.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "15"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "a > b",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ],
+                      [
+                        "b < c",
+                        {
+                          "t": "v",
+                          "s": "True"
+                        }
+                      ],
+                      [
+                        "c > 20",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ],
+                      [
+                        "a == 5",
+                        {
+                          "t": "v",
+                          "s": "True"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "&& قبل ||: نحسب b < c && c > 20.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "15"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "b < c && c > 20",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "ثم || من اليسار: False || False ثم || True.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "15"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "a > b || b < c && c > 20",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ],
+                      [
+                        "… || a == 5",
+                        {
+                          "t": "v",
+                          "s": "True"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الطباعة: True، يكفي طرف صحيح واحد مع ||.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "15"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "True\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -991,6 +1236,124 @@ const m02: ContentModule = {
                 }
               ],
               "explanation": "/ تعطي «كم مرة كاملة»، و% تعطي «ماذا بقي». هذا الزوج يتكرر في تحويل الوقت والعملة والمنازل."
+            },
+            {
+              "id": "m02-l01-p06-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int m = 135;\nConsole.WriteLine(m / 60 + \":\" + m % 60);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "135 دقيقة.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "m",
+                            {
+                              "t": "v",
+                              "s": "135"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "القسمة الصحيحة: كم ساعة كاملة؟",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "m",
+                            {
+                              "t": "v",
+                              "s": "135"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "m / 60",
+                        {
+                          "t": "v",
+                          "s": "2"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "باقي القسمة: كم دقيقة بقيت؟",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "m",
+                            {
+                              "t": "v",
+                              "s": "135"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "m % 60",
+                        {
+                          "t": "v",
+                          "s": "15"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الطباعة: 2:15.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "m",
+                            {
+                              "t": "v",
+                              "s": "135"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "2:15\n"
+                  }
+                ]
+              }
             }
           ]
         },

@@ -665,3 +665,50 @@
 :where(:root[data-theme="dark"]) .learning-osi-layer.is-active .learning-osi-number { color: var(--eb-surface); }   /* the label on the primary, like the buttons' */
 :where(:root[data-theme="dark"]) .learning-cable-light { fill: var(--eb-surface); }                                   /* a hollow ring on the primary stroke */
 :where(:root[data-theme="dark"]) .learning-handshake-numtext { fill: var(--eb-surface); }
+
+/* ── 899371 P6 — simulation / csharp-trace / v1 (CSharpTraceActivity): a C# program step by step. Tokens only; the program panel
+   uses the Reader's code tokens (P1). Every control is a 44 px target; nothing moves on its own. ── */
+.learning-trace{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-trace-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-trace-btn{ min-height:44px; min-width:44px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-pill); background:var(--eb-surface); font:inherit; font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); cursor:pointer; }
+.learning-trace-btn.is-next{ background:var(--eb-primary-050); }
+.learning-trace-btn:disabled{ opacity:.5; cursor:default; }
+.learning-trace-btn:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-trace-counter{ font-size:var(--eb-fs-14); color:var(--eb-muted); }
+.learning-trace-note{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r-sm); background:var(--eb-info-bg); color:var(--eb-text); line-height:var(--eb-lh-body); }
+.learning-trace-noteline{ font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-trace-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap:var(--eb-space-3); }   /* two columns when they fit, no media query */
+.learning-trace-code{ margin:0; padding:var(--eb-space-2) 0; list-style:none; overflow-x:auto; border-radius:var(--eb-r); background:var(--eb-code-bg); color:var(--eb-code-fg); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-14); text-align:left; }
+.learning-trace-line{ display:flex; gap:var(--eb-space-2); padding-inline:var(--eb-space-2); border-inline-start:4px solid transparent; white-space:pre; }
+.learning-trace-line.is-current{ border-inline-start-color:var(--eb-code-keyword); background:var(--eb-code-line); }
+.learning-trace-lineno{ flex:0 0 2ch; text-align:right; color:var(--eb-code-gutter); user-select:none; }
+.learning-trace-linecode{ font:inherit; color:inherit; background:none; }
+.learning-trace-sr{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.learning-trace-state{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-trace-heading{ margin:0 0 var(--eb-space-1); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-trace-stdin{ margin:0; font-size:var(--eb-fs-14); color:var(--eb-text); }
+.learning-trace-label{ font-weight:var(--eb-fw-semibold); }
+.learning-trace-frame, .learning-trace-object{ padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.learning-trace-frame + .learning-trace-frame{ margin-block-start:var(--eb-space-2); }
+.learning-trace-frame.is-top{ border-color:var(--eb-primary); }
+.learning-trace-object + .learning-trace-object{ margin-block-start:var(--eb-space-2); }
+.learning-trace-framename{ margin:0 0 var(--eb-space-1); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-bold); color:var(--eb-primary-strong); }
+.learning-trace-none{ margin:0; font-size:var(--eb-fs-14); color:var(--eb-muted); }
+.learning-trace-vars{ display:flex; flex-direction:column; gap:var(--eb-space-1); margin:0; padding:0; list-style:none; }
+.learning-trace-var{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); min-width:0; }
+.learning-trace-name{ min-width:3ch; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); background:none; }
+.learning-trace-box, .learning-trace-cell{ display:inline-block; min-width:2.2em; padding:2px var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; text-align:center; color:var(--eb-text); }
+.learning-trace-box.is-ref{ border-style:dashed; color:var(--eb-primary-strong); }
+.learning-trace-var.is-changed .learning-trace-box, .learning-trace-var.is-changed .learning-trace-cell, .learning-trace-var.is-changed .learning-trace-matrix td{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-trace-tag{ padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-trace-arrow{ color:var(--eb-muted); }
+.learning-trace-cells{ display:inline-flex; flex-wrap:wrap; gap:2px; direction:ltr; }
+.learning-trace-cellbox{ display:inline-flex; flex-direction:column; align-items:center; }
+.learning-trace-cellbox .learning-trace-cell{ min-width:1.8em; padding:2px 4px; }
+.learning-trace-idx{ font-size:var(--eb-fs-12); color:var(--eb-muted); font-variant-numeric:tabular-nums; }
+.learning-trace-matrix{ border-collapse:collapse; direction:ltr; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-trace-matrix th{ padding:0 4px; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-regular); color:var(--eb-muted); }
+.learning-trace-matrix td{ min-width:2em; padding:2px var(--eb-space-2); border:1px solid var(--eb-line-2); background:var(--eb-surface-2); text-align:center; color:var(--eb-text); }
+.learning-trace-out{ margin:0; min-height:2.5em; padding:var(--eb-space-2); overflow-x:auto; border-radius:var(--eb-r-sm); background:var(--eb-code-bg); color:var(--eb-code-fg); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-14); text-align:left; white-space:pre; }
+.learning-trace-out:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-trace-empty{ margin:0; color:var(--eb-muted); }

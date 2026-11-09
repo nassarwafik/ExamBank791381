@@ -814,6 +814,152 @@ const m04: ContentModule = {
                 }
               ],
               "explanation": "الإزاحة للقارئ فقط، والحاسوب لا يراها. لنتجنب اللبس نضع الأقواس { } دائمًا."
+            },
+            {
+              "id": "m04-l01-p06-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int x = 3, y = -1;\nif (x > 0)\n    if (y > 0)\n        Console.WriteLine(\"A\");\nelse\n    Console.WriteLine(\"B\");",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "x موجب وy سالب.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "-1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الشرط الخارجي صحيح: ندخل.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "-1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "x > 0",
+                        {
+                          "t": "v",
+                          "s": "True"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 3,
+                    "note": "الشرط الداخلي خطأ، وelse تتبع هذا الـ if الأقرب.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "-1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "y > 0",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 6,
+                    "note": "فرع else الخاص بـ if (y > 0): يطبع B.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "-1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "B\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -1140,6 +1286,285 @@ const m04: ContentModule = {
                 }
               ],
               "explanation": "نحتفظ بـ «الأكبر حتى الآن» ونقارن به كل عدد جديد. الفكرة نفسها تعمل لاحقًا مع الحلقات والمصفوفات."
+            },
+            {
+              "id": "m04-l01-p09-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int a = 7, b = 12, c = 9;\nint max = a;\nif (b > max)\n    max = b;\nif (c > max)\n    max = c;\nConsole.WriteLine(max);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "ثلاثة أعداد.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نفترض أن الأول هو الأكبر.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "max",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 3,
+                    "note": "هل b أكبر من الأكبر حتى الآن؟",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "max",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "b > max",
+                        {
+                          "t": "v",
+                          "s": "True"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "نعم: max يصبح 12.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "max",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 5,
+                    "note": "هل c أكبر من الأكبر حتى الآن؟",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "max",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "c > max",
+                        {
+                          "t": "v",
+                          "s": "False"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 7,
+                    "note": "الطباعة: 12.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "7"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "max",
+                            {
+                              "t": "v",
+                              "s": "12"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "12\n"
+                  }
+                ]
+              }
             }
           ]
         }

@@ -145,7 +145,7 @@ console.log("1. teacher: a walkthrough, step by step");
   check(p1.steps.length === g.steps.length && p1.result.includes("***"), "in presentation mode the walkthrough is revealed to the end in front of the class");
   await settle(page);
   await page.evaluate(axeSource + "\n;0");
-  const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length));
+  const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length + " " + x.nodes.map(n => n.target.join(" ") + " " + n.html.slice(0, 120)).join(" | ")));
   check(res.length === 0, "presentation mode: axe — " + (res.join(", ") || "no serious / critical violation"));
   await shot(page, "p5-presentation-1440");
   await page.getByRole("button", { name: "خروج من وضع العرض" }).first().click();
@@ -192,7 +192,7 @@ for (const v of [{ width: 390, height: 844, touch: true }, { width: 1440, height
     await page.waitForTimeout(300);
     await settle(page);
   await page.evaluate(axeSource + "\n;0");   // evaluated, not an inline <script>: the production CSP stays in force (as L.8)
-    const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length));
+    const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length + " " + x.nodes.map(n => n.target.join(" ") + " " + n.html.slice(0, 120)).join(" | ")));
     const where = "walkthrough " + v.width + "px " + readTheme;
     check(res.length === 0, where + ": axe — " + (res.join(", ") || "no serious / critical violation"));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);

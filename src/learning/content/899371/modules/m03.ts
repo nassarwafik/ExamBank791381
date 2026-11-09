@@ -594,6 +594,160 @@ const m03: ContentModule = {
                 }
               ],
               "explanation": "% 10 تأخذ آخر منزلة، و/ 10 تحذفها. بتكرارهما نصل إلى أي منزلة."
+            },
+            {
+              "id": "m03-l01-p04-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int n = 582;\nConsole.WriteLine(n / 100 + \" \" + n / 10 % 10 + \" \" + n % 10);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "العدد 582.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "582"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "المئات: القسمة على 100 تحذف منزلتين.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "582"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "n / 100",
+                        {
+                          "t": "v",
+                          "s": "5"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "العشرات: نحذف الآحاد، ثم نأخذ الآحاد الجديدة.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "582"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "n / 10",
+                        {
+                          "t": "v",
+                          "s": "58"
+                        }
+                      ],
+                      [
+                        "n / 10 % 10",
+                        {
+                          "t": "v",
+                          "s": "8"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الآحاد: باقي القسمة على 10.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "582"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "n % 10",
+                        {
+                          "t": "v",
+                          "s": "2"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الطباعة: 5 8 2.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "582"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "5 8 2\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -699,6 +853,123 @@ const m03: ContentModule = {
                 }
               ],
               "explanation": "المسافة = جذر (مربع فرق x + مربع فرق y)، وMath.Round(x, 2) يقرّب إلى منزلتين."
+            },
+            {
+              "id": "m03-l01-p05-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "double d = Math.Sqrt(Math.Pow(3 - 0, 2) + Math.Pow(5 - 0, 2));\nConsole.WriteLine(Math.Round(d, 2));",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "مربع فرق x ومربع فرق y.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "Math.Pow(3 - 0, 2)",
+                        {
+                          "t": "v",
+                          "s": "9"
+                        }
+                      ],
+                      [
+                        "Math.Pow(5 - 0, 2)",
+                        {
+                          "t": "v",
+                          "s": "25"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 1,
+                    "note": "الجذر التربيعي للمجموع 34.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "d",
+                            {
+                              "t": "v",
+                              "s": "5.830951894845301"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نقرّب إلى منزلتين عشريتين.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "d",
+                            {
+                              "t": "v",
+                              "s": "5.830951894845301"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "Math.Round(d, 2)",
+                        {
+                          "t": "v",
+                          "s": "5.83"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "الطباعة: 5.83.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "d",
+                            {
+                              "t": "v",
+                              "s": "5.830951894845301"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "5.83\n"
+                  }
+                ]
+              }
             }
           ]
         },

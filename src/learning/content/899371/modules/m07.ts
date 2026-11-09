@@ -893,6 +893,303 @@ const m07: ContentModule = {
                 }
               ],
               "explanation": "بدون ref / out تعمل العملية على نسخة. ref للتعديل على الأصل، وout لإعادة قيمة إضافية."
+            },
+            {
+              "id": "m07-l01-p07-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "static void A(int x)\n{\n    x = 10;\n}\nstatic void B(ref int x)\n{\n    x = 20;\n}\nstatic void C(out int x)\n{\n    x = 30;\n}\nstatic void Main()\n{\n    int n = 1;\n    A(n);\n    Console.Write(n + \" \");\n    B(ref n);\n    Console.Write(n + \" \");\n    C(out n);\n    Console.Write(n);\n}",
+                "steps": [
+                  {
+                    "line": 15,
+                    "note": "صندوق n في Main.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 1,
+                    "note": "A تستلم نسخة من قيمة n.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "A",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 3,
+                    "note": "A تغيّر نسختها فقط.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "A",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 16,
+                    "note": "عدنا من A: n ما زال 1.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 17,
+                    "note": "الطباعة: 1.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 "
+                  },
+                  {
+                    "line": 7,
+                    "note": "مع ref: x في B هو صندوق n نفسه.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "B",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "20"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 "
+                  },
+                  {
+                    "line": 18,
+                    "note": "عدنا من B: n صار 20.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "20"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 "
+                  },
+                  {
+                    "line": 19,
+                    "note": "الطباعة: 20.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "20"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 20 "
+                  },
+                  {
+                    "line": 11,
+                    "note": "مع out: C تعطي x قيمة، وتعود القيمة إلى n.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "20"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "name": "C",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "30"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 20 "
+                  },
+                  {
+                    "line": 20,
+                    "note": "عدنا من C: n صار 30.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "30"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 20 "
+                  },
+                  {
+                    "line": 21,
+                    "note": "الطباعة: 30.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "n",
+                            {
+                              "t": "v",
+                              "s": "30"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "1 20 30"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -1076,6 +1373,135 @@ const m07: ContentModule = {
                 }
               ],
               "explanation": "كل عملية تنتهي تعود إلى السطر الذي يلي استدعاءها. آخر من دخل المكدس أول من يخرج."
+            },
+            {
+              "id": "m07-l01-p09-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "static void G()\n{\n    Console.Write(\"G \");\n}\nstatic void F()\n{\n    Console.Write(\"F1 \");\n    G();\n    Console.Write(\"F2 \");\n}\nstatic void Main()\n{\n    Console.Write(\"M1 \");\n    F();\n    Console.Write(\"M2\");\n}",
+                "steps": [
+                  {
+                    "line": 13,
+                    "note": "Main وحدها في المكدس.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 "
+                  },
+                  {
+                    "line": 7,
+                    "note": "F فوق Main في المكدس.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      },
+                      {
+                        "name": "F",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 "
+                  },
+                  {
+                    "line": 3,
+                    "note": "G فوق F في المكدس: تطبع ثم تنتهي.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      },
+                      {
+                        "name": "F",
+                        "vars": []
+                      },
+                      {
+                        "name": "G",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 G "
+                  },
+                  {
+                    "line": 8,
+                    "note": "خرجت G من المكدس: نكمل F بعد سطر الاستدعاء.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      },
+                      {
+                        "name": "F",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 G "
+                  },
+                  {
+                    "line": 9,
+                    "note": "F تكمل ثم تنتهي.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      },
+                      {
+                        "name": "F",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 G F2 "
+                  },
+                  {
+                    "line": 14,
+                    "note": "خرجت F: عدنا إلى Main.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 G F2 "
+                  },
+                  {
+                    "line": 15,
+                    "note": "الطباعة الأخيرة.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": []
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "M1 F1 G F2 M2"
+                  }
+                ]
+              }
             }
           ]
         },

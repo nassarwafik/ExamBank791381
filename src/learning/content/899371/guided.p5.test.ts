@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import manifest from "./manifest";
 import proofsFile from "./guided/proofs.json";
+import traceRuns from "./traces/runs.json";
 import { loadBundledModuleContent } from "../bundledModules";
 import type { ContentBlock, ContentModule, ContentPage } from "../types";
 // @ts-expect-error — plain ESM tools shared with the converter and the prover; untyped on purpose.
@@ -73,11 +74,12 @@ describe("899371 P5 — «نحلّ معًا»", () => {
     expect(total).toBe(44);
   }, 30000);
 
-  it("each walkthrough page holds its program (if any) then one guided reveal, all enrichment, titled by the walkthrough", async () => {
-    for (const { page, block, w } of await walkthroughs()) {
+  it("each walkthrough page holds its program (if any) then one guided reveal (then, P6, its tracer if traced), all enrichment", async () => {
+    for (const { chapter, n, page, block, w } of await walkthroughs()) {
+      const traced = (`${chapter}/g${String(n).padStart(2, "0")}`) in traceRuns.runs;
       expect(page.layout, page.id).toBeUndefined();
       expect(page.title, page.id).toBe("نحلّ معًا: " + w.title);
-      expect(page.blocks.map(b => b.type), page.id).toEqual(w.program ? ["code", "guided"] : ["guided"]);
+      expect(page.blocks.map(b => b.type), page.id).toEqual([...(w.program ? ["code"] : []), "guided", ...(traced ? ["simulation"] : [])]);
       for (const b of page.blocks) expect(b.origin, b.id).toBe("teacher-enrichment");
       expect(block.title, page.id).toBe(w.title);
     }

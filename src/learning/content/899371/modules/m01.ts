@@ -663,6 +663,157 @@ const m01: ContentModule = {
                 }
               ],
               "explanation": "الإسناد = يضع قيمة جديدة في الصندوق ويمحو القديمة، والمتغير لا «يتذكر» كيف حُسب."
+            },
+            {
+              "id": "m01-l01-p04-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int a = 5, b = 3;\nint c = a + b;\na = a * 2;\nConsole.WriteLine(a + \" \" + b + \" \" + c);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "صندوق لكل متغير: a فيه 5، وb فيه 3.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نحسب a + b = 5 + 3 ونضع 8 في صندوق جديد c.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "5"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "8"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 3,
+                    "note": "a يأخذ 5 × 2 = 10، والقيمة القديمة 5 تُمحى. c لا يتغير: حُسب مرة واحدة.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "8"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "الطباعة: القيم الحالية بينها مسافات.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "a",
+                            {
+                              "t": "v",
+                              "s": "10"
+                            }
+                          ],
+                          [
+                            "b",
+                            {
+                              "t": "v",
+                              "s": "3"
+                            }
+                          ],
+                          [
+                            "c",
+                            {
+                              "t": "v",
+                              "s": "8"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "10 3 8\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -1047,6 +1198,192 @@ const m01: ContentModule = {
                 }
               ],
               "explanation": "كل إسناد يمحو القيمة القديمة، لذلك نحفظ ما نحتاجه في متغير مؤقت قبل أن نكتب فوقه."
+            },
+            {
+              "id": "m01-l01-p07-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "int x = 4, y = 9;\nint t = x;\nx = y;\ny = t;\nConsole.WriteLine(x + \" \" + y);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "x = 4 وy = 9.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نحفظ قيمة x في صندوق مؤقت t قبل أن نكتب فوقها.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "t",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 3,
+                    "note": "x يأخذ 9، والقيمة 4 ما زالت محفوظة في t.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "t",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "y يأخذ 4 من t: تم التبديل.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ],
+                          [
+                            "t",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 5,
+                    "note": "الطباعة: 9 4.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "x",
+                            {
+                              "t": "v",
+                              "s": "9"
+                            }
+                          ],
+                          [
+                            "y",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ],
+                          [
+                            "t",
+                            {
+                              "t": "v",
+                              "s": "4"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "9 4\n"
+                  }
+                ]
+              }
             }
           ]
         }

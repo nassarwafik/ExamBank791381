@@ -114,7 +114,10 @@ export default function LearningPageRenderer({ header, body, activity, training,
           <span className="learning-reader-position">صفحة {header.position.index} من {header.position.total}</span>
           {body.kind === "ready" && body.page.layout === "practice"
             ? <span className="learning-reader-frombook is-enrichment"><IconSparkles size={14} aria-hidden="true" />تدريبات تفاعلية</span>
-            : <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>}
+            : body.kind === "ready" && body.page.blocks.length > 0 && body.page.blocks.every(b => b.origin === "teacher-enrichment")
+              // 899371 P6 (plan §19): a page of added blocks only (e.g. a «نحلّ معًا» walkthrough) never claims to be the book
+              ? <span className="learning-reader-frombook is-enrichment"><IconSparkles size={14} aria-hidden="true" />إثراء تعليمي</span>
+              : <span className="learning-reader-frombook"><IconBook size={14} aria-hidden="true" />من الكتاب</span>}
         </div>
         {header.source && <SourceInfo source={header.source} />}
       </header>

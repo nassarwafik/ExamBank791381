@@ -156,11 +156,11 @@ describe("899371 — the bodies", () => {
     const clarifications = all.filter(x => !x.enrichment && x.b.origin !== "book");
     expect(clarifications.map(x => x.b.type + (x.b.type === "callout" ? ":" + x.b.kind : "")).sort()).toEqual([...Array(8).fill("callout:clarification"), "list", "list"].sort());
     expect(all.filter(x => x.note === PRACTICE_NOTE).length).toBe(110 + 77);   // 110 exercises, 77 of them with their program above
-    expect(all.filter(x => x.note === GUIDED_NOTE).length).toBe(44 + 43);      // 44 walkthroughs, 43 of them with their program above
+    expect(all.filter(x => x.note === GUIDED_NOTE).length).toBe(44 + 43 + 22); // 44 walkthroughs, 43 with their program above, 22 with their tracer (P6)
     for (const { page, enrichment, note, b } of all) {
       const where = page + " / " + b.id;
       expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
-      if (enrichment) { expect(b.origin, where).toBe("teacher-enrichment"); expect(note === PRACTICE_NOTE ? ["code", "practice"] : ["code", "guided"], where).toContain(b.type); continue; }
+      if (enrichment) { expect(b.origin, where).toBe("teacher-enrichment"); expect(note === PRACTICE_NOTE ? ["code", "practice"] : ["code", "guided", "simulation"], where).toContain(b.type); continue; }
       if (b.origin !== "book" && /-(clarify|choices)$/.test(b.id)) continue;   // a teacher clarification (§18)
       expect(b.origin, where).toBe("book");
       expect(BOOK_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);

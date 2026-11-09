@@ -1146,6 +1146,230 @@ const m08: ContentModule = {
                 }
               ],
               "explanation": "% 26 تجعل الأبجدية دائرة: بعد Z تأتي A."
+            },
+            {
+              "id": "m08-l01-p06-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "string s = \"ABZ\";\nstring r = \"\";\nfor (int i = 0; i < s.Length; i++)\n    r += (char)((s[i] - 'A' + 2) % 26 + 'A');\nConsole.WriteLine(r);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "النص صناديق أحرف لها مؤشرات.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نص فارغ نبني فيه الناتج.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ],
+                          [
+                            "r",
+                            {
+                              "t": "str",
+                              "s": ""
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "الحرف A رقمه 0، ومع الإزاحة 2 يصبح C.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ],
+                          [
+                            "r",
+                            {
+                              "t": "str",
+                              "s": "C"
+                            }
+                          ],
+                          [
+                            "i",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "(s[i] - 'A' + 2) % 26",
+                        {
+                          "t": "v",
+                          "s": "2"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "الحرف B رقمه 1، ومع الإزاحة 2 يصبح D.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ],
+                          [
+                            "r",
+                            {
+                              "t": "str",
+                              "s": "CD"
+                            }
+                          ],
+                          [
+                            "i",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "(s[i] - 'A' + 2) % 26",
+                        {
+                          "t": "v",
+                          "s": "3"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "الحرف Z رقمه 25، ومع الإزاحة 2 يصبح B.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ],
+                          [
+                            "r",
+                            {
+                              "t": "str",
+                              "s": "CDB"
+                            }
+                          ],
+                          [
+                            "i",
+                            {
+                              "t": "v",
+                              "s": "2"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "(s[i] - 'A' + 2) % 26",
+                        {
+                          "t": "v",
+                          "s": "1"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 5,
+                    "note": "الطباعة: CDB.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "ABZ"
+                            }
+                          ],
+                          [
+                            "r",
+                            {
+                              "t": "str",
+                              "s": "CDB"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "CDB\n"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -1399,6 +1623,201 @@ const m08: ContentModule = {
                 }
               ],
               "explanation": "الموقع المقابل لـ i هو `Length - 1 - i`."
+            },
+            {
+              "id": "m08-l01-p08-trace",
+              "type": "simulation",
+              "origin": "teacher-enrichment",
+              "simulationType": "csharp-trace",
+              "version": 1,
+              "title": "تتبّع البرنامج خطوة خطوة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "code": "string s = \"level\";\nbool ok = true;\nfor (int i = 0; i < s.Length / 2; i++)\n    if (s[i] != s[s.Length - 1 - i])\n        ok = false;\nConsole.WriteLine(ok);",
+                "steps": [
+                  {
+                    "line": 1,
+                    "note": "النص صناديق أحرف.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "level"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 2,
+                    "note": "نفترض أنه متناظر.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "level"
+                            }
+                          ],
+                          [
+                            "ok",
+                            {
+                              "t": "v",
+                              "s": "True"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "نقارن الحرف 0 بالحرف المقابل 4.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "level"
+                            }
+                          ],
+                          [
+                            "ok",
+                            {
+                              "t": "v",
+                              "s": "True"
+                            }
+                          ],
+                          [
+                            "i",
+                            {
+                              "t": "v",
+                              "s": "0"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "s[i]",
+                        {
+                          "t": "char",
+                          "s": "l"
+                        }
+                      ],
+                      [
+                        "s[s.Length - 1 - i]",
+                        {
+                          "t": "char",
+                          "s": "l"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 4,
+                    "note": "نقارن الحرف 1 بالحرف المقابل 3.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "level"
+                            }
+                          ],
+                          [
+                            "ok",
+                            {
+                              "t": "v",
+                              "s": "True"
+                            }
+                          ],
+                          [
+                            "i",
+                            {
+                              "t": "v",
+                              "s": "1"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [
+                      [
+                        "s[i]",
+                        {
+                          "t": "char",
+                          "s": "e"
+                        }
+                      ],
+                      [
+                        "s[s.Length - 1 - i]",
+                        {
+                          "t": "char",
+                          "s": "e"
+                        }
+                      ]
+                    ],
+                    "heap": [],
+                    "out": ""
+                  },
+                  {
+                    "line": 6,
+                    "note": "الطباعة: True.",
+                    "frames": [
+                      {
+                        "name": "Main",
+                        "vars": [
+                          [
+                            "s",
+                            {
+                              "t": "str",
+                              "s": "level"
+                            }
+                          ],
+                          [
+                            "ok",
+                            {
+                              "t": "v",
+                              "s": "True"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "eval": [],
+                    "heap": [],
+                    "out": "True\n"
+                  }
+                ]
+              }
             }
           ]
         },

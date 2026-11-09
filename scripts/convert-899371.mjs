@@ -24,6 +24,9 @@
 // lesson (right after the summary, before the assignments; the book's own pages, lessons and ids are untouched). Each is a teacher-
 // led guided reveal (guided/reveal/v1), PARALLEL to the book (owner, 2026-11-09: never a book assignment's own answer), and the
 // printed result of each walkthrough program is proven by a run (guided/proofs.json).
+// P6 (§19): on 22 walkthrough pages (2 per chapter) the walkthrough is followed by the C# TRACER (simulation / csharp-trace / v1):
+// the page's program step by step — the line that ran, memory boxes, arrays, a matrix, strings as letters, the call stack, objects
+// and the output so far — every step RECORDED by running the program (scripts/trace-899371.mjs → traces/runs.json).
 // Decisions (§18): where the book promises data it does not print (F9: the inputs of five traces; F15: a points table and two sets of
 // choices), a clarification callout «توضيح المعلم» (teacher-enrichment) right after that line completes the question — the book's
 // text is untouched (book lock) and no answer is shown (Q3). Data: src/learning/content/899371/clarifications.json.
@@ -290,7 +293,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications()) {
+export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications(), traceRuns = readTraceRuns()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -344,7 +347,7 @@ export function convert(body, practice = readPractice(), guided = readGuided(), 
         return { id: pid, title: pg.title, order: i + 1, source: src(les.toc ?? mod.toc, pg.from, pg.to), blocks };
       });
       const walkthroughs = les.kind === "summary" ? guided[`m${String(mod.n).padStart(2, "0")}`] : undefined;
-      if (walkthroughs) pages.push(...guidedPages(lid, les.toc, pages.length, walkthroughs));
+      if (walkthroughs) pages.push(...guidedPages(lid, les.toc, pages.length, walkthroughs, `m${String(mod.n).padStart(2, "0")}`, traceRuns));
       lessons.push({ id: lid, title: les.title, order: les.order, pages });
     }
     const exercises = practice[`m${String(mod.n).padStart(2, "0")}`];
@@ -597,8 +600,20 @@ export function readGuided(dir = GUIDED_DIR) {
 export function guidedSpans(text) {
   return text.split(/(`[^`]+`)/).filter(Boolean).map(part => (part.startsWith("`") ? { text: part.slice(1, -1), style: "code", dir: "ltr" } : { text: part }));
 }
-/** One page per walkthrough, appended to the summary lesson: the program (if any) as a code block, then the guided reveal. */
-function guidedPages(lid, toc, after, walkthroughs) {
+// ── P6: the C# tracer on traced walkthrough pages ─────────────────────────────────────────────────────────────────────────────────
+export const TRACE_RUNS_FILE = join(OUT, "traces", "runs.json");
+export const TRACE_TITLE = "تتبّع البرنامج خطوة خطوة";
+/** The recorded traces { "mNN/gNN": { sha, steps } } (written by scripts/trace-899371.mjs; empty before any run). */
+export const readTraceRuns = (file = TRACE_RUNS_FILE) => (existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).runs : {});
+/** The tracer block of a walkthrough: the page's program, its input and the recorded steps (data only, never executed). */
+export function traceBlock(id, w, run) {
+  return { id, type: "simulation", origin: "teacher-enrichment", simulationType: "csharp-trace", version: 1, title: TRACE_TITLE,
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+    config: { code: w.program, ...(w.stdin !== undefined ? { stdin: w.stdin } : {}), steps: run.steps } };
+}
+/** One page per walkthrough, appended to the summary lesson: the program (if any) as a code block, then the guided reveal, then
+ *  (P6) the tracer when the walkthrough was traced. */
+function guidedPages(lid, toc, after, walkthroughs, mid = "", runs = {}) {
   const short = lid.slice(CID.length + 1);
   return walkthroughs.map((w, i) => {
     const n = String(after + i + 1).padStart(2, "0"), pid = `${lid}-p${n}`, base = `${short}-p${n}`;
@@ -607,6 +622,8 @@ function guidedPages(lid, toc, after, walkthroughs) {
     blocks.push({ id: base + "-guided", type: "guided", origin: "teacher-enrichment", guidedType: "reveal", version: 1, title: w.title,
       capabilities: { fullscreen: true, reset: true }, prompt: guidedSpans(w.prompt),
       steps: w.steps.map((t, k) => ({ id: `${base}-g${k + 1}`, text: guidedSpans(t) })), result: guidedSpans(w.result), explanation: w.explanation });
+    const run = runs[`${mid}/g${String(i + 1).padStart(2, "0")}`];
+    if (run) blocks.push(traceBlock(base + "-trace", w, run));
     return { id: pid, title: "نحلّ معًا: " + w.title, order: after + i + 1, source: { kind: "book", sourceId: CID, pdfPageStart: toc, printedPage: toc, sourceNote: GUIDED_NOTE }, blocks };
   });
 }
