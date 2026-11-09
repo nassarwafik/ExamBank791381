@@ -8,7 +8,7 @@ import { parseStructuredExamJson } from "../../../src/structuredExamImport";
 import { toSavedStructuredExam } from "../../../src/examBuilderState";
 import { evaluateExamFinalization } from "../../../src/examFinalization";
 import { validateRichContent, RICH_BLOCK_TYPES } from "../../../src/richContent/richContentModel";
-import { catalogForPrompt } from "../../../src/aiComposer/composerCatalog";
+import { catalogForPrompt, networkCatalogForPrompt, networkScenariosLine } from "../../../src/aiComposer/composerCatalog";
 import { answered } from "../../../src/answerState";
 
 // Phase 21A.1 — COMPATIBILITY FREEZE (captured on the untouched baseline ff13899 with CAPTURE_21A1=1, before any 21A.1 change). Charts are
@@ -143,10 +143,13 @@ describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff
       // UX-R16d (owner direction, option A): the preset list may gain ONLY the appended "reference" preset; every baseline id keeps its place.
       if (line.startsWith("Presentation presets:")) { expect(now.find(l => l.startsWith("Presentation presets:"))).toBe(line + ", reference"); continue; }
       // Phase 21J / 21K (owner requests): the SmartSim plugin list may gain ONLY the three chemistry simulators, appended; every baseline plugin keeps its place.
+      // Phase 21M (owner request: composer headroom): the networkTopology@2 line keeps the scenario ids, titles and topics; its check list
+      // moved VERBATIM to networkCatalogForPrompt() (sent with the section / modify prompts that use the network simulator).
+      if (line.startsWith("networkTopology@2 scenarios:")) { expect(networkCatalogForPrompt()).toBe(line); expect(now.find(l => l.startsWith("networkTopology@2 scenarios:"))).toBe(networkScenariosLine()); continue; }
       if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry), chemistryLab@1 (chemistry)"); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
-    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:"));
+    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("networkTopology@2 scenarios:"));
     // Phase 21A.2 may append ONLY the declared Function graphs contract; baseline lines stay immutable.
     // Phase 21J adds exactly ONE line: the bounded chemistry pointer (the full chemistry catalog travels only in the prompts that need it)
     for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Charts|Chart selection|Function graphs)\b|^Chemistry simulators: their catalogs come with the section task that uses them; expected answers are derived by code\.$/);

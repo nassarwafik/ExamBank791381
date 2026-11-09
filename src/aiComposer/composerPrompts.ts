@@ -4,7 +4,7 @@
 // authority). No hidden reasoning is requested: only short teacher-facing rationale fields exist in the schemas.
 import { buildAiAuthorPrompt, classifyAuthorRequest } from "../aiQuestionDraft";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
-import { catalogForPrompt } from "./composerCatalog";
+import { catalogForPrompt, mentionsNetworking, networkCatalogForPrompt } from "./composerCatalog";
 import { CHEMISTRY_SIM_KEYS, chemistryCatalogForPrompt, mentionsChemistry } from "./composerChemistry";
 import { intentForPrompt, type AiExamIntentV1 } from "./composerIntent";
 import type { AiExamPlanV1 } from "./composerPlan";
@@ -48,6 +48,8 @@ export function buildSectionPrompt(intent: AiExamIntentV1, plan: AiExamPlanV1, s
     "PER-QUESTION RULES (for every `question` payload):\n" + perQuestion,
     // Phase 21J — the full chemistry catalog only when this section plans a chemistry simulator (keeps every other prompt bounded)
     ...(s.items.some(it => it.simulator && CHEMISTRY_SIM_KEYS.includes(it.simulator)) ? [chemistryCatalogForPrompt()] : []),
+    // Phase 21M — the full network scenario catalog (check ids for composite parts) only when this section plans the network simulator
+    ...(s.items.some(it => it.simulator === "networkTopology") ? [networkCatalogForPrompt()] : []),
     teacher(intent.teacherInstruction)].join("\n\n");
 }
 
@@ -70,5 +72,6 @@ export function buildModifyPrompt(projection: AiSafeExamProjectionV1, mode: Comp
     "Return domain operations only (no whole exam). Refer to existing questions and sections ONLY by the ids in the exam data. New questions use the item schema (single-question kinds fill `question`, smartSim fills `smartSim`, composite fills the composite* fields with each part naming its group) and need `marks` on addQuestion; addSection puts its items in `items` beside `section`. Keep every id, mark and answer you were not asked to change.",
     // Phase 21J — the full chemistry catalog when the request or the exam involves chemistry
     ...(mentionsChemistry(instruction + " " + JSON.stringify(projection)) ? [chemistryCatalogForPrompt()] : []),
+    ...(mentionsNetworking(instruction + " " + JSON.stringify(projection)) ? [networkCatalogForPrompt()] : []),
     fence("current exam (answers withheld)", projection), teacher(instruction)].join("\n\n");
 }
