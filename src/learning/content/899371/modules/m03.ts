@@ -2158,7 +2158,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Math.Abs تعيد القيمة المطلقة: بدون إشارة سالبة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p01-q02-code",
@@ -2198,7 +2199,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Math.Pow(2, 5) = 2 × 2 × 2 × 2 × 2 = 32."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p01-q03-code",
@@ -2238,7 +2240,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Math.Min(4, 9) = 4، ثم Math.Max(4, 6) = 6."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p01-q04-code",
@@ -2278,7 +2281,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Math.Round(4.7) = 5 (أقرب عدد صحيح)، وMath.Floor(4.7) = 4 (للأسفل)، والمجموع 9."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p01-q05-code",
@@ -2318,7 +2322,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "num / 100 = 7 (منزلة المئات)، وnum % 10 = 9 (منزلة الآحاد)، والمجموع 16."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             }
           ]
         },
@@ -2354,7 +2359,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "n / 10 = 482، ثم 482 % 10 = 2: هذه منزلة العشرات."
                 }
-              }
+              },
+              "reviewPageId": "899371-m02-l01-p02"
             },
             {
               "id": "m03-l04-p02-q07",
@@ -2418,7 +2424,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "القيمة المطلقة لـ -5 هي 5، و3² = 9، والجذر التربيعي لـ 16 هو 4، وFloor يقرّب 7.9 للأسفل إلى 7، والأكبر بين 3 و8 هو 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p02-q08",
@@ -2450,7 +2457,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Next(1, 7) تعيد عددًا من 1 حتى 6: الحد الأعلى 7 لا يدخل. لهذا نستعملها لحجر النرد."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p03"
             },
             {
               "id": "m03-l04-p02-q09-code",
@@ -2472,7 +2480,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "Math.Round في C# يقرّب العدد الذي ينتهي بـ .5 إلى العدد الزوجي الأقرب: Math.Round(2.5) = 2 (وMath.Round(3.5) = 4). هذا ليس مذكورًا في الكتاب، فانتبه له."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             },
             {
               "id": "m03-l04-p02-q10",
@@ -2507,7 +2516,8 @@ const m03: ContentModule = {
                 "feedback": {
                   "explanation": "new Random() ينشئ مولّد الأعداد، وrnd.NextDouble() يعيد عددًا عشريًا بين 0 و1، أما rnd.Next(a, b) فيعيد عددًا صحيحًا."
                 }
-              }
+              },
+              "reviewPageId": "899371-m03-l01-p02"
             }
           ]
         }

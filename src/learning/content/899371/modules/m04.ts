@@ -3021,7 +3021,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "72 ليست >= 90 ولا >= 75، فينفّذ فرع else: حاول مجددًا."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p02"
             },
             {
               "id": "m04-l04-p01-q02-code",
@@ -3061,7 +3062,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "x > 0 خطأ (x = -2)، فلا يُفحص الشرط الداخلي أصلًا، وينفّذ else الخارجي: C. كل else تتبع أقرب if قبلها."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p02"
             },
             {
               "id": "m04-l04-p01-q03-code",
@@ -3101,7 +3103,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "8 زوجي و8 > 5، فالشرط المركّب صحيح ويُطبع a * 2 = 16."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p03"
             },
             {
               "id": "m04-l04-p01-q04-code",
@@ -3122,7 +3125,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "15 يقبل القسمة على 3 فيُطبع Fizz، ويقبل القسمة على 5 فيُطبع Buzz. الأمران if منفصلان فيُنفّذ كلاهما."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p01"
             },
             {
               "id": "m04-l04-p01-q05-code",
@@ -3162,7 +3166,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "x = 5 > 3 فيصبح 7، ثم 7 > 6 فيصبح 70. كل if يُفحص بالقيمة الجديدة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p01"
             }
           ]
         },
@@ -3217,7 +3222,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "النص يبدأ بـ \"1\" وينتهي بـ \"4\"، فالشرطان صحيحان وتُطبع True."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p05"
             },
             {
               "id": "m04-l04-p02-q07",
@@ -3274,7 +3280,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "60 >= 60 صحيح، و60 > 60 خطأ. ‏mark == 60 صحيح فـ || صحيح. ‏mark < 60 خطأ فنفيه صحيح. لا يمكن أن يكون العدد >= 60 و< 60 معًا. ‏mark != 60 خطأ."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p03"
             },
             {
               "id": "m04-l04-p02-q08",
@@ -3288,7 +3295,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "&& (و) تعطي true فقط إذا كان الطرفان true. في كل حالة أخرى النتيجة false، كما في جدول AND."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p04"
             },
             {
               "id": "m04-l04-p02-q09",
@@ -3325,7 +3333,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "نفحص الشرط الأعلى أولًا: لو بدأنا بـ mark >= 70 لأخذت علامة 95 تقدير «جيد» وتوقف الفحص."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p02"
             },
             {
               "id": "m04-l04-p02-q10",
@@ -3360,7 +3369,8 @@ const m04: ContentModule = {
                 "feedback": {
                   "explanation": "if تفحص الشرط، وelse تنفّذ عندما يكون الشرط false. أما for وwhile فللتكرار."
                 }
-              }
+              },
+              "reviewPageId": "899371-m04-l01-p01"
             }
           ]
         }

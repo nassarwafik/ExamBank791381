@@ -25,7 +25,11 @@
     }
    },
    "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box b = new Box(4);\n        Console.WriteLine(b.GetSize() * 2);\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p01",
+    "anchor": "private"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Counter c1 = new Counter();\n        Counter c2 = new Counter();\n        c1.Add();\n        c1.Add();\n        c2.Add();\n        Console.WriteLine(c1.Get() + \" \" + c2.Get());\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p02",
+    "anchor": "private"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box a = new Box(3);\n        Box b = a;\n        b.SetSize(9);\n        Console.WriteLine(a.GetSize());\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p02",
+    "anchor": "private"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box[] arr = new Box[3];\n        Console.WriteLine(arr[0] == null);\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p02",
+    "anchor": "private"
+   }
   },
   {
    "question": {
@@ -130,7 +146,11 @@
    },
    "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box[] arr = new Box[2];\n        Console.WriteLine(arr[0].GetSize());\n    }\n}",
    "prove": "runtime",
-   "runtimeError": "NullReferenceException"
+   "runtimeError": "NullReferenceException",
+   "review": {
+    "pageId": "899371-m11-l01-p03",
+    "anchor": "null"
+   }
   },
   {
    "question": {
@@ -142,7 +162,11 @@
     }
    },
    "program": "class Score\n{\n    private int value;\n    public void Set(int x)\n    {\n        if (x >= 0 && x <= 100)\n            value = x;\n    }\n    public int Get()\n    {\n        return value;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Score s = new Score();\n        s.Set(80);\n        s.Set(150);\n        Console.WriteLine(s.Get());\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p02",
+    "anchor": "Set"
+   }
   },
   {
    "question": {
@@ -168,7 +192,11 @@
     }
    },
    "program": "class P\n{\n    private int x;\n    public P(int x)\n    {\n        this.x = x;\n    }\n    public int Get()\n    {\n        return x;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Console.WriteLine(new P(5).Get());\n    }\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m11-l01-p01",
+    "anchor": "this"
+   }
   },
   {
    "question": {
@@ -195,6 +223,10 @@
     "feedback": {
      "explanation": "الحقول عادة private لحمايتها، والعمليات public ليصل إليها الآخرون بأمان."
     }
+   },
+   "review": {
+    "pageId": "899371-m11-l01-p01",
+    "anchor": "public"
    }
   },
   {
@@ -231,6 +263,10 @@
     "feedback": {
      "explanation": "الحقل بيانات داخلية (نوع واسم)، والمنشئ اسمه اسم الفئة نفسها وبلا نوع إرجاع، والعملية لها نوع إرجاع (int، void …)."
     }
+   },
+   "review": {
+    "pageId": "899371-m11-l01-p01",
+    "anchor": "private"
    }
   },
   {
@@ -241,6 +277,10 @@
     "feedback": {
      "explanation": "الفئة قالب، والكائن نسخة حيّة منها نُنشئها بـ new، مثل: Box b = new Box(4);"
     }
+   },
+   "review": {
+    "pageId": "899371-m11-l01-p01",
+    "anchor": "new"
    }
   }
  ]

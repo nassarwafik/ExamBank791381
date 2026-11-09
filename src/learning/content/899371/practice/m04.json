@@ -25,7 +25,11 @@
     }
    },
    "program": "int mark = 72;\nif (mark >= 90)\n    Console.WriteLine(\"ممتاز\");\nelse if (mark >= 75)\n    Console.WriteLine(\"جيد جدًا\");\nelse\n    Console.WriteLine(\"حاول مجددًا\");",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p02",
+    "anchor": "else if"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "int x = -2, y = 5;\nif (x > 0)\n    if (y > 0)\n        Console.WriteLine(\"A\");\n    else\n        Console.WriteLine(\"B\");\nelse\n    Console.WriteLine(\"C\");",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p02",
+    "anchor": "else"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "int a = 8;\nif (a % 2 == 0 && a > 5)\n    Console.WriteLine(a * 2);\nelse\n    Console.WriteLine(a);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p03",
+    "anchor": "&&"
+   }
   },
   {
    "question": {
@@ -90,7 +102,11 @@
    },
    "program": "int n = int.Parse(Console.ReadLine());\nif (n % 3 == 0)\n    Console.WriteLine(\"Fizz\");\nif (n % 5 == 0)\n    Console.WriteLine(\"Buzz\");",
    "stdin": "15",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p01",
+    "anchor": "if"
+   }
   },
   {
    "question": {
@@ -116,7 +132,11 @@
     }
    },
    "program": "int x = 5;\nif (x > 3)\n    x = x + 2;\nif (x > 6)\n    x = x * 10;\nConsole.WriteLine(x);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p01",
+    "anchor": "if"
+   }
   },
   {
    "question": {
@@ -142,7 +162,11 @@
     }
    },
    "program": "string s = \"1234\";\nConsole.WriteLine(s.StartsWith(\"1\") && s.EndsWith(\"4\"));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m04-l01-p05",
+    "anchor": "StartsWith"
+   }
   },
   {
    "question": {
@@ -181,6 +205,10 @@
     "feedback": {
      "explanation": "60 >= 60 صحيح، و60 > 60 خطأ. ‏mark == 60 صحيح فـ || صحيح. ‏mark < 60 خطأ فنفيه صحيح. لا يمكن أن يكون العدد >= 60 و< 60 معًا. ‏mark != 60 خطأ."
     }
+   },
+   "review": {
+    "pageId": "899371-m04-l01-p03",
+    "anchor": "||"
    }
   },
   {
@@ -191,6 +219,10 @@
     "feedback": {
      "explanation": "&& (و) تعطي true فقط إذا كان الطرفان true. في كل حالة أخرى النتيجة false، كما في جدول AND."
     }
+   },
+   "review": {
+    "pageId": "899371-m04-l01-p04",
+    "anchor": "true"
    }
   },
   {
@@ -206,6 +238,10 @@
     "feedback": {
      "explanation": "نفحص الشرط الأعلى أولًا: لو بدأنا بـ mark >= 70 لأخذت علامة 95 تقدير «جيد» وتوقف الفحص."
     }
+   },
+   "review": {
+    "pageId": "899371-m04-l01-p02",
+    "anchor": "else if"
    }
   },
   {
@@ -221,6 +257,10 @@
     "feedback": {
      "explanation": "if تفحص الشرط، وelse تنفّذ عندما يكون الشرط false. أما for وwhile فللتكرار."
     }
+   },
+   "review": {
+    "pageId": "899371-m04-l01-p01",
+    "anchor": "if"
    }
   }
  ]

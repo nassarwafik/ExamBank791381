@@ -54,7 +54,8 @@ export type ContentIssueCode =
   | "invalid-page-layout"
   | "invalid-structured-question"
   | "invalid-network-lab"
-  | "exam-item-invalid";
+  | "exam-item-invalid"
+  | "invalid-review-page";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -104,6 +105,9 @@ export function validateLearningCourseContent(content: LearningCourseContent): C
 
   const modules = Array.isArray(content?.modules) ? content.modules : [];
   if (modules.length === 0) add("empty-modules", "course has no modules", { courseId });
+  // 899371 P9 — an exercise's «راجع في الكتاب» link must name a real page of this course that is not an exercise page itself.
+  const reviewLinks: { pageId: unknown; loc: Loc }[] = [];
+  const linkablePages = new Set<string>();
   checkSiblingOrders(modules, add, { courseId });
 
   for (const m of modules) {
@@ -139,8 +143,13 @@ export function validateLearningCourseContent(content: LearningCourseContent): C
         if (blocks.length === 0) add("page-no-blocks", "page has no blocks", pLoc);
         for (const b of blocks) checkBlock(b, courseId, add, { ...pLoc, blockId: b?.id }, noteId);
         checkPageLayout(p, blocks, add, pLoc);
+        if (isNonEmptyString(p?.id) && p.layout !== "practice" && p.layout !== "opener") linkablePages.add(p.id);
+        for (const b of blocks) if (b?.type === "practice" && (b as { reviewPageId?: unknown }).reviewPageId !== undefined) reviewLinks.push({ pageId: (b as { reviewPageId?: unknown }).reviewPageId, loc: { ...pLoc, blockId: b.id } });
       }
     }
+  }
+  for (const r of reviewLinks) {
+    if (typeof r.pageId !== "string" || !linkablePages.has(r.pageId)) add("invalid-review-page", `reviewPageId "${String(r.pageId)}" is not a lesson page of this course`, r.loc);
   }
   return issues;
 }

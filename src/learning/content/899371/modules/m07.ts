@@ -4678,7 +4678,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "Twice(3) = 6، ثم Twice(6) = 12. الاستدعاء الداخلي يُنفّذ أولًا."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p02"
             },
             {
               "id": "m07-l04-p01-q02-code",
@@ -4718,7 +4719,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "ref يرسل مرجع المتغير، فالتغيير داخل العملية يغيّر n الأصلي: 2 + 5 = 7."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             },
             {
               "id": "m07-l04-p01-q03-code",
@@ -4758,7 +4760,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "بدون ref تُرسل نسخة من القيمة (by value): العملية تغيّر نسختها فقط، ويبقى n = 2."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             },
             {
               "id": "m07-l04-p01-q04-code",
@@ -4798,7 +4801,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "out يعيد قيمتين: tens = 47 / 10 = 4 وones = 47 % 10 = 7، ومجموعهما 11."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             },
             {
               "id": "m07-l04-p01-q05-code",
@@ -4838,7 +4842,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "IsEven(7) تعيد false وIsEven(10) تعيد true، و|| يكفيه طرف صحيح: True."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p04"
             }
           ]
         },
@@ -4874,7 +4879,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "العملية تقسم على 10 حتى يصبح العدد 0 وتعدّ: 90210 فيه 5 منازل."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p02"
             },
             {
               "id": "m07-l04-p02-q07",
@@ -4929,7 +4935,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "نوع العملية يكتب قبل اسمها، وهو نوع القيمة التي تعيدها return. ‏void يعني أنها لا تعيد شيئًا."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p02"
             },
             {
               "id": "m07-l04-p02-q08",
@@ -4981,7 +4988,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "بدون ref / out تُرسل نسخة (by value) فلا يتغير الأصل. مع ref يُرسل المرجع، وout يعيد القيمة إلى المتغير الأصلي."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             },
             {
               "id": "m07-l04-p02-q09",
@@ -4995,7 +5003,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "تعريف العملية لا ينفّذها. تنفّذ فقط عندما نستدعيها باسمها، مثل Twice(3)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             },
             {
               "id": "m07-l04-p02-q10",
@@ -5027,7 +5036,8 @@ const m07: ContentModule = {
                 "feedback": {
                   "explanation": "آخر عملية دخلت المكدس هي أول من يخرج: B تنتهي أولًا وتعود إلى A، ثم A تعود إلى Main."
                 }
-              }
+              },
+              "reviewPageId": "899371-m07-l01-p03"
             }
           ]
         }

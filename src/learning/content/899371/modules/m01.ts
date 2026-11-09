@@ -1926,7 +1926,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "y = 5 + 3 = 8، ثم x = 8 × 2 = 16. فيُطبع x ثم مسافة ثم y: 16 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p01-q02-code",
@@ -1966,7 +1967,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "(int)7.9 يحذف الجزء العشري فيصبح 7، ثم 7 + 1 = 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p01-q03-code",
@@ -2006,7 +2008,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "يبدأ التعبير بنص \"2\"، فكل + بعده ربط نصوص: \"2\" ثم \"23\" ثم \"234\"."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p01-q04-code",
@@ -2046,7 +2049,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "التنفيذ من اليسار: 2 + 3 = 5 جمع أعداد، ثم 5 + \"4\" ربط نص فيصبح \"54\"."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p01-q05-code",
@@ -2067,7 +2071,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "int.Parse يحوّل النص \"7\" إلى العدد 7، ثم 7 × 7 − 1 = 48."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             }
           ]
         },
@@ -2156,7 +2161,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "الأعداد الكاملة int، والأعداد ذات الكسور double، وما بين علامتي تنصيص مزدوجتين نص string (حتى \"7\")، وحرف واحد بين علامتين مفردتين char، وtrue / false قيمة منطقية bool."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p02-q07",
@@ -2211,7 +2217,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "WriteLine تطبع وتنزل سطرًا، وWrite تطبع دون نزول، وReadLine تقرأ نصًا دائمًا، وint.Parse تحوّل النص إلى عدد."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p02-q08",
@@ -2248,7 +2255,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "نطبع الطلب أولًا، ثم نقرأ النص، ثم نحوّله إلى عدد، وأخيرًا نطبع الناتج. لا يمكن الحساب قبل التحويل."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p02-q09",
@@ -2283,7 +2291,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "Console.ReadLine() يعيد نصًا (string)، ولإجراء عملية حسابية نحوّله بـ int.Parse (أو double.Parse)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             },
             {
               "id": "m01-l04-p02-q10",
@@ -2297,7 +2306,8 @@ const m01: ContentModule = {
                 "feedback": {
                   "explanation": "camelCase: الكلمة الأولى تبدأ بحرف صغير، وكل كلمة بعدها تبدأ بحرف كبير: myAge, firstName, itemPrice."
                 }
-              }
+              },
+              "reviewPageId": "899371-m01-l01-p02"
             }
           ]
         }

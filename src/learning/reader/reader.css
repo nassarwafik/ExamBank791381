@@ -472,9 +472,15 @@
 .learning-practice-fixlist{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-success); border-radius:var(--eb-r); background:var(--eb-success-bg); }
 .learning-practice-fixlist ol{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
 .learning-practice-check{ align-self:flex-start; }
+/* 899371 P9 (plan §22): an exercise's link to the lesson page that teaches it. */
+.learning-reader-practice-review{ margin:calc(-1 * var(--eb-space-2)) 0 var(--eb-space-3); }
+.learning-reader-practice-reviewlink{ min-block-size:32px; padding:2px 0; border:0; background:none; font:inherit; font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-semibold); color:var(--eb-read-accent-strong); text-decoration:underline; text-underline-offset:3px; cursor:pointer; text-align:start; }
+.learning-reader-practice-reviewlink:focus-visible{ outline:2px solid var(--eb-read-accent); outline-offset:2px; border-radius:var(--eb-r-sm); }
+@media (pointer: coarse){ .learning-reader-practice-reviewlink{ min-block-size:44px; } }
 /* 899371 P4: on touch every control of a structured exercise is a full 44 × 44 target (WCAG 2.5.5 as the rest of the Reader). */
 @media (pointer: coarse){
   .learning-practice-blank, .learning-practice-chip, .learning-practice-select, .learning-practice-group{ min-block-size:44px; }
+  .learning-practice-blank, .learning-practice-chip{ min-inline-size:44px; }   /* 899371 P9: a short word («if») stays a 44 px target */
   .learning-practice-move .eb-button{ min-block-size:44px; min-inline-size:44px; }
 }
 

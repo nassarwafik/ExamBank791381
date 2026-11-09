@@ -3041,7 +3041,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "n: 1 ← 3 ← 9 ← 27 ← 81. عندها 81 < 50 خطأ فتتوقف الحلقة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p01"
             },
             {
               "id": "m06-l04-p01-q02-code",
@@ -3081,7 +3082,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "نجمع المنازل: 5 + 4 + 0 + 9 = 18. كل دورة تأخذ الآحاد (% 10) ثم تحذفها (/= 10)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p02"
             },
             {
               "id": "m06-l04-p01-q03-code",
@@ -3102,7 +3104,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "-1 قيمة حارسة توقف الإدخال ولا تُجمع: 4 + 7 + 2 = 13."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p01"
             },
             {
               "id": "m06-l04-p01-q04-code",
@@ -3142,7 +3145,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "k: 100 ← 50 ← 25 ← 12 ← 6 ← 3 ← 1. ست قسمات، ثم k > 1 خطأ."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p01"
             },
             {
               "id": "m06-l04-p01-q05-code",
@@ -3182,7 +3186,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "في كل دورة نأخذ آخر منزلة ونضيفها إلى يمين r: 3، ثم 32، ثم 321."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p02"
             }
           ]
         },
@@ -3237,7 +3242,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "x: 5 ← 3 ← 1 ← -1. عندها x > 0 خطأ فتتوقف الحلقة، فيُطبع -1."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p01"
             },
             {
               "id": "m06-l04-p02-q07-code",
@@ -3259,7 +3265,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "الشرط i < 5 خطأ من البداية (i = 10)، فلا تنفّذ حلقة while أي مرة، ويُطبع 10 كما هو."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p01"
             },
             {
               "id": "m06-l04-p02-q08",
@@ -3273,7 +3280,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "do-while تنفّذ الأوامر أولًا ثم تفحص الشرط، أما while فتفحص الشرط أولًا وقد لا تنفّذ أبدًا."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p03"
             },
             {
               "id": "m06-l04-p02-q09",
@@ -3330,7 +3338,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "for عندما نعرف عدد المرات مسبقًا (100، 10، 30). while عندما يتوقف التكرار على شرط لا نعرف متى يتحقق (قيمة حارسة، منازل عدد، كلمة سر)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p03"
             },
             {
               "id": "m06-l04-p02-q10",
@@ -3367,7 +3376,8 @@ const m06: ContentModule = {
                 "feedback": {
                   "explanation": "نهيّئ المجموع، ثم نكرر ما دام في العدد منازل: نضيف الآحاد ونحذفها، وأخيرًا نطبع."
                 }
-              }
+              },
+              "reviewPageId": "899371-m06-l01-p02"
             }
           ]
         }

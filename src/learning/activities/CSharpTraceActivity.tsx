@@ -79,7 +79,7 @@ export default function CSharpTraceActivity({ block, commands, emit }: LearningA
         <span className="learning-trace-noteline">السطر <span dir="ltr">{step.line}</span>:</span> {step.note}
       </p>
       <div className="learning-trace-grid">
-        <ol className="learning-trace-code" dir="ltr" aria-label="البرنامج">
+        <ol className="learning-trace-code" dir="ltr" tabIndex={0} aria-label="البرنامج">
           {cfg.lines.map((l, i) => {
             const current = i + 1 === step.line;
             return (

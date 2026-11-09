@@ -25,7 +25,11 @@
     }
    },
    "program": "int[,] m = new int[3, 5];\nConsole.WriteLine(m.GetLength(0) + \" \" + m.GetLength(1));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p01",
+    "anchor": "GetLength"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 } };\nConsole.WriteLine(m[1, 2]);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p01",
+    "anchor": "["
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "int[,] m = { { 3, 1, 4 }, { 2, 7, 6 } };\nint sum = 0;\nfor (int j = 0; j < m.GetLength(1); j++)\n    sum += m[1, j];\nConsole.WriteLine(sum);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p02",
+    "anchor": "GetLength"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nint d = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    d += m[i, i];\nConsole.WriteLine(d);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p03",
+    "anchor": "القطر"
+   }
   },
   {
    "question": {
@@ -115,7 +131,11 @@
     }
    },
    "program": "int[,] m = { { 1, 6 }, { 8, 3 }, { 5, 2 } };\nint c = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    for (int j = 0; j < m.GetLength(1); j++)\n        if (m[i, j] > 4)\n            c++;\nConsole.WriteLine(c);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p02",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -141,7 +161,11 @@
     }
    },
    "program": "int[,] m = new int[4, 6];\nConsole.WriteLine(m.Length);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p01",
+    "anchor": "Length"
+   }
   },
   {
    "question": {
@@ -167,7 +191,11 @@
     }
    },
    "program": "int[,] m = { { 3, 1, 4 }, { 2, 7, 6 } };\nint sum = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    sum += m[i, 1];\nConsole.WriteLine(sum);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m10-l01-p02",
+    "anchor": "for"
+   }
   },
   {
    "question": {
@@ -206,6 +234,10 @@
     "feedback": {
      "explanation": "القطر الرئيسي حيث رقم الصف = رقم العمود: [0, 0] و[1, 1] و[2, 2]."
     }
+   },
+   "review": {
+    "pageId": "899371-m10-l01-p03",
+    "anchor": "القطر"
    }
   },
   {
@@ -216,6 +248,10 @@
     "feedback": {
      "explanation": "المؤشرات تبدأ من 0: الصف 1 هو الثاني، والعمود 2 هو الثالث."
     }
+   },
+   "review": {
+    "pageId": "899371-m10-l01-p01",
+    "anchor": "الصف"
    }
   },
   {
@@ -232,6 +268,10 @@
     "feedback": {
      "explanation": "الحلقة الخارجية على الصفوف (GetLength(0))، والداخلية على الأعمدة (GetLength(1))، والجمع داخل الاثنتين، والطباعة بعدهما."
     }
+   },
+   "review": {
+    "pageId": "899371-m10-l01-p02",
+    "anchor": "for"
    }
   }
  ]

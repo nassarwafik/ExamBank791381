@@ -4222,7 +4222,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "المنشئ يضع size = 4، وGetSize() تعيد 4، والناتج 4 × 2 = 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p01"
             },
             {
               "id": "m11-l04-p01-q02-code",
@@ -4262,7 +4263,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "لكل كائن حالته الخاصة: c1 زيد مرتين وc2 مرة واحدة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p02"
             },
             {
               "id": "m11-l04-p01-q03-code",
@@ -4302,7 +4304,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "Box b = a لا ينشئ صندوقًا جديدًا: a وb مرجعان للكائن نفسه، فتغييره عبر b يظهر عبر a: 9."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p02"
             },
             {
               "id": "m11-l04-p01-q04-code",
@@ -4342,7 +4345,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "new Box[3] ينشئ مصفوفة مراجع قيمها null، ولا ينشئ الصناديق نفسها."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p02"
             },
             {
               "id": "m11-l04-p01-q05-code",
@@ -4382,7 +4386,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "arr[0] قيمته null لأننا لم ننشئ صندوقًا بـ new، فاستدعاء GetSize() عليه خطأ تنفيذ (NullReferenceException)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p03"
             }
           ]
         },
@@ -4418,7 +4423,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "Set(80) مقبولة لأنها بين 0 و100، أما Set(150) فترفضها العملية ولا تغيّر القيمة: هذه فائدة التغليف."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p02"
             },
             {
               "id": "m11-l04-p02-q07-code",
@@ -4458,7 +4464,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "this.x هو الحقل وx هو البارامتر: المنشئ ينسخ 5 إلى الحقل، وGet تعيده."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p01"
             },
             {
               "id": "m11-l04-p02-q08",
@@ -4513,7 +4520,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "الحقول عادة private لحمايتها، والعمليات public ليصل إليها الآخرون بأمان."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p01"
             },
             {
               "id": "m11-l04-p02-q09",
@@ -4569,7 +4577,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "الحقل بيانات داخلية (نوع واسم)، والمنشئ اسمه اسم الفئة نفسها وبلا نوع إرجاع، والعملية لها نوع إرجاع (int، void …)."
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p01"
             },
             {
               "id": "m11-l04-p02-q10",
@@ -4583,7 +4592,8 @@ const m11: ContentModule = {
                 "feedback": {
                   "explanation": "الفئة قالب، والكائن نسخة حيّة منها نُنشئها بـ new، مثل: Box b = new Box(4);"
                 }
-              }
+              },
+              "reviewPageId": "899371-m11-l01-p01"
             }
           ]
         }

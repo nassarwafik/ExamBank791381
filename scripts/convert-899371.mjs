@@ -546,7 +546,8 @@ function practiceLesson(mid, mod, order, items) {
       if (it.program) blocks.push({ id: qid + "-code", type: "code", origin: "teacher-enrichment", language: "csharp", dir: "ltr", code: it.program });   // a program with input names it in the prompt
       const question = expandQuestion(it.question, qid, it.question.kind === "multipleChoice" ? choice++ % it.question.options.length : undefined);
       // reveal (decision Q3) wherever the content model allows it: every kind but the free short answer
-      blocks.push({ id: qid, type: "practice", origin: "teacher-enrichment", ...(question.kind === "shortInput" ? {} : { reveal: true }), question });
+      // P9 (plan §22): «راجع في الكتاب» — the summary page that teaches it (its anchor text is checked by practice.p9.test.ts)
+      blocks.push({ id: qid, type: "practice", origin: "teacher-enrichment", ...(question.kind === "shortInput" ? {} : { reveal: true }), question, ...(it.review ? { reviewPageId: it.review.pageId } : {}) });
     });
     const total = Math.ceil(items.length / PRACTICE_PER_PAGE);
     pages.push({ id: pid, title: total > 1 ? `تدريبات الوحدة (${p + 1} من ${total})` : "تدريبات الوحدة", order: p + 1, layout: "practice",

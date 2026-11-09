@@ -3150,7 +3150,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "i يأخذ 1، 2، 3، 4 (الشرط i <= 4)، ونطبع i * 2 في كل مرة: 2 4 6 8."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p01"
             },
             {
               "id": "m05-l04-p01-q02-code",
@@ -3190,7 +3191,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "sum = 1 + 2 + 3 + 4 + 5 = 15."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p02"
             },
             {
               "id": "m05-l04-p01-q03-code",
@@ -3230,7 +3232,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "i يأخذ 0، 3، 6، 9 ثم يصبح 12 فيتوقف: أربع مرات."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p01"
             },
             {
               "id": "m05-l04-p01-q04-code",
@@ -3270,7 +3273,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "i يبدأ من 5 وينقص 2 كل مرة: 5، 3، 1، ثم -1 فيتوقف. Console.Write يطبع في السطر نفسه: 531."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p01"
             },
             {
               "id": "m05-l04-p01-q05-code",
@@ -3291,7 +3295,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة الداخلية تتكرر i مرة: 1 + 2 + 3 = 6."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p02"
             }
           ]
         },
@@ -3346,7 +3351,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "في السطر i تطبع الحلقة الداخلية i نجوم، ثم WriteLine ينزل سطرًا: سطر بنجمة، ثم بنجمتين، ثم بثلاث. (الرمز | يفصل بين الأسطر)"
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p02"
             },
             {
               "id": "m05-l04-p02-q07-code",
@@ -3386,7 +3392,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "p = 1 × 1 × 2 × 3 × 4 = 24."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p02"
             },
             {
               "id": "m05-l04-p02-q08-code",
@@ -3408,7 +3415,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "i من 1 حتى 100 بخطوة 1: الحلقة تتكرر 100 مرة، فيصبح c = 100."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p01"
             },
             {
               "id": "m05-l04-p02-q09",
@@ -3454,7 +3462,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "المهيّئ يعيّن العدّاد مرة واحدة، والشرط يُفحص قبل كل دورة، والتحديث يعدّل العدّاد بعد كل دورة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p01"
             },
             {
               "id": "m05-l04-p02-q10",
@@ -3491,7 +3500,8 @@ const m05: ContentModule = {
                 "feedback": {
                   "explanation": "نهيّئ المجمّع بصفر قبل الحلقة، ثم الحلقة وجسمها، ثم نطبع بعد انتهاء الحلقة لا داخلها."
                 }
-              }
+              },
+              "reviewPageId": "899371-m05-l01-p02"
             }
           ]
         }

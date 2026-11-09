@@ -25,7 +25,11 @@
     }
    },
    "program": "int x = 5;\nint y = x + 3;\nx = y * 2;\nConsole.WriteLine(x + \" \" + y);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "int"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n + 1);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "double"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "Console.WriteLine(\"2\" + 3 + 4);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "string"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "Console.WriteLine(2 + 3 + \"4\");",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "string"
+   }
   },
   {
    "question": {
@@ -116,7 +132,11 @@
    },
    "program": "int n = int.Parse(Console.ReadLine());\nConsole.WriteLine(n * n - 1);",
    "stdin": "7",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "int.Parse"
+   }
   },
   {
    "question": {
@@ -162,6 +182,10 @@
     "feedback": {
      "explanation": "الأعداد الكاملة int، والأعداد ذات الكسور double، وما بين علامتي تنصيص مزدوجتين نص string (حتى \"7\")، وحرف واحد بين علامتين مفردتين char، وtrue / false قيمة منطقية bool."
     }
+   },
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "double"
    }
   },
   {
@@ -189,6 +213,10 @@
     "feedback": {
      "explanation": "WriteLine تطبع وتنزل سطرًا، وWrite تطبع دون نزول، وReadLine تقرأ نصًا دائمًا، وint.Parse تحوّل النص إلى عدد."
     }
+   },
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "Console.Write"
    }
   },
   {
@@ -204,6 +232,10 @@
     "feedback": {
      "explanation": "نطبع الطلب أولًا، ثم نقرأ النص، ثم نحوّله إلى عدد، وأخيرًا نطبع الناتج. لا يمكن الحساب قبل التحويل."
     }
+   },
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "ReadLine"
    }
   },
   {
@@ -219,6 +251,10 @@
     "feedback": {
      "explanation": "Console.ReadLine() يعيد نصًا (string)، ولإجراء عملية حسابية نحوّله بـ int.Parse (أو double.Parse)."
     }
+   },
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "string"
    }
   },
   {
@@ -229,6 +265,10 @@
     "feedback": {
      "explanation": "camelCase: الكلمة الأولى تبدأ بحرف صغير، وكل كلمة بعدها تبدأ بحرف كبير: myAge, firstName, itemPrice."
     }
+   },
+   "review": {
+    "pageId": "899371-m01-l01-p02",
+    "anchor": "camelCase"
    }
   }
  ]

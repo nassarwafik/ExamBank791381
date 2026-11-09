@@ -25,7 +25,11 @@
     }
    },
    "program": "string s = \"program\";\nConsole.WriteLine(s.Length);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p02",
+    "anchor": "Length"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "string s = \"hello\";\nConsole.WriteLine(s[1]);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p02",
+    "anchor": "["
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "Console.WriteLine(\"computer\".Substring(3, 4));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p03",
+    "anchor": "Substring"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "Console.WriteLine(\"banana\".IndexOf('n'));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p02",
+    "anchor": "IndexOf"
+   }
   },
   {
    "question": {
@@ -129,7 +145,11 @@
     }
    },
    "program": "Console.WriteLine(\"banana\".Replace(\"an\", \"AN\"));",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p03",
+    "anchor": "Replace"
+   }
   },
   {
    "question": {
@@ -141,7 +161,11 @@
     }
    },
    "program": "string s = \"abc\";\nstring r = \"\";\nfor (int i = s.Length - 1; i >= 0; i--)\n    r += s[i];\nConsole.WriteLine(r);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p04",
+    "anchor": "Length"
+   }
   },
   {
    "question": {
@@ -167,7 +191,11 @@
     }
    },
    "program": "Console.WriteLine(\"apple\".CompareTo(\"banana\") < 0);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p02",
+    "anchor": "CompareTo"
+   }
   },
   {
    "question": {
@@ -193,7 +221,11 @@
     }
    },
    "program": "string text = \"Good morning class\";\nConsole.WriteLine(text.Split(' ').Length);",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m08-l01-p04",
+    "anchor": "Split"
+   }
   },
   {
    "question": {
@@ -206,7 +238,11 @@
    },
    "program": "Console.WriteLine(\"Hi\".Equals(\"hi\"));",
    "prove": "claim",
-   "claimOutput": "True"
+   "claimOutput": "True",
+   "review": {
+    "pageId": "899371-m08-l01-p02",
+    "anchor": "Equals"
+   }
   },
   {
    "question": {
@@ -233,6 +269,10 @@
     "feedback": {
      "explanation": "ToUpper تكبّر الأحرف، وInsert تُدخل نصًا، وRemove تحذف جزءًا، وLastIndexOf تعيد موقع آخر ظهور (وIndexOf أول ظهور)."
     }
+   },
+   "review": {
+    "pageId": "899371-m08-l01-p03",
+    "anchor": "ToUpper"
    }
   }
  ]

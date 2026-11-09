@@ -25,7 +25,11 @@
     }
    },
    "program": "static int Twice(int x)\n{\n    return x * 2;\n}\nstatic void Main()\n{\n    Console.WriteLine(Twice(Twice(3)));\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p02",
+    "anchor": "return"
+   }
   },
   {
    "question": {
@@ -51,7 +55,11 @@
     }
    },
    "program": "static void Add(ref int a)\n{\n    a += 5;\n}\nstatic void Main()\n{\n    int n = 2;\n    Add(ref n);\n    Console.WriteLine(n);\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "ref"
+   }
   },
   {
    "question": {
@@ -77,7 +85,11 @@
     }
    },
    "program": "static void Add(int a)\n{\n    a += 5;\n}\nstatic void Main()\n{\n    int n = 2;\n    Add(n);\n    Console.WriteLine(n);\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "ref"
+   }
   },
   {
    "question": {
@@ -103,7 +115,11 @@
     }
    },
    "program": "static void Split(int n, out int tens, out int ones)\n{\n    tens = n / 10;\n    ones = n % 10;\n}\nstatic void Main()\n{\n    int t, o;\n    Split(47, out t, out o);\n    Console.WriteLine(t + o);\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "out"
+   }
   },
   {
    "question": {
@@ -129,7 +145,11 @@
     }
    },
    "program": "static bool IsEven(int n)\n{\n    return n % 2 == 0;\n}\nstatic void Main()\n{\n    Console.WriteLine(IsEven(7) || IsEven(10));\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p04",
+    "anchor": "bool"
+   }
   },
   {
    "question": {
@@ -141,7 +161,11 @@
     }
    },
    "program": "static int Digits(int n)\n{\n    int c = 0;\n    while (n > 0)\n    {\n        n /= 10;\n        c++;\n    }\n    return c;\n}\nstatic void Main()\n{\n    Console.WriteLine(Digits(90210));\n}",
-   "prove": "output"
+   "prove": "output",
+   "review": {
+    "pageId": "899371-m07-l01-p02",
+    "anchor": "return"
+   }
   },
   {
    "question": {
@@ -168,6 +192,10 @@
     "feedback": {
      "explanation": "نوع العملية يكتب قبل اسمها، وهو نوع القيمة التي تعيدها return. ‏void يعني أنها لا تعيد شيئًا."
     }
+   },
+   "review": {
+    "pageId": "899371-m07-l01-p02",
+    "anchor": "void"
    }
   },
   {
@@ -203,6 +231,10 @@
     "feedback": {
      "explanation": "بدون ref / out تُرسل نسخة (by value) فلا يتغير الأصل. مع ref يُرسل المرجع، وout يعيد القيمة إلى المتغير الأصلي."
     }
+   },
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "ref"
    }
   },
   {
@@ -213,6 +245,10 @@
     "feedback": {
      "explanation": "تعريف العملية لا ينفّذها. تنفّذ فقط عندما نستدعيها باسمها، مثل Twice(3)."
     }
+   },
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "استدعاء"
    }
   },
   {
@@ -227,6 +263,10 @@
     "feedback": {
      "explanation": "آخر عملية دخلت المكدس هي أول من يخرج: B تنتهي أولًا وتعود إلى A، ثم A تعود إلى Main."
     }
+   },
+   "review": {
+    "pageId": "899371-m07-l01-p03",
+    "anchor": "مكدس"
    }
   }
  ]

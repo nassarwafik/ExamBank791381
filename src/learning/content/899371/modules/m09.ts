@@ -3821,7 +3821,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "a[2] هو العنصر الثالث (المؤشر يبدأ من 0) = 1، وa.Length = 4، والمجموع 5."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p03"
             },
             {
               "id": "m09-l04-p01-q02-code",
@@ -3861,7 +3862,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "new int[3] ينشئ ثلاثة عناصر قيمتها الابتدائية 0."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p01"
             },
             {
               "id": "m09-l04-p01-q03-code",
@@ -3901,7 +3903,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "الحلقة تمرّ على كل العناصر وتجمعها: 3 + 5 + 8 = 16."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p04"
             },
             {
               "id": "m09-l04-p01-q04-code",
@@ -3941,7 +3944,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "البرنامج يحفظ مؤشر العنصر الأكبر لا قيمته: الأكبر 9 في المؤشر 2."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p04"
             },
             {
               "id": "m09-l04-p01-q05-code",
@@ -3981,7 +3985,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "المصفوفة تُرسل بالمرجع: Zero يغيّر a[0] الأصلي إلى 0، فيصبح 0 + 6 = 6."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p02"
             }
           ]
         },
@@ -4036,7 +4041,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "المصفوفة بحجم 3 مؤشراتها 0 و1 و2 فقط. a[3] خارج الحدود، فيظهر خطأ تنفيذ (IndexOutOfRangeException) عند الوصول إليه."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p03"
             },
             {
               "id": "m09-l04-p02-q07-code",
@@ -4057,7 +4063,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "العناصر التي >= 18 هي 18 و21 و30: ثلاثة."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p04"
             },
             {
               "id": "m09-l04-p02-q08-code",
@@ -4097,7 +4104,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "مصفوفة العدّادات: كل علامة تزيد خانتها. العلامة 2 ظهرت ثلاث مرات، فـ count[2] = 3."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p05"
             },
             {
               "id": "m09-l04-p02-q09",
@@ -4154,7 +4162,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "المؤشرات الصالحة من 0 حتى Length - 1 أي 0..4. ‏a[5] وa[a.Length] وa[-1] خارج الحدود."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p03"
             },
             {
               "id": "m09-l04-p02-q10",
@@ -4168,7 +4177,8 @@ const m09: ContentModule = {
                 "feedback": {
                   "explanation": "المؤشر يبدأ دائمًا من الصفر: العنصر الأول a[0]، والأخير a[a.Length - 1]."
                 }
-              }
+              },
+              "reviewPageId": "899371-m09-l01-p03"
             }
           ]
         }

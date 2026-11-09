@@ -281,6 +281,7 @@ export default function LearningReader({
   }, [setNotesOpen]);
   const openNotedPage = useCallback((pageId: string) => { setNotesOpen(false); if (pageId === selectedPageId) contentRef.current?.querySelector<HTMLElement>(".learning-reader-page-title")?.focus(); else selectPage(pageId); }, [selectPage, selectedPageId, setNotesOpen]);
   const titleOfPage = useCallback((pageId: string) => (manifest ? findPage(manifest, pageId)?.page.title ?? null : null), [manifest]);
+  const bookPages = useMemo(() => ({ title: titleOfPage, open: selectPage }), [titleOfPage, selectPage]);   // 899371 P9 — «راجع في الكتاب»
   // The index docks only where it leaves the page enough room (≥1280px) and only in normal, unfocused reading.
   const dockable = wide && !focusMode && !presentation;
   const sidebarDocked = dockable && tocDocked;
@@ -638,7 +639,7 @@ export default function LearningReader({
               </button>
             </div>
           )}
-          {header ? <LearningPageRenderer header={header} body={body} training={training} examItems={examItems} study={study} codeRun={codeRun} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {header ? <LearningPageRenderer header={header} body={body} training={training} examItems={examItems} study={study} codeRun={codeRun} bookPages={bookPages} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
           {located && body.kind === "ready" && body.page.blocks.some(b => b.type === "unit-opener") && (
             <UnitContents module={located.module} currentLessonId={located.lesson.id} onSelectPage={selectPage} visited={visitedScope ? visited : undefined} />
           )}
