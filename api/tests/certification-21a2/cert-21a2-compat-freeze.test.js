@@ -149,8 +149,8 @@ describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e
       if (line.startsWith("Rich blocks:")) { const nowLine = now.find(l => l.startsWith("Rich blocks:")); expect(nowLine.startsWith(line.replace(/\.$/, ""))).toBe(true); continue; }
       // UX-R16d (owner direction, option A): the preset list may gain ONLY the appended "reference" preset; every baseline id keeps its place.
       if (line.startsWith("Presentation presets:")) { expect(now.find(l => l.startsWith("Presentation presets:"))).toBe(line + ", reference"); continue; }
-      // Phase 21J (owner request): the SmartSim plugin list may gain ONLY the two chemistry simulators, appended; every baseline plugin keeps its place.
-      if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry)"); continue; }
+      // Phase 21J / 21K (owner requests): the SmartSim plugin list may gain ONLY the three chemistry simulators, appended; every baseline plugin keeps its place.
+      if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry), chemistryLab@1 (chemistry)"); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
     const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:"));

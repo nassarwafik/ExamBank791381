@@ -67,7 +67,7 @@ describe("20F-ACC acceptance fixtures A–E: natural language → canonical stru
       const golden = JSON.parse(fs.readFileSync(file, "utf8"));
       const actual = JSON.parse(json);
       expect(golden.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V3");
-      expect(actual.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V5");
+      expect(actual.metadata.aiComposer.catalog).toBe("AI_COMPOSER_CATALOG_V6");
       actual.metadata.aiComposer.catalog = golden.metadata.aiComposer.catalog;
       expect(actual).toEqual(golden);
     });

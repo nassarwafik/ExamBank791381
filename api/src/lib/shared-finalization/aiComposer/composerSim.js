@@ -19,6 +19,7 @@ const functionStudyModel_1 = require("../functionStudyModel");
 const net2Templates_1 = require("../networkTopology2/net2Templates");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
+const composerChemistryLab_1 = require("./composerChemistryLab");
 const composerChemistry_1 = require("./composerChemistry");
 const composerSchemaKit_1 = require("./composerSchemaKit");
 const fail = (code, message, path) => ({ ok: false, issues: [{ code, message, ...(path ? { path } : {}) }] });
@@ -35,12 +36,13 @@ function buildSimSpecSchema() {
             extrema: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(["min", "max"]), x: (0, composerSchemaKit_1.sNum)(), y: (0, composerSchemaKit_1.sNum)() }), 10), intervals: (0, composerSchemaKit_1.sArr)((0, composerSchemaKit_1.sObj)({ kind: (0, composerSchemaKit_1.sEnum)(INTERVAL_KINDS), from: (0, composerSchemaKit_1.sStr)(), to: (0, composerSchemaKit_1.sStr)() }), 12)
         })),
         reactions: (0, composerSchemaKit_1.sNull)((0, composerChemistry_1.buildReactionsSpecSchema)()),
-        structure: (0, composerSchemaKit_1.sNull)((0, composerChemistry_1.buildStructureSpecSchema)())
+        structure: (0, composerSchemaKit_1.sNull)((0, composerChemistry_1.buildStructureSpecSchema)()),
+        lab: (0, composerSchemaKit_1.sNull)((0, composerChemistryLab_1.buildLabSpecSchema)())
     });
 }
-const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure"];
+const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure", "lab"];
 const SPEC_FIELD = Object.freeze({
-    networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure"
+    networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure", chemistryLab: "lab"
 });
 const MEASURE = {
     impactTime: { id: "impactTime", label: "زمن الوصول إلى الأرض", unit: "s" }, impactSpeed: { id: "impactSpeed", label: "سرعة الارتطام (مقدار)", unit: "m/s" },
@@ -1098,8 +1100,15 @@ function buildSimFromSpec(raw, path = "smartSim", expectPlugin, expectScenario) 
         config = b.value.config;
         checks = b.value.checks;
     }
-    else {
+    else if (plugin === "chemistryStructure") {
         const b = (0, composerChemistry_1.buildStructureSim)(raw.structure, path);
+        if (!b.ok)
+            return b;
+        config = b.value.config;
+        checks = b.value.checks;
+    }
+    else {
+        const b = (0, composerChemistryLab_1.buildLabSim)(raw.lab, path);
         if (!b.ok)
             return b;
         config = b.value.config;
