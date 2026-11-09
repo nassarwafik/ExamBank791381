@@ -29,14 +29,15 @@ import "../trustedSimPlugins";
 // V8 (Phase 21N): the structured kinds multipleSelect@1, matching@1, ordering@1, categorization@1 (compact Item kinds line).
 // V9 (Phase 21O): the structured kinds multiTrueFalse@1, matrix@1, wordBank@1, numericResponse@1.
 // V10 (Phase 21P): chartSelection@1 with a code-computed key.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V10";
+// V11 (Phase 21R): cliFill@1 (blanks in CLI command text, code-placed).
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V11";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
 export type ComposerDraftType = (typeof COMPOSER_DRAFT_TYPES)[number];
 /** Phase 21N — the registered / structured families the composer builds itself (composerStructured: code-owned ids, option lists and keys),
  *  outside the frozen 19A per-question layer. */
-export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse"] as const);   // 21O: the last four
+export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization", "multiTrueFalse", "matrix", "wordBank", "numericResponse", "cliFill"] as const);   // 21O: four more · 21R: cliFill
 export type ComposerStructuredType = (typeof COMPOSER_STRUCTURED_TYPES)[number];
 /** Every item kind a plan / draft may name: a 19A family, a structured family (21N), a trusted SmartSim question, or a composite@1 question. */
 /** Phase 21P — chartSelection@1: a chart descriptor + a closed task; code builds the chart and computes the key from its numbers. */
@@ -154,6 +155,7 @@ const NOTES: Readonly<Partial<Record<ComposerItemKind, string>>> = Object.freeze
   matrix: "one column per row",
   wordBank: "blanks filled from a word bank",
   numericResponse: "one number, bounded tolerance",
+  cliFill: "blanks in CLI command text",
   chartSelection: "select on a chart; code computes the key"
 });
 

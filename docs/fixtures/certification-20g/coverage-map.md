@@ -11,7 +11,7 @@
 | `matching@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | D, E, S |
 | `ordering@1` | type | auto | ✓ | sequence | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | C, E, S |
 | `tableFill@1` | type | auto | ✓ | fields/table | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, C, E, S |
-| `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | — | ✓ | legacy adapter | A | A, S |
+| `cliFill@1` | type | auto | ✓ | fields | ✓ | ✓ | ✓ | ✓ | legacy adapter | A | A, S |
 | `compound@1` | type | composed | ✓ | compound | — | — | — | ✓ | legacy adapter | A | E, S |
 | `composite@1` | type | composed | ✓ | composite | — | — | ✓ | ✓ | composed | A | 21A1, 21A2, 21DA1, 21DA2, 21DD1, 21DD2, 21DD3, A, B, C, D, E, S |
 | `chartSelection@1` | type | auto | ✓ | chartSelection | — | ✓ | ✓ | ✓ | registered | A | 21A1 |
