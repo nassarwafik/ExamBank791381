@@ -799,6 +799,11 @@
     {
       "page": "state-ai-composer",
       "viewport": "all",
+      "reason": "Phase 21M — the composer's «امتحان جديد» tab gains one collapsed line «المحاكاة التي يستطيع المؤلف توليدها» (per-subject list of the simulators the composer can generate) under «الميزات»; nothing else in the dialog moves."
+    },
+    {
+      "page": "state-ai-composer",
+      "viewport": "all",
       "reason": "Phase 21N — the composer's «امتحان جديد» tab lists four more question types the AI composer can now generate (اختيار متعدد الإجابات، مطابقة، ترتيب، تصنيف) as type toggles beside the existing ones; the toggle row may wrap onto one more line. Nothing else in the dialog moves."
     }
   ]

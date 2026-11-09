@@ -58,3 +58,7 @@
 .ai-composer-prefill{ border:1px solid var(--eb-primary); background:var(--eb-primary-050); border-radius:var(--eb-r-lg, 12px); padding:10px 12px; font-size:13px; line-height:1.8; color:var(--eb-text); }
 .ai-composer-prefill p{ margin:0; }
 .ai-composer-prefill ul{ margin:6px 0 0; padding-inline-start:20px; color:var(--eb-warn-tx, var(--eb-text)); }
+/* Phase 21M — what the composer can simulate, per subject (collapsed by default) */
+.ai-composer-sims{border:1px solid var(--eb-border,var(--eb-content-grid));border-radius:var(--eb-r-sm,6px);padding:6px 10px;font-size:13px;color:var(--eb-text)}
+.ai-composer-sims summary{cursor:pointer;font-weight:700;color:var(--eb-text-secondary,var(--eb-content-text))}
+.ai-composer-sims ul{margin:6px 0 0;padding-inline-start:20px;line-height:1.8}

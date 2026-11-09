@@ -8,7 +8,7 @@ import { parseStructuredExamJson } from "../../../src/structuredExamImport";
 import { toSavedStructuredExam } from "../../../src/examBuilderState";
 import { evaluateExamFinalization } from "../../../src/examFinalization";
 import { validateRichContent, RICH_BLOCK_TYPES } from "../../../src/richContent/richContentModel";
-import { catalogForPrompt } from "../../../src/aiComposer/composerCatalog";
+import { catalogForPrompt, networkCatalogForPrompt, networkScenariosLine } from "../../../src/aiComposer/composerCatalog";
 import { answered } from "../../../src/answerState";
 import { chartTargets } from "../../../src/charts/chartData";
 
@@ -165,12 +165,15 @@ describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e
       if (line.startsWith("Presentation presets:")) { expect(now.find(l => l.startsWith("Presentation presets:"))).toBe(line + ", reference"); continue; }
       // Phase 21J / 21K / 21L (owner requests): the SmartSim plugin list may gain ONLY the chemistry and advanced physics simulators, appended; every baseline plugin keeps its place.
       if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry), chemistryLab@1 (chemistry), physicsMotion@1 (physics), physicsLab@1 (physics)"); continue; }
+      // Phase 21M (owner request: composer headroom): the networkTopology@2 line keeps the scenario ids, titles and topics; its check list
+      // moved VERBATIM to networkCatalogForPrompt() (sent with the section / modify prompts that use the network simulator).
+      if (line.startsWith("networkTopology@2 scenarios:")) { expect(networkCatalogForPrompt()).toBe(line); expect(now.find(l => l.startsWith("networkTopology@2 scenarios:"))).toBe(networkScenariosLine()); continue; }
       // Phase 21N (owner request): the Item kinds line is re-rendered compactly (kind@version, "manual" marks manual/hybrid grading, every baseline
       // note verbatim) and gains ONLY the four structured kinds, inserted before smartSim; every baseline kind keeps its place, version and note.
       if (line.startsWith("Item kinds:")) { expect(now.find(l => l.startsWith("Item kinds"))).toBe(compactItemKinds(line)); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
-    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("Item kinds"));
+    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("networkTopology@2 scenarios:") && !l.startsWith("Item kinds"));
     // Phase 21J adds exactly ONE line: the bounded chemistry pointer (the full chemistry catalog travels only in the prompts that need it)
     for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Function graphs)\b|^Chemistry simulators: their catalogs come with the section task that uses them; expected answers are derived by code\.$/);
   });
