@@ -1,0 +1,114 @@
+{
+ "module": "m08",
+ "questions": [
+  {
+   "book": "c08-p-q1",
+   "title": "ضغط النص",
+   "version": 3,
+   "text": "اكتب جسم العملية CompressString التي تستقبل نصًا غير فارغ من أحرف فقط، وتُعيد نصًا فيه كل حرف يتبعه عدد مرات تكراره المتتالي. مثال: \"AABBBBCD\" ← \"A2B4C1D1\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على السؤال 1 من وظيفة البرمجة الثامنة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static string CompressString(string str)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CompressString(s));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        string r = \"\";\n        int count = 1;\n        for (int i = 1; i <= str.Length; i++)\n        {\n            if (i < str.Length && str[i] == str[i - 1])\n                count++;\n            else\n            {\n                r += str[i - 1] + \"\" + count;\n                count = 1;\n            }\n        }\n        return r;\n"
+   },
+   "wrongGaps": {
+    "body": "        string r = \"\";\n        foreach (char c in str)\n            if (r.IndexOf(c) < 0)\n            {\n                int n = 0;\n                foreach (char d in str) if (d == c) n++;\n                r += c + \"\" + n;\n            }\n        return r;\n"
+   },
+   "public": [
+    "AABBBBCD\n"
+   ],
+   "hidden": [
+    "XXXYZZ\n",
+    "ABAB\n",
+    "Q\n",
+    "aaaaaaaaaaaa\n",
+    "ZZYYZZ\n"
+   ]
+  },
+  {
+   "book": "c08-p-q2",
+   "title": "استبدال b بـ c",
+   "version": 3,
+   "text": "اكتب جسم العملية ReplaceBWithC التي تستقبل نصًا وتُعيد نصًا جديدًا يُستبدل فيه كل حرف 'b' أو 'B' بالحرف 'c'، وتبقى الأحرف الأخرى كما هي. مثال: \"abBd\" ← \"accd\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على السؤال 2 من وظيفة البرمجة الثامنة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static string ReplaceBWithC(string str)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(ReplaceBWithC(s));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        string r = \"\";\n        foreach (char ch in str)\n            r += (ch == 'b' || ch == 'B') ? 'c' : ch;\n        return r;\n"
+   },
+   "wrongGaps": {
+    "body": "        return str.Replace('b', 'c');\n"
+   },
+   "public": [
+    "abBd\n"
+   ],
+   "hidden": [
+    "Bubble Bob\n",
+    "no letters here\n",
+    "BBB\n",
+    "abcABC\n"
+   ]
+  },
+  {
+   "book": "c08-p-q4",
+   "title": "تشفير ANBO",
+   "version": 3,
+   "text": "اكتب جسم العملية CodeANBO التي تستقبل نصًا من أحرف إنجليزية صغيرة وفراغات، وتُعيد النص مشفّرًا: كل حرف يُستبدل بالحرف الذي يبعد عنه 13 موقعًا (a–m ← n–z، وn–z ← a–m)، والفراغات تبقى. مثال: \"hello\" ← \"uryyb\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على القسم 4.1 من السؤال 4 في وظيفة البرمجة الثامنة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static string CodeANBO(string text)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CodeANBO(s));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        string r = \"\";\n        foreach (char ch in text)\n        {\n            if (ch >= 'a' && ch <= 'z')\n                r += (char)((ch - 'a' + 13) % 26 + 'a');\n            else\n                r += ch;\n        }\n        return r;\n"
+   },
+   "wrongGaps": {
+    "body": "        string r = \"\";\n        foreach (char ch in text)\n        {\n            if (ch >= 'a' && ch <= 'z')\n                r += (char)(ch + 13);\n            else\n                r += ch;\n        }\n        return r;\n"
+   },
+   "public": [
+    "hello\n"
+   ],
+   "hidden": [
+    "uryyb\n",
+    "the quick brown fox\n",
+    "abc xyz\n",
+    "nopqrstuvwxyz\n"
+   ]
+  }
+ ]
+}

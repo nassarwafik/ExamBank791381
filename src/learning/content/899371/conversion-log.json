@@ -1,0 +1,357 @@
+{
+  "markers": [
+    {
+      "where": "899371-m01-l01-p01",
+      "marker": "**",
+      "text": "**وصفة طعام**"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "**",
+      "text": "**صناديق التخزين**"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "** (stray)",
+      "text": "int (عدد صحيح):** لتخزين الأرقام الكاملة (مثال:"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`10`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`-5`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`3.14`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`9.99`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`\"مرحباً\"`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`\"خالد\"`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`'A'`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`'z'`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`true`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`false`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "\\#",
+      "text": "C\\#"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`Enter`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`string`"
+    },
+    {
+      "where": "899371-m04-l03-p07",
+      "marker": "**",
+      "text": "**درجة الحرارة**"
+    },
+    {
+      "where": "899371-m04-l03-p07",
+      "marker": "**",
+      "text": "**نسبة الرطوبة**"
+    },
+    {
+      "where": "899371-m11-l02-p01",
+      "marker": "`",
+      "text": "`name`"
+    },
+    {
+      "where": "899371-m11-l02-p01",
+      "marker": "`",
+      "text": "`abilities`"
+    },
+    {
+      "where": "899371-m11-l02-p01",
+      "marker": "`",
+      "text": "`weight`"
+    },
+    {
+      "where": "899371-m11-l02-p02",
+      "marker": "`",
+      "text": "`ExcellentStudent`"
+    },
+    {
+      "where": "899371-m11-l02-p02",
+      "marker": "`",
+      "text": "`other`"
+    },
+    {
+      "where": "899371-m11-l02-p02",
+      "marker": "**",
+      "text": "**قواعد التميز:**"
+    },
+    {
+      "where": "899371-m11-l02-p03",
+      "marker": "`",
+      "text": "`Font`"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "`",
+      "text": "`FindSeller`"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**مؤشّر (Index)**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "`",
+      "text": "`allSellers`"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "** (stray)",
+      "text": "🟥 إذا لم يوجد أي بائع يفي بالشروط**، تُعيد العملية -1."
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**مصفوفة مكوّنة من 3 أعداد صحيحة**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "`",
+      "text": "`int[3]`"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "\\#",
+      "text": "\\[0]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**الخلية الأولى [0]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "`",
+      "text": "`allSellers`"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**أقل من 3**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "\\#",
+      "text": "\\[1]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**الخلية الثانية [1]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**من 3 حتى أقل من 4**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "\\#",
+      "text": "\\[2]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**الخلية الثالثة [2]:**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**أكبر أو يساوي 4**"
+    },
+    {
+      "where": "899371-m11-l02-p04",
+      "marker": "**",
+      "text": "**تحليل التوزيع العام لتقييمات البائعين**"
+    },
+    {
+      "where": "899371-m11-l03-p01",
+      "marker": "**",
+      "text": "**بإضافة مبلغ `y` من الشواقل إلى سعر الروبوت الحالي**"
+    },
+    {
+      "where": "899371-m11-l03-p01",
+      "marker": "`",
+      "text": "`y`"
+    },
+    {
+      "where": "899371-m11-l03-p01",
+      "marker": "**",
+      "text": "**تحديث سعر الروبوت بعد تعديلات أو إضافات عليه**"
+    },
+    {
+      "where": "899371-m11-l03-p01",
+      "marker": "**",
+      "text": "**نفس القدرة على الكلام**"
+    },
+    {
+      "where": "899371-m11-l03-p02",
+      "marker": "`",
+      "text": "`x`"
+    },
+    {
+      "where": "899371-m11-l03-p02",
+      "marker": "`",
+      "text": "`true`"
+    },
+    {
+      "where": "899371-m11-l03-p02",
+      "marker": "`",
+      "text": "`c`"
+    },
+    {
+      "where": "899371-m11-l03-p02",
+      "marker": "**",
+      "text": "**نفس المنطقة**"
+    },
+    {
+      "where": "899371-m11-l03-p02",
+      "marker": "`",
+      "text": "`false`"
+    }
+  ],
+  "corrections": [
+    {
+      "finding": "F2",
+      "index": 138,
+      "find": "5 / 2",
+      "replace": "5.0 / 2"
+    },
+    {
+      "finding": "F1",
+      "index": 397,
+      "find": "في شبكات الاتصال",
+      "replace": "في أسس علم الحاسوب"
+    },
+    {
+      "finding": "F6",
+      "index": 639,
+      "find": "int b;",
+      "replace": "int b = int.Parse(Console.ReadLine());"
+    },
+    {
+      "finding": "F6",
+      "index": 705,
+      "find": "int x, y;",
+      "replace": "int x = int.Parse(Console.ReadLine());\nint y = int.Parse(Console.ReadLine());"
+    },
+    {
+      "finding": "F10",
+      "index": 1580,
+      "find": "inc(3095): ",
+      "replace": "inc(3005): "
+    },
+    {
+      "finding": "F10",
+      "index": 1581,
+      "find": "dec(1090): ",
+      "replace": "dec(1000): "
+    },
+    {
+      "finding": "F12",
+      "index": 1875,
+      "find": " 0 إذا كان النص الأول أكبر أبجديًا",
+      "replace": " > 0 إذا كان النص الأول أكبر أبجديًا"
+    },
+    {
+      "finding": "F14",
+      "index": 2001,
+      "find": "ملاحظة تربوية: إذا رغبت، يمكنك إضافة حالة اختبار أخرى للطالب مثل: ما ناتج sod(\"abba\", 2)؟",
+      "replace": ""
+    },
+    {
+      "finding": "F14",
+      "index": 2054,
+      "find": "\nمثال مطلوب من الطالب يراعي أن الدالة تحوّل الحروف إلى صغيرة وتستبدل غير الحروف بنجوم",
+      "replace": ""
+    },
+    {
+      "finding": "F30",
+      "index": 2107,
+      "find": "\"9.6/3.2\"",
+      "replace": "\"7.5/2.5\""
+    },
+    {
+      "finding": "F30",
+      "index": 2107,
+      "find": "3.0",
+      "replace": "3"
+    },
+    {
+      "finding": "F16",
+      "index": 2645,
+      "find": "العنصر الموجود في الصف 3 والعمود 2، وقيمته 10، مجموع الصف = مجموع العمود = 12",
+      "replace": "العنصر mat[1, 3] (الصف 1 والعمود 3 بفهارس C# التي تبدأ من 0)، وقيمته 9، مجموع الصف = مجموع العمود = 30"
+    },
+    {
+      "finding": "F17",
+      "index": 2657,
+      "find": "public static bool IsRightDiagonalThree(",
+      "replace": "public static int IsUnifiedRightDiagonalThree("
+    },
+    {
+      "finding": "F17",
+      "index": 2659,
+      "find": "وتحتوي فقط على أعداد صحيحة.",
+      "replace": "وتحتوي فقط على 0 و 1."
+    },
+    {
+      "finding": "F14",
+      "index": 2888,
+      "find": "بهذا الترتيب: Class → Object → Get/Set يدوي → Access Modifiers → مصفوفة كائنات/كائن يحوي مصفوفة، تحصل على ملخّص واضح ومباشر جاهز للنسخ إلى ملف وورد.",
+      "replace": ""
+    },
+    {
+      "finding": "F14",
+      "index": 2940,
+      "find": "الجواب",
+      "replace": ""
+    }
+  ]
+}

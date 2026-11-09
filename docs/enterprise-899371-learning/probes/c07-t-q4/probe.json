@@ -1,0 +1,13 @@
+{
+  "id": "c07-t-q4",
+  "source": "ف7 تتبع س4.1",
+  "verbatim": true,
+  "finding": "F10",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "inc(1959): 2000\ndec(0): 2359\ninc(3095): 3006\ndec(1090): 959"
+      }
+    }
+  ]
+}

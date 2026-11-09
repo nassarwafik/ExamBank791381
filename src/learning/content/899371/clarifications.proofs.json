@@ -1,0 +1,56 @@
+{
+ "worker": "csharp@1",
+ "image": "mcr.microsoft.com/dotnet/sdk@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29",
+ "proofs": {
+  "m06-l02-p01-b04": {
+   "sha": "26a4c4ec7b3d173b8e6c3a01b82fcb0d82278507cbd82b37f1260fda2a4fae1e",
+   "inputs": "12 153 100 370",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Enter numbers one by one :\n153 is a golden number! (1/2)\n370 is a golden number! (2/2)\nProgram ended.\n",
+   "exception": null,
+   "withoutLastExitCode": 134,
+   "withoutLastException": "ArgumentNullException"
+  },
+  "m06-l02-p02-b03": {
+   "sha": "1345ebacd9d9d8292cc7c9305e8b00b2f04863136e02b7da8e7b81e0e679d52f",
+   "inputs": "4 6 3 8 10 12 5 -1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Enter numbers one by one (-1 to stop):\nThe longest consecutive even-number sequence length is: 3\n",
+   "exception": null,
+   "withoutLastExitCode": 134,
+   "withoutLastException": "ArgumentNullException"
+  },
+  "m06-l02-p03-b03": {
+   "sha": "a0fd4533e0f6332f8e4eb9862cc395b83e66ec9f8bcadae9de9142353194183a",
+   "inputs": "123 456 789 -1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Enter a three-digit number. :\nEnter a three-digit number. :\nEnter a three-digit number. :\nEnter a three-digit number. :\nNewNum := 456\n",
+   "exception": null,
+   "withoutLastExitCode": 134,
+   "withoutLastException": "ArgumentNullException"
+  },
+  "m06-l02-p04-b03": {
+   "sha": "e56c72527e9867c2c5629fae84632d689ee1454bdfbb8137ebbd9bd6fe3e95ab",
+   "inputs": "12 7 3 -1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Enter num value. :\nEnter num value:\nEnter num value:\nEnter num value:\nmax : = 7\n",
+   "exception": null,
+   "withoutLastExitCode": 134,
+   "withoutLastException": "ArgumentNullException"
+  },
+  "m06-l02-p05-b03": {
+   "sha": "821f4a9b92ca13e33e1b7738292770140155cf2aa84152c55738387eb11d611a",
+   "inputs": "129 345 678 254 117",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Enter a three-digit number. :\nEnter a three-digit number. :\nEnter a three-digit number. :\nEnter a three-digit number. :\nEnter a three-digit number. :\ncount : = 5\n",
+   "exception": null,
+   "withoutLastExitCode": 134,
+   "withoutLastException": "ArgumentNullException"
+  }
+ }
+}

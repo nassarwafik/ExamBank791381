@@ -1,0 +1,235 @@
+{
+ "module": "m01",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "16 8",
+      "correct": true
+     },
+     {
+      "text": "10 8"
+     },
+     {
+      "text": "16 13"
+     },
+     {
+      "text": "5 8"
+     }
+    ],
+    "feedback": {
+     "explanation": "y = 5 + 3 = 8، ثم x = 8 × 2 = 16. فيُطبع x ثم مسافة ثم y: 16 8."
+    }
+   },
+   "program": "int x = 5;\nint y = x + 3;\nx = y * 2;\nConsole.WriteLine(x + \" \" + y);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "7"
+     },
+     {
+      "text": "8",
+      "correct": true
+     },
+     {
+      "text": "8.9"
+     },
+     {
+      "text": "9"
+     }
+    ],
+    "feedback": {
+     "explanation": "(int)7.9 يحذف الجزء العشري فيصبح 7، ثم 7 + 1 = 8."
+    }
+   },
+   "program": "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n + 1);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "9"
+     },
+     {
+      "text": "234",
+      "correct": true
+     },
+     {
+      "text": "27"
+     },
+     {
+      "text": "2 + 3 + 4"
+     }
+    ],
+    "feedback": {
+     "explanation": "يبدأ التعبير بنص \"2\"، فكل + بعده ربط نصوص: \"2\" ثم \"23\" ثم \"234\"."
+    }
+   },
+   "program": "Console.WriteLine(\"2\" + 3 + 4);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "234"
+     },
+     {
+      "text": "9"
+     },
+     {
+      "text": "54",
+      "correct": true
+     },
+     {
+      "text": "5 4"
+     }
+    ],
+    "feedback": {
+     "explanation": "التنفيذ من اليسار: 2 + 3 = 5 جمع أعداد، ثم 5 + \"4\" ربط نص فيصبح \"54\"."
+    }
+   },
+   "program": "Console.WriteLine(2 + 3 + \"4\");",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "إذا أدخل المستخدم العدد 7، ماذا يطبع البرنامج أعلاه؟",
+    "answer": "48",
+    "feedback": {
+     "explanation": "int.Parse يحوّل النص \"7\" إلى العدد 7، ثم 7 × 7 − 1 = 48."
+    }
+   },
+   "program": "int n = int.Parse(Console.ReadLine());\nConsole.WriteLine(n * n - 1);",
+   "stdin": "7",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "صنّف كل قيمة حسب نوع المتغير الذي يخزّنها:",
+    "groups": [
+     "int",
+     "double",
+     "string",
+     "char",
+     "bool"
+    ],
+    "items": [
+     [
+      "25",
+      0
+     ],
+     [
+      "-12",
+      0
+     ],
+     [
+      "3.75",
+      1
+     ],
+     [
+      "\"خالد\"",
+      2
+     ],
+     [
+      "\"7\"",
+      2
+     ],
+     [
+      "'A'",
+      3
+     ],
+     [
+      "true",
+      4
+     ]
+    ],
+    "feedback": {
+     "explanation": "الأعداد الكاملة int، والأعداد ذات الكسور double، وما بين علامتي تنصيص مزدوجتين نص string (حتى \"7\")، وحرف واحد بين علامتين مفردتين char، وtrue / false قيمة منطقية bool."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل أمر بعمله:",
+    "pairs": [
+     [
+      "Console.WriteLine",
+      "يطبع ثم ينتقل إلى سطر جديد"
+     ],
+     [
+      "Console.Write",
+      "يطبع ويبقى في السطر نفسه"
+     ],
+     [
+      "Console.ReadLine",
+      "يقرأ ما يكتبه المستخدم كنص"
+     ],
+     [
+      "int.Parse",
+      "يحوّل نصًا إلى عدد صحيح"
+     ]
+    ],
+    "feedback": {
+     "explanation": "WriteLine تطبع وتنزل سطرًا، وWrite تطبع دون نزول، وReadLine تقرأ نصًا دائمًا، وint.Parse تحوّل النص إلى عدد."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب أسطر البرنامج الذي يطلب عمر المستخدم ثم يطبع ضعفه:",
+    "inOrder": [
+     "Console.WriteLine(\"أدخل عمرك:\");",
+     "string s = Console.ReadLine();",
+     "int age = int.Parse(s);",
+     "Console.WriteLine(age * 2);"
+    ],
+    "feedback": {
+     "explanation": "نطبع الطلب أولًا، ثم نقرأ النص، ثم نحوّله إلى عدد، وأخيرًا نطبع الناتج. لا يمكن الحساب قبل التحويل."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "wordBank",
+    "prompt": "أكمل الجملة:",
+    "text": "الأمر [[ReadLine]] يعيد ما يكتبه المستخدم كنص دائمًا، لذلك نحوّله إلى عدد بالأمر [[int.Parse]] قبل أي عملية حسابية.",
+    "distractors": [
+     "WriteLine",
+     "double",
+     "Write"
+    ],
+    "feedback": {
+     "explanation": "Console.ReadLine() يعيد نصًا (string)، ولإجراء عملية حسابية نحوّله بـ int.Parse (أو double.Parse)."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "الطريقة المعتادة لتسمية المتغيرات في C# هي camelCase، مثل firstName.",
+    "answer": true,
+    "feedback": {
+     "explanation": "camelCase: الكلمة الأولى تبدأ بحرف صغير، وكل كلمة بعدها تبدأ بحرف كبير: myAge, firstName, itemPrice."
+    }
+   }
+  }
+ ]
+}

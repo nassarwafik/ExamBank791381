@@ -1,0 +1,227 @@
+{
+ "module": "m04",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "ممتاز"
+     },
+     {
+      "text": "جيد جدًا"
+     },
+     {
+      "text": "حاول مجددًا",
+      "correct": true
+     },
+     {
+      "text": "لا شيء"
+     }
+    ],
+    "feedback": {
+     "explanation": "72 ليست >= 90 ولا >= 75، فينفّذ فرع else: حاول مجددًا."
+    }
+   },
+   "program": "int mark = 72;\nif (mark >= 90)\n    Console.WriteLine(\"ممتاز\");\nelse if (mark >= 75)\n    Console.WriteLine(\"جيد جدًا\");\nelse\n    Console.WriteLine(\"حاول مجددًا\");",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "A"
+     },
+     {
+      "text": "B"
+     },
+     {
+      "text": "C",
+      "correct": true
+     },
+     {
+      "text": "لا شيء"
+     }
+    ],
+    "feedback": {
+     "explanation": "x > 0 خطأ (x = -2)، فلا يُفحص الشرط الداخلي أصلًا، وينفّذ else الخارجي: C. كل else تتبع أقرب if قبلها."
+    }
+   },
+   "program": "int x = -2, y = 5;\nif (x > 0)\n    if (y > 0)\n        Console.WriteLine(\"A\");\n    else\n        Console.WriteLine(\"B\");\nelse\n    Console.WriteLine(\"C\");",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "8"
+     },
+     {
+      "text": "16",
+      "correct": true
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "True"
+     }
+    ],
+    "feedback": {
+     "explanation": "8 زوجي و8 > 5، فالشرط المركّب صحيح ويُطبع a * 2 = 16."
+    }
+   },
+   "program": "int a = 8;\nif (a % 2 == 0 && a > 5)\n    Console.WriteLine(a * 2);\nelse\n    Console.WriteLine(a);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "إذا أدخل المستخدم العدد 15، ماذا يطبع البرنامج أعلاه؟ (اكتب السطرين بينهما مسافة)",
+    "answer": "Fizz Buzz",
+    "feedback": {
+     "explanation": "15 يقبل القسمة على 3 فيُطبع Fizz، ويقبل القسمة على 5 فيُطبع Buzz. الأمران if منفصلان فيُنفّذ كلاهما."
+    }
+   },
+   "program": "int n = int.Parse(Console.ReadLine());\nif (n % 3 == 0)\n    Console.WriteLine(\"Fizz\");\nif (n % 5 == 0)\n    Console.WriteLine(\"Buzz\");",
+   "stdin": "15",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "5"
+     },
+     {
+      "text": "7"
+     },
+     {
+      "text": "70",
+      "correct": true
+     },
+     {
+      "text": "50"
+     }
+    ],
+    "feedback": {
+     "explanation": "x = 5 > 3 فيصبح 7، ثم 7 > 6 فيصبح 70. كل if يُفحص بالقيمة الجديدة."
+    }
+   },
+   "program": "int x = 5;\nif (x > 3)\n    x = x + 2;\nif (x > 6)\n    x = x * 10;\nConsole.WriteLine(x);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "True",
+      "correct": true
+     },
+     {
+      "text": "False"
+     },
+     {
+      "text": "1234"
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "النص يبدأ بـ \"1\" وينتهي بـ \"4\"، فالشرطان صحيحان وتُطبع True."
+    }
+   },
+   "program": "string s = \"1234\";\nConsole.WriteLine(s.StartsWith(\"1\") && s.EndsWith(\"4\"));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "إذا كانت mark = 60، صنّف كل شرط:",
+    "groups": [
+     "يتحقق",
+     "لا يتحقق"
+    ],
+    "items": [
+     [
+      "mark >= 60",
+      0
+     ],
+     [
+      "mark > 60",
+      1
+     ],
+     [
+      "mark == 60 || mark > 90",
+      0
+     ],
+     [
+      "!(mark < 60)",
+      0
+     ],
+     [
+      "mark >= 60 && mark < 60",
+      1
+     ],
+     [
+      "mark != 60",
+      1
+     ]
+    ],
+    "feedback": {
+     "explanation": "60 >= 60 صحيح، و60 > 60 خطأ. ‏mark == 60 صحيح فـ || صحيح. ‏mark < 60 خطأ فنفيه صحيح. لا يمكن أن يكون العدد >= 60 و< 60 معًا. ‏mark != 60 خطأ."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "نتيجة التعبير true && false هي true.",
+    "answer": false,
+    "feedback": {
+     "explanation": "&& (و) تعطي true فقط إذا كان الطرفان true. في كل حالة أخرى النتيجة false، كما في جدول AND."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب فروع جملة الشرط التي تعطي التقدير من الأعلى إلى الأدنى:",
+    "inOrder": [
+     "if (mark >= 90)",
+     "else if (mark >= 80)",
+     "else if (mark >= 70)",
+     "else"
+    ],
+    "feedback": {
+     "explanation": "نفحص الشرط الأعلى أولًا: لو بدأنا بـ mark >= 70 لأخذت علامة 95 تقدير «جيد» وتوقف الفحص."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "wordBank",
+    "prompt": "أكمل الجملة:",
+    "text": "نستعمل [[if]] لتنفيذ أوامر عندما يتحقّق شرط، و[[else]] لتنفيذ أوامر أخرى عندما لا يتحقّق.",
+    "distractors": [
+     "for",
+     "while",
+     "return"
+    ],
+    "feedback": {
+     "explanation": "if تفحص الشرط، وelse تنفّذ عندما يكون الشرط false. أما for وwhile فللتكرار."
+    }
+   }
+  }
+ ]
+}

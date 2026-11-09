@@ -71,7 +71,10 @@ function findStudyActivity(index, pageId, activityId) {
 }
 
 // ── the SERVER evaluator (mirrors src/learning/practice/evaluator.ts normalization; the client verdict is never trusted) ──
-const norm = s => String(s ?? "").trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
+// Decision Q10 (899371 plan §18): Arabic-Indic «٠–٩» and Persian «۰–۹» digits and the Arabic decimal separator «٫» are the same
+// answer as «0–9» / «.» (a learner on an Arabic keyboard). Same fold in eligibility.ts (keys) and evaluator.ts (local).
+const foldDigits = s => s.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660)).replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x06F0)).replace(/\u066B/g, ".");
+const norm = s => foldDigits(String(s ?? "")).trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
 /** True when `response` answers `key` correctly. Malformed / mismatched responses are simply wrong. Pure. */
 function evaluateStudyResponse(key, response) {
   if (!key || !response || typeof response !== "object") return false;

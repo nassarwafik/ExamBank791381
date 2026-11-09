@@ -1,0 +1,12 @@
+{
+  "id": "c07-t-q2",
+  "source": "ف7 تتبع س2.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "6872"
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+ "module": "m04",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "Tr.Begin();\nint x = 3, y = -1;\nTr.S(\"x موجب وy سالب.\", \"x\", x, \"y\", y);\nTr.At(2, \"الشرط الخارجي صحيح: ندخل.\", \"x > 0\", x > 0);\nif (x > 0)\n{ //~\n    Tr.At(3, \"الشرط الداخلي خطأ، وelse تتبع هذا الـ if الأقرب.\", \"y > 0\", y > 0);\n    if (y > 0)\n    { //~\n        Console.WriteLine(\"A\");\n        Tr.S(\"لا نصل إلى هنا.\");\n    } //~\nelse\n{ //~\n    Console.WriteLine(\"B\");\n    Tr.S(\"فرع else الخاص بـ if (y > 0): يطبع B.\");\n} //~\n} //~\nTr.End();"
+  },
+  {
+   "walkthrough": 4,
+   "program": "Tr.Begin();\nint a = 7, b = 12, c = 9;\nTr.S(\"ثلاثة أعداد.\", \"a\", a, \"b\", b, \"c\", c);\nint max = a;\nTr.S(\"نفترض أن الأول هو الأكبر.\", \"max\", max);\nTr.At(3, \"هل b أكبر من الأكبر حتى الآن؟\", \"b > max\", b > max);\nif (b > max)\n{ //~\n    max = b;\n    Tr.S(\"نعم: max يصبح 12.\", \"max\", max);\n} //~\nTr.At(5, \"هل c أكبر من الأكبر حتى الآن؟\", \"c > max\", c > max);\nif (c > max)\n{ //~\n    max = c;\n    Tr.S(\"لا نصل إلى هنا.\", \"max\", max);\n} //~\nConsole.WriteLine(max);\nTr.S(\"الطباعة: 12.\");\nTr.End();"
+  }
+ ]
+}

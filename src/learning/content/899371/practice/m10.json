@@ -1,0 +1,238 @@
+{
+ "module": "m10",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "3 5",
+      "correct": true
+     },
+     {
+      "text": "5 3"
+     },
+     {
+      "text": "15"
+     },
+     {
+      "text": "3"
+     }
+    ],
+    "feedback": {
+     "explanation": "GetLength(0) عدد الصفوف (3)، وGetLength(1) عدد الأعمدة (5)."
+    }
+   },
+   "program": "int[,] m = new int[3, 5];\nConsole.WriteLine(m.GetLength(0) + \" \" + m.GetLength(1));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "3"
+     },
+     {
+      "text": "6",
+      "correct": true
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "2"
+     }
+    ],
+    "feedback": {
+     "explanation": "m[1, 2]: الصف الثاني (مؤشر 1) والعمود الثالث (مؤشر 2) = 6."
+    }
+   },
+   "program": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 } };\nConsole.WriteLine(m[1, 2]);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "8"
+     },
+     {
+      "text": "15",
+      "correct": true
+     },
+     {
+      "text": "23"
+     },
+     {
+      "text": "6"
+     }
+    ],
+    "feedback": {
+     "explanation": "الحلقة تجمع الصف 1 فقط: 2 + 7 + 6 = 15."
+    }
+   },
+   "program": "int[,] m = { { 3, 1, 4 }, { 2, 7, 6 } };\nint sum = 0;\nfor (int j = 0; j < m.GetLength(1); j++)\n    sum += m[1, j];\nConsole.WriteLine(sum);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "15",
+      "correct": true
+     },
+     {
+      "text": "45"
+     },
+     {
+      "text": "12"
+     },
+     {
+      "text": "24"
+     }
+    ],
+    "feedback": {
+     "explanation": "القطر الرئيسي هو العناصر التي رقم صفها = رقم عمودها: 1 + 5 + 9 = 15."
+    }
+   },
+   "program": "int[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nint d = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    d += m[i, i];\nConsole.WriteLine(d);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "3",
+    "feedback": {
+     "explanation": "نمرّ على كل الخانات بحلقتين: العناصر الأكبر من 4 هي 6 و8 و5."
+    }
+   },
+   "program": "int[,] m = { { 1, 6 }, { 8, 3 }, { 5, 2 } };\nint c = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    for (int j = 0; j < m.GetLength(1); j++)\n        if (m[i, j] > 4)\n            c++;\nConsole.WriteLine(c);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "24",
+      "correct": true
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "6"
+     }
+    ],
+    "feedback": {
+     "explanation": "Length لمصفوفة ثنائية الأبعاد هو عدد كل العناصر: 4 × 6 = 24."
+    }
+   },
+   "program": "int[,] m = new int[4, 6];\nConsole.WriteLine(m.Length);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "8",
+      "correct": true
+     },
+     {
+      "text": "6"
+     },
+     {
+      "text": "10"
+     },
+     {
+      "text": "3"
+     }
+    ],
+    "feedback": {
+     "explanation": "الحلقة تجمع العمود 1 فقط: 1 + 7 = 8."
+    }
+   },
+   "program": "int[,] m = { { 3, 1, 4 }, { 2, 7, 6 } };\nint sum = 0;\nfor (int i = 0; i < m.GetLength(0); i++)\n    sum += m[i, 1];\nConsole.WriteLine(sum);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "في مصفوفة 3×3، أي الخانات على القطر الرئيسي؟",
+    "groups": [
+     "على القطر الرئيسي",
+     "ليست على القطر الرئيسي"
+    ],
+    "items": [
+     [
+      "[0, 0]",
+      0
+     ],
+     [
+      "[1, 2]",
+      1
+     ],
+     [
+      "[2, 2]",
+      0
+     ],
+     [
+      "[1, 1]",
+      0
+     ],
+     [
+      "[2, 0]",
+      1
+     ],
+     [
+      "[0, 1]",
+      1
+     ]
+    ],
+    "feedback": {
+     "explanation": "القطر الرئيسي حيث رقم الصف = رقم العمود: [0, 0] و[1, 1] و[2, 2]."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "mat[1, 2] هو العنصر في الصف الثاني والعمود الثالث.",
+    "answer": true,
+    "feedback": {
+     "explanation": "المؤشرات تبدأ من 0: الصف 1 هو الثاني، والعمود 2 هو الثالث."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب أسطر البرنامج الذي يجمع كل عناصر المصفوفة mat:",
+    "inOrder": [
+     "int sum = 0;",
+     "for (int i = 0; i < mat.GetLength(0); i++)",
+     "for (int j = 0; j < mat.GetLength(1); j++)",
+     "sum += mat[i, j];",
+     "Console.WriteLine(sum);"
+    ],
+    "feedback": {
+     "explanation": "الحلقة الخارجية على الصفوف (GetLength(0))، والداخلية على الأعمدة (GetLength(1))، والجمع داخل الاثنتين، والطباعة بعدهما."
+    }
+   }
+  }
+ ]
+}

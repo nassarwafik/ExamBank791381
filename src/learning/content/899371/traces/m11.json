@@ -1,0 +1,13 @@
+{
+ "module": "m11",
+ "traces": [
+  {
+   "walkthrough": 2,
+   "program": "class Book\n{\n    private string title;\n    public Book(string t)\n    {\n        title = t;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Tr.Begin();\n        Book[] shelf = new Book[2];\n        Tr.S(\"مصفوفة من مرجعين، وكلاهما null: لا كتب بعد.\", \"shelf\", shelf);\n        shelf[0] = new Book(\"Coding\");\n        Tr.S(\"new ينشئ كتابًا، ومرجعه يوضع في الخانة 0. الخانة 1 ما زالت null.\", \"shelf\", shelf);\n        Console.WriteLine((shelf[0] == null) + \" \" + (shelf[1] == null));\n        Tr.S(\"الطباعة: False True.\");\n        Tr.End();\n    }\n}"
+  },
+  {
+   "walkthrough": 4,
+   "program": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Tr.Begin();\n        Counter a = new Counter();\n        Tr.S(\"new ينشئ كائنًا، وa يشير إليه.\", \"a\", a);\n        Counter b = a;\n        Tr.S(\"لا new: b يشير إلى الكائن نفسه.\", \"b\", b);\n        Counter c = new Counter();\n        Tr.S(\"new ثانية: كائن ثانٍ مستقل.\", \"c\", c);\n        b.Add();\n        Tr.S(\"b.Add() تزيد n في الكائن الأول.\");\n        b.Add();\n        Tr.S(\"مرة ثانية: الكائن الأول n = 2.\");\n        c.Add();\n        Tr.S(\"c.Add() تزيد الكائن الثاني.\");\n        Console.WriteLine(a.Get() + \" \" + b.Get() + \" \" + c.Get());\n        Tr.S(\"الطباعة: 2 2 1.\");\n        Tr.End();\n    }\n}"
+  }
+ ]
+}

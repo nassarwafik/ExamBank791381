@@ -1,0 +1,14 @@
+{
+  "id": "f15-igloo-choices",
+  "source": "ف9 برمجة س5.2 / س5.3: Igloo",
+  "verbatim": false,
+  "finding": "F15",
+  "bookClaim": "الخيارات لم تُطبع؛ خيارات المعلم (§18): 5.2 → ج، 5.3 → ب، والخيارات الأخرى خاطئة",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "5.2 OK\n5.3 OK"
+      }
+    }
+  ]
+}

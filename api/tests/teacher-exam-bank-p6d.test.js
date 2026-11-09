@@ -34,6 +34,9 @@ const { resetOperatorGateCache } = cjs("../src/lib/identity/operator-gate.js");
 const OWNER_ID = "own_0011223344556677";
 const SARA = "t_00112233445566aa", OMAR = "t_00112233445566bb";
 const ALL36 = ["F01", "F02", "F03", "F04", "F05", "F06", ...Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0"))];
+// 899371 P7: the coding lab «مختبر البرمجة» (11 items) was added to the library after the launch — so it starts for nobody under enforcement
+const LAB11 = Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0"));
+const WHOLE_LIBRARY = [...ALL36, ...LAB11];
 
 function setup({ mode = "enforce" } = {}) {
   resetRevisionCache(); resetOperatorGateCache();
@@ -77,6 +80,7 @@ describe("P6-D launch default — nobody loses anything on day one", () => {
     expect(LA.audienceOf({ items: {} }, "T31")).toMatchObject({ audience: "selected", teachers: [], stored: false });
     expect(LA.inBank({ items: {} }, "T31", SARA)).toBe(false);
     expect([...LA.LAUNCH_ITEMS]).toEqual(ALL36);
+    for (const id of LAB11) expect(LA.audienceOf({ items: {} }, id), id).toMatchObject({ audience: "selected", teachers: [], stored: false });
   });
 });
 
@@ -146,14 +150,14 @@ describe("P6-D what never changes", () => {
     for (const mode of ["legacy", "observe"]) {
       const ctx = setup({ mode });
       await owner(ctx, "set-audience", { itemId: "T05", audience: "selected", teachers: [] });
-      expect(await bankOf(ctx, ctx.sara)).toEqual(ALL36);
+      expect(await bankOf(ctx, ctx.sara)).toEqual(WHOLE_LIBRARY);
     }
     // the shared-password identity exists only while no owner does (P2-B), so: a workspace without an owner, the record written directly
     const ctx = setup();
     ctx.mem.store.delete(BOOTSTRAP_MARKER);
     resetOperatorGateCache();
     await LA.mutateAudience(ctx.mem.container, doc => { doc.items.T05 = { audience: "selected", teachers: [], updatedAt: "x", updatedBy: "owner:x" }; });
-    expect(await bankOf(ctx, { "x-builder-token": createBuilderToken("teacher") })).toEqual(ALL36);
+    expect(await bankOf(ctx, { "x-builder-token": createBuilderToken("teacher") })).toEqual(WHOLE_LIBRARY);
     expect(await bankOf(ctx, ctx.sara)).not.toContain("T05");
   });
   it("a catalog narrowed differently has its own ETag; a revalidation answers 304 only for the same list", async () => {
@@ -189,7 +193,8 @@ describe("P6-D the owner route", () => {
   it("lists every exam with its audience and every teacher", async () => {
     await owner(ctx, "set-audience", { itemId: "T05", audience: "selected", teachers: [SARA] });
     const r = await ownerGet(ctx);
-    expect(r.jsonBody.items).toHaveLength(36);
+    expect(r.jsonBody.items.map(i => i.libraryItemId)).toEqual(WHOLE_LIBRARY);
+    for (const id of LAB11) expect(r.jsonBody.items.find(i => i.libraryItemId === id), id).toMatchObject({ audience: "selected", teachers: [] });
     expect(r.jsonBody.items.find(i => i.libraryItemId === "T05")).toMatchObject({ audience: "selected", teachers: [SARA], decided: true });
     expect(r.jsonBody.items.find(i => i.libraryItemId === "F01")).toMatchObject({ audience: "all", teachers: [], decided: true, title: expect.any(String) });
     expect(r.jsonBody.teachers.map(t => t.accountId).sort()).toEqual([SARA, OMAR].sort());

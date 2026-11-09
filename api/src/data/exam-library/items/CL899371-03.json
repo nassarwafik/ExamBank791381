@@ -1,0 +1,329 @@
+{
+  "libraryItemId": "CL899371-03",
+  "title": "مختبر البرمجة — الفصل 3: المكتبة الرياضية",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 3 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 4,
+  "totalMarks": 40,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 4,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "bb723a625b116350506534e48fa5e083568e6072d3c187654ae87f7211af1757",
+  "contentHash": "846f3773c7538236aa3a9277045285c6b1a9ebd5adb372f1a8ce67fd14236e61",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m03.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-03",
+    "title": "مختبر البرمجة — الفصل 3: المكتبة الرياضية",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-03-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-03",
+        "sourceQuestionId": "c03-p-q6",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "طول الوتر\n\nاكتب برنامجًا يقرأ طولي القائمين في مثلث قائم الزاوية (عددين حقيقيين، كل عدد في سطر)، ويحسب طول الوتر بقانون فيتاغورس c² = a² + b²، ثم يطبعه مقرّبًا إلى منزلتين عشريتين: Math.Round(c, 2).\n(مبني على السؤال 6 من وظيفة البرمجة الثالثة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "3\n4\n",
+              "sampleOutput": "5\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "5\n12\n",
+              "expectedOutput": "13\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "1\n1\n",
+              "expectedOutput": "1.41\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "2.5\n6\n",
+              "expectedOutput": "6.5\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "7\n3\n",
+              "expectedOutput": "7.62\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "8\n15\n",
+              "expectedOutput": "17\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Round(Math.Sqrt(a * a + b * b), 2));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-03-Q02",
+        "origin": "imported",
+        "sourceId": "CL899371-03",
+        "sourceQuestionId": "c03-p-q7",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "الطول الأكبر\n\nاكتب برنامجًا يقرأ ثلاثة أطوال (أعداد حقيقية، كل طول في سطر) لثلاثة طلاب، ثم يطبع الطول الأكبر فقط (كما يطبعه Console.WriteLine).\n(مبني على السؤال 7 من وظيفة البرمجة الثالثة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "1.65\n1.8\n1.72\n",
+              "sampleOutput": "1.8\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "1.5\n1.6\n1.9\n",
+              "expectedOutput": "1.9\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "1.95\n1.4\n1.7\n",
+              "expectedOutput": "1.95\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "1.55\n1.55\n1.6\n",
+              "expectedOutput": "1.6\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "1.71\n1.82\n1.81\n",
+              "expectedOutput": "1.82\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Max(a, Math.Max(b, c)));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-03-Q03",
+        "origin": "imported",
+        "sourceId": "CL899371-03",
+        "sourceQuestionId": "c03-p-q8",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "معدل الشهادة\n\nاكتب برنامجًا يقرأ ثلاث علامات (أعدادًا صحيحة، كل علامة في سطر)، ثم يحسب معدلها ويطبعه عددًا صحيحًا بلا كسور (القسمة الصحيحة على 3).\n(مبني على السؤال 8 من وظيفة البرمجة الثالثة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "80\n90\n100\n",
+              "sampleOutput": "90\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "70\n75\n81\n",
+              "expectedOutput": "75\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "0\n0\n1\n",
+              "expectedOutput": "0\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "99\n100\n100\n",
+              "expectedOutput": "99\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "55\n60\n66\n",
+              "expectedOutput": "60\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine((a + b + c) / 3);\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-03-Q04",
+        "origin": "imported",
+        "sourceId": "CL899371-03",
+        "sourceQuestionId": "c03-h-q9",
+        "presentationType": "coding",
+        "questionTypeVersion": 2,
+        "marks": 10,
+        "locked": false,
+        "text": "الوتر والمساحة والمحيط\n\nاكتب برنامجًا يقرأ طولي ساقي مثلث قائم الزاوية (عددين حقيقيين، كل عدد في سطر)، ثم يطبع على ثلاثة أسطر:\n• طول الوتر مقرّبًا إلى منزلتين: Math.Round(c, 2)\n• المساحة (نصف حاصل ضرب الساقين)\n• المحيط (مجموع الأضلاع الثلاثة) مقرّبًا إلى منزلتين\n(مبني على السؤال 9 من الوظيفة البيتية الثالثة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+          },
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "3\n4\n",
+              "sampleOutput": "5\n6\n12\n"
+            }
+          ]
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "1\n1\n",
+              "expectedOutput": "1.41\n0.5\n3.41\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "6\n8\n",
+              "expectedOutput": "10\n24\n24\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "2\n3\n",
+              "expectedOutput": "3.61\n3\n8.61\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "5\n5\n",
+              "expectedOutput": "7.07\n12.5\n17.07\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = Math.Sqrt(a * a + b * b);\n        Console.WriteLine(Math.Round(c, 2));\n        Console.WriteLine(a * b / 2);\n        Console.WriteLine(Math.Round(a + b + c, 2));\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 40,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

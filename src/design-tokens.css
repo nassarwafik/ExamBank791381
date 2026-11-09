@@ -61,6 +61,12 @@
   --eb-sh-md: 0 10px 28px -12px rgba(28,19,48,.18);
   --eb-sh-lg: 0 18px 40px -18px rgba(28,19,48,.24);
 
+  /* 899371 P1 — the Reader's code panel (reader.css, CodeBlockView.tsx): a dark panel in EVERY theme, like the navigation rail, so
+     these are never redeclared by a dark or reading theme (codeContrast.p1.test.ts); every text colour is AA on --eb-code-bg. */
+  --eb-code-bg: #1c1330; --eb-code-fg: #e6edf7; --eb-code-gutter: #8c93a8;
+  --eb-code-keyword: #c4b5fd; --eb-code-type: #7dd3fc; --eb-code-string: #a7f3d0; --eb-code-number: #fcd34d; --eb-code-comment: #aab3c5;
+  --eb-code-line: rgba(255,255,255,.1); --eb-code-hover: rgba(255,255,255,.08); --eb-code-control: rgba(255,255,255,.28);
+
   /* Motion & focus */
   --eb-ease: cubic-bezier(.4,0,.2,1);
   --eb-dur: .18s;

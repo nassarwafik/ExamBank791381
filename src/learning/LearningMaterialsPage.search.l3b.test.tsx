@@ -22,7 +22,7 @@ describe("L3-B teacher library — filters", () => {
     render(<LearningMaterialsPage token="t" />);
     const subject = screen.getByRole("combobox", { name: "المادة" }) as HTMLSelectElement;
     const grade = screen.getByRole("combobox", { name: "الصف" }) as HTMLSelectElement;
-    expect([...subject.options].map(o => o.textContent)).toEqual(["كل المواد", "أنظمة محوسبة"]);
+    expect([...subject.options].map(o => o.textContent)).toEqual(["كل المواد", "أنظمة محوسبة", "علم الحاسوب"]);   // 899371 P2 adds «علم الحاسوب»
     expect([...grade.options].map(o => o.textContent)).toEqual(["كل الصفوف", "الصف العاشر", "الصف الحادي عشر"]);
     fireEvent.change(grade, { target: { value: "الصف الحادي عشر" } });
     expect(screen.getByRole("heading", { level: 3, name: "شبكات الاتصال" })).toBeTruthy();
@@ -40,7 +40,7 @@ describe("L3-B teacher library — search", () => {
     fireEvent.click(screen.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }));
     const box = await screen.findByRole("searchbox", undefined, SLOW) as HTMLInputElement;
     expect(document.activeElement).toBe(box);
-    await waitFor(() => expect([...manifestLoads].sort()).toEqual(["791381", "791381s"]), SLOW);   // the library searches every course
+    await waitFor(() => expect([...manifestLoads].sort()).toEqual(["791381", "791381s", "899371"]), SLOW);   // the library searches every course
     fireEvent.change(box, { target: { value: "VLAN" } });
     await settle();
     const section = screen.getByRole("region", { name: "البحث في المكتبة" });

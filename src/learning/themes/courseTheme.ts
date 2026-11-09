@@ -20,6 +20,8 @@ export type ThemeTone = (typeof THEME_TONES)[number];
 /** Which course wears which skin. 791381 (the full book) keeps the established Reader look. */
 const COURSE_THEMES: Readonly<Record<string, CourseThemeId>> = {
   "791381s": "booklet",
+  // 899371 P2 — the same skin: a colour per section of the book (intro, b1–b5), Cairo headings. Presentation only.
+  "899371": "booklet",
 };
 
 /** The theme a page is drawn with: the skin and the colour of the group its module belongs to. */

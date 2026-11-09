@@ -1,0 +1,15 @@
+{
+  "id": "f30-c08-p-q3-doubles",
+  "source": "ف8 برمجة س3، جدول أمثلة CalculateExpression",
+  "verbatim": false,
+  "finding": "F30",
+  "bookClaim": "\"9.6/3.2\" → 3.0 ، \"4*2\" → 8",
+  "note": "الحساب بأعداد double في C# (IEEE 754) والطباعة بأقصر تمثيل؛ double.Parse يعمل بالثقافة الثابتة في المشغّل",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "7.8\n6.5\n8\n2.9999999999999996\n7.8"
+      }
+    }
+  ]
+}

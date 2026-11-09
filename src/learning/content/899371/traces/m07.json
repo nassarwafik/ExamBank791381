@@ -1,0 +1,13 @@
+{
+ "module": "m07",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "static void A(int x)\n{\n    Tr.Enter(\"A\");\n    Tr.At(1, \"A تستلم نسخة من قيمة n.\", \"x\", x);\n    x = 10;\n    Tr.S(\"A تغيّر نسختها فقط.\", \"x\", x);\n    Tr.Leave();\n}\nstatic void B(ref int x)\n{\n    Tr.Enter(\"B\");\n    x = 20;\n    Tr.S(\"مع ref: x في B هو صندوق n نفسه.\", \"x\", x);\n    Tr.Leave();\n}\nstatic void C(out int x)\n{\n    Tr.Enter(\"C\");\n    x = 30;\n    Tr.S(\"مع out: C تعطي x قيمة، وتعود القيمة إلى n.\", \"x\", x);\n    Tr.Leave();\n}\nstatic void Main()\n{\n    Tr.Begin();\n    int n = 1;\n    Tr.S(\"صندوق n في Main.\", \"n\", n);\n    A(n);\n    Tr.S(\"عدنا من A: n ما زال 1.\", \"n\", n);\n    Console.Write(n + \" \");\n    Tr.S(\"الطباعة: 1.\");\n    B(ref n);\n    Tr.S(\"عدنا من B: n صار 20.\", \"n\", n);\n    Console.Write(n + \" \");\n    Tr.S(\"الطباعة: 20.\");\n    C(out n);\n    Tr.S(\"عدنا من C: n صار 30.\", \"n\", n);\n    Console.Write(n);\n    Tr.S(\"الطباعة: 30.\");\n    Tr.End();\n}"
+  },
+  {
+   "walkthrough": 3,
+   "program": "static void G()\n{\n    Tr.Enter(\"G\");\n    Console.Write(\"G \");\n    Tr.S(\"G فوق F في المكدس: تطبع ثم تنتهي.\");\n    Tr.Leave();\n}\nstatic void F()\n{\n    Tr.Enter(\"F\");\n    Console.Write(\"F1 \");\n    Tr.S(\"F فوق Main في المكدس.\");\n    G();\n    Tr.S(\"خرجت G من المكدس: نكمل F بعد سطر الاستدعاء.\");\n    Console.Write(\"F2 \");\n    Tr.S(\"F تكمل ثم تنتهي.\");\n    Tr.Leave();\n}\nstatic void Main()\n{\n    Tr.Begin();\n    Console.Write(\"M1 \");\n    Tr.S(\"Main وحدها في المكدس.\");\n    F();\n    Tr.S(\"خرجت F: عدنا إلى Main.\");\n    Console.Write(\"M2\");\n    Tr.S(\"الطباعة الأخيرة.\");\n    Tr.End();\n}"
+  }
+ ]
+}

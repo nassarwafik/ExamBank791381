@@ -1,0 +1,18 @@
+{
+ "note": "Teacher clarifications (owner decision 2026-11-09, plan §18): the book's own text stays exactly as printed; where it promises data it does not print (F9 inputs, F15 points table and choices), a clearly marked teacher note completes the question right after that line. Never an answer (Q3).",
+ "clarifications": [
+  { "finding": "F9", "after": "m06-l02-p01-b04", "program": "m06-l02-p01-b03", "inputs": "12 153 100 370" },
+  { "finding": "F9", "after": "m06-l02-p02-b03", "program": "m06-l02-p02-b02", "inputs": "4 6 3 8 10 12 5 -1" },
+  { "finding": "F9", "after": "m06-l02-p03-b03", "program": "m06-l02-p03-b02", "inputs": "123 456 789 -1" },
+  { "finding": "F9", "after": "m06-l02-p04-b03", "program": "m06-l02-p04-b02", "inputs": "12 7 3 -1" },
+  { "finding": "F9", "after": "m06-l02-p05-b03", "program": "m06-l02-p05-b02", "inputs": "129 345 678 254 117" },
+  { "finding": "F15", "after": "m09-l03-p02-b02",
+    "text": "جدول النقاط لم يُطبع في الكتاب. نعتمد الترتيب المعروف في مسابقات الأغاني: المركز الأول 12 نقطة، الثاني 10، الثالث 8، الرابع 7، الخامس 6، السادس 5، السابع 4، الثامن 3، التاسع 2، العاشر 1." },
+  { "finding": "F15", "after": "m09-l03-p05-b08",
+    "text": "الخيارات لم تُطبع في الكتاب. اختر واحدًا مما يلي:",
+    "choices": ["num موجود في المصفوفة، وهو أكبر عناصرها.", "num موجود في آخر خانة من المصفوفة.", "num غير موجود في المصفوفة، وهو أكبر من جميع عناصرها.", "num أصغر من جميع عناصر المصفوفة."] },
+  { "finding": "F15", "after": "m09-l03-p05-b09",
+    "text": "الخيارات لم تُطبع في الكتاب. اختر واحدًا مما يلي:",
+    "choices": ["فقط عندما يكون num العنصر الأول في المصفوفة.", "عندما لا يسبق num في المصفوفة أي عدد أصغر منه، أو عندما يكون غير موجود فيها وأصغر من جميع عناصرها.", "فقط عندما يكون num غير موجود في المصفوفة وأصغر من جميع عناصرها.", "فقط عندما تكون المصفوفة فارغة."] }
+ ]
+}

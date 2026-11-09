@@ -97,7 +97,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact sixteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
+  it("registers ONLY the exact seventeen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2, 899371 P6) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -115,13 +115,14 @@ describe("production registry is an exact allowlist", () => {
       { kind: "simulation", key: "cli-terminal", versions: [1] },
       { kind: "simulation", key: "ipv6-compress", versions: [1] },
       { kind: "simulation", key: "network-lab", versions: [1] },        // 791381s Phase 8B-2 — the server-judged network lab
+      { kind: "simulation", key: "csharp-trace", versions: [1] },       // 899371 P6 — the C# tracer (recorded steps, data only)
     ]);
-    expect(productionActivityRegistry.size).toBe(16);
+    expect(productionActivityRegistry.size).toBe(17);
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });
   it("every Units 4–6, Units 7–8, Batch 3, Batch 4 and Batch 5 renderer is reached only through a static string-literal import thunk", () => {
-    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder", "OsiLayersExplorer", "NetworkDomainsExplorer", "TcpHandshakeStepper"]) expect(engine).toContain(`import("./${name}")`);
+    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder", "OsiLayersExplorer", "NetworkDomainsExplorer", "TcpHandshakeStepper", "CSharpTraceActivity"]) expect(engine).toContain(`import("./${name}")`);
   });
   it("the ipv4-octets renderer is reached only through a static string-literal import thunk", () => {
     expect(engine).toContain('import("./IPv4OctetsDiagram")');

@@ -1,0 +1,21 @@
+{
+  "id": "f31-c04-p-q1-readkey",
+  "source": "ف4 برمجة س1 (كما طُبع، ينتهي بـ Console.ReadKey())",
+  "verbatim": true,
+  "finding": "F31",
+  "note": "المدخلات مُعادة التوجيه في المشغّل، فـ Console.ReadKey() يرمي استثناء بعد الطباعة",
+  "runs": [
+    {
+      "stdin": "123",
+      "expect": {
+        "runtimeError": "InvalidOperationException"
+      }
+    },
+    {
+      "stdin": "504",
+      "expect": {
+        "runtimeError": "InvalidOperationException"
+      }
+    }
+  ]
+}

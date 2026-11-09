@@ -113,3 +113,25 @@ describe("buildLibrary - end to end against real Book791381 files", () => {
     }
   });
 });
+
+// 899371 P7: the library also ships the 899371 coding lab (CL899371-NN, built by scripts/build-899371-coding-lab.mjs). Rebuilding the
+// 791381 exams rewrites catalog.json; it must keep every entry of ANOTHER repository and replace only its own (Book791381) entries.
+describe("buildLibrary - keeps the catalog entries of other repositories", () => {
+  it("a rebuild replaces its own entries and keeps another repository's, after its own", () => {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-data3-"));
+    const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-assets3-"));
+    try {
+      const foreign = { libraryItemId: "CL899371-01", title: "مختبر البرمجة", category: "coding-899371", source: { repository: "899371", sourceFile: "scripts/coding-lab-899371/m01.json" } };
+      const stale = { libraryItemId: "T99", title: "stale", category: "core", source: { repository: "Book791381", sourceFile: "T99.html" } };
+      fs.writeFileSync(path.join(dataDir, "catalog.json"), JSON.stringify([stale, foreign], null, 2));
+      const { catalog } = buildLibrary(FIXTURES_DIR, dataDir, assetsDir);
+      const written = JSON.parse(fs.readFileSync(path.join(dataDir, "catalog.json"), "utf8"));
+      expect(written.map(e => e.libraryItemId)).toEqual([...catalog.map(e => e.libraryItemId), "CL899371-01"]);
+      expect(written.at(-1)).toEqual(foreign);
+      expect(written.some(e => e.libraryItemId === "T99")).toBe(false);
+    } finally {
+      fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(assetsDir, { recursive: true, force: true });
+    }
+  });
+});

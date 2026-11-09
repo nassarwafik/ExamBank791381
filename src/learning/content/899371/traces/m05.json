@@ -1,0 +1,13 @@
+{
+ "module": "m05",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "Tr.Begin();\nfor (int i = 3; i >= 1; i--)\n{\n    Tr.At(1, \"سطر جديد: الحلقة الداخلية ستطبع i نجوم.\", \"i\", i);\n    for (int j = 1; j <= i; j++)\n    { //~\n        Console.Write(\"*\");\n        Tr.S(\"نجمة في السطر نفسه.\", \"j\", j);\n    } //~\n    Tr.Drop(\"j\");\n    Console.WriteLine();\n    Tr.S(\"انتهى السطر: ننزل سطرًا جديدًا.\");\n}\nTr.Drop(\"i\");\nTr.End();"
+  },
+  {
+   "walkthrough": 4,
+   "program": "Tr.Begin();\nint count = 0;\nTr.S(\"العدّاد يبدأ من صفر.\", \"count\", count);\nfor (int i = 1; i <= 12; i++)\n{ //~\n    Tr.At(3, 12 % i == 0 ? \"الباقي صفر: i يقسم 12.\" : \"الباقي ليس صفرًا: i لا يقسم 12.\", \"i\", i, \"12 % i\", 12 % i);\n    if (12 % i == 0)\n    { //~\n        count++;\n        Tr.S(\"نزيد العدّاد.\", \"count\", count);\n    } //~\n} //~\nTr.Drop(\"i\");\nConsole.WriteLine(count);\nTr.S(\"الطباعة: 6 قواسم.\");\nTr.End();"
+  }
+ ]
+}

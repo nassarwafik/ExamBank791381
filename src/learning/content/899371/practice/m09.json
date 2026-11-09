@@ -1,0 +1,249 @@
+{
+ "module": "m09",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "5",
+      "correct": true
+     },
+     {
+      "text": "1"
+     },
+     {
+      "text": "13"
+     },
+     {
+      "text": "4"
+     }
+    ],
+    "feedback": {
+     "explanation": "a[2] هو العنصر الثالث (المؤشر يبدأ من 0) = 1، وa.Length = 4، والمجموع 5."
+    }
+   },
+   "program": "int[] a = { 4, 7, 1, 9 };\nConsole.WriteLine(a[2] + a.Length);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "0",
+      "correct": true
+     },
+     {
+      "text": "1"
+     },
+     {
+      "text": "null"
+     },
+     {
+      "text": "خطأ تنفيذ"
+     }
+    ],
+    "feedback": {
+     "explanation": "new int[3] ينشئ ثلاثة عناصر قيمتها الابتدائية 0."
+    }
+   },
+   "program": "int[] a = new int[3];\nConsole.WriteLine(a[1]);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "16",
+      "correct": true
+     },
+     {
+      "text": "8"
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "358"
+     }
+    ],
+    "feedback": {
+     "explanation": "الحلقة تمرّ على كل العناصر وتجمعها: 3 + 5 + 8 = 16."
+    }
+   },
+   "program": "int[] a = { 3, 5, 8 };\nint sum = 0;\nfor (int i = 0; i < a.Length; i++)\n    sum += a[i];\nConsole.WriteLine(sum);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "9"
+     },
+     {
+      "text": "2",
+      "correct": true
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "0"
+     }
+    ],
+    "feedback": {
+     "explanation": "البرنامج يحفظ مؤشر العنصر الأكبر لا قيمته: الأكبر 9 في المؤشر 2."
+    }
+   },
+   "program": "int[] a = { 6, 2, 9, 4 };\nint index = 0;\nfor (int i = 1; i < a.Length; i++)\n    if (a[i] > a[index])\n        index = i;\nConsole.WriteLine(index);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "11"
+     },
+     {
+      "text": "6",
+      "correct": true
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "0"
+     }
+    ],
+    "feedback": {
+     "explanation": "المصفوفة تُرسل بالمرجع: Zero يغيّر a[0] الأصلي إلى 0، فيصبح 0 + 6 = 6."
+    }
+   },
+   "program": "static void Zero(int[] arr)\n{\n    arr[0] = 0;\n}\nstatic void Main()\n{\n    int[] a = { 5, 6 };\n    Zero(a);\n    Console.WriteLine(a[0] + a[1]);\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ماذا يحدث عند تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "يطبع 1"
+     },
+     {
+      "text": "يطبع 0"
+     },
+     {
+      "text": "خطأ تنفيذ: المؤشر خارج حدود المصفوفة",
+      "correct": true
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "المصفوفة بحجم 3 مؤشراتها 0 و1 و2 فقط. a[3] خارج الحدود، فيظهر خطأ تنفيذ (IndexOutOfRangeException) عند الوصول إليه."
+    }
+   },
+   "program": "int[] a = new int[3];\na[3] = 1;\nConsole.WriteLine(a[3]);",
+   "prove": "runtime",
+   "runtimeError": "IndexOutOfRangeException"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "3",
+    "feedback": {
+     "explanation": "العناصر التي >= 18 هي 18 و21 و30: ثلاثة."
+    }
+   },
+   "program": "int[] ages = { 18, 21, 17, 30, 15 };\nint count = 0;\nfor (int i = 0; i < ages.Length; i++)\n    if (ages[i] >= 18)\n        count++;\nConsole.WriteLine(count);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2"
+     },
+     {
+      "text": "3",
+      "correct": true
+     },
+     {
+      "text": "1"
+     },
+     {
+      "text": "5"
+     }
+    ],
+    "feedback": {
+     "explanation": "مصفوفة العدّادات: كل علامة تزيد خانتها. العلامة 2 ظهرت ثلاث مرات، فـ count[2] = 3."
+    }
+   },
+   "program": "int[] marks = { 2, 3, 2, 1, 2 };\nint[] count = new int[4];\nfor (int i = 0; i < marks.Length; i++)\n    count[marks[i]]++;\nConsole.WriteLine(count[2]);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "إذا كانت int[] a = new int[5]، صنّف كل وصول:",
+    "groups": [
+     "مؤشر صالح",
+     "خارج حدود المصفوفة"
+    ],
+    "items": [
+     [
+      "a[0]",
+      0
+     ],
+     [
+      "a[4]",
+      0
+     ],
+     [
+      "a[5]",
+      1
+     ],
+     [
+      "a[-1]",
+      1
+     ],
+     [
+      "a[a.Length - 1]",
+      0
+     ],
+     [
+      "a[a.Length]",
+      1
+     ]
+    ],
+    "feedback": {
+     "explanation": "المؤشرات الصالحة من 0 حتى Length - 1 أي 0..4. ‏a[5] وa[a.Length] وa[-1] خارج الحدود."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "المؤشر الأول في المصفوفة هو 1.",
+    "answer": false,
+    "feedback": {
+     "explanation": "المؤشر يبدأ دائمًا من الصفر: العنصر الأول a[0]، والأخير a[a.Length - 1]."
+    }
+   }
+  }
+ ]
+}

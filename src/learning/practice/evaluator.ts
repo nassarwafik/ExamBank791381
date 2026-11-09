@@ -10,6 +10,7 @@
 // later phase inject a local, a server, or NO evaluator without touching question presentation.
 
 import { hintLadder, type PracticeQuestion, type PracticeQuestionKind, type PracticeFeedback } from "../content/types";
+import { normalizeStudyText } from "../study/eligibility";
 
 // ── Student response (presentation -> evaluator) ─────────────────────────────────────────────────────────────
 /** What the presentation layer collects. Shape per question kind; unknown fields are ignored by evaluators. */
@@ -82,7 +83,8 @@ export function createEvaluatorRegistry(evaluators: readonly LearningQuestionEva
 }
 
 // ── The pure LOCAL evaluator (reference implementation; not wired into Phase-3 rendering) ────────────────────
-const norm = (s: string) => s.trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
+// Decision Q10 (899371 plan §18): the same digit fold as the server and the key builder (eligibility.ts).
+const norm = (s: string) => normalizeStudyText(s);
 
 /** Judges against the answer key carried on the question. Pure; no I/O. Returns "unknown" when no key exists. */
 export const localEvaluator: LearningQuestionEvaluator = {

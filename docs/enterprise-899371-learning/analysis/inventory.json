@@ -1,0 +1,3569 @@
+{
+ "course": "899371",
+ "title": "مجمع أسئلة في أسس علم الحاسوب",
+ "phase": "P0",
+ "source": {
+  "file": "أسس علم الحاسوب 899371.docx",
+  "sha256": "22ef25cd0c811be565d23472335d5cbaefa9253f52f29a25f3dfb124d5e97d3f",
+  "bytes": 898808,
+  "renderedPages": 140,
+  "pageNote": "tocPage = رقم الصفحة في فهرس الكتاب؛ لا يطابق إخراج الملف على جهاز آخر (F29)"
+ },
+ "batches": [
+  {
+   "id": "intro",
+   "label": "المقدمة"
+  },
+  {
+   "id": "b1",
+   "label": "الأساسيات: الطباعة والمتغيرات والعوامل و Math"
+  },
+  {
+   "id": "b2",
+   "label": "الشرط والتكرار"
+  },
+  {
+   "id": "b3",
+   "label": "العمليات والنصوص"
+  },
+  {
+   "id": "b4",
+   "label": "المصفوفات"
+  },
+  {
+   "id": "b5",
+   "label": "الكائنات"
+  }
+ ],
+ "patterns": {
+  "PO": {
+   "name": "predict-output",
+   "meaning": "ما ناتج / ماذا يطبع",
+   "component": "practice.shortInput (سطر واحد) أو practice.multipleChoice (عدة أسطر)"
+  },
+  "TV": {
+   "name": "truth-value",
+   "meaning": "قيمة True / False لتعبير",
+   "component": "practice.trueFalse"
+  },
+  "TT": {
+   "name": "trace-table",
+   "meaning": "تتبّع بجدول متابعة",
+   "component": "exam-item.tableFill + codeStimulus، أو practice-table للجداول الصغيرة"
+  },
+  "EX": {
+   "name": "explain-purpose",
+   "meaning": "ماذا ينفّذ البرنامج / ما هدف العملية",
+   "component": "practice.multipleChoice (ذاتي) + guided (مع المعلم)"
+  },
+  "GI": {
+   "name": "give-input-example",
+   "meaning": "أعطِ مثالًا لمدخلات يكون الناتج كذا",
+   "component": "guided (مع المعلم)؛ لا مفتاح ثابت"
+  },
+  "WE": {
+   "name": "write-expression",
+   "meaning": "اكتب تعبيرًا / أمر if / سطرًا",
+   "component": "practice.wordBank أو practice.multipleChoice"
+  },
+  "CQ": {
+   "name": "concept",
+   "meaning": "سؤال مفاهيمي (الفرق بين…، اختر…)",
+   "component": "practice.multipleChoice / matching"
+  },
+  "WP": {
+   "name": "write-program",
+   "meaning": "اكتب برنامجًا (مدخلات ← مخرجات)",
+   "component": "coding@2 بحالات مخفية + practice.ordering (رتّب الأسطر) + guided"
+  },
+  "WM": {
+   "name": "write-method",
+   "meaning": "اكتب عملية بالترويسة التالية",
+   "component": "coding@3 (Main مقفل يستدعي عملية الطالب)"
+  },
+  "WC": {
+   "name": "write-class",
+   "meaning": "اكتب الفئة / البنّاء / العمليات",
+   "component": "coding@3 (Main مقفل يختبر واجهة الفئة) أو تصحيح المعلم"
+  }
+ },
+ "runnerClasses": {
+  "auto": "يُصحَّح آليًا على المشغّل بحالات مخفية",
+  "auto-small-n": "آليًا بنسخة إثراء تقرأ N أولًا (المدخلات بالعدد المطبوع تتجاوز 16 KB لحالة الاختبار)",
+  "nondeterministic": "مبني على Random: لا مخرجات ثابتة؛ تصحيح المعلم أو نسخة إثراء حتمية",
+  "needs-correction": "آليًا بعد تصحيح المواصفة المشار إليها",
+  "incomplete-spec": "لا يُصحَّح آليًا قبل استكمال المعطيات من المالك"
+ },
+ "modules": [
+  {
+   "moduleId": "899371-m00",
+   "order": 0,
+   "title": "كلمة افتتاحية",
+   "batch": "intro",
+   "tocPage": 3
+  },
+  {
+   "moduleId": "899371-m01",
+   "order": 1,
+   "chapter": 1,
+   "title": "الطباعة والمتغيرات",
+   "batch": "b1",
+   "tocPages": {
+    "summary": 4,
+    "homework": 6,
+    "programming": 8
+   },
+   "concepts": [
+    "Console.WriteLine",
+    "المتغيرات وأنواعها int/double/string/char/bool",
+    "camelCase",
+    "Console.ReadLine",
+    "int.Parse / double.Parse"
+   ],
+   "summary": {
+    "workedExamples": 3,
+    "exercises": [
+     {
+      "id": "c01-s-x1",
+      "number": "ت1",
+      "brief": "حاسبة مساحة المستطيل",
+      "parts": [
+       {
+        "id": "c01-s-x1-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto",
+      "withTeacherCandidate": true
+     },
+     {
+      "id": "c01-s-x2",
+      "number": "ت2",
+      "brief": "حساب العمر",
+      "parts": [
+       {
+        "id": "c01-s-x2-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     }
+    ]
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الأولى في أسس علم الحاسوب - بيتية",
+     "tocPage": 6,
+     "questions": [
+      {
+       "id": "c01-h-q1",
+       "number": 1,
+       "brief": "قيم a,b,c والناتج",
+       "parts": [
+        {
+         "id": "c01-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c01-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "PO"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c01-h-q1"
+       ]
+      },
+      {
+       "id": "c01-h-q2",
+       "number": 2,
+       "brief": "التحويل (int) و Write/WriteLine",
+       "parts": [
+        {
+         "id": "c01-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c01-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "PO"
+        },
+        {
+         "id": "c01-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "CQ"
+        }
+       ],
+       "findings": [
+        "F21"
+       ],
+       "probes": [
+        "c01-h-q2"
+       ]
+      },
+      {
+       "id": "c01-h-q3",
+       "number": 3,
+       "brief": "int.Parse مع 6 ومع m",
+       "parts": [
+        {
+         "id": "c01-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c01-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "PO"
+        },
+        {
+         "id": "c01-h-q3-3_3",
+         "label": "3.3",
+         "pattern": "CQ"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c01-h-q3"
+       ]
+      },
+      {
+       "id": "c01-h-q4",
+       "number": 4,
+       "brief": "مجموع عددين بتنسيق",
+       "parts": [
+        {
+         "id": "c01-h-q4-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-h-q5",
+       "number": 5,
+       "brief": "متوسط علامتين كسريتين",
+       "parts": [
+        {
+         "id": "c01-h-q5-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الأولى في أسس علم الحاسوب - برمجية",
+     "tocPage": 8,
+     "questions": [
+      {
+       "id": "c01-p-q1",
+       "number": 1,
+       "brief": "طباعة جملة",
+       "parts": [
+        {
+         "id": "c01-p-q1-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q2",
+       "number": 2,
+       "brief": "العشرات والآحاد",
+       "parts": [
+        {
+         "id": "c01-p-q2-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q3",
+       "number": 3,
+       "brief": "مربع عدد",
+       "parts": [
+        {
+         "id": "c01-p-q3-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q4",
+       "number": 4,
+       "brief": "مجموع رقمين",
+       "parts": [
+        {
+         "id": "c01-p-q4-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q5",
+       "number": 5,
+       "brief": "الاسم والعمر",
+       "parts": [
+        {
+         "id": "c01-p-q5-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q6",
+       "number": 6,
+       "brief": "مجموع منازل عدد ثلاثي",
+       "parts": [
+        {
+         "id": "c01-p-q6-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q7",
+       "number": 7,
+       "brief": "العلامة النهائية بالوحدات والبونوس",
+       "parts": [
+        {
+         "id": "c01-p-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q8",
+       "number": 8,
+       "brief": "منازل عدد رباعي",
+       "parts": [
+        {
+         "id": "c01-p-q8-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c01-p-q9",
+       "number": 9,
+       "brief": "بناء عدد من 4 منازل",
+       "parts": [
+        {
+         "id": "c01-p-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F21"
+       ]
+      },
+      {
+       "id": "c01-p-q10",
+       "number": 10,
+       "brief": "سلزيوس ← فهرنهايت (قسمة صحيحة)",
+       "parts": [
+        {
+         "id": "c01-p-q10-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m02",
+   "order": 2,
+   "chapter": 2,
+   "title": "العوامل والتعابير المنطقية",
+   "batch": "b1",
+   "tocPages": {
+    "summary": 9,
+    "homework": 12,
+    "programming": 15
+   },
+   "concepts": [
+    "العوامل الحسابية",
+    "العوامل المنطقية && || !",
+    "عوامل المقارنة",
+    "++ -- += -="
+   ],
+   "summary": {
+    "workedExamples": 3,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الثانية في أسس علم الحاسوب - بيتية",
+     "tocPage": 12,
+     "questions": [
+      {
+       "id": "c02-h-q1",
+       "number": 1,
+       "brief": "x++ ثم x--",
+       "parts": [
+        {
+         "id": "c02-h-q1-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c02-h-q1"
+       ]
+      },
+      {
+       "id": "c02-h-q2",
+       "number": 2,
+       "brief": "+= و -=",
+       "parts": [
+        {
+         "id": "c02-h-q2-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q3",
+       "number": 3,
+       "brief": "n % 2 == 0",
+       "parts": [
+        {
+         "id": "c02-h-q3-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q4",
+       "number": 4,
+       "brief": "تعبير مركّب",
+       "parts": [
+        {
+         "id": "c02-h-q4-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-h-q4"
+       ]
+      },
+      {
+       "id": "c02-h-q5",
+       "number": 5,
+       "brief": "a > b بعد التعديل",
+       "parts": [
+        {
+         "id": "c02-h-q5-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q6",
+       "number": 6,
+       "brief": "x بين 10 و20",
+       "parts": [
+        {
+         "id": "c02-h-q6-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q7",
+       "number": 7,
+       "brief": "n فردي",
+       "parts": [
+        {
+         "id": "c02-h-q7-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q8",
+       "number": 8,
+       "brief": "a مضاعف لـ b",
+       "parts": [
+        {
+         "id": "c02-h-q8-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q9",
+       "number": 9,
+       "brief": "age ≥ 18 أو = 0",
+       "parts": [
+        {
+         "id": "c02-h-q9-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q10",
+       "number": 10,
+       "brief": "score += 10 ثم -= 3",
+       "parts": [
+        {
+         "id": "c02-h-q10-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c02-h-q11",
+       "number": 11,
+       "brief": "|| مع %",
+       "parts": [
+        {
+         "id": "c02-h-q11-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-h-q11"
+       ]
+      },
+      {
+       "id": "c02-h-q12",
+       "number": 12,
+       "brief": "&& بعد *= ",
+       "parts": [
+        {
+         "id": "c02-h-q12-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-h-q12"
+       ]
+      },
+      {
+       "id": "c02-h-q13",
+       "number": 13,
+       "brief": "!(n < 10)",
+       "parts": [
+        {
+         "id": "c02-h-q13-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-h-q13"
+       ]
+      },
+      {
+       "id": "c02-h-q14",
+       "number": 14,
+       "brief": "x > 0 و (5..10 أو 20)",
+       "parts": [
+        {
+         "id": "c02-h-q14-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ],
+       "findings": [
+        "F22"
+       ]
+      },
+      {
+       "id": "c02-h-q15",
+       "number": 15,
+       "brief": "تعبير بثلاثة متغيرات",
+       "parts": [
+        {
+         "id": "c02-h-q15-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-h-q15"
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الثانية في أسس علم الحاسوب - برمجية",
+     "tocPage": 15,
+     "questions": [
+      {
+       "id": "c02-p-q1",
+       "number": 1,
+       "brief": "تتبع += و *=",
+       "parts": [
+        {
+         "id": "c02-p-q1-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c02-p-q1"
+       ]
+      },
+      {
+       "id": "c02-p-q2",
+       "number": 2,
+       "brief": "تتبع ++ و -=",
+       "parts": [
+        {
+         "id": "c02-p-q2-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c02-p-q2"
+       ]
+      },
+      {
+       "id": "c02-p-q3",
+       "number": 3,
+       "brief": "تتبع",
+       "parts": [
+        {
+         "id": "c02-p-q3-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c02-p-q3"
+       ]
+      },
+      {
+       "id": "c02-p-q4",
+       "number": 4,
+       "brief": "تتبع",
+       "parts": [
+        {
+         "id": "c02-p-q4-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c02-p-q4"
+       ]
+      },
+      {
+       "id": "c02-p-q5",
+       "number": 5,
+       "brief": "مجموع وضرب ومتوسط",
+       "parts": [
+        {
+         "id": "c02-p-q5-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c02-p-q6",
+       "number": 6,
+       "brief": "أسبقية && على ||",
+       "parts": [
+        {
+         "id": "c02-p-q6-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c02-p-q6"
+       ]
+      },
+      {
+       "id": "c02-p-q7",
+       "number": 7,
+       "brief": "ثلاث قيم منطقية",
+       "parts": [
+        {
+         "id": "c02-p-q7-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-p-q7"
+       ]
+      },
+      {
+       "id": "c02-p-q8",
+       "number": 8,
+       "brief": "تعبير بعد التعديل",
+       "parts": [
+        {
+         "id": "c02-p-q8-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-p-q8"
+       ]
+      },
+      {
+       "id": "c02-p-q9",
+       "number": 9,
+       "brief": "تعبير x > 0 و (…)",
+       "parts": [
+        {
+         "id": "c02-p-q9-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ],
+       "findings": [
+        "F22"
+       ]
+      },
+      {
+       "id": "c02-p-q10",
+       "number": 10,
+       "brief": "تتبع مع ||",
+       "parts": [
+        {
+         "id": "c02-p-q10-all",
+         "label": "",
+         "pattern": "TV"
+        }
+       ],
+       "probes": [
+        "c02-p-q10"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m03",
+   "order": 3,
+   "chapter": 3,
+   "title": "المكتبة Math والفئة Random",
+   "batch": "b1",
+   "tocPages": {
+    "summary": 18,
+    "homework": 21,
+    "programming": 23
+   },
+   "concepts": [
+    "Math.Abs/Pow/Sqrt/Round/Floor/Max/Min",
+    "Math.PI / Math.E",
+    "Random.Next / NextDouble"
+   ],
+   "summary": {
+    "workedExamples": 0,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الثالثة في شبكات الاتصال - بيتية",
+     "tocPage": 21,
+     "questions": [
+      {
+       "id": "c03-h-q1",
+       "number": 1,
+       "brief": "x % y + x / y",
+       "parts": [
+        {
+         "id": "c03-h-q1-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "findings": [
+        "F1"
+       ],
+       "probes": [
+        "c03-h-q1"
+       ]
+      },
+      {
+       "id": "c03-h-q2",
+       "number": 2,
+       "brief": "أول وآخر منزلة",
+       "parts": [
+        {
+         "id": "c03-h-q2-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c03-h-q2"
+       ]
+      },
+      {
+       "id": "c03-h-q3",
+       "number": 3,
+       "brief": "a * b - b",
+       "parts": [
+        {
+         "id": "c03-h-q3-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-h-q3"
+       ]
+      },
+      {
+       "id": "c03-h-q4",
+       "number": 4,
+       "brief": "مجموع آخر منزلتين",
+       "parts": [
+        {
+         "id": "c03-h-q4-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-h-q4"
+       ]
+      },
+      {
+       "id": "c03-h-q5",
+       "number": 5,
+       "brief": "x / y + x % y",
+       "parts": [
+        {
+         "id": "c03-h-q5-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-h-q5"
+       ]
+      },
+      {
+       "id": "c03-h-q6",
+       "number": 6,
+       "brief": "n % 100",
+       "parts": [
+        {
+         "id": "c03-h-q6-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-h-q6"
+       ]
+      },
+      {
+       "id": "c03-h-q7",
+       "number": 7,
+       "brief": "حلّا معادلة تربيعية",
+       "parts": [
+        {
+         "id": "c03-h-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-h-q8",
+       "number": 8,
+       "brief": "شرط منازل عدد ثلاثي",
+       "parts": [
+        {
+         "id": "c03-h-q8-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-h-q9",
+       "number": 9,
+       "brief": "الوتر والمساحة والمحيط",
+       "parts": [
+        {
+         "id": "c03-h-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-h-q10",
+       "number": 10,
+       "brief": "5 علامات عشوائية ومعدلها",
+       "parts": [
+        {
+         "id": "c03-h-q10-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "nondeterministic",
+       "findings": [
+        "F24"
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الثالثة في أسس علم الحاسوب - برمجية",
+     "tocPage": 23,
+     "questions": [
+      {
+       "id": "c03-p-q1",
+       "number": 1,
+       "brief": "المسافة بين نقطتين",
+       "parts": [
+        {
+         "id": "c03-p-q1-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c03-p-q1"
+       ]
+      },
+      {
+       "id": "c03-p-q2",
+       "number": 2,
+       "brief": "% و / ",
+       "parts": [
+        {
+         "id": "c03-p-q2-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-p-q2"
+       ]
+      },
+      {
+       "id": "c03-p-q3",
+       "number": 3,
+       "brief": "معدل المنازل مع Round",
+       "parts": [
+        {
+         "id": "c03-p-q3-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-p-q3"
+       ]
+      },
+      {
+       "id": "c03-p-q4",
+       "number": 4,
+       "brief": "مساحة دائرة",
+       "parts": [
+        {
+         "id": "c03-p-q4-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-p-q4"
+       ]
+      },
+      {
+       "id": "c03-p-q5",
+       "number": 5,
+       "brief": "جذر مجموع",
+       "parts": [
+        {
+         "id": "c03-p-q5-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c03-p-q5"
+       ]
+      },
+      {
+       "id": "c03-p-q6",
+       "number": 6,
+       "brief": "الوتر بفيتاغورس",
+       "parts": [
+        {
+         "id": "c03-p-q6-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-p-q7",
+       "number": 7,
+       "brief": "الطول الأكبر",
+       "parts": [
+        {
+         "id": "c03-p-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-p-q8",
+       "number": 8,
+       "brief": "معدل ثلاث علامات صحيح",
+       "parts": [
+        {
+         "id": "c03-p-q8-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c03-p-q9",
+       "number": 9,
+       "brief": "7 بوم بعدد عشوائي",
+       "parts": [
+        {
+         "id": "c03-p-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "nondeterministic",
+       "findings": [
+        "F24"
+       ]
+      },
+      {
+       "id": "c03-p-q10",
+       "number": 10,
+       "brief": "حجرا النرد",
+       "parts": [
+        {
+         "id": "c03-p-q10-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "nondeterministic",
+       "findings": [
+        "F24"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m04",
+   "order": 4,
+   "chapter": 4,
+   "title": "جملة الشرط",
+   "batch": "b2",
+   "tocPages": {
+    "summary": 26,
+    "homework": 31,
+    "programming": 37
+   },
+   "concepts": [
+    "if / else / else if",
+    "الشروط المركّبة",
+    "جداول الحقيقة",
+    "جدول المتابعة"
+   ],
+   "summary": {
+    "workedExamples": 1,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الرابعة في أسس علم الحاسوب - بيتية",
+     "tocPage": 31,
+     "questions": [
+      {
+       "id": "c04-h-q1",
+       "number": 1,
+       "brief": "تتبع بحالتين",
+       "parts": [
+        {
+         "id": "c04-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c04-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "TT"
+        }
+       ],
+       "probes": [
+        "c04-h-q1"
+       ]
+      },
+      {
+       "id": "c04-h-q2",
+       "number": 2,
+       "brief": "مقطع مكافئ بـ else",
+       "parts": [
+        {
+         "id": "c04-h-q2-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ],
+       "findings": [
+        "F6"
+       ],
+       "probes": [
+        "f06-c04-h-q2"
+       ]
+      },
+      {
+       "id": "c04-h-q3",
+       "number": 3,
+       "brief": "رسم 0 أو 1",
+       "parts": [
+        {
+         "id": "c04-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c04-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "PO"
+        },
+        {
+         "id": "c04-h-q3-3_3",
+         "label": "3.3",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c04-h-q3"
+       ]
+      },
+      {
+       "id": "c04-h-q4",
+       "number": 4,
+       "brief": "else المعلّق",
+       "parts": [
+        {
+         "id": "c04-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "GI"
+        },
+        {
+         "id": "c04-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c04-h-q4-4_3",
+         "label": "4.3",
+         "pattern": "CQ"
+        }
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "c04-h-q4"
+       ]
+      },
+      {
+       "id": "c04-h-q5",
+       "number": 5,
+       "brief": "أوامر if لست جمل",
+       "parts": [
+        {
+         "id": "c04-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "WE"
+        },
+        {
+         "id": "c04-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "WE"
+        },
+        {
+         "id": "c04-h-q5-5_3",
+         "label": "5.3",
+         "pattern": "WE"
+        },
+        {
+         "id": "c04-h-q5-5_4",
+         "label": "5.4",
+         "pattern": "WE"
+        },
+        {
+         "id": "c04-h-q5-5_5",
+         "label": "5.5",
+         "pattern": "WE"
+        },
+        {
+         "id": "c04-h-q5-5_6",
+         "label": "5.6",
+         "pattern": "WE"
+        }
+       ]
+      },
+      {
+       "id": "c04-h-q6",
+       "number": 6,
+       "brief": "قيم قضايا منطقية",
+       "parts": [
+        {
+         "id": "c04-h-q6-6_1",
+         "label": "6.1",
+         "pattern": "TV"
+        },
+        {
+         "id": "c04-h-q6-6_2",
+         "label": "6.2",
+         "pattern": "TV"
+        },
+        {
+         "id": "c04-h-q6-6_3",
+         "label": "6.3",
+         "pattern": "TV"
+        }
+       ]
+      },
+      {
+       "id": "c04-h-q7",
+       "number": 7,
+       "brief": "صحة تاريخ وعدد الأيام",
+       "parts": [
+        {
+         "id": "c04-h-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c04-h-q8",
+       "number": 8,
+       "brief": "if متداخل بأربع حالات",
+       "parts": [
+        {
+         "id": "c04-h-q8-8_1",
+         "label": "8.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c04-h-q8-8_2",
+         "label": "8.2",
+         "pattern": "TT"
+        },
+        {
+         "id": "c04-h-q8-8_3",
+         "label": "8.3",
+         "pattern": "TT"
+        },
+        {
+         "id": "c04-h-q8-8_4",
+         "label": "8.4",
+         "pattern": "TT"
+        }
+       ],
+       "findings": [
+        "F6"
+       ],
+       "withTeacherCandidate": true,
+       "probes": [
+        "f06-c04-h-q8"
+       ]
+      },
+      {
+       "id": "c04-h-q9",
+       "number": 9,
+       "brief": "الراتب الصافي وشرائح الضريبة",
+       "parts": [
+        {
+         "id": "c04-h-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c04-h-q10",
+       "number": 10,
+       "brief": "أكمل if من جدول",
+       "parts": [
+        {
+         "id": "c04-h-q10-all",
+         "label": "",
+         "pattern": "WE"
+        }
+       ],
+       "figure": "image2.png"
+      },
+      {
+       "id": "c04-h-q11",
+       "number": 11,
+       "brief": "أجرة العامل حسب اليوم",
+       "parts": [
+        {
+         "id": "c04-h-q11-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "figure": "image3.png"
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الرابعة في أسس علم الحاسوب - برمجية",
+     "tocPage": 37,
+     "questions": [
+      {
+       "id": "c04-p-q1",
+       "number": 1,
+       "brief": "قلب منازل عدد ثلاثي",
+       "parts": [
+        {
+         "id": "c04-p-q1-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "findings": [
+        "F31"
+       ],
+       "probes": [
+        "f31-c04-p-q1-readkey"
+       ]
+      },
+      {
+       "id": "c04-p-q2",
+       "number": 2,
+       "brief": "منازل متتالية",
+       "parts": [
+        {
+         "id": "c04-p-q2-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c04-p-q2"
+       ]
+      },
+      {
+       "id": "c04-p-q3",
+       "number": 3,
+       "brief": "عدد ثنائي المنازل",
+       "parts": [
+        {
+         "id": "c04-p-q3-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c04-p-q3"
+       ]
+      },
+      {
+       "id": "c04-p-q4",
+       "number": 4,
+       "brief": "منازل متساوية",
+       "parts": [
+        {
+         "id": "c04-p-q4-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c04-p-q4"
+       ]
+      },
+      {
+       "id": "c04-p-q5",
+       "number": 5,
+       "brief": "منزلتان متساويتان",
+       "parts": [
+        {
+         "id": "c04-p-q5-all",
+         "label": "",
+         "pattern": "PO"
+        }
+       ],
+       "probes": [
+        "c04-p-q5"
+       ]
+      },
+      {
+       "id": "c04-p-q6",
+       "number": 6,
+       "brief": "نوع الرخصة",
+       "parts": [
+        {
+         "id": "c04-p-q6-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c04-p-q7",
+       "number": 7,
+       "brief": "السعر بعد الخصم",
+       "parts": [
+        {
+         "id": "c04-p-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c04-p-q8",
+       "number": 8,
+       "brief": "التقدير",
+       "parts": [
+        {
+         "id": "c04-p-q8-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c04-p-q9",
+       "number": 9,
+       "brief": "زوجي / يقبل القسمة على 5",
+       "parts": [
+        {
+         "id": "c04-p-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c04-p-q10",
+       "number": 10,
+       "brief": "توصيات الطقس",
+       "parts": [
+        {
+         "id": "c04-p-q10-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F28"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m05",
+   "order": 5,
+   "chapter": 5,
+   "title": "جملة التكرار for",
+   "batch": "b2",
+   "tocPages": {
+    "summary": 41,
+    "homework": 45,
+    "programming": 49
+   },
+   "concepts": [
+    "صيغة for",
+    "العدّاد والمجمّع",
+    "أكبر قيمة",
+    "حلقتان متداخلتان"
+   ],
+   "summary": {
+    "workedExamples": 10,
+    "exercises": [
+     {
+      "id": "c05-s-x1",
+      "number": "ت1",
+      "brief": "الأعداد من 10 إلى 1",
+      "parts": [
+       {
+        "id": "c05-s-x1-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c05-s-x2",
+      "number": "ت2",
+      "brief": "كم عددًا فرديًا من 10",
+      "parts": [
+       {
+        "id": "c05-s-x2-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c05-s-x3",
+      "number": "ت3",
+      "brief": "مضاعفات 7 حتى 100",
+      "parts": [
+       {
+        "id": "c05-s-x3-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c05-s-x4",
+      "number": "ت4",
+      "brief": "مستطيل نجوم 5×10",
+      "parts": [
+       {
+        "id": "c05-s-x4-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c05-s-x5",
+      "number": "ت5",
+      "brief": "عدد من حصل على 100",
+      "parts": [
+       {
+        "id": "c05-s-x5-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     }
+    ]
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الخامسة في أسس علم الحاسوب - بيتية",
+     "tocPage": 45,
+     "questions": [
+      {
+       "id": "c05-h-q1",
+       "number": 1,
+       "brief": "مقارنة منازل في حلقة",
+       "parts": [
+        {
+         "id": "c05-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c05-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c05-h-q1-1_3",
+         "label": "1.3",
+         "pattern": "EX"
+        }
+       ],
+       "probes": [
+        "c05-h-q1"
+       ]
+      },
+      {
+       "id": "c05-h-q2",
+       "number": 2,
+       "brief": "تحويل HHMMSS",
+       "parts": [
+        {
+         "id": "c05-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c05-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c05-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "EX"
+        }
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c05-h-q3",
+       "number": 3,
+       "brief": "معدل موزون بالوحدات",
+       "parts": [
+        {
+         "id": "c05-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c05-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "EX"
+        }
+       ],
+       "probes": [
+        "c05-h-q3"
+       ]
+      },
+      {
+       "id": "c05-h-q4",
+       "number": 4,
+       "brief": "شرائح ضريبة",
+       "parts": [
+        {
+         "id": "c05-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c05-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c05-h-q5",
+       "number": 5,
+       "brief": "أرقام عشوائية بتسلسل معطى",
+       "parts": [
+        {
+         "id": "c05-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c05-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "EX"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الخامسة في أسس علم الحاسوب - برمجية",
+     "tocPage": 49,
+     "questions": [
+      {
+       "id": "c05-p-q1",
+       "number": 1,
+       "brief": "44 مقطعًا ومجموع الأطوال",
+       "parts": [
+        {
+         "id": "c05-p-q1-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F25"
+       ]
+      },
+      {
+       "id": "c05-p-q2",
+       "number": 2,
+       "brief": "38 زوجًا: مجموع وباقٍ",
+       "parts": [
+        {
+         "id": "c05-p-q2-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c05-p-q3",
+       "number": 3,
+       "brief": "218 زوجًا: Smaller",
+       "parts": [
+        {
+         "id": "c05-p-q3-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c05-p-q4",
+       "number": 4,
+       "brief": "286 تقنيًا: BONUS",
+       "parts": [
+        {
+         "id": "c05-p-q4-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c05-p-q5",
+       "number": 5,
+       "brief": "975 طالبًا: A وعدّ 5 وحدات",
+       "parts": [
+        {
+         "id": "c05-p-q5-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto-small-n",
+       "findings": [
+        "F23"
+       ]
+      },
+      {
+       "id": "c05-p-q6",
+       "number": 6,
+       "brief": "4790 زبونًا: المبلغ والشحن",
+       "parts": [
+        {
+         "id": "c05-p-q6-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto-small-n",
+       "findings": [
+        "F23"
+       ]
+      },
+      {
+       "id": "c05-p-q7",
+       "number": 7,
+       "brief": "30 طالبًا: العلامة النهائية",
+       "parts": [
+        {
+         "id": "c05-p-q7-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c05-p-q8",
+       "number": 8,
+       "brief": "مسابقة التدوير بين صفين",
+       "parts": [
+        {
+         "id": "c05-p-q8-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c05-p-q9",
+       "number": 9,
+       "brief": "400 عائلة: البطاقات",
+       "parts": [
+        {
+         "id": "c05-p-q9-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F25"
+       ]
+      },
+      {
+       "id": "c05-p-q10",
+       "number": 10,
+       "brief": "الأعداد 1000–9999",
+       "parts": [
+        {
+         "id": "c05-p-q10-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m06",
+   "order": 6,
+   "chapter": 6,
+   "title": "جملة التكرار while",
+   "batch": "b2",
+   "tocPages": {
+    "summary": 52,
+    "homework": 57,
+    "programming": 61
+   },
+   "concepts": [
+    "while",
+    "القيمة الحارسة",
+    "while مقابل do-while"
+   ],
+   "summary": {
+    "workedExamples": 6,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة السادسة في أسس علم الحاسوب - بيتية",
+     "tocPage": 57,
+     "questions": [
+      {
+       "id": "c06-h-q1",
+       "number": 1,
+       "brief": "الأعداد الذهبية",
+       "parts": [
+        {
+         "id": "c06-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c06-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F9"
+       ]
+      },
+      {
+       "id": "c06-h-q2",
+       "number": 2,
+       "brief": "أطول سلسلة زوجية",
+       "parts": [
+        {
+         "id": "c06-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c06-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c06-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F9"
+       ]
+      },
+      {
+       "id": "c06-h-q3",
+       "number": 3,
+       "brief": "معدلات المنازل",
+       "parts": [
+        {
+         "id": "c06-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c06-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c06-h-q3-3_3",
+         "label": "3.3",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F9"
+       ]
+      },
+      {
+       "id": "c06-h-q4",
+       "number": 4,
+       "brief": "أكبر قيمة (العدد الأول لا يُقارن)",
+       "parts": [
+        {
+         "id": "c06-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c06-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c06-h-q4-4_3",
+         "label": "4.3",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F9"
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c06-h-q5",
+       "number": 5,
+       "brief": "مجموع الآحاد حتى 30",
+       "parts": [
+        {
+         "id": "c06-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c06-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c06-h-q5-5_3",
+         "label": "5.3",
+         "pattern": "CQ"
+        },
+        {
+         "id": "c06-h-q5-5_4",
+         "label": "5.4",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F9"
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة السادسة في أسس علم الحاسوب - برمجية",
+     "tocPage": 61,
+     "questions": [
+      {
+       "id": "c06-p-q1",
+       "number": 1,
+       "brief": "مجموع المنازل والأعداد الذهبية",
+       "parts": [
+        {
+         "id": "c06-p-q1-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c06-p-q2",
+       "number": 2,
+       "brief": "أعلى علامة في 28 صفًا",
+       "parts": [
+        {
+         "id": "c06-p-q2-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c06-p-q3",
+       "number": 3,
+       "brief": "عدد الحاصلين على الأعلى",
+       "parts": [
+        {
+         "id": "c06-p-q3-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c06-p-q4",
+       "number": 4,
+       "brief": "19 سائقًا والوقود",
+       "parts": [
+        {
+         "id": "c06-p-q4-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c06-p-q5",
+       "number": 5,
+       "brief": "التبرعات",
+       "parts": [
+        {
+         "id": "c06-p-q5-all",
+         "label": "",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m07",
+   "order": 7,
+   "chapter": 7,
+   "title": "العمليات (الدوال)",
+   "batch": "b3",
+   "tocPages": {
+    "summary": 63,
+    "homework": 68,
+    "programming": 73
+   },
+   "concepts": [
+    "تعريف العملية",
+    "البارامترات",
+    "return",
+    "by value / ref / out",
+    "مكدس الاستدعاءات"
+   ],
+   "summary": {
+    "workedExamples": 7,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة السابعة في أسس علم الحاسوب - تتبع",
+     "tocPage": 68,
+     "questions": [
+      {
+       "id": "c07-h-q1",
+       "number": 1,
+       "brief": "Sod للمنازل",
+       "parts": [
+        {
+         "id": "c07-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c07-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c07-h-q1-1_3",
+         "label": "1.3",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c07-h-q2",
+       "number": 2,
+       "brief": "Sod1 و Sod2: قلب عدد",
+       "parts": [
+        {
+         "id": "c07-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c07-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "EX"
+        },
+        {
+         "id": "c07-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "EX"
+        },
+        {
+         "id": "c07-h-q2-2_4",
+         "label": "2.4",
+         "pattern": "GI"
+        }
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c07-h-q3",
+       "number": 3,
+       "brief": "اليوم التالي",
+       "parts": [
+        {
+         "id": "c07-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c07-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "EX"
+        },
+        {
+         "id": "c07-h-q3-3_3",
+         "label": "3.3",
+         "pattern": "GI"
+        }
+       ]
+      },
+      {
+       "id": "c07-h-q4",
+       "number": 4,
+       "brief": "inc / dec للوقت",
+       "parts": [
+        {
+         "id": "c07-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c07-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F10"
+       ]
+      },
+      {
+       "id": "c07-h-q5",
+       "number": 5,
+       "brief": "IsValidKey",
+       "parts": [
+        {
+         "id": "c07-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c07-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "EX"
+        },
+        {
+         "id": "c07-h-q5-5_3",
+         "label": "5.3",
+         "pattern": "EX"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة السابعة في أسس علم الحاسوب - برمجة",
+     "tocPage": 73,
+     "questions": [
+      {
+       "id": "c07-p-q1",
+       "number": 1,
+       "brief": "عرض محل الكتب",
+       "parts": [
+        {
+         "id": "c07-p-q1-1_1",
+         "label": "1.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q1-1_2",
+         "label": "1.2",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q1-1_3",
+         "label": "1.3",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q1-1_4",
+         "label": "1.4",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c07-p-q2",
+       "number": 2,
+       "brief": "قناة الموسيقى",
+       "parts": [
+        {
+         "id": "c07-p-q2-2_1",
+         "label": "2.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q2-2_2",
+         "label": "2.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c07-p-q3",
+       "number": 3,
+       "brief": "قسائم الهدية (5000 زبون)",
+       "parts": [
+        {
+         "id": "c07-p-q3-3_1",
+         "label": "3.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q3-3_2",
+         "label": "3.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto-small-n",
+       "findings": [
+        "F23",
+        "F25"
+       ]
+      },
+      {
+       "id": "c07-p-q4",
+       "number": 4,
+       "brief": "رعاية الأم والطفل",
+       "parts": [
+        {
+         "id": "c07-p-q4-4_1",
+         "label": "4.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q4-4_2",
+         "label": "4.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c07-p-q5",
+       "number": 5,
+       "brief": "السائقون الجدد",
+       "parts": [
+        {
+         "id": "c07-p-q5-5_1",
+         "label": "5.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q5-5_2",
+         "label": "5.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c07-p-q6",
+       "number": 6,
+       "brief": "مصنع الأغطية",
+       "parts": [
+        {
+         "id": "c07-p-q6-6_1",
+         "label": "6.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q6-6_2",
+         "label": "6.2",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c07-p-q7",
+       "number": 7,
+       "brief": "مسابقة علم الحاسوب",
+       "parts": [
+        {
+         "id": "c07-p-q7-7_1",
+         "label": "7.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q7-7_2",
+         "label": "7.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c07-p-q8",
+       "number": 8,
+       "brief": "التوصيل المجاني (850 زبونًا)",
+       "parts": [
+        {
+         "id": "c07-p-q8-8_1",
+         "label": "8.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q8-8_2",
+         "label": "8.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto-small-n",
+       "findings": [
+        "F23"
+       ]
+      },
+      {
+       "id": "c07-p-q9",
+       "number": 9,
+       "brief": "ولادات التوائم (1371 زوجًا)",
+       "parts": [
+        {
+         "id": "c07-p-q9-9_1",
+         "label": "9.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q9-9_2",
+         "label": "9.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto-small-n",
+       "findings": [
+        "F23"
+       ]
+      },
+      {
+       "id": "c07-p-q10",
+       "number": 10,
+       "brief": "الأعداد المينورية المثلثية",
+       "parts": [
+        {
+         "id": "c07-p-q10-10_1",
+         "label": "10.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c07-p-q10-10_2",
+         "label": "10.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "nondeterministic",
+       "findings": [
+        "F11",
+        "F24"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m08",
+   "order": 8,
+   "chapter": 8,
+   "title": "النصوص",
+   "batch": "b3",
+   "tocPages": {
+    "summary": 84,
+    "homework": 88,
+    "programming": 92
+   },
+   "concepts": [
+    "Length و []",
+    "Equals و CompareTo",
+    "IndexOf و LastIndexOf",
+    "Substring / Replace / Insert / Remove",
+    "ToLower / ToUpper",
+    "Split"
+   ],
+   "summary": {
+    "workedExamples": 4,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الثامنة في أسس علم الحاسوب - تتبع",
+     "tocPage": 88,
+     "questions": [
+      {
+       "id": "c08-h-q1",
+       "number": 1,
+       "brief": "قلب النص",
+       "parts": [
+        {
+         "id": "c08-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c08-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c08-h-q2",
+       "number": 2,
+       "brief": "التناظر",
+       "parts": [
+        {
+         "id": "c08-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c08-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F13"
+       ]
+      },
+      {
+       "id": "c08-h-q3",
+       "number": 3,
+       "brief": "تشفير قيصر",
+       "parts": [
+        {
+         "id": "c08-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c08-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "EX"
+        }
+       ],
+       "findings": [
+        "F14"
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c08-h-q4",
+       "number": 4,
+       "brief": "عدد كبير عشوائي",
+       "parts": [
+        {
+         "id": "c08-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c08-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c08-h-q5",
+       "number": 5,
+       "brief": "تنظيف نص",
+       "parts": [
+        {
+         "id": "c08-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c08-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "EX"
+        },
+        {
+         "id": "c08-h-q5-5_3",
+         "label": "5.3",
+         "pattern": "GI"
+        }
+       ],
+       "findings": [
+        "F14"
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الثامنة في أسس علم الحاسوب - برمجة",
+     "tocPage": 92,
+     "questions": [
+      {
+       "id": "c08-p-q1",
+       "number": 1,
+       "brief": "ضغط النص",
+       "parts": [
+        {
+         "id": "c08-p-q1-all",
+         "label": "",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c08-p-q2",
+       "number": 2,
+       "brief": "b ← c",
+       "parts": [
+        {
+         "id": "c08-p-q2-all",
+         "label": "",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c08-p-q3",
+       "number": 3,
+       "brief": "حاسبة تعبير",
+       "parts": [
+        {
+         "id": "c08-p-q3-all",
+         "label": "",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F30"
+       ],
+       "probes": [
+        "f30-c08-p-q3-doubles"
+       ]
+      },
+      {
+       "id": "c08-p-q4",
+       "number": 4,
+       "brief": "ROT13",
+       "parts": [
+        {
+         "id": "c08-p-q4-4_1",
+         "label": "4.1",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m09",
+   "order": 9,
+   "chapter": 9,
+   "title": "المصفوفات",
+   "batch": "b4",
+   "tocPages": {
+    "summary": 95,
+    "homework": 100,
+    "programming": 104
+   },
+   "concepts": [
+    "تعريف المصفوفة والمؤشر",
+    "stack و heap",
+    "الحدود و Length",
+    "التمرير بالمرجع",
+    "أكبر قيمة ومؤشرها",
+    "العكس والتناظر والتدوير",
+    "مصفوفة العدّادات",
+    "نقطة التوازن"
+   ],
+   "summary": {
+    "workedExamples": 7,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة التاسعة في أسس علم الحاسوب - تتبع",
+     "tocPage": 100,
+     "questions": [
+      {
+       "id": "c09-h-q1",
+       "number": 1,
+       "brief": "شرط على المؤشر",
+       "parts": [
+        {
+         "id": "c09-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c09-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c09-h-q1-1_3",
+         "label": "1.3",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c09-h-q2",
+       "number": 2,
+       "brief": "عدّ مدى",
+       "parts": [
+        {
+         "id": "c09-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "PO"
+        },
+        {
+         "id": "c09-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "GI"
+        },
+        {
+         "id": "c09-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c09-h-q3",
+       "number": 3,
+       "brief": "تبديل الأكبر بالأصغر",
+       "parts": [
+        {
+         "id": "c09-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c09-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "EX"
+        }
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c09-h-q4",
+       "number": 4,
+       "brief": "تبديل الزوجيين المتجاورين",
+       "parts": [
+        {
+         "id": "c09-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c09-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "TT"
+        },
+        {
+         "id": "c09-h-q4-4_3",
+         "label": "4.3",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c09-h-q5",
+       "number": 5,
+       "brief": "تحويل مصفوفة",
+       "parts": [
+        {
+         "id": "c09-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c09-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "EX"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة التاسعة في أسس علم الحاسوب - برمجة",
+     "tocPage": 104,
+     "questions": [
+      {
+       "id": "c09-p-q1",
+       "number": 1,
+       "brief": "متاجر أوفناتي",
+       "parts": [
+        {
+         "id": "c09-p-q1-1_1",
+         "label": "1.1",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F25"
+       ]
+      },
+      {
+       "id": "c09-p-q2",
+       "number": 2,
+       "brief": "نجم الغناء",
+       "parts": [
+        {
+         "id": "c09-p-q2-2_1",
+         "label": "2.1",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "incomplete-spec",
+       "findings": [
+        "F15"
+       ]
+      },
+      {
+       "id": "c09-p-q3",
+       "number": 3,
+       "brief": "انتخابات مجلس الطلاب",
+       "parts": [
+        {
+         "id": "c09-p-q3-3_1",
+         "label": "3.1",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c09-p-q4",
+       "number": 4,
+       "brief": "اللاعب الفائز",
+       "parts": [
+        {
+         "id": "c09-p-q4-4_1",
+         "label": "4.1",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c09-p-q5",
+       "number": 5,
+       "brief": "Igloo و Dog",
+       "parts": [
+        {
+         "id": "c09-p-q5-5_1",
+         "label": "5.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c09-p-q5-5_2",
+         "label": "5.2",
+         "pattern": "CQ"
+        },
+        {
+         "id": "c09-p-q5-5_3",
+         "label": "5.3",
+         "pattern": "CQ"
+        },
+        {
+         "id": "c09-p-q5-5_4",
+         "label": "5.4",
+         "pattern": "WM"
+        },
+        {
+         "id": "c09-p-q5-5_5",
+         "label": "5.5",
+         "pattern": "PO"
+        },
+        {
+         "id": "c09-p-q5-5_6",
+         "label": "5.6",
+         "pattern": "EX"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F15"
+       ]
+      },
+      {
+       "id": "c09-p-q6",
+       "number": 6,
+       "brief": "نقطة التوازن",
+       "parts": [
+        {
+         "id": "c09-p-q6-1",
+         "label": "1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c09-p-q6-2",
+         "label": "2",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto",
+       "withTeacherCandidate": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m10",
+   "order": 10,
+   "chapter": 10,
+   "title": "المصفوفة ثنائية الأبعاد",
+   "batch": "b4",
+   "tocPages": {
+    "summary": 108,
+    "homework": 111,
+    "programming": 115
+   },
+   "concepts": [
+    "int[,]",
+    "GetLength(0) / GetLength(1)",
+    "حلقتان متداخلتان",
+    "القطر الرئيسي"
+   ],
+   "summary": {
+    "workedExamples": 2,
+    "exercises": [
+     {
+      "id": "c10-s-x1",
+      "number": "ت1",
+      "brief": "مجموع كل صف 4×4",
+      "parts": [
+       {
+        "id": "c10-s-x1-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c10-s-x2",
+      "number": "ت2",
+      "brief": "القطر الرئيسي",
+      "parts": [
+       {
+        "id": "c10-s-x2-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c10-s-x3",
+      "number": "ت3",
+      "brief": "عدد العناصر > 10",
+      "parts": [
+       {
+        "id": "c10-s-x3-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     },
+     {
+      "id": "c10-s-x4",
+      "number": "ت4",
+      "brief": "معدل كل عمود",
+      "parts": [
+       {
+        "id": "c10-s-x4-all",
+        "label": "",
+        "pattern": "WP"
+       }
+      ],
+      "runner": "auto"
+     }
+    ]
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة العاشرة في أسس علم الحاسوب - تتبع",
+     "tocPage": 111,
+     "questions": [
+      {
+       "id": "c10-h-q1",
+       "number": 1,
+       "brief": "تعديل مصفوفة 3×4",
+       "parts": [
+        {
+         "id": "c10-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c10-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "TT"
+        }
+       ],
+       "figure": "image4.png"
+      },
+      {
+       "id": "c10-h-q2",
+       "number": 2,
+       "brief": "XO والقطر",
+       "parts": [
+        {
+         "id": "c10-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c10-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "EX"
+        }
+       ],
+       "figure": "image5.png",
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c10-h-q3",
+       "number": 3,
+       "brief": "Airplane",
+       "parts": [
+        {
+         "id": "c10-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "TT"
+        },
+        {
+         "id": "c10-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c10-h-q4",
+       "number": 4,
+       "brief": "Taxi و Help",
+       "parts": [
+        {
+         "id": "c10-h-q4-all",
+         "label": "",
+         "pattern": "EX"
+        }
+       ]
+      },
+      {
+       "id": "c10-h-q5",
+       "number": 5,
+       "brief": "PoliceCar",
+       "parts": [
+        {
+         "id": "c10-h-q5-all",
+         "label": "",
+         "pattern": "EX"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة العاشرة في أسس علم الحاسوب - برمجة",
+     "tocPage": 115,
+     "questions": [
+      {
+       "id": "c10-p-q1",
+       "number": 1,
+       "brief": "عنصر التقاطع",
+       "parts": [
+        {
+         "id": "c10-p-q1-1_1",
+         "label": "1.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q1-1_2",
+         "label": "1.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F16"
+       ],
+       "figure": "image6.png",
+       "withTeacherCandidate": true,
+       "probes": [
+        "f16-c10-p-q1-node"
+       ]
+      },
+      {
+       "id": "c10-p-q2",
+       "number": 2,
+       "brief": "ثلاثية قطرية يمنى موحّدة",
+       "parts": [
+        {
+         "id": "c10-p-q2-2_1",
+         "label": "2.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q2-2_2",
+         "label": "2.2",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q2-2_3",
+         "label": "2.3",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F17"
+       ],
+       "figure": "image7.png"
+      },
+      {
+       "id": "c10-p-q3",
+       "number": 3,
+       "brief": "صف مكرر من العمود j",
+       "parts": [
+        {
+         "id": "c10-p-q3-3_1",
+         "label": "3.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q3-3_2",
+         "label": "3.2",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "figure": "image8.png"
+      },
+      {
+       "id": "c10-p-q4",
+       "number": 4,
+       "brief": "صفوف وأعمدة موجبة",
+       "parts": [
+        {
+         "id": "c10-p-q4-4_1",
+         "label": "4.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q4-4_2",
+         "label": "4.2",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q4-4_3",
+         "label": "4.3",
+         "pattern": "WP"
+        }
+       ],
+       "runner": "auto",
+       "figure": "image9.png"
+      },
+      {
+       "id": "c10-p-q5",
+       "number": 5,
+       "brief": "Place و PrintAndCount",
+       "parts": [
+        {
+         "id": "c10-p-q5-5_1",
+         "label": "5.1",
+         "pattern": "WM"
+        },
+        {
+         "id": "c10-p-q5-5_2",
+         "label": "5.2",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto",
+       "figure": "image10.png"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m11",
+   "order": 11,
+   "chapter": 11,
+   "title": "الكائنات",
+   "batch": "b5",
+   "tocPages": {
+    "summary": 126,
+    "homework": 131,
+    "programming": 138
+   },
+   "concepts": [
+    "الفئة والكائن",
+    "التغليف و Get/Set",
+    "البنّاء و this",
+    "معدّلات الوصول",
+    "مصفوفة كائنات",
+    "كائن يحوي مصفوفة"
+   ],
+   "summary": {
+    "workedExamples": 3,
+    "exercises": []
+   },
+   "assignments": [
+    {
+     "section": "homework",
+     "printedTitle": "الوظيفة الحادية عشرة في أسس علم الحاسوب - تتبع",
+     "tocPage": 131,
+     "questions": [
+      {
+       "id": "c11-h-q1",
+       "number": 1,
+       "brief": "PreHistoricAnimal و JurassicPark",
+       "parts": [
+        {
+         "id": "c11-h-q1-1_1",
+         "label": "1.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q1-1_2",
+         "label": "1.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q1-1_3",
+         "label": "1.3",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q1-1_4",
+         "label": "1.4",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q1-1_5",
+         "label": "1.5",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F20"
+       ]
+      },
+      {
+       "id": "c11-h-q2",
+       "number": 2,
+       "brief": "ExcellentStudent",
+       "parts": [
+        {
+         "id": "c11-h-q2-2_1",
+         "label": "2.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q2-2_2",
+         "label": "2.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q2-2_3",
+         "label": "2.3",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F13",
+        "F20",
+        "F25"
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c11-h-q3",
+       "number": 3,
+       "brief": "Font",
+       "parts": [
+        {
+         "id": "c11-h-q3-3_1",
+         "label": "3.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q3-3_2",
+         "label": "3.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q3-3_3",
+         "label": "3.3",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F14",
+        "F20"
+       ]
+      },
+      {
+       "id": "c11-h-q4",
+       "number": 4,
+       "brief": "Seller و AllSellers",
+       "parts": [
+        {
+         "id": "c11-h-q4-4_1",
+         "label": "4.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q4-4_2",
+         "label": "4.2",
+         "pattern": "CQ"
+        },
+        {
+         "id": "c11-h-q4-4_3",
+         "label": "4.3",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q4-4_4",
+         "label": "4.4",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F18",
+        "F20"
+       ]
+      },
+      {
+       "id": "c11-h-q5",
+       "number": 5,
+       "brief": "Food و Meal",
+       "parts": [
+        {
+         "id": "c11-h-q5-5_1",
+         "label": "5.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q5-5_2",
+         "label": "5.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q5-5_3",
+         "label": "5.3",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q5-5_4",
+         "label": "5.4",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-h-q5-5_5",
+         "label": "5.5",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F20"
+       ]
+      }
+     ]
+    },
+    {
+     "section": "programming",
+     "printedTitle": "الوظيفة الحادية عشرة في أسس علم الحاسوب - برمجة",
+     "tocPage": 138,
+     "questions": [
+      {
+       "id": "c11-p-q1",
+       "number": 1,
+       "brief": "Robot",
+       "parts": [
+        {
+         "id": "c11-p-q1-1_1",
+         "label": "1.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q1-1_2",
+         "label": "1.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q1-1_3",
+         "label": "1.3",
+         "pattern": "WM"
+        },
+        {
+         "id": "c11-p-q1-1_4",
+         "label": "1.4",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F19"
+       ],
+       "withTeacherCandidate": true
+      },
+      {
+       "id": "c11-p-q2",
+       "number": 2,
+       "brief": "City",
+       "parts": [
+        {
+         "id": "c11-p-q2-2_1",
+         "label": "2.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q2-2_2",
+         "label": "2.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q2-2_3",
+         "label": "2.3",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "auto"
+      },
+      {
+       "id": "c11-p-q3",
+       "number": 3,
+       "brief": "Test و Patient",
+       "parts": [
+        {
+         "id": "c11-p-q3-3_1",
+         "label": "3.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q3-3_2",
+         "label": "3.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q3-3_3",
+         "label": "3.3",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q3-3_4",
+         "label": "3.4",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "auto",
+       "findings": [
+        "F25"
+       ]
+      },
+      {
+       "id": "c11-p-q4",
+       "number": 4,
+       "brief": "ThinkAndDrink",
+       "parts": [
+        {
+         "id": "c11-p-q4-4_1",
+         "label": "4.1",
+         "pattern": "WC"
+        }
+       ],
+       "runner": "needs-correction",
+       "findings": [
+        "F19"
+       ]
+      },
+      {
+       "id": "c11-p-q5",
+       "number": 5,
+       "brief": "Color و Picture",
+       "parts": [
+        {
+         "id": "c11-p-q5-5_1",
+         "label": "5.1",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q5-5_2",
+         "label": "5.2",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q5-5_3",
+         "label": "5.3",
+         "pattern": "WC"
+        },
+        {
+         "id": "c11-p-q5-5_4",
+         "label": "5.4",
+         "pattern": "WM"
+        }
+       ],
+       "runner": "incomplete-spec",
+       "findings": [
+        "F19"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "moduleId": "899371-m12",
+   "order": 12,
+   "title": "الكلمة الختامية",
+   "batch": "b5",
+   "tocPage": 140
+  }
+ ]
+}

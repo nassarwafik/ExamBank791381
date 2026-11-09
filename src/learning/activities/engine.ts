@@ -333,4 +333,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("../lab/NetworkLabActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  {
+    // 899371 P6 (plan §19) — the C# TRACER: a program step by step (the line that ran, memory boxes, arrays, a matrix, strings as
+    // letters, the call stack, objects, the output so far), every step recorded by running that program. Data only; its own lazy
+    // chunk; no timers, no network, no persistence.
+    kind: "simulation",
+    key: "csharp-trace",
+    versions: [1],
+    load: () => import("./CSharpTraceActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);

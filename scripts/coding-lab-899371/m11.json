@@ -1,0 +1,132 @@
+{
+ "module": "m11",
+ "questions": [
+  {
+   "book": "c11-h-q2",
+   "title": "الطالب المتميّز",
+   "version": 3,
+   "text": "أكمل في الفئة ExcellentStudent: العملية البنائية (تعطي الحقول name وaverage وdavidsonLovesYou قيمها)؛ RaisingStudentsAverageGrades (ترفع المتوسط بنسبة 10% منه، ولا يتجاوز 100)؛ وCompare(other) التي تُعيد 1 إذا كان الطالب الحالي أكثر تميزًا، و0 إذا تساويا، و-1 إذا كان الآخر أكثر تميزًا: من يحبه المدير أكثر تميزًا من الذي لا يحبه، وإن تساويا في ذلك فصاحب المتوسط الأعلى. الدالة Main مقفلة: تقرأ طالبين (اسم، متوسط، True/False لكلٍّ منهما) ثم تطبع a.Compare(b)، ثم ترفع متوسط a وتطبع متوسطه مقرّبًا إلى منزلتين، ثم تطبع a.Compare(b) مرة أخرى.\n(مبني على السؤال 2 من الوظيفة البيتية الحادية عشرة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class ExcellentStudent\n{\n    private string name;\n    private double average;\n    private bool davidsonLovesYou;\n\n    public double GetAverage() { return average; }   // «لكل خاصية عملية Get» (as the book says)\n\n    public ExcellentStudent(string name, double average, bool davidsonLovesYou)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public void RaisingStudentsAverageGrades()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "raise",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public int Compare(ExcellentStudent other)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "compare",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ExcellentStudent a = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        ExcellentStudent b = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        Console.WriteLine(a.Compare(b));\n        a.RaisingStudentsAverageGrades();\n        Console.WriteLine(Math.Round(a.GetAverage(), 2));\n        Console.WriteLine(a.Compare(b));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "ctor": "        this.name = name;\n        this.average = average;\n        this.davidsonLovesYou = davidsonLovesYou;\n",
+    "raise": "        average = Math.Min(100, average * 1.1);\n",
+    "compare": "        if (davidsonLovesYou && !other.davidsonLovesYou) return 1;\n        if (!davidsonLovesYou && other.davidsonLovesYou) return -1;\n        if (average > other.average) return 1;\n        if (average < other.average) return -1;\n        return 0;\n"
+   },
+   "wrongGaps": {
+    "ctor": "        this.name = name;\n        this.average = average;\n        this.davidsonLovesYou = davidsonLovesYou;\n",
+    "raise": "        average = average * 1.1;\n",
+    "compare": "        if (average > other.average) return 1;\n        if (average < other.average) return -1;\n        return 0;\n"
+   },
+   "public": [
+    "Rana\n85\nFalse\nOmar\n90\nFalse\n"
+   ],
+   "hidden": [
+    "Lina\n80\nTrue\nSami\n95\nFalse\n",
+    "Adam\n95\nFalse\nNoor\n88\nTrue\n",
+    "Maya\n92\nTrue\nYara\n92\nTrue\n",
+    "Hadi\n99\nFalse\nRami\n99\nFalse\n"
+   ]
+  },
+  {
+   "book": "c11-h-q3",
+   "title": "الفئة Font",
+   "version": 3,
+   "text": "أكمل في الفئة Font: العملية البنائية المبسّطة Font(name, size) (خط غير مشدّد وبلا خط تحتي)؛ Increase وDecrease (تزيد / تنقص الحجم بـ 1)؛ وToggleUnderline (تقلب حالة الخط التحتي). الدالة Main مقفلة: تقرأ اسم الخط وحجمه وسطرًا من الأوامر (I تكبير، D تصغير، U قلب الخط التحتي)، تنشئ الخط بالعملية المبسّطة وتنفّذ الأوامر بالترتيب، ثم تطبع الحجم وIsUnderline وIsBold (كل قيمة في سطر).\n(مبني على السؤال 3 من الوظيفة البيتية الحادية عشرة.)",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Font\n{\n    private string name;\n    private int size;\n    private bool bold;\n    private bool underline;\n\n    public Font(string name, int size, bool bold, bool underline)\n    {\n        this.name = name;\n        this.size = size;\n        this.bold = bold;\n        this.underline = underline;\n    }\n\n    public int GetSize() { return size; }\n    public bool IsBold() { return bold; }\n    public bool IsUnderline() { return underline; }\n\n    public Font(string name, int size)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public void Increase()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "inc",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public void Decrease()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "dec",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public void ToggleUnderline()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "toggle",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        Font f = new Font(Console.ReadLine(), int.Parse(Console.ReadLine()));\n        foreach (char op in Console.ReadLine())\n        {\n            if (op == 'I') f.Increase();\n            else if (op == 'D') f.Decrease();\n            else if (op == 'U') f.ToggleUnderline();\n        }\n        Console.WriteLine(f.GetSize());\n        Console.WriteLine(f.IsUnderline());\n        Console.WriteLine(f.IsBold());\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "ctor": "        this.name = name;\n        this.size = size;\n        bold = false;\n        underline = false;\n",
+    "inc": "        size++;\n",
+    "dec": "        size--;\n",
+    "toggle": "        underline = !underline;\n"
+   },
+   "wrongGaps": {
+    "ctor": "        this.name = name;\n        this.size = size;\n        bold = false;\n        underline = false;\n",
+    "inc": "        size++;\n",
+    "dec": "        size--;\n",
+    "toggle": "        underline = true;\n"
+   },
+   "public": [
+    "Arial\n12\nIIU\n"
+   ],
+   "hidden": [
+    "David\n10\nUU\n",
+    "Tahoma\n14\nDDDU\n",
+    "Calibri\n11\nIUIUD\n",
+    "Mono\n9\nU\n"
+   ]
+  }
+ ]
+}

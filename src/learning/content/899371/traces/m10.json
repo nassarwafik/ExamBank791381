@@ -1,0 +1,13 @@
+{
+ "module": "m10",
+ "traces": [
+  {
+   "walkthrough": 2,
+   "program": "Tr.Begin();\nint[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nTr.S(\"مصفوفة 3×3.\", \"m\", m);\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 3; j++)\n    {\n        int row = 0, col = 0;\n        for (int k = 0; k < 3; k++)\n        {\n            row += m[i, k];\n            col += m[k, j];\n        }\n        Tr.At(11, \"مجموع الصف \" + i + \" ومجموع العمود \" + j + \".\", \"i\", i, \"j\", j, \"row\", row, \"col\", col, \"row == col\", row == col);\n        if (row == col)\n        { //~\n            Console.WriteLine(i + \" \" + j + \" \" + m[i, j]);\n            Tr.S(\"متساويان: نطبع موقع العنصر وقيمته.\");\n        } //~\n    }\nTr.Drop(\"i\");\nTr.Drop(\"j\");\nTr.Drop(\"row\");\nTr.Drop(\"col\");\nTr.End();"
+  },
+  {
+   "walkthrough": 4,
+   "program": "Tr.Begin();\nint[,] m = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };\nTr.S(\"مصفوفة 3×3.\", \"m\", m);\nint n = 3, s = 0;\nTr.S(\"n عدد الصفوف، وs المجموع.\", \"n\", n, \"s\", s);\nfor (int i = 0; i < n; i++)\n{ //~\n    s += m[i, n - 1 - i];\n    Tr.S(\"الصف \" + i + \"، العمود \" + (n - 1 - i) + \": نضيف \" + m[i, n - 1 - i] + \".\", \"i\", i, \"n - 1 - i\", n - 1 - i, \"s\", s);\n} //~\nTr.Drop(\"i\");\nConsole.WriteLine(s);\nTr.S(\"الطباعة: 15.\");\nTr.End();"
+  }
+ ]
+}
