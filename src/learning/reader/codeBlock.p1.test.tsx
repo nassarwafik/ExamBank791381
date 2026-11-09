@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import LearningPageRenderer, { type ReaderPageHeader } from "./LearningPageRenderer";
+import { PlainCSharpCode } from "./CodeBlockView";
 import { validateLearningCourseContent } from "../content/validation";
 import { CODE_LANGUAGES, type ContentPage, type LearningCourseContent } from "../content/types";
 import { cloneCourse } from "../content/content.fixtures";
@@ -49,6 +50,15 @@ describe("a csharp code block in the Reader", () => {
     expect(code.querySelector(".cs-tok-string")?.textContent).toBe("\"a = \"");
     expect(code.querySelector(".cs-tok-comment")?.textContent).toBe("// متغير");
     expect(code.innerHTML).not.toMatch(/<(?!\/?span\b)[a-z]/i);   // spans only: nothing in the code is markup
+  });
+
+  it("before the panel arrives, the plain code is already keyboard-scrollable and named (axe scrollable-region-focusable, §18)", async () => {
+    // the fallback itself (the lazy panel, once loaded by an earlier test, would replace it at once)
+    const { container } = render(<PlainCSharpCode code={CS} />);
+    const pre = container.querySelector(".learning-reader-codewrap pre") as HTMLElement;
+    expect(pre.querySelector("code")!.textContent).toBe(CS);
+    expect(pre.getAttribute("tabindex")).toBe("0");
+    expect(pre.getAttribute("aria-label")).toBe("كود C#");
   });
 
   it("numbers the lines in a gutter that assistive technology skips, and the code is keyboard-scrollable", async () => {

@@ -2,7 +2,7 @@
 // bound to, how an output and an exception are read, and that the judge refuses a wrong key. The runs themselves are made by
 // `node scripts/prove-899371-practice.mjs` (docs/enterprise-899371-learning-plan.md §16).
 import { describe, it, expect } from "vitest";
-import { wrapProgram, proofSha, outputLine, exceptionOf, judgeItem, judgeGuided } from "./prove-899371-practice.mjs";
+import { wrapProgram, proofSha, outputLine, exceptionOf, judgeItem, judgeGuided, judgeClarification, clarificationStdins } from "./prove-899371-practice.mjs";
 
 const mcq = (texts, correct) => ({ kind: "multipleChoice", prompt: "?", options: texts.map((text, i) => ({ text, ...(i === correct ? { correct: true } : {}) })), feedback: { explanation: "e" } });
 const proofFor = (item, run) => ({ sha: proofSha(wrapProgram(item.program), item.stdin), compileExit: 0, exitCode: 0, stdout: "", exception: null, ...run });
@@ -69,5 +69,24 @@ describe("judgeGuided refuses a walkthrough whose result is not what the run pri
     expect(judgeGuided(crash, proof)).toEqual([]);
     expect(judgeGuided(crash, { ...proof, exitCode: 0, exception: null })).not.toEqual([]);
     expect(judgeGuided({ ...crash, result: "يتوقف." }, proof)).toContain("the result does not name the exception");
+  });
+});
+
+describe("judgeClarification: the inputs a teacher adds must fit the book's own program (§18)", () => {
+  const c = { finding: "F9", after: "x", inputs: "4 6 -1" };
+  const program = "int n = int.Parse(Console.ReadLine());";
+  const ok = { sha: proofSha(wrapProgram(program), "4\n6\n-1"), compileExit: 0, exitCode: 0, stdout: "3\n", exception: null, withoutLastExitCode: 134 };
+  it("reads the inputs left to right, one per line, and without the last one", () => {
+    expect(clarificationStdins(" 4  6 -1 ")).toEqual(["4\n6\n-1", "4\n6"]);
+  });
+  it("accepts a normal end that needs every input", () => {
+    expect(judgeClarification(c, program, ok)).toEqual([]);
+  });
+  it("refuses a crash, an input never read, silence, another program and no proof", () => {
+    expect(judgeClarification(c, program, { ...ok, exitCode: 134, exception: "ArgumentNullException" })).not.toEqual([]);
+    expect(judgeClarification(c, program, { ...ok, withoutLastExitCode: 0 })).toContain("ends without the last input (an input is never read)");
+    expect(judgeClarification(c, program, { ...ok, stdout: " " })).toContain("prints nothing");
+    expect(judgeClarification(c, "other", ok)).toContain("the proof is for another program / inputs");
+    expect(judgeClarification(c, program, undefined)).toEqual(["no proof"]);
   });
 });

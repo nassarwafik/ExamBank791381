@@ -11,14 +11,18 @@
 // against the committed proofs and checks each proof still belongs to the program the course shows, without needing Docker.
 // P5 (§17): the same for the walkthroughs «نحلّ معًا» (guided/mNN.json → guided/proofs.json): a walkthrough's `output` (its printed
 // result, lines joined by « | ») or its `runtimeError` must be what the run gives, and its revealed result must say it (judgeGuided).
-//   node scripts/prove-899371-practice.mjs [--only practice|guided]
+// Decisions §18: the inputs a teacher clarification adds to a book trace question (F9) are run through the BOOK's own program: it must
+// end normally with them, and must NOT end without the last one (so every input is read) → clarifications.proofs.json. The output
+// is recorded for the teacher's record only; the course never shows it (Q3).
+//   node scripts/prove-899371-practice.mjs [--only practice|guided|clarify]
 // Exit code: 0 when every key agrees with its run, 1 otherwise, 2 on an environment error.
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { executeCSharp, csharpEnvironment } from "./run-csharp-probes.mjs";
-import { readPractice, PRACTICE_DIR, readGuided, GUIDED_DIR } from "./convert-899371.mjs";
+import { readPractice, PRACTICE_DIR, readGuided, GUIDED_DIR, readClarifications, CLARIFICATIONS_FILE, convert, SOURCE_FILE } from "./convert-899371.mjs";
+import { readDocxBody } from "./lib/docx-source.mjs";
 
 /** The compilable program for an exercise's printed code. */
 export function wrapProgram(code) {
@@ -83,6 +87,20 @@ export function judgeGuided(w, proof) {
   return problems;
 }
 
+/** The stdin of a clarification's inputs (written left to right, one value per line) and the same without its last value. */
+export const clarificationStdins = inputs => { const v = inputs.trim().split(/\s+/); return [v.join("\n"), v.slice(0, -1).join("\n")]; };
+/** Judges a clarification's proof: the book program, these inputs, a normal end — and no normal end without the last input. */
+export function judgeClarification(c, program, proof) {
+  if (!proof) return ["no proof"];
+  const problems = [];
+  if (proof.sha !== proofSha(wrapProgram(program), clarificationStdins(c.inputs)[0])) problems.push("the proof is for another program / inputs");
+  if (proof.compileExit !== 0) return [...problems, "does not compile"];
+  if (proof.exitCode !== 0 || proof.exception) problems.push(`does not end normally with these inputs (${proof.exception})`);
+  if (!proof.stdout.trim()) problems.push("prints nothing");
+  if (proof.withoutLastExitCode === 0) problems.push("ends without the last input (an input is never read)");
+  return problems;
+}
+
 /** Runs one program and records its proof. */
 function prove(env, program, stdin) {
   const wrapped = wrapProgram(program);
@@ -112,6 +130,22 @@ function main() {
       report(name + " " + key, judge(item, proofs[key]), proofs[key]);
     });
     writeFileSync(join(dir, "proofs.json"), JSON.stringify({ worker: "csharp@1", image: env.image, proofs }, null, 1) + "\n");
+  }
+  if (!only || only === "clarify") {
+    const blocks = convert(readDocxBody(readFileSync(SOURCE_FILE))).modules.flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks)));
+    const proofs = {};
+    for (const c of readClarifications().filter(c => c.inputs !== undefined)) {
+      const program = blocks.find(b => b.id === c.program && b.type === "code" && b.origin === "book")?.code;
+      if (!program) { bad++; console.log(`✗ clarify ${c.after}: no book program ${c.program}`); continue; }
+      const [all, withoutLast] = clarificationStdins(c.inputs);
+      const wrapped = wrapProgram(program);
+      const { compile, observed } = executeCSharp(wrapped, [all, withoutLast], env);
+      const [o, w] = [observed[0] ?? { exitCode: null, stdout: "", stderr: "" }, observed[1] ?? { exitCode: null, stderr: "" }];
+      proofs[c.after] = { sha: proofSha(wrapped, all), inputs: c.inputs, compileExit: compile.exitCode, exitCode: o.exitCode, stdout: o.stdout, exception: exceptionOf(o.stderr),
+        withoutLastExitCode: w.exitCode, withoutLastException: exceptionOf(w.stderr) };
+      report("clarify " + c.after, judgeClarification(c, program, proofs[c.after]), proofs[c.after]);
+    }
+    writeFileSync(CLARIFICATIONS_FILE.replace(/\.json$/, ".proofs.json"), JSON.stringify({ worker: "csharp@1", image: env.image, proofs }, null, 1) + "\n");
   }
   console.log(`${runs} programs run, ${bad} disagree`);
   process.exit(bad ? 1 : 0);

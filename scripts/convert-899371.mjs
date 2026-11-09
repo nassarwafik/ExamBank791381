@@ -24,6 +24,9 @@
 // lesson (right after the summary, before the assignments; the book's own pages, lessons and ids are untouched). Each is a teacher-
 // led guided reveal (guided/reveal/v1), PARALLEL to the book (owner, 2026-11-09: never a book assignment's own answer), and the
 // printed result of each walkthrough program is proven by a run (guided/proofs.json).
+// Decisions (§18): where the book promises data it does not print (F9: the inputs of five traces; F15: a points table and two sets of
+// choices), a clarification callout «توضيح المعلم» (teacher-enrichment) right after that line completes the question — the book's
+// text is untouched (book lock) and no answer is shown (Q3). Data: src/learning/content/899371/clarifications.json.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
@@ -287,7 +290,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body, practice = readPractice(), guided = readGuided()) {
+export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -350,6 +353,7 @@ export function convert(body, practice = readPractice(), guided = readGuided()) 
   });
   const unused = Object.keys(practice).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k));
   if (unused.length) throw new Error("practice files for no chapter: " + unused.join(", "));
+  addClarifications(modules, clarifications);
   const unusedGuided = Object.keys(guided).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k && m.lessons.some(l => l.kind === "summary")));
   if (unusedGuided.length) throw new Error("walkthrough files for no chapter summary: " + unusedGuided.join(", "));
   if (applied.length !== CORRECTIONS.length) throw new Error("a correction did not apply: " + CORRECTIONS.filter(c => !applied.includes(c)).map(c => c.finding).join(", "));
@@ -549,6 +553,30 @@ function practiceLesson(mid, mod, order, items) {
 }
 /** The source note of an exercise page: added enrichment, parallel to the chapter's summary (it names no ¶ of the book). */
 export const PRACTICE_NOTE = "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)";
+
+// ── Decisions §18: teacher clarifications next to the book's incomplete questions (F9, F15) ─────────────────────────────────────
+export const CLARIFICATIONS_FILE = join(OUT, "clarifications.json");
+export const CLARIFICATION_TITLE = "توضيح المعلم";   // the Reader's own label for a clarification
+export const readClarifications = (file = CLARIFICATIONS_FILE) => (existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).clarifications : []);
+/** The callout (and, for missing choices, the lettered list) a clarification adds; ids derive from the book block it follows. */
+export function clarificationBlocks(c) {
+  const spans = c.inputs !== undefined
+    ? [{ text: "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: " }, { text: c.inputs, style: "code", dir: "ltr" }]
+    : [{ text: c.text }];
+  const out = [{ id: c.after + "-clarify", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: CLARIFICATION_TITLE, spans }];
+  if (c.choices) out.push({ id: c.after + "-choices", type: "list", origin: "teacher-enrichment", variant: "plain",
+    items: c.choices.map((t, i) => ({ id: "c" + (i + 1), term: "أبجد"[i], text: [{ text: t }] })) });
+  return out;
+}
+function addClarifications(modules, clarifications) {
+  for (const c of clarifications) {
+    const page = modules.flatMap(m => m.lessons.flatMap(l => l.pages)).find(p => p.blocks.some(b => b.id === c.after));
+    if (!page) throw new Error(c.finding + ": no book block " + c.after);
+    const at = page.blocks.findIndex(b => b.id === c.after);
+    if (page.blocks[at].origin !== "book") throw new Error(c.finding + ": " + c.after + " is not a book block");
+    page.blocks.splice(at + 1, 0, ...clarificationBlocks(c));
+  }
+}
 
 // ── P5: «نحلّ معًا» (teacher-led walkthroughs, enrichment) ──────────────────────────────────────────────────────────────────────
 export const GUIDED_DIR = join(OUT, "guided");

@@ -4,7 +4,7 @@
 //
 //   1. STUDENT (a class with m00–m05 published) opens the chapter-5 exercises: before an answer the markup names no key; each
 //      exercise's program is shown exactly as served; a RIGHT choice is judged right by the server; a WRONG choice is judged wrong
-//      and REVEALS the right option (green) with its explanation (decision Q3); a short answer is judged by the server; every
+//      and REVEALS the right option (green) with its explanation (decision Q3); a short answer typed «٦» is judged right (Q10); every
 //      answer went to POST /api/learning-study/899371/attempt and carried no key.
 //   2. STRENGTH: GET /api/learning-study/899371 counts exactly the right answers (the revealed one earns nothing), survives a
 //      reload, and an exercise of the unpublished chapter 6 is refused (403).
@@ -116,11 +116,11 @@ console.log("1. student: answering the chapter-5 exercises");
   check(answerShown.trim() === "15", "q02: the right option is marked (is-answer: «" + answerShown.trim() + "»)");
   const shownText = (await q(1).innerText()).replace(/\s+/g, " ");
   check(shownText.includes("1 + 2 + 3 + 4 + 5 = 15"), "q02: the explanation is shown under the answer");
-  // q05 — a short answer
-  await q(4).locator("input, textarea").first().fill("6");
+  // q05 — a short answer, typed with an Arabic keyboard (decision Q10: «٦» is «6»)
+  await q(4).locator("input, textarea").first().fill("٦");
   await q(4).getByRole("button", { name: "تحقّق" }).click();
   const v5 = await verdictOf(4);
-  check(/is-right/.test(v5.cls), "q05: the short answer «6» is judged right by the server");
+  check(/is-right/.test(v5.cls), "q05: the short answer «٦» (Arabic-Indic digit) is judged right by the server (Q10)");
   check(attempts.length === 3 && attempts.every(b => !/"correct"|"points"|"gained"/.test(b)), "every answer went to the server's attempt route, carrying only the response (" + attempts.length + " requests)");
   await shot(page, "p4-exercises-answered-1440");
 
@@ -133,6 +133,24 @@ console.log("1. student: answering the chapter-5 exercises");
   check(JSON.stringify(s2.modules["899371-m05"]) === JSON.stringify(m5) && s2.totalPoints === s1.totalPoints, "Strength survives a reload (" + s2.totalPoints + " points)");
   const refused = await page.evaluate(async t => (await fetch("/api/learning-study/899371/attempt", { method: "POST", headers: { "x-student-token": t, "content-type": "application/json" }, body: JSON.stringify({ pageId: "899371-m06-l04-p01", activityId: "m06-l04-p01-q01", response: { kind: "multipleChoice", optionIds: ["a"] } }) })).status, studentToken);
   check(refused === 403, "an exercise of the unpublished chapter 6 is refused (" + refused + ")");
+  await ctx.close();
+}
+
+console.log("1b. a teacher clarification next to an incomplete book question (§18)");
+{
+  const { ctx, page } = await session("teacher", { width: 390, height: 844 }, { touch: true });
+  await page.goto(origin + "/#/learning/" + CID + "/read/899371-m06-l02-p04");
+  await page.reload();
+  await readerReady(page);
+  const note = page.locator(".learning-reader-page").getByText("توضيح المعلم").first();
+  const shown = await note.waitFor({ timeout: 15000 }).then(() => true, () => false);
+  const said = shown ? (await page.locator(".learning-reader-page").innerText()).replace(/\s+/g, " ") : "";
+  check(shown && said.includes("المدخلات لم تُطبع في الكتاب") && said.includes("12 7 3 -1") && !said.includes("max : = 7"),
+    "chapter 6, question 4: «توضيح المعلم» gives the inputs the book does not print (12 7 3 -1), and no answer");
+  await page.evaluate(axeSource + "\n;0");
+  const res = await page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } })).violations.filter(x => x.impact === "serious" || x.impact === "critical").map(x => x.id + " ×" + x.nodes.length + " " + x.nodes.map(n => n.target.join(" ")).join(" | ")));
+  check(res.length === 0, "the clarified page at 390px: axe — " + (res.join(", ") || "no serious / critical violation"));
+  await shot(page, "d18-clarification-390");
   await ctx.close();
 }
 

@@ -980,6 +980,23 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l02-p01-b04-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: "
+                },
+                {
+                  "text": "12 153 100 370",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ]
+            },
+            {
               "id": "m06-l02-p01-b05",
               "type": "text",
               "origin": "book",
@@ -1036,6 +1053,23 @@ const m06: ContentModule = {
               "spans": [
                 {
                   "text": "2.1 - تتبع مقطع البرنامج التالي واكتب ما هو المخرج بالنسبة للمدخلات التالية :"
+                }
+              ]
+            },
+            {
+              "id": "m06-l02-p02-b03-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: "
+                },
+                {
+                  "text": "4 6 3 8 10 12 5 -1",
+                  "style": "code",
+                  "dir": "ltr"
                 }
               ]
             },
@@ -1110,6 +1144,23 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l02-p03-b03-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: "
+                },
+                {
+                  "text": "123 456 789 -1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ]
+            },
+            {
               "id": "m06-l02-p03-b04",
               "type": "text",
               "origin": "book",
@@ -1180,6 +1231,23 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l02-p04-b03-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: "
+                },
+                {
+                  "text": "12 7 3 -1",
+                  "style": "code",
+                  "dir": "ltr"
+                }
+              ]
+            },
+            {
               "id": "m06-l02-p04-b04",
               "type": "text",
               "origin": "book",
@@ -1246,6 +1314,23 @@ const m06: ContentModule = {
               "spans": [
                 {
                   "text": "5.1 - تتبع مقطع البرنامج التالي واكتب ما هو المخرج ع المعطيات التالية من اليسار لليمين :"
+                }
+              ]
+            },
+            {
+              "id": "m06-l02-p05-b03-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "المدخلات لم تُطبع في الكتاب. نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: "
+                },
+                {
+                  "text": "129 345 678 254 117",
+                  "style": "code",
+                  "dir": "ltr"
                 }
               ]
             },

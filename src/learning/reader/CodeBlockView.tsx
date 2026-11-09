@@ -14,10 +14,15 @@ export default function CodeBlockView({ block }: { block: CodeBlock }) {
       </div>
     );
   }
-  const plain = (
+  return <Suspense fallback={<PlainCSharpCode code={block.code} />}><CSharpCodePanel code={block.code} /></Suspense>;
+}
+
+/** The C# code as plain text, shown until the panel arrives. Like the panel, it scrolls sideways on a phone, so it is focusable and
+ *  named for the keyboard (axe scrollable-region-focusable, plan §18). */
+export function PlainCSharpCode({ code }: { code: string }) {
+  return (
     <div className="learning-reader-codewrap is-csharp">
-      <pre className="learning-reader-code" dir="ltr"><code dir="ltr" className="lang-csharp">{block.code}</code></pre>
+      <pre className="learning-reader-code" dir="ltr" tabIndex={0} aria-label="كود C#"><code dir="ltr" className="lang-csharp">{code}</code></pre>
     </div>
   );
-  return <Suspense fallback={plain}><CSharpCodePanel code={block.code} /></Suspense>;
 }

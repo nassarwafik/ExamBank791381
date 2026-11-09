@@ -10,7 +10,8 @@
 // A question figure is either a table it was transcribed to (P2-c) or the book's own drawing, byte for byte (P3-c).
 // The pages of «تدريبات الوحدة» (P4, §16) and «نحلّ معًا» (P5, §17) are added enrichment, not the book: they name no ¶ (their own
 // notes) and are proven by practice.p4.test.ts / guided.p5.test.ts; here they are only set aside, and everything else must still be
-// exactly the book.
+// exactly the book. The teacher clarifications next to F9 / F15 (§18) are enrichment blocks on book pages: the page text below skips
+// them (clarifications.d18.test.ts proves what they are and where).
 // Plus: the source file is the one the owner sent (sha256); only owner-approved corrections exist and each one is in the course.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -88,6 +89,7 @@ function sourceLines(from: number, to: number): string[] {
 function pageLines(blocks: ContentBlock[]): string[] {
   const out: string[] = [];
   for (const b of blocks) {
+    if (b.origin !== "book") continue;   // a teacher clarification (§18), not the book
     if (b.type === "text") out.push(norm(b.spans.map(s => s.text).join("")));
     else if (b.type === "heading") out.push(norm(b.text));
     else if (b.type === "list") for (const item of b.items) out.push(norm(item.text.map(s => s.text).join("")));

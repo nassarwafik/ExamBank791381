@@ -1728,6 +1728,18 @@ const m09: ContentModule = {
               ]
             },
             {
+              "id": "m09-l03-p02-b02-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "جدول النقاط لم يُطبع في الكتاب. نعتمد الترتيب المعروف في مسابقات الأغاني: المركز الأول 12 نقطة، الثاني 10، الثالث 8، الرابع 7، الخامس 6، السادس 5، السابع 4، الثامن 3، التاسع 2، العاشر 1."
+                }
+              ]
+            },
+            {
               "id": "m09-l03-p02-b03",
               "type": "text",
               "origin": "book",
@@ -2195,6 +2207,62 @@ const m09: ContentModule = {
               ]
             },
             {
+              "id": "m09-l03-p05-b08-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "الخيارات لم تُطبع في الكتاب. اختر واحدًا مما يلي:"
+                }
+              ]
+            },
+            {
+              "id": "m09-l03-p05-b08-choices",
+              "type": "list",
+              "origin": "teacher-enrichment",
+              "variant": "plain",
+              "items": [
+                {
+                  "id": "c1",
+                  "term": "أ",
+                  "text": [
+                    {
+                      "text": "num موجود في المصفوفة، وهو أكبر عناصرها."
+                    }
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "term": "ب",
+                  "text": [
+                    {
+                      "text": "num موجود في آخر خانة من المصفوفة."
+                    }
+                  ]
+                },
+                {
+                  "id": "c3",
+                  "term": "ج",
+                  "text": [
+                    {
+                      "text": "num غير موجود في المصفوفة، وهو أكبر من جميع عناصرها."
+                    }
+                  ]
+                },
+                {
+                  "id": "c4",
+                  "term": "د",
+                  "text": [
+                    {
+                      "text": "num أصغر من جميع عناصر المصفوفة."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
               "id": "m09-l03-p05-b09",
               "type": "text",
               "origin": "book",
@@ -2205,6 +2273,62 @@ const m09: ContentModule = {
                 },
                 {
                   "text": " في أي حالات قد تُعيد العملية Igloo القيمة 0؟ ✅ اختر الإجابة الصحيحة:"
+                }
+              ]
+            },
+            {
+              "id": "m09-l03-p05-b09-clarify",
+              "type": "callout",
+              "origin": "teacher-enrichment",
+              "kind": "clarification",
+              "title": "توضيح المعلم",
+              "spans": [
+                {
+                  "text": "الخيارات لم تُطبع في الكتاب. اختر واحدًا مما يلي:"
+                }
+              ]
+            },
+            {
+              "id": "m09-l03-p05-b09-choices",
+              "type": "list",
+              "origin": "teacher-enrichment",
+              "variant": "plain",
+              "items": [
+                {
+                  "id": "c1",
+                  "term": "أ",
+                  "text": [
+                    {
+                      "text": "فقط عندما يكون num العنصر الأول في المصفوفة."
+                    }
+                  ]
+                },
+                {
+                  "id": "c2",
+                  "term": "ب",
+                  "text": [
+                    {
+                      "text": "عندما لا يسبق num في المصفوفة أي عدد أصغر منه، أو عندما يكون غير موجود فيها وأصغر من جميع عناصرها."
+                    }
+                  ]
+                },
+                {
+                  "id": "c3",
+                  "term": "ج",
+                  "text": [
+                    {
+                      "text": "فقط عندما يكون num غير موجود في المصفوفة وأصغر من جميع عناصرها."
+                    }
+                  ]
+                },
+                {
+                  "id": "c4",
+                  "term": "د",
+                  "text": [
+                    {
+                      "text": "فقط عندما تكون المصفوفة فارغة."
+                    }
+                  ]
                 }
               ]
             },
