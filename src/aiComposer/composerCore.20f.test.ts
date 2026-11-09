@@ -35,7 +35,7 @@ describe("20F-CAT capability catalog: one source of truth, derived from the prod
     expect(c.questionTypes.map(t => t.kind)).toEqual([...COMPOSER_ITEM_KINDS]);
     for (const t of c.questionTypes) { expect(questionTypeDefinition(t.key)).toBeTruthy(); expect(supportsQuestionTypeVersion(t.key, t.version)).toBe(true); expect(Number.isInteger(t.version)).toBe(true); }
     expect(c.questionTypes.find(t => t.kind === "coding")!.version).toBe(2);
-    expect(c.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion)).toEqual(["networkTopology@2", "physicsFreeFall@1", "functionStudy2d@1", "chemistryReactions@1", "chemistryStructure@1", "physicsMotion@1", "physicsLab@1"]);   // 21J adds the chemistry simulators, 21L the advanced physics ones
+    expect(c.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion)).toEqual(["networkTopology@2", "physicsFreeFall@1", "functionStudy2d@1", "chemistryReactions@1", "chemistryStructure@1", "chemistryLab@1", "physicsMotion@1", "physicsLab@1"]);   // 21J adds the chemistry simulators, 21K the virtual lab, 21L the advanced physics ones
     expect(JSON.stringify(c)).not.toMatch(/latest/i);
   });
   it("the catalog never offers unsupported capabilities, images, raw markup or extra languages", () => {

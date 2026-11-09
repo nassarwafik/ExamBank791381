@@ -19,6 +19,7 @@ const functionStudyModel_1 = require("../functionStudyModel");
 const net2Templates_1 = require("../networkTopology2/net2Templates");
 const composerLimits_1 = require("./composerLimits");
 const composerCatalog_1 = require("./composerCatalog");
+const composerChemistryLab_1 = require("./composerChemistryLab");
 const composerPhysics_1 = require("./composerPhysics");
 const composerChemistry_1 = require("./composerChemistry");
 const composerSchemaKit_1 = require("./composerSchemaKit");
@@ -37,13 +38,14 @@ function buildSimSpecSchema() {
         })),
         reactions: (0, composerSchemaKit_1.sNull)((0, composerChemistry_1.buildReactionsSpecSchema)()),
         structure: (0, composerSchemaKit_1.sNull)((0, composerChemistry_1.buildStructureSpecSchema)()),
+        lab: (0, composerSchemaKit_1.sNull)((0, composerChemistryLab_1.buildLabSpecSchema)()),
         motion: (0, composerSchemaKit_1.sNull)((0, composerPhysics_1.buildMotionSpecSchema)()),
         physicsLab: (0, composerSchemaKit_1.sNull)((0, composerPhysics_1.buildPhysicsLabSpecSchema)())
     });
 }
-const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure", "motion", "physicsLab"];
+const SPEC_KEYS = ["plugin", "title", "instructions", "network", "physics", "function", "reactions", "structure", "lab", "motion", "physicsLab"];
 const SPEC_FIELD = Object.freeze({
-    networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure", physicsMotion: "motion", physicsLab: "physicsLab"
+    networkTopology: "network", physicsFreeFall: "physics", functionStudy2d: "function", chemistryReactions: "reactions", chemistryStructure: "structure", chemistryLab: "lab", physicsMotion: "motion", physicsLab: "physicsLab"
 });
 const MEASURE = {
     impactTime: { id: "impactTime", label: "زمن الوصول إلى الأرض", unit: "s" }, impactSpeed: { id: "impactSpeed", label: "سرعة الارتطام (مقدار)", unit: "m/s" },
@@ -1115,8 +1117,15 @@ function buildSimFromSpec(raw, path = "smartSim", expectPlugin, expectScenario) 
         config = b.value.config;
         checks = b.value.checks;
     }
-    else {
+    else if (plugin === "physicsLab") {
         const b = (0, composerPhysics_1.buildPhysicsSim)(composerPhysics_1.PHYSICS_FAMILIES.physicsLab, raw.physicsLab, path);
+        if (!b.ok)
+            return b;
+        config = b.value.config;
+        checks = b.value.checks;
+    }
+    else {
+        const b = (0, composerChemistryLab_1.buildLabSim)(raw.lab, path);
         if (!b.ok)
             return b;
         config = b.value.config;
