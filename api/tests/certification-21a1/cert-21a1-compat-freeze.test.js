@@ -142,11 +142,14 @@ describe("21A.1-FREEZE compatibility pins (captured on the untouched baseline ff
       if (line.startsWith("Rich blocks:")) { const nowLine = now.find(l => l.startsWith("Rich blocks:")); expect(nowLine.startsWith(line.replace(/\.$/, ""))).toBe(true); continue; }
       // UX-R16d (owner direction, option A): the preset list may gain ONLY the appended "reference" preset; every baseline id keeps its place.
       if (line.startsWith("Presentation presets:")) { expect(now.find(l => l.startsWith("Presentation presets:"))).toBe(line + ", reference"); continue; }
+      // Phase 21J (owner request): the SmartSim plugin list may gain ONLY the two chemistry simulators, appended; every baseline plugin keeps its place.
+      if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry)"); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
-    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:"));
+    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:"));
     // Phase 21A.2 may append ONLY the declared Function graphs contract; baseline lines stay immutable.
-    for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Charts|Chart selection|Function graphs)\b/);
+    // Phase 21J adds exactly ONE line: the bounded chemistry pointer (the full chemistry catalog travels only in the prompts that need it)
+    for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Charts|Chart selection|Function graphs)\b|^Chemistry simulators: their catalogs come with the section task that uses them; expected answers are derived by code\.$/);
   });
   it("capture writes the pins (CAPTURE_21A1=1 only)", () => {
     if (CAPTURE) fs.writeFileSync(PINS, JSON.stringify(pins, null, 1) + "\n");

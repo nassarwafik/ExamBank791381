@@ -745,6 +745,56 @@
       "page": "login-error",
       "viewport": "all",
       "reason": "Tadris+ SIGN-IN-1 (docs/enterprise-signin-1.md, requested by the owner) — one sign-in screen for every account: the sign-in card now starts with «نوع الحساب» («معلم أو طالب» | «مالك المنصة»), a two-part switch; the form below is unchanged."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "all",
+      "reason": "Phase 21I — multi-subject exam prompt: the «ماذا تريد في الامتحان؟» card explains that networking requests use the classified bank and other subjects (programming, physics, chemistry, mathematics…) go to the AI composer; its placeholder shows one example per subject, the helper line and the button («تحليل الطلب») are reworded. The card grows by a few lines; nothing else on the page moves."
+    },
+    {
+      "page": "state-ai-composer",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "state-classic-builder",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "state-governance",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "state-question-types",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "state-studio-title-focus",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "studio-content",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "studio-publish",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "studio-review",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "studio-setup",
+      "viewport": "all",
+      "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
     }
   ]
 }

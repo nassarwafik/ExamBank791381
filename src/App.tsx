@@ -54,7 +54,7 @@ const HomePresetLibrary = lazy(lazyWithRetry(() => import("./presets/PresetLibra
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useExamStudioController } from "./studio/useExamStudioController";
 import { readBuilderLayout, writeBuilderLayout, type BuilderLayout } from "./studio/studioPreference";
-import { examSaveState } from "./examHistory";
+import { examSaveState, isExamDirty } from "./examHistory";
 import "./project794589.css";
 // Phase 8E-4 — the teacher PLATFORM (classes / students / assignments / audit / dashboard workspace) is a LAZY chunk:
 // students, the login page, the session-validation boot and the other teacher destinations never download it; it
@@ -86,6 +86,9 @@ import { createPortal } from "react-dom";
 const ExamPreview = lazy(lazyWithRetry(() => import("./ExamPreview"), "teacher-theme-preview"));
 import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
 import ThemeMiniPreview from "./ThemeMiniPreview";
+// Phase 21I — the request's route card and the routing contract load on demand (after an analysis), outside the initial bundle.
+const ExamRouteCard = lazy(lazyWithRetry(() => import("./ExamRouteCard"), "exam-route-card"));
+import type { ComposerPrefill, ExamRoute, ExamRouteDecision } from "./examRequestRouting";
 import { BRAND_NAME, BRAND_TAGLINE } from "./brand";
 import "./App.css";
 import "./platform.css";
@@ -155,6 +158,8 @@ export type ExamPlan = {
   explanation: string;
   aiProvider?: "glm" | "qwen" | "qwenplus" | "openai";
   aiModel?: string;
+  /** Phase 21I — the subject the request was routed by (server-decided; informational for the bank plan). */
+  subjectDomain?: string;
 };
 
 export type TopicOption = { code: string; name: string; parent: string | null };
@@ -929,6 +934,12 @@ function App() {
   const [examPrompt, setExamPrompt] = useState("");
   const [aiProvider, setAiProvider] = useState<"glm" | "qwen" | "qwenplus" | "openai">("glm");
   const [plan, setPlan] = useState<ExamPlan | null>(null);
+  // Phase 21I — where the analysed request is built: the classified bank (networking) or the AI Full Exam Composer (any subject).
+  // `examRoute` is the server's decision (re-checked by parseExamRouteDecision), `activeRoute` the teacher's current choice among the
+  // decision's allowed routes. A missing / malformed decision keeps the bank flow exactly as before this phase.
+  const [examRoute, setExamRoute] = useState<ExamRouteDecision | null>(null);
+  const [composerPrefill, setComposerPrefill] = useState<ComposerPrefill | null>(null);
+  const [activeRoute, setActiveRoute] = useState<ExamRoute>("bank");
   const [exam, setExam] = useState<ExamDraft | null>(null);
   // Structured Exam Builder (Phase 2). When non-null the structured builder overlay is shown; the
   // legacy flat-exam editor is never disturbed and legacy exams are only converted on explicit request.
@@ -1351,6 +1362,9 @@ function App() {
     setPassword("");
     setExamPrompt("");
     setPlan(null);
+    setExamRoute(null);
+    setComposerPrefill(null);
+    setActiveRoute("bank");
     setExam(null);
     setBuilderError("");
     setAvailability(null);
@@ -1439,6 +1453,9 @@ function App() {
     setAnalyzeBusy(true);
     setBuilderError("");
     setPlan(null);
+    setExamRoute(null);
+    setComposerPrefill(null);
+    setActiveRoute("bank");
     setExam(null);
     setAvailability(null);
 
@@ -1447,6 +1464,8 @@ function App() {
         ok: true;
         plan: ExamPlan;
         topics: TopicOption[];
+        route?: unknown;
+        composerPrefill?: unknown;
       }>("/api/interpret-exam-request", {
         method: "POST",
         body: JSON.stringify({
@@ -1458,6 +1477,15 @@ function App() {
       setPlan(interpreted.plan);
       setTopicsCatalog(interpreted.topics);
       setManualQuestionCount(interpreted.plan.totalQuestions);
+
+      // Phase 21I — a request the code routed to the composer (any subject but networking, or new networking questions) never searches
+      // the networking bank: the route card offers «فتح المؤلف الذكي» instead. The bank stays one click away when the decision allows it.
+      const { parseExamRouteDecision, parseComposerPrefill } = await import("./examRequestRouting");
+      const decision = parseExamRouteDecision(interpreted.route);
+      const composerRoute = !!decision && decision.route === "composer";
+      setExamRoute(decision);
+      setComposerPrefill(parseComposerPrefill(interpreted.composerPrefill));
+      setActiveRoute(composerRoute ? "composer" : "bank");
 
       // Only topics/difficulty/type the AI actually detected in the prompt start checked — never
       // auto-select anything the teacher didn't ask for. Any topic code the AI returned that
@@ -1479,11 +1507,13 @@ function App() {
       setSelectedDifficulties(initialDifficulties);
       setSelectedTypes(initialTypes);
 
-      await fetchAvailability(initialTopics, initialDifficulties, initialTypes);
+      if (!composerRoute) {
+        await fetchAvailability(initialTopics, initialDifficulties, initialTypes);
+      }
 
       window.setTimeout(() => {
         document
-          .getElementById("exam-availability-panel")
+          .getElementById(composerRoute ? "exam-route-panel" : "exam-availability-panel")
           ?.scrollIntoView({
             behavior: "smooth",
             block: "start"
@@ -1524,6 +1554,30 @@ function App() {
       : [...selectedTypes, type];
     setSelectedTypes(next);
     void fetchAvailability(selectedTopics, selectedDifficulties, next);
+  }
+
+  // Phase 21I — the teacher switches the analysed request between the bank and the composer (only among the decision's allowed routes).
+  function changeExamRoute(next: ExamRoute) {
+    if (!examRoute || !examRoute.allowedRoutes.includes(next) || next === activeRoute) return;
+    setActiveRoute(next);
+    if (next === "bank" && !availability) void fetchAvailability(selectedTopics, selectedDifficulties, selectedTypes);
+  }
+
+  // Phase 21I — «فتح المؤلف الذكي بهذا الطلب»: a NEW structured exam opens in the Builder with the composer dialog pre-filled from the
+  // request. Unsaved work in the current structured exam is never discarded silently (the shared confirmation asks first).
+  async function openComposerFromRequest() {
+    if (!composerPrefill) return;
+    if (structuredExam && isExamDirty(structuredHistory.history)) {
+      const ok = await confirm({
+        title: "امتحان منظّم غير محفوظ",
+        tone: "danger",
+        confirmLabel: "فتح امتحان جديد",
+        cancelLabel: "العودة للامتحان الحالي",
+        message: "في الباني امتحان منظّم فيه تعديلات غير محفوظة. فتح المؤلف الذكي ينشئ امتحانًا جديدًا مكانه وتضيع هذه التعديلات. احفظ الامتحان الحالي أولًا إن كنت تحتاجه."
+      });
+      if (!ok) return;
+    }
+    await composeNewStructuredExam(composerPrefill, plan?.title);
   }
 
   async function handlePreviewQuestions() {
@@ -4100,12 +4154,12 @@ function App() {
     studio.openExam(legacyToStructured(exam as unknown as Record<string, unknown>), "unsaved");
     setStructuredBuilderOpen(true);
   }
-  async function openNewStructuredExam(): Promise<string> {
+  async function openNewStructuredExam(title?: string): Promise<string> {
     const examId = newExamId();
     const { newSection, newQuestion } = await import("./examBuilderState");
     studio.openExam({
       examId,
-      title: "امتحان منظّم جديد",
+      title: title?.trim() || "امتحان منظّم جديد",
       status: "draft",
       sections: [newSection({ title: "القسم الأول", questions: [newQuestion("multipleChoice")] })]
     }, "unsaved", null);
@@ -4113,10 +4167,11 @@ function App() {
     return examId;
   }
   // Phase 21F.7 — «امتحاناتي» → «المؤلف الذكي»: a new exam opens with the builder's own composer (its menu item, run once).
-  const [builderStartTool, setBuilderStartTool] = useState<{ examId: string; key: string } | null>(null);
-  async function composeNewStructuredExam() {
-    const examId = await openNewStructuredExam();
-    setBuilderStartTool({ examId, key: "ai-composer" });
+  // Phase 21I — the builder prompt's composer route passes the request's pre-fill (and title) along; the dialog opens filled in.
+  const [builderStartTool, setBuilderStartTool] = useState<{ examId: string; key: string; composerPrefill?: ComposerPrefill | null } | null>(null);
+  async function composeNewStructuredExam(prefill?: ComposerPrefill | null, title?: string) {
+    const examId = await openNewStructuredExam(title);
+    setBuilderStartTool({ examId, key: "ai-composer", composerPrefill: prefill ?? null });
   }
   const [homePresetsOpen, setHomePresetsOpen] = useState(false);
   // Imported exam (JSON/HTML) becomes the ACTIVE structured exam in memory only — never auto-saved.
@@ -6048,8 +6103,9 @@ function App() {
             <div>
               <h2>ماذا تريد في الامتحان؟</h2>
               <p>
-                اكتب طلبك بحرية. الذكاء الاصطناعي يحلل المطلوب،
-                ثم يختار النظام الأسئلة من المخزن المصنف.
+                اكتب طلبك بحرية لأي موضوع. الذكاء الاصطناعي يحلل المطلوب ويحدد موضوعه:
+                طلبات شبكات الاتصال تُبنى من مخزن الأسئلة المصنف، وباقي المواضيع (برمجة، فيزياء،
+                كيمياء، رياضيات…) يؤلفها المؤلف الذكي كامتحان منظّم تراجعه قبل الحفظ.
               </p>
             </div>
           </div>
@@ -6059,12 +6115,13 @@ function App() {
             onChange={event =>
               setExamPrompt(event.target.value)
             }
-            placeholder="مثال: أنشئ امتحانًا من 20 سؤالًا، 12 BASIC و8 INFRASTRUCTURE، ركز على IPv4 وDHCP وOSPF، واجعل معظم الأسئلة سهلة ومتوسطة، وأضف سؤالين صور وسؤالين CLI..."
+            aria-label="وصف الامتحان المطلوب"
+            placeholder={"أمثلة:\n• أنشئ امتحان شبكات من 20 سؤالًا، 12 BASIC و8 INFRASTRUCTURE، ركز على IPv4 وDHCP وOSPF، وأضف سؤالين CLI...\n• امتحان برمجة Python للصف العاشر من 10 أسئلة عن الحلقات والمصفوفات، منها 3 أسئلة كتابة كود...\n• امتحان فيزياء عن السقوط الحر والمقذوفات مع محاكاة، علامته 50..."}
           />
 
           <div className="builder-actions">
             <span className="helper-text">
-              لن يتم تأليف أسئلة جديدة إلا عندما تختار أنت «بناء سؤال خارجي» لاحقًا.
+              التحليل لا يؤلف أسئلة ولا يحفظ شيئًا: سترى أولًا موضوع الطلب ومصدر الأسئلة المقترح، وتختار أنت المتابعة.
             </span>
 
             <div className="model-and-generate">
@@ -6101,14 +6158,27 @@ function App() {
               disabled={!examPrompt.trim() || analyzeBusy}
             >
               {analyzeBusy
-                ? "جارٍ تحليل الطلب والبحث عن الأسئلة..."
-                : "تحليل الطلب والبحث عن الأسئلة"}
+                ? "جارٍ تحليل الطلب..."
+                : "تحليل الطلب"}
             </button>
             </div>
           </div>
         </div>
 
-        {plan && (
+        {plan && examRoute && (
+          <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
+            <ExamRouteCard
+              decision={examRoute}
+              prefill={composerPrefill}
+              activeRoute={activeRoute}
+              onChangeRoute={changeExamRoute}
+              onOpenComposer={() => { void openComposerFromRequest(); }}
+              busy={analyzeBusy || generateBusy}
+            />
+          </Suspense>
+        )}
+
+        {plan && activeRoute === "bank" && (
           <div id="exam-availability-panel" className="builder-card exam-availability-card">
             <div className="builder-heading">
               <div>

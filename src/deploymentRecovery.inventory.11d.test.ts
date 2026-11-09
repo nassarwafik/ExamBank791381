@@ -27,6 +27,7 @@ const PROTECTED: [string, string, string, string][] = [
   ["./App.tsx", "SaveConflictDialog", "./studio/SaveConflictDialog", "save-conflict-dialog"],
   // Phase 21F.7 — «امتحاناتي» (the Studio home) and its academic-preset library, opened from the home.
   ["./App.tsx", "StudioExamsHome", "./studio/StudioExamsHome", "studio-exams-home"],
+  ["./App.tsx", "ExamRouteCard", "./ExamRouteCard", "exam-route-card"],   // Phase 21I
   ["./App.tsx", "HomePresetLibrary", "./presets/PresetLibraryPanel", "studio-home-presets"],
   // Phase 19E bundle relief — the question import destination and the teacher profile dialog load on demand
   ["./App.tsx", "ImportQuestionsPanel", "./ImportQuestionsPanel", "teacher-import-questions"],

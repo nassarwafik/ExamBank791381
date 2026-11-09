@@ -3,14 +3,16 @@ import Dialog from "../ui/Dialog";
 import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
-import { COMPOSER_CAPABILITY_DEFAULT_OFF, COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
-import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS, type ComposerItemKind } from "./composerCatalog";
+import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
+import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
 import type { ComposerScope } from "./composerProjection";
 import { allQuestions, composerMetadataOf, composerVerdict, verifyAiQuestion, withComposerHistory, type ComposerVerdict } from "./composerExam";
 import { examRevision } from "./composerRevision";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
 import { PRESENTATION_PRESETS } from "../presentation/presentationModel";
+import type { ComposerPrefill } from "../examRequestRouting";
+import { formFromPrefill, initialForm, intentInputOf, type GenForm } from "./composerForm";
 import "./ai-composer.css";
 
 // Phase 20F — «المؤلف الذكي للامتحان» (lazy edge of the Structured Exam Builder). The teacher fills STRUCTURED controls (they win over the
@@ -31,6 +33,8 @@ type Props = {
   onUndo?: () => void;
   selectedQuestionId?: string | null;
   disabled?: boolean;
+  /** Phase 21I — the builder prompt's request mapped onto the generate form (the teacher reviews it; nothing runs before «توليد»). */
+  prefill?: ComposerPrefill | null;
 };
 
 type Tab = "generate" | "modifyExam" | "generateSection" | "question" | "presentation";
@@ -67,37 +71,6 @@ const MODIFY_STAGES = [STAGE_LABELS.modify, STAGE_LABELS.validate, STAGE_LABELS.
 const DIFF_LIMIT = 200;
 const ISSUE_LIMIT = 60;
 
-type GenForm = {
-  subject: string; course: string; grade: string; language: (typeof COMPOSER_LANGUAGES)[number]; totalMarks: string; durationMinutes: string;
-  difficulty: (typeof COMPOSER_DIFFICULTIES)[number]; sectionTarget: string; questionTarget: string; preset: string;
-  types: Record<ComposerItemKind, boolean>; capabilities: Record<ComposerCapabilityFlag, boolean>; requiredTopics: string; excludedTopics: string; instruction: string;
-};
-const initialForm = (): GenForm => ({
-  subject: "", course: "", grade: "", language: "ar", totalMarks: "", durationMinutes: "", difficulty: "mixed", sectionTarget: "", questionTarget: "", preset: "auto",
-  types: Object.fromEntries(COMPOSER_ITEM_KINDS.map(k => [k, true])) as Record<ComposerItemKind, boolean>,
-  capabilities: Object.fromEntries(COMPOSER_CAPABILITY_FLAGS.map(f => [f, !COMPOSER_CAPABILITY_DEFAULT_OFF.includes(f)])) as Record<ComposerCapabilityFlag, boolean>,
-  requiredTopics: "", excludedTopics: "", instruction: ""
-});
-const topicsOf = (s: string) => [...new Set(s.split(/[,،]/).map(t => t.trim()).filter(Boolean))];
-const intNum = (s: string) => (s.trim() === "" ? null : Number(s));
-
-/** The intent input exactly as normalizeComposerIntent expects it (empty optional controls are omitted; the code normalizes the rest). */
-function intentInputOf(f: GenForm): Record<string, unknown> {
-  const types = COMPOSER_ITEM_KINDS.filter(k => f.types[k]);
-  const out: Record<string, unknown> = { v: 1, subject: f.subject.trim(), language: f.language, totalMarks: intNum(f.totalMarks), difficulty: f.difficulty, capabilities: { ...f.capabilities }, presentationPreset: f.preset };
-  if (f.course.trim()) out.course = f.course.trim();
-  if (f.grade.trim()) out.grade = f.grade.trim();
-  if (f.durationMinutes.trim()) out.durationMinutes = intNum(f.durationMinutes);
-  if (f.sectionTarget.trim()) out.sectionTarget = intNum(f.sectionTarget);
-  if (f.questionTarget.trim()) out.questionTarget = intNum(f.questionTarget);
-  if (types.length !== COMPOSER_ITEM_KINDS.length) out.allowedQuestionTypes = types;
-  const req = topicsOf(f.requiredTopics), exc = topicsOf(f.excludedTopics);
-  if (req.length) out.requiredTopics = req;
-  if (exc.length) out.excludedTopics = exc;
-  if (f.instruction.trim()) out.teacherInstruction = f.instruction.trim();
-  return out;
-}
-
 /** Verdict of a STAGED generated exam after an AI modification (the plan no longer describes it; the intent still does). */
 function stagedVerdict(exam: StructuredExam, result: GenerationResult): ComposerVerdict {
   const v = composerVerdict(exam, { intent: result.intent });
@@ -115,11 +88,11 @@ function IssueList({ issues, label }: { issues: { message: string }[]; label: st
   );
 }
 
-export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled }: Props) {
+export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled, prefill }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [m, dispatch] = useReducer(composerReducer<ReadyResult>, undefined, () => initialComposer<ReadyResult>());
   const [tab, setTab] = useState<Tab>("generate");
-  const [form, setForm] = useState<GenForm>(initialForm);
+  const [form, setForm] = useState<GenForm>(() => (prefill ? formFromPrefill(prefill) : initialForm()));
   const [instruction, setInstruction] = useState("");
   const [sectionScope, setSectionScope] = useState("");
   const [questionId, setQuestionId] = useState(selectedQuestionId ?? "");
@@ -467,6 +440,12 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
 
   const generateForm = (
     <div className="ai-composer-form">
+      {prefill && (
+        <div className="ai-composer-prefill" role="note">
+          <p>عُبّئ هذا النموذج من طلبك في «ماذا تريد في الامتحان؟». راجع الحقول وعدّلها، ثم اضغط «توليد» — لا يُولَّد شيء قبل ذلك.</p>
+          {prefill.notes.length > 0 && <ul>{prefill.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>}
+        </div>
+      )}
       <p className="sb-hint">الحقول المنظَّمة (المادة، العلامات، الأنواع، الخيارات) تتقدّم دائمًا على الوصف الحر عند التعارض.</p>
       <div className="ai-composer-grid">
         <label className="sb-field"><span>المادة (مطلوب)</span><input required aria-required="true" value={form.subject} maxLength={COMPOSER_LIMITS.shortText} disabled={lockForm} onChange={e => set("subject", e.target.value)} /></label>

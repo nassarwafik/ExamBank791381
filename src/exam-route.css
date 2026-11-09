@@ -1,0 +1,24 @@
+/* Phase 21I — «كيف سيُبنى هذا الامتحان؟»: the route card's own sheet, loaded with its lazy chunk (ExamRouteCard.tsx). It uses the
+   builder-pro tokens (--bp-*) defined on :root by builder-pro.css, which the builder page always loads. */
+.exam-route-card{ border-top:3px solid var(--bp-primary); margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+.exam-route-card[data-route="composer"]{ border-top-color:var(--bp-primary-2); }
+.exam-route-reasons,.exam-route-notes{ margin:0; padding-inline-start:20px; color:var(--bp-text); font-size:13.5px; line-height:1.8; }
+.exam-route-notes{ color:var(--bp-warn); }
+.exam-route-options{ border:0; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; }
+.exam-route-options legend{ padding:0 0 6px; font-weight:800; color:var(--bp-navy); font-size:13px; }
+.exam-route-option{ display:flex; gap:10px; align-items:flex-start; border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); padding:12px 14px; background:var(--bp-surface); cursor:pointer; transition:border-color .16s var(--bp-ease), background .16s var(--bp-ease); }
+.exam-route-option.is-active{ border-color:var(--bp-primary); background:var(--bp-primary-050); }
+.exam-route-option input{ margin-top:4px; accent-color:var(--bp-primary); }
+.exam-route-option strong{ display:block; color:var(--bp-navy); font-size:14px; }
+.exam-route-option small{ display:block; color:var(--bp-muted); font-size:12.5px; line-height:1.7; margin-top:2px; }
+.exam-route-recommended{ color:var(--bp-primary-2); font-weight:700; font-size:12px; }
+.exam-route-note{ grid-column:1/-1; margin:0; color:var(--bp-muted); font-size:12.5px; }
+.exam-route-composer{ border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); background:var(--bp-surface-2); padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+.exam-route-composer h3{ margin:0; font-size:14.5px; font-weight:800; color:var(--bp-navy); }
+.exam-route-summary{ margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px 14px; }
+.exam-route-summary div{ min-width:0; }
+.exam-route-summary dt{ font-size:11.5px; font-weight:700; color:var(--bp-muted); }
+.exam-route-summary dd{ margin:2px 0 0; font-size:13.5px; color:var(--bp-text); overflow-wrap:anywhere; }
+.exam-route-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+.exam-route-actions .helper-text{ flex:1 1 260px; }
+@media (prefers-reduced-motion:reduce){ .exam-route-option{ transition:none; } }

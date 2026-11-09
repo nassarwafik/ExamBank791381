@@ -16,6 +16,7 @@ import { FUNCTION_STUDY_TASKS, FUNCTION_STUDY_LIMITS } from "../functionStudyMod
 import { CHART_KINDS, CHART_LIMITS } from "../charts/chartSpec";
 import { AI_CHART_DATA_ORIGINS, AI_CHART_POINTS } from "./composerChart";
 import { AI_GRAPH_CURVES } from "./composerGraph";
+import { CHEMISTRY_POINTER } from "./composerChemistry";
 import "../trustedSimPlugins";
 
 // V3 (Phase 21A.1): the catalog gained the data-chart capability (the dataChart rich block + its declarative chart descriptor contract).
@@ -23,7 +24,8 @@ import "../trustedSimPlugins";
 // records the catalog of the exam's LAST composer operation (withComposerHistory re-stamps it): an exam last composed under V1 keeps "V1"
 // until its next composer operation; nothing validates or migrates it.
 // Phase 21A.2: explicit-author-formula-only function graphs, not invented mathematics.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V4";
+// V5 (Phase 21J): the chemistry simulators chemistryReactions@1 and chemistryStructure@1.
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V5";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
@@ -41,7 +43,9 @@ export function composerItemIdentity(kind: ComposerItemKind): { key: string; ver
 export const COMPOSER_SIM_PLUGINS = Object.freeze([
   { pluginKey: "networkTopology", pluginVersion: 2, subject: "networking" },
   { pluginKey: "physicsFreeFall", pluginVersion: 1, subject: "physics" },
-  { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" }
+  { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" },
+  { pluginKey: "chemistryReactions", pluginVersion: 1, subject: "chemistry" },     // Phase 21J
+  { pluginKey: "chemistryStructure", pluginVersion: 1, subject: "chemistry" }      // Phase 21J
 ] as const);
 export type ComposerSimPluginKey = (typeof COMPOSER_SIM_PLUGINS)[number]["pluginKey"];
 export const COMPOSER_SIM_PLUGIN_KEYS = Object.freeze(COMPOSER_SIM_PLUGINS.map(p => p.pluginKey)) as readonly ComposerSimPluginKey[];
@@ -170,6 +174,7 @@ export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog
     "SmartSim plugins: " + catalog.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion + " (" + p.subject + ")").join(", "),
     "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "] checks: " + s.checks.map(c => c.id + " " + c.label).join("; ")).join(" || "),
     "physicsFreeFall@1: model initialHeight 0.." + catalog.physics.bounds.heightMax + " m, initialVelocity ±" + catalog.physics.bounds.velocityAbsMax + " m/s (up positive), gravity " + catalog.physics.bounds.gravityMin + ".." + catalog.physics.bounds.gravityMax + " m/s²; measurements: " + catalog.physics.measurements.join(", ") + "; points: " + catalog.physics.points.join(", ") + ". Expected values are computed by code, never by you.",
+    CHEMISTRY_POINTER,
     "functionStudy2d@1: expression language 2 in the single variable x (numbers, + - * / % ^, parentheses, abs, round, floor, ceil, min, max, sqrt, pow, log (natural), log10, exp; nothing else); tasks: " + catalog.functionStudy.tasks.join(", ") + "; |x| <= " + catalog.functionStudy.bounds.xAbsMax + ". Your expected answers are checked numerically against the expression.",
     "Presentation presets: " + catalog.presets.join(", "),
     // 21A.1: the pre-21A.1 block list keeps its exact wording; dataChart is announced after it and specified on the Charts line
