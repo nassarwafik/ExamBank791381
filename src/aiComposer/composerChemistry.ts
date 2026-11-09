@@ -18,6 +18,7 @@ import { CHEM_SYMBOLS, chemElement, chemMassNumbers } from "../chemistry/element
 import { MOLECULES, chemMolecule } from "../chemistry/molecules";
 import { parseFormula } from "../chemistry/formula";
 import type { ComposerIssue } from "./composerLimits";
+import { labCatalogForPrompt } from "./composerChemistryLab";
 import { hasExactKeys, isArr, isEnum, sArr, sBool, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
 type SimCheck = { id: string; label: string; weight: number; kind: string } & Record<string, unknown>;
@@ -195,11 +196,12 @@ export function chemistryCatalogForPrompt(): string {
   return [
     "CHEMISTRY CATALOG (exact ids; anything else is refused):",
     "chemistryReactions@1 (fill `reactions`): pick ONE catalog reaction id, then tasks: balance (the student writes all coefficients), classify (the reaction family; options and the key are built by code), roles (ONLY roles listed for that reaction), conservationAid (true shows the live atom-count table — an aid that reveals whether the equation balances; false for assessment). Catalog: " + reactions.join(" || "),
-    "chemistryStructure@1 (fill `structure`): activity atom (element symbol, one of " + COMPOSER_ELEMENT_SYMBOLS.join(" ") + "; massNumber of a listed natural isotope, charge 0 or a simple ion; build / shells tasks), molecule (catalog: " + MOLECULES.map(m => m.id + "=" + m.formula).join(", ") + "), or formula (a valid chemical formula, e.g. C6H12O6, CuSO4·5H2O). Fields of the other activities are null. quantities (≤ " + MAX_QUANTITIES + "): " + CHEM_QUANTITIES.filter(q => COMPOSER_CHEM_QUANTITIES.includes(q.id)).map(q => q.id + " [" + q.activities.join("/") + (q.needs === "element" ? ", needs element" : "") + "]").join(", ") + "; classifications: atom " + CHEM_ACTIVITY_PROPERTIES.atom.join("/") + ", molecule " + CHEM_ACTIVITY_PROPERTIES.molecule.join("/") + "; formulaTargets: molecule molecular/empirical, formula empirical only. The subject is visible to the student; every expected value is derived by code, never by you."
+    "chemistryStructure@1 (fill `structure`): activity atom (element symbol, one of " + COMPOSER_ELEMENT_SYMBOLS.join(" ") + "; massNumber of a listed natural isotope, charge 0 or a simple ion; build / shells tasks), molecule (catalog: " + MOLECULES.map(m => m.id + "=" + m.formula).join(", ") + "), or formula (a valid chemical formula, e.g. C6H12O6, CuSO4·5H2O). Fields of the other activities are null. quantities (≤ " + MAX_QUANTITIES + "): " + CHEM_QUANTITIES.filter(q => COMPOSER_CHEM_QUANTITIES.includes(q.id)).map(q => q.id + " [" + q.activities.join("/") + (q.needs === "element" ? ", needs element" : "") + "]").join(", ") + "; classifications: atom " + CHEM_ACTIVITY_PROPERTIES.atom.join("/") + ", molecule " + CHEM_ACTIVITY_PROPERTIES.molecule.join("/") + "; formulaTargets: molecule molecular/empirical, formula empirical only. The subject is visible to the student; every expected value is derived by code, never by you.",
+    labCatalogForPrompt()
   ].join("\n");
 }
 
 /** Whether a prompt needs the full chemistry catalog: a planned chemistry simulator, or chemistry named in a modify request / exam. */
-export const CHEMISTRY_SIM_KEYS: readonly string[] = Object.freeze(["chemistryReactions", "chemistryStructure"]);
-const CHEMISTRY_WORDS = /chemi|كيمي|כימי|تفاعل|معادل|ذر[ةه]|جزي[ءئ]|عنصر|حمض|reaction|molecul|atom|equation|element/i;
+export const CHEMISTRY_SIM_KEYS: readonly string[] = Object.freeze(["chemistryReactions", "chemistryStructure", "chemistryLab"]);
+const CHEMISTRY_WORDS = /chemi|كيمي|כימי|تفاعل|معادل|ذر[ةه]|جزي[ءئ]|عنصر|حمض|قاعد|معاير|محلول|مختبر|titrat|reaction|molecul|atom|equation|element|\bph\b/i;
 export const mentionsChemistry = (text: string): boolean => CHEMISTRY_WORDS.test(text) || CHEMISTRY_SIM_KEYS.some(k => text.includes(k));
