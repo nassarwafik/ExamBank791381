@@ -468,6 +468,11 @@
 .learning-practice-fixlist{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-success); border-radius:var(--eb-r); background:var(--eb-success-bg); }
 .learning-practice-fixlist ol{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
 .learning-practice-check{ align-self:flex-start; }
+/* 899371 P4: on touch every control of a structured exercise is a full 44 × 44 target (WCAG 2.5.5 as the rest of the Reader). */
+@media (pointer: coarse){
+  .learning-practice-blank, .learning-practice-chip, .learning-practice-select, .learning-practice-group{ min-block-size:44px; }
+  .learning-practice-move .eb-button{ min-block-size:44px; min-inline-size:44px; }
+}
 
 /* ── 791381s Phase 2 — REVEAL mode (PracticeBlockView `reveal`): after an answer the question locks; the right option is green
    (✓ الإجابة الصحيحة), the chosen wrong option red (✕ إجابتك), the explanation sits under the verdict. Never colour-only: every

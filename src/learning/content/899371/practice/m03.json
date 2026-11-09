@@ -1,0 +1,230 @@
+{
+ "module": "m03",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "-12"
+     },
+     {
+      "text": "12",
+      "correct": true
+     },
+     {
+      "text": "0"
+     },
+     {
+      "text": "144"
+     }
+    ],
+    "feedback": {
+     "explanation": "Math.Abs تعيد القيمة المطلقة: بدون إشارة سالبة."
+    }
+   },
+   "program": "Console.WriteLine(Math.Abs(-12));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "25"
+     },
+     {
+      "text": "32",
+      "correct": true
+     },
+     {
+      "text": "7"
+     }
+    ],
+    "feedback": {
+     "explanation": "Math.Pow(2, 5) = 2 × 2 × 2 × 2 × 2 = 32."
+    }
+   },
+   "program": "Console.WriteLine(Math.Pow(2, 5));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "4"
+     },
+     {
+      "text": "6",
+      "correct": true
+     },
+     {
+      "text": "9"
+     },
+     {
+      "text": "8"
+     }
+    ],
+    "feedback": {
+     "explanation": "Math.Min(4, 9) = 4، ثم Math.Max(4, 6) = 6."
+    }
+   },
+   "program": "Console.WriteLine(Math.Max(Math.Min(4, 9), 6));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "9",
+      "correct": true
+     },
+     {
+      "text": "8"
+     },
+     {
+      "text": "9.4"
+     }
+    ],
+    "feedback": {
+     "explanation": "Math.Round(4.7) = 5 (أقرب عدد صحيح)، وMath.Floor(4.7) = 4 (للأسفل)، والمجموع 9."
+    }
+   },
+   "program": "Console.WriteLine(Math.Round(4.7) + Math.Floor(4.7));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "16",
+      "correct": true
+     },
+     {
+      "text": "10"
+     },
+     {
+      "text": "73"
+     },
+     {
+      "text": "79"
+     }
+    ],
+    "feedback": {
+     "explanation": "num / 100 = 7 (منزلة المئات)، وnum % 10 = 9 (منزلة الآحاد)، والمجموع 16."
+    }
+   },
+   "program": "int num = 739;\nConsole.WriteLine(num / 100 + num % 10);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "2",
+    "feedback": {
+     "explanation": "n / 10 = 482، ثم 482 % 10 = 2: هذه منزلة العشرات."
+    }
+   },
+   "program": "int n = 4825;\nConsole.WriteLine(n / 10 % 10);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل استدعاء بناتجه:",
+    "pairs": [
+     [
+      "Math.Abs(-5)",
+      "5"
+     ],
+     [
+      "Math.Pow(3, 2)",
+      "9"
+     ],
+     [
+      "Math.Sqrt(16)",
+      "4"
+     ],
+     [
+      "Math.Floor(7.9)",
+      "7"
+     ],
+     [
+      "Math.Max(3, 8)",
+      "8"
+     ]
+    ],
+    "feedback": {
+     "explanation": "القيمة المطلقة لـ -5 هي 5، و3² = 9، والجذر التربيعي لـ 16 هو 4، وFloor يقرّب 7.9 للأسفل إلى 7، والأكبر بين 3 و8 هو 8."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "أي قيمة لا يمكن أن تعيدها rnd.Next(1, 7)؟",
+    "options": [
+     {
+      "text": "1"
+     },
+     {
+      "text": "6"
+     },
+     {
+      "text": "7",
+      "correct": true
+     },
+     {
+      "text": "3"
+     }
+    ],
+    "feedback": {
+     "explanation": "Next(1, 7) تعيد عددًا من 1 حتى 6: الحد الأعلى 7 لا يدخل. لهذا نستعملها لحجر النرد."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "البرنامج أعلاه يطبع 3.",
+    "answer": false,
+    "feedback": {
+     "explanation": "Math.Round في C# يقرّب العدد الذي ينتهي بـ .5 إلى العدد الزوجي الأقرب: Math.Round(2.5) = 2 (وMath.Round(3.5) = 4). هذا ليس مذكورًا في الكتاب، فانتبه له."
+    }
+   },
+   "program": "Console.WriteLine(Math.Round(2.5));",
+   "prove": "claim",
+   "claimOutput": "3"
+  },
+  {
+   "question": {
+    "kind": "wordBank",
+    "prompt": "أكمل الجملة:",
+    "text": "لتوليد عدد عشوائي ننشئ كائنًا بالأمر Random rnd = new [[Random]]()، وتعيد [[NextDouble]] عددًا عشريًا بين 0 و1.",
+    "distractors": [
+     "Math",
+     "Next",
+     "Round"
+    ],
+    "feedback": {
+     "explanation": "new Random() ينشئ مولّد الأعداد، وrnd.NextDouble() يعيد عددًا عشريًا بين 0 و1، أما rnd.Next(a, b) فيعيد عددًا صحيحًا."
+    }
+   }
+  }
+ ]
+}

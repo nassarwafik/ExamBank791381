@@ -1,0 +1,247 @@
+{
+ "module": "m11",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "4"
+     },
+     {
+      "text": "8",
+      "correct": true
+     },
+     {
+      "text": "2"
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "المنشئ يضع size = 4، وGetSize() تعيد 4، والناتج 4 × 2 = 8."
+    }
+   },
+   "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box b = new Box(4);\n        Console.WriteLine(b.GetSize() * 2);\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2 1",
+      "correct": true
+     },
+     {
+      "text": "3 3"
+     },
+     {
+      "text": "1 2"
+     },
+     {
+      "text": "2 2"
+     }
+    ],
+    "feedback": {
+     "explanation": "لكل كائن حالته الخاصة: c1 زيد مرتين وc2 مرة واحدة."
+    }
+   },
+   "program": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Counter c1 = new Counter();\n        Counter c2 = new Counter();\n        c1.Add();\n        c1.Add();\n        c2.Add();\n        Console.WriteLine(c1.Get() + \" \" + c2.Get());\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "3"
+     },
+     {
+      "text": "9",
+      "correct": true
+     },
+     {
+      "text": "12"
+     },
+     {
+      "text": "0"
+     }
+    ],
+    "feedback": {
+     "explanation": "Box b = a لا ينشئ صندوقًا جديدًا: a وb مرجعان للكائن نفسه، فتغييره عبر b يظهر عبر a: 9."
+    }
+   },
+   "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box a = new Box(3);\n        Box b = a;\n        b.SetSize(9);\n        Console.WriteLine(a.GetSize());\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "True",
+      "correct": true
+     },
+     {
+      "text": "False"
+     },
+     {
+      "text": "0"
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "new Box[3] ينشئ مصفوفة مراجع قيمها null، ولا ينشئ الصناديق نفسها."
+    }
+   },
+   "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box[] arr = new Box[3];\n        Console.WriteLine(arr[0] == null);\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ماذا يحدث عند تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "يطبع 0"
+     },
+     {
+      "text": "خطأ تنفيذ: لا يوجد كائن في arr[0]",
+      "correct": true
+     },
+     {
+      "text": "خطأ ترجمة"
+     },
+     {
+      "text": "يطبع null"
+     }
+    ],
+    "feedback": {
+     "explanation": "arr[0] قيمته null لأننا لم ننشئ صندوقًا بـ new، فاستدعاء GetSize() عليه خطأ تنفيذ (NullReferenceException)."
+    }
+   },
+   "program": "class Box\n{\n    private int size;\n    public Box(int s)\n    {\n        size = s;\n    }\n    public int GetSize()\n    {\n        return size;\n    }\n    public void SetSize(int s)\n    {\n        size = s;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Box[] arr = new Box[2];\n        Console.WriteLine(arr[0].GetSize());\n    }\n}",
+   "prove": "runtime",
+   "runtimeError": "NullReferenceException"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "80",
+    "feedback": {
+     "explanation": "Set(80) مقبولة لأنها بين 0 و100، أما Set(150) فترفضها العملية ولا تغيّر القيمة: هذه فائدة التغليف."
+    }
+   },
+   "program": "class Score\n{\n    private int value;\n    public void Set(int x)\n    {\n        if (x >= 0 && x <= 100)\n            value = x;\n    }\n    public int Get()\n    {\n        return value;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Score s = new Score();\n        s.Set(80);\n        s.Set(150);\n        Console.WriteLine(s.Get());\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "0"
+     },
+     {
+      "text": "5",
+      "correct": true
+     },
+     {
+      "text": "x"
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "this.x هو الحقل وx هو البارامتر: المنشئ ينسخ 5 إلى الحقل، وGet تعيده."
+    }
+   },
+   "program": "class P\n{\n    private int x;\n    public P(int x)\n    {\n        this.x = x;\n    }\n    public int Get()\n    {\n        return x;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Console.WriteLine(new P(5).Get());\n    }\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل معدِّل وصول بمعناه:",
+    "pairs": [
+     [
+      "public",
+      "متاح للجميع"
+     ],
+     [
+      "private",
+      "داخل نفس الفئة فقط"
+     ],
+     [
+      "protected",
+      "داخل الفئة والأصناف المشتقة"
+     ],
+     [
+      "internal",
+      "داخل نفس المشروع"
+     ]
+    ],
+    "feedback": {
+     "explanation": "الحقول عادة private لحمايتها، والعمليات public ليصل إليها الآخرون بأمان."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "صنّف كل سطر من فئة Student:",
+    "groups": [
+     "حقل",
+     "منشئ",
+     "عملية"
+    ],
+    "items": [
+     [
+      "private int age;",
+      0
+     ],
+     [
+      "private string name;",
+      0
+     ],
+     [
+      "public Student(string name)",
+      1
+     ],
+     [
+      "public int GetAge()",
+      2
+     ],
+     [
+      "public void PrintInfo()",
+      2
+     ]
+    ],
+    "feedback": {
+     "explanation": "الحقل بيانات داخلية (نوع واسم)، والمنشئ اسمه اسم الفئة نفسها وبلا نوع إرجاع، والعملية لها نوع إرجاع (int، void …)."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "يُنشأ الكائن من الفئة بالكلمة new.",
+    "answer": true,
+    "feedback": {
+     "explanation": "الفئة قالب، والكائن نسخة حيّة منها نُنشئها بـ new، مثل: Box b = new Box(4);"
+    }
+   }
+  }
+ ]
+}

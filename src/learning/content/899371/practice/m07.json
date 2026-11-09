@@ -1,0 +1,233 @@
+{
+ "module": "m07",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "6"
+     },
+     {
+      "text": "12",
+      "correct": true
+     },
+     {
+      "text": "9"
+     },
+     {
+      "text": "3"
+     }
+    ],
+    "feedback": {
+     "explanation": "Twice(3) = 6، ثم Twice(6) = 12. الاستدعاء الداخلي يُنفّذ أولًا."
+    }
+   },
+   "program": "static int Twice(int x)\n{\n    return x * 2;\n}\nstatic void Main()\n{\n    Console.WriteLine(Twice(Twice(3)));\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2"
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "7",
+      "correct": true
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "ref يرسل مرجع المتغير، فالتغيير داخل العملية يغيّر n الأصلي: 2 + 5 = 7."
+    }
+   },
+   "program": "static void Add(ref int a)\n{\n    a += 5;\n}\nstatic void Main()\n{\n    int n = 2;\n    Add(ref n);\n    Console.WriteLine(n);\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2",
+      "correct": true
+     },
+     {
+      "text": "7"
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "0"
+     }
+    ],
+    "feedback": {
+     "explanation": "بدون ref تُرسل نسخة من القيمة (by value): العملية تغيّر نسختها فقط، ويبقى n = 2."
+    }
+   },
+   "program": "static void Add(int a)\n{\n    a += 5;\n}\nstatic void Main()\n{\n    int n = 2;\n    Add(n);\n    Console.WriteLine(n);\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "47"
+     },
+     {
+      "text": "11",
+      "correct": true
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "7"
+     }
+    ],
+    "feedback": {
+     "explanation": "out يعيد قيمتين: tens = 47 / 10 = 4 وones = 47 % 10 = 7، ومجموعهما 11."
+    }
+   },
+   "program": "static void Split(int n, out int tens, out int ones)\n{\n    tens = n / 10;\n    ones = n % 10;\n}\nstatic void Main()\n{\n    int t, o;\n    Split(47, out t, out o);\n    Console.WriteLine(t + o);\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "True",
+      "correct": true
+     },
+     {
+      "text": "False"
+     },
+     {
+      "text": "7"
+     },
+     {
+      "text": "10"
+     }
+    ],
+    "feedback": {
+     "explanation": "IsEven(7) تعيد false وIsEven(10) تعيد true، و|| يكفيه طرف صحيح: True."
+    }
+   },
+   "program": "static bool IsEven(int n)\n{\n    return n % 2 == 0;\n}\nstatic void Main()\n{\n    Console.WriteLine(IsEven(7) || IsEven(10));\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "5",
+    "feedback": {
+     "explanation": "العملية تقسم على 10 حتى يصبح العدد 0 وتعدّ: 90210 فيه 5 منازل."
+    }
+   },
+   "program": "static int Digits(int n)\n{\n    int c = 0;\n    while (n > 0)\n    {\n        n /= 10;\n        c++;\n    }\n    return c;\n}\nstatic void Main()\n{\n    Console.WriteLine(Digits(90210));\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل نوع القيمة المعادة بمعناه:",
+    "pairs": [
+     [
+      "int",
+      "تعيد عددًا صحيحًا"
+     ],
+     [
+      "bool",
+      "تعيد true أو false"
+     ],
+     [
+      "void",
+      "لا تعيد أي قيمة"
+     ],
+     [
+      "string",
+      "تعيد نصًا"
+     ]
+    ],
+    "feedback": {
+     "explanation": "نوع العملية يكتب قبل اسمها، وهو نوع القيمة التي تعيدها return. ‏void يعني أنها لا تعيد شيئًا."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "هل يغيّر تعديلُ البارامتر داخل العملية المتغيرَ الأصلي؟",
+    "groups": [
+     "يغيّر الأصل",
+     "لا يغيّر الأصل"
+    ],
+    "items": [
+     [
+      "int a",
+      1
+     ],
+     [
+      "ref int a",
+      0
+     ],
+     [
+      "out int a",
+      0
+     ],
+     [
+      "double x",
+      1
+     ],
+     [
+      "ref double x",
+      0
+     ]
+    ],
+    "feedback": {
+     "explanation": "بدون ref / out تُرسل نسخة (by value) فلا يتغير الأصل. مع ref يُرسل المرجع، وout يعيد القيمة إلى المتغير الأصلي."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "العملية لا تعمل من تلقاء نفسها، بل يجب استدعاؤها.",
+    "answer": true,
+    "feedback": {
+     "explanation": "تعريف العملية لا ينفّذها. تنفّذ فقط عندما نستدعيها باسمها، مثل Twice(3)."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "Main تستدعي A، وA تستدعي B. رتّب انتهاء العمليات حسب مكدس الاستدعاءات:",
+    "inOrder": [
+     "تنتهي B",
+     "تنتهي A",
+     "تنتهي Main"
+    ],
+    "feedback": {
+     "explanation": "آخر عملية دخلت المكدس هي أول من يخرج: B تنتهي أولًا وتعود إلى A، ثم A تعود إلى Main."
+    }
+   }
+  }
+ ]
+}

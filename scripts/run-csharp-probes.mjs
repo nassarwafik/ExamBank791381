@@ -19,7 +19,7 @@
 //
 // Usage: node scripts/run-csharp-probes.mjs [probesDir] [--only id1,id2] [--json out.json]
 // Exit code: 0 when every probe matched its expectation, 1 otherwise, 2 on a usage / environment error.
-import { readFileSync, readdirSync, existsSync, mkdtempSync, writeFileSync, rmSync, chmodSync, cpSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdtempSync, writeFileSync, rmSync, chmodSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -152,13 +152,16 @@ function containerScript(argv, runCount) {
   return lines.join("\n") + "\n";
 }
 
-function runProbe({ dir, probe }, image, argv, env) {
+/**
+ * Compile `code` once and run it once per stdin, in one disposable container with the csharp@1 worker's compiler settings
+ * (shared by the probes and by the 899371 practice prover, scripts/prove-899371-practice.mjs). → { compile, observed[] }.
+ */
+export function executeCSharp(code, stdins, { image, argv, env }) {
   const work = mkdtempSync(join(tmpdir(), "csharp-probe-"));
   try {
-    cpSync(join(dir, "Program.cs"), join(work, "Program.cs"));
-    const runs = probe.runs || [];
-    runs.forEach((r, i) => writeFileSync(join(work, `stdin${i}.txt`), r.stdin || ""));
-    writeFileSync(join(work, "probe.sh"), containerScript(argv, runs.length));
+    writeFileSync(join(work, "Program.cs"), code);
+    stdins.forEach((stdin, i) => writeFileSync(join(work, `stdin${i}.txt`), stdin || ""));
+    writeFileSync(join(work, "probe.sh"), containerScript(argv, stdins.length));
     chmodSync(work, 0o777);
     const envArgs = Object.entries(env).flatMap(([k, v]) => ["-e", `${k}=${v}`]);
     const res = spawnSync("docker", ["run", "--rm", "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -170,15 +173,27 @@ function runProbe({ dir, probe }, image, argv, env) {
     if (res.error || res.status !== 0) throw new Error("docker run failed: " + (res.error ? res.error.message : firstLine(res.stderr)));
     const read = f => existsSync(join(work, f)) ? readFileSync(join(work, f), "utf8") : "";
     const compile = { exitCode: Number(read("compile.exit").trim() || 1), output: read("compile.txt") };
-    const c = judgeCompile(probe.expect, compile);
-    if (probe.expect && probe.expect.compile === "error") return { id: probe.id, ok: c.ok, steps: [c.detail], compile, observed: [] };
-    if (!c.ok) return { id: probe.id, ok: false, steps: [c.detail + " " + firstLine(compile.output)], compile, observed: [] };
-    const observed = runs.map((r, i) => ({ stdin: r.stdin || "", exitCode: Number(read(`exit${i}.txt`).trim() || 1), stdout: read(`stdout${i}.txt`), stderr: read(`stderr${i}.txt`) }));
-    const verdicts = runs.map((r, i) => judgeRun(r.expect, observed[i]));
-    return { id: probe.id, ok: verdicts.every(v => v.ok), steps: verdicts.map(v => v.detail), compile, observed };
+    const observed = compile.exitCode !== 0 ? [] : stdins.map((stdin, i) => ({ stdin: stdin || "", exitCode: Number(read(`exit${i}.txt`).trim() || 1), stdout: read(`stdout${i}.txt`), stderr: read(`stderr${i}.txt`) }));
+    return { compile, observed };
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
+}
+
+/** The worker's image, compile / run argv and environment (throws when the worker files no longer describe csharp@1). */
+export function csharpEnvironment() {
+  const toolchain = JSON.parse(readFileSync(join(WORKER_DIR, "toolchain.json"), "utf8"));
+  return { image: sdkImageFromDockerfile(readFileSync(join(WORKER_DIR, "Dockerfile"), "utf8")), argv: probeArgv(toolchain), env: { ...toolchain.env }, toolchain };
+}
+
+function runProbe({ dir, probe }, image, argv, env) {
+  const runs = probe.runs || [];
+  const { compile, observed } = executeCSharp(readFileSync(join(dir, "Program.cs"), "utf8"), runs.map(r => r.stdin || ""), { image, argv, env });
+  const c = judgeCompile(probe.expect, compile);
+  if (probe.expect && probe.expect.compile === "error") return { id: probe.id, ok: c.ok, steps: [c.detail], compile, observed: [] };
+  if (!c.ok) return { id: probe.id, ok: false, steps: [c.detail + " " + firstLine(compile.output)], compile, observed: [] };
+  const verdicts = runs.map((r, i) => judgeRun(r.expect, observed[i]));
+  return { id: probe.id, ok: verdicts.every(v => v.ok), steps: verdicts.map(v => v.detail), compile, observed };
 }
 
 function main() {

@@ -8,6 +8,8 @@
 //   3. coverage: every source paragraph (¶0–3046) is on exactly one page; only the decorative cover picture (¶2) and the decorative
 //      rule (¶1174) are not, and the printed table of contents (¶5) only lends chapter 9 its opener title (P3-a).
 // A question figure is either a table it was transcribed to (P2-c) or the book's own drawing, byte for byte (P3-c).
+// The pages of «تدريبات الوحدة» (P4, §16) are added enrichment, not the book: they name no ¶ (PRACTICE_NOTE) and are proven by
+// practice.p4.test.ts; here they are only set aside, and everything else must still be exactly the book.
 // Plus: the source file is the one the owner sent (sha256); only owner-approved corrections exist and each one is in the course.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -19,7 +21,7 @@ import type { ContentBlock, ContentModule } from "../types";
 // @ts-expect-error — plain ESM tools shared with the converter; untyped on purpose.
 import { readDocxBody, readZipEntry } from "../../../../scripts/lib/docx-source.mjs";
 // @ts-expect-error — plain ESM tools shared with the converter; untyped on purpose.
-import { convert, CORRECTIONS, FIGURES, SOURCE_FILE } from "../../../../scripts/convert-899371.mjs";
+import { convert, CORRECTIONS, FIGURES, SOURCE_FILE, PRACTICE_NOTE } from "../../../../scripts/convert-899371.mjs";
 
 const CID = "899371";
 const SOURCE_SHA256 = "22ef25cd0c811be565d23472335d5cbaefa9253f52f29a25f3dfb124d5e97d3f";
@@ -46,6 +48,9 @@ async function modules(): Promise<ContentModule[]> {
   for (const m of manifest.modules) out.push(await loadBundledModuleContent(CID, m.id));
   return out;
 }
+/** A page of the book (every page but the added exercises of «تدريبات الوحدة»). */
+const isBookPage = (p: { source?: { sourceNote?: string } }) => p.source?.sourceNote !== PRACTICE_NOTE;
+const bookBlocks = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.filter(isBookPage).flatMap(p => p.blocks)));
 const rangeOf = (note: string | undefined) => {
   const m = /^¶(\d+)(?:–(\d+))?$/.exec(note ?? "");
   if (!m) throw new Error("no ¶ range in source note " + note);
@@ -107,7 +112,7 @@ describe("899371 — the course is the owner's Word source", () => {
 
   it("2. every page shows exactly its source lines, in order (corrections applied, Markdown markers read as formatting)", async () => {
     let pages = 0;
-    for (const m of await modules()) for (const l of m.lessons) for (const p of l.pages) {
+    for (const m of await modules()) for (const l of m.lessons) for (const p of l.pages.filter(isBookPage)) {
       const [from, to] = rangeOf(p.source?.sourceNote);
       if (p.layout === "opener" && from === 5) {
         // chapter 9 prints no title line: its opener carries one of the table of contents' own entries
@@ -121,7 +126,7 @@ describe("899371 — the course is the owner's Word source", () => {
 
   it("3. coverage: ¶0–3046 are each on exactly one page, except the cover picture (¶2) and the decorative rule (¶1174)", () => {
     const seen = new Map<number, string>();
-    for (const m of manifest.modules) for (const l of m.lessons) for (const p of l.pages) {
+    for (const m of manifest.modules) for (const l of m.lessons) for (const p of l.pages.filter(isBookPage)) {
       const [from, to] = rangeOf(p.source?.sourceNote);
       for (let i = from; i <= to; i++) {
         expect(seen.has(i), "¶" + i + " on " + seen.get(i) + " and " + p.id).toBe(false);
@@ -135,7 +140,7 @@ describe("899371 — the course is the owner's Word source", () => {
   });
 
   it("only owner-approved corrections, each visible in the course where it belongs", async () => {
-    const all = JSON.stringify(await modules());
+    const all = JSON.stringify(bookBlocks(await modules()));
     for (const c of CORRECTIONS as Correction[]) {
       expect(APPROVED.has(c.finding), c.finding).toBe(true);
       for (const piece of c.replace.split("\n")) expect(all, c.finding).toContain(JSON.stringify(piece).slice(1, -1).trim());
@@ -147,12 +152,12 @@ describe("899371 — the course is the owner's Word source", () => {
 
   it("every Markdown marker read as formatting is listed in the log (decision P2-a), and none is left in the book text", async () => {
     expect(conversionLog.markers.length).toBe(51);
-    const text = JSON.stringify(await modules());
+    const text = JSON.stringify(bookBlocks(await modules()));
     expect(text).not.toMatch(/\*\*|`|\\\\[#[\]]/);
   }, 30000);
 
   it("every drawing is the source image byte for byte, protected, with an alt naming its values", async () => {
-    const drawings = (await modules()).flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks))).filter(b => b.type === "diagram") as Extract<ContentBlock, { type: "diagram" }>[];
+    const drawings = bookBlocks(await modules()).filter(b => b.type === "diagram") as Extract<ContentBlock, { type: "diagram" }>[];
     const figures = Object.entries(FIGURES as Record<string, Figure>).filter(([, f]) => f.drawing);
     expect(drawings.map(d => d.src)).toEqual(figures.map(([img]) => "/learning-assets/899371/" + drawingHash(img) + ".png"));
     for (const d of drawings) {

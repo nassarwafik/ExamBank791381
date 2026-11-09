@@ -3,7 +3,8 @@
 //     every source this book's; the overview's batches equal the manifest's, the whole book (m00–m12) in its six sections;
 //   • the manifest is exactly the one derived from the bodies; the app's body list, the server registry and the committed page
 //     index agree;
-//   • the whole course passes the content validator; every block is a BOOK block of a faithful type — no enrichment yet;
+//   • the whole course passes the content validator; every block of a book page is a BOOK block of a faithful type, and the only
+//     enrichment is the lesson «تدريبات الوحدة» closing chapters 1–11 (P4, §16): exercise pages of code + practice blocks only;
 //   • every drawing (the chapter-10 matrices, P3-c) is a protected file that exists, stays small, and no unreferenced file ships;
 //   • every program is a C# code block (Reader P1); the course wears the existing «booklet» skin (presentation only).
 // fidelity.p2.test.ts proves the text equal to the Word source; bookLock.test.ts keeps it from changing.
@@ -23,6 +24,8 @@ import * as apiRegistry from "../../../../api/src/lib/learning-materials-registr
 
 const CID = "899371";
 const server = apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string; title: string; order: number }[] };
+// @ts-expect-error — plain ESM tool shared with the converter; untyped on purpose.
+import { PRACTICE_NOTE } from "../../../../scripts/convert-899371.mjs";
 const BOOK_BLOCKS = new Set(["text", "heading", "list", "table", "code", "unit-opener", "diagram"]);
 const assetDir = fileURLToPath(new URL("../../../../api/src/data/content-assets/learning/" + CID + "/", import.meta.url));
 
@@ -31,7 +34,7 @@ async function loadAll(): Promise<ContentModule[]> {
   for (const m of manifest.modules) out.push(await loadBundledModuleContent(CID, m.id));
   return out;
 }
-const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks.map(b => ({ page: p.id, b })))));
+const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(l => l.pages.flatMap(p => p.blocks.map(b => ({ page: p.id, exercises: p.source?.sourceNote === PRACTICE_NOTE, b })))));
 
 describe("899371 — identity and registration", () => {
   it("is the third catalog course, with the card the owner set", () => {
@@ -55,25 +58,26 @@ describe("899371 — identity and registration", () => {
     ]);
   });
 
-  it("every chapter has its opener, its summary and its two assignments under the book's own table-of-contents names", () => {
+  it("every chapter has its opener, its summary and its two assignments under the book's own table-of-contents names, then its exercises", () => {
     const lessons = manifest.modules.filter(m => m.order > 0 && m.order < 12).map(m => m.lessons.map(l => l.title));
     expect(lessons).toEqual([
-      ["افتتاحية الوحدة", "الطباعة والمتغيرات", "الوظيفة الأولى بيتية", "الوظيفة الأولى برمجة"],
-      ["افتتاحية الوحدة", "العوامل والتعابير المنطقية", "الوظيفة الثانية بيتية", "الوظيفة الثانية برمجة"],
-      ["افتتاحية الوحدة", "المكتبة الرياضية", "الوظيفة الثالثة بيتية", "الوظيفة الثالثة برمجة"],
-      ["افتتاحية الوحدة", "جملة الشرط", "الوظيفة الرابعة بيتية", "الوظيفة الرابعة برمجة"],
-      ["افتتاحية الوحدة", "جملة التكرار for", "الوظيفة الخامسة بيتية", "الوظيفة الخامسة برمجة"],
-      ["افتتاحية الوحدة", "جملة التكرار while", "الوظيفة السادسة بيتية", "الوظيفة السادسة برمجة"],
-      ["افتتاحية الوحدة", "العمليات", "الوظيفة السابعة بيتية", "الوظيفة السابعة برمجة"],
-      ["افتتاحية الوحدة", "النصوص", "الوظيفة الثامنة بيتية", "الوظيفة الثامنة برمجة"],
-      ["افتتاحية الوحدة", "المصفوفات", "الوظيفة التاسعة بيتية", "الوظيفة التاسعة برمجة"],
-      ["افتتاحية الوحدة", "مصفوفة ثنائية الابعاد", "الوظيفة العاشرة بيتية", "الوظيفة العاشرة برمجة"],
-      ["افتتاحية الوحدة", "الكائنات", "الوظيفة الحادية عشرة بيتية", "الوظيفة الحادية عشرة برمجة"],
+      ["افتتاحية الوحدة", "الطباعة والمتغيرات", "الوظيفة الأولى بيتية", "الوظيفة الأولى برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "العوامل والتعابير المنطقية", "الوظيفة الثانية بيتية", "الوظيفة الثانية برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "المكتبة الرياضية", "الوظيفة الثالثة بيتية", "الوظيفة الثالثة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "جملة الشرط", "الوظيفة الرابعة بيتية", "الوظيفة الرابعة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "جملة التكرار for", "الوظيفة الخامسة بيتية", "الوظيفة الخامسة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "جملة التكرار while", "الوظيفة السادسة بيتية", "الوظيفة السادسة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "العمليات", "الوظيفة السابعة بيتية", "الوظيفة السابعة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "النصوص", "الوظيفة الثامنة بيتية", "الوظيفة الثامنة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "المصفوفات", "الوظيفة التاسعة بيتية", "الوظيفة التاسعة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "مصفوفة ثنائية الابعاد", "الوظيفة العاشرة بيتية", "الوظيفة العاشرة برمجة", "تدريبات الوحدة"],
+      ["افتتاحية الوحدة", "الكائنات", "الوظيفة الحادية عشرة بيتية", "الوظيفة الحادية عشرة برمجة", "تدريبات الوحدة"],
     ]);
     expect(manifest.modules.at(-1)!.lessons.map(l => l.title)).toEqual(["الكلمة الختامية"]);
   });
 
   it("each assignment page is titled by the question numbers printed on it (no «السؤال 32» from the typo of ¶97, no chapter-11 item as a question)", () => {
+    // (the exercise lesson closing each chapter is P4's, not a book assignment)
     const titles = Object.fromEntries(manifest.modules.flatMap(m => m.lessons).filter(l => l.title.startsWith("الوظيفة")).map(l => [l.title, l.pages.map(p => p.title)]));
     const q = (...xs: string[]) => xs.map(x => (x.includes("–") ? "الأسئلة " : "السؤال ") + x);
     expect(titles).toEqual({
@@ -102,7 +106,7 @@ describe("899371 — identity and registration", () => {
     });
   });
 
-  it("every id is course-prefixed and nested; every source is this book (printed page 3–140 + its Word paragraphs)", () => {
+  it("every id is course-prefixed and nested; every source is this book (printed page 3–140 + its Word paragraphs, or the exercises' note)", () => {
     for (const m of manifest.modules) for (const l of m.lessons) {
       expect(l.id.startsWith(m.id + "-l")).toBe(true);
       for (const p of l.pages) {
@@ -111,7 +115,8 @@ describe("899371 — identity and registration", () => {
         expect(p.source!.printedPage).toBe(p.source!.pdfPageStart);
         expect(p.source!.pdfPageStart).toBeGreaterThanOrEqual(3);
         expect(p.source!.pdfPageStart).toBeLessThanOrEqual(140);
-        expect(p.source!.sourceNote).toMatch(/^¶\d+(–\d+)?$/);
+        if (l.title === "تدريبات الوحدة") expect(p.source!.sourceNote).toBe(PRACTICE_NOTE);
+        else expect(p.source!.sourceNote).toMatch(/^¶\d+(–\d+)?$/);
       }
     }
   });
@@ -141,20 +146,23 @@ describe("899371 — the bodies", () => {
     expect(validateLearningCourseContent(content)).toEqual([]);
   }, 30000);
 
-  it("every block is a book block of a faithful type, with a page-prefixed id; no enrichment yet", async () => {
+  it("every block of a book page is a book block of a faithful type; the only enrichment is the exercise pages' code + practice", async () => {
     const all = blocksOf(await loadAll());
-    expect(all.length).toBe(1602);
-    for (const { page, b } of all) {
+    expect(all.filter(x => !x.exercises).length).toBe(1602);
+    expect(all.filter(x => x.exercises).length).toBe(110 + 77);   // 110 exercises, 77 of them with their program above
+    for (const { page, exercises, b } of all) {
       const where = page + " / " + b.id;
+      expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
+      if (exercises) { expect(b.origin, where).toBe("teacher-enrichment"); expect(["code", "practice"], where).toContain(b.type); continue; }
       expect(b.origin, where).toBe("book");
       expect(BOOK_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);
-      expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
     }
   }, 30000);
 
   it("every program is a C# code block shown left to right", async () => {
     const code = blocksOf(await loadAll()).filter(x => x.b.type === "code").map(x => x.b as Extract<ContentBlock, { type: "code" }>);
-    expect(code.length).toBe(224);
+    expect(code.filter(c => c.origin === "book").length).toBe(224);
+    expect(code.length).toBe(224 + 77);
     for (const c of code) expect([c.language, c.dir], c.id).toEqual(["csharp", "ltr"]);
   }, 30000);
 

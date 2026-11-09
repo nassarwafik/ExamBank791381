@@ -16,7 +16,11 @@
 //   • replaces the two question FIGURES of chapter 4 (images) by the tables they show (decision P2-c), transcribed in FIGURES;
 //     keeps the seven matrix figures of chapter 10 as the book's own drawings (protected PNG, exact bytes, full alt; P3-c).
 // The table of contents (¶5) is the Reader's own; the cover picture (¶2) and the decorative rule ¶1174 are not content (P2-b, P3-b).
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+// P4 (§16): after the book's own lessons of chapters 1–11 the converter appends the lesson «تدريبات الوحدة» — ADDED enrichment, never
+// book text: the self-study exercises authored in src/learning/content/899371/practice/mNN.json (owner decision Q3: questions
+// PARALLEL to the chapter's summary, not the book's assignment questions, with the right answer revealed after an answer). Each
+// program question's key is proven by running the program with the csharp@1 worker (scripts/prove-899371-practice.mjs → proofs.json).
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -279,7 +283,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body) {
+export function convert(body, practice = readPractice()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -334,8 +338,12 @@ export function convert(body) {
       });
       lessons.push({ id: lid, title: les.title, order: les.order, pages });
     }
+    const exercises = practice[`m${String(mod.n).padStart(2, "0")}`];
+    if (exercises) lessons.push(practiceLesson(mid, mod, lessons.length, exercises));
     return { id: mid, title: mod.title, order: mod.n, lessons };
   });
+  const unused = Object.keys(practice).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k));
+  if (unused.length) throw new Error("practice files for no chapter: " + unused.join(", "));
   if (applied.length !== CORRECTIONS.length) throw new Error("a correction did not apply: " + CORRECTIONS.filter(c => !applied.includes(c)).map(c => c.finding).join(", "));
   return { modules, log, applied };
 }
@@ -444,6 +452,96 @@ function blocksOf(body, pg, pid, kind, corrected, log) {
   flushCode(); flushList();
   return blocks;
 }
+// ── P4: the self-study exercises («تدريبات الوحدة», enrichment) ──────────────────────────────────────────────────────────────
+export const PRACTICE_DIR = join(OUT, "practice");
+export const PRACTICE_PER_PAGE = 5;
+/** The authored exercise files: { mNN: item[] }. An item is { question (compact form), program?, stdin?, prove?, … }. */
+export function readPractice(dir = PRACTICE_DIR) {
+  const out = {};
+  if (!existsSync(dir)) return out;
+  for (const f of readdirSync(dir).filter(f => /^m\d\d\.json$/.test(f)).sort()) {
+    const file = JSON.parse(readFileSync(join(dir, f), "utf8"));
+    if (file.module !== f.slice(0, 3)) throw new Error(f + ": module " + file.module);
+    out[file.module] = file.items;
+  }
+  return out;
+}
+/** A deterministic shuffle (seeded by the block id) that never leaves a list of two or more in its given order. */
+export function seededShuffle(list, seed) {
+  if (list.length < 2) return [...list];
+  const h = createHash("sha256").update(seed).digest();
+  let k = 0;
+  for (;;) {
+    const a = [...list];
+    for (let i = a.length - 1; i > 0; i--) { const j = h[k++ % h.length] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    if (a.some((x, i) => x !== list[i])) return a;
+  }
+}
+/** The compact authored question → the content model's PracticeQuestion (ids, scrambled presentation, key). */
+/** `correctAt` (multiple choice): the position the right option is moved to — the options are rotated, so the distractors keep
+ *  their authored order; the lesson spreads the right answers evenly over a–d. */
+export function expandQuestion(q, seed, correctAt) {
+  const feedback = { explanation: q.feedback.explanation };
+  switch (q.kind) {
+    case "multipleChoice": {
+      const ids = "abcdefgh", n = q.options.length, at = q.options.findIndex(o => o.correct);
+      const shift = correctAt === undefined ? 0 : ((correctAt - at) % n + n) % n;
+      const options = q.options.map((_, i) => q.options[((i - shift) % n + n) % n]);
+      return { kind: q.kind, prompt: q.prompt, options: options.map((o, i) => ({ id: ids[i], text: o.text, ...(o.correct ? { correct: true } : {}) })), feedback };
+    }
+    case "trueFalse": case "shortInput": return { kind: q.kind, prompt: q.prompt, answer: q.answer, feedback };
+    case "matching": {
+      const left = q.pairs.map(([t], i) => ({ id: `l${i + 1}`, text: t }));
+      const right = seededShuffle(q.pairs.map(([, t], i) => ({ id: `r${i + 1}`, text: t })), seed + "/right");
+      return { kind: q.kind, prompt: q.prompt, left, right, pairs: Object.fromEntries(left.map((l, i) => [l.id, `r${i + 1}`])), feedback };
+    }
+    case "ordering": {
+      const inOrder = q.inOrder.map((t, i) => ({ id: `s${i + 1}`, text: t }));
+      return { kind: q.kind, prompt: q.prompt, items: seededShuffle(inOrder, seed + "/items"), order: inOrder.map(s => s.id), feedback };
+    }
+    case "classify": {
+      const groups = q.groups.map((t, i) => ({ id: `g${i + 1}`, text: t }));
+      const items = q.items.map(([t], i) => ({ id: `c${i + 1}`, text: t }));
+      return { kind: q.kind, prompt: q.prompt, groups, items, assign: Object.fromEntries(q.items.map(([, g], i) => [`c${i + 1}`, groups[g].id])), feedback };
+    }
+    case "wordBank": {
+      const segments = [], answers = {};
+      let n = 0;
+      for (const [i, part] of q.text.split(/\[\[|\]\]/).entries()) {
+        if (i % 2 === 0) { if (part) segments.push(part); continue; }
+        const id = `b${++n}`; segments.push({ blank: id }); answers[id] = part;
+      }
+      return { kind: q.kind, prompt: q.prompt, segments, bank: seededShuffle([...Object.values(answers), ...q.distractors], seed + "/bank"), answers, feedback };
+    }
+    default: throw new Error("unknown practice kind " + q.kind);
+  }
+}
+/** The lesson «تدريبات الوحدة»: pages of PRACTICE_PER_PAGE exercises; a program question shows its program (code) above it. */
+function practiceLesson(mid, mod, order, items) {
+  const lid = `${mid}-l${String(order).padStart(2, "0")}`;
+  const short = lid.slice(CID.length + 1);
+  const toc = mod.lessons[0].toc;
+  const pages = [];
+  let choice = mod.n;   // the k-th multiple-choice question of chapter n has its right option at position (n + k) mod 4
+  for (let p = 0; p * PRACTICE_PER_PAGE < items.length; p++) {
+    const pid = `${lid}-p${String(p + 1).padStart(2, "0")}`;
+    const blocks = [];
+    items.slice(p * PRACTICE_PER_PAGE, (p + 1) * PRACTICE_PER_PAGE).forEach((it, k) => {
+      const qid = `${short}-p${String(p + 1).padStart(2, "0")}-q${String(p * PRACTICE_PER_PAGE + k + 1).padStart(2, "0")}`;
+      if (it.program) blocks.push({ id: qid + "-code", type: "code", origin: "teacher-enrichment", language: "csharp", dir: "ltr", code: it.program });   // a program with input names it in the prompt
+      const question = expandQuestion(it.question, qid, it.question.kind === "multipleChoice" ? choice++ % it.question.options.length : undefined);
+      // reveal (decision Q3) wherever the content model allows it: every kind but the free short answer
+      blocks.push({ id: qid, type: "practice", origin: "teacher-enrichment", ...(question.kind === "shortInput" ? {} : { reveal: true }), question });
+    });
+    const total = Math.ceil(items.length / PRACTICE_PER_PAGE);
+    pages.push({ id: pid, title: total > 1 ? `تدريبات الوحدة (${p + 1} من ${total})` : "تدريبات الوحدة", order: p + 1, layout: "practice",
+      source: { kind: "book", sourceId: CID, pdfPageStart: toc, printedPage: toc, sourceNote: PRACTICE_NOTE }, blocks });
+  }
+  return { id: lid, title: "تدريبات الوحدة", order, pages };
+}
+/** The source note of an exercise page: added enrichment, parallel to the chapter's summary (it names no ¶ of the book). */
+export const PRACTICE_NOTE = "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)";
+
 /** A drawing's protected file name: the first 16 hex of the sha256 of its exact bytes in the Word source. */
 let SOURCE_ZIP = null;
 export const drawingBytes = image => readZipEntry(SOURCE_ZIP ?? (SOURCE_ZIP = readFileSync(SOURCE_FILE)), "word/media/" + image);
@@ -464,9 +562,11 @@ function moduleFile(mod) {
   return `// Learning Materials — «أسس علم الحاسوب» (899371), ${mod.order === 0 ? "the opening" : "chapter " + mod.order} «${mod.title}».
 //
 // GENERATED by scripts/convert-899371.mjs from the owner's Word source (do not edit by hand: change the converter and re-run it).
-// Every block is origin "book", converted verbatim from the source paragraphs its page's source note names (¶); the owner-approved
+// Every block of a book page is origin "book", converted verbatim from the source paragraphs its page's source note names (¶); the owner-approved
 // corrections (plan §12.4) and the reading of the source's Markdown residue (decision P2-a) are the only differences, and
-// fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.
+// fidelity.p2.test.ts proves it. The page's source note (¶) names the Word paragraphs it was converted from.${mod.lessons.some(l => l.title === "تدريبات الوحدة") ? `
+// The last lesson «تدريبات الوحدة» is ADDED enrichment (P4, plan §16), not the book: the self-study exercises of practice/${n}.json,
+// each program exercise's key proven by a run (practice/proofs.json; practice.p4.test.ts).` : ""}
 
 import type { ContentModule } from "../../types";
 

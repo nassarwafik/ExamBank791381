@@ -216,6 +216,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m01-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m01-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m01-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 4,
+                "printedPage": 4,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -563,6 +594,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m02-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m02-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m02-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 9,
+                "printedPage": 9,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -811,6 +873,37 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 23,
                 "printedPage": 23,
                 "sourceNote": "¶522–533"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m03-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m03-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m03-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 18,
+                "printedPage": 18,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
               }
             }
           ]
@@ -1113,6 +1206,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m04-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m04-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m04-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 26,
+                "printedPage": 26,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -1340,6 +1464,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m05-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m05-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m05-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 41,
+                "printedPage": 41,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -1540,6 +1695,37 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 61,
                 "printedPage": 61,
                 "sourceNote": "¶1310–1316"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m06-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m06-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m06-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 52,
+                "printedPage": 52,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
               }
             }
           ]
@@ -1842,6 +2028,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m07-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m07-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m07-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 63,
+                "printedPage": 63,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -2054,6 +2271,37 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 92,
                 "printedPage": 92,
                 "sourceNote": "¶2113–2131"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m08-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m08-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m08-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 84,
+                "printedPage": 84,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
               }
             }
           ]
@@ -2308,6 +2556,37 @@ const manifest: LearningCourseManifest = {
               }
             }
           ]
+        },
+        {
+          "id": "899371-m09-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m09-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m09-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 95,
+                "printedPage": 95,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            }
+          ]
         }
       ]
     },
@@ -2508,6 +2787,37 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 115,
                 "printedPage": 115,
                 "sourceNote": "¶2695–2723"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m10-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m10-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m10-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 108,
+                "printedPage": 108,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
               }
             }
           ]
@@ -2723,6 +3033,37 @@ const manifest: LearningCourseManifest = {
                 "pdfPageStart": 138,
                 "printedPage": 138,
                 "sourceNote": "¶3027–3031"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899371-m11-l04",
+          "title": "تدريبات الوحدة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899371-m11-l04-p01",
+              "title": "تدريبات الوحدة (1 من 2)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
+              }
+            },
+            {
+              "id": "899371-m11-l04-p02",
+              "title": "تدريبات الوحدة (2 من 2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899371",
+                "pdfPageStart": 126,
+                "printedPage": 126,
+                "sourceNote": "إثراء: تدريبات ذاتية موازية لملخص الفصل (ليست من الكتاب)"
               }
             }
           ]
