@@ -795,6 +795,11 @@
       "page": "studio-setup",
       "viewport": "all",
       "reason": "Phase 21I — size only: these scenes capture the whole builder page beneath the builder overlay, and that page's «ماذا تريد في الامتحان؟» card is a few lines taller (multi-subject description and placeholder, see the studio-home entry), so the page grows by 19–73 px; the overlay and the builder itself are unchanged."
+    },
+    {
+      "page": "state-ai-composer",
+      "viewport": "all",
+      "reason": "Phase 21N — the composer's «امتحان جديد» tab lists four more question types the AI composer can now generate (اختيار متعدد الإجابات، مطابقة، ترتيب، تصنيف) as type toggles beside the existing ones; the toggle row may wrap onto one more line. Nothing else in the dialog moves."
     }
   ]
 }

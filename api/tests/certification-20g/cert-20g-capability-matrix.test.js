@@ -10,7 +10,7 @@ import { examD } from "./exams/D-mathematics.js";
 import { examE } from "./exams/E-showcase.js";
 import { stressExam } from "./exams/S-stress.js";
 import { COMPOSITE_CHILD_IDENTITIES } from "../../../src/compositeQuestion";
-import { COMPOSER_DRAFT_TYPES, COMPOSER_SIM_PLUGINS } from "../../../src/aiComposer/composerCatalog";
+import { COMPOSER_ITEM_KINDS, COMPOSER_SIM_PLUGINS } from "../../../src/aiComposer/composerCatalog";
 
 // Phase 20G — the LIVE CAPABILITY MATRIX, derived from the code at run time (never a hand list): every production question type of the canonical
 // Question Type Catalog at every supported version, every registered SmartSim plugin identity and every composite child identity. Each row gets
@@ -84,7 +84,8 @@ function rows() {
     const id = def.key + "@" + v;
     const c = def.capabilities;
     out.push({ id, kind: "type", grading: def.gradingMode, partial: c.partialCredit, responses: def.responseKinds.join("/"), compoundPart: c.compoundPart, compositeChild: COMPOSITE_CHILD_IDENTITIES.includes(id),
-      ai: COMPOSER_DRAFT_TYPES.includes(def.key) || (def.key === "smartSim" || def.key === "composite"), authoring: catalog.authoringQuestionTypeVersion(def.key) === v, grader: def.legacy ? "legacy adapter" : (typeof resolveGrader(def.key, v) === "function" ? "registered" : "composed"), ...disp(id) });
+      ai: COMPOSER_ITEM_KINDS.includes(def.key),   // 21N: every item kind the composer may name (19A drafts, structured kinds, smartSim, composite)
+      authoring: catalog.authoringQuestionTypeVersion(def.key) === v, grader: def.legacy ? "legacy adapter" : (typeof resolveGrader(def.key, v) === "function" ? "registered" : "composed"), ...disp(id) });
   }
   for (const d of registry.listSmartSimPluginDescriptors()) {
     const id = "plugin:" + d.key + "@" + d.version;

@@ -121,7 +121,7 @@ const DYNAMIC_SIGNATURES = ["SIMULATION_CLOCK_V1", "xp-dyn-plot", "dyn-flow", "f
 // (Phase 21A: the catalog marker became AI_COMPOSER_CATALOG_V2 — Scientific Math v2; Phase 21A.1: AI_COMPOSER_CATALOG_V3 — data charts.)
 // Phase 21A.2 advances ONLY the additive function-graph catalog marker to V4; the UI stays lazy.
 // Phase 21J advanced the marker to V5 (the chemistry simulators), 21K to V6 (the virtual lab); the UI stays lazy.
-const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V6", "ai-composer-diff"];
+const COMPOSER_SIGNATURES = ["ai-composer-dialog", "AI_COMPOSER_CATALOG_V7", "ai-composer-diff"];
 // React 19.3 — examBuilderState's section presets (ids / titles survive minification); moving it out made room for React 19.3.
 const BUILDER_STATE_SIGNATURES = ["core-2026", "أنظمة حوسبة — أساس"];
 // Phase 21A.1 — the data-chart platform: ExamBank's chart surface (the selection list and data table class names of the lazy DataChart,

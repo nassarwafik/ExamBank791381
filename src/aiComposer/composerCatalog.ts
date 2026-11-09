@@ -25,13 +25,17 @@ import "../trustedSimPlugins";
 // until its next composer operation; nothing validates or migrates it.
 // Phase 21A.2: explicit-author-formula-only function graphs, not invented mathematics.
 // V5 (Phase 21J): the chemistry simulators chemistryReactions@1 and chemistryStructure@1. V6 (Phase 21K): the virtual lab chemistryLab@1.
-export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V6";
+export const COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V7";
 
 /** The single-question families the composer generates through the 19A per-question normalizer (unchanged). */
 export const COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"] as const);
 export type ComposerDraftType = (typeof COMPOSER_DRAFT_TYPES)[number];
-/** Every item kind a plan / draft may name: a 19A family, a trusted SmartSim question, or a composite@1 question. */
-export const COMPOSER_ITEM_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, "smartSim", "composite"] as const);
+/** Phase 21N — the registered / structured families the composer builds itself (composerStructured: code-owned ids, option lists and keys),
+ *  outside the frozen 19A per-question layer. */
+export const COMPOSER_STRUCTURED_TYPES = Object.freeze(["multipleSelect", "matching", "ordering", "categorization"] as const);
+export type ComposerStructuredType = (typeof COMPOSER_STRUCTURED_TYPES)[number];
+/** Every item kind a plan / draft may name: a 19A family, a structured family (21N), a trusted SmartSim question, or a composite@1 question. */
+export const COMPOSER_ITEM_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, ...COMPOSER_STRUCTURED_TYPES, "smartSim", "composite"] as const);
 export type ComposerItemKind = (typeof COMPOSER_ITEM_KINDS)[number];
 
 /** The exact question identity each item kind is stored as (authoring version, never "latest"). */
@@ -133,7 +137,11 @@ const NOTES: Readonly<Partial<Record<ComposerItemKind, string>>> = Object.freeze
   smartSim: "trusted simulator: networkTopology@2 curriculum scenario, physicsFreeFall@1 bounded model, or functionStudy2d@1 safe expression",
   composite: "one question with shared context (one SmartSim or one source) and groups of child parts; never nested",
   parametricNumeric: "safe expression language only; {{var}} placeholders in the stem",
-  openResponse: "rubric with 1-12 criteria, 2-8 levels, a 0-point and a full-points level per criterion; manual grading"
+  openResponse: "rubric with 1-12 criteria, 2-8 levels, a 0-point and a full-points level per criterion; manual grading",
+  multipleSelect: "several correct options",
+  matching: "one-to-one pairs",
+  ordering: "a sequence, given in its correct order",
+  categorization: "items sorted into categories"
 });
 
 /** The catalog, derived from the live registries (throws only if a production registry disagrees — a programming error, caught by tests). */
@@ -142,6 +150,7 @@ export function buildComposerCatalog(): ComposerCatalog {
     const id = composerItemIdentity(kind);
     const def = questionTypeDefinition(id.key);
     if (!def || !supportsQuestionTypeVersion(id.key, id.version)) throw new Error("composer catalog: unsupported production type " + id.key + "@" + id.version);
+    if (id.key !== kind) throw new Error("composer catalog: an item kind must be its stored type key " + kind);   // the prompt names kind@version
     return { kind, key: id.key, version: id.version, label: def.label, autoGraded: def.gradingMode === "auto" && kind !== "coding", compositeChild: kind !== "composite", note: NOTES[kind] ?? "" };
   });
   const smartSim = COMPOSER_SIM_PLUGINS.map(p => {
@@ -171,7 +180,8 @@ export function buildComposerCatalog(): ComposerCatalog {
 export function catalogForPrompt(catalog: ComposerCatalog = buildComposerCatalog()): string {
   const lines = [
     "CAPABILITY CATALOG " + catalog.version + " (select ONLY from this list; exact versions; never invent a type, plugin, scenario, preset, block or language):",
-    "Item kinds: " + catalog.questionTypes.map(t => t.kind + " (" + t.key + "@" + t.version + (t.autoGraded ? ", auto" : ", manual/hybrid") + (t.note ? "; " + t.note : "") + ")").join(" | "),
+    // 21N: kind@version (the kind IS the stored type key), auto-graded unless marked "manual"
+    "Item kinds (kind@version; auto-graded unless marked manual): " + catalog.questionTypes.map(t => t.kind + "@" + t.version + (t.autoGraded ? "" : " manual") + (t.note ? " (" + t.note + ")" : "")).join(" | "),
     "SmartSim plugins: " + catalog.smartSim.map(p => p.pluginKey + "@" + p.pluginVersion + " (" + p.subject + ")").join(", "),
     "networkTopology@2 scenarios: " + catalog.networkScenarios.map(s => s.id + " = " + s.title + " [" + s.topics.join(", ") + "] checks: " + s.checks.map(c => c.id + " " + c.label).join("; ")).join(" || "),
     "physicsFreeFall@1: model initialHeight 0.." + catalog.physics.bounds.heightMax + " m, initialVelocity ±" + catalog.physics.bounds.velocityAbsMax + " m/s (up positive), gravity " + catalog.physics.bounds.gravityMin + ".." + catalog.physics.bounds.gravityMax + " m/s²; measurements: " + catalog.physics.measurements.join(", ") + "; points: " + catalog.physics.points.join(", ") + ". Expected values are computed by code, never by you.",

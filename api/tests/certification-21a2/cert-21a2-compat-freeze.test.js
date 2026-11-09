@@ -107,6 +107,20 @@ function snapshot(name, exam) {
 }
 const promptLines = () => catalogForPrompt().split("\n");
 
+// Phase 21N — the declared Item kinds delta, derived from the BASELINE line: "kind (key@v, auto|manual/hybrid[; note])" → "kind@v[ manual][ (note)]"
+// (the kind is its stored key), with exactly the four structured kinds inserted before smartSim.
+const STRUCTURED_21N = ["multipleSelect@1 (several correct options)", "matching@1 (one-to-one pairs)", "ordering@1 (a sequence, given in its correct order)", "categorization@1 (items sorted into categories)"];
+function compactItemKinds(baseLine) {
+  const entries = baseLine.slice("Item kinds: ".length).split(" | ").map(e => {
+    const m = /^(\w+) \((\w+)@(\d+), (auto|manual\/hybrid)(?:; (.*))?\)$/.exec(e);
+    if (!m || m[1] !== m[2]) throw new Error("unexpected baseline item kind entry: " + e);
+    return m[1] + "@" + m[3] + (m[4] === "auto" ? "" : " manual") + (m[5] ? " (" + m[5] + ")" : "");
+  });
+  const at = entries.findIndex(e => e.startsWith("smartSim@"));
+  if (at < 0) throw new Error("baseline item kinds without smartSim");
+  return "Item kinds (kind@version; auto-graded unless marked manual): " + [...entries.slice(0, at), ...STRUCTURED_21N, ...entries.slice(at)].join(" | ");
+}
+
 describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e4a5ef)", () => {
   const pins = CAPTURE ? { fixtures: {}, prompt: [] } : JSON.parse(fs.readFileSync(PINS, "utf8"));
   it("the corpus is every committed exam fixture (at least 28: the 21A.1 chart exam included)", () => {
@@ -151,9 +165,12 @@ describe("21A.2-FREEZE compatibility pins (captured on the untouched baseline 6e
       if (line.startsWith("Presentation presets:")) { expect(now.find(l => l.startsWith("Presentation presets:"))).toBe(line + ", reference"); continue; }
       // Phase 21J / 21K (owner requests): the SmartSim plugin list may gain ONLY the three chemistry simulators, appended; every baseline plugin keeps its place.
       if (line.startsWith("SmartSim plugins:")) { expect(now.find(l => l.startsWith("SmartSim plugins:"))).toBe(line + ", chemistryReactions@1 (chemistry), chemistryStructure@1 (chemistry), chemistryLab@1 (chemistry)"); continue; }
+      // Phase 21N (owner request): the Item kinds line is re-rendered compactly (kind@version, "manual" marks manual/hybrid grading, every baseline
+      // note verbatim) and gains ONLY the four structured kinds, inserted before smartSim; every baseline kind keeps its place, version and note.
+      if (line.startsWith("Item kinds:")) { expect(now.find(l => l.startsWith("Item kinds"))).toBe(compactItemKinds(line)); continue; }
       expect(now.map(norm), line.slice(0, 60)).toContain(norm(line));
     }
-    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:"));
+    const added = now.filter(l => !base.map(norm).includes(norm(l)) && !l.startsWith("Rich blocks:") && !l.startsWith("Presentation presets:") && !l.startsWith("SmartSim plugins:") && !l.startsWith("Item kinds"));
     // Phase 21J adds exactly ONE line: the bounded chemistry pointer (the full chemistry catalog travels only in the prompts that need it)
     for (const l of added) expect(l, l.slice(0, 60)).toMatch(/^(Function graphs)\b|^Chemistry simulators: their catalogs come with the section task that uses them; expected answers are derived by code\.$/);
   });

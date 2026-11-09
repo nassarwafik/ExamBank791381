@@ -13,7 +13,8 @@ import { buildAiAuthorSchema, normalizeAiQuestionDraft } from "../aiQuestionDraf
 import { validateStructuredExam } from "../examQuality";
 import type { BuilderQuestion, BuilderSection } from "../examTypes";
 import { COMPOSER_LIMITS, type ComposerIssue } from "./composerLimits";
-import { COMPOSER_DRAFT_TYPES, COMPOSER_ITEM_KINDS, composerItemIdentity, type ComposerItemKind } from "./composerCatalog";
+import { COMPOSER_DRAFT_TYPES, COMPOSER_ITEM_KINDS, COMPOSER_STRUCTURED_TYPES, composerItemIdentity, type ComposerItemKind, type ComposerStructuredType } from "./composerCatalog";
+import { buildStructuredBody, buildStructuredQuestion, buildStructuredSchema } from "./composerStructured";
 import type { AiExamPlanItem, AiExamPlanSection, PlanDifficulty } from "./composerPlan";
 import { PLAN_DIFFICULTIES } from "./composerPlan";
 import { buildRichBlocksSchema, mapAiRichBlocks } from "./composerRich";
@@ -22,7 +23,8 @@ import { buildSimFromSpec, buildSimSpecSchema, simFreeCreditIssues, type BuiltSi
 import { cleanText, hasExactKeys, isArr, isEnum, isInt, isStr, sArr, sBool, sEnum, sInt, sNull, sObj, sStr, type JsonSchema } from "./composerSchemaKit";
 
 const L = COMPOSER_LIMITS;
-const PART_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, "smartSim"] as const);
+const PART_KINDS = Object.freeze([...COMPOSER_DRAFT_TYPES, ...COMPOSER_STRUCTURED_TYPES, "smartSim"] as const);
+const isStructuredKind = (k: unknown): k is ComposerStructuredType => (COMPOSER_STRUCTURED_TYPES as readonly unknown[]).includes(k);
 const POLICIES = ["all", "firstNAnswered"] as const;
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل"];
 
@@ -31,21 +33,22 @@ const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "
 // path is item → part → 19A question → payload → entry → format.
 export function buildItemSchema(): JsonSchema {
   const q = buildAiAuthorSchema() as unknown as JsonSchema;
-  const part = sObj({ group: sInt(1, L.compositeGroups), kind: sEnum(PART_KINDS), linked: sBool(), marks: sInt(1, L.itemMarksMax), label: sStr(), simChecks: sArr(sStr(), 40), simText: sStr(), question: sNull(q) });
+  const st = buildStructuredSchema();
+  const part = sObj({ group: sInt(1, L.compositeGroups), kind: sEnum(PART_KINDS), linked: sBool(), marks: sInt(1, L.itemMarksMax), label: sStr(), simChecks: sArr(sStr(), 40), simText: sStr(), question: sNull(q), structured: sNull(st) });
   const group = sObj({ title: sStr(), policy: sEnum(POLICIES), requiredAnswers: sNull(sInt(1, L.compositeParts)) });
   const context = sObj({ kind: sEnum(["smartSim", "source"]), sim: sNull(buildSimSpecSchema()), sourceTitle: sStr(), sourceBlocks: buildRichBlocksSchema() });
   return sObj({
     kind: sEnum(COMPOSER_ITEM_KINDS), topic: sStr(), difficulty: sEnum(PLAN_DIFFICULTIES), rationale: sStr(), stem: buildRichBlocksSchema(),
-    question: sNull(q), smartSim: sNull(sObj({ text: sStr(), sim: buildSimSpecSchema() })),
+    question: sNull(q), structured: sNull(st), smartSim: sNull(sObj({ text: sStr(), sim: buildSimSpecSchema() })),
     compositeText: sStr(), compositeContext: sNull(context), compositeGroups: sArr(group, L.compositeGroups), compositeParts: sArr(part, L.compositeParts),
     assetRequest: sNull(sObj({ description: sStr() }))
   });
 }
 export const buildSectionDraftSchema = (): JsonSchema => sObj({ items: sArr(buildItemSchema(), L.itemsPerSection) });
 
-const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"] as const;
+const ITEM_KEYS = ["kind", "topic", "difficulty", "rationale", "stem", "question", "structured", "smartSim", "compositeText", "compositeContext", "compositeGroups", "compositeParts", "assetRequest"] as const;
 const FLAT_GROUP_KEYS = ["title", "policy", "requiredAnswers"] as const;
-const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question"] as const;
+const PART_KEYS = ["kind", "linked", "marks", "label", "simChecks", "simText", "question", "structured"] as const;
 const GROUP_KEYS = ["title", "policy", "requiredAnswers", "parts"] as const;
 const CTX_KEYS = ["kind", "sim", "sourceTitle", "sourceBlocks"] as const;
 
@@ -108,7 +111,7 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
       const id = "p" + partNo, label = labelOf(p.label, partNo - 1);
       if (p.kind === "smartSim") {
         if (!sim || !p.linked) { issues.push(issue("AI_COMPOSITE_SMARTSIM_CONTEXT", "بند المحاكاة يجب أن يرتبط بسياق المحاكاة المشترك.", pp, qid)); return; }
-        if (p.question !== null || !p.simChecks.length || new Set(p.simChecks).size !== p.simChecks.length) { issues.push(issue("AI_COMPOSITE_MALFORMED", "بند المحاكاة يحتاج إلى قائمة فحوص من السياق المشترك.", pp, qid)); return; }
+        if (p.question !== null || p.structured !== null || !p.simChecks.length || new Set(p.simChecks).size !== p.simChecks.length) { issues.push(issue("AI_COMPOSITE_MALFORMED", "بند المحاكاة يحتاج إلى قائمة فحوص من السياق المشترك.", pp, qid)); return; }
         const picked = (p.simChecks as string[]).map(cid => sim!.checks.find(k => k.id === cid));
         if (picked.some(k => !k)) { issues.push(issue("AI_SIM_CHECK_UNKNOWN", "فحص غير موجود في سيناريو المحاكاة: " + (p.simChecks as string[]).filter((_, i) => !picked[i]).join(", "), pp, qid)); return; }
         const reused = (p.simChecks as string[]).filter(cid => usedChecks.has(cid));
@@ -119,10 +122,19 @@ function buildComposite(raw: unknown, qid: string, marks: number, plan: AiExamPl
         parts.push({ id, label, type: "smartSim", questionTypeVersion: 1, contextId: "ctx1", text: cleanText(p.simText) || label, marks: p.marks, answer: { scoring: "proportional", checks } });
         return;
       }
-      if (p.question === null || p.simChecks.length) { issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي يحتاج إلى مسودة سؤال.", pp, qid)); return; }
-      const m = mapDraftQuestion(p.question, p.kind, qid + "::p", p.marks, request, pp + ".question");
-      if (!m.ok) { issues.push(...m.issues); return; }
-      const q = m.value as unknown as Record<string, unknown>;
+      if (p.simChecks.length) { issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي يحتاج إلى مسودة سؤال.", pp, qid)); return; }
+      let q: Record<string, unknown>;
+      if (isStructuredKind(p.kind)) {                                            // Phase 21N — a structured child part (code-owned ids and keys)
+        if (p.question !== null || p.structured === null) { issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي من هذا النوع يحتاج إلى `structured`.", pp, qid)); return; }
+        const b = buildStructuredBody(p.structured, p.kind, qid + "::" + id, pp + ".structured", qid, true);
+        if (!b.ok) { issues.push(...b.issues); return; }
+        q = { ...b.node, marks: p.marks };
+      } else {
+        if (p.question === null || p.structured !== null) { issues.push(issue("AI_COMPOSITE_MALFORMED", "البند الفرعي يحتاج إلى مسودة سؤال.", pp, qid)); return; }
+        const m = mapDraftQuestion(p.question, p.kind, qid + "::p", p.marks, request, pp + ".question");
+        if (!m.ok) { issues.push(...m.issues); return; }
+        q = m.value as unknown as Record<string, unknown>;
+      }
       if (q.codeStimulus !== undefined) { issues.push(issue("AI_COMPOSITE_PART_FIELD", "مثير الكود غير متاح داخل بند فرعي.", pp, qid)); return; }
       const { examQuestionId: _id, presentationType, questionTypeVersion, text, marks: _m, displayNumber: _d, ...config } = q;
       void _id; void _m; void _d;
@@ -166,11 +178,12 @@ function mapItem(raw: unknown, plan: AiExamPlanItem, qid: string, request: strin
   const kind = raw.kind as ComposerItemKind;
   const comp = nestedComposite(raw, qid, path + ".composite");
   if (comp.issues) return { ok: false, issues: comp.issues };
-  const present = [...(["question", "smartSim"] as const).filter(k => raw[k] !== null), ...(comp.present ? ["composite" as const] : [])];
-  const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : "question";
+  const present = [...(["question", "structured", "smartSim"] as const).filter(k => raw[k] !== null), ...(comp.present ? ["composite" as const] : [])];
+  const want = kind === "smartSim" ? "smartSim" : kind === "composite" ? "composite" : isStructuredKind(kind) ? "structured" : "question";
   if (present.length !== 1 || present[0] !== want) return { ok: false, issues: [issue("AI_ITEM_PAYLOAD", "البند يجب أن يحمل محتوى نوعه فقط.", path, qid)] };
   let q: BuilderQuestion;
   if (want === "question") { const m = mapDraftQuestion(raw.question, kind, qid, plan.marks, request, path + ".question"); if (!m.ok) return m; q = m.value; }
+  else if (want === "structured") { const b = buildStructuredQuestion(raw.structured, kind as ComposerStructuredType, qid, plan.marks, path + ".structured"); if (!b.ok) return { ok: false, issues: b.issues }; q = b.question; }
   else if (want === "smartSim") {
     const s = raw.smartSim;
     if (!hasExactKeys(s, ["text", "sim"]) || !isStr(s.text, L.richTextChars, 1)) return { ok: false, issues: [issue("AI_ITEM_MALFORMED", "سؤال المحاكاة غير صالح.", path, qid)] };
