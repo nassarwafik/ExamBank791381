@@ -35,8 +35,8 @@ const ORDER = { text: "رتّب مراحل DHCP.", sequence: ["Discover", "Offer
 const CAT = { text: "صنّف الأجهزة حسب الطبقة.", categories: ["الطبقة الثانية", "الطبقة الثالثة"], entries: [{ label: "Switch", category: 0 }, { label: "Router", category: 1 }, { label: "Bridge", category: 0 }, { label: "L3 Switch", category: 1 }] };
 
 describe("21N-CAT the four structured kinds join the catalog", () => {
-  it("catalog V9, every kind is its stored key at the authoring version; the Item kinds line is compact and the general catalog stays bounded", () => {
-    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V9");
+  it("catalog V10, every kind is its stored key at the authoring version; the Item kinds line is compact and the general catalog stays bounded", () => {
+    expect(COMPOSER_CATALOG_VERSION).toBe("AI_COMPOSER_CATALOG_V10");
     const c = buildComposerCatalog();
     for (const k of COMPOSER_STRUCTURED_TYPES) { expect(COMPOSER_ITEM_KINDS).toContain(k); const t = c.questionTypes.find(x => x.kind === k)!; expect([t.key, t.version, t.autoGraded, t.compositeChild]).toEqual([k, 1, true, true]); }
     const p = catalogForPrompt(c);

@@ -17,7 +17,7 @@ const L = composerLimits_1.COMPOSER_LIMITS;
 function intentAllowedKinds(intent) {
     const c = intent.capabilities;
     return (intent.allowedQuestionTypes ?? [...composerCatalog_1.COMPOSER_ITEM_KINDS]).filter(k => (k !== "composite" || c.composite) && (k !== "smartSim" || c.smartSim) && (k !== "coding" || c.coding) &&
-        (k !== "parametricNumeric" || c.parametric) && (k !== "openResponse" || c.openResponse));
+        (k !== "parametricNumeric" || c.parametric) && (k !== "openResponse" || c.openResponse) && (k !== "chartSelection" || (c.charts && c.richContent)));
 }
 function normalizeComposerIntent(raw) {
     const issues = [];
