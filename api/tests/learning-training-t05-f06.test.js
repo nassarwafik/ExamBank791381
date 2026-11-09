@@ -57,8 +57,10 @@ describe("registry — the complete Learning-Practice catalog", () => {
     const list = listLearningTrainings();
     expect(list.map(t => t.trainingId)).toEqual([...ids(1, 30), ...ids(1, 6, "F")]);
     expect(list.map(t => t.order)).toEqual(Array.from({ length: 36 }, (_, i) => i + 1));
-    const cat = Object.fromEntries(readLibraryCatalog().map(c => [c.libraryItemId, c]));
-    expect(Object.keys(cat).sort()).toEqual(list.map(t => t.trainingId).sort());   // the registry covers the WHOLE library, nothing invented
+    const cat = Object.fromEntries(readLibraryCatalog().filter(c => c.source?.repository === "Book791381").map(c => [c.libraryItemId, c]));
+    expect(Object.keys(cat).sort()).toEqual(list.map(t => t.trainingId).sort());   // the registry covers the WHOLE Book 791381 library, nothing invented
+    // the other entries are the 899371 coding lab (P7): assigned by a teacher as homework, never a self-training of this course
+    expect(readLibraryCatalog().filter(c => c.source?.repository !== "Book791381").map(c => [c.libraryItemId, c.source?.repository, c.category])).toEqual(Array.from({ length: 11 }, (_, i) => ["CL899371-" + String(i + 1).padStart(2, "0"), "899371", "coding-899371"]));
     for (const t of list) {
       const item = readLibraryItem(t.trainingId);
       expect(item && item.examSnapshot && item.examSnapshot.questions.length, t.trainingId).toBe(cat[t.trainingId].questionCount);

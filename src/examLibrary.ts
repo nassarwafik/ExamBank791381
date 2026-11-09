@@ -1,5 +1,5 @@
-// Shared types + pure helpers for the "مكتبة 791381" exam-library source in the assignments page.
-// The catalog is small (36 items) and served whole by GET /api/exam-library, so filtering/search is
+// Shared types + pure helpers for the «المكتبة الرسمية» exam-library source in the assignments page (the 791381 exams and, since
+// 899371 P7, the C# coding lab of 899371). The catalog is small (36 + 11 items) and served whole by GET /api/exam-library, so filtering/search is
 // done client-side here rather than via a search endpoint.
 
 export type LibraryCatalogItem = {
@@ -22,7 +22,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
   infra: "البنى التحتية",
   comprehensive: "الشامل",
   advanced: "إضافية",
-  final: "النهائي"
+  final: "النهائي",
+  "coding-899371": "مختبر البرمجة · أسس علم الحاسوب"   // 899371 P7: runner-graded C# questions (docs/enterprise-899371-learning-plan.md §20)
 };
 
 export function categoryLabel(code: string): string {
@@ -31,7 +32,7 @@ export function categoryLabel(code: string): string {
 
 // Distinct categories present in a catalog, in a stable, meaningful order (matching the source
 // index's own ordering), so the filter chips don't jump around between loads.
-const CATEGORY_ORDER = ["foundation", "infra", "comprehensive", "advanced", "final"];
+const CATEGORY_ORDER = ["foundation", "infra", "comprehensive", "advanced", "final", "coding-899371"];
 
 export function catalogCategories(catalog: LibraryCatalogItem[]): string[] {
   const present = new Set(catalog.map(item => item.category).filter(Boolean));

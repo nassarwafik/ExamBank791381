@@ -970,5 +970,302 @@
       "repository": "Book791381",
       "sourceFile": "T30.html"
     }
+  },
+  {
+    "libraryItemId": "CL899371-01",
+    "title": "مختبر البرمجة — الفصل 1: الطباعة والمتغيرات",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 1 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "8db14cbe5c662aace94be149b91dbb57c48c78d3087005c63f45aa215650b5fd",
+    "contentHash": "6cf4e280fdd5d8c5184500a48f405e8f91bcc8ea558908d9b278b1f6e02fccdd",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m01.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-02",
+    "title": "مختبر البرمجة — الفصل 2: العوامل والتعابير المنطقية",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 2 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 1,
+    "totalMarks": 10,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 1,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "54616465e79c1b5bcb9c60d88c0280b274db4a5d9e18a7c5ff3be21f27183dac",
+    "contentHash": "138a4d0669bca44181dd1b77cdc86dff8d9192e067cb01a69952e47350ed9e09",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m02.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-03",
+    "title": "مختبر البرمجة — الفصل 3: المكتبة الرياضية",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 3 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "bb723a625b116350506534e48fa5e083568e6072d3c187654ae87f7211af1757",
+    "contentHash": "846f3773c7538236aa3a9277045285c6b1a9ebd5adb372f1a8ce67fd14236e61",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m03.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-04",
+    "title": "مختبر البرمجة — الفصل 4: جملة الشرط",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 4 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "aaa687a59f09a1b4edb90c3834ad2b5d3b3f0cc07f919805812868c8da9ffc26",
+    "contentHash": "fb03246f9ab14493a92d0ffcf5aa02a9006002e1d126a3db2f4ba74aac3a5b2d",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m04.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-05",
+    "title": "مختبر البرمجة — الفصل 5: جملة التكرار for",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 5 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "2ed5225f976e06340993365eff3dbcf84f973567ef44bfec397deb2fc4b17cdf",
+    "contentHash": "27e3fe47fc240eb0168daffb7805ffd3c1dacfc58cc0dcdbf58ce0186c3f5ef3",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m05.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-06",
+    "title": "مختبر البرمجة — الفصل 6: جملة التكرار while",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 6 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "57f7ccaecc4ef8487045982f1e0fc2e12b21a2806a340d571d0cc186d424822e",
+    "contentHash": "3f149b7e44f9af37bfeac1cfcad9695b562a4574a6e52593d022bb3eb231d745",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m06.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-07",
+    "title": "مختبر البرمجة — الفصل 7: العمليات",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 7 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 4,
+    "totalMarks": 40,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 4,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "bc6a0cf06a745dfbfde694e850553259c5a49c20001d40d6737f2b39d4c2b9a8",
+    "contentHash": "8989e880121ff258281473a920a247f7cfe5700f8e41d222fec497d700da4071",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m07.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-08",
+    "title": "مختبر البرمجة — الفصل 8: النصوص",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 8 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 3,
+    "totalMarks": 30,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 3,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "e3fe2eef4e5e9a5e436fa35e4b87351a7a89862fed74379406b4266e58e5a4a2",
+    "contentHash": "80c3784adf857acd6a68cd9bbfefbb60e3af6c4e2e9774585d7e46f2586032c5",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m08.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-09",
+    "title": "مختبر البرمجة — الفصل 9: المصفوفات",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 9 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 3,
+    "totalMarks": 30,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 3,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "61ab3d4b0950746f96d8db120fd5e2cc06b11c7476777c4875761e99591ef2ad",
+    "contentHash": "e8ef57ab79e349349b12f120e9487478f143869bb37cd9d6d2b3c3408edaaece",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m09.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-10",
+    "title": "مختبر البرمجة — الفصل 10: مصفوفة ثنائية الابعاد",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 10 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 3,
+    "totalMarks": 30,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 3,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "141da7e8a108fc32daa2a646d6a0f1e28c3048a1812c760ad2fbc15a44053414",
+    "contentHash": "92c145bc97ec10c4f8fc72c2c957376eb9cdbc55aa17f6c32a777f0c03fccc67",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m10.json"
+    }
+  },
+  {
+    "libraryItemId": "CL899371-11",
+    "title": "مختبر البرمجة — الفصل 11: الكائنات",
+    "category": "coding-899371",
+    "description": "أسئلة برمجة بلغة C# من وظائف الفصل 11 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+    "tags": [
+      "برمجة",
+      "C#",
+      "تصحيح آلي"
+    ],
+    "questionCount": 2,
+    "totalMarks": 20,
+    "pageRange": "",
+    "parserFamily": "coding-lab-899371-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 2,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "78f11bcffb837d51e66daa63b41050c46dde23064f6062ff8d099b0a8640f005",
+    "contentHash": "09c10f9317aed62ff9c370301cd59dd7217f18f8d7b99f93bdca6dc8957ca9c7",
+    "convertedAt": "2026-11-09T00:00:00.000Z",
+    "source": {
+      "repository": "899371",
+      "sourceFile": "scripts/coding-lab-899371/m11.json"
+    }
   }
 ]

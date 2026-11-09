@@ -1,0 +1,314 @@
+{
+ "worker": "csharp@1",
+ "image": "mcr.microsoft.com/dotnet/sdk@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29",
+ "proofs": {
+  "m01/g01": {
+   "sha": "6df1859931132d94a5cdbb2f98520ea2d07dd899deb585c9308105eb7a241222",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "10 3 8\n",
+   "exception": null
+  },
+  "m01/g02": {
+   "sha": "6dc28314697cb5900ffe436fd6ad39bc0b70fb85238a1c8c8b010fec7889a17c",
+   "stdin": "abc",
+   "compileExit": 0,
+   "exitCode": 134,
+   "stdout": "",
+   "exception": "FormatException"
+  },
+  "m01/g03": {
+   "sha": "862d37a26c8dba079ad650c171baef10158886f6b23af1ef7697def3b20e6e9e",
+   "stdin": "6\n4",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "المساحة: 12\n",
+   "exception": null
+  },
+  "m01/g04": {
+   "sha": "4cbb7d5f91aeab11ab47b743071bf4fa46f3932e69bd66e5438b619b11830519",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "9 4\n",
+   "exception": null
+  },
+  "m02/g01": {
+   "sha": "d84404331d7be7b163bdf3c6b5a64c78b6785cefb4608604f8cc856f70904ff5",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "True\n",
+   "exception": null
+  },
+  "m02/g02": {
+   "sha": "6685e4589544dda54aa86b144682b7c5a1affb1dda62e5e4c0e11a1044ca3581",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "False True False\n",
+   "exception": null
+  },
+  "m02/g03": {
+   "sha": "2147e0a1d2148b106ad1d34e8ec6332f0bb3abb5e16334b2838ab21fb6c9d0aa",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "2:15\n",
+   "exception": null
+  },
+  "m02/g04": {
+   "sha": "57f36b61125b77e3bd8c997b134a0151c04c1470ec9a419b8f9b1aed240294d1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "True\n",
+   "exception": null
+  },
+  "m03/g01": {
+   "sha": "76f6e6e62175734c6406b1491084a035d40b0f478b3370eee0897e7e8bb1f2e7",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "5 8 2\n",
+   "exception": null
+  },
+  "m03/g02": {
+   "sha": "28f4f97d9bd2b00bea6e47e29d45b551192515b8d24d61f9a03acce255f414aa",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "5.83\n",
+   "exception": null
+  },
+  "m03/g03": {
+   "sha": "67c698bb7dd899f8e66315f38a5ad4dd85775312496ecdde5c75b377bf43fc34",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "28.27\n",
+   "exception": null
+  },
+  "m04/g01": {
+   "sha": "b8304c8abee89efabf759f3d36b801f1b3d70060678d6b6426247b09da2ef167",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "B\n",
+   "exception": null
+  },
+  "m04/g02": {
+   "sha": "379b8bb796d2111f9efd127a2b98763241509cd4ef9c54ecb21b32e6e3e6045a",
+   "stdin": "8",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "35\n",
+   "exception": null
+  },
+  "m04/g03": {
+   "sha": "7951178f53360f5f5ca9734ce5498731d7dfa474d8c550a86d06b57713eefbc6",
+   "stdin": "5",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "24\n",
+   "exception": null
+  },
+  "m04/g04": {
+   "sha": "1d2d72ffaf8621272f5fa81082a34b51a726313e2289f346b0eb2822a17997aa",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "12\n",
+   "exception": null
+  },
+  "m05/g01": {
+   "sha": "23aed66cf5f3b5cf98a2e08f31cb5172ee5d78da29bdaead8b1e2aad99269dc9",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "***\n**\n*\n",
+   "exception": null
+  },
+  "m05/g02": {
+   "sha": "a1dea77d498d1b2105bf7ab9552b200b3ccee87faa745a5418e4e0af36f48a9e",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "7 14 21 28 35 ",
+   "exception": null
+  },
+  "m05/g03": {
+   "sha": "2ee7a073699d9b0e020602a610e7d7fd87a6e0a5a9a9b8f3689e1d040b6027f3",
+   "stdin": "95\n80\n70",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "85\n",
+   "exception": null
+  },
+  "m05/g04": {
+   "sha": "e07a5dd5b61ba9d5f8092dadbc14779ac442280a90ca22650e11c0f7a5f0ab0a",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "6\n",
+   "exception": null
+  },
+  "m06/g01": {
+   "sha": "98f820b284a73a1e9a23f3b6abaa0f0af17123f5e6041f37ff1bfde9bc2cbd7e",
+   "stdin": "5\n3\n8\n0",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "0\n",
+   "exception": null
+  },
+  "m06/g02": {
+   "sha": "77510bace0fbebf0c519d46a4e42b09ad14df6b4871028d2363ce6e07bb8bab6",
+   "stdin": "4\n7\n7\n2\n7\n-1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "7 3\n",
+   "exception": null
+  },
+  "m06/g03": {
+   "sha": "46731489902ac4cfd360f5eb6576ac65d6a64556bd0d7d14aa13695bcc441ec5",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "14\n",
+   "exception": null
+  },
+  "m06/g04": {
+   "sha": "570cb2ebc41f78ff5799d847ab935c5dd19e33a763fabc8222eac8eb8c91bc7e",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "8\n",
+   "exception": null
+  },
+  "m07/g01": {
+   "sha": "d79d7648bd210d4910489af79999a3356acd054e0b11a68ae41edd54be2de286",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "1 20 30",
+   "exception": null
+  },
+  "m07/g02": {
+   "sha": "257a9a2fa528423629865be847a142210bfbb5f8c620d512d159bf6190534a26",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "المجموع: 66\n",
+   "exception": null
+  },
+  "m07/g03": {
+   "sha": "7adf8f980147057db33872804a40b0e8a4ff3adfab62f12f5896b515c0412edd",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "M1 F1 G F2 M2",
+   "exception": null
+  },
+  "m07/g04": {
+   "sha": "12f0f54539a1a14ecc2a48a129bd4f575f7197602cc3a66fd2b730518caa589f",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "True False\n",
+   "exception": null
+  },
+  "m08/g01": {
+   "sha": "b6de0587cf9eda68b5052ef2c3ae6c25cc14fb818ad14880b144f5187df72352",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "CDB\n",
+   "exception": null
+  },
+  "m08/g02": {
+   "sha": "1678f85450d09758a1b085a882bbe8587345604e5b7d63ffb2bb7c90d65ffe4e",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "X3Y1Z2\n",
+   "exception": null
+  },
+  "m08/g03": {
+   "sha": "70a4c8f25abeef896216986fab3ba545572b63402379366d48bd9b8e8a921f8e",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "True\n",
+   "exception": null
+  },
+  "m08/g04": {
+   "sha": "eb6a634839cf3b4ae64cfafe85af823b7227e808e9266ff78d6d3c7455207e58",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "3\n",
+   "exception": null
+  },
+  "m09/g01": {
+   "sha": "6e769995a196c46e846891e837f27e04dee5802a5ca4f162b71908c669fce15b",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "2 3 1\n",
+   "exception": null
+  },
+  "m09/g02": {
+   "sha": "76d061d2ca6a2588b36beacd5fd3818de79c6f6d7c34a583d2806e53e13ef736",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "2\n",
+   "exception": null
+  },
+  "m09/g03": {
+   "sha": "8784ee6a9c98967b0f46cdd4b129447e016d20350a7178930a4ba9f86556dc32",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "2 3 4 1 ",
+   "exception": null
+  },
+  "m09/g04": {
+   "sha": "2c603bf908ba1fa65dce4fdc9cb5fad157bfcf813c4103c7b9b14f97b03eefe4",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "1\n",
+   "exception": null
+  },
+  "m10/g01": {
+   "sha": "fbe525b36b83105dbecf8997fdf2ddc04ff95a4988ac3abc28487087a9b7bb26",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "True\n",
+   "exception": null
+  },
+  "m10/g02": {
+   "sha": "89acc10f4e2e30d9d7c342568214e947d3d6429d754e3de6e7fb5adf66715a92",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "1 1 5\n",
+   "exception": null
+  },
+  "m10/g03": {
+   "sha": "2e06acd9d80fdc58193a58d9225b93f88bfa601c4f419fa7b6cd1c6ffc42b36e",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "4 5 14 ",
+   "exception": null
+  },
+  "m10/g04": {
+   "sha": "12f50bd256e596aeccbf96d4e5075ab39157b30781dc66892ee7675b10342dce",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "15\n",
+   "exception": null
+  },
+  "m11/g01": {
+   "sha": "105552c8d9fb1ec75503f0279ab875876036dca9b7fbb04849e6b0c3669db795",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "Coding True\n",
+   "exception": null
+  },
+  "m11/g02": {
+   "sha": "3f006cf318889c67a290a5f92a3e30e6222ff150e27b9ec9b9ed810922ab3838",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "False True\n",
+   "exception": null
+  },
+  "m11/g03": {
+   "sha": "c9b57ab4d5d05dbacf9d7eea79cceebaf0f2899ac0915530ba3f524f822ef2b1",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "150\n",
+   "exception": null
+  },
+  "m11/g04": {
+   "sha": "df1b27f440c9876b82951761dcc6fdb91e42eb14fdda4e12bf3e8d98dfb26a05",
+   "compileExit": 0,
+   "exitCode": 0,
+   "stdout": "2 2 1\n",
+   "exception": null
+  }
+ }
+}

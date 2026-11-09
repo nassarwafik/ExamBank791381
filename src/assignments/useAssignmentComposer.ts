@@ -22,7 +22,7 @@ type ComposerDeps = {
   setError: (v: string) => void;
   setNotice: (v: string) => void;
   /** Tadris+ P8-B1 — the sources the teacher's access allows (absent → all, as before). `own`: «امتحاناتي»; `saved`: the list of
-   *  saved exams may be read; `library`: «مكتبة 791381». */
+   *  saved exams may be read; `library`: «المكتبة الرسمية». */
   sources?: { own: boolean; saved: boolean; library: boolean };
 };
 
@@ -70,7 +70,7 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
     if (mode === "library" && !libraryCatalog.length && !libraryLoading) {
       setLibraryLoading(true);
       try { const r = await api<{ catalog: LibraryCatalogItem[] }>("/api/exam-library"); setLibraryCatalog(r.catalog || []); }
-      catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل مكتبة 791381."); }
+      catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل المكتبة الرسمية."); }
       finally { setLibraryLoading(false); }
     }
   }
@@ -80,7 +80,7 @@ export function useAssignmentComposer({ api, current, active, onCopyLibraryExamT
     setExamLoading(true);
     try {
       const r = await api<{ item: { examSnapshot: Exam } }>("/api/exam-library/" + encodeURIComponent(it.libraryItemId));
-      setLibraryExam(r.item?.examSnapshot || null); setTitle(String(r.item?.examSnapshot?.title || it.title || "")); setNotice("✓ تم اختيار «" + it.title + "» من مكتبة 791381.");
+      setLibraryExam(r.item?.examSnapshot || null); setTitle(String(r.item?.examSnapshot?.title || it.title || "")); setNotice("✓ تم اختيار «" + it.title + "» من المكتبة الرسمية.");
     } catch (e) { setLibrarySelectedId(""); setError(e instanceof Error ? e.message : "تعذر فتح عنصر المكتبة."); } finally { setExamLoading(false); }
   }
   // Preview reuses the ONE faithful renderer (ExamPreview), whose toSafePreviewExam() deep-scrubs every grading secret from the

@@ -23,8 +23,11 @@
 // which the authoring contract treats as stable (renaming a block id is a content change, never a cosmetic one).
 import { isNetworkLabBlock, NETWORK_LAB_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
 
+/** Decision Q10 (899371 plan §18): Arabic-Indic «٠–٩» and Persian «۰–۹» digits and the Arabic decimal separator «٫» read as «0–9» / «.». */
+export const foldArabicDigits = (s: string): string =>
+  s.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660)).replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x06F0)).replace(/\u066B/g, ".");
 /** The normalization shared with the local evaluator (src/learning/practice/evaluator.ts) and the server. */
-export const normalizeStudyText = (s: string): string => String(s ?? "").trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
+export const normalizeStudyText = (s: string): string => foldArabicDigits(String(s ?? "")).trim().toLocaleLowerCase("ar").replace(/\s+/g, " ");
 
 export type StudyActivityKey =
   | { kind: "multipleChoice"; correct: string[] }

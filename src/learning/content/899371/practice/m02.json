@@ -1,0 +1,244 @@
+{
+ "module": "m02",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2.5"
+     },
+     {
+      "text": "2",
+      "correct": true
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "2.0"
+     }
+    ],
+    "feedback": {
+     "explanation": "القسمة بين عددين صحيحين تعطي عددًا صحيحًا (بدون كسور): 10 / 4 = 2."
+    }
+   },
+   "program": "Console.WriteLine(10 / 4);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "4.6"
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "3",
+      "correct": true
+     },
+     {
+      "text": "5"
+     }
+    ],
+    "feedback": {
+     "explanation": "% تعطي باقي القسمة: 23 = 4 × 5 + 3، فالباقي 3."
+    }
+   },
+   "program": "Console.WriteLine(23 % 5);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2"
+     },
+     {
+      "text": "2.5",
+      "correct": true
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "2.0"
+     }
+    ],
+    "feedback": {
+     "explanation": "عندما يكون أحد العددين كسريًا (10.0) تكون القسمة كسرية: 10.0 / 4 = 2.5."
+    }
+   },
+   "program": "Console.WriteLine(10.0 / 4);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "20"
+     },
+     {
+      "text": "18"
+     },
+     {
+      "text": "19",
+      "correct": true
+     },
+     {
+      "text": "11"
+     }
+    ],
+    "feedback": {
+     "explanation": "a = 6، ثم += 4 تصبح 10، ثم *= 2 تصبح 20، ثم -- تصبح 19."
+    }
+   },
+   "program": "int a = 6;\na += 4;\na *= 2;\na--;\nConsole.WriteLine(a);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "البرنامج أعلاه يطبع True.",
+    "answer": false,
+    "feedback": {
+     "explanation": "x > 10 صحيح، لكن x % 5 == 0 خطأ (باقي قسمة 12 على 5 هو 2)، و&& تحتاج الشرطين معًا، فيُطبع False."
+    }
+   },
+   "program": "int x = 12;\nConsole.WriteLine(x > 10 && x % 5 == 0);",
+   "prove": "claim",
+   "claimOutput": "True"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "True",
+      "correct": true
+     },
+     {
+      "text": "False"
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "خطأ ترجمة"
+     }
+    ],
+    "feedback": {
+     "explanation": "!(x > 3) خطأ لأن 4 > 3 صحيح، لكن x == 4 صحيح، و|| يكفيه شرط واحد صحيح: True."
+    }
+   },
+   "program": "int x = 4;\nConsole.WriteLine(!(x > 3) || x == 4);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل عامل بمعناه:",
+    "pairs": [
+     [
+      "%",
+      "باقي القسمة"
+     ],
+     [
+      "&&",
+      "و (AND): الشرطان معًا"
+     ],
+     [
+      "||",
+      "أو (OR): أحد الشرطين يكفي"
+     ],
+     [
+      "!=",
+      "لا يساوي"
+     ],
+     [
+      "==",
+      "يساوي (مقارنة)"
+     ]
+    ],
+    "feedback": {
+     "explanation": "% باقي القسمة، && تتحقق إذا تحقق الشرطان، || إذا تحقق أحدهما، != لا يساوي، == للمقارنة (أما = فللإسناد)."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "إذا كان x = 7، صنّف كل تعبير حسب قيمته:",
+    "groups": [
+     "True",
+     "False"
+    ],
+    "items": [
+     [
+      "x % 2 == 0",
+      1
+     ],
+     [
+      "x > 5 && x < 10",
+      0
+     ],
+     [
+      "x == 7 || x == 8",
+      0
+     ],
+     [
+      "!(x > 0)",
+      1
+     ],
+     [
+      "x >= 7",
+      0
+     ],
+     [
+      "x != 7",
+      1
+     ]
+    ],
+    "feedback": {
+     "explanation": "7 فردي فـ x % 2 == 0 خطأ؛ 7 بين 5 و10 صحيح؛ x == 7 صحيح فـ || صحيح؛ x > 0 صحيح فنفيه خطأ؛ 7 >= 7 صحيح؛ x != 7 خطأ."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "9",
+    "feedback": {
+     "explanation": "a يصبح 4 بعد ++، ثم b += a تجعل b = 5 + 4 = 9."
+    }
+   },
+   "program": "int a = 3, b = 5;\na++;\nb += a;\nConsole.WriteLine(b);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب خطوات حساب التعبير (2 + 3) * 4 - 1:",
+    "inOrder": [
+     "(2 + 3) = 5",
+     "5 * 4 = 20",
+     "20 - 1 = 19"
+    ],
+    "feedback": {
+     "explanation": "الأقواس أولًا، ثم الضرب قبل الطرح، فالناتج 19."
+    }
+   }
+  }
+ ]
+}

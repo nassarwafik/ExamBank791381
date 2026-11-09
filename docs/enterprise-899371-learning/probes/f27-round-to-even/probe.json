@@ -1,0 +1,14 @@
+{
+  "id": "f27-round-to-even",
+  "source": "ف3 تلخيص: Math.Round",
+  "verbatim": false,
+  "finding": "F27",
+  "bookClaim": "Math.Round(5.6) → 6 (لا يذكر التقريب نحو الزوجي)",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "6\n2\n4"
+      }
+    }
+  ]
+}

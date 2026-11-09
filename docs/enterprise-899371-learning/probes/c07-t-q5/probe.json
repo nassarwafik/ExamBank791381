@@ -1,0 +1,13 @@
+{
+  "id": "c07-t-q5",
+  "source": "ف7 تتبع س5.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "42141\n51111\n72182\n-1",
+      "expect": {
+        "stdout": "Enter 5-digit numbers. To stop, enter -1.\nEnter a number: Enter a number: Enter a number: Enter a number: Number of valid keys: 2"
+      }
+    }
+  ]
+}

@@ -58,8 +58,11 @@ const ratio = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((
 const dark = (n: string) => { const v = themed(n, 1); if (!/^#[0-9a-f]{6}$/.test(v)) throw new Error("--eb-" + n + " dark is not a hex colour: " + v); return v; };
 
 // Kept in both themes on purpose: the dark rail / toast surfaces and their labels (already dark), the inverse focus ring (white on
-// a dark surface) and the medal accents (the same metals in both themes).
-const KEPT = new Set(["--eb-nav-bg", "--eb-nav-text", "--eb-nav-text-muted", "--eb-nav-hover", "--eb-nav-border", "--eb-focus-ring-inverse", "--eb-medal-gold", "--eb-medal-silver", "--eb-medal-bronze"]);
+// a dark surface) and the medal accents (the same metals in both themes). 899371 P1: the Reader's code panel (already dark; its
+// light-on-dark text must not flip — codeContrast.p1.test.ts).
+const KEPT = new Set(["--eb-nav-bg", "--eb-nav-text", "--eb-nav-text-muted", "--eb-nav-hover", "--eb-nav-border", "--eb-focus-ring-inverse", "--eb-medal-gold", "--eb-medal-silver", "--eb-medal-bronze",
+  "--eb-code-bg", "--eb-code-fg", "--eb-code-gutter", "--eb-code-keyword", "--eb-code-type", "--eb-code-string", "--eb-code-number", "--eb-code-comment",
+  "--eb-code-line", "--eb-code-hover", "--eb-code-control"]);
 
 describe("UX-R18a — the dark token file", () => {
   it("loads right after design-tokens.css", () => {

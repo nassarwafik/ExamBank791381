@@ -1,0 +1,69 @@
+{
+ "module": "m06",
+ "questions": [
+  {
+   "book": "c06-p-q1",
+   "title": "مجموع المنازل والأعداد الذهبية",
+   "text": "يقرأ البرنامج أعدادًا ثلاثية المنازل (كل عدد في سطر) حتى يُدخل -1 (لا يُحتسب). لكل عدد يطبع مجموع منازله في سطر. العدد الذهبي: مجموع منازله يقبل القسمة على منزلة الآحاد (يمكن الافتراض أن منزلة الآحاد ليست صفرًا). في النهاية يطبع عدد الأعداد الذهبية.\n(مبني على السؤال الأول من وظيفة البرمجة السادسة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int golden = 0;\n        int x = int.Parse(Console.ReadLine());\n        while (x != -1)\n        {\n            int sum = x / 100 + x / 10 % 10 + x % 10;\n            Console.WriteLine(sum);\n            if (sum % (x % 10) == 0)\n                golden++;\n            x = int.Parse(Console.ReadLine());\n        }\n        Console.WriteLine(golden);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int golden = 0;\n        int x = int.Parse(Console.ReadLine());\n        while (x != -1)\n        {\n            int sum = x / 100 + x / 10 % 10 + x % 10;\n            Console.WriteLine(sum);\n            if (sum % (x / 100) == 0)\n                golden++;\n            x = int.Parse(Console.ReadLine());\n        }\n        Console.WriteLine(golden);\n    }\n}\n",
+   "public": [
+    "123\n111\n212\n-1\n"
+   ],
+   "hidden": [
+    "534\n478\n363\n289\n538\n757\n885\n423\n-1\n",
+    "827\n227\n128\n944\n413\n378\n354\n258\n938\n216\n869\n943\n721\n199\n772\n-1\n",
+    "144\n-1\n",
+    "-1\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c06-p-q2",
+   "title": "أعلى علامة في 28 صفًا",
+   "text": "يقرأ البرنامج علامات 28 صفًا. لكل صف تُقرأ العلامات واحدة بعد الأخرى (كل علامة في سطر) حتى تُدخل علامة سالبة (قيمة حارسة لا تُحتسب)؛ في كل صف علامة واحدة على الأقل. يطبع البرنامج لكل صف أعلى علامة فيه (كل صف في سطر)، ثم يطبع في السطر الأخير أعلى علامة بين جميع الصفوف.\n(مبني على السؤال الثاني من وظيفة البرمجة السادسة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int best = -1;\n        for (int c = 0; c < 28; c++)\n        {\n            int max = -1;\n            int m = int.Parse(Console.ReadLine());\n            while (m >= 0)\n            {\n                if (m > max)\n                    max = m;\n                m = int.Parse(Console.ReadLine());\n            }\n            Console.WriteLine(max);\n            if (max > best)\n                best = max;\n        }\n        Console.WriteLine(best);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int best = -1;\n        for (int c = 0; c < 28; c++)\n        {\n            int max = -1;\n            int m = int.Parse(Console.ReadLine());\n            while (m >= 0)\n            {\n                if (m > max)\n                    max = m;\n                m = int.Parse(Console.ReadLine());\n            }\n            Console.WriteLine(max);\n            best = max;\n        }\n        Console.WriteLine(best);\n    }\n}\n",
+   "public": [
+    "94\n50\n61\n59\n-1\n62\n80\n89\n73\n76\n79\n65\n-1\n30\n44\n33\n63\n34\n91\n-1\n74\n68\n77\n87\n-1\n33\n86\n51\n90\n-1\n37\n43\n52\n-1\n89\n32\n85\n83\n55\n77\n44\n-1\n52\n75\n87\n93\n45\n86\n-1\n85\n99\n35\n-1\n95\n42\n97\n69\n88\n33\n-1\n83\n97\n41\n82\n65\n-1\n90\n91\n57\n99\n-1\n71\n89\n69\n-1\n86\n55\n75\n67\n62\n91\n48\n-1\n84\n52\n44\n68\n89\n31\n50\n-1\n39\n94\n98\n66\n86\n87\n-1\n78\n32\n65\n47\n81\n95\n-1\n70\n99\n81\n72\n88\n82\n-1\n71\n91\n45\n30\n46\n80\n57\n-1\n63\n36\n80\n72\n98\n65\n-1\n71\n30\n67\n-1\n39\n91\n48\n74\n65\n40\n-1\n94\n30\n60\n85\n53\n43\n-1\n31\n97\n50\n91\n47\n49\n82\n-1\n56\n92\n36\n88\n96\n81\n-1\n35\n45\n67\n-1\n39\n54\n48\n38\n95\n55\n86\n-1\n58\n92\n59\n40\n38\n-1\n"
+   ],
+   "hidden": [
+    "36\n95\n91\n77\n82\n-1\n47\n50\n82\n-1\n74\n86\n30\n34\n-1\n79\n86\n31\n60\n38\n50\n51\n-1\n59\n65\n92\n93\n83\n45\n-1\n78\n41\n80\n-1\n99\n46\n48\n80\n96\n-1\n52\n65\n41\n71\n53\n84\n94\n-1\n33\n55\n30\n56\n91\n88\n47\n-1\n45\n53\n41\n46\n-1\n57\n69\n55\n84\n39\n51\n99\n-1\n94\n59\n87\n49\n-1\n97\n79\n55\n39\n-1\n35\n30\n77\n63\n-1\n81\n35\n46\n-1\n49\n43\n78\n94\n30\n99\n68\n-1\n35\n53\n49\n97\n96\n41\n-1\n71\n56\n76\n62\n-1\n47\n40\n63\n37\n-1\n54\n59\n71\n-1\n76\n67\n31\n51\n81\n-1\n41\n91\n58\n36\n71\n-1\n68\n63\n76\n85\n-1\n90\n30\n91\n64\n44\n94\n37\n-1\n91\n87\n56\n-1\n63\n37\n66\n-1\n96\n51\n32\n70\n95\n-1\n56\n44\n73\n88\n-1\n",
+    "57\n88\n94\n91\n76\n98\n33\n-1\n51\n74\n46\n-1\n37\n51\n36\n76\n59\n-1\n55\n59\n46\n47\n74\n94\n-1\n95\n81\n37\n72\n65\n-1\n41\n82\n79\n86\n-1\n49\n36\n87\n91\n-1\n74\n59\n48\n40\n-1\n42\n36\n91\n-1\n71\n62\n60\n37\n79\n83\n-1\n53\n55\n98\n72\n-1\n54\n90\n58\n96\n91\n-1\n52\n92\n55\n68\n42\n-1\n38\n79\n78\n39\n67\n46\n-1\n59\n88\n60\n69\n97\n54\n-1\n90\n92\n84\n59\n52\n57\n72\n-1\n53\n65\n86\n71\n-1\n42\n31\n61\n40\n78\n76\n-1\n54\n62\n90\n72\n50\n-1\n74\n41\n37\n98\n-1\n85\n32\n99\n89\n91\n48\n-1\n57\n77\n36\n61\n63\n83\n-1\n33\n94\n71\n32\n73\n63\n40\n-1\n36\n34\n98\n96\n80\n97\n-1\n96\n46\n76\n99\n43\n81\n-1\n30\n36\n82\n83\n57\n94\n-1\n37\n81\n62\n67\n54\n47\n78\n-1\n56\n90\n45\n91\n59\n-1\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c06-p-q3",
+   "title": "كم طالبًا حصل على الأعلى؟",
+   "text": "نفس معطيات السؤال السابق (28 صفًا، العلامات حتى علامة سالبة)، لكن قد تتكرر العلامة القصوى. يطبع البرنامج لكل صف في سطر: أعلى علامة في الصف ثم عدد الطلاب الذين حصلوا عليها (بينهما مسافة). ثم يطبع في السطر الأخير: أعلى علامة في المدرسة ثم عدد الطلاب في المدرسة كلها الذين حصلوا عليها.\n(مبني على السؤال الثالث من وظيفة البرمجة السادسة وملاحظاته الخوارزمية.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int best = -1, bestCount = 0;\n        for (int c = 0; c < 28; c++)\n        {\n            int max = -1, count = 0;\n            int m = int.Parse(Console.ReadLine());\n            while (m >= 0)\n            {\n                if (m > max) { max = m; count = 1; }\n                else if (m == max) count++;\n                m = int.Parse(Console.ReadLine());\n            }\n            Console.WriteLine(max + \" \" + count);\n            if (max > best) { best = max; bestCount = count; }\n            else if (max == best) bestCount += count;\n        }\n        Console.WriteLine(best + \" \" + bestCount);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int best = -1, bestCount = 0;\n        for (int c = 0; c < 28; c++)\n        {\n            int max = -1, count = 0;\n            int m = int.Parse(Console.ReadLine());\n            while (m >= 0)\n            {\n                if (m > max) { max = m; count = 1; }\n                else if (m == max) count++;\n                m = int.Parse(Console.ReadLine());\n            }\n            Console.WriteLine(max + \" \" + count);\n            if (max > best) { best = max; bestCount = count; }\n        }\n        Console.WriteLine(best + \" \" + bestCount);\n    }\n}\n",
+   "public": [
+    "97\n75\n53\n97\n-1\n97\n62\n97\n44\n65\n-1\n80\n100\n-1\n49\n88\n48\n65\n88\n86\n-1\n54\n92\n66\n66\n48\n56\n-1\n59\n100\n100\n40\n45\n94\n-1\n97\n79\n47\n97\n-1\n95\n52\n95\n48\n65\n44\n-1\n97\n94\n97\n-1\n88\n95\n93\n95\n95\n-1\n47\n78\n92\n-1\n56\n92\n89\n92\n92\n-1\n46\n55\n51\n88\n-1\n57\n77\n95\n-1\n92\n50\n48\n92\n46\n-1\n81\n83\n77\n69\n92\n92\n-1\n100\n88\n71\n99\n-1\n62\n88\n88\n68\n88\n83\n60\n-1\n82\n80\n62\n48\n59\n100\n-1\n72\n49\n88\n88\n-1\n88\n88\n82\n77\n63\n46\n79\n-1\n97\n97\n81\n97\n58\n-1\n100\n52\n-1\n100\n58\n68\n49\n-1\n70\n92\n89\n90\n60\n64\n-1\n100\n100\n68\n79\n78\n100\n-1\n100\n100\n61\n-1\n79\n88\n88\n88\n77\n64\n-1\n"
+   ],
+   "hidden": [
+    "44\n100\n92\n-1\n95\n51\n72\n-1\n92\n41\n92\n-1\n50\n81\n95\n53\n85\n84\n-1\n100\n100\n59\n97\n99\n61\n-1\n78\n51\n57\n52\n92\n86\n-1\n46\n92\n81\n92\n-1\n76\n50\n61\n92\n-1\n40\n63\n95\n74\n95\n95\n70\n-1\n81\n83\n61\n100\n-1\n65\n95\n95\n-1\n88\n80\n44\n88\n69\n56\n-1\n97\n71\n97\n90\n66\n-1\n95\n89\n95\n-1\n95\n95\n51\n95\n-1\n100\n99\n87\n100\n65\n-1\n61\n49\n100\n71\n100\n-1\n48\n88\n85\n86\n67\n88\n-1\n67\n77\n95\n95\n95\n-1\n54\n100\n100\n83\n87\n-1\n97\n86\n81\n54\n-1\n97\n97\n60\n-1\n100\n83\n56\n95\n100\n100\n-1\n85\n92\n92\n92\n-1\n97\n51\n97\n-1\n100\n100\n69\n76\n100\n98\n-1\n72\n95\n74\n95\n79\n-1\n61\n62\n95\n95\n95\n77\n40\n-1\n",
+    "56\n70\n97\n58\n82\n-1\n95\n92\n95\n95\n-1\n55\n92\n92\n61\n-1\n67\n92\n80\n63\n75\n67\n92\n-1\n100\n88\n47\n99\n-1\n97\n63\n43\n63\n43\n-1\n76\n44\n72\n52\n54\n100\n100\n-1\n65\n95\n95\n88\n-1\n88\n48\n88\n63\n48\n48\n-1\n97\n65\n91\n97\n-1\n88\n88\n77\n88\n62\n-1\n50\n70\n79\n63\n67\n88\n-1\n59\n45\n81\n74\n95\n66\n-1\n89\n97\n97\n-1\n91\n86\n97\n70\n97\n-1\n60\n88\n55\n78\n88\n51\n-1\n57\n92\n62\n42\n68\n92\n-1\n62\n97\n92\n60\n50\n59\n-1\n82\n75\n64\n52\n95\n95\n-1\n57\n100\n85\n68\n64\n81\n-1\n47\n58\n95\n46\n41\n95\n-1\n100\n67\n77\n100\n100\n-1\n78\n100\n58\n63\n99\n54\n-1\n42\n97\n81\n78\n97\n66\n73\n97\n-1\n47\n44\n95\n100\n87\n100\n-1\n82\n88\n61\n63\n88\n61\n86\n-1\n95\n82\n72\n-1\n95\n80\n70\n52\n67\n95\n58\n-1\n",
+    "97\n80\n97\n97\n-1\n80\n92\n85\n91\n-1\n97\n86\n41\n-1\n46\n77\n88\n-1\n52\n92\n69\n89\n92\n41\n45\n-1\n95\n43\n73\n51\n40\n-1\n83\n88\n53\n55\n-1\n95\n95\n81\n95\n76\n-1\n97\n50\n59\n63\n97\n85\n-1\n88\n88\n88\n47\n-1\n90\n100\n67\n100\n93\n-1\n60\n88\n86\n83\n88\n46\n49\n88\n-1\n66\n60\n95\n-1\n95\n50\n89\n95\n89\n64\n95\n51\n-1\n95\n63\n67\n95\n41\n95\n-1\n97\n97\n97\n42\n-1\n97\n97\n73\n47\n97\n50\n64\n-1\n95\n91\n95\n49\n-1\n92\n58\n92\n-1\n60\n97\n97\n97\n-1\n53\n95\n74\n-1\n100\n42\n71\n-1\n80\n81\n100\n50\n-1\n80\n95\n40\n66\n95\n-1\n95\n41\n64\n56\n85\n-1\n64\n75\n73\n72\n88\n88\n49\n-1\n40\n83\n48\n95\n73\n53\n-1\n87\n97\n-1\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c06-p-q5",
+   "title": "حملة التبرعات",
+   "text": "عدد الصفوف غير معروف مسبقًا. لكل صف يقرأ البرنامج عدد الطلاب، ثم مبلغ تبرّع كل طالب (عدد حقيقي)، كل قيمة في سطر. ينتهي الإدخال عند عدد طلاب صفر أو سالب (لا يُحتسب). يطبع البرنامج مجموع تبرعات كل صف (سطر لكل صف)، ثم إجمالي التبرعات، ثم عدد الصفوف المشاركة، ثم معدل مجموع التبرعات للصف الواحد مقرّبًا إلى منزلتين: Math.Round(avg, 2). يمكن الافتراض أن صفًا واحدًا على الأقل يشارك.\n(مبني على السؤال الخامس من وظيفة البرمجة السادسة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double total = 0;\n        int classes = 0;\n        int n = int.Parse(Console.ReadLine());\n        while (n > 0)\n        {\n            double sum = 0;\n            for (int i = 0; i < n; i++)\n                sum += double.Parse(Console.ReadLine());\n            Console.WriteLine(sum);\n            total += sum;\n            classes++;\n            n = int.Parse(Console.ReadLine());\n        }\n        Console.WriteLine(total);\n        Console.WriteLine(classes);\n        Console.WriteLine(Math.Round(total / classes, 2));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double total = 0;\n        int classes = 0, students = 0;\n        int n = int.Parse(Console.ReadLine());\n        while (n > 0)\n        {\n            double sum = 0;\n            for (int i = 0; i < n; i++)\n                sum += double.Parse(Console.ReadLine());\n            Console.WriteLine(sum);\n            total += sum;\n            classes++;\n            students += n;\n            n = int.Parse(Console.ReadLine());\n        }\n        Console.WriteLine(total);\n        Console.WriteLine(classes);\n        Console.WriteLine(Math.Round(total / students, 2));\n    }\n}\n",
+   "public": [
+    "3\n7.5\n7.5\n5\n3\n10\n10\n12.5\n1\n10\n0\n"
+   ],
+   "hidden": [
+    "1\n7.5\n6\n10\n12.5\n50\n7.5\n7.5\n12.5\n3\n50\n50\n50\n5\n10\n50\n50\n12.5\n10\n4\n10\n50\n5\n50\n0\n",
+    "3\n5\n7.5\n20\n0\n",
+    "5\n7.5\n5\n12.5\n5\n12.5\n2\n10\n12.5\n1\n20\n4\n7.5\n12.5\n20\n10\n3\n12.5\n7.5\n7.5\n1\n50\n5\n5\n10\n10\n20\n10\n5\n20\n10\n12.5\n12.5\n50\n4\n5\n7.5\n10\n50\n0\n"
+   ],
+   "version": 2
+  }
+ ]
+}

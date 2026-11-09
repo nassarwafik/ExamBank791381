@@ -1,0 +1,78 @@
+{
+ "module": "m04",
+ "questions": [
+  {
+   "book": "c04-p-q7",
+   "title": "السعر بعد الخصم",
+   "text": "اكتب برنامجًا يقرأ عدد المنتجات (عدد صحيح) ثم سعر المنتج الواحد (عدد حقيقي)، ويحسب السعر النهائي بعد الخصم:\n• أكثر من 10 منتجات: خصم 20%\n• من 5 إلى 10 منتجات: خصم 10%\n• أقل من 5 منتجات: بدون خصم\nاطبع السعر النهائي مقرّبًا إلى منزلتين: Math.Round(total, 2).\n(مبني على السؤال 7 من وظيفة البرمجة الرابعة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        double p = double.Parse(Console.ReadLine());\n        double total = n * p;\n        if (n > 10)\n            total = total * 0.8;\n        else if (n >= 5)\n            total = total * 0.9;\n        Console.WriteLine(Math.Round(total, 2));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        double p = double.Parse(Console.ReadLine());\n        double total = n * p;\n        if (n >= 10)\n            total = total * 0.8;\n        else if (n >= 5)\n            total = total * 0.9;\n        Console.WriteLine(Math.Round(total, 2));\n    }\n}\n",
+   "public": [
+    "12\n10\n"
+   ],
+   "hidden": [
+    "10\n10\n",
+    "5\n20\n",
+    "4\n25\n",
+    "11\n2.5\n",
+    "7\n3.3\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c04-p-q9",
+   "title": "زوجي ويقبل القسمة على 5",
+   "text": "اكتب برنامجًا يقرأ عددًا صحيحًا ويطبع إحدى الجمل التالية بالضبط:\n• Even and divisible by 5\n• Even but not divisible by 5\n• Divisible by 5 but not even\n• Neither even nor divisible by 5\n(مبني على السؤال 9 من وظيفة البرمجة الرابعة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        bool even = n % 2 == 0, five = n % 5 == 0;\n        if (even && five)\n            Console.WriteLine(\"Even and divisible by 5\");\n        else if (even)\n            Console.WriteLine(\"Even but not divisible by 5\");\n        else if (five)\n            Console.WriteLine(\"Divisible by 5 but not even\");\n        else\n            Console.WriteLine(\"Neither even nor divisible by 5\");\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        bool even = n % 2 == 0, five = n % 5 == 0;\n        if (five)\n            Console.WriteLine(\"Divisible by 5 but not even\");\n        else if (even)\n            Console.WriteLine(\"Even but not divisible by 5\");\n        else\n            Console.WriteLine(\"Neither even nor divisible by 5\");\n    }\n}\n",
+   "public": [
+    "10\n"
+   ],
+   "hidden": [
+    "4\n",
+    "15\n",
+    "7\n",
+    "0\n",
+    "-20\n",
+    "-3\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c04-h-q9",
+   "title": "الراتب الصافي",
+   "text": "اكتب برنامجًا يقرأ عدد ساعات عمل العامل في الشهر (عدد صحيح) ثم أجرة الساعة (عدد حقيقي). الراتب = الساعات × الأجرة. تُخصم ضريبة الدخل كما يلي:\n• راتب أقل من 4500: لا ضريبة.\n• راتب من 4500 حتى 7000 (شامل): 20% من المبلغ الذي يزيد عن 4500.\n• راتب أكبر من 7000: ‏400 + 35% من المبلغ الذي يزيد عن 7000.\nاطبع الراتب الصافي (الراتب ناقص الضريبة) مقرّبًا إلى منزلتين: Math.Round(net, 2).\n(مبني على السؤال 9 من الوظيفة البيتية الرابعة، بشرائح الضريبة كما طُبعت.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int h = int.Parse(Console.ReadLine());\n        double rate = double.Parse(Console.ReadLine());\n        double s = h * rate;\n        double tax = 0;\n        if (s > 7000)\n            tax = 400 + (s - 7000) * 0.35;\n        else if (s >= 4500)\n            tax = (s - 4500) * 0.2;\n        Console.WriteLine(Math.Round(s - tax, 2));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int h = int.Parse(Console.ReadLine());\n        double rate = double.Parse(Console.ReadLine());\n        double s = h * rate;\n        double tax = 0;\n        if (s >= 4500)\n            tax = s * 0.2;\n        Console.WriteLine(Math.Round(s - tax, 2));\n    }\n}\n",
+   "public": [
+    "150\n40\n"
+   ],
+   "hidden": [
+    "100\n40\n",
+    "175\n40\n",
+    "200\n40\n",
+    "180\n45\n",
+    "120\n37.5\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c04-h-q11",
+   "title": "أجرة العامل حسب اليوم",
+   "text": "يقرأ البرنامج رقم اليوم ثم عدد الساعات (عددين صحيحين). أرقام الأيام: 1 الأحد، 2 الإثنين، 3 الثلاثاء، 4 الأربعاء، 5 الخميس، 6 الجمعة، 7 السبت.\nأجرة الساعة: السبت 40 شيكلًا لكل ساعة من الساعات الثماني الأولى و50 لكل ساعة بعدها؛ الإثنين حتى الخميس 25 و30؛ الجمعة والأحد 30 و35.\nاطبع أجرة العامل في ذلك اليوم فقط.\nمثال من الكتاب: السبت 11 ساعة ← 40 × 8 + 50 × 3 = 470.\n(مبني على السؤال 11 من الوظيفة البيتية الرابعة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int day = int.Parse(Console.ReadLine());\n        int hours = int.Parse(Console.ReadLine());\n        int low, high;\n        if (day == 7) { low = 40; high = 50; }\n        else if (day >= 2 && day <= 5) { low = 25; high = 30; }\n        else { low = 30; high = 35; }\n        int pay = hours <= 8 ? hours * low : 8 * low + (hours - 8) * high;\n        Console.WriteLine(pay);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int day = int.Parse(Console.ReadLine());\n        int hours = int.Parse(Console.ReadLine());\n        int low, high;\n        if (day == 7) { low = 40; high = 50; }\n        else if (day >= 2 && day <= 5) { low = 25; high = 30; }\n        else { low = 30; high = 35; }\n        int pay = hours <= 8 ? hours * low : hours * high;\n        Console.WriteLine(pay);\n    }\n}\n",
+   "public": [
+    "7\n11\n"
+   ],
+   "hidden": [
+    "7\n8\n",
+    "3\n10\n",
+    "1\n9\n",
+    "6\n5\n",
+    "2\n12\n"
+   ],
+   "version": 2
+  }
+ ]
+}

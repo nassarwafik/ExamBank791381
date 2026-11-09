@@ -1,0 +1,12 @@
+{
+  "id": "c02-h-q13",
+  "source": "ف2 بيتية س13",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "False"
+      }
+    }
+  ]
+}

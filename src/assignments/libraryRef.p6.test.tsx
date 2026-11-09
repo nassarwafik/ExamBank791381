@@ -33,7 +33,7 @@ async function chooseLibraryItem(copy?: (exam: unknown, title: string) => void) 
   await waitFor(() => expect(calls.some(c => c.url.startsWith("/api/assignments"))).toBe(true));
   fireEvent.click((await screen.findAllByRole("button", { name: "إنشاء واجب" }))[0]);
   const composer = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
-  fireEvent.click(within(composer).getByRole("button", { name: "مكتبة 791381" }));
+  fireEvent.click(within(composer).getByRole("button", { name: "المكتبة الرسمية" }));
   const list = await within(composer).findByRole("list", { name: "عناصر المكتبة" });
   return { composer, list };
 }

@@ -222,10 +222,10 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     await mount(copy);
     fireEvent.click(screen.getByRole("button", { name: "إنشاء واجب" }));
     const composer = await screen.findByRole("region", { name: "إنشاء واجب جديد" });
-    fireEvent.click(within(composer).getByRole("button", { name: "مكتبة 791381" }));
+    fireEvent.click(within(composer).getByRole("button", { name: "المكتبة الرسمية" }));
     await within(composer).findByRole("list", { name: "عناصر المكتبة" });
     expect(gets("/api/exam-library")).toHaveLength(1);
-    fireEvent.click(within(composer).getByRole("button", { name: "امتحاناتي" })); fireEvent.click(within(composer).getByRole("button", { name: "مكتبة 791381" }));
+    fireEvent.click(within(composer).getByRole("button", { name: "امتحاناتي" })); fireEvent.click(within(composer).getByRole("button", { name: "المكتبة الرسمية" }));
     expect(gets("/api/exam-library")).toHaveLength(1);                                                // catalog cached
     const libList = within(composer).getByRole("list", { name: "عناصر المكتبة" });                     // picker remounts on source switch
     expect(within(libList).getAllByRole("listitem")).toHaveLength(3);

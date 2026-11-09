@@ -1,0 +1,13 @@
+{
+  "id": "c05-h-q1",
+  "source": "ف5 بيتية س1.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "288\n917\n456\n878\n912",
+      "expect": {
+        "stdout": "Enter a three-digit integer : \nEnter a three-digit integer : \nEnter a three-digit integer : \nEnter a three-digit integer : \nEnter a three-digit integer : \ncount := 2"
+      }
+    }
+  ]
+}

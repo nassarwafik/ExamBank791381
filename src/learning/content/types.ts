@@ -125,8 +125,9 @@ export interface TableBlock extends BlockBase {
   columnDirs?: ContentDirection[];
 }
 
-export type CodeLanguage = "cli" | "text" | "config";
-/** Commands / syntax. Whitespace preserved; usually `dir:"ltr"` even inside an RTL lesson. */
+export type CodeLanguage = "cli" | "text" | "config" | "csharp";
+/** Commands / syntax. Whitespace preserved; usually `dir:"ltr"` even inside an RTL lesson. `csharp` (899371 P1) is a C# program:
+ *  shown highlighted, with line numbers and a copy control (reader/CodeBlockView.tsx), its text never altered. */
 export interface CodeBlock extends BlockBase { type: "code"; language: CodeLanguage; code: string; }
 
 /** A semantic learning diagram: a local image asset + metadata. NO simulation behavior (that is Phase 5). */
@@ -554,7 +555,7 @@ export const BLOCK_TYPES: readonly BlockType[] = [
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
-export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config"];
+export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config", "csharp"];
 
 // ────────────────────────────────────────────────────────────────────────────
 // Hierarchy: Course → Module → Lesson → Page. Page is the future Reader unit.

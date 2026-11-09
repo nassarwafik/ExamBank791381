@@ -1,0 +1,1683 @@
+{
+ "worker": "csharp@1",
+ "image": "mcr.microsoft.com/dotnet/sdk@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29",
+ "comparator": "normalizeWhitespace",
+ "runs": {
+  "CL899371-01-Q01": {
+   "book": "c01-p-q3",
+   "version": 2,
+   "sha": "dd9a08328eb796f5cd96e10cf56addfd5789ae37e32c4608cf4701ed0fd813ff",
+   "wrongSha": "d83ff50984285a10740336350113e8697593a4faaaec5cfba83cee4c4d8edfb8",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "49\n"
+    ],
+    "hidden": [
+     "81\n",
+     "16\n",
+     "0\n",
+     "144\n",
+     "10000\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "18\n",
+     "-8\n",
+     "0\n",
+     "24\n",
+     "200\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-01-Q02": {
+   "book": "c01-p-q6",
+   "version": 2,
+   "sha": "bc2527a035b019a064b0509ad107afe135abb9db5eac880c6472489875472b9e",
+   "wrongSha": "1d35039d23a62db9fdfbe19bed843fc17f788a98df32d84afed7dcd7407ee0b5",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "6\n"
+    ],
+    "hidden": [
+     "27\n",
+     "1\n",
+     "12\n",
+     "12\n",
+     "7\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "18\n",
+     "1\n",
+     "12\n",
+     "4\n",
+     "2\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-01-Q03": {
+   "book": "c01-p-q8",
+   "version": 2,
+   "sha": "617790406ca5bdcf18cd4784f110d61070507f6a356945dc8757faa5f079567c",
+   "wrongSha": "22933f9af1a5512fbc1ab671b15cb688253aeb7cc7b39e820e9e167d66a2bf59",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "10\n7\n"
+    ],
+    "hidden": [
+     "36\n18\n",
+     "1\n0\n",
+     "12\n8\n",
+     "19\n8\n",
+     "8\n6\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "36\n18\n",
+     "1\n1\n",
+     "12\n4\n",
+     "19\n11\n",
+     "8\n2\n"
+    ],
+    "failsHidden": [
+     false,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-01-Q04": {
+   "book": "c01-p-q9",
+   "version": 2,
+   "sha": "85dc67844b3e9a7550049e70532dbb79835a627b33f1c0854ae462fffadbdde9",
+   "wrongSha": "0515797324e59cea90070efcfba39c9e0109c38fc6d5f0913f8490a3089fad16",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "1234\n"
+    ],
+    "hidden": [
+     "9000\n",
+     "5079\n",
+     "1001\n",
+     "3862\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "900\n",
+     "9507\n",
+     "1100\n",
+     "2386\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-02-Q01": {
+   "book": "c02-p-q5",
+   "version": 2,
+   "sha": "9a2cd75dc219cf7769081e71e9aaf7cf65d9336ab1f489b1e4a40a87a68643e1",
+   "wrongSha": "022401794cdba7a3622665dddabcba0a6a1f9c656375cc489d327b1701e7f66d",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "10\n24\n5\n"
+    ],
+    "hidden": [
+     "7\n12\n3.5\n",
+     "-3\n-10\n-1.5\n",
+     "0\n0\n0\n",
+     "107\n700\n53.5\n",
+     "18\n81\n9\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "7\n12\n3\n",
+     "-3\n-10\n-1\n",
+     "0\n0\n0\n",
+     "107\n700\n53\n",
+     "18\n81\n9\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-03-Q01": {
+   "book": "c03-p-q6",
+   "version": 2,
+   "sha": "bad838533ca8ce6a47cd520f0f13daf10b8cfa05ca65983593ef447d78e91c20",
+   "wrongSha": "d2a50c53eeca8e5c1e55b60e884148e2ae70f7cef717a2747fcc6225d978aafe",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "5\n"
+    ],
+    "hidden": [
+     "13\n",
+     "1.41\n",
+     "6.5\n",
+     "7.62\n",
+     "17\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "4.12\n",
+     "1.41\n",
+     "2.92\n",
+     "3.16\n",
+     "4.8\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-03-Q02": {
+   "book": "c03-p-q7",
+   "version": 2,
+   "sha": "a884e36d194a3f0ccd270433ffc52d1aa61d7698ece1da71973005f471e0aa25",
+   "wrongSha": "63067017275f772c9de9bed9f9efe358bc77b132a2225aebe4950bbe5f213e09",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "1.8\n"
+    ],
+    "hidden": [
+     "1.9\n",
+     "1.95\n",
+     "1.6\n",
+     "1.82\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "1.6\n",
+     "1.95\n",
+     "1.55\n",
+     "1.82\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-03-Q03": {
+   "book": "c03-p-q8",
+   "version": 2,
+   "sha": "a13bbe4f458edd8dd59056a1886bc258f9b04c5aa92fe651bcb401023f771870",
+   "wrongSha": "4620223c174b005a8dfe45d26200f5171e60844406ecc7612b8aeb950a261616",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "90\n"
+    ],
+    "hidden": [
+     "75\n",
+     "0\n",
+     "99\n",
+     "60\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "75\n",
+     "0\n",
+     "100\n",
+     "60\n"
+    ],
+    "failsHidden": [
+     false,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-03-Q04": {
+   "book": "c03-h-q9",
+   "version": 2,
+   "sha": "ae1d5eb16566f732060271667ae4a9dbdd8306ed7766264bb40b61cc17149842",
+   "wrongSha": "0b9af47033ca796aa9d2bd5911387ea8f48b2d7a12843f47b61de0665726337c",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "5\n6\n12\n"
+    ],
+    "hidden": [
+     "1.41\n0.5\n3.41\n",
+     "10\n24\n24\n",
+     "3.61\n3\n8.61\n",
+     "7.07\n12.5\n17.07\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "1.41\n1\n3.41\n",
+     "10\n48\n24\n",
+     "3.61\n6\n8.61\n",
+     "7.07\n25\n17.07\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-04-Q01": {
+   "book": "c04-p-q7",
+   "version": 2,
+   "sha": "531b3cff08eb7329e00aabec274373b885dbfeeea334e2fafeb91400c32764f1",
+   "wrongSha": "89fa4e0679c3e8b99e367a108c4bdf8f5754f3d1945e8c9da73e0b724500ebec",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "96\n"
+    ],
+    "hidden": [
+     "90\n",
+     "90\n",
+     "100\n",
+     "22\n",
+     "20.79\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "80\n",
+     "90\n",
+     "100\n",
+     "22\n",
+     "20.79\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "CL899371-04-Q02": {
+   "book": "c04-p-q9",
+   "version": 2,
+   "sha": "0a96514c4209c702e7ce57e156bd8528a4354fa44896331337c62d5c9c980736",
+   "wrongSha": "7e5be45a6d828be49fb5b87825f86539cdeb5a911cd7ae5750334555021d6ce0",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "Even and divisible by 5\n"
+    ],
+    "hidden": [
+     "Even but not divisible by 5\n",
+     "Divisible by 5 but not even\n",
+     "Neither even nor divisible by 5\n",
+     "Even and divisible by 5\n",
+     "Even and divisible by 5\n",
+     "Neither even nor divisible by 5\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "Even but not divisible by 5\n",
+     "Divisible by 5 but not even\n",
+     "Neither even nor divisible by 5\n",
+     "Divisible by 5 but not even\n",
+     "Divisible by 5 but not even\n",
+     "Neither even nor divisible by 5\n"
+    ],
+    "failsHidden": [
+     false,
+     false,
+     false,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-04-Q03": {
+   "book": "c04-h-q9",
+   "version": 2,
+   "sha": "d6f6309335ac47ccee1460c12fe678524d0414866874104a6ffb5d1ad62409da",
+   "wrongSha": "255e45a4c2556afae77265c9b88995083bee83c3b08dc54b621524213595c2a2",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "5700\n"
+    ],
+    "hidden": [
+     "4000\n",
+     "6500\n",
+     "7250\n",
+     "7315\n",
+     "4500\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "4000\n",
+     "5600\n",
+     "6400\n",
+     "6480\n",
+     "3600\n"
+    ],
+    "failsHidden": [
+     false,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-04-Q04": {
+   "book": "c04-h-q11",
+   "version": 2,
+   "sha": "e720a01fa32555806e5149b8136b428b652f8473b8499086bcb3cdcad124eb2c",
+   "wrongSha": "c2318d8bc69f2c325797c838d303cb47af7679386767c8ac7da31af7fbb4dfb9",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "470\n"
+    ],
+    "hidden": [
+     "320\n",
+     "260\n",
+     "275\n",
+     "150\n",
+     "320\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "320\n",
+     "300\n",
+     "315\n",
+     "150\n",
+     "360\n"
+    ],
+    "failsHidden": [
+     false,
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "CL899371-05-Q01": {
+   "book": "c05-p-q1",
+   "version": 2,
+   "sha": "efea2c35af24b6c0df60d6c10195b3bf8d031377804e9fad0f7210fe29090825",
+   "wrongSha": "a0f4a7170db9fcb796d594425c442e9afe593e75666a5d87c7e6511f4e61f19c",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "Section2\nSection3\nSection5\nSection6\nSection7\nSection8\nSection11\nSection12\nSection13\nSection17\nSection19\nSection20\nSection22\nSection23\nSection24\nSection25\nSection26\nSection35\nSection37\nSection40\nSection41\nSection42\nSection44\n439.5\n"
+    ],
+    "hidden": [
+     "Section2\nSection3\nSection4\nSection6\nSection10\nSection11\nSection12\nSection14\nSection20\nSection22\nSection24\nSection29\nSection30\nSection31\nSection38\nSection39\nSection42\n445.7\n",
+     "Section1\nSection2\nSection5\nSection6\nSection7\nSection9\nSection10\nSection11\nSection13\nSection16\nSection17\nSection18\nSection19\nSection22\nSection26\nSection31\nSection34\nSection36\nSection41\nSection42\nSection43\n463.8\n",
+     "Section1\nSection3\nSection4\nSection6\nSection8\nSection9\nSection15\nSection18\nSection21\nSection23\nSection28\nSection33\nSection34\nSection35\nSection36\nSection37\nSection41\nSection43\nSection44\n420.8\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "Section1\nSection2\nSection3\nSection4\nSection6\nSection10\nSection11\nSection12\nSection13\nSection14\nSection20\nSection22\nSection24\nSection27\nSection28\nSection29\nSection30\nSection31\nSection38\nSection39\nSection40\nSection42\n445.7\n",
+     "Section1\nSection2\nSection5\nSection6\nSection7\nSection9\nSection10\nSection11\nSection12\nSection13\nSection16\nSection17\nSection18\nSection19\nSection22\nSection26\nSection31\nSection32\nSection34\nSection36\nSection37\nSection39\nSection41\nSection42\nSection43\n463.8\n",
+     "Section1\nSection3\nSection4\nSection6\nSection8\nSection9\nSection10\nSection14\nSection15\nSection18\nSection21\nSection23\nSection24\nSection28\nSection33\nSection34\nSection35\nSection36\nSection37\nSection41\nSection43\nSection44\n420.8\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-05-Q02": {
+   "book": "c05-p-q2",
+   "version": 2,
+   "sha": "34ae5332beece157a19e95336ebe407a3a0570916083975a8743b5b98c29cbfb",
+   "wrongSha": "6f90a4e2d776e23af3b2c417563b942ad1588a15ff36e0f8e7047fb3788e7b7f",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "36\n0\n36\n1\n31\n3\n-5\n0\n42\n0\n46\n2\n-7\nindivisible\n30\n0\n-12\nindivisible\n38\nindivisible\n51\n1\n23\n3\n54\n0\n49\nindivisible\n37\nindivisible\n-23\nindivisible\n-4\n0\n46\nindivisible\n33\n1\n22\n2\n4\n-5\n2\n-1\n33\nindivisible\n54\nindivisible\n31\n1\n31\n4\n-17\n-2\n12\n0\n38\n2\n-27\nindivisible\n42\nindivisible\n21\nindivisible\n12\n2\n-22\nindivisible\n57\nindivisible\n-1\n-1\n-17\n-3\n23\n3\n"
+    ],
+    "hidden": [
+     "33\n0\n63\n0\n59\n3\n-7\n-2\n-25\n-1\n34\n1\n59\n3\n54\n2\n8\n-1\n-34\n-2\n-5\n-5\n18\n0\n15\n1\n-27\n-3\n-5\nindivisible\n39\n3\n62\n2\n-19\nindivisible\n-14\n-5\n-2\nindivisible\n31\n3\n-11\n-1\n-4\n-4\n6\n2\n42\n0\n59\nindivisible\n42\n0\n34\nindivisible\n17\n1\n19\n3\n37\n2\n52\n2\n39\nindivisible\n52\nindivisible\n-3\n0\n19\n3\n63\n3\n59\n2\n",
+     "6\n0\n58\n0\n55\n1\n56\n0\n-1\n0\n-14\nindivisible\n40\n0\n7\nindivisible\n26\n0\n53\n1\n-26\n-2\n-12\nindivisible\n10\n3\n26\n0\n6\n2\n6\n-1\n36\n0\n28\n0\n29\n1\n53\nindivisible\n10\n2\n54\n0\n65\n2\n36\n0\n-6\n-6\n63\n0\n39\n0\n9\n1\n1\n-8\n18\n0\n24\n3\n-1\n3\n10\n0\n-18\n-2\n41\n5\n-4\n0\n2\n0\n63\n3\n",
+     "-21\n-1\n68\n5\n4\n1\n5\n2\n-14\n0\n15\n1\n62\n2\n20\nindivisible\n5\n1\n14\n2\n7\n3\n59\n5\n-10\n0\n43\n1\n-9\nindivisible\n53\nindivisible\n-19\n-3\n13\nindivisible\n-17\n-2\n1\n-4\n17\n1\n22\n2\n-18\nindivisible\n40\n0\n55\n3\n-7\nindivisible\n41\n5\n58\n0\n11\n4\n51\n1\n35\n2\n37\n1\n-17\nindivisible\n-16\n-1\n5\nindivisible\n-26\n0\n22\nindivisible\n66\n3\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "33\n10\n63\n6\n59\n13\n-7\n-2\n-25\n-7\n34\n10\n59\n7\n54\n-14\n8\n0\n-34\n7\n-5\n-1\n18\n17\n15\n6\n-27\n5\n-5\nindivisible\n39\n8\n62\n11\n-19\nindivisible\n-14\n-2\n-2\nindivisible\n31\n3\n-11\n-3\n-4\n-1\n6\n-2\n42\n41\n59\nindivisible\n42\n41\n34\nindivisible\n17\n-5\n19\n-5\n37\n4\n52\n9\n39\nindivisible\n52\nindivisible\n-3\n-2\n19\n3\n63\n11\n59\n18\n",
+     "6\n1\n58\n57\n55\n26\n56\n55\n-1\n-2\n-14\nindivisible\n40\n19\n7\nindivisible\n26\n25\n53\n-14\n-26\n-9\n-12\nindivisible\n10\n0\n26\n25\n6\n0\n6\n0\n36\n-10\n28\n6\n29\n6\n53\nindivisible\n10\n-3\n54\n17\n65\n8\n36\n-10\n-6\n-1\n63\n8\n39\n38\n9\n3\n1\n0\n18\n5\n24\n2\n-1\n0\n10\n1\n-18\n3\n41\n3\n-4\n0\n2\n0\n63\n14\n",
+     "-21\n4\n68\n6\n4\n0\n5\n0\n-14\n-3\n15\n1\n62\n11\n20\nindivisible\n5\n1\n14\n2\n7\n0\n59\n5\n-10\n-11\n43\n13\n-9\nindivisible\n53\nindivisible\n-19\n3\n13\nindivisible\n-17\n-6\n1\n0\n17\n-5\n22\n-6\n-18\nindivisible\n40\n-11\n55\n12\n-7\nindivisible\n41\n3\n58\n28\n11\n0\n51\n24\n35\n10\n37\n11\n-17\nindivisible\n-16\n-6\n5\nindivisible\n-26\n-27\n22\nindivisible\n66\n6\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-05-Q03": {
+   "book": "c05-p-q4",
+   "version": 2,
+   "sha": "f04895343597d4f1f304fc04c67a5b1688dfe138479dee6606ecdf7e4b58a805",
+   "wrongSha": "83f6ddaf9e2d82ee534daf076657c8ecb039e257021d9ccf389771efd9e28371",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "Tech2 BONUS\nTech3 BONUS\nTech5 BONUS\nTech7 BONUS\nTech16 BONUS\nTech17 BONUS\nTech23 BONUS\nTech24 BONUS\nTech25 BONUS\nTech26 BONUS\nTech30 BONUS\nTech38 BONUS\nTech42 BONUS\nTech43 BONUS\nTech47 BONUS\nTech52 BONUS\nTech56 BONUS\nTech58 BONUS\nTech63 BONUS\nTech66 BONUS\nTech68 BONUS\nTech70 BONUS\nTech71 BONUS\nTech76 BONUS\nTech78 BONUS\nTech81 BONUS\nTech84 BONUS\nTech85 BONUS\nTech88 BONUS\nTech95 BONUS\nTech102 BONUS\nTech108 BONUS\nTech110 BONUS\nTech113 BONUS\nTech115 BONUS\nTech121 BONUS\nTech122 BONUS\nTech123 BONUS\nTech130 BONUS\nTech133 BONUS\nTech138 BONUS\nTech143 BONUS\nTech149 BONUS\nTech150 BONUS\nTech151 BONUS\nTech152 BONUS\nTech153 BONUS\nTech157 BONUS\nTech161 BONUS\nTech165 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech176 BONUS\nTech180 BONUS\nTech189 BONUS\nTech190 BONUS\nTech192 BONUS\nTech196 BONUS\nTech200 BONUS\nTech204 BONUS\nTech205 BONUS\nTech207 BONUS\nTech208 BONUS\nTech212 BONUS\nTech216 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech229 BONUS\nTech234 BONUS\nTech239 BONUS\nTech245 BONUS\nTech249 BONUS\nTech251 BONUS\nTech253 BONUS\nTech254 BONUS\nTech257 BONUS\nTech258 BONUS\nTech263 BONUS\nTech267 BONUS\nTech268 BONUS\nTech269 BONUS\nTech270 BONUS\nTech272 BONUS\nTech273 BONUS\nTech275 BONUS\nTech279 BONUS\nTech281 BONUS\nTech283 BONUS\nTech285 BONUS\nTech286 BONUS\n6032\n"
+    ],
+    "hidden": [
+     "Tech4 BONUS\nTech5 BONUS\nTech14 BONUS\nTech17 BONUS\nTech19 BONUS\nTech21 BONUS\nTech24 BONUS\nTech28 BONUS\nTech30 BONUS\nTech33 BONUS\nTech37 BONUS\nTech44 BONUS\nTech49 BONUS\nTech54 BONUS\nTech55 BONUS\nTech58 BONUS\nTech60 BONUS\nTech61 BONUS\nTech64 BONUS\nTech65 BONUS\nTech69 BONUS\nTech71 BONUS\nTech74 BONUS\nTech77 BONUS\nTech78 BONUS\nTech83 BONUS\nTech86 BONUS\nTech91 BONUS\nTech97 BONUS\nTech106 BONUS\nTech109 BONUS\nTech110 BONUS\nTech113 BONUS\nTech116 BONUS\nTech118 BONUS\nTech119 BONUS\nTech123 BONUS\nTech134 BONUS\nTech135 BONUS\nTech146 BONUS\nTech152 BONUS\nTech153 BONUS\nTech154 BONUS\nTech156 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech172 BONUS\nTech179 BONUS\nTech185 BONUS\nTech187 BONUS\nTech190 BONUS\nTech195 BONUS\nTech197 BONUS\nTech199 BONUS\nTech205 BONUS\nTech206 BONUS\nTech209 BONUS\nTech222 BONUS\nTech223 BONUS\nTech227 BONUS\nTech228 BONUS\nTech231 BONUS\nTech237 BONUS\nTech247 BONUS\nTech257 BONUS\nTech264 BONUS\nTech265 BONUS\nTech266 BONUS\n5744\n",
+     "Tech4 BONUS\nTech6 BONUS\nTech7 BONUS\nTech13 BONUS\nTech16 BONUS\nTech17 BONUS\nTech21 BONUS\nTech22 BONUS\nTech25 BONUS\nTech30 BONUS\nTech33 BONUS\nTech36 BONUS\nTech38 BONUS\nTech41 BONUS\nTech43 BONUS\nTech45 BONUS\nTech46 BONUS\nTech47 BONUS\nTech55 BONUS\nTech59 BONUS\nTech61 BONUS\nTech63 BONUS\nTech65 BONUS\nTech72 BONUS\nTech78 BONUS\nTech80 BONUS\nTech85 BONUS\nTech87 BONUS\nTech89 BONUS\nTech92 BONUS\nTech93 BONUS\nTech101 BONUS\nTech105 BONUS\nTech106 BONUS\nTech111 BONUS\nTech114 BONUS\nTech127 BONUS\nTech130 BONUS\nTech132 BONUS\nTech134 BONUS\nTech135 BONUS\nTech140 BONUS\nTech141 BONUS\nTech144 BONUS\nTech153 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech171 BONUS\nTech175 BONUS\nTech176 BONUS\nTech178 BONUS\nTech180 BONUS\nTech181 BONUS\nTech192 BONUS\nTech193 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech200 BONUS\nTech206 BONUS\nTech208 BONUS\nTech209 BONUS\nTech215 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech227 BONUS\nTech233 BONUS\nTech234 BONUS\nTech236 BONUS\nTech241 BONUS\nTech243 BONUS\nTech247 BONUS\nTech248 BONUS\nTech252 BONUS\nTech253 BONUS\nTech260 BONUS\nTech263 BONUS\nTech265 BONUS\nTech268 BONUS\nTech269 BONUS\nTech279 BONUS\nTech281 BONUS\nTech284 BONUS\nTech285 BONUS\n6025\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0
+    ],
+    "hidden": [
+     "Tech4 BONUS\nTech5 BONUS\nTech8 BONUS\nTech11 BONUS\nTech13 BONUS\nTech14 BONUS\nTech17 BONUS\nTech19 BONUS\nTech21 BONUS\nTech22 BONUS\nTech23 BONUS\nTech24 BONUS\nTech28 BONUS\nTech30 BONUS\nTech32 BONUS\nTech33 BONUS\nTech34 BONUS\nTech35 BONUS\nTech37 BONUS\nTech38 BONUS\nTech41 BONUS\nTech42 BONUS\nTech44 BONUS\nTech46 BONUS\nTech49 BONUS\nTech50 BONUS\nTech52 BONUS\nTech54 BONUS\nTech55 BONUS\nTech57 BONUS\nTech58 BONUS\nTech59 BONUS\nTech60 BONUS\nTech61 BONUS\nTech63 BONUS\nTech64 BONUS\nTech65 BONUS\nTech69 BONUS\nTech71 BONUS\nTech74 BONUS\nTech75 BONUS\nTech77 BONUS\nTech78 BONUS\nTech83 BONUS\nTech86 BONUS\nTech91 BONUS\nTech92 BONUS\nTech94 BONUS\nTech95 BONUS\nTech97 BONUS\nTech106 BONUS\nTech109 BONUS\nTech110 BONUS\nTech113 BONUS\nTech116 BONUS\nTech117 BONUS\nTech118 BONUS\nTech119 BONUS\nTech121 BONUS\nTech123 BONUS\nTech124 BONUS\nTech129 BONUS\nTech131 BONUS\nTech134 BONUS\nTech135 BONUS\nTech136 BONUS\nTech141 BONUS\nTech145 BONUS\nTech146 BONUS\nTech150 BONUS\nTech152 BONUS\nTech153 BONUS\nTech154 BONUS\nTech156 BONUS\nTech157 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech172 BONUS\nTech173 BONUS\nTech177 BONUS\nTech179 BONUS\nTech182 BONUS\nTech185 BONUS\nTech187 BONUS\nTech188 BONUS\nTech190 BONUS\nTech192 BONUS\nTech195 BONUS\nTech197 BONUS\nTech199 BONUS\nTech201 BONUS\nTech202 BONUS\nTech203 BONUS\nTech205 BONUS\nTech206 BONUS\nTech209 BONUS\nTech211 BONUS\nTech212 BONUS\nTech214 BONUS\nTech216 BONUS\nTech217 BONUS\nTech220 BONUS\nTech222 BONUS\nTech223 BONUS\nTech227 BONUS\nTech228 BONUS\nTech229 BONUS\nTech231 BONUS\nTech237 BONUS\nTech238 BONUS\nTech246 BONUS\nTech247 BONUS\nTech250 BONUS\nTech257 BONUS\nTech260 BONUS\nTech262 BONUS\nTech263 BONUS\nTech264 BONUS\nTech265 BONUS\nTech266 BONUS\nTech269 BONUS\nTech270 BONUS\nTech274 BONUS\nTech275 BONUS\nTech281 BONUS\nTech282 BONUS\nTech284 BONUS\n5744\n",
+     "Tech1 BONUS\nTech4 BONUS\nTech5 BONUS\nTech6 BONUS\nTech7 BONUS\nTech9 BONUS\nTech12 BONUS\nTech13 BONUS\nTech16 BONUS\nTech17 BONUS\nTech21 BONUS\nTech22 BONUS\nTech25 BONUS\nTech26 BONUS\nTech30 BONUS\nTech31 BONUS\nTech33 BONUS\nTech35 BONUS\nTech36 BONUS\nTech37 BONUS\nTech38 BONUS\nTech39 BONUS\nTech40 BONUS\nTech41 BONUS\nTech43 BONUS\nTech45 BONUS\nTech46 BONUS\nTech47 BONUS\nTech52 BONUS\nTech55 BONUS\nTech59 BONUS\nTech61 BONUS\nTech62 BONUS\nTech63 BONUS\nTech64 BONUS\nTech65 BONUS\nTech66 BONUS\nTech68 BONUS\nTech69 BONUS\nTech71 BONUS\nTech72 BONUS\nTech75 BONUS\nTech78 BONUS\nTech80 BONUS\nTech82 BONUS\nTech85 BONUS\nTech87 BONUS\nTech89 BONUS\nTech92 BONUS\nTech93 BONUS\nTech101 BONUS\nTech103 BONUS\nTech105 BONUS\nTech106 BONUS\nTech110 BONUS\nTech111 BONUS\nTech114 BONUS\nTech115 BONUS\nTech125 BONUS\nTech127 BONUS\nTech130 BONUS\nTech131 BONUS\nTech132 BONUS\nTech134 BONUS\nTech135 BONUS\nTech139 BONUS\nTech140 BONUS\nTech141 BONUS\nTech142 BONUS\nTech144 BONUS\nTech147 BONUS\nTech151 BONUS\nTech153 BONUS\nTech157 BONUS\nTech163 BONUS\nTech164 BONUS\nTech165 BONUS\nTech167 BONUS\nTech168 BONUS\nTech171 BONUS\nTech175 BONUS\nTech176 BONUS\nTech178 BONUS\nTech179 BONUS\nTech180 BONUS\nTech181 BONUS\nTech187 BONUS\nTech188 BONUS\nTech192 BONUS\nTech193 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech198 BONUS\nTech199 BONUS\nTech200 BONUS\nTech201 BONUS\nTech202 BONUS\nTech203 BONUS\nTech204 BONUS\nTech206 BONUS\nTech208 BONUS\nTech209 BONUS\nTech211 BONUS\nTech213 BONUS\nTech215 BONUS\nTech217 BONUS\nTech220 BONUS\nTech222 BONUS\nTech223 BONUS\nTech225 BONUS\nTech226 BONUS\nTech227 BONUS\nTech230 BONUS\nTech233 BONUS\nTech234 BONUS\nTech236 BONUS\nTech238 BONUS\nTech240 BONUS\nTech241 BONUS\nTech243 BONUS\nTech247 BONUS\nTech248 BONUS\nTech249 BONUS\nTech250 BONUS\nTech252 BONUS\nTech253 BONUS\nTech260 BONUS\nTech262 BONUS\nTech263 BONUS\nTech264 BONUS\nTech265 BONUS\nTech268 BONUS\nTech269 BONUS\nTech271 BONUS\nTech274 BONUS\nTech279 BONUS\nTech280 BONUS\nTech281 BONUS\nTech284 BONUS\nTech285 BONUS\nTech286 BONUS\n6025\n"
+    ],
+    "failsHidden": [
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-05-Q04": {
+   "book": "c05-p-q5",
+   "version": 2,
+   "sha": "c27f257412ec4fe8f90d71f1866b0f43da15c951c210c63f778570b52d1a80b3",
+   "wrongSha": "03467819cb0682cf3476f6a5a7f91851f17919b94811b0285cb87f92c517043a",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "Student1 3 99\nA\nStudent2 3 95\nStudent3 4 60\nStudent4 4 88\n0\n"
+    ],
+    "hidden": [
+     "Student1 3 96\nA\nStudent2 4 100\nA\nStudent3 4 99\nA\nStudent4 3 60\nStudent5 3 74\nStudent6 5 60\nStudent7 5 74\nStudent8 3 95\nStudent9 3 99\nA\nStudent10 4 100\nA\nStudent11 4 99\nA\nStudent12 3 74\n2\n",
+     "Student1 4 96\nA\nStudent2 5 99\nA\nStudent3 4 74\nStudent4 5 99\nA\nStudent5 5 88\nStudent6 5 95\nStudent7 5 99\nA\nStudent8 3 95\nStudent9 5 74\nStudent10 4 88\nStudent11 3 74\nStudent12 5 96\nA\nStudent13 3 74\nStudent14 3 74\nStudent15 4 100\nA\nStudent16 5 60\nStudent17 5 100\nA\nStudent18 5 95\nStudent19 4 88\nStudent20 3 74\nStudent21 3 88\nStudent22 4 88\nStudent23 3 74\nStudent24 3 60\nStudent25 5 100\nA\nStudent26 5 96\nA\nStudent27 4 95\nStudent28 5 99\nA\nStudent29 5 99\nA\nStudent30 5 99\nA\n15\n",
+     "Student1 5 60\n1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "Student1 3 96\nA\nStudent2 4 100\nA\nStudent3 4 99\nA\nStudent4 3 60\nStudent5 3 74\nStudent6 5 60\nStudent7 5 74\nStudent8 3 95\nA\nStudent9 3 99\nA\nStudent10 4 100\nA\nStudent11 4 99\nA\nStudent12 3 74\n2\n",
+     "Student1 4 96\nA\nStudent2 5 99\nA\nStudent3 4 74\nStudent4 5 99\nA\nStudent5 5 88\nStudent6 5 95\nA\nStudent7 5 99\nA\nStudent8 3 95\nA\nStudent9 5 74\nStudent10 4 88\nStudent11 3 74\nStudent12 5 96\nA\nStudent13 3 74\nStudent14 3 74\nStudent15 4 100\nA\nStudent16 5 60\nStudent17 5 100\nA\nStudent18 5 95\nA\nStudent19 4 88\nStudent20 3 74\nStudent21 3 88\nStudent22 4 88\nStudent23 3 74\nStudent24 3 60\nStudent25 5 100\nA\nStudent26 5 96\nA\nStudent27 4 95\nA\nStudent28 5 99\nA\nStudent29 5 99\nA\nStudent30 5 99\nA\n15\n",
+     "Student1 5 60\n1\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-06-Q01": {
+   "book": "c06-p-q1",
+   "version": 2,
+   "sha": "a39664c8356d9dc5d2983cdfa8b57ab6a19138828085fb0bfe6183d449e1dcce",
+   "wrongSha": "5b2b5fb03cb49ce4261df8a48f58ce4c0a978b4da36858e0cdbcccb685224c89",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "6\n3\n5\n2\n"
+    ],
+    "hidden": [
+     "12\n19\n12\n19\n16\n19\n21\n9\n4\n",
+     "17\n11\n11\n17\n8\n18\n12\n15\n20\n9\n23\n16\n10\n19\n16\n3\n",
+     "9\n0\n",
+     "0\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "12\n19\n12\n19\n16\n19\n21\n9\n1\n",
+     "17\n11\n11\n17\n8\n18\n12\n15\n20\n9\n23\n16\n10\n19\n16\n5\n",
+     "9\n1\n",
+     "0\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "CL899371-06-Q02": {
+   "book": "c06-p-q2",
+   "version": 2,
+   "sha": "a36c1f321eb10d894e8541844c46191198593c203d3b9045117b11b3de883c42",
+   "wrongSha": "d42bbd549e601dbfb570ebe9012f93bd8a769b7e2db64aea421a8b28f4f93f46",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "94\n89\n91\n87\n90\n52\n89\n93\n99\n97\n97\n99\n89\n91\n89\n98\n95\n99\n91\n98\n71\n91\n94\n97\n96\n67\n95\n92\n99\n"
+    ],
+    "hidden": [
+     "95\n82\n86\n86\n93\n80\n99\n94\n91\n53\n99\n94\n97\n77\n81\n99\n97\n76\n63\n71\n81\n91\n85\n94\n91\n66\n96\n88\n99\n",
+     "98\n74\n76\n94\n95\n86\n91\n74\n91\n83\n98\n96\n92\n79\n97\n92\n86\n78\n90\n98\n99\n83\n94\n98\n99\n94\n81\n91\n99\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0
+    ],
+    "hidden": [
+     "95\n82\n86\n86\n93\n80\n99\n94\n91\n53\n99\n94\n97\n77\n81\n99\n97\n76\n63\n71\n81\n91\n85\n94\n91\n66\n96\n88\n88\n",
+     "98\n74\n76\n94\n95\n86\n91\n74\n91\n83\n98\n96\n92\n79\n97\n92\n86\n78\n90\n98\n99\n83\n94\n98\n99\n94\n81\n91\n91\n"
+    ],
+    "failsHidden": [
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-06-Q03": {
+   "book": "c06-p-q3",
+   "version": 2,
+   "sha": "6c4598577d227bed9141ae9feebfc4d401f01ecb6e3cc6eb8e97380ddab98fd1",
+   "wrongSha": "175942f605541f7628e71a0306576363d736003922259a001b953d9b561a732d",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "97 2\n97 2\n100 1\n88 2\n92 1\n100 2\n97 2\n95 2\n97 2\n95 3\n92 1\n92 3\n88 1\n95 1\n92 2\n92 2\n100 1\n88 3\n100 1\n88 2\n88 2\n97 3\n100 1\n100 1\n92 1\n100 3\n100 2\n88 3\n100 12\n"
+    ],
+    "hidden": [
+     "100 1\n95 1\n92 2\n95 1\n100 2\n92 1\n92 2\n92 1\n95 3\n100 1\n95 2\n88 2\n97 2\n95 2\n95 3\n100 2\n100 2\n88 2\n95 3\n100 2\n97 1\n97 2\n100 3\n92 3\n97 2\n100 3\n95 2\n95 3\n100 16\n",
+     "97 1\n95 3\n92 2\n92 2\n100 1\n97 1\n100 2\n95 2\n88 2\n97 2\n88 3\n88 1\n95 1\n97 2\n97 2\n88 2\n92 2\n97 1\n95 2\n100 1\n95 2\n100 3\n100 1\n97 3\n100 2\n88 2\n95 1\n95 2\n100 10\n",
+     "97 3\n92 1\n97 1\n88 1\n92 2\n95 1\n88 1\n95 3\n97 2\n88 3\n100 2\n88 3\n95 1\n95 3\n95 3\n97 3\n97 3\n95 2\n92 2\n97 3\n95 1\n100 1\n100 1\n95 2\n95 1\n88 2\n95 1\n97 1\n100 4\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "100 1\n95 1\n92 2\n95 1\n100 2\n92 1\n92 2\n92 1\n95 3\n100 1\n95 2\n88 2\n97 2\n95 2\n95 3\n100 2\n100 2\n88 2\n95 3\n100 2\n97 1\n97 2\n100 3\n92 3\n97 2\n100 3\n95 2\n95 3\n100 1\n",
+     "97 1\n95 3\n92 2\n92 2\n100 1\n97 1\n100 2\n95 2\n88 2\n97 2\n88 3\n88 1\n95 1\n97 2\n97 2\n88 2\n92 2\n97 1\n95 2\n100 1\n95 2\n100 3\n100 1\n97 3\n100 2\n88 2\n95 1\n95 2\n100 1\n",
+     "97 3\n92 1\n97 1\n88 1\n92 2\n95 1\n88 1\n95 3\n97 2\n88 3\n100 2\n88 3\n95 1\n95 3\n95 3\n97 3\n97 3\n95 2\n92 2\n97 3\n95 1\n100 1\n100 1\n95 2\n95 1\n88 2\n95 1\n97 1\n100 2\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-06-Q04": {
+   "book": "c06-p-q5",
+   "version": 2,
+   "sha": "fbb1c568686e1be899c1d3b12b9fd80577e3275882093e49e12abd4a3cd3bff4",
+   "wrongSha": "342f48b0fe9e51eaab4399d7cb9f8972417f388bc6376cd1a0a5b8f4c8c20eca",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "20\n32.5\n10\n62.5\n3\n20.83\n"
+    ],
+    "hidden": [
+     "7.5\n100\n150\n132.5\n115\n505\n5\n101\n",
+     "32.5\n32.5\n1\n32.5\n",
+     "42.5\n22.5\n20\n50\n27.5\n50\n55\n105\n72.5\n445\n9\n49.44\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "7.5\n100\n150\n132.5\n115\n505\n5\n26.58\n",
+     "32.5\n32.5\n1\n10.83\n",
+     "42.5\n22.5\n20\n50\n27.5\n50\n55\n105\n72.5\n445\n9\n14.83\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-07-Q01": {
+   "book": "c07-p-q1",
+   "version": 3,
+   "sha": "b7e0f569814b1b82da30589c8429e6a2536ee9ebc989e8f793146e7aecd3c1de",
+   "wrongSha": "2f28a887a131ade35437fee92c16f7385616428a40d31496f457a47fd4ed7f0a",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "100\n"
+    ],
+    "hidden": [
+     "50\n",
+     "144.5\n",
+     "150\n",
+     "99.75\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "30\n",
+     "111.5\n",
+     "85\n",
+     "78.25\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-07-Q02": {
+   "book": "c07-p-q2",
+   "version": 3,
+   "sha": "28646f090cb50d05ba41bd5693ac2b3af28a6d0635be7bffaf15615342c96759",
+   "wrongSha": "5d06911ed517f743ca9fee90a2812c76c638faaea37689298f623cf44741d96e",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "True\n"
+    ],
+    "hidden": [
+     "True\n",
+     "True\n",
+     "False\n",
+     "False\n",
+     "True\n",
+     "False\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "False\n",
+     "False\n",
+     "False\n",
+     "False\n",
+     "True\n",
+     "False\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "CL899371-07-Q03": {
+   "book": "c07-p-q5",
+   "version": 3,
+   "sha": "669dafb1d67788de9d42f4c96f73fc0ebb34bfdb77bc5c9e5e44cf353aea7a39",
+   "wrongSha": "d3c1fa739ec138bcb3be07c1167e65ef33cb0312dc70feda58b12a1efbbef5ba",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "80\n"
+    ],
+    "hidden": [
+     "90\n",
+     "80\n",
+     "40\n",
+     "110\n",
+     "90\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "80\n",
+     "80\n",
+     "40\n",
+     "110\n",
+     "90\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "CL899371-07-Q04": {
+   "book": "c07-p-q7",
+   "version": 3,
+   "sha": "3a24091bf565c54063809f0567a35349d68740dfd1a3359f6b05888c51aa9a5e",
+   "wrongSha": "e4084b6aa6c53579578b90ae5467e44d7a0567c8171f7cc14960ed084603a473",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "2\n"
+    ],
+    "hidden": [
+     "2\n",
+     "3\n",
+     "0\n",
+     "1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "3\n",
+     "3\n",
+     "1\n",
+     "2\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-08-Q01": {
+   "book": "c08-p-q1",
+   "version": 3,
+   "sha": "014de5b65199ec7f9f7ff879ad9899e473ea332af1ed95c3d9f8ab2dd8d60f93",
+   "wrongSha": "5abc357d25c923c29857462dd86829b458299decd81179d6f58c923f9b2ad514",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "A2B4C1D1\n"
+    ],
+    "hidden": [
+     "X3Y1Z2\n",
+     "A1B1A1B1\n",
+     "Q1\n",
+     "a12\n",
+     "Z2Y2Z2\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "X3Y1Z2\n",
+     "A2B2\n",
+     "Q1\n",
+     "a12\n",
+     "Z4Y2\n"
+    ],
+    "failsHidden": [
+     false,
+     true,
+     false,
+     false,
+     true
+    ]
+   }
+  },
+  "CL899371-08-Q02": {
+   "book": "c08-p-q2",
+   "version": 3,
+   "sha": "5da05ed56d3fb2bed24c71cecbeeef677bed8c77433badae38a4f6e0c5d840c4",
+   "wrongSha": "a0256c296e7f4a793735b5de7727e3c1405e166f94cdce6b186792e051f3aab0",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "accd\n"
+    ],
+    "hidden": [
+     "cuccle coc\n",
+     "no letters here\n",
+     "ccc\n",
+     "accAcC\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "Buccle Boc\n",
+     "no letters here\n",
+     "BBB\n",
+     "accABC\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-08-Q03": {
+   "book": "c08-p-q4",
+   "version": 3,
+   "sha": "f718d50335703011bd06d05d8c57a1ade04d9f90f095899f113cf7f3ea94e571",
+   "wrongSha": "9e61535babb31c6419e9bb03d8c369eab16102f4ea7437c5a32ff98398639de6",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "uryyb\n"
+    ],
+    "hidden": [
+     "hello\n",
+     "gur dhvpx oebja sbk\n",
+     "nop klm\n",
+     "abcdefghijklm\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "o\n",
+     "ur ~vpx o|{ s|\n",
+     "nop \n",
+     "{|}~\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-09-Q01": {
+   "book": "c09-p-q3",
+   "version": 2,
+   "sha": "77f5cecf40681c36de2633945a1b41e034b51d3c73eed5c0ba751279b23caa62",
+   "wrongSha": "e5205bfb942720bc2f0f3e0654df4ad14e3dad2caabdfc6c24f2f422b7ad45f0",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "7\n"
+    ],
+    "hidden": [
+     "3\n",
+     "12\n",
+     "1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "26\n",
+     "16\n",
+     "37\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-09-Q02": {
+   "book": "c09-p-q4",
+   "version": 2,
+   "sha": "f204e7ee81df92bd9109a460f6d94964aff36b27e85476111cc2393413e880af",
+   "wrongSha": "222b854b31265068741adf77576cb94bb0dced7eb39878a54fe3a3f65533a1fc",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "1\n78\n"
+    ],
+    "hidden": [
+     "1\n78\n",
+     "1\n78\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0
+    ],
+    "hidden": [
+     "1\n1\n",
+     "1\n1\n"
+    ],
+    "failsHidden": [
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-09-Q03": {
+   "book": "c09-p-q6",
+   "version": 3,
+   "sha": "f2a45fe858d06ade6e03654a516d9c8e984c0659313e676215cacd8a8b5920e5",
+   "wrongSha": "5ce0470d177f702093b08e719f438b2149566244fbb6a7002abe92ce8fc073c2",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "8\n"
+    ],
+    "hidden": [
+     "4\n",
+     "-1\n",
+     "9\n",
+     "-1\n",
+     "-1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "-1\n",
+     "2\n",
+     "-1\n",
+     "2\n",
+     "5\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-10-Q01": {
+   "book": "c10-p-q1",
+   "version": 3,
+   "sha": "005d3dce550b018bc2ab487aa1813dae9854164472fafee6eb873bd27a2caa05",
+   "wrongSha": "b4e3dacf9041db92ba20b567242b5d417f398f1888b1dd4d997b1873f95b29b4",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "1\n"
+    ],
+    "hidden": [
+     "0\n",
+     "1\n",
+     "9\n",
+     "1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     134
+    ],
+    "hidden": [
+     "0\n",
+     "0\n",
+     "9\n",
+     ""
+    ],
+    "failsHidden": [
+     false,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "CL899371-10-Q02": {
+   "book": "c10-p-q3",
+   "version": 3,
+   "sha": "ed2dcff021d6c636865a114384df1898a488fb3baff0d342a23e4e8a055dcaf4",
+   "wrongSha": "cdd448aed695948d89c7987c1e1cf85e5d7ae37c5425898448494ffc57164378",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "1\n"
+    ],
+    "hidden": [
+     "2\n",
+     "2\n",
+     "1\n",
+     "3\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "1\n",
+     "1\n",
+     "1\n",
+     "1\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "CL899371-10-Q03": {
+   "book": "c10-p-q4",
+   "version": 3,
+   "sha": "13f44629f2292b57cb9b3f03caaf4d149b59e17b22900b1df88f98892934faa8",
+   "wrongSha": "4681e2a44102c1a3aa2d8a2d57faba2fbef778200d2377ae77e3567dae0974fd",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "no\n"
+    ],
+    "hidden": [
+     "no\n",
+     "no\n",
+     "yes\n",
+     "no\n",
+     "no\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "no\n",
+     "yes\n",
+     "yes\n",
+     "no\n",
+     "no\n"
+    ],
+    "failsHidden": [
+     false,
+     true,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "CL899371-11-Q01": {
+   "book": "c11-h-q2",
+   "version": 3,
+   "sha": "bbe81d51a5e0def4bd43994e51c9026700ed2c0fee1622e7655fe6938860f7e2",
+   "wrongSha": "340ad980ff66b6acf7242fec54872ffc68d13c8a5fa0c9619c0d08f639e5b2e6",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "-1\n93.5\n1\n"
+    ],
+    "hidden": [
+     "1\n88\n1\n",
+     "-1\n100\n-1\n",
+     "0\n100\n1\n",
+     "0\n100\n1\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "-1\n88\n-1\n",
+     "1\n104.5\n1\n",
+     "0\n101.2\n1\n",
+     "0\n108.9\n1\n"
+    ],
+    "failsHidden": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "CL899371-11-Q02": {
+   "book": "c11-h-q3",
+   "version": 3,
+   "sha": "7760c312521cc32dc185a42fcd0ef8ae7fd6a383f2d083f90d9b71a5c4ea52e8",
+   "wrongSha": "4f2c1c276c7f79f666c93be109fc1ce38a703a030913f9d154282962ef31ecfe",
+   "reference": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "public": [
+     "14\nTrue\nFalse\n"
+    ],
+    "hidden": [
+     "10\nFalse\nFalse\n",
+     "11\nTrue\nFalse\n",
+     "12\nFalse\nFalse\n",
+     "9\nTrue\nFalse\n"
+    ]
+   },
+   "wrong": {
+    "compileExit": 0,
+    "exitCodes": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "hidden": [
+     "10\nTrue\nFalse\n",
+     "11\nTrue\nFalse\n",
+     "12\nTrue\nFalse\n",
+     "9\nTrue\nFalse\n"
+    ],
+    "failsHidden": [
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  }
+ }
+}

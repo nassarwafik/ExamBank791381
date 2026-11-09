@@ -2,7 +2,7 @@
 //
 // This is the ONE central place that owns course/book metadata for the Learning Materials product. The page and
 // its cards read every string from here — nothing course-specific is hardcoded in JSX, so adding a second book
-// later (e.g. 794589, 899373) is a data edit here, not a UI rewrite.
+// later (e.g. 794589, 899371) is a data edit here, not a UI rewrite.
 //
 // The reading structure (Course → Module → Lesson → Page → Blocks) lives in each course's content manifest
 // (`content/<courseId>/manifest.ts`), and the API's publishable list in `api/src/lib/learning-materials-registry.js`.
@@ -97,6 +97,31 @@ export const LEARNING_COURSES: LearningCourse[] = [
       { id: "b5", label: "Wi-Fi و IPv6 و DHCP والأمان" },
       { id: "b6", label: "WAN والتوجيه و ACL" },
       { id: "summary", label: "الملخص الشامل" },
+    ],
+  },
+  /**
+   * 899371 P2 (docs/enterprise-899371-learning-plan.md §14) — the owner's C# question bank «مجمع أسئلة في أسس علم الحاسوب»
+   * (نموذج 899371), for the eleventh grade, 2026–2027 (owner, 2026-11-09). An independent course generated from the owner's Word
+   * source (scripts/convert-899371.mjs). Its six sections are the book's own chapter groups; a section whose chapters are not
+   * converted yet is shown as «قريبًا».
+   */
+  {
+    id: "899371",
+    title: "أسس علم الحاسوب",
+    productTitle: "مجمع أسئلة 899371 — أسس علم الحاسوب",
+    subject: "علم الحاسوب",
+    grades: "الصف الحادي عشر",
+    author: "الأستاذ وفيق نصار",
+    year: "2026–2027",
+    status: "available",
+    description: "رفيقك العملي في أسس علم الحاسوب بلغة C#: تلخيصات قصيرة وتمارين منتقاة من الفكرة إلى التطبيق، مع وظائف بيتية ووظائف برمجة لكل فصل.",
+    overviewBatches: [
+      { id: "intro", label: "المقدمة" },
+      { id: "b1", label: "الأساسيات: الطباعة والمتغيرات والعوامل و Math" },
+      { id: "b2", label: "الشرط والتكرار" },
+      { id: "b3", label: "العمليات والنصوص" },
+      { id: "b4", label: "المصفوفات" },
+      { id: "b5", label: "الكائنات" },
     ],
   },
 ];

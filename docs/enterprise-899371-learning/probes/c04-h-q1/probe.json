@@ -1,0 +1,19 @@
+{
+  "id": "c04-h-q1",
+  "source": "ف4 بيتية س1 (الحالتان 1.1 و1.2)",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "5\n2\n7",
+      "expect": {
+        "stdout": "7"
+      }
+    },
+    {
+      "stdin": "-3\n4\n5",
+      "expect": {
+        "stdout": "5"
+      }
+    }
+  ]
+}

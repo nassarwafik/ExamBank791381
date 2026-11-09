@@ -1,0 +1,61 @@
+{
+ "module": "m11",
+ "walkthroughs": [
+  {
+   "title": "نبني فئة Book طبقة طبقة",
+   "prompt": "نبني فئة كتاب: حقول خاصة، ثم منشئ، ثم عمليات. ماذا يطبع البرنامج؟",
+   "steps": [
+    "الحقول private: `title` و`pages`، فلا يغيّرها أحد من خارج الفئة مباشرة.",
+    "المنشئ اسمه اسم الفئة وبلا نوع إرجاع، ويعطي الحقول قيمها عند `new`.",
+    "العمليات public تقرأ الحقول: `GetTitle()` و`IsLong()` (صفحاته أكثر من 300).",
+    "`new Book(\"Coding\", 320)` ← العنوان Coding، و320 > 300 ← `True`."
+   ],
+   "result": "يطبع البرنامج: `Coding True`",
+   "explanation": "الفئة قالب: حقول (ما يعرفه الكائن) + منشئ (كيف يولد) + عمليات (ماذا يفعل).",
+   "program": "class Book\n{\n    private string title;\n    private int pages;\n    public Book(string t, int p)\n    {\n        title = t;\n        pages = p;\n    }\n    public string GetTitle()\n    {\n        return title;\n    }\n    public bool IsLong()\n    {\n        return pages > 300;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Book b = new Book(\"Coding\", 320);\n        Console.WriteLine(b.GetTitle() + \" \" + b.IsLong());\n    }\n}",
+   "output": "Coding True"
+  },
+  {
+   "title": "مصفوفة كائنات لا تنشئ الكائنات",
+   "prompt": "`new Book[2]` ينشئ رفًّا لكتابين. هل ينشئ الكتابين؟",
+   "steps": [
+    "`new Book[2]` ينشئ مصفوفة من مرجعين فقط، وقيمة كل مرجع null: رف فارغ.",
+    "`shelf[0] = new Book(…)` ينشئ كتابًا فعلًا ويضع مرجعه في الخانة 0.",
+    "الخانة 1 لم نضع فيها كتابًا، فما زالت null.",
+    "لو استدعينا `shelf[1].GetTitle()` لظهر خطأ تنفيذ، لأنه لا كتاب هناك."
+   ],
+   "result": "يطبع البرنامج: `False True`",
+   "explanation": "لكل كائن نحتاج new خاصة به، ومصفوفة الكائنات تحمل المراجع لا الكائنات.",
+   "program": "class Book\n{\n    private string title;\n    public Book(string t)\n    {\n        title = t;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Book[] shelf = new Book[2];\n        shelf[0] = new Book(\"Coding\");\n        Console.WriteLine((shelf[0] == null) + \" \" + (shelf[1] == null));\n    }\n}",
+   "output": "False True"
+  },
+  {
+   "title": "التغليف يحمي الرصيد",
+   "prompt": "حساب بنكي يرفض الإيداع السالب. ما الرصيد بعد الإيداعات أعلاه؟",
+   "steps": [
+    "الرصيد private، فالطريقة الوحيدة لتغييره هي العملية Deposit.",
+    "`Deposit(100)` ← موجب، الرصيد 100.",
+    "`Deposit(-40)` ← سالب، ترفضه العملية ولا يتغير الرصيد.",
+    "`Deposit(50)` ← الرصيد 150."
+   ],
+   "result": "يطبع البرنامج: `150`",
+   "explanation": "لو كان الرصيد public لاستطاع أي كود أن يكتب فيه قيمة خاطئة. العملية تفحص قبل أن تغيّر.",
+   "program": "class Account\n{\n    private int balance = 0;\n    public void Deposit(int amount)\n    {\n        if (amount > 0)\n            balance += amount;\n    }\n    public int GetBalance()\n    {\n        return balance;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Account acc = new Account();\n        acc.Deposit(100);\n        acc.Deposit(-40);\n        acc.Deposit(50);\n        Console.WriteLine(acc.GetBalance());\n    }\n}",
+   "output": "150"
+  },
+  {
+   "title": "مرجعان لكائن واحد",
+   "prompt": "ماذا يطبع البرنامج؟ ارسم سهمًا من كل متغير إلى كائنه.",
+   "steps": [
+    "`new Counter()` الأول ← كائن أول، وa يشير إليه.",
+    "`Counter b = a;` ← لا new: b يشير إلى الكائن نفسه.",
+    "`new Counter()` الثاني ← كائن ثانٍ مستقل يشير إليه c.",
+    "`b.Add()` مرتين تزيد الكائن الأول (a وb معًا) إلى 2، و`c.Add()` تزيد الثاني إلى 1."
+   ],
+   "result": "يطبع البرنامج: `2 2 1`",
+   "explanation": "الإسناد بين متغيري كائنات ينسخ المرجع لا الكائن. كائن جديد يحتاج new.",
+   "program": "class Counter\n{\n    private int n = 0;\n    public void Add()\n    {\n        n++;\n    }\n    public int Get()\n    {\n        return n;\n    }\n}\npublic class Program\n{\n    static void Main()\n    {\n        Counter a = new Counter();\n        Counter b = a;\n        Counter c = new Counter();\n        b.Add();\n        b.Add();\n        c.Add();\n        Console.WriteLine(a.Get() + \" \" + b.Get() + \" \" + c.Get());\n    }\n}",
+   "output": "2 2 1"
+  }
+ ]
+}

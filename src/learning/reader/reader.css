@@ -82,6 +82,9 @@
 .learning-reader-term{ font-weight:var(--eb-fw-semibold); }
 .learning-reader-inline-code, .learning-reader-mono{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; }
 .learning-reader-inline-code{ padding:1px 5px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); unicode-bidi:isolate; }
+/* 899371 P5: a code fragment in a walkthrough step never breaks inside (`i--` split at its hyphen on a phone); every such fragment
+   is ≤ 24 characters (guided.p5.test.ts), so it always fits the step. */
+.learning-guided-steptext .learning-reader-inline-code, .learning-guided-prompt .learning-reader-inline-code, .learning-guided-result .learning-reader-inline-code{ white-space:nowrap; }
 
 /* Enrichment surface — clearly, quietly distinguished (never color-only: it carries a text label). */
 .learning-reader-block.is-enrichment{
@@ -140,9 +143,31 @@
 
 /* Code — LTR, only the wrapper scrolls. The wrapper itself is LTR so that, inside the RTL reader, a long command line
    starts scrolled at its BEGINNING (the prompt «Switch(config)#»), never at its tail (Batch 6: switch CLI pages). */
-.learning-reader-codewrap{ overflow-x:auto; max-width:100%; background:var(--eb-navy); border-radius:var(--eb-r); direction:ltr; text-align:left; }
+/* 899371 P1 — the panel reads its OWN tokens (--eb-code-*, design-tokens.css; no theme redeclares them): it used to paint itself with
+   --eb-navy, which the dark tokens flip to a light colour under the fixed light text (≈1.06:1 in the «داكن» reading theme and in the
+   app's dark mode — scripts/check-reader-code-p1.mjs). Every text colour meets WCAG AA on --eb-code-bg (codeContrast.p1.test.ts). */
+.learning-reader-codewrap{ overflow-x:auto; max-width:100%; background:var(--eb-code-bg); border-radius:var(--eb-r); direction:ltr; text-align:left; }
 .learning-reader-code{ margin:0; padding:var(--eb-space-3); }
-.learning-reader-code code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-read-fs-code); line-height:var(--eb-lh-body); color:#e6edf7; white-space:pre; }
+.learning-reader-code code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-read-fs-code); line-height:var(--eb-lh-body); color:var(--eb-code-fg); white-space:pre; }
+
+/* 899371 P1 — a C# program panel (CodeBlockView.tsx): a bar (language · status · «نسخ الكود»), then the program with its line
+   numbers in a gutter that stays in view while a long line scrolls. Only the program scrolls, never the bar. */
+.learning-reader-codewrap.is-csharp{ overflow:hidden; }
+.learning-reader-code-bar{ display:flex; align-items:center; gap:var(--eb-space-2); padding-block:4px; padding-inline:var(--eb-space-3) 6px; border-block-end:1px solid var(--eb-code-line); }
+.learning-reader-code-lang{ font:600 12px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; letter-spacing:.04em; color:var(--eb-code-type); }
+.learning-reader-code-status{ flex:1; min-width:0; direction:rtl; text-align:start; font-size:13px; color:var(--eb-code-comment); }
+.learning-reader-code-copy{ min-height:36px; padding-block:0; padding-inline:12px; font:inherit; font-size:13px; color:var(--eb-code-fg); background:transparent; border:1px solid var(--eb-code-control); border-radius:8px; cursor:pointer; }
+.learning-reader-code-copy:hover{ background:var(--eb-code-hover); }
+.learning-reader-code-copy:focus-visible, .is-csharp .learning-reader-code:focus-visible{ outline:2px solid var(--eb-code-type); outline-offset:-2px; }
+@media (pointer: coarse){ .learning-reader-code-copy{ min-height:44px; min-width:44px; } }
+.is-csharp .learning-reader-code{ display:flex; overflow-x:auto; padding-block:var(--eb-space-3); padding-inline:0; }
+.is-csharp .learning-reader-code code{ padding-block:0; padding-inline:var(--eb-space-3); }
+.learning-reader-code-gutter{ position:sticky; inset-inline-start:0; flex:none; padding-block:0; padding-inline:12px 10px; text-align:end; white-space:pre; user-select:none; color:var(--eb-code-gutter); background:var(--eb-code-bg); border-inline-end:1px solid var(--eb-code-line); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-read-fs-code); line-height:var(--eb-lh-body); }
+.cs-tok-keyword{ color:var(--eb-code-keyword); }
+.cs-tok-type{ color:var(--eb-code-type); }
+.cs-tok-string, .cs-tok-char{ color:var(--eb-code-string); }
+.cs-tok-number{ color:var(--eb-code-number); }
+.cs-tok-comment{ color:var(--eb-code-comment); font-style:italic; }
 
 /* Figure / diagram */
 .learning-reader-figure{ margin:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
@@ -354,7 +379,7 @@
 .learning-reader.is-presentation .learning-reader-callout-body{ font-size:max(var(--eb-read-fs-body), clamp(19px, 0.6vw + 15px, 24px)); }
 .learning-reader.is-presentation .learning-reader-list-text{ font-size:max(var(--eb-read-fs-card), clamp(17px, 0.5vw + 13px, 21px)); }
 .learning-reader.is-presentation .learning-reader-table{ font-size:max(var(--eb-read-fs-table), clamp(17px, 0.5vw + 13px, 21px)); }
-.learning-reader.is-presentation .learning-reader-code code{ font-size:max(var(--eb-read-fs-code), clamp(15px, 0.4vw + 12px, 18px)); }
+.learning-reader.is-presentation .learning-reader-code code, .learning-reader.is-presentation .learning-reader-code-gutter{ font-size:max(var(--eb-read-fs-code), clamp(15px, 0.4vw + 12px, 18px)); }
 .learning-reader.is-presentation .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
 /* Control bar: static flex item at the bottom (never overlaps content), large hit areas, page-number field. */
 .learning-reader.is-presentation .learning-reader-nav{
@@ -446,6 +471,11 @@
 .learning-practice-fixlist{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-success); border-radius:var(--eb-r); background:var(--eb-success-bg); }
 .learning-practice-fixlist ol{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
 .learning-practice-check{ align-self:flex-start; }
+/* 899371 P4: on touch every control of a structured exercise is a full 44 × 44 target (WCAG 2.5.5 as the rest of the Reader). */
+@media (pointer: coarse){
+  .learning-practice-blank, .learning-practice-chip, .learning-practice-select, .learning-practice-group{ min-block-size:44px; }
+  .learning-practice-move .eb-button{ min-block-size:44px; min-inline-size:44px; }
+}
 
 /* ── 791381s Phase 2 — REVEAL mode (PracticeBlockView `reveal`): after an answer the question locks; the right option is green
    (✓ الإجابة الصحيحة), the chosen wrong option red (✕ إجابتك), the explanation sits under the verdict. Never colour-only: every

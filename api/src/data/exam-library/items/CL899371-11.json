@@ -1,0 +1,258 @@
+{
+  "libraryItemId": "CL899371-11",
+  "title": "مختبر البرمجة — الفصل 11: الكائنات",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 11 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 2,
+  "totalMarks": 20,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 2,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "78f11bcffb837d51e66daa63b41050c46dde23064f6062ff8d099b0a8640f005",
+  "contentHash": "09c10f9317aed62ff9c370301cd59dd7217f18f8d7b99f93bdca6dc8957ca9c7",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m11.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-11",
+    "title": "مختبر البرمجة — الفصل 11: الكائنات",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-11-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-11",
+        "sourceQuestionId": "c11-h-q2",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "الطالب المتميّز\n\nأكمل في الفئة ExcellentStudent: العملية البنائية (تعطي الحقول name وaverage وdavidsonLovesYou قيمها)؛ RaisingStudentsAverageGrades (ترفع المتوسط بنسبة 10% منه، ولا يتجاوز 100)؛ وCompare(other) التي تُعيد 1 إذا كان الطالب الحالي أكثر تميزًا، و0 إذا تساويا، و-1 إذا كان الآخر أكثر تميزًا: من يحبه المدير أكثر تميزًا من الذي لا يحبه، وإن تساويا في ذلك فصاحب المتوسط الأعلى. الدالة Main مقفلة: تقرأ طالبين (اسم، متوسط، True/False لكلٍّ منهما) ثم تطبع a.Compare(b)، ثم ترفع متوسط a وتطبع متوسطه مقرّبًا إلى منزلتين، ثم تطبع a.Compare(b) مرة أخرى.\n(مبني على السؤال 2 من الوظيفة البيتية الحادية عشرة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "Rana\n85\nFalse\nOmar\n90\nFalse\n",
+              "sampleOutput": "-1\n93.5\n1\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class ExcellentStudent\n{\n    private string name;\n    private double average;\n    private bool davidsonLovesYou;\n\n    public double GetAverage() { return average; }   // «لكل خاصية عملية Get» (as the book says)\n\n    public ExcellentStudent(string name, double average, bool davidsonLovesYou)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "ctor",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public void RaisingStudentsAverageGrades()\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "raise",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public int Compare(ExcellentStudent other)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "compare",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ExcellentStudent a = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        ExcellentStudent b = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        Console.WriteLine(a.Compare(b));\n        a.RaisingStudentsAverageGrades();\n        Console.WriteLine(Math.Round(a.GetAverage(), 2));\n        Console.WriteLine(a.Compare(b));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "Lina\n80\nTrue\nSami\n95\nFalse\n",
+              "expectedOutput": "1\n88\n1\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "Adam\n95\nFalse\nNoor\n88\nTrue\n",
+              "expectedOutput": "-1\n100\n-1\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "Maya\n92\nTrue\nYara\n92\nTrue\n",
+              "expectedOutput": "0\n100\n1\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "Hadi\n99\nFalse\nRami\n99\nFalse\n",
+              "expectedOutput": "0\n100\n1\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class ExcellentStudent\n{\n    private string name;\n    private double average;\n    private bool davidsonLovesYou;\n\n    public double GetAverage() { return average; }   // «لكل خاصية عملية Get» (as the book says)\n\n    public ExcellentStudent(string name, double average, bool davidsonLovesYou)\n    {\n        this.name = name;\n        this.average = average;\n        this.davidsonLovesYou = davidsonLovesYou;\n    }\n\n    public void RaisingStudentsAverageGrades()\n    {\n        average = Math.Min(100, average * 1.1);\n    }\n\n    public int Compare(ExcellentStudent other)\n    {\n        if (davidsonLovesYou && !other.davidsonLovesYou) return 1;\n        if (!davidsonLovesYou && other.davidsonLovesYou) return -1;\n        if (average > other.average) return 1;\n        if (average < other.average) return -1;\n        return 0;\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ExcellentStudent a = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        ExcellentStudent b = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        Console.WriteLine(a.Compare(b));\n        a.RaisingStudentsAverageGrades();\n        Console.WriteLine(Math.Round(a.GetAverage(), 2));\n        Console.WriteLine(a.Compare(b));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-11-Q02",
+        "origin": "imported",
+        "sourceId": "CL899371-11",
+        "sourceQuestionId": "c11-h-q3",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "الفئة Font\n\nأكمل في الفئة Font: العملية البنائية المبسّطة Font(name, size) (خط غير مشدّد وبلا خط تحتي)؛ Increase وDecrease (تزيد / تنقص الحجم بـ 1)؛ وToggleUnderline (تقلب حالة الخط التحتي). الدالة Main مقفلة: تقرأ اسم الخط وحجمه وسطرًا من الأوامر (I تكبير، D تصغير، U قلب الخط التحتي)، تنشئ الخط بالعملية المبسّطة وتنفّذ الأوامر بالترتيب، ثم تطبع الحجم وIsUnderline وIsBold (كل قيمة في سطر).\n(مبني على السؤال 3 من الوظيفة البيتية الحادية عشرة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "Arial\n12\nIIU\n",
+              "sampleOutput": "14\nTrue\nFalse\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Font\n{\n    private string name;\n    private int size;\n    private bool bold;\n    private bool underline;\n\n    public Font(string name, int size, bool bold, bool underline)\n    {\n        this.name = name;\n        this.size = size;\n        this.bold = bold;\n        this.underline = underline;\n    }\n\n    public int GetSize() { return size; }\n    public bool IsBold() { return bold; }\n    public bool IsUnderline() { return underline; }\n\n    public Font(string name, int size)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "ctor",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public void Increase()\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "inc",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public void Decrease()\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "dec",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public void ToggleUnderline()\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "toggle",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        Font f = new Font(Console.ReadLine(), int.Parse(Console.ReadLine()));\n        foreach (char op in Console.ReadLine())\n        {\n            if (op == 'I') f.Increase();\n            else if (op == 'D') f.Decrease();\n            else if (op == 'U') f.ToggleUnderline();\n        }\n        Console.WriteLine(f.GetSize());\n        Console.WriteLine(f.IsUnderline());\n        Console.WriteLine(f.IsBold());\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "David\n10\nUU\n",
+              "expectedOutput": "10\nFalse\nFalse\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "Tahoma\n14\nDDDU\n",
+              "expectedOutput": "11\nTrue\nFalse\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "Calibri\n11\nIUIUD\n",
+              "expectedOutput": "12\nFalse\nFalse\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "Mono\n9\nU\n",
+              "expectedOutput": "9\nTrue\nFalse\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Font\n{\n    private string name;\n    private int size;\n    private bool bold;\n    private bool underline;\n\n    public Font(string name, int size, bool bold, bool underline)\n    {\n        this.name = name;\n        this.size = size;\n        this.bold = bold;\n        this.underline = underline;\n    }\n\n    public int GetSize() { return size; }\n    public bool IsBold() { return bold; }\n    public bool IsUnderline() { return underline; }\n\n    public Font(string name, int size)\n    {\n        this.name = name;\n        this.size = size;\n        bold = false;\n        underline = false;\n    }\n\n    public void Increase()\n    {\n        size++;\n    }\n\n    public void Decrease()\n    {\n        size--;\n    }\n\n    public void ToggleUnderline()\n    {\n        underline = !underline;\n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        Font f = new Font(Console.ReadLine(), int.Parse(Console.ReadLine()));\n        foreach (char op in Console.ReadLine())\n        {\n            if (op == 'I') f.Increase();\n            else if (op == 'D') f.Decrease();\n            else if (op == 'U') f.ToggleUnderline();\n        }\n        Console.WriteLine(f.GetSize());\n        Console.WriteLine(f.IsUnderline());\n        Console.WriteLine(f.IsBold());\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 20,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

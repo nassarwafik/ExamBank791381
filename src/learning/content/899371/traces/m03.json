@@ -1,0 +1,13 @@
+{
+ "module": "m03",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "Tr.Begin();\nint n = 582;\nTr.S(\"العدد 582.\", \"n\", n);\nTr.At(2, \"المئات: القسمة على 100 تحذف منزلتين.\", \"n / 100\", n / 100);\nTr.At(2, \"العشرات: نحذف الآحاد، ثم نأخذ الآحاد الجديدة.\", \"n / 10\", n / 10, \"n / 10 % 10\", n / 10 % 10);\nTr.At(2, \"الآحاد: باقي القسمة على 10.\", \"n % 10\", n % 10);\nConsole.WriteLine(n / 100 + \" \" + n / 10 % 10 + \" \" + n % 10);\nTr.S(\"الطباعة: 5 8 2.\");\nTr.End();"
+  },
+  {
+   "walkthrough": 2,
+   "program": "Tr.Begin();\nTr.At(1, \"مربع فرق x ومربع فرق y.\", \"Math.Pow(3 - 0, 2)\", Math.Pow(3 - 0, 2), \"Math.Pow(5 - 0, 2)\", Math.Pow(5 - 0, 2));\ndouble d = Math.Sqrt(Math.Pow(3 - 0, 2) + Math.Pow(5 - 0, 2));\nTr.S(\"الجذر التربيعي للمجموع 34.\", \"d\", d);\nTr.At(2, \"نقرّب إلى منزلتين عشريتين.\", \"Math.Round(d, 2)\", Math.Round(d, 2));\nConsole.WriteLine(Math.Round(d, 2));\nTr.S(\"الطباعة: 5.83.\");\nTr.End();"
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "module": "m08",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "Tr.Begin();\nstring s = \"ABZ\";\nTr.S(\"النص صناديق أحرف لها مؤشرات.\", \"s\", s);\nstring r = \"\";\nTr.S(\"نص فارغ نبني فيه الناتج.\", \"r\", r);\nfor (int i = 0; i < s.Length; i++)\n{ //~\n    r += (char)((s[i] - 'A' + 2) % 26 + 'A');\n    Tr.S(\"الحرف \" + s[i] + \" رقمه \" + (s[i] - 'A') + \"، ومع الإزاحة 2 يصبح \" + r[i] + \".\", \"i\", i, \"(s[i] - 'A' + 2) % 26\", (s[i] - 'A' + 2) % 26, \"r\", r);\n} //~\nTr.Drop(\"i\");\nConsole.WriteLine(r);\nTr.S(\"الطباعة: CDB.\");\nTr.End();"
+  },
+  {
+   "walkthrough": 3,
+   "program": "Tr.Begin();\nstring s = \"level\";\nTr.S(\"النص صناديق أحرف.\", \"s\", s);\nbool ok = true;\nTr.S(\"نفترض أنه متناظر.\", \"ok\", ok);\nfor (int i = 0; i < s.Length / 2; i++)\n{ //~\n    Tr.At(4, \"نقارن الحرف \" + i + \" بالحرف المقابل \" + (s.Length - 1 - i) + \".\", \"i\", i, \"s[i]\", s[i], \"s[s.Length - 1 - i]\", s[s.Length - 1 - i]);\n    if (s[i] != s[s.Length - 1 - i])\n    { //~\n        ok = false;\n        Tr.S(\"لا نصل إلى هنا.\", \"ok\", ok);\n    } //~\n} //~\nTr.Drop(\"i\");\nConsole.WriteLine(ok);\nTr.S(\"الطباعة: True.\");\nTr.End();"
+  }
+ ]
+}

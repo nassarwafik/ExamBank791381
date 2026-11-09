@@ -1,0 +1,13 @@
+{
+ "module": "m06",
+ "traces": [
+  {
+   "walkthrough": 1,
+   "program": "Tr.Begin();\nint min = 0;\nTr.S(\"min يبدأ من 0 — انتبه لهذه القيمة.\", \"min\", min);\nint x = int.Parse(Console.ReadLine());\nTr.S(\"نقرأ أول عدد.\", \"x\", x);\nwhile (x != 0)\n{\n    Tr.At(3, \"الشرط صحيح: ندخل الحلقة.\", \"x != 0\", x != 0);\n    Tr.At(5, x < min ? \"x أصغر من min.\" : \"x ليس أصغر من min = 0: لا يتغير شيء.\", \"x < min\", x < min);\n    if (x < min)\n    { //~\n        min = x;\n        Tr.S(\"min يتغير.\", \"min\", min);\n    } //~\n    x = int.Parse(Console.ReadLine());\n    Tr.S(\"نقرأ العدد التالي.\", \"x\", x);\n}\nTr.At(3, \"الشرط خطأ: نخرج من الحلقة.\", \"x != 0\", x != 0);\nConsole.WriteLine(min);\nTr.S(\"الطباعة: 0، مع أن 0 ليس من الأعداد. هذا هو الفخّ.\");\nTr.End();"
+  },
+  {
+   "walkthrough": 3,
+   "program": "Tr.Begin();\nint n = 4827, sum = 0;\nTr.S(\"نبدأ بالعدد والمجموع صفر.\", \"n\", n, \"sum\", sum);\nwhile (n > 0)\n{\n    int d = n % 10;\n    Tr.S(\"نأخذ الآحاد.\", \"d\", d);\n    Tr.At(5, d % 2 == 0 ? \"زوجية: نضيفها.\" : \"فردية: نتجاوزها.\", \"d % 2\", d % 2);\n    if (d % 2 == 0)\n    { //~\n        sum += d;\n        Tr.S(\"نضيف d إلى المجموع.\", \"sum\", sum);\n    } //~\n    n /= 10;\n    Tr.S(\"نحذف الآحاد.\", \"n\", n);\n}\nTr.Drop(\"d\");\nTr.At(2, \"لم تبقَ منازل: نخرج من الحلقة.\", \"n > 0\", n > 0);\nConsole.WriteLine(sum);\nTr.S(\"الطباعة: 14.\");\nTr.End();"
+  }
+ ]
+}

@@ -1,0 +1,306 @@
+{
+  "libraryItemId": "CL899371-08",
+  "title": "مختبر البرمجة — الفصل 8: النصوص",
+  "category": "coding-899371",
+  "description": "أسئلة برمجة بلغة C# من وظائف الفصل 8 في «أسس علم الحاسوب»، يصحّحها المشغّل بحالات اختبار مخفية؛ خطأ الترجمة يذهب لمراجعة المعلم.",
+  "tags": [
+    "برمجة",
+    "C#",
+    "تصحيح آلي"
+  ],
+  "questionCount": 3,
+  "totalMarks": 30,
+  "pageRange": "",
+  "parserFamily": "coding-lab-899371-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 3,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "e3fe2eef4e5e9a5e436fa35e4b87351a7a89862fed74379406b4266e58e5a4a2",
+  "contentHash": "80c3784adf857acd6a68cd9bbfefbb60e3af6c4e2e9774585d7e46f2586032c5",
+  "convertedAt": "2026-11-09T00:00:00.000Z",
+  "source": {
+    "repository": "899371",
+    "sourceFile": "scripts/coding-lab-899371/m08.json"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-CL899371-08",
+    "title": "مختبر البرمجة — الفصل 8: النصوص",
+    "questions": [
+      {
+        "examQuestionId": "CL899371-08-Q01",
+        "origin": "imported",
+        "sourceId": "CL899371-08",
+        "sourceQuestionId": "c08-p-q1",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "ضغط النص\n\nاكتب جسم العملية CompressString التي تستقبل نصًا غير فارغ من أحرف فقط، وتُعيد نصًا فيه كل حرف يتبعه عدد مرات تكراره المتتالي. مثال: \"AABBBBCD\" ← \"A2B4C1D1\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على السؤال 1 من وظيفة البرمجة الثامنة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "AABBBBCD\n",
+              "sampleOutput": "A2B4C1D1\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static string CompressString(string str)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CompressString(s));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "XXXYZZ\n",
+              "expectedOutput": "X3Y1Z2\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "ABAB\n",
+              "expectedOutput": "A1B1A1B1\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "Q\n",
+              "expectedOutput": "Q1\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "aaaaaaaaaaaa\n",
+              "expectedOutput": "a12\n",
+              "weight": 1
+            },
+            {
+              "id": "h5",
+              "input": "ZZYYZZ\n",
+              "expectedOutput": "Z2Y2Z2\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static string CompressString(string str)\n    {\n        string r = \"\";\n        int count = 1;\n        for (int i = 1; i <= str.Length; i++)\n        {\n            if (i < str.Length && str[i] == str[i - 1])\n                count++;\n            else\n            {\n                r += str[i - 1] + \"\" + count;\n                count = 1;\n            }\n        }\n        return r;\n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CompressString(s));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-08-Q02",
+        "origin": "imported",
+        "sourceId": "CL899371-08",
+        "sourceQuestionId": "c08-p-q2",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "استبدال b بـ c\n\nاكتب جسم العملية ReplaceBWithC التي تستقبل نصًا وتُعيد نصًا جديدًا يُستبدل فيه كل حرف 'b' أو 'B' بالحرف 'c'، وتبقى الأحرف الأخرى كما هي. مثال: \"abBd\" ← \"accd\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على السؤال 2 من وظيفة البرمجة الثامنة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "abBd\n",
+              "sampleOutput": "accd\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static string ReplaceBWithC(string str)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(ReplaceBWithC(s));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "Bubble Bob\n",
+              "expectedOutput": "cuccle coc\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "no letters here\n",
+              "expectedOutput": "no letters here\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "BBB\n",
+              "expectedOutput": "ccc\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "abcABC\n",
+              "expectedOutput": "accAcC\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static string ReplaceBWithC(string str)\n    {\n        string r = \"\";\n        foreach (char ch in str)\n            r += (ch == 'b' || ch == 'B') ? 'c' : ch;\n        return r;\n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(ReplaceBWithC(s));\n    }\n}\n"
+          }
+        }
+      },
+      {
+        "examQuestionId": "CL899371-08-Q03",
+        "origin": "imported",
+        "sourceId": "CL899371-08",
+        "sourceQuestionId": "c08-p-q4",
+        "presentationType": "coding",
+        "questionTypeVersion": 3,
+        "marks": 10,
+        "locked": false,
+        "text": "تشفير ANBO\n\nاكتب جسم العملية CodeANBO التي تستقبل نصًا من أحرف إنجليزية صغيرة وفراغات، وتُعيد النص مشفّرًا: كل حرف يُستبدل بالحرف الذي يبعد عنه 13 موقعًا (a–m ← n–z، وn–z ← a–m)، والفراغات تبقى. مثال: \"hello\" ← \"uryyb\". الدالة Main مقفلة: تقرأ سطرًا وتطبع ما تعيده عمليتك.\n(مبني على القسم 4.1 من السؤال 4 في وظيفة البرمجة الثامنة.)",
+        "coding": {
+          "allowedLanguages": [
+            "csharp"
+          ],
+          "defaultLanguage": "csharp",
+          "starterCode": {},
+          "taskMode": "program",
+          "inputMode": "stdin",
+          "outputMode": "stdout",
+          "limits": {
+            "sourceBytes": 65536,
+            "outputBytes": 16384,
+            "timeMs": 2000,
+            "memoryMb": 128
+          },
+          "publicTests": [
+            {
+              "id": "p1",
+              "input": "hello\n",
+              "sampleOutput": "uryyb\n"
+            }
+          ],
+          "template": {
+            "language": "csharp",
+            "segments": [
+              {
+                "kind": "locked",
+                "text": "using System;\n\npublic class Program\n{\n    public static string CodeANBO(string text)\n    {\n"
+              },
+              {
+                "kind": "editable",
+                "id": "body",
+                "starter": "        \n"
+              },
+              {
+                "kind": "locked",
+                "text": "    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CodeANBO(s));\n    }\n}\n"
+              }
+            ]
+          }
+        },
+        "answer": {
+          "gradingMode": "hiddenTests",
+          "comparator": "normalizeWhitespace",
+          "scoringPolicy": "proportional",
+          "compileErrorPolicy": "manualReview",
+          "hiddenTests": [
+            {
+              "id": "h1",
+              "input": "uryyb\n",
+              "expectedOutput": "hello\n",
+              "weight": 1
+            },
+            {
+              "id": "h2",
+              "input": "the quick brown fox\n",
+              "expectedOutput": "gur dhvpx oebja sbk\n",
+              "weight": 1
+            },
+            {
+              "id": "h3",
+              "input": "abc xyz\n",
+              "expectedOutput": "nop klm\n",
+              "weight": 1
+            },
+            {
+              "id": "h4",
+              "input": "nopqrstuvwxyz\n",
+              "expectedOutput": "abcdefghijklm\n",
+              "weight": 1
+            }
+          ],
+          "referenceSolutions": {
+            "csharp": "using System;\n\npublic class Program\n{\n    public static string CodeANBO(string text)\n    {\n        string r = \"\";\n        foreach (char ch in text)\n        {\n            if (ch >= 'a' && ch <= 'z')\n                r += (char)((ch - 'a' + 13) % 26 + 'a');\n            else\n                r += ch;\n        }\n        return r;\n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CodeANBO(s));\n    }\n}\n"
+          }
+        }
+      }
+    ],
+    "totalMarks": 30,
+    "status": "final",
+    "createdAt": "2026-11-09T00:00:00.000Z",
+    "updatedAt": "2026-11-09T00:00:00.000Z"
+  }
+}

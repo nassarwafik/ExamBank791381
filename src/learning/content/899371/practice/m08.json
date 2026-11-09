@@ -1,0 +1,239 @@
+{
+ "module": "m08",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "6"
+     },
+     {
+      "text": "7",
+      "correct": true
+     },
+     {
+      "text": "8"
+     },
+     {
+      "text": "program"
+     }
+    ],
+    "feedback": {
+     "explanation": "Length يعيد عدد الأحرف: p-r-o-g-r-a-m سبعة أحرف."
+    }
+   },
+   "program": "string s = \"program\";\nConsole.WriteLine(s.Length);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "h"
+     },
+     {
+      "text": "e",
+      "correct": true
+     },
+     {
+      "text": "l"
+     },
+     {
+      "text": "1"
+     }
+    ],
+    "feedback": {
+     "explanation": "المؤشر يبدأ من 0: [0] هو h و[1] هو e."
+    }
+   },
+   "program": "string s = \"hello\";\nConsole.WriteLine(s[1]);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "comp"
+     },
+     {
+      "text": "pute",
+      "correct": true
+     },
+     {
+      "text": "puter"
+     },
+     {
+      "text": "mpu"
+     }
+    ],
+    "feedback": {
+     "explanation": "Substring(3, 4) يبدأ من المؤشر 3 (الحرف p) ويأخذ 4 أحرف: pute."
+    }
+   },
+   "program": "Console.WriteLine(\"computer\".Substring(3, 4));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2",
+      "correct": true
+     },
+     {
+      "text": "3"
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "1"
+     }
+    ],
+    "feedback": {
+     "explanation": "IndexOf يعيد موقع أول ظهور: b(0) a(1) n(2)، فالجواب 2."
+    }
+   },
+   "program": "Console.WriteLine(\"banana\".IndexOf('n'));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "bANana"
+     },
+     {
+      "text": "bANANa",
+      "correct": true
+     },
+     {
+      "text": "BANANA"
+     },
+     {
+      "text": "banana"
+     }
+    ],
+    "feedback": {
+     "explanation": "Replace يستبدل كل ظهور لـ \"an\": b·an·an·a تصبح bANANa."
+    }
+   },
+   "program": "Console.WriteLine(\"banana\".Replace(\"an\", \"AN\"));",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "cba",
+    "feedback": {
+     "explanation": "الحلقة تمرّ على الأحرف من الأخير إلى الأول وتضيفها: c ثم b ثم a."
+    }
+   },
+   "program": "string s = \"abc\";\nstring r = \"\";\nfor (int i = s.Length - 1; i >= 0; i--)\n    r += s[i];\nConsole.WriteLine(r);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "True",
+      "correct": true
+     },
+     {
+      "text": "False"
+     },
+     {
+      "text": "-1"
+     },
+     {
+      "text": "apple"
+     }
+    ],
+    "feedback": {
+     "explanation": "\"apple\" قبل \"banana\" أبجديًا، فـ CompareTo يعيد قيمة سالبة (< 0)، والتعبير صحيح: True."
+    }
+   },
+   "program": "Console.WriteLine(\"apple\".CompareTo(\"banana\") < 0);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2"
+     },
+     {
+      "text": "3",
+      "correct": true
+     },
+     {
+      "text": "4"
+     },
+     {
+      "text": "18"
+     }
+    ],
+    "feedback": {
+     "explanation": "Split(' ') يقسم النص عند كل مسافة: Good و morning و class، فعدد الأجزاء 3."
+    }
+   },
+   "program": "string text = \"Good morning class\";\nConsole.WriteLine(text.Split(' ').Length);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "البرنامج أعلاه يطبع True.",
+    "answer": false,
+    "feedback": {
+     "explanation": "Equals تقارن النصين حرفًا بحرف مع حالة الأحرف: \"Hi\" و\"hi\" مختلفان، فيُطبع False."
+    }
+   },
+   "program": "Console.WriteLine(\"Hi\".Equals(\"hi\"));",
+   "prove": "claim",
+   "claimOutput": "True"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل عملية بعملها:",
+    "pairs": [
+     [
+      "ToUpper()",
+      "تحويل إلى أحرف كبيرة"
+     ],
+     [
+      "Insert(index, text)",
+      "إدخال نص في موقع معيّن"
+     ],
+     [
+      "Remove(start, length)",
+      "حذف جزء من النص"
+     ],
+     [
+      "LastIndexOf(c)",
+      "موقع آخر ظهور"
+     ]
+    ],
+    "feedback": {
+     "explanation": "ToUpper تكبّر الأحرف، وInsert تُدخل نصًا، وRemove تحذف جزءًا، وLastIndexOf تعيد موقع آخر ظهور (وIndexOf أول ظهور)."
+    }
+   }
+  }
+ ]
+}

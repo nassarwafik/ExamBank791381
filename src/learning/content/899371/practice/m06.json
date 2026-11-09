@@ -1,0 +1,225 @@
+{
+ "module": "m06",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "27"
+     },
+     {
+      "text": "81",
+      "correct": true
+     },
+     {
+      "text": "50"
+     },
+     {
+      "text": "243"
+     }
+    ],
+    "feedback": {
+     "explanation": "n: 1 ← 3 ← 9 ← 27 ← 81. عندها 81 < 50 خطأ فتتوقف الحلقة."
+    }
+   },
+   "program": "int n = 1;\nwhile (n < 50)\n    n *= 3;\nConsole.WriteLine(n);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "9"
+     },
+     {
+      "text": "18",
+      "correct": true
+     },
+     {
+      "text": "9045"
+     },
+     {
+      "text": "13"
+     }
+    ],
+    "feedback": {
+     "explanation": "نجمع المنازل: 5 + 4 + 0 + 9 = 18. كل دورة تأخذ الآحاد (% 10) ثم تحذفها (/= 10)."
+    }
+   },
+   "program": "int num = 9045;\nint s = 0;\nwhile (num > 0)\n{\n    s += num % 10;\n    num /= 10;\n}\nConsole.WriteLine(s);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "إذا أدخل المستخدم 4 ثم 7 ثم 2 ثم -1، ماذا يطبع البرنامج أعلاه؟",
+    "answer": "13",
+    "feedback": {
+     "explanation": "-1 قيمة حارسة توقف الإدخال ولا تُجمع: 4 + 7 + 2 = 13."
+    }
+   },
+   "program": "int sum = 0;\nint x = int.Parse(Console.ReadLine());\nwhile (x != -1)\n{\n    sum += x;\n    x = int.Parse(Console.ReadLine());\n}\nConsole.WriteLine(sum);",
+   "stdin": "4\n7\n2\n-1",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "5"
+     },
+     {
+      "text": "6",
+      "correct": true
+     },
+     {
+      "text": "7"
+     },
+     {
+      "text": "50"
+     }
+    ],
+    "feedback": {
+     "explanation": "k: 100 ← 50 ← 25 ← 12 ← 6 ← 3 ← 1. ست قسمات، ثم k > 1 خطأ."
+    }
+   },
+   "program": "int k = 100;\nint c = 0;\nwhile (k > 1)\n{\n    k /= 2;\n    c++;\n}\nConsole.WriteLine(c);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "123"
+     },
+     {
+      "text": "321",
+      "correct": true
+     },
+     {
+      "text": "6"
+     },
+     {
+      "text": "3210"
+     }
+    ],
+    "feedback": {
+     "explanation": "في كل دورة نأخذ آخر منزلة ونضيفها إلى يمين r: 3، ثم 32، ثم 321."
+    }
+   },
+   "program": "int n = 123;\nint r = 0;\nwhile (n > 0)\n{\n    r = r * 10 + n % 10;\n    n /= 10;\n}\nConsole.WriteLine(r);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "0"
+     },
+     {
+      "text": "1"
+     },
+     {
+      "text": "-1",
+      "correct": true
+     },
+     {
+      "text": "5"
+     }
+    ],
+    "feedback": {
+     "explanation": "x: 5 ← 3 ← 1 ← -1. عندها x > 0 خطأ فتتوقف الحلقة، فيُطبع -1."
+    }
+   },
+   "program": "int x = 5;\nwhile (x > 0)\n{\n    x -= 2;\n}\nConsole.WriteLine(x);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "البرنامج أعلاه يطبع 5.",
+    "answer": false,
+    "feedback": {
+     "explanation": "الشرط i < 5 خطأ من البداية (i = 10)، فلا تنفّذ حلقة while أي مرة، ويُطبع 10 كما هو."
+    }
+   },
+   "program": "int i = 10;\nwhile (i < 5)\n{\n    i++;\n}\nConsole.WriteLine(i);",
+   "prove": "claim",
+   "claimOutput": "5"
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "حلقة do-while تنفّذ أوامرها مرة واحدة على الأقل.",
+    "answer": true,
+    "feedback": {
+     "explanation": "do-while تنفّذ الأوامر أولًا ثم تفحص الشرط، أما while فتفحص الشرط أولًا وقد لا تنفّذ أبدًا."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "classify",
+    "prompt": "أي حلقة أنسب لكل مهمة؟",
+    "groups": [
+     "for (عدد التكرارات معروف)",
+     "while (عدد التكرارات غير معروف)"
+    ],
+    "items": [
+     [
+      "طباعة الأعداد من 1 إلى 100",
+      0
+     ],
+     [
+      "قراءة علامات حتى إدخال -1",
+      1
+     ],
+     [
+      "جمع منازل عدد",
+      1
+     ],
+     [
+      "طباعة جدول الضرب للعدد 7",
+      0
+     ],
+     [
+      "تكرار الطلب حتى يُدخل المستخدم كلمة السر الصحيحة",
+      1
+     ],
+     [
+      "حساب معدل 30 علامة",
+      0
+     ]
+    ],
+    "feedback": {
+     "explanation": "for عندما نعرف عدد المرات مسبقًا (100، 10، 30). while عندما يتوقف التكرار على شرط لا نعرف متى يتحقق (قيمة حارسة، منازل عدد، كلمة سر)."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب أسطر البرنامج الذي يجمع منازل العدد number:",
+    "inOrder": [
+     "int sum = 0;",
+     "while (number > 0)",
+     "{ sum += number % 10; number /= 10; }",
+     "Console.WriteLine(sum);"
+    ],
+    "feedback": {
+     "explanation": "نهيّئ المجموع، ثم نكرر ما دام في العدد منازل: نضيف الآحاد ونحذفها، وأخيرًا نطبع."
+    }
+   }
+  }
+ ]
+}

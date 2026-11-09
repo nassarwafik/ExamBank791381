@@ -27,6 +27,8 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
   "791381": () => import("./791381/manifest"),
   // The summary booklet «أوراق تلخيص للمراجعة» (نموذج 791381) — an independent second course.
   "791381s": () => import("./791381s/manifest"),
+  // 899371 P2 — «أسس علم الحاسوب» (مجمع أسئلة نموذج 899371, C#): generated from the owner's Word source by scripts/convert-899371.mjs.
+  "899371": () => import("./899371/manifest"),
 };
 
 // The module ids that HAVE a body (791381: every manifest module). Phase L.6a — only the ids live in the app; each body is served
@@ -102,6 +104,22 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "791381s-m34",
     "791381s-m35",
     "791381s-m36",
+  ],
+  // 899371: the opening (m00), chapters 1–11 (m01–m11; P2 m00–m04, P3 m05–m12) and the closing word (m12).
+  "899371": [
+    "899371-m00",
+    "899371-m01",
+    "899371-m02",
+    "899371-m03",
+    "899371-m04",
+    "899371-m05",
+    "899371-m06",
+    "899371-m07",
+    "899371-m08",
+    "899371-m09",
+    "899371-m10",
+    "899371-m11",
+    "899371-m12",
   ],
 };
 

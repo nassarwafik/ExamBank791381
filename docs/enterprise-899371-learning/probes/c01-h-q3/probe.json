@@ -1,0 +1,19 @@
+{
+  "id": "c01-h-q3",
+  "source": "ف1 بيتية س3",
+  "verbatim": true,
+  "runs": [
+    {
+      "stdin": "6",
+      "expect": {
+        "stdout": "12"
+      }
+    },
+    {
+      "stdin": "m",
+      "expect": {
+        "runtimeError": "FormatException"
+      }
+    }
+  ]
+}

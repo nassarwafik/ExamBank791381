@@ -353,7 +353,12 @@ function buildLibrary(sourceDir, dataDir, assetsDir) {
     });
   }
 
-  fs.writeFileSync(path.join(outputDir, "catalog.json"), JSON.stringify(catalog, null, 2));
+  // 899371 P7: the catalog also lists the items other sources build (the coding lab of 899371, scripts/build-899371-coding-lab.mjs);
+  // this build owns only the Book791381 entries, so it keeps the others, after its own, exactly as they are.
+  const catalogPath = path.join(outputDir, "catalog.json");
+  let others = [];
+  try { others = JSON.parse(fs.readFileSync(catalogPath, "utf8")).filter(e => e && e.source && e.source.repository !== "Book791381"); } catch { others = []; }
+  fs.writeFileSync(catalogPath, JSON.stringify([...catalog, ...others], null, 2));
   fs.writeFileSync(path.join(outputDir, "quality-report.json"), JSON.stringify(report, null, 2));
 
   return { catalog, report, assetsWritten, dataDir: outputDir, assetsDir: assetsOutputDir };

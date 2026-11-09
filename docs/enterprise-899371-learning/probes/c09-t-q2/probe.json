@@ -1,0 +1,12 @@
+{
+  "id": "c09-t-q2",
+  "source": "ف9 تتبع س2.1",
+  "verbatim": true,
+  "runs": [
+    {
+      "expect": {
+        "stdout": "s :=3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+ "module": "m03",
+ "questions": [
+  {
+   "book": "c03-p-q6",
+   "title": "طول الوتر",
+   "text": "اكتب برنامجًا يقرأ طولي القائمين في مثلث قائم الزاوية (عددين حقيقيين، كل عدد في سطر)، ويحسب طول الوتر بقانون فيتاغورس c² = a² + b²، ثم يطبعه مقرّبًا إلى منزلتين عشريتين: Math.Round(c, 2).\n(مبني على السؤال 6 من وظيفة البرمجة الثالثة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Round(Math.Sqrt(a * a + b * b), 2));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Round(Math.Sqrt(a + b), 2));\n    }\n}\n",
+   "public": [
+    "3\n4\n"
+   ],
+   "hidden": [
+    "5\n12\n",
+    "1\n1\n",
+    "2.5\n6\n",
+    "7\n3\n",
+    "8\n15\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c03-p-q7",
+   "title": "الطول الأكبر",
+   "text": "اكتب برنامجًا يقرأ ثلاثة أطوال (أعداد حقيقية، كل طول في سطر) لثلاثة طلاب، ثم يطبع الطول الأكبر فقط (كما يطبعه Console.WriteLine).\n(مبني على السؤال 7 من وظيفة البرمجة الثالثة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Max(a, Math.Max(b, c)));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Max(a, b));\n    }\n}\n",
+   "public": [
+    "1.65\n1.8\n1.72\n"
+   ],
+   "hidden": [
+    "1.5\n1.6\n1.9\n",
+    "1.95\n1.4\n1.7\n",
+    "1.55\n1.55\n1.6\n",
+    "1.71\n1.82\n1.81\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c03-p-q8",
+   "title": "معدل الشهادة",
+   "text": "اكتب برنامجًا يقرأ ثلاث علامات (أعدادًا صحيحة، كل علامة في سطر)، ثم يحسب معدلها ويطبعه عددًا صحيحًا بلا كسور (القسمة الصحيحة على 3).\n(مبني على السؤال 8 من وظيفة البرمجة الثالثة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine((a + b + c) / 3);\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(Math.Round((a + b + c) / 3.0));\n    }\n}\n",
+   "public": [
+    "80\n90\n100\n"
+   ],
+   "hidden": [
+    "70\n75\n81\n",
+    "0\n0\n1\n",
+    "99\n100\n100\n",
+    "55\n60\n66\n"
+   ],
+   "version": 2
+  },
+  {
+   "book": "c03-h-q9",
+   "title": "الوتر والمساحة والمحيط",
+   "text": "اكتب برنامجًا يقرأ طولي ساقي مثلث قائم الزاوية (عددين حقيقيين، كل عدد في سطر)، ثم يطبع على ثلاثة أسطر:\n• طول الوتر مقرّبًا إلى منزلتين: Math.Round(c, 2)\n• المساحة (نصف حاصل ضرب الساقين)\n• المحيط (مجموع الأضلاع الثلاثة) مقرّبًا إلى منزلتين\n(مبني على السؤال 9 من الوظيفة البيتية الثالثة.)",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = Math.Sqrt(a * a + b * b);\n        Console.WriteLine(Math.Round(c, 2));\n        Console.WriteLine(a * b / 2);\n        Console.WriteLine(Math.Round(a + b + c, 2));\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = Math.Sqrt(a * a + b * b);\n        Console.WriteLine(Math.Round(c, 2));\n        Console.WriteLine(a * b);\n        Console.WriteLine(Math.Round(a + b + c, 2));\n    }\n}\n",
+   "public": [
+    "3\n4\n"
+   ],
+   "hidden": [
+    "1\n1\n",
+    "6\n8\n",
+    "2\n3\n",
+    "5\n5\n"
+   ],
+   "version": 2
+  }
+ ]
+}

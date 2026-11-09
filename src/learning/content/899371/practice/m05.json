@@ -1,0 +1,224 @@
+{
+ "module": "m05",
+ "items": [
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "2 4 6 8",
+      "correct": true
+     },
+     {
+      "text": "1 2 3 4"
+     },
+     {
+      "text": "2 4 6 8 10"
+     },
+     {
+      "text": "0 2 4 6"
+     }
+    ],
+    "feedback": {
+     "explanation": "i يأخذ 1، 2، 3، 4 (الشرط i <= 4)، ونطبع i * 2 في كل مرة: 2 4 6 8."
+    }
+   },
+   "program": "for (int i = 1; i <= 4; i++)\n    Console.Write(i * 2 + \" \");",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "15",
+      "correct": true
+     },
+     {
+      "text": "5"
+     },
+     {
+      "text": "6"
+     }
+    ],
+    "feedback": {
+     "explanation": "sum = 1 + 2 + 3 + 4 + 5 = 15."
+    }
+   },
+   "program": "int sum = 0;\nfor (int i = 1; i <= 5; i++)\n    sum += i;\nConsole.WriteLine(sum);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "3"
+     },
+     {
+      "text": "4",
+      "correct": true
+     },
+     {
+      "text": "10"
+     },
+     {
+      "text": "9"
+     }
+    ],
+    "feedback": {
+     "explanation": "i يأخذ 0، 3، 6، 9 ثم يصبح 12 فيتوقف: أربع مرات."
+    }
+   },
+   "program": "int count = 0;\nfor (int i = 0; i < 10; i += 3)\n    count++;\nConsole.WriteLine(count);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "54321"
+     },
+     {
+      "text": "531",
+      "correct": true
+     },
+     {
+      "text": "135"
+     },
+     {
+      "text": "5310"
+     }
+    ],
+    "feedback": {
+     "explanation": "i يبدأ من 5 وينقص 2 كل مرة: 5، 3، 1، ثم -1 فيتوقف. Console.Write يطبع في السطر نفسه: 531."
+    }
+   },
+   "program": "for (int i = 5; i > 0; i -= 2)\n    Console.Write(i);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "shortInput",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "answer": "6",
+    "feedback": {
+     "explanation": "الحلقة الداخلية تتكرر i مرة: 1 + 2 + 3 = 6."
+    }
+   },
+   "program": "int c = 0;\nfor (int i = 1; i <= 3; i++)\n    for (int j = 1; j <= i; j++)\n        c++;\nConsole.WriteLine(c);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "* | ** | ***",
+      "correct": true
+     },
+     {
+      "text": "*** | ** | *"
+     },
+     {
+      "text": "*** | *** | ***"
+     },
+     {
+      "text": "* | * | *"
+     }
+    ],
+    "feedback": {
+     "explanation": "في السطر i تطبع الحلقة الداخلية i نجوم، ثم WriteLine ينزل سطرًا: سطر بنجمة، ثم بنجمتين، ثم بثلاث. (الرمز | يفصل بين الأسطر)"
+    }
+   },
+   "program": "for (int i = 1; i <= 3; i++)\n{\n    for (int j = 1; j <= i; j++)\n        Console.Write(\"*\");\n    Console.WriteLine();\n}",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "multipleChoice",
+    "prompt": "ما ناتج تنفيذ البرنامج أعلاه؟",
+    "options": [
+     {
+      "text": "10"
+     },
+     {
+      "text": "24",
+      "correct": true
+     },
+     {
+      "text": "120"
+     },
+     {
+      "text": "4"
+     }
+    ],
+    "feedback": {
+     "explanation": "p = 1 × 1 × 2 × 3 × 4 = 24."
+    }
+   },
+   "program": "int p = 1;\nfor (int i = 1; i <= 4; i++)\n    p *= i;\nConsole.WriteLine(p);",
+   "prove": "output"
+  },
+  {
+   "question": {
+    "kind": "trueFalse",
+    "prompt": "البرنامج أعلاه يطبع 100.",
+    "answer": true,
+    "feedback": {
+     "explanation": "i من 1 حتى 100 بخطوة 1: الحلقة تتكرر 100 مرة، فيصبح c = 100."
+    }
+   },
+   "program": "int c = 0;\nfor (int i = 1; i <= 100; i++)\n    c++;\nConsole.WriteLine(c);",
+   "prove": "claim",
+   "claimOutput": "100"
+  },
+  {
+   "question": {
+    "kind": "matching",
+    "prompt": "صِل كل جزء من رأس حلقة for بوقت تنفيذه:",
+    "pairs": [
+     [
+      "المهيّئ (int i = 1)",
+      "ينفّذ مرة واحدة في البداية"
+     ],
+     [
+      "الشرط (i <= 5)",
+      "يُفحص قبل كل تكرار"
+     ],
+     [
+      "التحديث (i++)",
+      "ينفّذ بعد كل تكرار"
+     ]
+    ],
+    "feedback": {
+     "explanation": "المهيّئ يعيّن العدّاد مرة واحدة، والشرط يُفحص قبل كل دورة، والتحديث يعدّل العدّاد بعد كل دورة."
+    }
+   }
+  },
+  {
+   "question": {
+    "kind": "ordering",
+    "prompt": "رتّب أسطر البرنامج الذي يجمع الأعداد من 1 إلى 10 ثم يطبع المجموع:",
+    "inOrder": [
+     "int sum = 0;",
+     "for (int i = 1; i <= 10; i++)",
+     "sum += i;",
+     "Console.WriteLine(sum);"
+    ],
+    "feedback": {
+     "explanation": "نهيّئ المجمّع بصفر قبل الحلقة، ثم الحلقة وجسمها، ثم نطبع بعد انتهاء الحلقة لا داخلها."
+    }
+   }
+  }
+ ]
+}

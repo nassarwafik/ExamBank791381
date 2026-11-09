@@ -1,0 +1,14 @@
+{
+  "id": "f02-int-division",
+  "source": "ف2 جدول العوامل الحسابية: «/ القسمة الكسرية · 5 / 2 · 2.5»",
+  "verbatim": false,
+  "finding": "F2",
+  "bookClaim": "5 / 2 → 2.5",
+  "runs": [
+    {
+      "expect": {
+        "stdout": "2\n2.5"
+      }
+    }
+  ]
+}
