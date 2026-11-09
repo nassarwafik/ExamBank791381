@@ -22,7 +22,7 @@ const composerChart_1 = require("./composerChart");
 const composerGraph_1 = require("./composerGraph");
 const composerChemistry_1 = require("./composerChemistry");
 require("../trustedSimPlugins");
-exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V5";
+exports.COMPOSER_CATALOG_VERSION = "AI_COMPOSER_CATALOG_V6";
 exports.COMPOSER_DRAFT_TYPES = Object.freeze(["multipleChoice", "trueFalse", "shortAnswer", "fillBlank", "inlineCloze", "parametricNumeric", "openResponse", "tableFill", "coding", "networkCli"]);
 exports.COMPOSER_ITEM_KINDS = Object.freeze([...exports.COMPOSER_DRAFT_TYPES, "smartSim", "composite"]);
 function composerItemIdentity(kind) {
@@ -33,7 +33,9 @@ exports.COMPOSER_SIM_PLUGINS = Object.freeze([
     { pluginKey: "physicsFreeFall", pluginVersion: 1, subject: "physics" },
     { pluginKey: "functionStudy2d", pluginVersion: 1, subject: "mathematics" },
     { pluginKey: "chemistryReactions", pluginVersion: 1, subject: "chemistry" },
-    { pluginKey: "chemistryStructure", pluginVersion: 1, subject: "chemistry" }
+    { pluginKey: "chemistryStructure", pluginVersion: 1, subject: "chemistry" },
+    { pluginKey: "physicsMotion", pluginVersion: 1, subject: "physics" },
+    { pluginKey: "physicsLab", pluginVersion: 1, subject: "physics" }
 ]);
 exports.COMPOSER_SIM_PLUGIN_KEYS = Object.freeze(exports.COMPOSER_SIM_PLUGINS.map(p => p.pluginKey));
 const composerSimVersion = (key) => exports.COMPOSER_SIM_PLUGINS.find(p => p.pluginKey === key)?.pluginVersion;
