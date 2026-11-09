@@ -1,0 +1,120 @@
+{
+  "markers": [
+    {
+      "where": "899371-m01-l01-p01",
+      "marker": "**",
+      "text": "**وصفة طعام**"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "**",
+      "text": "**صناديق التخزين**"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "** (stray)",
+      "text": "int (عدد صحيح):** لتخزين الأرقام الكاملة (مثال:"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`10`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`-5`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`3.14`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`9.99`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`\"مرحباً\"`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`\"خالد\"`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`'A'`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`'z'`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`true`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`false`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "\\#",
+      "text": "C\\#"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`Enter`"
+    },
+    {
+      "where": "899371-m01-l01-p02",
+      "marker": "`",
+      "text": "`string`"
+    },
+    {
+      "where": "899371-m04-l03-p07",
+      "marker": "**",
+      "text": "**درجة الحرارة**"
+    },
+    {
+      "where": "899371-m04-l03-p07",
+      "marker": "**",
+      "text": "**نسبة الرطوبة**"
+    }
+  ],
+  "corrections": [
+    {
+      "finding": "F2",
+      "index": 138,
+      "find": "5 / 2",
+      "replace": "5.0 / 2"
+    },
+    {
+      "finding": "F1",
+      "index": 397,
+      "find": "في شبكات الاتصال",
+      "replace": "في أسس علم الحاسوب"
+    },
+    {
+      "finding": "F6",
+      "index": 639,
+      "find": "int b;",
+      "replace": "int b = int.Parse(Console.ReadLine());"
+    },
+    {
+      "finding": "F6",
+      "index": 705,
+      "find": "int x, y;",
+      "replace": "int x = int.Parse(Console.ReadLine());\nint y = int.Parse(Console.ReadLine());"
+    }
+  ]
+}

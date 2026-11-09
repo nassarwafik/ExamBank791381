@@ -123,6 +123,15 @@ export const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>>
     "791381s-m35": () => import("./791381s/modules/m35"),
     "791381s-m36": () => import("./791381s/modules/m36"),
   },
+  // 899371 — «أسس علم الحاسوب»: module mNN = chapter NN (m00 = the opening), generated from the owner's Word source
+  // (scripts/convert-899371.mjs). P2: m00–m04.
+  "899371": {
+    "899371-m00": () => import("./899371/modules/m00"),
+    "899371-m01": () => import("./899371/modules/m01"),
+    "899371-m02": () => import("./899371/modules/m02"),
+    "899371-m03": () => import("./899371/modules/m03"),
+    "899371-m04": () => import("./899371/modules/m04"),
+  },
 };
 
 /** Load a single module BODY from the authored source. Throws for an unknown course/module. */

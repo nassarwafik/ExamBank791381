@@ -126,6 +126,20 @@ const COURSES = [
       { moduleId: "791381s-m35", title: "التوجيه والأمان", order: 35 },
       { moduleId: "791381s-m36", title: "الخدمات والأوامر", order: 36 }
     ]
+  },
+  // 899371 P2 — «أسس علم الحاسوب» (مجمع أسئلة نموذج 899371, C#): module mNN = chapter NN of the book (m00 = its opening), generated
+  // from the owner's Word source. Publishable (the teacher sees each as «مخفي عن الطلاب»); NEVER auto-published to any class.
+  {
+    courseId: "899371",
+    title: "أسس علم الحاسوب",
+    subject: "علم الحاسوب",
+    modules: [
+      { moduleId: "899371-m00", title: "افتتاحية", order: 0 },
+      { moduleId: "899371-m01", title: "الطباعة والمتغيرات", order: 1 },
+      { moduleId: "899371-m02", title: "العوامل والتعابير المنطقية", order: 2 },
+      { moduleId: "899371-m03", title: "المكتبة الرياضية", order: 3 },
+      { moduleId: "899371-m04", title: "جملة الشرط", order: 4 }
+    ]
   }
 ];
 
