@@ -175,6 +175,99 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l01-p02-scene-write-writeline",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: Write مقابل WriteLine ومكان المؤشر",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 160,
+                "alt": "أربعة أوامر طباعة وشاشة. Write يطبع ويبقى المؤشر في السطر نفسه، وWriteLine يطبع ثم ينقل المؤشر إلى السطر التالي.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 6,
+                    "y": 10,
+                    "lines": [
+                      "Console.Write(\"A\");",
+                      "Console.Write(\"B\");",
+                      "Console.WriteLine(\"C\");",
+                      "Console.Write(\"D\");"
+                    ]
+                  },
+                  {
+                    "id": "scr",
+                    "kind": "screen",
+                    "x": 250,
+                    "y": 30,
+                    "w": 140,
+                    "h": 70,
+                    "label": "الشاشة",
+                    "text": "▌"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "الشاشة فارغة، والمؤشر ▌ في أول السطر الأول."
+                  },
+                  {
+                    "say": "`Write(\"A\")` يطبع A ويبقى المؤشر بعده في السطر نفسه.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "scr": {
+                        "text": "A▌",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`Write(\"B\")` يكمل من مكان المؤشر في السطر نفسه: `AB`.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "scr": {
+                        "text": "AB▌"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`WriteLine(\"C\")` يطبع C ثم ينقل المؤشر إلى أول السطر التالي.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "scr": {
+                        "text": "ABC\n▌"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`Write(\"D\")` يبدأ حيث المؤشر: في أول السطر الثاني.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "scr": {
+                        "text": "ABC\nD▌"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m01-l01-p02-b08",
               "type": "text",
               "origin": "book",
@@ -207,6 +300,192 @@ const m01: ContentModule = {
                   "text": " في ذاكرة الحاسوب. يمكنك وضع أي معلومة في هذا الصندوق (رقم، نص، حرف)، وإعطاء الصندوق اسمًا لكي تتمكن من الوصول إليه لاحقًا. كل متغير له نوع محدد يخبر الحاسوب بنوع البيانات التي يمكن تخزينها فيه."
                 }
               ]
+            },
+            {
+              "id": "m01-l01-p02-scene-variable-box",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: المتغير صندوق: الإسناد يستبدل القيمة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 210,
+                "alt": "صندوقان في الذاكرة اسمهما x وy. نضع 5 في x، ثم 8 تحل محل 5، ثم تُنسخ قيمة x إلى y، ثم يزيد y واحدًا.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 10,
+                    "lines": [
+                      "int x = 5;",
+                      "x = 8;",
+                      "int y = x;",
+                      "y = y + 1;"
+                    ]
+                  },
+                  {
+                    "id": "bx",
+                    "kind": "box",
+                    "x": 230,
+                    "y": 40,
+                    "w": 70,
+                    "h": 50,
+                    "label": "x",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "by",
+                    "kind": "box",
+                    "x": 230,
+                    "y": 140,
+                    "w": 70,
+                    "h": 50,
+                    "label": "y",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "t8",
+                    "kind": "token",
+                    "x": 160,
+                    "y": 44,
+                    "text": "8",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "t5",
+                    "kind": "token",
+                    "x": 265,
+                    "y": 65,
+                    "text": "5",
+                    "show": false,
+                    "tone": "bad"
+                  },
+                  {
+                    "id": "tc",
+                    "kind": "token",
+                    "x": 265,
+                    "y": 65,
+                    "text": "8",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "قبل التنفيذ الذاكرة فارغة. سننفّذ البرنامج سطرًا سطرًا."
+                  },
+                  {
+                    "say": "السطر 1: `int x = 5;` يحجز صندوقًا اسمه `x` من نوع `int` ويضع فيه 5.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "bx": {
+                        "show": true,
+                        "value": "5",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "السطر 2: `x = 8;` القيمة الجديدة 8 جاهزة لتدخل الصندوق نفسه.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "bx": {
+                        "tone": "base"
+                      },
+                      "t8": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "8 تدخل الصندوق `x`، والقيمة القديمة 5 تخرج منه ولا تبقى.",
+                    "set": {
+                      "t8": {
+                        "x": 265,
+                        "y": 65
+                      },
+                      "bx": {
+                        "value": ""
+                      },
+                      "t5": {
+                        "show": true,
+                        "x": 360
+                      }
+                    }
+                  },
+                  {
+                    "say": "الصندوق `x` يحمل الآن 8 فقط: الإسناد يستبدل القيمة ولا يضيف إليها.",
+                    "set": {
+                      "t8": {
+                        "show": false
+                      },
+                      "t5": {
+                        "show": false
+                      },
+                      "bx": {
+                        "value": "8",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "السطر 3: `int y = x;` ينسخ قيمة `x` إلى صندوق جديد اسمه `y`.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bx": {
+                        "tone": "base"
+                      },
+                      "by": {
+                        "show": true
+                      },
+                      "tc": {
+                        "show": true,
+                        "y": 165
+                      }
+                    }
+                  },
+                  {
+                    "say": "`y` يحمل نسخة من 8، والصندوق `x` لم يتغيّر.",
+                    "set": {
+                      "tc": {
+                        "show": false
+                      },
+                      "by": {
+                        "value": "8",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "السطر 4: `y = y + 1;` يقرأ 8 من `y` ويضيف 1 ويكتب 9 في `y` نفسه. أما `x` فبقي 8: لكل صندوق قيمته.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "by": {
+                        "value": "9"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m01-l01-p02-b10",
@@ -479,6 +758,190 @@ const m01: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "  Console.WriteLine(\"أدخل عمرك:\");\nstring ageAsString = Console.ReadLine();\nint age = int.Parse(ageAsString); // تحويل النص إلى رقم\nConsole.WriteLine(\"عمرك هو: \" + age);"
+            },
+            {
+              "id": "m01-l01-p02-scene-readline-parse",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: ReadLine ثم int.Parse: من لوحة المفاتيح إلى الصندوق",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 250,
+                "alt": "المستخدم يكتب 17. ReadLine يضعها نصًا في صندوق من نوع string، ثم يحوّلها int.Parse إلى العدد 17 في صندوق من نوع int، ثم يُطبع 18.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 6,
+                    "y": 6,
+                    "lines": [
+                      "string ageAsString = Console.ReadLine();",
+                      "int age = int.Parse(ageAsString);",
+                      "Console.WriteLine(age + 1);"
+                    ]
+                  },
+                  {
+                    "id": "kbd",
+                    "kind": "text",
+                    "x": 55,
+                    "y": 105,
+                    "text": "لوحة المفاتيح",
+                    "show": false
+                  },
+                  {
+                    "id": "tk",
+                    "kind": "token",
+                    "x": 55,
+                    "y": 135,
+                    "text": "17",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "bs",
+                    "kind": "box",
+                    "x": 140,
+                    "y": 120,
+                    "w": 110,
+                    "h": 44,
+                    "label": "ageAsString (string)",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "conv",
+                    "kind": "arrow",
+                    "x": 195,
+                    "y": 168,
+                    "x2": 195,
+                    "y2": 196,
+                    "label": "int.Parse",
+                    "show": false
+                  },
+                  {
+                    "id": "ba",
+                    "kind": "box",
+                    "x": 140,
+                    "y": 200,
+                    "w": 110,
+                    "h": 44,
+                    "label": "age (int)",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "scr",
+                    "kind": "screen",
+                    "x": 285,
+                    "y": 120,
+                    "w": 105,
+                    "h": 44,
+                    "label": "الشاشة",
+                    "text": ""
+                  },
+                  {
+                    "id": "note",
+                    "kind": "text",
+                    "x": 330,
+                    "y": 220,
+                    "text": "\"17\" + 1 = \"171\"",
+                    "mono": true,
+                    "show": false,
+                    "tone": "warn"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "السطر 1: `ReadLine` ينتظر المستخدم. يكتب 17 ثم يضغط Enter.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "kbd": {
+                        "show": true
+                      },
+                      "tk": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "ما كُتب ينتقل إلى الصندوق `ageAsString`.",
+                    "set": {
+                      "tk": {
+                        "x": 195,
+                        "y": 142
+                      },
+                      "bs": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`ReadLine` يعيد نصًا دائمًا: في الصندوق النص `\"17\"`، حرفان وليس عددًا.",
+                    "set": {
+                      "tk": {
+                        "show": false
+                      },
+                      "bs": {
+                        "value": "\"17\"",
+                        "tone": "warn"
+                      }
+                    }
+                  },
+                  {
+                    "say": "السطر 2: `int.Parse` يحوّل النص `\"17\"` إلى العدد 17 في صندوق من نوع `int`.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "conv": {
+                        "show": true,
+                        "tone": "accent"
+                      },
+                      "ba": {
+                        "show": true,
+                        "value": "17",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "السطر 3: `age + 1` جمع حسابي: `17 + 1 = 18`، فيُطبع 18.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "conv": {
+                        "tone": "base"
+                      },
+                      "ba": {
+                        "tone": "base"
+                      },
+                      "scr": {
+                        "text": "18",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "لو جمعنا النص مباشرة لالتصق الرقم: `\"17\" + 1` يعطي `\"171\"`. لهذا نحوّل بـ `int.Parse` قبل الحساب.",
+                    "set": {
+                      "note": {
+                        "show": true
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },

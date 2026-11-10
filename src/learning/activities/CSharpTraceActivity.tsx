@@ -74,6 +74,11 @@ export default function CSharpTraceActivity({ block, commands, emit }: LearningA
         <button type="button" className="learning-trace-btn" onClick={() => go(at - 1)} disabled={at === 0}>الخطوة السابقة</button>
         <button type="button" className="learning-trace-btn is-next" onClick={() => go(at + 1)} disabled={at === total - 1}>الخطوة التالية</button>
         <span className="learning-trace-counter">الخطوة <span dir="ltr">{at + 1} / {total}</span></span>
+        {total > 12 && (
+          // 899371 P13 — a long trace (a counting loop) is reached by its slider too, not only one step at a time
+          <input type="range" className="learning-trace-slider" dir="ltr" min={1} max={total} value={at + 1} aria-label="انتقل إلى الخطوة"
+            aria-valuetext={"الخطوة " + (at + 1) + " من " + total} onChange={e => go(Number(e.target.value) - 1)} />
+        )}
       </div>
       <p className="learning-trace-note" role="status" aria-live="polite">
         <span className="learning-trace-noteline">السطر <span dir="ltr">{step.line}</span>:</span> {step.note}

@@ -7,7 +7,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import LearningActivityHost from "./LearningActivityHost";
 import { productionActivityRegistry } from "./engine";
-import { readTraceConfig } from "./csharpTrace";
+import { readTraceConfig, MAX_TRACE_STEPS } from "./csharpTrace";
 import type { SimulationBlock } from "../content/types";
 import runsFile from "../content/899371/traces/runs.json";
 import m05 from "../content/899371/guided/m05.json";
@@ -153,7 +153,9 @@ describe("an unreadable config never guesses", () => {
     expect(readTraceConfig({ code, steps: [{ ...steps[0], line: 99 }] })).toBeNull();
     expect(readTraceConfig({ code, steps: [{ ...steps[0], frames: [] }] })).toBeNull();
     expect(readTraceConfig({ code, steps: [{ ...steps[0], frames: [{ name: "Main", vars: [["x", { t: "html", s: "<b>" }]] }] }] })).toBeNull();
-    expect(readTraceConfig({ code, steps: Array(201).fill(steps[0]) })).toBeNull();
+    expect(readTraceConfig({ code, steps: Array(MAX_TRACE_STEPS + 1).fill(steps[0]) })).toBeNull();
+    expect(readTraceConfig({ code, steps: Array(MAX_TRACE_STEPS).fill(steps[0]) })).not.toBeNull();
+    expect(MAX_TRACE_STEPS).toBe(200);
     expect(readTraceConfig({ code: "", steps })).toBeNull();
   });
   it("shows a short note instead of the tracer", async () => {

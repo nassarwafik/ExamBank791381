@@ -1,0 +1,221 @@
+{
+ "_about": "899371 enrichment P13 — what the tracer must add to run a BOOK tracing program (never shown, never printing, never reading input): its input (stdin), the declarations a fragment needs (setup), the Main that calls a method (call) and any member it needs (extra). `source` says where the values come from: the question's own text, its teacher clarification, or chosen because the page gives none (then said in the trace). `quote` is the exact text used.",
+ "specs": {
+  "c01-h-q3/m01-l02-p03-b02": {
+   "stdin": "6\n",
+   "source": "question",
+   "quote": "إذا أدخل المستخدم الرقم 6",
+   "why": "Uses the first case given (input 6); case 3.2 (input m) would throw FormatException."
+  },
+  "c04-h-q1/m04-l02-p01-b03": {
+   "stdin": "5\n2\n7\n",
+   "source": "question",
+   "quote": "1.1 -  a=5, b=2, c=7",
+   "why": "First of the two cases listed (a, b, c read in that order); case 1.2 is a=-3, b=4, c=5."
+  },
+  "c04-h-q3/m04-l02-p03-b02": {
+   "stdin": "1\n",
+   "source": "question",
+   "quote": "3.1 : i = 1",
+   "why": "First of the three cases listed (i = 1, 0, 2)."
+  },
+  "c04-h-q8/m04-l02-p06-b02": {
+   "stdin": "6\n6\n",
+   "source": "question",
+   "quote": "8.1 : x = 6, y = 6",
+   "why": "First of the four cases listed (x then y); the other cases are 7/12, 7/4, 3/20."
+  },
+  "c04-p-q1/m04-l03-p01-b03": {
+   "stdin": "123\n",
+   "source": "question",
+   "quote": "ماذا سيطبع البرنامج التالي عند إدخال القيمة 123؟",
+   "why": "First value asked (123); 504 is the second case.",
+   "notes": "The program ends with Console.ReadKey(); with redirected stdin real .NET throws InvalidOperationException there, so the tracer must treat ReadKey as a no-op (or stop before it)."
+  },
+  "c04-p-q2/m04-l03-p02-b02": {
+   "stdin": "567\n",
+   "source": "question",
+   "quote": "ماذا سيطبع البرنامج عند إدخال الرقم 567؟",
+   "why": "First value asked (567, prints Yes); 895, 444, 543 are further cases."
+  },
+  "c04-p-q3/m04-l03-p03-b02": {
+   "stdin": "45\n",
+   "source": "question",
+   "quote": "ماذا سيطبع البرنامج عندما يتم إدخال الرقم 45؟",
+   "why": "First value asked (45, prints Yes); 99, 95, 44 are further cases."
+  },
+  "c04-p-q4/m04-l03-p04-b02": {
+   "stdin": "222\n",
+   "source": "question",
+   "quote": "عندما يتم إدخال الرقم 222",
+   "why": "First value asked (222, prints Equal); 566 is the second case."
+  },
+  "c04-p-q5/m04-l03-p05-b02": {
+   "stdin": "44\n",
+   "source": "question",
+   "quote": "عندما يتم إدخال الرقم 44",
+   "why": "First value asked (44, prints Equal); 56 is the second case."
+  },
+  "c05-h-q1/m05-l02-p01-b03": {
+   "stdin": "288\n917\n456\n878\n912\n",
+   "source": "question",
+   "quote": "مع المدخلات : 288 , 917 , 456 , 878 , 912",
+   "why": "Exactly the five inputs the 5-iteration loop reads."
+  },
+  "c05-h-q2/m05-l02-p02-b02": {
+   "stdin": "235967\n896745\n217899\n",
+   "source": "question",
+   "quote": "مع المدخلات : 235967 , 896745 , 217899",
+   "why": "Exactly the three inputs the 3-iteration loop reads."
+  },
+  "c05-h-q3/m05-l02-p03-b02": {
+   "stdin": "78\n5\n97\n3\n77\n4\n",
+   "source": "question",
+   "quote": "مع المدخلات التالية : 78 , 5 , 97 , 3 , 77 , 4",
+   "why": "Three (mark, units) pairs in reading order for the 3-iteration loop."
+  },
+  "c05-h-q4/m05-l02-p04-b02": {
+   "stdin": "22800\n3\n12\n17800\n2\n8\n7800\n1\n12\n5800\n0\n5\n",
+   "source": "question",
+   "quote": "TABLE {\"headers\": [\"Discount\", \"Children\", \"Salary\"], \"rows\": [[\"12\", \"3\", \"22800\"], [\"8\", \"2\", \"17800\"], [\"12\", \"1\", \"7800\"], [\"5\", \"0\", \"5800\"]]}",
+   "why": "Four table rows, each fed in the program's reading order Salary, Children, Discount (the table header is right-to-left)."
+  },
+  "c05-h-q5/m05-l02-p05-b02": {
+   "stdin": "4\n",
+   "extra": "class Random : System.Random { public Random() : base(2026) { } }",
+   "random": true,
+   "source": "chosen",
+   "why": "the program draws random digits: it runs with a generator fixed to one sequence (hidden class Random, the book's code unchanged) and 4 digits; the learner is told it is one example run"
+  },
+  "c06-h-q1/m06-l02-p01-b03": {
+   "stdin": "12\n153\n100\n370\n",
+   "source": "clarification",
+   "quote": "نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: 12 153 100 370",
+   "why": "Teacher-given inputs; 153 and 370 are the two golden numbers, so the loop ends exactly after the last input."
+  },
+  "c06-h-q2/m06-l02-p02-b02": {
+   "stdin": "4\n6\n3\n8\n10\n12\n5\n-1\n",
+   "source": "clarification",
+   "quote": "نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: 4 6 3 8 10 12 5 -1",
+   "why": "Teacher-given inputs ending with the -1 sentinel."
+  },
+  "c06-h-q3/m06-l02-p03-b02": {
+   "stdin": "123\n456\n789\n-1\n",
+   "source": "clarification",
+   "quote": "نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: 123 456 789 -1",
+   "why": "Teacher-given inputs ending with the -1 sentinel."
+  },
+  "c06-h-q4/m06-l02-p04-b02": {
+   "stdin": "12\n7\n3\n-1\n",
+   "source": "clarification",
+   "quote": "نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: 12 7 3 -1",
+   "why": "Teacher-given inputs; the first value (12) is read before the loop and never compared."
+  },
+  "c06-h-q5/m06-l02-p05-b02": {
+   "stdin": "129\n345\n678\n254\n117\n",
+   "source": "clarification",
+   "quote": "نتتبّع البرنامج على هذه المدخلات بالترتيب، من اليسار لليمين: 129 345 678 254 117",
+   "why": "Teacher-given inputs; the units digits sum 9+5+8+4+7 = 33 reaches 30 exactly on the fifth input."
+  },
+  "c07-h-q5/m07-l02-p05-b02": {
+   "stdin": "42141\n51111\n72182\n-1\n",
+   "source": "question",
+   "quote": "مع المدخلات 42141 , 51111 , 72182 , -1",
+   "why": "The three keys followed by the -1 sentinel."
+  },
+  "c08-h-q2/m08-l02-p02-b03": {
+   "call": "bool r = sod(\"abba\");",
+   "source": "question",
+   "quote": "ما هو المخرج بعد تنفيذ الاستدعاء: sod(\"abba\"",
+   "why": "Calls the static method with the argument the question gives."
+  },
+  "c08-h-q4/m08-l02-p04-b03": {
+   "stdin": "6\n",
+   "extra": "class Random : System.Random { public Random() : base(2026) { } }",
+   "random": true,
+   "source": "chosen",
+   "why": "the program draws random digits: it runs with a generator fixed to one sequence (hidden class Random, the book's code unchanged) and 6 digits; the learner is told it is one example run"
+  },
+  "c09-h-q4/m09-l02-p04-b02": {
+   "call": "int[] arr = { 4, 2, 7, 6, 8 };\nProcess(arr);",
+   "source": "question",
+   "quote": "قم بإجراء تتبع لاستدعاء العملية على المصفوفة: [4, 2, 7, 6, 8].",
+   "why": "Calls Process on the array the question gives."
+  },
+  "c09-h-q5/m09-l02-p05-b02": {
+   "source": "question",
+   "quote": "int[] a = { 7, 10, 9, 8, 5, 3, 15, 8 };",
+   "why": "The fragment is a self-contained array declaration with literal values; nothing needs to be declared before it."
+  },
+  "c09-p-q5/m09-l03-p05-b14": {
+   "call": "int[] a = { 2, 8, 17, 14, 42, 11, 5, 12 };\nint r = Dog(a);",
+   "extra": "public static int Igloo(int[] a, int num)\n{\n    int count = 0;\n    for (int i = 0; i < a.Length; i++)\n    {\n        if (a[i] == num)\n            return count;\n        if (a[i] < num)\n            count++;\n    }\n    return count;\n}",
+   "source": "question",
+   "quote": "ما القيمة التي ستُعيدها العملية Dog عند استخدام المصفوفة التالية؟ int[] a = {2, 8, 17, 14, 42, 11, 5, 12};",
+   "why": "Calls Dog on the given array; Igloo is not shown (it is the student's answer to 5.1), so extra supplies a minimal implementation of its stated spec; Dog returns 3.",
+   "notes": "Igloo in extra follows 5.1 literally: count smaller values before num if num is present, else count all smaller values."
+  },
+  "c09-p-q5/m09-l03-p05-b16": {
+   "source": "question",
+   "quote": "int[] a = {2, 8, 17, 14, 42, 11, 5, 12};",
+   "why": "The fragment is a self-contained array declaration with literal values; nothing needs to be declared before it."
+  },
+  "c10-h-q1/m10-l02-p01-b06": {
+   "setup": "int[,] m = { { 5, 3, 7, 4 }, { 2, 2, 2, 2 }, { 8, 9, 8, 8 } };",
+   "source": "question",
+   "quote": "الصف 0: 5، 3، 7، 4؛ الصف 1: 2، 2، 2، 2؛ الصف 2: 8، 9، 8، 8.",
+   "why": "m comes from the page diagram (its alt text in the m10 content, block m10-l02-p01-b03, since the page text shows only [diagram]); each segment starts from that original m."
+  },
+  "c10-h-q1/m10-l02-p01-b11": {
+   "setup": "int[,] m = { { 5, 3, 7, 4 }, { 2, 2, 2, 2 }, { 8, 9, 8, 8 } };",
+   "source": "question",
+   "quote": "الصف 0: 5، 3، 7، 4؛ الصف 1: 2، 2، 2، 2؛ الصف 2: 8، 9، 8، 8.",
+   "why": "Same diagram matrix; \"بعد تنفيذ كل مقطع\" so segment 1.2 also starts from the original m, not from 1.1's result."
+  },
+  "c10-h-q2/m10-l02-p02-b04": {
+   "source": "question",
+   "quote": "char[,] game = { { 'X', 'O', 'X' }, { 'O', 'X', 'O' }, { 'O', 'X', 'X' } };",
+   "why": "The fragment is the self-contained game declaration; nothing needs to be declared before it."
+  },
+  "c10-h-q2/m10-l02-p02-b06": {
+   "setup": "char[,] game = {\n     { 'X', 'O', 'X' },\n     { 'O', 'X', 'O' },\n     { 'O', 'X', 'X' }\n};",
+   "source": "question",
+   "quote": "char[,] game = { { 'X', 'O', 'X' }, { 'O', 'X', 'O' }, { 'O', 'X', 'X' } };",
+   "why": "Declares game exactly as given on the page; m is declared by the fragment itself (prints 3)."
+  },
+  "c10-h-q2/m10-l02-p02-b11": {
+   "setup": "char[,] game = {\n     { 'X', 'O', 'X' },\n     { 'O', 'X', 'O' },\n     { 'O', 'X', 'X' }\n};\nint m = 0;",
+   "source": "question",
+   "quote": "char[,] game = { { 'X', 'O', 'X' }, { 'O', 'X', 'O' }, { 'O', 'X', 'X' } };",
+   "why": "game is from the page; the starting value of the counter m is not given, so m = 0 is chosen (m becomes 1 since game[1, 1] is X)."
+  },
+  "c10-h-q3/m10-l02-p03-b02": {
+   "call": "int[,] mat = {\n{ 242, 105, 670, 898 },\n{ 512, 970, 747, 412 },\n{ 390, 272, 111, 290 }\n};\nint r = Airplane(mat);",
+   "source": "question",
+   "quote": "int[,] mat = { { 242, 105, 670, 898 }, { 512, 970, 747, 412 }, { 390, 272, 111, 290 } };",
+   "why": "Calls Airplane on the matrix given on the page (12 cells, returns 5)."
+  },
+  "c10-h-q3/m10-l02-p03-b04": {
+   "source": "question",
+   "quote": "int[,] mat = { { 242, 105, 670, 898 }, { 512, 970, 747, 412 }, { 390, 272, 111, 290 } };",
+   "why": "The fragment is the self-contained mat declaration; nothing needs to be declared before it."
+  },
+  "c10-h-q4/m10-l02-p04-b02": {
+   "call": "int[,] arr = { { 7, 150, 2048 }, { 999, 45, 300 } };\nint r = Taxi(arr);",
+   "extra": "public static bool Help(int num)\n{\n    if (num / 1000 == 0 && num / 100 > 0)\n        return true;\n    return false;\n}",
+   "source": "chosen",
+   "why": "The page gives no matrix, so a small 2x3 one mixes 1-, 2-, 3- and 4-digit values (Taxi returns 3); extra is the Help method shown on the same page.",
+   "notes": "extra is copied verbatim from the page's Help block (m10-l02-p04-b04), not invented."
+  },
+  "c10-h-q4/m10-l02-p04-b04": {
+   "call": "bool r1 = Help(150);\nbool r2 = Help(45);\nbool r3 = Help(2048);",
+   "source": "chosen",
+   "why": "No argument is given; three calls show a three-digit value (true), a smaller one and a four-digit one (both false)."
+  },
+  "c10-h-q5/m10-l02-p05-b02": {
+   "call": "int[,] mat1 = { { 1, 2, 3, 4 }, { 6, 5, 8, 7 } };\nbool r1 = PoliceCar(mat1);\nint[,] mat2 = { { 3, 8, 5 }, { 2, 4, 9 } };\nbool r2 = PoliceCar(mat2);",
+   "source": "chosen",
+   "why": "No matrix is given; one call has alternating parity in every row (true), the other has two adjacent evens in row 1 (false)."
+  }
+ }
+}

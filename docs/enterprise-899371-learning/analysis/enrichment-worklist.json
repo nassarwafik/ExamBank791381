@@ -1,0 +1,3664 @@
+{
+ "schemaVersion": 1,
+ "courseId": "899371",
+ "plan": "docs/enterprise-899371-enrichment-plan.md",
+ "decisions": {
+  "D1": "teacher-release",
+  "D2": "follows-D1",
+  "D3": "badge-only",
+  "D4": "no-runner-change",
+  "D5": "run-only-until-corrected",
+  "D6": "scenes-as-listed"
+ },
+ "totals": {
+  "questions": 161,
+  "trace": 70,
+  "solve": 80,
+  "tryInput": 13,
+  "solveByClass": {
+   "check": 63,
+   "check-small-n": 5,
+   "run-only-until-corrected": 6,
+   "run-only": 6
+  },
+  "solveFromLab": 36,
+  "scenes": 33
+ },
+ "scenes": [
+  {
+   "id": "m01-variable-box",
+   "chapter": "m01",
+   "pageId": "899371-m01-l01-p02",
+   "concept": "المتغير صندوق: الإسناد يستبدل القيمة"
+  },
+  {
+   "id": "m01-write-writeline",
+   "chapter": "m01",
+   "pageId": "899371-m01-l01-p02",
+   "concept": "Write مقابل WriteLine ومكان المؤشر"
+  },
+  {
+   "id": "m01-readline-parse",
+   "chapter": "m01",
+   "pageId": "899371-m01-l01-p02",
+   "concept": "ReadLine ثم int.Parse: من لوحة المفاتيح إلى الصندوق"
+  },
+  {
+   "id": "m02-int-division",
+   "chapter": "m02",
+   "pageId": "899371-m02-l01-p02",
+   "concept": "القسمة الصحيحة والكسرية: 7 / 2 و7.0 / 2"
+  },
+  {
+   "id": "m02-remainder",
+   "chapter": "m02",
+   "pageId": "899371-m02-l01-p02",
+   "concept": "باقي القسمة: 7 % 3 توزيع حبات على مجموعات"
+  },
+  {
+   "id": "m02-logic-gates",
+   "chapter": "m02",
+   "pageId": "899371-m02-l01-p02",
+   "concept": "&& و|| بوابتان تضيئان"
+  },
+  {
+   "id": "m03-number-line",
+   "chapter": "m03",
+   "pageId": "899371-m03-l01-p02",
+   "concept": "Abs وRound وFloor على خط الأعداد"
+  },
+  {
+   "id": "m03-pow-sqrt",
+   "chapter": "m03",
+   "pageId": "899371-m03-l01-p02",
+   "concept": "Pow وSqrt: مربعات تكبر"
+  },
+  {
+   "id": "m03-random-range",
+   "chapter": "m03",
+   "pageId": "899371-m03-l01-p03",
+   "concept": "Random.Next(1, 7): الحد الأعلى غير مشمول"
+  },
+  {
+   "id": "m04-if-else-path",
+   "chapter": "m04",
+   "pageId": "899371-m04-l01-p01",
+   "concept": "مسار if / else يضيء حسب الشرط"
+  },
+  {
+   "id": "m04-else-if-ladder",
+   "chapter": "m04",
+   "pageId": "899371-m04-l01-p02",
+   "concept": "سلّم else if: أول شرط صحيح يوقف الفحص"
+  },
+  {
+   "id": "m04-truth-table",
+   "chapter": "m04",
+   "pageId": "899371-m04-l01-p04",
+   "concept": "جدول منطقي يمتلئ"
+  },
+  {
+   "id": "m05-for-anatomy",
+   "chapter": "m05",
+   "pageId": "899371-m05-l01-p01",
+   "concept": "تشريح for: البداية ← الشرط ← الجسم ← الخطوة"
+  },
+  {
+   "id": "m05-accumulator",
+   "chapter": "m05",
+   "pageId": "899371-m05-l01-p02",
+   "concept": "المجمِّع sum += i"
+  },
+  {
+   "id": "m05-nested-stars",
+   "chapter": "m05",
+   "pageId": "899371-m05-l01-p02",
+   "concept": "حلقتان متداخلتان ترسمان مثلث نجوم"
+  },
+  {
+   "id": "m06-while-vs-do",
+   "chapter": "m06",
+   "pageId": "899371-m06-l01-p03",
+   "concept": "while مقابل do-while: من يفحص أولًا"
+  },
+  {
+   "id": "m06-digits",
+   "chapter": "m06",
+   "pageId": "899371-m06-l01-p02",
+   "concept": "استخراج المنازل % 10 و/ 10"
+  },
+  {
+   "id": "m06-sentinel",
+   "chapter": "m06",
+   "pageId": "899371-m06-l01-p01",
+   "concept": "حلقة الحارس (−1)"
+  },
+  {
+   "id": "m07-call-return",
+   "chapter": "m07",
+   "pageId": "899371-m07-l01-p02",
+   "concept": "استدعاء وعودة: إطار يُدفع ويُسحب"
+  },
+  {
+   "id": "m07-value-ref-out",
+   "chapter": "m07",
+   "pageId": "899371-m07-l01-p03",
+   "concept": "بالقيمة مقابل ref وout: نسخة مقابل الصندوق نفسه"
+  },
+  {
+   "id": "m07-return-value",
+   "chapter": "m07",
+   "pageId": "899371-m07-l01-p04",
+   "concept": "القيمة المعادة تحل مكان الاستدعاء"
+  },
+  {
+   "id": "m08-string-index",
+   "chapter": "m08",
+   "pageId": "899371-m08-l01-p02",
+   "concept": "النص أحرف بمؤشرات: s[i] وLength"
+  },
+  {
+   "id": "m08-substring",
+   "chapter": "m08",
+   "pageId": "899371-m08-l01-p03",
+   "concept": "Substring(3, 4) نافذة تنزلق"
+  },
+  {
+   "id": "m08-indexof-replace",
+   "chapter": "m08",
+   "pageId": "899371-m08-l01-p03",
+   "concept": "IndexOf يمسح، وReplace ينشئ نصًا جديدًا"
+  },
+  {
+   "id": "m09-array-cells",
+   "chapter": "m09",
+   "pageId": "899371-m09-l01-p03",
+   "concept": "خانات المصفوفة والمؤشر من 0، و«خارج الحدود»"
+  },
+  {
+   "id": "m09-find-max",
+   "chapter": "m09",
+   "pageId": "899371-m09-l01-p04",
+   "concept": "أكبر قيمة: المؤشر يمشي ويحفظ"
+  },
+  {
+   "id": "m09-counters",
+   "chapter": "m09",
+   "pageId": "899371-m09-l01-p05",
+   "concept": "مصفوفة العدّادات (أصوات)"
+  },
+  {
+   "id": "m10-rows-cols",
+   "chapter": "m10",
+   "pageId": "899371-m10-l01-p01",
+   "concept": "الصفوف والأعمدة وGetLength(0/1)"
+  },
+  {
+   "id": "m10-row-major",
+   "chapter": "m10",
+   "pageId": "899371-m10-l01-p02",
+   "concept": "المرور صفًا صفًا"
+  },
+  {
+   "id": "m10-diagonals",
+   "chapter": "m10",
+   "pageId": "899371-m10-l01-p03",
+   "concept": "القطر الرئيسي والثانوي"
+  },
+  {
+   "id": "m11-class-objects",
+   "chapter": "m11",
+   "pageId": "899371-m11-l01-p01",
+   "concept": "الفئة مخطط والكائنات نسخ (new)"
+  },
+  {
+   "id": "m11-references-null",
+   "chapter": "m11",
+   "pageId": "899371-m11-l01-p03",
+   "concept": "مرجعان لكائن واحد، وnull"
+  },
+  {
+   "id": "m11-encapsulation",
+   "chapter": "m11",
+   "pageId": "899371-m11-l01-p02",
+   "concept": "private والوصول عبر Get / Set"
+  }
+ ],
+ "questions": [
+  {
+   "id": "c01-h-q1",
+   "chapter": "m01",
+   "section": "homework",
+   "number": 1,
+   "brief": "قيم a,b,c والناتج",
+   "pageId": "899371-m01-l02-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m01-l02-p01-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-h-q2",
+   "chapter": "m01",
+   "section": "homework",
+   "number": 2,
+   "brief": "التحويل (int) و Write/WriteLine",
+   "pageId": "899371-m01-l02-p02",
+   "patterns": [
+    "CQ",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m01-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-h-q3",
+   "chapter": "m01",
+   "section": "homework",
+   "number": 3,
+   "brief": "int.Parse مع 6 ومع m",
+   "pageId": "899371-m01-l02-p03",
+   "patterns": [
+    "CQ",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m01-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-h-q4",
+   "chapter": "m01",
+   "section": "homework",
+   "number": 4,
+   "brief": "مجموع عددين بتنسيق",
+   "pageId": "899371-m01-l02-p04",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-h-q5",
+   "chapter": "m01",
+   "section": "homework",
+   "number": 5,
+   "brief": "متوسط علامتين كسريتين",
+   "pageId": "899371-m01-l02-p04",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q1",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 1,
+   "brief": "طباعة جملة",
+   "pageId": "899371-m01-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q2",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 2,
+   "brief": "العشرات والآحاد",
+   "pageId": "899371-m01-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q3",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 3,
+   "brief": "مربع عدد",
+   "pageId": "899371-m01-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-01-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q4",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 4,
+   "brief": "مجموع رقمين",
+   "pageId": "899371-m01-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q5",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 5,
+   "brief": "الاسم والعمر",
+   "pageId": "899371-m01-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q6",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 6,
+   "brief": "مجموع منازل عدد ثلاثي",
+   "pageId": "899371-m01-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-01-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q7",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 7,
+   "brief": "العلامة النهائية بالوحدات والبونوس",
+   "pageId": "899371-m01-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q8",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 8,
+   "brief": "منازل عدد رباعي",
+   "pageId": "899371-m01-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-01-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q9",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 9,
+   "brief": "بناء عدد من 4 منازل",
+   "pageId": "899371-m01-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-01-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c01-p-q10",
+   "chapter": "m01",
+   "section": "programming",
+   "number": 10,
+   "brief": "سلزيوس ← فهرنهايت (قسمة صحيحة)",
+   "pageId": "899371-m01-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q1",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 1,
+   "brief": "x++ ثم x--",
+   "pageId": "899371-m02-l02-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p01-b05",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q2",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 2,
+   "brief": "+= و -=",
+   "pageId": "899371-m02-l02-p02",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q3",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 3,
+   "brief": "n % 2 == 0",
+   "pageId": "899371-m02-l02-p03",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q4",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 4,
+   "brief": "تعبير مركّب",
+   "pageId": "899371-m02-l02-p04",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q5",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 5,
+   "brief": "a > b بعد التعديل",
+   "pageId": "899371-m02-l02-p05",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q6",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 6,
+   "brief": "x بين 10 و20",
+   "pageId": "899371-m02-l02-p06",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q7",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 7,
+   "brief": "n فردي",
+   "pageId": "899371-m02-l02-p06",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q8",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 8,
+   "brief": "a مضاعف لـ b",
+   "pageId": "899371-m02-l02-p06",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q9",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 9,
+   "brief": "age ≥ 18 أو = 0",
+   "pageId": "899371-m02-l02-p06",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q10",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 10,
+   "brief": "score += 10 ثم -= 3",
+   "pageId": "899371-m02-l02-p07",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q11",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 11,
+   "brief": "|| مع %",
+   "pageId": "899371-m02-l02-p08",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p08-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q12",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 12,
+   "brief": "&& بعد *= ",
+   "pageId": "899371-m02-l02-p09",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p09-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q13",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 13,
+   "brief": "!(n < 10)",
+   "pageId": "899371-m02-l02-p10",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p10-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-h-q14",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 14,
+   "brief": "x > 0 و (5..10 أو 20)",
+   "pageId": "899371-m02-l02-p11",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-h-q15",
+   "chapter": "m02",
+   "section": "homework",
+   "number": 15,
+   "brief": "تعبير بثلاثة متغيرات",
+   "pageId": "899371-m02-l02-p12",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l02-p12-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q1",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 1,
+   "brief": "تتبع += و *=",
+   "pageId": "899371-m02-l03-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p01-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q2",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 2,
+   "brief": "تتبع ++ و -=",
+   "pageId": "899371-m02-l03-p02",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p02-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q3",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 3,
+   "brief": "تتبع",
+   "pageId": "899371-m02-l03-p03",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p03-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q4",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 4,
+   "brief": "تتبع",
+   "pageId": "899371-m02-l03-p04",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p04-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q5",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 5,
+   "brief": "مجموع وضرب ومتوسط",
+   "pageId": "899371-m02-l03-p05",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p05-b05",
+     "kind": "fragment"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-02-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q6",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 6,
+   "brief": "أسبقية && على ||",
+   "pageId": "899371-m02-l03-p06",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p06-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q7",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 7,
+   "brief": "ثلاث قيم منطقية",
+   "pageId": "899371-m02-l03-p07",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p07-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q8",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 8,
+   "brief": "تعبير بعد التعديل",
+   "pageId": "899371-m02-l03-p08",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p08-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c02-p-q9",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 9,
+   "brief": "تعبير x > 0 و (…)",
+   "pageId": "899371-m02-l03-p09",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c02-p-q10",
+   "chapter": "m02",
+   "section": "programming",
+   "number": 10,
+   "brief": "تتبع مع ||",
+   "pageId": "899371-m02-l03-p10",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [
+    {
+     "blockId": "m02-l03-p10-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q1",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 1,
+   "brief": "x % y + x / y",
+   "pageId": "899371-m03-l02-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p01-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q2",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 2,
+   "brief": "أول وآخر منزلة",
+   "pageId": "899371-m03-l02-p02",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q3",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 3,
+   "brief": "a * b - b",
+   "pageId": "899371-m03-l02-p03",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q4",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 4,
+   "brief": "مجموع آخر منزلتين",
+   "pageId": "899371-m03-l02-p04",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q5",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 5,
+   "brief": "x / y + x % y",
+   "pageId": "899371-m03-l02-p05",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q6",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 6,
+   "brief": "n % 100",
+   "pageId": "899371-m03-l02-p06",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l02-p06-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q7",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 7,
+   "brief": "حلّا معادلة تربيعية",
+   "pageId": "899371-m03-l02-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q8",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 8,
+   "brief": "شرط منازل عدد ثلاثي",
+   "pageId": "899371-m03-l02-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q9",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 9,
+   "brief": "الوتر والمساحة والمحيط",
+   "pageId": "899371-m03-l02-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-03-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-h-q10",
+   "chapter": "m03",
+   "section": "homework",
+   "number": 10,
+   "brief": "5 علامات عشوائية ومعدلها",
+   "pageId": "899371-m03-l02-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "nondeterministic",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q1",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 1,
+   "brief": "المسافة بين نقطتين",
+   "pageId": "899371-m03-l03-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l03-p01-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q2",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 2,
+   "brief": "% و / ",
+   "pageId": "899371-m03-l03-p02",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l03-p02-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q3",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 3,
+   "brief": "معدل المنازل مع Round",
+   "pageId": "899371-m03-l03-p03",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l03-p03-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q4",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 4,
+   "brief": "مساحة دائرة",
+   "pageId": "899371-m03-l03-p04",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l03-p04-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q5",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 5,
+   "brief": "جذر مجموع",
+   "pageId": "899371-m03-l03-p05",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m03-l03-p05-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q6",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 6,
+   "brief": "الوتر بفيتاغورس",
+   "pageId": "899371-m03-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-03-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q7",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 7,
+   "brief": "الطول الأكبر",
+   "pageId": "899371-m03-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-03-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q8",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 8,
+   "brief": "معدل ثلاث علامات صحيح",
+   "pageId": "899371-m03-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-03-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q9",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 9,
+   "brief": "7 بوم بعدد عشوائي",
+   "pageId": "899371-m03-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "nondeterministic",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c03-p-q10",
+   "chapter": "m03",
+   "section": "programming",
+   "number": 10,
+   "brief": "حجرا النرد",
+   "pageId": "899371-m03-l03-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "nondeterministic",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q1",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 1,
+   "brief": "تتبع بحالتين",
+   "pageId": "899371-m04-l02-p01",
+   "patterns": [
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q2",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 2,
+   "brief": "مقطع مكافئ بـ else",
+   "pageId": "899371-m04-l02-p02",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c04-h-q3",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 3,
+   "brief": "رسم 0 أو 1",
+   "pageId": "899371-m04-l02-p03",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q4",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 4,
+   "brief": "else المعلّق",
+   "pageId": "899371-m04-l02-p04",
+   "patterns": [
+    "CQ",
+    "GI"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": false,
+   "solve": null,
+   "tryInput": true,
+   "gate": null
+  },
+  {
+   "id": "c04-h-q5",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 5,
+   "brief": "أوامر if لست جمل",
+   "pageId": "899371-m04-l02-p05",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c04-h-q6",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 6,
+   "brief": "قيم قضايا منطقية",
+   "pageId": "899371-m04-l02-p05",
+   "patterns": [
+    "TV"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c04-h-q7",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 7,
+   "brief": "صحة تاريخ وعدد الأيام",
+   "pageId": "899371-m04-l02-p05",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q8",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 8,
+   "brief": "if متداخل بأربع حالات",
+   "pageId": "899371-m04-l02-p06",
+   "patterns": [
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p06-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q9",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 9,
+   "brief": "الراتب الصافي وشرائح الضريبة",
+   "pageId": "899371-m04-l02-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-04-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-h-q10",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 10,
+   "brief": "أكمل if من جدول",
+   "pageId": "899371-m04-l02-p08",
+   "patterns": [
+    "WE"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l02-p08-b04",
+     "kind": "fragment"
+    }
+   ],
+   "trace": false,
+   "solve": null,
+   "tryInput": false,
+   "gate": null
+  },
+  {
+   "id": "c04-h-q11",
+   "chapter": "m04",
+   "section": "homework",
+   "number": 11,
+   "brief": "أجرة العامل حسب اليوم",
+   "pageId": "899371-m04-l02-p09",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-04-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q1",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 1,
+   "brief": "قلب منازل عدد ثلاثي",
+   "pageId": "899371-m04-l03-p01",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l03-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q2",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 2,
+   "brief": "منازل متتالية",
+   "pageId": "899371-m04-l03-p02",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l03-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q3",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 3,
+   "brief": "عدد ثنائي المنازل",
+   "pageId": "899371-m04-l03-p03",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l03-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q4",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 4,
+   "brief": "منازل متساوية",
+   "pageId": "899371-m04-l03-p04",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l03-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q5",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 5,
+   "brief": "منزلتان متساويتان",
+   "pageId": "899371-m04-l03-p05",
+   "patterns": [
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m04-l03-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q6",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 6,
+   "brief": "نوع الرخصة",
+   "pageId": "899371-m04-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q7",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 7,
+   "brief": "السعر بعد الخصم",
+   "pageId": "899371-m04-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-04-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q8",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 8,
+   "brief": "التقدير",
+   "pageId": "899371-m04-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q9",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 9,
+   "brief": "زوجي / يقبل القسمة على 5",
+   "pageId": "899371-m04-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-04-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c04-p-q10",
+   "chapter": "m04",
+   "section": "programming",
+   "number": 10,
+   "brief": "توصيات الطقس",
+   "pageId": "899371-m04-l03-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-h-q1",
+   "chapter": "m05",
+   "section": "homework",
+   "number": 1,
+   "brief": "مقارنة منازل في حلقة",
+   "pageId": "899371-m05-l02-p01",
+   "patterns": [
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m05-l02-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-h-q2",
+   "chapter": "m05",
+   "section": "homework",
+   "number": 2,
+   "brief": "تحويل HHMMSS",
+   "pageId": "899371-m05-l02-p02",
+   "patterns": [
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m05-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-h-q3",
+   "chapter": "m05",
+   "section": "homework",
+   "number": 3,
+   "brief": "معدل موزون بالوحدات",
+   "pageId": "899371-m05-l02-p03",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m05-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-h-q4",
+   "chapter": "m05",
+   "section": "homework",
+   "number": 4,
+   "brief": "شرائح ضريبة",
+   "pageId": "899371-m05-l02-p04",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m05-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-h-q5",
+   "chapter": "m05",
+   "section": "homework",
+   "number": 5,
+   "brief": "أرقام عشوائية بتسلسل معطى",
+   "pageId": "899371-m05-l02-p05",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m05-l02-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q1",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 1,
+   "brief": "44 مقطعًا ومجموع الأطوال",
+   "pageId": "899371-m05-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-05-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q2",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 2,
+   "brief": "38 زوجًا: مجموع وباقٍ",
+   "pageId": "899371-m05-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-05-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q3",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 3,
+   "brief": "218 زوجًا: Smaller",
+   "pageId": "899371-m05-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q4",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 4,
+   "brief": "286 تقنيًا: BONUS",
+   "pageId": "899371-m05-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-05-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q5",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 5,
+   "brief": "975 طالبًا: A وعدّ 5 وحدات",
+   "pageId": "899371-m05-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check-small-n",
+   "runnerClass": "auto-small-n",
+   "lab": "CL899371-05-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q6",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 6,
+   "brief": "4790 زبونًا: المبلغ والشحن",
+   "pageId": "899371-m05-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check-small-n",
+   "runnerClass": "auto-small-n",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q7",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 7,
+   "brief": "30 طالبًا: العلامة النهائية",
+   "pageId": "899371-m05-l03-p04",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q8",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 8,
+   "brief": "مسابقة التدوير بين صفين",
+   "pageId": "899371-m05-l03-p05",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q9",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 9,
+   "brief": "400 عائلة: البطاقات",
+   "pageId": "899371-m05-l03-p06",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c05-p-q10",
+   "chapter": "m05",
+   "section": "programming",
+   "number": 10,
+   "brief": "الأعداد 1000–9999",
+   "pageId": "899371-m05-l03-p07",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-h-q1",
+   "chapter": "m06",
+   "section": "homework",
+   "number": 1,
+   "brief": "الأعداد الذهبية",
+   "pageId": "899371-m06-l02-p01",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m06-l02-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-h-q2",
+   "chapter": "m06",
+   "section": "homework",
+   "number": 2,
+   "brief": "أطول سلسلة زوجية",
+   "pageId": "899371-m06-l02-p02",
+   "patterns": [
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m06-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-h-q3",
+   "chapter": "m06",
+   "section": "homework",
+   "number": 3,
+   "brief": "معدلات المنازل",
+   "pageId": "899371-m06-l02-p03",
+   "patterns": [
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m06-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-h-q4",
+   "chapter": "m06",
+   "section": "homework",
+   "number": 4,
+   "brief": "أكبر قيمة (العدد الأول لا يُقارن)",
+   "pageId": "899371-m06-l02-p04",
+   "patterns": [
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m06-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-h-q5",
+   "chapter": "m06",
+   "section": "homework",
+   "number": 5,
+   "brief": "مجموع الآحاد حتى 30",
+   "pageId": "899371-m06-l02-p05",
+   "patterns": [
+    "CQ",
+    "EX",
+    "GI",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m06-l02-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-p-q1",
+   "chapter": "m06",
+   "section": "programming",
+   "number": 1,
+   "brief": "مجموع المنازل والأعداد الذهبية",
+   "pageId": "899371-m06-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-06-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-p-q2",
+   "chapter": "m06",
+   "section": "programming",
+   "number": 2,
+   "brief": "أعلى علامة في 28 صفًا",
+   "pageId": "899371-m06-l03-p01",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-06-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-p-q3",
+   "chapter": "m06",
+   "section": "programming",
+   "number": 3,
+   "brief": "عدد الحاصلين على الأعلى",
+   "pageId": "899371-m06-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-06-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-p-q4",
+   "chapter": "m06",
+   "section": "programming",
+   "number": 4,
+   "brief": "19 سائقًا والوقود",
+   "pageId": "899371-m06-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c06-p-q5",
+   "chapter": "m06",
+   "section": "programming",
+   "number": 5,
+   "brief": "التبرعات",
+   "pageId": "899371-m06-l03-p04",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-06-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-h-q1",
+   "chapter": "m07",
+   "section": "homework",
+   "number": 1,
+   "brief": "Sod للمنازل",
+   "pageId": "899371-m07-l02-p01",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l02-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-h-q2",
+   "chapter": "m07",
+   "section": "homework",
+   "number": 2,
+   "brief": "Sod1 و Sod2: قلب عدد",
+   "pageId": "899371-m07-l02-p02",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-h-q3",
+   "chapter": "m07",
+   "section": "homework",
+   "number": 3,
+   "brief": "اليوم التالي",
+   "pageId": "899371-m07-l02-p03",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-h-q4",
+   "chapter": "m07",
+   "section": "homework",
+   "number": 4,
+   "brief": "inc / dec للوقت",
+   "pageId": "899371-m07-l02-p04",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l02-p04-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-h-q5",
+   "chapter": "m07",
+   "section": "homework",
+   "number": 5,
+   "brief": "IsValidKey",
+   "pageId": "899371-m07-l02-p05",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l02-p05-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q1",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 1,
+   "brief": "عرض محل الكتب",
+   "pageId": "899371-m07-l03-p01",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p01-b08",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m07-l03-p01-b13",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m07-l03-p01-b17",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-07-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q2",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 2,
+   "brief": "قناة الموسيقى",
+   "pageId": "899371-m07-l03-p02",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p02-b05",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-07-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q3",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 3,
+   "brief": "قسائم الهدية (5000 زبون)",
+   "pageId": "899371-m07-l03-p03",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p03-b09",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check-small-n",
+   "runnerClass": "auto-small-n",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q4",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 4,
+   "brief": "رعاية الأم والطفل",
+   "pageId": "899371-m07-l03-p04",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p04-b06",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q5",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 5,
+   "brief": "السائقون الجدد",
+   "pageId": "899371-m07-l03-p05",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p05-b06",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-07-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q6",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 6,
+   "brief": "مصنع الأغطية",
+   "pageId": "899371-m07-l03-p06",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p06-b13",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q7",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 7,
+   "brief": "مسابقة علم الحاسوب",
+   "pageId": "899371-m07-l03-p07",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p07-b09",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-07-Q04",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q8",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 8,
+   "brief": "التوصيل المجاني (850 زبونًا)",
+   "pageId": "899371-m07-l03-p08",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p08-b08",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check-small-n",
+   "runnerClass": "auto-small-n",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q9",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 9,
+   "brief": "ولادات التوائم (1371 زوجًا)",
+   "pageId": "899371-m07-l03-p09",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p09-b10",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check-small-n",
+   "runnerClass": "auto-small-n",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c07-p-q10",
+   "chapter": "m07",
+   "section": "programming",
+   "number": 10,
+   "brief": "الأعداد المينورية المثلثية",
+   "pageId": "899371-m07-l03-p10",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m07-l03-p10-b08",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "nondeterministic",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-h-q1",
+   "chapter": "m08",
+   "section": "homework",
+   "number": 1,
+   "brief": "قلب النص",
+   "pageId": "899371-m08-l02-p01",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l02-p01-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-h-q2",
+   "chapter": "m08",
+   "section": "homework",
+   "number": 2,
+   "brief": "التناظر",
+   "pageId": "899371-m08-l02-p02",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l02-p02-b03",
+     "kind": "method"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-h-q3",
+   "chapter": "m08",
+   "section": "homework",
+   "number": 3,
+   "brief": "تشفير قيصر",
+   "pageId": "899371-m08-l02-p03",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l02-p03-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-h-q4",
+   "chapter": "m08",
+   "section": "homework",
+   "number": 4,
+   "brief": "عدد كبير عشوائي",
+   "pageId": "899371-m08-l02-p04",
+   "patterns": [
+    "EX",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l02-p04-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-h-q5",
+   "chapter": "m08",
+   "section": "homework",
+   "number": 5,
+   "brief": "تنظيف نص",
+   "pageId": "899371-m08-l02-p05",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l02-p05-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-p-q1",
+   "chapter": "m08",
+   "section": "programming",
+   "number": 1,
+   "brief": "ضغط النص",
+   "pageId": "899371-m08-l03-p01",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l03-p01-b06",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-08-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-p-q2",
+   "chapter": "m08",
+   "section": "programming",
+   "number": 2,
+   "brief": "b ← c",
+   "pageId": "899371-m08-l03-p02",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l03-p02-b05",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-08-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-p-q3",
+   "chapter": "m08",
+   "section": "programming",
+   "number": 3,
+   "brief": "حاسبة تعبير",
+   "pageId": "899371-m08-l03-p03",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l03-p03-b06",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c08-p-q4",
+   "chapter": "m08",
+   "section": "programming",
+   "number": 4,
+   "brief": "ROT13",
+   "pageId": "899371-m08-l03-p04",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m08-l03-p04-b09",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-08-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-h-q1",
+   "chapter": "m09",
+   "section": "homework",
+   "number": 1,
+   "brief": "شرط على المؤشر",
+   "pageId": "899371-m09-l02-p01",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l02-p01-b03",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-h-q2",
+   "chapter": "m09",
+   "section": "homework",
+   "number": 2,
+   "brief": "عدّ مدى",
+   "pageId": "899371-m09-l02-p02",
+   "patterns": [
+    "EX",
+    "GI",
+    "PO"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l02-p02-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": true,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-h-q3",
+   "chapter": "m09",
+   "section": "homework",
+   "number": 3,
+   "brief": "تبديل الأكبر بالأصغر",
+   "pageId": "899371-m09-l02-p03",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l02-p03-b02",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-h-q4",
+   "chapter": "m09",
+   "section": "homework",
+   "number": 4,
+   "brief": "تبديل الزوجيين المتجاورين",
+   "pageId": "899371-m09-l02-p04",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l02-p04-b02",
+     "kind": "method"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-h-q5",
+   "chapter": "m09",
+   "section": "homework",
+   "number": 5,
+   "brief": "تحويل مصفوفة",
+   "pageId": "899371-m09-l02-p05",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l02-p05-b02",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m09-l02-p05-b04",
+     "kind": "main"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q1",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 1,
+   "brief": "متاجر أوفناتي",
+   "pageId": "899371-m09-l03-p01",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q2",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 2,
+   "brief": "نجم الغناء",
+   "pageId": "899371-m09-l03-p02",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "incomplete-spec",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q3",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 3,
+   "brief": "انتخابات مجلس الطلاب",
+   "pageId": "899371-m09-l03-p03",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-09-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q4",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 4,
+   "brief": "اللاعب الفائز",
+   "pageId": "899371-m09-l03-p04",
+   "patterns": [
+    "WP"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-09-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q5",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 5,
+   "brief": "Igloo و Dog",
+   "pageId": "899371-m09-l03-p05",
+   "patterns": [
+    "CQ",
+    "EX",
+    "PO",
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m09-l03-p05-b03",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m09-l03-p05-b14",
+     "kind": "method"
+    },
+    {
+     "blockId": "m09-l03-p05-b16",
+     "kind": "fragment"
+    }
+   ],
+   "trace": true,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c09-p-q6",
+   "chapter": "m09",
+   "section": "programming",
+   "number": 6,
+   "brief": "نقطة التوازن",
+   "pageId": "899371-m09-l03-p06",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-09-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-h-q1",
+   "chapter": "m10",
+   "section": "homework",
+   "number": 1,
+   "brief": "تعديل مصفوفة 3×4",
+   "pageId": "899371-m10-l02-p01",
+   "patterns": [
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l02-p01-b06",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m10-l02-p01-b11",
+     "kind": "fragment"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-h-q2",
+   "chapter": "m10",
+   "section": "homework",
+   "number": 2,
+   "brief": "XO والقطر",
+   "pageId": "899371-m10-l02-p02",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l02-p02-b04",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m10-l02-p02-b06",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m10-l02-p02-b11",
+     "kind": "fragment"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-h-q3",
+   "chapter": "m10",
+   "section": "homework",
+   "number": 3,
+   "brief": "Airplane",
+   "pageId": "899371-m10-l02-p03",
+   "patterns": [
+    "EX",
+    "TT"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l02-p03-b02",
+     "kind": "method"
+    },
+    {
+     "blockId": "m10-l02-p03-b04",
+     "kind": "fragment"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-h-q4",
+   "chapter": "m10",
+   "section": "homework",
+   "number": 4,
+   "brief": "Taxi و Help",
+   "pageId": "899371-m10-l02-p04",
+   "patterns": [
+    "EX"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l02-p04-b02",
+     "kind": "method"
+    },
+    {
+     "blockId": "m10-l02-p04-b04",
+     "kind": "method"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-h-q5",
+   "chapter": "m10",
+   "section": "homework",
+   "number": 5,
+   "brief": "PoliceCar",
+   "pageId": "899371-m10-l02-p05",
+   "patterns": [
+    "EX"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l02-p05-b02",
+     "kind": "method"
+    }
+   ],
+   "trace": true,
+   "solve": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-p-q1",
+   "chapter": "m10",
+   "section": "programming",
+   "number": 1,
+   "brief": "عنصر التقاطع",
+   "pageId": "899371-m10-l03-p01",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l03-p01-b09",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-10-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-p-q2",
+   "chapter": "m10",
+   "section": "programming",
+   "number": 2,
+   "brief": "ثلاثية قطرية يمنى موحّدة",
+   "pageId": "899371-m10-l03-p02",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l03-p02-b19",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m10-l03-p02-b28",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-p-q3",
+   "chapter": "m10",
+   "section": "programming",
+   "number": 3,
+   "brief": "صف مكرر من العمود j",
+   "pageId": "899371-m10-l03-p03",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l03-p03-b12",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-10-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-p-q4",
+   "chapter": "m10",
+   "section": "programming",
+   "number": 4,
+   "brief": "صفوف وأعمدة موجبة",
+   "pageId": "899371-m10-l03-p04",
+   "patterns": [
+    "WM",
+    "WP"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l03-p04-b09",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m10-l03-p04-b17",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-10-Q03",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c10-p-q5",
+   "chapter": "m10",
+   "section": "programming",
+   "number": 5,
+   "brief": "Place و PrintAndCount",
+   "pageId": "899371-m10-l03-p05",
+   "patterns": [
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m10-l03-p05-b10",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m10-l03-p05-b18",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-h-q1",
+   "chapter": "m11",
+   "section": "homework",
+   "number": 1,
+   "brief": "PreHistoricAnimal و JurassicPark",
+   "pageId": "899371-m11-l02-p01",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-h-q2",
+   "chapter": "m11",
+   "section": "homework",
+   "number": 2,
+   "brief": "ExcellentStudent",
+   "pageId": "899371-m11-l02-p02",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l02-p02-b08",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p02-b12",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p02-b18",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-11-Q01",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-h-q3",
+   "chapter": "m11",
+   "section": "homework",
+   "number": 3,
+   "brief": "Font",
+   "pageId": "899371-m11-l02-p03",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l02-p03-b11",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b14",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b17",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b20",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b23",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b26",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b29",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b32",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l02-p03-b35",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": "CL899371-11-Q02",
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-h-q4",
+   "chapter": "m11",
+   "section": "homework",
+   "number": 4,
+   "brief": "Seller و AllSellers",
+   "pageId": "899371-m11-l02-p04",
+   "patterns": [
+    "CQ",
+    "WC"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l02-p04-b12",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m11-l02-p04-b19",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-h-q5",
+   "chapter": "m11",
+   "section": "homework",
+   "number": 5,
+   "brief": "Food و Meal",
+   "pageId": "899371-m11-l02-p05",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-p-q1",
+   "chapter": "m11",
+   "section": "programming",
+   "number": 1,
+   "brief": "Robot",
+   "pageId": "899371-m11-l03-p01",
+   "patterns": [
+    "WC",
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l03-p01-b09",
+     "kind": "fragment"
+    },
+    {
+     "blockId": "m11-l03-p01-b14",
+     "kind": "fragment"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-p-q2",
+   "chapter": "m11",
+   "section": "programming",
+   "number": 2,
+   "brief": "City",
+   "pageId": "899371-m11-l03-p02",
+   "patterns": [
+    "WC",
+    "WM"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l03-p02-b08",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b12",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b15",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b18",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b21",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b24",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b27",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b32",
+     "kind": "signature"
+    },
+    {
+     "blockId": "m11-l03-p02-b35",
+     "kind": "signature"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-p-q3",
+   "chapter": "m11",
+   "section": "programming",
+   "number": 3,
+   "brief": "Test و Patient",
+   "pageId": "899371-m11-l03-p03",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l03-p03-b03",
+     "kind": "class"
+    },
+    {
+     "blockId": "m11-l03-p03-b07",
+     "kind": "class"
+    }
+   ],
+   "trace": false,
+   "solve": "check",
+   "runnerClass": "auto",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-p-q4",
+   "chapter": "m11",
+   "section": "programming",
+   "number": 4,
+   "brief": "ThinkAndDrink",
+   "pageId": "899371-m11-l03-p04",
+   "patterns": [
+    "WC"
+   ],
+   "programs": [
+    {
+     "blockId": "m11-l03-p04-b04",
+     "kind": "method"
+    }
+   ],
+   "trace": false,
+   "solve": "run-only-until-corrected",
+   "runnerClass": "needs-correction",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  },
+  {
+   "id": "c11-p-q5",
+   "chapter": "m11",
+   "section": "programming",
+   "number": 5,
+   "brief": "Color و Picture",
+   "pageId": "899371-m11-l03-p05",
+   "patterns": [
+    "WC",
+    "WM"
+   ],
+   "programs": [],
+   "trace": false,
+   "solve": "run-only",
+   "runnerClass": "incomplete-spec",
+   "lab": null,
+   "tryInput": false,
+   "gate": "teacher-release"
+  }
+ ]
+}

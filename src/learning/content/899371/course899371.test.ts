@@ -152,9 +152,17 @@ describe("899371 — the bodies", () => {
   it("every block of a book page is a book block of a faithful type; the only enrichment is the exercise and walkthrough pages", async () => {
     const all = blocksOf(await loadAll());
     expect(all.filter(x => !x.enrichment && x.b.origin === "book").length).toBe(1602);
-    // the only enrichment on a book page: the 8 teacher clarifications of F9 / F15 and their 2 lists of choices (§18)
-    const clarifications = all.filter(x => !x.enrichment && x.b.origin !== "book");
+    // the only enrichment on a book page: the 8 teacher clarifications of F9 / F15 and their 2 lists of choices (§18), and the
+    // animated scenes of the enrichment plan (P11, csharp-scene) on the summary pages
+    const added = all.filter(x => !x.enrichment && x.b.origin !== "book");
+    const scenes = added.filter(x => x.b.type === "animation");
+    const clarifications = added.filter(x => x.b.type !== "animation");
     expect(clarifications.map(x => x.b.type + (x.b.type === "callout" ? ":" + x.b.kind : "")).sort()).toEqual([...Array(8).fill("callout:clarification"), "list", "list"].sort());
+    expect(scenes.length).toBe(12);
+    for (const { page, b } of scenes) {
+      expect([b.origin, (b as { animationType?: string }).animationType, /-l01-p\d\d$/.test(page)], b.id).toEqual(["teacher-enrichment", "csharp-scene", true]);
+      expect(b.id, page).toMatch(/-scene-[a-z0-9-]+$/);
+    }
     expect(all.filter(x => x.note === PRACTICE_NOTE).length).toBe(110 + 77);   // 110 exercises, 77 of them with their program above
     expect(all.filter(x => x.note === GUIDED_NOTE).length).toBe(44 + 43 + 22); // 44 walkthroughs, 43 with their program above, 22 with their tracer (P6)
     for (const { page, enrichment, note, b } of all) {
@@ -162,6 +170,7 @@ describe("899371 — the bodies", () => {
       expect(b.id.startsWith(page.slice(CID.length + 1) + "-"), where).toBe(true);
       if (enrichment) { expect(b.origin, where).toBe("teacher-enrichment"); expect(note === PRACTICE_NOTE ? ["code", "practice"] : ["code", "guided", "simulation"], where).toContain(b.type); continue; }
       if (b.origin !== "book" && /-(clarify|choices)$/.test(b.id)) continue;   // a teacher clarification (§18)
+      if (b.origin !== "book" && /-scene-[a-z0-9-]+$/.test(b.id)) continue;      // an animated scene (enrichment P11)
       expect(b.origin, where).toBe("book");
       expect(BOOK_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);
     }

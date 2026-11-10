@@ -391,6 +391,10 @@
 .eb-lm-class-module{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); flex-wrap:wrap; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); min-width:0; }
 .eb-lm-class-module.is-on{ border-color:var(--eb-primary); }
 .eb-lm-class-module-label{ display:flex; align-items:center; gap:var(--eb-space-2); min-width:0; flex:1 1 220px; cursor:pointer; min-height:32px; }
+/* 899371 P13 (D1) — the per-module «حلول الكتاب مفتوحة» release toggle and its hint */
+.eb-lm-class-module-release{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; padding-inline:var(--eb-space-2); border-radius:var(--eb-r-sm); color:var(--eb-text); font-size:var(--eb-fs-14); cursor:pointer; }
+.eb-lm-class-module-release:has(input:disabled){ color:var(--eb-muted); cursor:default; }
+.eb-lm-class-release-hint{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-14); }
 .eb-lm-class-module-label input{ width:18px; height:18px; margin:0; flex:0 0 auto; }
 .eb-lm-class-module-order{ flex:0 0 auto; display:inline-grid; place-items:center; min-width:24px; height:24px; border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
 .eb-lm-class-module-title{ min-width:0; overflow-wrap:anywhere; font-size:var(--eb-fs-14); color:var(--eb-text); }

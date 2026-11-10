@@ -130,6 +130,157 @@ const m04: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "{\n    // الكود الذي ينفّذ إذا تحقّق الشرط\n}"
+            },
+            {
+              "id": "m04-l01-p01-scene-if-else-path",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: مسار if يضيء حسب الشرط",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 220,
+                "alt": "البرنامج يفحص الشرط mark > 55. حين mark = 70 يسلك المسار true ويطبع ناجح، وحين mark = 40 يسلك المسار false ويتخطى ما داخل if.",
+                "items": [
+                  {
+                    "id": "mark",
+                    "kind": "box",
+                    "x": 10,
+                    "y": 26,
+                    "w": 70,
+                    "h": 44,
+                    "label": "mark",
+                    "value": "70"
+                  },
+                  {
+                    "id": "cond",
+                    "kind": "box",
+                    "x": 120,
+                    "y": 10,
+                    "w": 170,
+                    "h": 76,
+                    "value": "mark > 55",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "yes",
+                    "kind": "arrow",
+                    "x": 250,
+                    "y": 70,
+                    "x2": 310,
+                    "y2": 140,
+                    "label": "true"
+                  },
+                  {
+                    "id": "no",
+                    "kind": "arrow",
+                    "x": 160,
+                    "y": 70,
+                    "x2": 100,
+                    "y2": 140,
+                    "label": "false",
+                    "dash": true
+                  },
+                  {
+                    "id": "pass",
+                    "kind": "box",
+                    "x": 255,
+                    "y": 144,
+                    "w": 120,
+                    "h": 44,
+                    "value": "يطبع: ناجح",
+                    "mono": false,
+                    "shape": "round"
+                  },
+                  {
+                    "id": "skip",
+                    "kind": "box",
+                    "x": 25,
+                    "y": 144,
+                    "w": 140,
+                    "h": 44,
+                    "value": "يتخطّى if",
+                    "mono": false,
+                    "shape": "round"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`mark = 70`. البرنامج يصل إلى `if` ويفحص الشرط.",
+                    "set": {
+                      "cond": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `70 > 55` صحيح، فيسلك المسار `true`.",
+                    "set": {
+                      "cond": {
+                        "tone": "ok"
+                      },
+                      "yes": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "يُنفَّذ ما داخل أقواس `if`: يُطبع «ناجح».",
+                    "set": {
+                      "pass": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الآن `mark = 40`. نفحص الشرط من جديد.",
+                    "set": {
+                      "mark": {
+                        "value": "40",
+                        "tone": "accent"
+                      },
+                      "cond": {
+                        "tone": "accent"
+                      },
+                      "yes": {
+                        "tone": "base"
+                      },
+                      "pass": {
+                        "tone": "base"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`40 > 55` خطأ، فيسلك المسار `false`.",
+                    "set": {
+                      "mark": {
+                        "tone": "base"
+                      },
+                      "cond": {
+                        "tone": "bad"
+                      },
+                      "no": {
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "ما داخل `if` لا يُنفَّذ، ويكمل البرنامج بعده دون طباعة. مع `else` يصبح لهذا المسار أمر خاص به (الصفحة التالية).",
+                    "set": {
+                      "skip": {
+                        "tone": "warn"
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -208,6 +359,223 @@ const m04: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "if (mark >= 90)\n    Console.WriteLine(\"ممتاز\");\nelse if (mark >= 75)\n    Console.WriteLine(\"جيد جدًا\");\nelse\n    Console.WriteLine(\"حاول مجددًا\");"
+            },
+            {
+              "id": "m04-l01-p02-scene-else-if-ladder",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: سلّم else if: أول شرط صحيح يوقف الفحص",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 240,
+                "alt": "سلّم من ثلاث درجات: mark >= 90 ثم mark >= 75 ثم else. حين mark = 80 يخطئ الأول ويصح الثاني فيُطبع جيد جدًا ويتوقف الفحص.",
+                "items": [
+                  {
+                    "id": "mark",
+                    "kind": "box",
+                    "x": 6,
+                    "y": 20,
+                    "w": 64,
+                    "h": 44,
+                    "label": "mark",
+                    "value": "80"
+                  },
+                  {
+                    "id": "d1",
+                    "kind": "box",
+                    "x": 90,
+                    "y": 8,
+                    "w": 190,
+                    "h": 60,
+                    "value": "mark >= 90",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "d2",
+                    "kind": "box",
+                    "x": 90,
+                    "y": 92,
+                    "w": 190,
+                    "h": 60,
+                    "value": "mark >= 75",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "d3",
+                    "kind": "box",
+                    "x": 120,
+                    "y": 182,
+                    "w": 130,
+                    "h": 40,
+                    "value": "else",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "down1",
+                    "kind": "arrow",
+                    "x": 185,
+                    "y": 68,
+                    "x2": 185,
+                    "y2": 90,
+                    "label": ""
+                  },
+                  {
+                    "id": "down2",
+                    "kind": "arrow",
+                    "x": 185,
+                    "y": 152,
+                    "x2": 185,
+                    "y2": 180
+                  },
+                  {
+                    "id": "r1",
+                    "kind": "arrow",
+                    "x": 280,
+                    "y": 38,
+                    "x2": 300,
+                    "y2": 38
+                  },
+                  {
+                    "id": "r2",
+                    "kind": "arrow",
+                    "x": 280,
+                    "y": 122,
+                    "x2": 300,
+                    "y2": 122
+                  },
+                  {
+                    "id": "r3",
+                    "kind": "arrow",
+                    "x": 250,
+                    "y": 202,
+                    "x2": 300,
+                    "y2": 202
+                  },
+                  {
+                    "id": "o1",
+                    "kind": "box",
+                    "x": 302,
+                    "y": 20,
+                    "w": 112,
+                    "h": 36,
+                    "value": "ممتاز",
+                    "mono": false,
+                    "shape": "round"
+                  },
+                  {
+                    "id": "o2",
+                    "kind": "box",
+                    "x": 302,
+                    "y": 104,
+                    "w": 112,
+                    "h": 36,
+                    "value": "جيد جدًا",
+                    "mono": false,
+                    "shape": "round"
+                  },
+                  {
+                    "id": "o3",
+                    "kind": "box",
+                    "x": 302,
+                    "y": 184,
+                    "w": 112,
+                    "h": 36,
+                    "value": "حاول مجددًا",
+                    "mono": false,
+                    "shape": "round"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`mark = 80`. السلّم يفحص الشروط من الأعلى بالترتيب."
+                  },
+                  {
+                    "say": "`80 >= 90` خطأ، فينزل إلى الدرجة التالية.",
+                    "set": {
+                      "d1": {
+                        "tone": "bad"
+                      },
+                      "down1": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`80 >= 75` صحيح: هذا أول شرط صحيح.",
+                    "set": {
+                      "d2": {
+                        "tone": "ok"
+                      },
+                      "r2": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "يُطبع «جيد جدًا».",
+                    "set": {
+                      "o2": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "ويتوقف الفحص هنا: `else` لا يُفحص بعد أول شرط صحيح.",
+                    "set": {
+                      "d3": {
+                        "tone": "muted"
+                      },
+                      "o3": {
+                        "tone": "muted"
+                      },
+                      "o1": {
+                        "tone": "muted"
+                      },
+                      "down2": {
+                        "tone": "muted"
+                      }
+                    }
+                  },
+                  {
+                    "say": "مع `mark = 95` يصح الشرط الأول فورًا، فيُطبع «ممتاز»، ولا يُفحص `95 >= 75` مع أنه صحيح.",
+                    "set": {
+                      "mark": {
+                        "value": "95",
+                        "tone": "accent"
+                      },
+                      "d1": {
+                        "tone": "ok"
+                      },
+                      "r1": {
+                        "tone": "ok"
+                      },
+                      "o1": {
+                        "tone": "ok"
+                      },
+                      "down1": {
+                        "tone": "muted"
+                      },
+                      "d2": {
+                        "tone": "muted"
+                      },
+                      "r2": {
+                        "tone": "base"
+                      },
+                      "o2": {
+                        "tone": "muted"
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -383,6 +751,242 @@ const m04: ContentModule = {
                 "ltr",
                 "ltr"
               ]
+            },
+            {
+              "id": "m04-l01-p04-scene-truth-table",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: جدول منطقي يمتلئ",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 290,
+                "alt": "جدول AND: لكل صف قيمتا الشرطين، ونملأ عمود النتيجة صفًا صفًا. && صحيح في صف واحد فقط: حين يكون الشرطان صحيحين.",
+                "items": [
+                  {
+                    "id": "h1",
+                    "kind": "text",
+                    "x": 256,
+                    "y": 40,
+                    "text": "الشرط 1",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "h2",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 40,
+                    "text": "الشرط 2",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "h3",
+                    "kind": "text",
+                    "x": 144,
+                    "y": 40,
+                    "text": "النتيجة",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "tt",
+                    "kind": "grid",
+                    "x": 116,
+                    "y": 58,
+                    "size": 56,
+                    "idx": false,
+                    "rows": [
+                      [
+                        "?",
+                        "true",
+                        "true"
+                      ],
+                      [
+                        "?",
+                        "false",
+                        "true"
+                      ],
+                      [
+                        "?",
+                        "true",
+                        "false"
+                      ],
+                      [
+                        "?",
+                        "false",
+                        "false"
+                      ]
+                    ]
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "جدول `&&`: كل صف تجربة لقيمتي الشرطين. نملأ عمود النتيجة صفًا صفًا."
+                  },
+                  {
+                    "say": "`true && true = true`: الشرطان صحيحان.",
+                    "set": {
+                      "tt": {
+                        "rows": [
+                          [
+                            "true",
+                            "true",
+                            "true"
+                          ],
+                          [
+                            "?",
+                            "false",
+                            "true"
+                          ],
+                          [
+                            "?",
+                            "true",
+                            "false"
+                          ],
+                          [
+                            "?",
+                            "false",
+                            "false"
+                          ]
+                        ],
+                        "cellsHi": [
+                          [
+                            0,
+                            2
+                          ],
+                          [
+                            0,
+                            1
+                          ],
+                          [
+                            0,
+                            0
+                          ]
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "`true && false = false`: يكفي شرط خاطئ واحد.",
+                    "set": {
+                      "tt": {
+                        "rows": [
+                          [
+                            "true",
+                            "true",
+                            "true"
+                          ],
+                          [
+                            "false",
+                            "false",
+                            "true"
+                          ],
+                          [
+                            "?",
+                            "true",
+                            "false"
+                          ],
+                          [
+                            "?",
+                            "false",
+                            "false"
+                          ]
+                        ],
+                        "cellsHi": [
+                          [
+                            1,
+                            1
+                          ],
+                          [
+                            1,
+                            0
+                          ]
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "`false && true = false`.",
+                    "set": {
+                      "tt": {
+                        "rows": [
+                          [
+                            "true",
+                            "true",
+                            "true"
+                          ],
+                          [
+                            "false",
+                            "false",
+                            "true"
+                          ],
+                          [
+                            "false",
+                            "true",
+                            "false"
+                          ],
+                          [
+                            "?",
+                            "false",
+                            "false"
+                          ]
+                        ],
+                        "cellsHi": [
+                          [
+                            2,
+                            2
+                          ],
+                          [
+                            2,
+                            0
+                          ]
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "`false && false = false`. إذن `&&` صحيح في صف واحد فقط من أربعة.",
+                    "set": {
+                      "tt": {
+                        "rows": [
+                          [
+                            "true",
+                            "true",
+                            "true"
+                          ],
+                          [
+                            "false",
+                            "false",
+                            "true"
+                          ],
+                          [
+                            "false",
+                            "true",
+                            "false"
+                          ],
+                          [
+                            "false",
+                            "false",
+                            "false"
+                          ]
+                        ],
+                        "cellsHi": [
+                          [
+                            0,
+                            0
+                          ]
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m04-l01-p04-b04",
