@@ -29,6 +29,9 @@ const nextBtn = () => screen.getByRole("button", { name: "التالي" }) as HT
 const jump = () => screen.getByLabelText("انتقل إلى صفحة") as HTMLSelectElement;
 // The page's CONTENT (not just its header) is on screen — the moment a page counts as visited.
 const contentReady = () => waitFor(() => expect(screen.queryByText("جارٍ تحميل الصفحة...")).toBeNull());
+// The mark is recorded in an effect once the page's content is ready, so a POSITIVE mark is awaited (waitFor), never read the
+// instant «جارٍ تحميل الصفحة...» disappears: on a slow runner that read raced the effect (main 56ca06f3, Quality Gate run
+// 42868387178: expected [ 'صفحة ٢' ] to deeply equal [ 'صفحة غنية', 'صفحة ٢' ]).
 const seenTitles = () => [...document.querySelectorAll(".learning-reader-sidebar .learning-reader-toc-page.is-visited .learning-reader-toc-pagetitle")].map(e => e.textContent);
 
 describe("21E L2-B — progress and orientation", () => {
@@ -122,26 +125,26 @@ describe("21E L2-B — visited marks (device-local, students only) — security"
     const a = mount({ visitedScope: "student:u1" });
     await heading("صفحة غنية"); await contentReady();
     fireEvent.click(nextBtn()); await heading("صفحة ٢"); await contentReady();
-    expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]);
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]));
     expect(JSON.parse(localStorage.getItem(KEY("student:u1"))!)).toEqual(["p1", "p2"]);
     expect(desktopToc().getByRole("button", { name: /^صفحة غنية\s*،\s*تمت قراءتها$/ })).toBeTruthy();   // announced, not colour-only
     a.unmount();
 
     const again = mount({ visitedScope: "student:u1" });                                     // same student, same device
     await heading("صفحة غنية"); await contentReady();
-    expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]);
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]));
     again.unmount();
 
     mount({ visitedScope: "student:u2" });                                                   // another student
     await heading("صفحة غنية"); await contentReady();
-    expect(seenTitles()).toEqual(["صفحة غنية"]);                                             // only what u2 opened
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية"]));                                             // only what u2 opened
     expect(JSON.parse(localStorage.getItem(KEY("student:u1"))!)).toEqual(["p1", "p2"]);     // u1 untouched
     cleanup();
 
     localStorage.setItem(KEY("student:u3", "other-course"), JSON.stringify(["p2", "p3"]));
     mount({ visitedScope: "student:u3" });
     await heading("صفحة غنية"); await contentReady();
-    expect(seenTitles()).toEqual(["صفحة غنية"]);                                             // another course's marks never apply
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية"]));                                             // another course's marks never apply
   });
 
   it("never renders a stored id outside the current published-only manifest (stale / unpublished pages)", async () => {
@@ -153,7 +156,7 @@ describe("21E L2-B — visited marks (device-local, students only) — security"
     const toc = document.querySelector(".learning-reader-sidebar")!;
     expect(toc.textContent).not.toContain("الوحدة الثانية");
     expect(toc.textContent).not.toContain("صفحة ٥");
-    expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]);
+    await waitFor(() => expect(seenTitles()).toEqual(["صفحة غنية", "صفحة ٢"]));
     expect([...jump().options].map(o => o.value)).toEqual(["p1", "p2", "p3", "p4"]);
   });
 
