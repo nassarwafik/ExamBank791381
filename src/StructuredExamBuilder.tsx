@@ -1014,6 +1014,23 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
     window.setTimeout(() => focusCard(fresh.examQuestionId), 0);
     return "ok";
   };
+  // Phase 21U — «تحرير هذا السؤال» from the composer's applied review: the question opens like an issue does (the Studio makes it the
+  // active card in the content step; the classic layout re-opens a collapsed card) and its card is focused once the dialog has closed.
+  const revealComposerQuestion = (openedFor: string) => (questionId: string) => {
+    if (!alive.current || latestExamRef.current.examId !== openedFor) return;
+    if (!(latestExamRef.current.sections || []).some(sec => (sec.questions || []).some(q => q.examQuestionId === questionId))) return;
+    if (studio) setStudioUi(prev => ({ ...prev, step: "content", activeId: questionId, sectionId: null }));
+    else { const count = ++revealCount.current; setOpenReq(prev => ({ examId: openedFor, seqs: new Map(prev?.examId === openedFor ? prev.seqs : EMPTY_REVEALS).set(questionId, count) })); }
+    // after the dialog released focus; the card may not be rendered yet (the Studio canvas is its own lazy chunk), so it is awaited — a
+    // bounded wait (60 × 50 ms), never a focus left on <body> because the card arrived one frame late
+    const focusWhenRendered = (tries: number) => {
+      if (!alive.current) return;
+      const el = nodes.current.get(questionId);
+      if (el) { focusCard(questionId); return; }
+      if (tries > 0) window.setTimeout(() => focusWhenRendered(tries - 1), 50);
+    };
+    window.setTimeout(() => focusWhenRendered(60), 0);
+  };
   const navigator = (asPanel: boolean) => (
     <ExamQuestionNavigator id={asPanel ? navId : undefined} asPanel={asPanel} entries={navEntries} sections={sectionOptions} filters={navFilters}
       onFilters={f => setUi(prev => ({ ...prev, filters: f }))} selected={selected} onToggle={toggleSelect} onSelectMany={selectMany}
@@ -1317,7 +1334,8 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
       {composerOpen && aiAuthor?.composeExam && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المؤلف الذكي للامتحان…</p>}>
           <AiExamComposerDialog key={exam.examId} open onClose={() => { setComposerOpenFor(""); setComposerPrefill(null); }} prefill={composerPrefill} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
-            onApply={applyComposer(exam.examId)} onPreview={setPreview} onUndo={onUndo} selectedQuestionId={selected.size === 1 ? [...selected][0] : null} disabled={saving} />
+            onApply={applyComposer(exam.examId)} onPreview={setPreview} onUndo={onUndo} selectedQuestionId={selected.size === 1 ? [...selected][0] : null} disabled={saving}
+            onRevealQuestion={revealComposerQuestion(exam.examId)} />
         </Suspense>
       )}
 
