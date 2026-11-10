@@ -75,5 +75,6 @@ export function noteFor(step, prev) {
     const lines = (printed.match(/\n/g) || []).length;
     parts.push(text ? "يطبع " + printedText(text) + (printed.endsWith("\n") ? " ثم ينتقل إلى سطر جديد." : ".") : lines > 1 ? "يطبع " + lines + " أسطر فارغة." : "ينتقل إلى سطر جديد.");
   }
+  if (!parts.length && step.kind === "decl") return "يُعرِّف متغيرات لم تأخذ قيمًا بعد.";   // int a, b, c; — declared, nothing assigned
   return parts.length ? parts.join(" ") : "يُنفَّذ هذا السطر.";
 }

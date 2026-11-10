@@ -5,7 +5,8 @@ import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
-import { classLearningMaterials, classLearningReleaseSummary, SOLUTION_RELEASE_COURSES } from "./classLearningMaterials";
+import { classLearningMaterials, classLearningReleaseSummary } from "./classLearningMaterials";
+import { SOLUTION_RELEASE_COURSES, classReleasedModuleIds } from "./classSolutionsRelease";
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
 import { arabicCountParts, ADDED_MATERIALS, HIDDEN_MODULES, PUBLISHED_MODULES, type ArabicCountForms } from "../learning/arabicCount";
 
@@ -123,7 +124,7 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
   const published = modules.filter(m => visible.has(m.moduleId)).length;
   // 899371 P13 (D1): the book's solutions and output tracers stay closed until the teacher opens them, per module
   const releases = SOLUTION_RELEASE_COURSES.includes(entry.courseId) && Boolean(onToggleRelease);
-  const released = new Set(entry.releasedModuleIds || []);
+  const released = new Set(classReleasedModuleIds(classroom, entry.courseId));
   return (
     <li className="eb-lm-class-card">
       <article aria-labelledby={headingId}>

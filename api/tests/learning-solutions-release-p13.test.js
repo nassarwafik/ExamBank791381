@@ -89,6 +89,14 @@ describe("P13 D1 — the setLearningCourseReleases action", () => {
     ]);
   });
 
+  it("refuses a course without release even when it is attached (its own refusal, nothing written)", async () => {
+    const ctx = fresh([{ courseId: "791381", visibleModuleIds: ["791381-m01"] }, { courseId: C, visibleModuleIds: [M1] }]);
+    const before = JSON.stringify(ctx.getJson(CLASS));
+    const r = await post(ctx, { action: "setLearningCourseReleases", classId: "c1", courseId: "791381", moduleIds: ["791381-m01"] });
+    expect([r.status, r.jsonBody.error]).toEqual([400, "لا حلول قابلة للفتح في هذه المادة."]);
+    expect(JSON.stringify(ctx.getJson(CLASS))).toBe(before);
+  });
+
   it.each([
     ["a course without release", { courseId: "791381", moduleIds: [] }, 400],
     ["an unknown module", { courseId: C, moduleIds: ["899371-m99"] }, 400],

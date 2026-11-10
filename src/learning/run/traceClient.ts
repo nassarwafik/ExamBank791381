@@ -30,5 +30,3 @@ export function traceList(access: CodeRunAccess, courseId: string, fresh = false
 /** The recorded steps of one block's program (the server checks the gate again). */
 export const traceSteps = (access: CodeRunAccess, courseId: string, pageId: string, blockId: string) =>
   call<TraceResponse>(access.headers, encodeURIComponent(courseId) + "/steps?pageId=" + encodeURIComponent(pageId) + "&blockId=" + encodeURIComponent(blockId));
-/** «تنبّأ ثم تحقّق»: the output as compared — each line's spaces collapsed and trimmed, no trailing empty lines. */
-export const comparable = (s: string) => s.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+/g, " ").trim()).join("\n").replace(/\n+$/, "").trim();

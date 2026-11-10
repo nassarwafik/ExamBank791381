@@ -100,4 +100,13 @@ describe("899371 P13 — the recorded question traces", () => {
   it("the server's trace index is exactly the build of these runs (regenerating changes no byte)", () => {
     expect(JSON.stringify(buildTraceIndex()) + "\n").toBe(readFileSync(INDEX_FILE, "utf8"));
   });
+
+  it("the index builder refuses a run whose program or input changed since it was recorded, and a run for no program", () => {
+    const key = Object.keys(runs)[0];
+    const stale = { ...runsFile, runs: { ...runs, [key]: { ...runs[key], sha: "0".repeat(64) } } };
+    expect(() => buildTraceIndex(stale)).toThrow(/changed since it was recorded/);
+    const changed = all.map(t => (t.key === key ? { ...t, program: t.program + "\n// edited" } : t));
+    expect(() => buildTraceIndex(runsFile, changed)).toThrow(/changed since it was recorded/);
+    expect(() => buildTraceIndex({ ...runsFile, runs: { ...runs, "899371-m01-l99-p01/x": runs[key] } })).toThrow(/for no program/);
+  });
 });

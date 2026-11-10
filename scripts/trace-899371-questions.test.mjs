@@ -64,6 +64,7 @@ describe("noteFor — the sentence says what the run did", () => {
     ["a print of two lines", step({ out: "a\nb\n" }), "يطبع «a ⏎ b» ثم ينتقل إلى سطر جديد."],
     ["an empty line", step({ out: "\n" }), "ينتقل إلى سطر جديد."],
     ["nothing visible", step({}), "يُنفَّذ هذا السطر."],
+    ["a declaration with no value yet", step({ kind: "decl" }), "يُعرِّف متغيرات لم تأخذ قيمًا بعد."],
   ])("%s", (_what, s, sentence) => {
     expect(strip(noteFor(s, null))).toBe(sentence);
   });

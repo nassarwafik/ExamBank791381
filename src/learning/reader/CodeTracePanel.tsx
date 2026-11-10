@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { CodeRunError } from "../run/runClient";
-import { traceList, traceSteps, comparable, type TraceResponse } from "../run/traceClient";
+import type { TraceResponse } from "../run/traceClient";
 import type { CodeRunTarget } from "./CSharpCodePanel";
 import type { SimulationBlock } from "../content/types";
 import "./codeRun.css";
@@ -15,12 +15,16 @@ const CSharpTraceActivity = lazy(() => import("../activities/CSharpTraceActivity
 const noop = () => {};
 type Trace = TraceResponse["trace"];
 type State = { kind: "loading" } | { kind: "refused"; message: string } | { kind: "ready"; trace: Trace };
+/** «تنبّأ ثم تحقّق»: the output as compared — each line's spaces collapsed and trimmed, no trailing empty lines. */
+const comparable = (s: string) => s.replace(/\r/g, "").split("\n").map(l => l.replace(/\s+/g, " ").trim()).join("\n").replace(/\n+$/, "").trim();
 const finalOutput = (trace: Trace): string => {
   const last = trace.steps[trace.steps.length - 1] as { out?: unknown } | undefined;
   return typeof last?.out === "string" ? last.out : "";
 };
 
-export default function CodeTracePanel({ id, target }: { id: string; target: CodeRunTarget }) {
+/** `load` fetches this block's steps and `refresh` asks the session's trace list again (both given by CSharpCodePanel, so the trace
+ *  transport stays inside that one lazy chunk and the Reader's first-load graph does not change). */
+export default function CodeTracePanel({ id, target, load, refresh }: { id: string; target: CodeRunTarget; load: () => Promise<TraceResponse>; refresh: () => void }) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [guess, setGuess] = useState("");
   const [phase, setPhase] = useState<"predict" | "watch">("predict");
@@ -29,15 +33,15 @@ export default function CodeTracePanel({ id, target }: { id: string; target: Cod
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
-    traceSteps(target.access, target.courseId, target.pageId, target.blockId)
+    load()
       .then(r => { if (alive.current) setState({ kind: "ready", trace: r.trace }); })
       .catch(e => {
         // after a refusal the session's list may be stale (an exercise just answered, a module just opened): ask again next time
-        void traceList(target.access, target.courseId, true).catch(() => undefined);
+        refresh();
         if (alive.current) setState({ kind: "refused", message: e instanceof CodeRunError ? e.message : "تعذّر تحميل التتبع الآن." });
       });
     return () => { alive.current = false; };
-  }, [target.access, target.courseId, target.pageId, target.blockId]);
+  }, [target.access, target.courseId, target.pageId, target.blockId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (state.kind === "loading") return <section id={id} className="learning-run learning-trace-panel" aria-label="شاهد التنفيذ"><p className="learning-run-status" role="status">جارٍ تحميل التنفيذ…</p></section>;
   if (state.kind === "refused") return <section id={id} className="learning-run learning-trace-panel" aria-label="شاهد التنفيذ"><p className="learning-run-status is-error" role="status">{state.message}</p></section>;

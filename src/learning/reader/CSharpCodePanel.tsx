@@ -3,7 +3,7 @@ import { tokenizeCSharp } from "./csharpTokens";
 import { arabicCount, type ArabicCountForms } from "../arabicCount";
 import type { CodeRunAccess } from "../run/runClient";
 import { runnableList } from "../run/runAccess";
-import { traceList, type TraceState } from "../run/traceClient";
+import { traceList, traceSteps, type TraceState } from "../run/traceClient";
 
 // 899371 P1 (docs/enterprise-899371-learning-plan.md §13) — the C# program panel of the Reader's `code` block, loaded LAZILY by
 // CodeBlockView only when a page has a C# block (it keeps the tokenizer out of the Reader's first-load graph, budget 40 KB):
@@ -94,7 +94,8 @@ export default function CSharpCodePanel({ code, run }: { code: string; run?: Cod
       {panel}
       {watching && traceState && run && (
         <Suspense fallback={<p className="learning-run-loading" role="status">جارٍ فتح التنفيذ…</p>}>
-          <CodeTracePanel id={tracePanelId} target={run} />
+          <CodeTracePanel id={tracePanelId} target={run} load={() => traceSteps(run.access, run.courseId, run.pageId, run.blockId)}
+            refresh={() => { void traceList(run.access, run.courseId, true).catch(() => undefined); }} />
         </Suspense>
       )}
       {trying && runnable && run && (

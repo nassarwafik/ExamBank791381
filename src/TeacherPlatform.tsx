@@ -23,6 +23,7 @@ import {useConfirm} from "./ui/useConfirm";
 import ClassesPane from "./students/ClassesPane";
 import RosterPane from "./students/RosterPane";
 import ClassLearningMaterialsPanel from "./students/ClassLearningMaterialsPanel";
+import { classReleasedModuleIds } from "./students/classSolutionsRelease";
 import {classLearningMaterials} from "./students/classLearningMaterials";
 import StudentDialog from "./students/StudentDialog";
 import {CreateClassDialog,EditClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
@@ -506,8 +507,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // is confirmed (students lose access to the solutions they were reading); the server decides and records it.
  async function toggleSolutionsRelease(classroom:Classroom,courseId:string,moduleId:string,open:boolean){
   if(actionBusy)return;
-  const entry=classLearningMaterials(classroom).find(e=>e.courseId===courseId);
-  const current=entry?.releasedModuleIds||[];
+  const current=classReleasedModuleIds(classroom,courseId);
   const moduleTitle=learningModuleTitle(courseId,moduleId);
   if(!open&&!(await confirm({message:"ستُقفل حلول أسئلة الكتاب ومحاكي ناتجها في فصل \""+moduleTitle+"\" عن طلاب الصف.",confirmLabel:"إقفال الحلول"})))return;
   const next=open?[...current.filter(id=>id!==moduleId),moduleId]:current.filter(id=>id!==moduleId);
