@@ -5,7 +5,7 @@ import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
-import { classLearningMaterials, classLearningReleaseSummary } from "./classLearningMaterials";
+import { classLearningMaterials, classLearningReleaseSummary, SOLUTION_RELEASE_COURSES } from "./classLearningMaterials";
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
 import { arabicCountParts, ADDED_MATERIALS, HIDDEN_MODULES, PUBLISHED_MODULES, type ArabicCountForms } from "../learning/arabicCount";
 
@@ -28,6 +28,8 @@ export type ClassLearningMaterialsPanelProps = {
   onRetryCatalog: () => void;
   onAddCourse: (classroom: Classroom, courseId: string, moduleIds: string[]) => void;
   onToggleModule: (classroom: Classroom, courseId: string, moduleId: string, publish: boolean) => void;
+  /** 899371 P13 (D1) — open / close the BOOK solutions and output tracers of one module for the class. */
+  onToggleRelease?: (classroom: Classroom, courseId: string, moduleId: string, open: boolean) => void;
   onRemoveCourse: (classroom: Classroom, courseId: string) => void;
 };
 
@@ -92,7 +94,7 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
       )}
       {classroom && materials.length > 0 && (
         <ul className="eb-lm-class-list" aria-label="المواد التعليمية المضافة">
-          {materials.map(entry => <CourseCard key={entry.courseId} classroom={classroom} entry={entry} course={(p.catalog || []).find(c => c.courseId === entry.courseId) || null} editable={editable} busy={p.busy} onToggleModule={p.onToggleModule} onRemoveCourse={p.onRemoveCourse} />)}
+          {materials.map(entry => <CourseCard key={entry.courseId} classroom={classroom} entry={entry} course={(p.catalog || []).find(c => c.courseId === entry.courseId) || null} editable={editable} busy={p.busy} onToggleModule={p.onToggleModule} onToggleRelease={p.onToggleRelease} onRemoveCourse={p.onRemoveCourse} />)}
         </ul>
       )}
       {classroom && (
@@ -110,15 +112,18 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
   );
 }
 
-function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, onRemoveCourse }: {
+function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, onToggleRelease, onRemoveCourse }: {
   classroom: Classroom; entry: ClassLearningMaterial; course: LearningCatalogCourse | null; editable: boolean; busy: boolean;
-  onToggleModule: ClassLearningMaterialsPanelProps["onToggleModule"]; onRemoveCourse: ClassLearningMaterialsPanelProps["onRemoveCourse"];
+  onToggleModule: ClassLearningMaterialsPanelProps["onToggleModule"]; onToggleRelease?: ClassLearningMaterialsPanelProps["onToggleRelease"]; onRemoveCourse: ClassLearningMaterialsPanelProps["onRemoveCourse"];
 }) {
   const can = useCan();
   const headingId = "eb-lm-class-course-" + entry.courseId;
   const modules = course ? course.modules.slice().sort((a, b) => a.order - b.order) : [];
   const visible = new Set(entry.visibleModuleIds);
   const published = modules.filter(m => visible.has(m.moduleId)).length;
+  // 899371 P13 (D1): the book's solutions and output tracers stay closed until the teacher opens them, per module
+  const releases = SOLUTION_RELEASE_COURSES.includes(entry.courseId) && Boolean(onToggleRelease);
+  const released = new Set(entry.releasedModuleIds || []);
   return (
     <li className="eb-lm-class-card">
       <article aria-labelledby={headingId}>
@@ -131,6 +136,9 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
           <StatusBadge tone={published > 0 ? "success" : "neutral"}>{published > 0 ? "يرى الطلاب " + published + " من " + modules.length : "لا شيء منشور بعد"}</StatusBadge>
         </div>
         {!course && <p className="eb-muted">تعذر تحميل قائمة الفصول لهذه المادة.</p>}
+        {course && releases && (
+          <p className="eb-muted eb-lm-class-release-hint">حلول أسئلة الكتاب ومحاكي ناتجها مقفلة عن الطلاب حتى تفتحها لكل فصل منشور. التدريبات الذاتية و«نحلّ معًا» متاحة دائمًا.</p>
+        )}
         {course && (
           <ul className="eb-lm-class-modules" aria-label={"فصول " + course.title}>
             {modules.map(m => {
@@ -144,6 +152,15 @@ function CourseCard({ classroom, entry, course, editable, busy, onToggleModule, 
                     <span className="eb-lm-class-module-title">{m.title}</span>
                   </label>
                   <StatusBadge tone={on ? "success" : "neutral"}>{on ? "منشور للطلاب" : "مخفي عن الطلاب"}</StatusBadge>
+                  {releases && (
+                    <label htmlFor={inputId + "-release"} className="eb-lm-class-module-release">
+                      <input id={inputId + "-release"} type="checkbox" checked={released.has(m.moduleId)} disabled={!editable || busy || !on}
+                        aria-describedby={on ? undefined : inputId + "-release-why"}
+                        onChange={e => onToggleRelease!(classroom, entry.courseId, m.moduleId, e.target.checked)} />
+                      <span>حلول الكتاب مفتوحة</span>
+                      {!on && <span id={inputId + "-release-why"} className="eb-visually-hidden">انشر الفصل أولًا</span>}
+                    </label>
+                  )}
                 </li>
               );
             })}

@@ -4,7 +4,10 @@ import type { Classroom, ClassLearningMaterial } from "./types";
 export function classLearningMaterials(classroom: Classroom | null | undefined): ClassLearningMaterial[] {
   const raw = classroom?.learningMaterials;
   return Array.isArray(raw)
-    ? raw.filter(e => e && typeof e.courseId === "string" && e.courseId).map(e => ({ courseId: e.courseId, visibleModuleIds: Array.isArray(e.visibleModuleIds) ? e.visibleModuleIds.slice() : [] }))
+    ? raw.filter(e => e && typeof e.courseId === "string" && e.courseId).map(e => ({
+      courseId: e.courseId, visibleModuleIds: Array.isArray(e.visibleModuleIds) ? e.visibleModuleIds.slice() : [],
+      ...(Array.isArray(e.releasedModuleIds) && e.releasedModuleIds.length ? { releasedModuleIds: e.releasedModuleIds.slice() } : {}),
+    }))
     : [];
 }
 
@@ -25,3 +28,9 @@ export function classLearningReleaseSummary(
   }
   return { assignedCourses: materials.length, publishedModules, hiddenModules: allModules - publishedModules };
 }
+
+/**
+ * 899371 enrichment P13 (decision D1) — the courses whose BOOK solutions and output tracers the teacher opens per module. Presentation
+ * only (it decides where the toggle appears): the server's registry is the authority and refuses a release for any other course.
+ */
+export const SOLUTION_RELEASE_COURSES: readonly string[] = ["899371"];

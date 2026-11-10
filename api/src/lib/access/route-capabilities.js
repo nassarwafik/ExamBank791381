@@ -17,7 +17,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
     GET: "classes.class.view", create: "classes.class.create", update: "classes.class.manage", archive: "classes.class.manage",
     unarchive: "classes.class.manage", graduateandarchive: "classes.class.manage",
     // Tadris+ P10-J (O10, owner decision §19.47) — enrolling a class in a project is the PROJECTS capability, not course assignment.
-    setprograms: "projects.tracker.manage", setprogram: "projects.tracker.manage", setlearningcoursemodules: "learning.module.release", removelearningcourse: "learning.course.assign",
+    setprograms: "projects.tracker.manage", setprogram: "projects.tracker.manage", setlearningcoursemodules: "learning.module.release", setlearningcoursereleases: "learning.module.release", removelearningcourse: "learning.course.assign",
     reconcileroster: "students.student.edit", "*": "classes.class.manage"
   },
   "manage-students.js": {
@@ -39,6 +39,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "learning-training.js": { "*": "learning.course.view" },
   "learning-exam-item.js": { "*": "learning.course.view" },
   "learning-run.js": { "*": "learning.course.view" },   // 899371 P8 — «جرّب الكود»: a teacher previewing a course may run its programs
+  "learning-trace.js": { "*": "learning.course.view" },   // 899371 P13 — «شاهد التنفيذ»: a teacher previewing a course sees every trace
   "learning-class-progress.js": { "*": "learning.progress.view" },
 
   // Exam library, question bank, imports.

@@ -17,9 +17,9 @@ const { getClassProgramCodes, normalizeProgramCodes, validateProgramCodes } = re
 // Class Learning Materials — an INDEPENDENT domain from projects (programCodes): which book/course a class uses
 // and which of its modules are currently published to students. Normalization + validation live in the lib; the
 // handler only wires auth, lifecycle, CAS persistence and audit.
-const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse, getVisibleLearningModuleIds } = require("../lib/class-learning-materials");
+const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse, getVisibleLearningModuleIds, setClassLearningCourseReleases, getReleasedLearningModuleIds } = require("../lib/class-learning-materials");
 const { recordEventSafely } = require("../lib/notification-events");
-const { validateLearningModuleIds, findLearningCourse } = require("../lib/learning-materials-registry");
+const { validateLearningModuleIds, findLearningCourse, courseHasSolutionRelease } = require("../lib/learning-materials-registry");
 // Classes & Students hardening — the classId is a blob-name segment: only the safe-id alphabet is accepted (a value such
 // as "../auth/<hash>" would otherwise be resolved by the storage SDK to a document outside platform/classes/).
 const { isSafeId, cleanText, LIMITS } = require("../lib/roster-input");
@@ -442,6 +442,48 @@ async function handler(request, deps = {}, obs = null) {
         }
         const learningMaterials = getClassLearningMaterials(updated);
         await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setModules", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { courseId, moduleIds } });
+        return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };
+      } catch (mutateError) {
+        if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+        if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+        throw mutateError;
+      }
+    }
+
+    // 899371 enrichment P13 (decision D1) — setLearningCourseReleases: set EXACTLY which modules of an ATTACHED course have their BOOK
+    // solutions and output tracers open to this class's students (moduleIds:[] = all closed). Only a course with a solutions release
+    // (registry) and only when it is attached; ids validated against the server registry. The publication is untouched (a released
+    // module stays closed while it is hidden: the gate needs both). CAS-protected; archived class → 403. Audited with the ids opened
+    // and closed. Same capability as publishing (learning.module.release).
+    if (action === "setlearningcoursereleases") {
+      const classId = String(body?.classId || "").trim();
+      const courseId = String(body?.courseId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      if (!courseId) return { status: 400, jsonBody: { ok: false, error: "courseId is required." } };
+      if (!courseHasSolutionRelease(courseId)) return { status: 400, jsonBody: { ok: false, error: "لا حلول قابلة للفتح في هذه المادة." } };
+      let moduleIds;
+      try {
+        moduleIds = validateLearningModuleIds(courseId, body?.moduleIds);
+      } catch (e) {
+        return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
+      }
+      const courseDecision = await teacherCourseDecision(container, auth.user, courseId, deps);
+      if (!courseDecision.ok) return courseRefusal(courseDecision, { teacher: true });
+      try {
+        let before = [], after = [];
+        const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+          if (!learningMaterialsChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مواده التعليمية."); blocked.httpStatus = 403; throw blocked; }
+          if (!getClassLearningMaterials(current).some(e => e.courseId === courseId)) { const unattached = new Error("أضف المادة إلى الصف أولًا."); unattached.httpStatus = 400; throw unattached; }
+          before = getReleasedLearningModuleIds(current, courseId);
+          const next = setClassLearningCourseReleases(current, courseId, moduleIds);
+          after = getReleasedLearningModuleIds(next, courseId);
+          next.updatedAt = new Date().toISOString();
+          return next;
+        });
+        const learningMaterials = getClassLearningMaterials(updated);
+        await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setReleases", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""),
+          details: { courseId, moduleIds: after, opened: after.filter(id => !before.includes(id)), closed: before.filter(id => !after.includes(id)) } });
         return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };
       } catch (mutateError) {
         if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };

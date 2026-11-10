@@ -208,4 +208,13 @@ function validateLearningModuleIds(courseId, moduleIds) {
   return canonicalizeLearningModuleIds(courseId, moduleIds);
 }
 
-module.exports = { listLearningCourses, findLearningCourse, listLearningModules, findLearningModule, canonicalizeLearningModuleIds, validateLearningModuleIds };
+/**
+ * 899371 enrichment P13 (decision D1) — the courses whose BOOK solutions and output tracers stay closed to students until the teacher
+ * opens them per module for a class. Only 899371 has them; every other course has nothing to release (a release request is refused).
+ */
+const SOLUTION_RELEASE_COURSES = Object.freeze(["899371"]);
+function courseHasSolutionRelease(courseId) {
+  return SOLUTION_RELEASE_COURSES.includes(cleanId(courseId)) && Boolean(findLearningCourse(courseId));
+}
+
+module.exports = { listLearningCourses, findLearningCourse, listLearningModules, findLearningModule, canonicalizeLearningModuleIds, validateLearningModuleIds, courseHasSolutionRelease, SOLUTION_RELEASE_COURSES };

@@ -19,3 +19,11 @@
 .learning-run-result{ display:grid; gap:var(--eb-space-1); }
 .learning-run-label{ margin:0; font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
 @media (pointer: coarse){ .learning-run-actions .eb-button{ min-block-size:44px; min-inline-size:44px; } }
+
+/* 899371 enrichment P13 — «شاهد التنفيذ خطوة بخطوة»: the trace panel, its «إثراء تعليمي» tag and the «تنبّأ ثم تحقّق» verdict */
+.learning-trace-panel .learning-trace{ margin-top:var(--eb-space-2); }
+.learning-trace-panel-tag{ display:inline-block; margin-inline-end:var(--eb-space-1); padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.learning-trace-verdict{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); border-inline-start:4px solid var(--eb-warn); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.learning-trace-verdict.is-match{ border-inline-start-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-trace-verdict-head{ margin:0; font-weight:var(--eb-fw-semibold); }
+.learning-trace-verdict-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:var(--eb-space-2); margin-top:var(--eb-space-2); }
