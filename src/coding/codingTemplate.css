@@ -27,6 +27,7 @@
   .cx-tpl-locked .cx-tpl-tag { position: static; margin: 4px 6px 0; }
   .cx-tpl-input { font-size: 16px; }   /* ≥ 16 px keeps iOS from zooming the page on focus */
   .cx-tpl-reset { min-height: 44px; }
+  .cx-tpl .cx-ws-button { min-height: 44px; }   /* «استعادة كل الفراغات»: the same 44 px touch target (899371 P15 audit) */
 }
 @media (prefers-contrast: more), (forced-colors: active) {
   .cx-tpl-locked { border-style: dashed; border-width: 2px; }

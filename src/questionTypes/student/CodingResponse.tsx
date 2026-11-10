@@ -216,8 +216,8 @@ export default function CodingResponse({ q, id, answer, onAnswer, disabled, labe
         {samples.map((t, i) => <section key={t.id || i} className="cx-sample" data-testid="coding-sample-test" aria-label={sampleTitle(t, i)}>
           <span>{sampleTitle(t, i)}</span>
           <div className="cx-io-grid">
-            <div className="cx-io-block"><span>الإدخال</span><pre dir="ltr">{t.input}</pre></div>
-            {t.sampleOutput !== undefined && <div className="cx-io-block"><span>الناتج المتوقع</span><pre dir="ltr">{t.sampleOutput}</pre></div>}
+            <div className="cx-io-block"><span>الإدخال</span><pre dir="ltr" tabIndex={0} role="region" aria-label={"الإدخال — " + sampleTitle(t, i)}>{t.input}</pre></div>
+            {t.sampleOutput !== undefined && <div className="cx-io-block"><span>الناتج المتوقع</span><pre dir="ltr" tabIndex={0} role="region" aria-label={"الناتج المتوقع — " + sampleTitle(t, i)}>{t.sampleOutput}</pre></div>}
           </div>
         </section>)}
       </section>}
