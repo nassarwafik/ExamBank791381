@@ -35,7 +35,12 @@ const CONTENT = join(ROOT, "api", "src", "data", "learning-content", CID);
 const WORKLIST = join(ROOT, "docs", "enterprise-899371-learning", "analysis", "enrichment-worklist.json");
 export const HELPER_FILE = join(ROOT, "scripts", "lib", "csharp-autotrace-helper.cs");
 const TOOL_DIR = join(ROOT, "scripts", "lib", "csharp-autotrace");
-export const MAX_STEPS = 200;   // the tracer's own limit (src/learning/activities/csharpTrace.ts)
+// A trace a grade-10 learner can follow (owner, 2026-11-10: «20 أو 30 خطوة تكفي»): at most SHOWN_STEPS steps. A longer run keeps its first
+// HEAD_STEPS steps (the start and the first iterations) and its last SHOWN_STEPS − HEAD_STEPS (the end and the final output); the first
+// step after the cut says how many similar steps were skipped. Every step shown is a real recorded state. The recorder writes at most 400
+// raw steps: a run that reaches that limit is refused (its end would not be the program's end).
+export const SHOWN_STEPS = 30, HEAD_STEPS = 21, RAW_LIMIT = 400;
+export const MAX_STEPS = SHOWN_STEPS;
 
 const indent = (s, n) => s.split("\n").map(l => (l ? " ".repeat(n) + l : l)).join("\n");
 const lines = s => s.split("\n").length;
@@ -69,13 +74,17 @@ export function targets({ pages = servedPages(), practice = readPractice(), work
   for (const q of worklist.questions) {
     if (!q.trace) continue;
     for (const pr of q.programs) {
+      if (pr.kind === "signature") continue;   // a method header the student is asked to write: nothing runs (P14 «حلّ وافحص»)
       const block = pages[q.pageId]?.blocks.find(b => b.id === pr.blockId);
       if (!block) throw new Error(q.id + ": no block " + pr.blockId);
       const spec = specs[q.id + "/" + pr.blockId] ?? {};
       out.push({ key: q.pageId + "/" + pr.blockId, kind: "book", moduleId: pages[q.pageId].moduleId, pageId: q.pageId, blockId: pr.blockId, questionId: q.id, programKind: pr.kind, program: block.code,
         ...(spec.stdin !== undefined ? { stdin: spec.stdin } : {}), ...(spec.setup ? { setup: spec.setup } : {}), ...(spec.call ? { call: spec.call } : {}), ...(spec.extra ? { extra: spec.extra } : {}), ...(spec.skip ? { skip: spec.skip } : {}),
         // where the run's values come from, when the tracer adds any: the question's text, its teacher clarification, or chosen
-        ...((spec.stdin !== undefined || spec.setup || spec.call) && spec.source ? { valuesFrom: spec.source } : {}) });
+        ...((spec.stdin !== undefined || spec.setup || spec.call) && spec.source ? { valuesFrom: spec.source } : {}),
+        // a program that draws random numbers runs with a generator fixed to one sequence (a hidden `extra` class), so its one run
+        // is reproducible; the learner is told it is one example run
+        ...(spec.random ? { random: true } : {}) });
     }
   }
   const keys = new Set();
@@ -91,12 +100,21 @@ export function runSource(t) {
     return { source: head + indent(t.program, 4) + "\n}\n", offset: lines(head) - 1 };
   }
   const body = (t.setup ? t.setup + "\n" : "") + t.program;
-  const wrapped = wrapProgram(body);
+  let wrapped = wrapProgram(body);
+  // a hidden member (e.g. the fixed-sequence Random) goes inside the program's class, AFTER the page's lines: nothing shifts
+  if (t.extra) { const at = wrapped.lastIndexOf("}"); wrapped = wrapped.slice(0, at) + indent(t.extra, 4) + "\n" + wrapped.slice(at); }
   const prefix = /\bclass\s+\w+/.test(body) ? 0 : /\bstatic\s+[\w<>[\]]+\s+Main\s*\(/.test(body) ? 2 : 4;
   return { source: wrapped, offset: prefix + (t.setup ? lines(t.setup) : 0) };
 }
 export const runSha = (source, stdin) => createHash("sha256").update(source + "\u0000" + (stdin ?? "")).digest("hex");
 
+/** At most SHOWN_STEPS: the head and the tail of a longer trace, the cut said on the first tail step. Pure. */
+export function shortenSteps(kept) {
+  if (kept.length <= SHOWN_STEPS) return kept;
+  const tail = kept.slice(kept.length - (SHOWN_STEPS - HEAD_STEPS));
+  const skipped = kept.length - SHOWN_STEPS;
+  return [...kept.slice(0, HEAD_STEPS), { ...tail[0], note: "⋯ تخطّينا هنا " + skipped + " من الخطوات المتشابهة، ونكمل قرب النهاية. " + tail[0].note }, ...tail.slice(1)];
+}
 /** The steps kept for the page (its own lines only), each with its sentence. */
 export function keepSteps(recorded, displayLines) {
   const kept = [];
@@ -144,12 +162,16 @@ function main() {
     if (clean.compile.exitCode !== 0 || !cleanRun) { skipped[t.key] = "the program does not compile or run as given"; bad++; console.log("  ✗ " + t.key + ": clean run failed"); continue; }
     const [printed, json] = (recRun?.stdout ?? "").split("\n\u0001TRACE\n");
     if (json === undefined || printed !== cleanRun.stdout) { skipped[t.key] = "the recorded run did not print what the program prints"; bad++; console.log("  ✗ " + t.key + ": recorded output differs"); continue; }
-    const steps = keepSteps(JSON.parse(json), lines(t.program));
-    if (steps.length > MAX_STEPS) { skipped[t.key] = "longer than the tracer shows (" + steps.length + " steps)"; console.log("  – " + t.key + ": " + steps.length + " steps"); continue; }
+    const raw = JSON.parse(json);
+    if (raw.length > RAW_LIMIT) { skipped[t.key] = "the run is longer than the recorder keeps (" + raw.length + " raw steps)"; bad++; console.log("  ✗ " + t.key + ": too long"); continue; }
+    const steps = shortenSteps(keepSteps(raw, lines(t.program)));
     if (!steps.length) { skipped[t.key] = "no step on the page's lines"; bad++; console.log("  ✗ " + t.key + ": no step"); continue; }
     runs[t.key] = { kind: t.kind, sha: runSha(source, t.stdin), ...(t.stdin !== undefined ? { stdin: t.stdin } : {}), stdout: cleanRun.stdout, ...(cleanRun.exitCode ? { exitCode: cleanRun.exitCode } : {}), steps };
     console.log("  ✓ " + t.key + ": " + steps.length + " steps");
   }
+  // a program that is no longer a target (removed from the page, or now a header the student writes) leaves no run behind
+  const live = new Set(all.map(t => t.key));
+  for (const k of [...Object.keys(runs), ...Object.keys(skipped)]) if (!live.has(k)) { delete runs[k]; delete skipped[k]; }
   const sorted = o => Object.fromEntries(Object.keys(o).sort().map(k => [k, o[k]]));
   mkdirSync(QT_DIR, { recursive: true });
   writeFileSync(RUNS_FILE, JSON.stringify({ schemaVersion: 1, courseId: CID, helperSha: createHash("sha256").update(helper).digest("hex"), runs: sorted(runs), skipped: sorted(skipped) }) + "\n");

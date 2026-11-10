@@ -81,9 +81,11 @@
    "why": "Four table rows, each fed in the program's reading order Salary, Children, Discount (the table header is right-to-left)."
   },
   "c05-h-q5/m05-l02-p05-b02": {
-   "skip": "the program uses Random: each run prints different values, so one recorded run would not be the program's behaviour",
+   "stdin": "4\n",
+   "extra": "class Random : System.Random { public Random() : base(2026) { } }",
+   "random": true,
    "source": "chosen",
-   "why": "nondeterministic"
+   "why": "the program draws random digits: it runs with a generator fixed to one sequence (hidden class Random, the book's code unchanged) and 4 digits; the learner is told it is one example run"
   },
   "c06-h-q1/m06-l02-p01-b03": {
    "stdin": "12\n153\n100\n370\n",
@@ -128,9 +130,11 @@
    "why": "Calls the static method with the argument the question gives."
   },
   "c08-h-q4/m08-l02-p04-b03": {
-   "skip": "the program uses Random: each run prints different values, so one recorded run would not be the program's behaviour",
+   "stdin": "6\n",
+   "extra": "class Random : System.Random { public Random() : base(2026) { } }",
+   "random": true,
    "source": "chosen",
-   "why": "nondeterministic"
+   "why": "the program draws random digits: it runs with a generator fixed to one sequence (hidden class Random, the book's code unchanged) and 6 digits; the learner is told it is one example run"
   },
   "c09-h-q4/m09-l02-p04-b02": {
    "call": "int[] arr = { 4, 2, 7, 6, 8 };\nProcess(arr);",
@@ -142,11 +146,6 @@
    "source": "question",
    "quote": "int[] a = { 7, 10, 9, 8, 5, 3, 15, 8 };",
    "why": "The fragment is a self-contained array declaration with literal values; nothing needs to be declared before it."
-  },
-  "c09-p-q5/m09-l03-p05-b03": {
-   "skip": "Only a method header ending with \";\" (the student is asked to write the body); not runnable C# and nothing to trace.",
-   "source": "question",
-   "why": "Signature-only block from a write-code question."
   },
   "c09-p-q5/m09-l03-p05-b14": {
    "call": "int[] a = { 2, 8, 17, 14, 42, 11, 5, 12 };\nint r = Dog(a);",

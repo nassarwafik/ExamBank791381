@@ -29,7 +29,7 @@ public static class Tr
     public static T R<T>(int line, string text, T value, params object[] kv) { Record(line, "return", kv, text, value); return value; }
     static void Record(int line, string kind, object[] kv, string? evalText, object? evalValue)
     {
-        if (steps.Count > MaxSteps) return;   // a run longer than any tracer shows: recorded up to one step over the limit, then not at all
+        if (steps.Count > MaxSteps) return;   // recorded up to one step over the limit, then not at all (the recorder refuses such a run)
         var vars = frames[frames.Count - 1].Value;
         vars.Clear();
         var eval = new List<KeyValuePair<string, object>>();

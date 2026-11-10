@@ -5,7 +5,7 @@
 //   • noteFor (scripts/lib/trace-notes.mjs): the sentence says what the recorded run did — a condition and its value, what changed, what
 //     was printed, a call and its arguments, a returned value — with code in direction isolates.
 import { describe, it, expect } from "vitest";
-import { runSource, keepSteps, runSha } from "./trace-899371-questions.mjs";
+import { runSource, keepSteps, runSha, shortenSteps, SHOWN_STEPS, HEAD_STEPS } from "./trace-899371-questions.mjs";
 import { noteFor, show, LRI, FSI, PDI } from "./lib/trace-notes.mjs";
 
 const lineOf = (source, offset, k) => source.split("\n")[offset + k - 1].trim();
@@ -46,6 +46,20 @@ describe("keepSteps — only the page's own lines, each with its sentence", () =
     expect(kept.map(s => s.line)).toEqual([1, 2]);
     expect(kept.map(s => strip(s.note))).toEqual(["متغير جديد x = 5.", "يطبع «5» ثم ينتقل إلى سطر جديد."]);
     expect(Object.keys(kept[0]).sort()).toEqual(["eval", "frames", "heap", "line", "note", "out"]);
+  });
+});
+
+describe("shortenSteps — at most 30 steps", () => {
+  const many = n => Array.from({ length: n }, (_, i) => ({ line: 1, note: "خطوة " + (i + 1), frames: [], eval: [], heap: [], out: String(i) }));
+  it("a short trace is unchanged; a long one keeps its head and its end, the cut said on the first step after the head", () => {
+    expect(shortenSteps(many(SHOWN_STEPS))).toEqual(many(SHOWN_STEPS));
+    const long = many(203), short = shortenSteps(long);
+    expect(short).toHaveLength(SHOWN_STEPS);
+    expect(short.slice(0, HEAD_STEPS)).toEqual(long.slice(0, HEAD_STEPS));
+    expect(short.slice(HEAD_STEPS + 1)).toEqual(long.slice(203 - (SHOWN_STEPS - HEAD_STEPS) + 1));
+    expect(short[HEAD_STEPS].note).toBe("⋯ تخطّينا هنا 173 من الخطوات المتشابهة، ونكمل قرب النهاية. خطوة 195");
+    expect(short[HEAD_STEPS].out).toBe(long[194].out);                                  // a real recorded state, only its sentence prefixed
+    expect(short.at(-1)).toEqual(long.at(-1));                                          // the end is the program's end
   });
 });
 

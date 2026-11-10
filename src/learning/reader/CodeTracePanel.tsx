@@ -58,7 +58,8 @@ export default function CodeTracePanel({ id, target, load, refresh }: { id: stri
   return (
     <section id={id} className="learning-run learning-trace-panel" aria-label="شاهد التنفيذ خطوة بخطوة">
       <p className="learning-run-note"><span className="learning-trace-panel-tag">إثراء تعليمي</span> تنفيذ البرنامج كما سُجّل بتشغيله فعلًا{trace.stdin ? "، بالمدخلات المكتوبة تحت" : ""}. لا علامة ولا حفظ.</p>
-      {trace.valuesFrom === "chosen" && <p className="learning-run-note">قيم هذا التشغيل مقترحة للتتبع، فالسؤال لا يحددها.</p>}
+      {trace.random && <p className="learning-run-note">البرنامج يختار أعدادًا عشوائية: هذا تشغيل واحد مثالًا، وكل تشغيل حقيقي يعطي أعدادًا أخرى.</p>}
+      {trace.valuesFrom === "chosen" && !trace.random && <p className="learning-run-note">قيم هذا التشغيل مقترحة للتتبع، فالسؤال لا يحددها.</p>}
       {trace.valuesFrom === "clarification" && <p className="learning-run-note">قيم هذا التشغيل من «توضيح المعلم» في الصفحة.</p>}
       {predicting ? (
         <>

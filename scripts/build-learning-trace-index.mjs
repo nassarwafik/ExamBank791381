@@ -26,7 +26,7 @@ export function buildTraceIndex(runsFile = JSON.parse(readFileSync(RUNS_FILE, "u
     if (run.sha !== runSha(runSource(t).source, t.stdin)) throw new Error(key + ": the program or its input changed since it was recorded — re-record it");
     traces[key] = {
       moduleId: t.moduleId, kind: t.kind, ...(t.activityId ? { activityId: t.activityId } : {}), ...(t.questionId ? { questionId: t.questionId } : {}),
-      code: t.program, ...(t.stdin !== undefined ? { stdin: t.stdin } : {}), ...(t.valuesFrom ? { valuesFrom: t.valuesFrom } : {}), steps: run.steps,
+      code: t.program, ...(t.stdin !== undefined ? { stdin: t.stdin } : {}), ...(t.valuesFrom ? { valuesFrom: t.valuesFrom } : {}), ...(t.random ? { random: true } : {}), steps: run.steps,
     };
   }
   return { schemaVersion: 1, courseId: CID, traces };

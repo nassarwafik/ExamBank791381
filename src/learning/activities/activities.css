@@ -673,6 +673,7 @@
 .learning-trace-btn{ min-height:44px; min-width:44px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-pill); background:var(--eb-surface); font:inherit; font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); cursor:pointer; }
 .learning-trace-btn.is-next{ background:var(--eb-primary-050); }
 .learning-trace-btn:disabled{ opacity:.5; cursor:default; }
+.learning-trace-slider{ flex:1 1 160px; min-width:120px; min-height:44px; accent-color:var(--eb-primary); }
 .learning-trace-btn:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .learning-trace-counter{ font-size:var(--eb-fs-14); color:var(--eb-muted); }
 .learning-trace-note{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r-sm); background:var(--eb-info-bg); color:var(--eb-text); line-height:var(--eb-lh-body); }

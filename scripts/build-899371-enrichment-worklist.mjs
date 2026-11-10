@@ -29,7 +29,9 @@ const ORDINALS = { "الأول": 1, "الثاني": 2, "الثالث": 3, "ال�
 const START = new RegExp("^\\s*(?:السؤال|سؤال)\\s*(\\d+|" + Object.keys(ORDINALS).join("|") + ")|^\\s*(\\d{1,2})\\.\\s");
 const spanText = b => (Array.isArray(b.spans) ? b.spans.map(s => s.text || "").join("") : "");
 const numbersOfTitle = t => { const m = /^الأسئلة\s+(\d+)–(\d+)$/.exec(t); if (m) { const out = []; for (let n = +m[1]; n <= +m[2]; n++) out.push(n); return out; } const s = /^السؤال\s+(\d+)$/.exec(t); return s ? [+s[1]] : []; };
-const programKind = code => /static\s+void\s+Main\s*\(/.test(code) ? (/\bclass\s+\w/.test(code) ? "class-with-main" : "main") : /\bclass\s+\w/.test(code) ? "class" : /\b(static\s+)?\w+\s+\w+\s*\([^)]*\)\s*\{/.test(code) ? "method" : "fragment";
+// a method HEADER alone («public static int Igloo(int[] a, int num);») is the signature a question asks the student to write: nothing
+// runs, so it is no program to trace (its writing is track C, P14)
+const programKind = code => /^\s*(public\s+|private\s+)?(static\s+)?[\w<>[\],\s]+\s+\w+\s*\([^)]*\)\s*;\s*$/.test(code) ? "signature" : /static\s+void\s+Main\s*\(/.test(code) ? (/\bclass\s+\w/.test(code) ? "class-with-main" : "main") : /\bclass\s+\w/.test(code) ? "class" : /\b(static\s+)?\w+\s+\w+\s*\([^)]*\)\s*\{/.test(code) ? "method" : "fragment";
 
 // ── track A: the 33 animated scenes (plan §3.1, decision D6 — accepted as listed) ─────────────────────────────────────────────────
 // [id, chapter, summary page (899371-mNN-l01-pNN), the concept the scene shows]

@@ -1,7 +1,7 @@
 // 899371 enrichment P13 (docs/enterprise-899371-enrichment-plan.md §9) — «شاهد التنفيذ خطوة بخطوة»: the recorded traces of a course's
 // questions, served on demand (never inside a page body).
 //     GET /api/learning-trace/{courseId}                                  → { ok, actor, traces: { "<pageId>/<blockId>": "open" | "answer-first" } }
-//     GET /api/learning-trace/{courseId}/steps?pageId=…&blockId=…         → { ok, trace: { kind, code, stdin?, valuesFrom?, steps } }
+//     GET /api/learning-trace/{courseId}/steps?pageId=…&blockId=…         → { ok, trace: { kind, code, stdin?, valuesFrom?, random?, steps } }
 // WHO: a teacher with learning.course.view (route-capabilities.js) and the course in their entitlement — every trace; an ACTIVE student
 // whose persisted class is not archived, has the course attached and allowed, and has the trace's MODULE published, then:
 //   • an EXERCISE trace (it shows the exercise's answer) only after the student answered that exercise — the server's own study record
@@ -106,7 +106,7 @@ async function handler(request, deps = {}, obs = null) {
     if (!canSee(t.moduleId)) return refuse(403, "UNAVAILABLE", obs);
     if (t.kind === "book" && !released(t.moduleId)) return refuse(403, "NOT_RELEASED", obs);
     if (t.kind === "exercise" && !(await answered())(pageId, t.activityId)) return refuse(409, "ANSWER_FIRST", obs);
-    return reply(200, { ok: true, trace: { kind: t.kind, code: t.code, ...(typeof t.stdin === "string" ? { stdin: t.stdin } : {}), ...(VALUES_FROM.has(t.valuesFrom) ? { valuesFrom: t.valuesFrom } : {}), steps: t.steps } });
+    return reply(200, { ok: true, trace: { kind: t.kind, code: t.code, ...(typeof t.stdin === "string" ? { stdin: t.stdin } : {}), ...(VALUES_FROM.has(t.valuesFrom) ? { valuesFrom: t.valuesFrom } : {}), ...(t.random === true ? { random: true } : {}), steps: t.steps } });
   } catch (e) {
     obs?.logError("learning.trace.error", e);
     return refuse(500, "FAILED", obs);

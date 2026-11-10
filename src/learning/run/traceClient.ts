@@ -7,7 +7,7 @@ import { CodeRunError, type CodeRunAccess } from "./runClient";
 export type TraceState = "open" | "answer-first";
 export type TraceListResponse = { ok: true; actor: "student" | "teacher"; traces: Record<string, TraceState> };
 /** `valuesFrom`: where a book run's values come from when the tracer adds any (its text, its teacher clarification, or chosen). */
-export type TraceResponse = { ok: true; trace: { kind: "exercise" | "book"; code: string; stdin?: string; valuesFrom?: "question" | "clarification" | "chosen"; steps: unknown[] } };
+export type TraceResponse = { ok: true; trace: { kind: "exercise" | "book"; code: string; stdin?: string; valuesFrom?: "question" | "clarification" | "chosen"; random?: true; steps: unknown[] } };
 const BASE = "/api/learning-trace/";
 
 async function call<T>(headers: Record<string, string>, path: string): Promise<T> {

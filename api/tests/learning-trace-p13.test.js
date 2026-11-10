@@ -36,7 +36,7 @@ const answered = (how) => ({ [STUDY]: { schemaVersion: 1, pages: { [EX.pageId]: 
 
 describe("899371 P13 — the trace index the route serves", () => {
   it("has the exercise and book traces of the course, each with its module, program and steps", () => {
-    expect(all.length).toBe(151);
+    expect(all.length).toBe(154);
     expect(all.filter(t => t.kind === "exercise").every(t => /^m\d\d-l\d\d-p\d\d-q\d\d$/.test(t.activityId) && t.blockId === t.activityId + "-code")).toBe(true);
     expect(EX && BOOK).toBeTruthy();
   });
@@ -47,7 +47,7 @@ describe("899371 P13 — who may watch what", () => {
     const ctx = seed([]);
     const r = await get(teacherDeps(ctx));
     expect(r.status).toBe(200);
-    expect(Object.keys(r.jsonBody.traces).length).toBe(151);
+    expect(Object.keys(r.jsonBody.traces).length).toBe(154);
     expect(new Set(Object.values(r.jsonBody.traces))).toEqual(new Set(["open"]));
     const s = await steps(teacherDeps(ctx), BOOK);
     expect(s.status).toBe(200);

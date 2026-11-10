@@ -117,4 +117,13 @@ describe("«شاهد التنفيذ» — a book question: تنبّأ ثم تح�
     expect(screen.queryByText(/توقّعك/)).toBeNull();
     expect(screen.getByText(/قيم هذا التشغيل مقترحة/)).toBeTruthy();
   });
+
+  it("a program that draws random numbers says its trace is one example run", async () => {
+    server(listed("open"), [trace("book", { valuesFrom: "chosen", random: true })]);
+    show(access());
+    fireEvent.click(await screen.findByRole("button", { name: WATCH }));
+    fireEvent.click(await screen.findByRole("button", { name: "شاهد دون توقّع" }));
+    expect((await screen.findByText(/هذا تشغيل واحد مثالًا/)).textContent).toContain("أعدادًا عشوائية");
+    expect(screen.queryByText(/قيم هذا التشغيل مقترحة/)).toBeNull();
+  });
 });
