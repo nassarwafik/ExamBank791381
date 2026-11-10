@@ -835,6 +835,11 @@
       "page": "student-progress",
       "viewport": "all",
       "reason": "Tadris+ UX-S4 (approved design docs/enterprise-ux-student-s4.md §2.1) — «التقدم»: the four task-count cards are removed, the description is one line, the stage sentence is the headline under the stage group, the point sources fold under «من أين جاءت نقاطك؟» (folded at zero), zero recognition is one line, a next-step button closes the view, and on a phone the average sits under the Strength card."
+    },
+    {
+      "page": "ed-coding",
+      "viewport": "all",
+      "reason": "899371 enrichment P17 (docs/enterprise-899371-enrichment-plan.md §13) — the coding editor's DIMMED last-line number gets its own theme colour (editorLineNumber.dimmedForeground, 5.4:1 light / 5.0:1 dark on the gutter) instead of Monaco's 40 % fade, which axe reported as too faint (color-contrast); only that one number darkens, nothing else in the editor moves."
     }
   ]
 }
