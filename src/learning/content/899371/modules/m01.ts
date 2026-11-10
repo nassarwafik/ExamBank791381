@@ -823,7 +823,16 @@ const m01: ContentModule = {
                     "y": 168,
                     "x2": 195,
                     "y2": 196,
-                    "label": "int.Parse",
+                    "show": false
+                  },
+                  {
+                    "id": "convl",
+                    "kind": "text",
+                    "x": 204,
+                    "y": 182,
+                    "text": "int.Parse",
+                    "anchor": "left",
+                    "mono": true,
                     "show": false
                   },
                   {
@@ -907,6 +916,10 @@ const m01: ContentModule = {
                         "show": true,
                         "tone": "accent"
                       },
+                      "convl": {
+                        "show": true,
+                        "tone": "accent"
+                      },
                       "ba": {
                         "show": true,
                         "value": "17",
@@ -921,6 +934,9 @@ const m01: ContentModule = {
                         "hl": 3
                       },
                       "conv": {
+                        "tone": "base"
+                      },
+                      "convl": {
                         "tone": "base"
                       },
                       "ba": {
@@ -2087,6 +2103,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l02-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l02-p04-b03",
               "type": "text",
               "origin": "book",
@@ -2109,6 +2133,14 @@ const m01: ContentModule = {
                   "text": "Average = 83"
                 }
               ]
+            },
+            {
+              "id": "m01-l02-p04-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }
@@ -2153,6 +2185,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l03-p01-b03",
               "type": "text",
               "origin": "book",
@@ -2177,6 +2217,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l03-p01-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l03-p01-b05",
               "type": "text",
               "origin": "book",
@@ -2191,6 +2239,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l03-p01-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l03-p01-b06",
               "type": "text",
               "origin": "book",
@@ -2203,6 +2259,14 @@ const m01: ContentModule = {
                   "text": " اكتب برنامجًا يطلب رقمين صحيحين ثم يطبع:  المجموع = [النتيجة]"
                 }
               ]
+            },
+            {
+              "id": "m01-l03-p01-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2233,6 +2297,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l03-p02-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l03-p02-b02",
               "type": "text",
               "origin": "book",
@@ -2245,6 +2317,14 @@ const m01: ContentModule = {
                   "text": " يستقبل البرنامج عددًا ثلاثي المنازل، ثم يحسب مجموع منازله (مثلاً 123 → 1+2+3=6) ويطبعه."
                 }
               ]
+            },
+            {
+              "id": "m01-l03-p02-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             },
             {
               "id": "m01-l03-p02-b03",
@@ -2261,6 +2341,14 @@ const m01: ContentModule = {
               ]
             },
             {
+              "id": "m01-l03-p02-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m01-l03-p02-b04",
               "type": "text",
               "origin": "book",
@@ -2273,6 +2361,14 @@ const m01: ContentModule = {
                   "text": " اكتب برنامج يستقبل عدد رباعي المنازل يقوم البرنامج بطباعة مجموع منازلة كذلك مجموع اخر منزلتين"
                 }
               ]
+            },
+            {
+              "id": "m01-l03-p02-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2328,6 +2424,22 @@ const m01: ContentModule = {
                   "text": "ثم يطبع:  [C]°C = [F]°F"
                 }
               ]
+            },
+            {
+              "id": "m01-l03-p03-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
+              "id": "m01-l03-p03-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

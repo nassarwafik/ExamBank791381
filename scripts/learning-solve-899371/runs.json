@@ -1,0 +1,2241 @@
+{
+ "schemaVersion": 1,
+ "comparator": "normalizeWhitespace",
+ "runs": {
+  "c01-h-q4": {
+   "sha": "4e3c396deb1b22e828d1fb9d0a002f917d4dc633598db20c331106a52155baee",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "a = 5, b = 7, sum = 12\n"
+   ],
+   "hidden": [
+    "a = 3, b = 4, sum = 7\n",
+    "a = -2, b = 10, sum = 8\n",
+    "a = 0, b = 0, sum = 0\n",
+    "a = 120, b = 35, sum = 155\n"
+   ],
+   "wrong": {
+    "sha": "4d981d108a1f4e29e69b712bad07747f6ea1df7d5589b6b1e1b11e5d97378ffa",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-h-q5": {
+   "sha": "865987a7b0ddcd62185d815cf222b878e4f5de084758045b3e7efe8c57a6f482",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Average = 83\n"
+   ],
+   "hidden": [
+    "Average = 82.75\n",
+    "Average = 100\n",
+    "Average = 29.5\n",
+    "Average = 80.375\n"
+   ],
+   "wrong": {
+    "sha": "a14a2098b4a6296a4f390d42c44682e66363857bcf1e52ebbc493dc11a1e699c",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c01-p-q1": {
+   "sha": "ca7ffc1b828b1ec9f9af1ed45256489b6fd48a34fbede933aee56469f8224316",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "مرحباً بكم في عالم C#\n"
+   ],
+   "hidden": [
+    "مرحباً بكم في عالم C#\n",
+    "مرحباً بكم في عالم C#\n",
+    "مرحباً بكم في عالم C#\n"
+   ],
+   "wrong": {
+    "sha": "173fce9df0c8c160a6fbbcd7b330fdbf6f31075b589b0d9c15132a5d3c0542ce",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q10": {
+   "sha": "0cb9781b6752c5f86248ef23c048829157c66340c4493717a2a4e0880b0ad807",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "100°C = 212°F\n"
+   ],
+   "hidden": [
+    "0°C = 32°F\n",
+    "37°C = 98°F\n",
+    "-40°C = -40°F\n",
+    "25°C = 77°F\n",
+    "-7°C = 20°F\n"
+   ],
+   "wrong": {
+    "sha": "c3882bf1d43532794a5235ecf797cbeefbb6642b7e25fee68508edfe46a4db88",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q2": {
+   "sha": "8facd9845aa83b4e7ef7a4ac2e2cc2f5bbd761fe16f19e1dc2d990048fc53c55",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "العدد المكوّن هو 57\n"
+   ],
+   "hidden": [
+    "العدد المكوّن هو 10\n",
+    "العدد المكوّن هو 99\n",
+    "العدد المكوّن هو 38\n",
+    "العدد المكوّن هو 62\n"
+   ],
+   "wrong": {
+    "sha": "092906a57dbedda75d2f38fc3c52d56cfb146adbfab1a55e5fcd489f46ca81b4",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q3": {
+   "sha": "04063c2b9528f27d5bf1f43fe1262c1585f57effe20c4c96cfd4446cf86791bd",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "49\n"
+   ],
+   "hidden": [
+    "81\n",
+    "16\n",
+    "0\n",
+    "144\n",
+    "10000\n"
+   ],
+   "wrong": {
+    "sha": "d83ff50984285a10740336350113e8697593a4faaaec5cfba83cee4c4d8edfb8",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q4": {
+   "sha": "75e83b079326a2b0df1fd3f6439ce2782e88b0d8eb11320c5837024c6a344901",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "المجموع = 12\n"
+   ],
+   "hidden": [
+    "المجموع = 30\n",
+    "المجموع = 2\n",
+    "المجموع = 0\n",
+    "المجموع = 100\n"
+   ],
+   "wrong": {
+    "sha": "1aba5eef0c9f5b0da09fac35fc2bf3e988bc008cce48af0736fac314e05f79de",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q5": {
+   "sha": "7bf5e10b3a74e82d0d708d504a6d0e5173392b0d54a8f99243ceb259dac82bce",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "مرحباً يا أحمد! عمرك 16 سنة.\n"
+   ],
+   "hidden": [
+    "مرحباً يا سارة! عمرك 15 سنة.\n",
+    "مرحباً يا Omar! عمرك 17 سنة.\n",
+    "مرحباً يا ليان! عمرك 9 سنة.\n",
+    "مرحباً يا يوسف! عمرك 40 سنة.\n"
+   ],
+   "wrong": {
+    "sha": "5ab8b6128391c402219a5f85b0c6107bd34096043bd56f81638c448e8b3fe957",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q6": {
+   "sha": "12854b4321774f189d26f5e8a6200ee3c1278f5afad69d7cc8ee1649b28ef51a",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "6\n"
+   ],
+   "hidden": [
+    "27\n",
+    "1\n",
+    "12\n",
+    "12\n",
+    "7\n"
+   ],
+   "wrong": {
+    "sha": "1d35039d23a62db9fdfbe19bed843fc17f788a98df32d84afed7dcd7407ee0b5",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q7": {
+   "sha": "06462b7c5514c2902efff77d0e13ae7a95386f6b27f2bd476cdf060e68ac461c",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "450\n"
+   ],
+   "hidden": [
+    "380\n",
+    "300\n",
+    "450\n",
+    "1\n",
+    "160\n"
+   ],
+   "wrong": {
+    "sha": "b0a0b5ea4dc38d600cb19eb35c8844908a3949faf18fe8dd4be8f43aa0d4fc49",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c01-p-q8": {
+   "sha": "3622ab5df82ae17b0b5022c329932ecf8d3bb16653b23512635f8442d374bec8",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "10\n7\n"
+   ],
+   "hidden": [
+    "36\n18\n",
+    "1\n0\n",
+    "12\n8\n",
+    "19\n8\n",
+    "8\n6\n"
+   ],
+   "wrong": {
+    "sha": "22933f9af1a5512fbc1ab671b15cb688253aeb7cc7b39e820e9e167d66a2bf59",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c01-p-q9": {
+   "sha": "ee3630d314f1979bd00a1a82d68040283febc4cf4874f4870a58c0f42a2c90dd",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1234\n"
+   ],
+   "hidden": [
+    "9000\n",
+    "5079\n",
+    "1001\n",
+    "3862\n"
+   ],
+   "wrong": {
+    "sha": "0515797324e59cea90070efcfba39c9e0109c38fc6d5f0913f8490a3089fad16",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c02-p-q5": {
+   "sha": "84efa1c2bcab61f30bd22e61690ba7e16ab4779047f2ae99ac90f8328f254e8c",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "10\n24\n5\n"
+   ],
+   "hidden": [
+    "7\n12\n3.5\n",
+    "-3\n-10\n-1.5\n",
+    "0\n0\n0\n",
+    "107\n700\n53.5\n",
+    "18\n81\n9\n"
+   ],
+   "wrong": {
+    "sha": "022401794cdba7a3622665dddabcba0a6a1f9c656375cc489d327b1701e7f66d",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "c03-h-q10": {
+   "sha": "7e052184b7dfb424d35aed313a297908b9974164709e3664b88c8cbe264fc8b7",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "9 3 59 23 72\n33\n"
+   ],
+   "hidden": []
+  },
+  "c03-h-q7": {
+   "sha": "4ab3db3fc1cf33cb56cee3d1c29cdcaa1dbadf1b4172d5aab554cc374fe322fb",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "2\n1\n"
+   ],
+   "hidden": [
+    "3\n2\n",
+    "2\n-4\n",
+    "0.5\n-0.5\n",
+    "-2\n3\n",
+    "5\n0\n"
+   ],
+   "wrong": {
+    "sha": "305d7f937f2cbee56fc1fbfef8489e3b3fbd7aa670d55c0289ce9ec90e9ea373",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c03-h-q8": {
+   "sha": "fdb159be4ff0e8431a08e00249b3ded1ecf1e4ed20860bdb9c4f43c8a937a8b8",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "True\n"
+   ],
+   "hidden": [
+    "False\n",
+    "True\n",
+    "True\n",
+    "False\n",
+    "False\n",
+    "True\n"
+   ],
+   "wrong": {
+    "sha": "e3bdc504f93ad45745fbfd4428cb5b2400d8906802d598319dfdac9e877ff7e8",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c03-h-q9": {
+   "sha": "86eca0aef3be5d29fae4dbec5bbf7b8621e8490c46e67806ef0e448361c9baab",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "5\n6\n12\n"
+   ],
+   "hidden": [
+    "1.41\n0.5\n3.41\n",
+    "10\n24\n24\n",
+    "3.61\n3\n8.61\n",
+    "7.07\n12.5\n17.07\n"
+   ],
+   "wrong": {
+    "sha": "0b9af47033ca796aa9d2bd5911387ea8f48b2d7a12843f47b61de0665726337c",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c03-p-q10": {
+   "sha": "afe52999ff47d00b1b1bdaea03dc7ea1cb5626aaacccb2fea7782a046403cd5d",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "3 3\nFalse\n"
+   ],
+   "hidden": []
+  },
+  "c03-p-q6": {
+   "sha": "deb443e1c7257a401ea4172856d800b5ced42cab5a1fb1f4c5a691768d0d54bf",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "5\n"
+   ],
+   "hidden": [
+    "13\n",
+    "1.41\n",
+    "6.5\n",
+    "7.62\n",
+    "17\n"
+   ],
+   "wrong": {
+    "sha": "d2a50c53eeca8e5c1e55b60e884148e2ae70f7cef717a2747fcc6225d978aafe",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c03-p-q7": {
+   "sha": "091a2b24e8184c013a08d3bf48c2edc8f320da7079bebd505acada3cdbbb4134",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1.8\n"
+   ],
+   "hidden": [
+    "1.9\n",
+    "1.95\n",
+    "1.6\n",
+    "1.82\n"
+   ],
+   "wrong": {
+    "sha": "63067017275f772c9de9bed9f9efe358bc77b132a2225aebe4950bbe5f213e09",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "c03-p-q8": {
+   "sha": "663fe40303976e6223794cd328320d10c3d2508719a05849bfa23e89ca9a12e6",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "90\n"
+   ],
+   "hidden": [
+    "75\n",
+    "0\n",
+    "99\n",
+    "60\n"
+   ],
+   "wrong": {
+    "sha": "4620223c174b005a8dfe45d26200f5171e60844406ecc7612b8aeb950a261616",
+    "compileExit": 0,
+    "fails": [
+     false,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "c03-p-q9": {
+   "sha": "c4a3db705b4c47eacccbabda0539fc438f1aaf6ed62799fdba55c3a5881c7982",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "455\nTrue\n"
+   ],
+   "hidden": []
+  },
+  "c04-h-q11": {
+   "sha": "b250bce4b320695744917a0d3bf6bd2d47be567361f52da738d3c16ea6f822e8",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "470\n"
+   ],
+   "hidden": [
+    "320\n",
+    "260\n",
+    "275\n",
+    "150\n",
+    "320\n"
+   ],
+   "wrong": {
+    "sha": "c2318d8bc69f2c325797c838d303cb47af7679386767c8ac7da31af7fbb4dfb9",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c04-h-q7": {
+   "sha": "8afce74dbea85219fb6b366e0bf622ff362299fe79a46d9605022b02cc7e4165",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "التاريخ قانوني\n140\n"
+   ],
+   "hidden": [
+    "التاريخ قانوني\n75\n",
+    "التاريخ قانوني\n360\n",
+    "التاريخ غير قانوني\n",
+    "التاريخ غير قانوني\n",
+    "التاريخ غير قانوني\n",
+    "التاريخ قانوني\n1\n",
+    "التاريخ غير قانوني\n"
+   ],
+   "wrong": {
+    "sha": "66221d07497c2abaa440b7ce3ce94ed5616fbe7c3cc0d464eb1c884a9ec5323d",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     false,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c04-h-q9": {
+   "sha": "29803b73807abb4eb997f781e87e50ba9117c0d491e323bd11516441574c846d",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "5700\n"
+   ],
+   "hidden": [
+    "4000\n",
+    "6500\n",
+    "7250\n",
+    "7315\n",
+    "4500\n"
+   ],
+   "wrong": {
+    "sha": "255e45a4c2556afae77265c9b88995083bee83c3b08dc54b621524213595c2a2",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c04-p-q10": {
+   "sha": "5031aaaabcd20bb2c45f3044e772701135ef00578e41882f400caf0d2b6a124a",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "الطقس معتدل – استمتع بيومك\n"
+   ],
+   "hidden": []
+  },
+  "c04-p-q6": {
+   "sha": "d222cc50182e5bc756b90f03b1476ec9bd0ea73dd409be9d8b8ddd4b1c7c2f52",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "يمكن الحصول على رخصة مؤقتة\n"
+   ],
+   "hidden": [
+    "يمكن الحصول على رخصة مؤقتة\n",
+    "يمكن الحصول على رخصة كاملة\n",
+    "لا يمكن الحصول على رخصة قيادة\n",
+    "يمكن الحصول على رخصة كاملة\n",
+    "لا يمكن الحصول على رخصة قيادة\n"
+   ],
+   "wrong": {
+    "sha": "930b2842509fe2ae62f3e3e46614dc8168b94f4edbb5179986fff0555e442dd1",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c04-p-q7": {
+   "sha": "d6f3e8a44a4a1f4f006dde71b4dd6586657c2ae3df0b21e381b6fe99cd397378",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "96\n"
+   ],
+   "hidden": [
+    "90\n",
+    "90\n",
+    "100\n",
+    "22\n",
+    "20.79\n"
+   ],
+   "wrong": {
+    "sha": "89fa4e0679c3e8b99e367a108c4bdf8f5754f3d1945e8c9da73e0b724500ebec",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c04-p-q8": {
+   "sha": "54721b7f52c748aadd7a4b5ff01f1aac09091d7be20698262b40d88335e9532e",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "جيد جدًا\n"
+   ],
+   "hidden": [
+    "ممتاز\n",
+    "جيد جدًا\n",
+    "جيد جدًا\n",
+    "جيد\n",
+    "مقبول\n",
+    "مقبول\n",
+    "راسب\n",
+    "ممتاز\n",
+    "راسب\n"
+   ],
+   "wrong": {
+    "sha": "50ce4edd76b496366027fa41dd91d598a4ead6364f493e30086585b24d2e6ff3",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true,
+     false,
+     true,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c04-p-q9": {
+   "sha": "d16efd020f7924dcac5bf68b34704f3addde3ab10cb70e37de9fdf6f57102e3b",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Even and divisible by 5\n"
+   ],
+   "hidden": [
+    "Even but not divisible by 5\n",
+    "Divisible by 5 but not even\n",
+    "Neither even nor divisible by 5\n",
+    "Even and divisible by 5\n",
+    "Even and divisible by 5\n",
+    "Neither even nor divisible by 5\n"
+   ],
+   "wrong": {
+    "sha": "7e5be45a6d828be49fb5b87825f86539cdeb5a911cd7ae5750334555021d6ce0",
+    "compileExit": 0,
+    "fails": [
+     false,
+     false,
+     false,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c05-p-q1": {
+   "sha": "a0e022cbb898c0c11fee33b3e720bb46a67f201f6793a6bd28352872276c109b",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Section2\nSection3\nSection5\nSection6\nSection7\nSection8\nSection11\nSection12\nSection13\nSection17\nSection19\nSection20\nSection22\nSection23\nSection24\nSection25\nSection26\nSection35\nSection37\nSection40\nSection41\nSection42\nSection44\n439.5\n"
+   ],
+   "hidden": [
+    "Section2\nSection3\nSection4\nSection6\nSection10\nSection11\nSection12\nSection14\nSection20\nSection22\nSection24\nSection29\nSection30\nSection31\nSection38\nSection39\nSection42\n445.7\n",
+    "Section1\nSection2\nSection5\nSection6\nSection7\nSection9\nSection10\nSection11\nSection13\nSection16\nSection17\nSection18\nSection19\nSection22\nSection26\nSection31\nSection34\nSection36\nSection41\nSection42\nSection43\n463.8\n",
+    "Section1\nSection3\nSection4\nSection6\nSection8\nSection9\nSection15\nSection18\nSection21\nSection23\nSection28\nSection33\nSection34\nSection35\nSection36\nSection37\nSection41\nSection43\nSection44\n420.8\n"
+   ],
+   "wrong": {
+    "sha": "a0f4a7170db9fcb796d594425c442e9afe593e75666a5d87c7e6511f4e61f19c",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c05-p-q10": {
+   "sha": "95296ca24795b899763949561d5684dce5ea5395395d78b3bdfe8bdefbea6af0",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1331\n"
+   ],
+   "hidden": [
+    "1331\n",
+    "1331\n",
+    "1331\n"
+   ],
+   "wrong": {
+    "sha": "50c96d43358c7a2005834970910c69f4c28d5a8cee16c516372aae8210fb744b",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c05-p-q2": {
+   "sha": "d0d1f4b3d7d8e2ec0f6fb9eda7cafd588ae2fe743bffea252da27cc597c0120a",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "36\n0\n36\n1\n31\n3\n-5\n0\n42\n0\n46\n2\n-7\nindivisible\n30\n0\n-12\nindivisible\n38\nindivisible\n51\n1\n23\n3\n54\n0\n49\nindivisible\n37\nindivisible\n-23\nindivisible\n-4\n0\n46\nindivisible\n33\n1\n22\n2\n4\n-5\n2\n-1\n33\nindivisible\n54\nindivisible\n31\n1\n31\n4\n-17\n-2\n12\n0\n38\n2\n-27\nindivisible\n42\nindivisible\n21\nindivisible\n12\n2\n-22\nindivisible\n57\nindivisible\n-1\n-1\n-17\n-3\n23\n3\n"
+   ],
+   "hidden": [
+    "33\n0\n63\n0\n59\n3\n-7\n-2\n-25\n-1\n34\n1\n59\n3\n54\n2\n8\n-1\n-34\n-2\n-5\n-5\n18\n0\n15\n1\n-27\n-3\n-5\nindivisible\n39\n3\n62\n2\n-19\nindivisible\n-14\n-5\n-2\nindivisible\n31\n3\n-11\n-1\n-4\n-4\n6\n2\n42\n0\n59\nindivisible\n42\n0\n34\nindivisible\n17\n1\n19\n3\n37\n2\n52\n2\n39\nindivisible\n52\nindivisible\n-3\n0\n19\n3\n63\n3\n59\n2\n",
+    "6\n0\n58\n0\n55\n1\n56\n0\n-1\n0\n-14\nindivisible\n40\n0\n7\nindivisible\n26\n0\n53\n1\n-26\n-2\n-12\nindivisible\n10\n3\n26\n0\n6\n2\n6\n-1\n36\n0\n28\n0\n29\n1\n53\nindivisible\n10\n2\n54\n0\n65\n2\n36\n0\n-6\n-6\n63\n0\n39\n0\n9\n1\n1\n-8\n18\n0\n24\n3\n-1\n3\n10\n0\n-18\n-2\n41\n5\n-4\n0\n2\n0\n63\n3\n",
+    "-21\n-1\n68\n5\n4\n1\n5\n2\n-14\n0\n15\n1\n62\n2\n20\nindivisible\n5\n1\n14\n2\n7\n3\n59\n5\n-10\n0\n43\n1\n-9\nindivisible\n53\nindivisible\n-19\n-3\n13\nindivisible\n-17\n-2\n1\n-4\n17\n1\n22\n2\n-18\nindivisible\n40\n0\n55\n3\n-7\nindivisible\n41\n5\n58\n0\n11\n4\n51\n1\n35\n2\n37\n1\n-17\nindivisible\n-16\n-1\n5\nindivisible\n-26\n0\n22\nindivisible\n66\n3\n"
+   ],
+   "wrong": {
+    "sha": "6f90a4e2d776e23af3b2c417563b942ad1588a15ff36e0f8e7047fb3788e7b7f",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c05-p-q3": {
+   "sha": "494601471c0a2716ffccf547c8d56c583cccbaefb8c69b41aa5e4df214983eb0",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Smaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\n"
+   ],
+   "hidden": [
+    "Smaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\n",
+    "Smaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\n",
+    "Smaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\n",
+    "Smaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\nSmaller\n"
+   ],
+   "wrong": {
+    "sha": "c703e64647bced5bd8fb5e62c5c38a2e5626ea277a65947b954af89637ff65b7",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c05-p-q4": {
+   "sha": "3fe2cd8775d37e2f7ff716a16765a09d8931b5039a2713607122e5d56cad7bee",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Tech2 BONUS\nTech3 BONUS\nTech5 BONUS\nTech7 BONUS\nTech16 BONUS\nTech17 BONUS\nTech23 BONUS\nTech24 BONUS\nTech25 BONUS\nTech26 BONUS\nTech30 BONUS\nTech38 BONUS\nTech42 BONUS\nTech43 BONUS\nTech47 BONUS\nTech52 BONUS\nTech56 BONUS\nTech58 BONUS\nTech63 BONUS\nTech66 BONUS\nTech68 BONUS\nTech70 BONUS\nTech71 BONUS\nTech76 BONUS\nTech78 BONUS\nTech81 BONUS\nTech84 BONUS\nTech85 BONUS\nTech88 BONUS\nTech95 BONUS\nTech102 BONUS\nTech108 BONUS\nTech110 BONUS\nTech113 BONUS\nTech115 BONUS\nTech121 BONUS\nTech122 BONUS\nTech123 BONUS\nTech130 BONUS\nTech133 BONUS\nTech138 BONUS\nTech143 BONUS\nTech149 BONUS\nTech150 BONUS\nTech151 BONUS\nTech152 BONUS\nTech153 BONUS\nTech157 BONUS\nTech161 BONUS\nTech165 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech176 BONUS\nTech180 BONUS\nTech189 BONUS\nTech190 BONUS\nTech192 BONUS\nTech196 BONUS\nTech200 BONUS\nTech204 BONUS\nTech205 BONUS\nTech207 BONUS\nTech208 BONUS\nTech212 BONUS\nTech216 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech229 BONUS\nTech234 BONUS\nTech239 BONUS\nTech245 BONUS\nTech249 BONUS\nTech251 BONUS\nTech253 BONUS\nTech254 BONUS\nTech257 BONUS\nTech258 BONUS\nTech263 BONUS\nTech267 BONUS\nTech268 BONUS\nTech269 BONUS\nTech270 BONUS\nTech272 BONUS\nTech273 BONUS\nTech275 BONUS\nTech279 BONUS\nTech281 BONUS\nTech283 BONUS\nTech285 BONUS\nTech286 BONUS\n6032\n"
+   ],
+   "hidden": [
+    "Tech4 BONUS\nTech5 BONUS\nTech14 BONUS\nTech17 BONUS\nTech19 BONUS\nTech21 BONUS\nTech24 BONUS\nTech28 BONUS\nTech30 BONUS\nTech33 BONUS\nTech37 BONUS\nTech44 BONUS\nTech49 BONUS\nTech54 BONUS\nTech55 BONUS\nTech58 BONUS\nTech60 BONUS\nTech61 BONUS\nTech64 BONUS\nTech65 BONUS\nTech69 BONUS\nTech71 BONUS\nTech74 BONUS\nTech77 BONUS\nTech78 BONUS\nTech83 BONUS\nTech86 BONUS\nTech91 BONUS\nTech97 BONUS\nTech106 BONUS\nTech109 BONUS\nTech110 BONUS\nTech113 BONUS\nTech116 BONUS\nTech118 BONUS\nTech119 BONUS\nTech123 BONUS\nTech134 BONUS\nTech135 BONUS\nTech146 BONUS\nTech152 BONUS\nTech153 BONUS\nTech154 BONUS\nTech156 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech172 BONUS\nTech179 BONUS\nTech185 BONUS\nTech187 BONUS\nTech190 BONUS\nTech195 BONUS\nTech197 BONUS\nTech199 BONUS\nTech205 BONUS\nTech206 BONUS\nTech209 BONUS\nTech222 BONUS\nTech223 BONUS\nTech227 BONUS\nTech228 BONUS\nTech231 BONUS\nTech237 BONUS\nTech247 BONUS\nTech257 BONUS\nTech264 BONUS\nTech265 BONUS\nTech266 BONUS\n5744\n",
+    "Tech4 BONUS\nTech6 BONUS\nTech7 BONUS\nTech13 BONUS\nTech16 BONUS\nTech17 BONUS\nTech21 BONUS\nTech22 BONUS\nTech25 BONUS\nTech30 BONUS\nTech33 BONUS\nTech36 BONUS\nTech38 BONUS\nTech41 BONUS\nTech43 BONUS\nTech45 BONUS\nTech46 BONUS\nTech47 BONUS\nTech55 BONUS\nTech59 BONUS\nTech61 BONUS\nTech63 BONUS\nTech65 BONUS\nTech72 BONUS\nTech78 BONUS\nTech80 BONUS\nTech85 BONUS\nTech87 BONUS\nTech89 BONUS\nTech92 BONUS\nTech93 BONUS\nTech101 BONUS\nTech105 BONUS\nTech106 BONUS\nTech111 BONUS\nTech114 BONUS\nTech127 BONUS\nTech130 BONUS\nTech132 BONUS\nTech134 BONUS\nTech135 BONUS\nTech140 BONUS\nTech141 BONUS\nTech144 BONUS\nTech153 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech171 BONUS\nTech175 BONUS\nTech176 BONUS\nTech178 BONUS\nTech180 BONUS\nTech181 BONUS\nTech192 BONUS\nTech193 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech200 BONUS\nTech206 BONUS\nTech208 BONUS\nTech209 BONUS\nTech215 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech227 BONUS\nTech233 BONUS\nTech234 BONUS\nTech236 BONUS\nTech241 BONUS\nTech243 BONUS\nTech247 BONUS\nTech248 BONUS\nTech252 BONUS\nTech253 BONUS\nTech260 BONUS\nTech263 BONUS\nTech265 BONUS\nTech268 BONUS\nTech269 BONUS\nTech279 BONUS\nTech281 BONUS\nTech284 BONUS\nTech285 BONUS\n6025\n"
+   ],
+   "wrong": {
+    "sha": "83f6ddaf9e2d82ee534daf076657c8ecb039e257021d9ccf389771efd9e28371",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true
+    ]
+   }
+  },
+  "c05-p-q5": {
+   "sha": "062b45a815c2589a914f369538d1f4385ebdc6b282d7224780b7ec3cfdfdb656",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Student1 3 99\nA\nStudent2 3 95\nStudent3 4 60\nStudent4 4 88\n0\n"
+   ],
+   "hidden": [
+    "Student1 3 96\nA\nStudent2 4 100\nA\nStudent3 4 99\nA\nStudent4 3 60\nStudent5 3 74\nStudent6 5 60\nStudent7 5 74\nStudent8 3 95\nStudent9 3 99\nA\nStudent10 4 100\nA\nStudent11 4 99\nA\nStudent12 3 74\n2\n",
+    "Student1 4 96\nA\nStudent2 5 99\nA\nStudent3 4 74\nStudent4 5 99\nA\nStudent5 5 88\nStudent6 5 95\nStudent7 5 99\nA\nStudent8 3 95\nStudent9 5 74\nStudent10 4 88\nStudent11 3 74\nStudent12 5 96\nA\nStudent13 3 74\nStudent14 3 74\nStudent15 4 100\nA\nStudent16 5 60\nStudent17 5 100\nA\nStudent18 5 95\nStudent19 4 88\nStudent20 3 74\nStudent21 3 88\nStudent22 4 88\nStudent23 3 74\nStudent24 3 60\nStudent25 5 100\nA\nStudent26 5 96\nA\nStudent27 4 95\nStudent28 5 99\nA\nStudent29 5 99\nA\nStudent30 5 99\nA\n15\n",
+    "Student1 5 60\n1\n"
+   ],
+   "wrong": {
+    "sha": "03467819cb0682cf3476f6a5a7f91851f17919b94811b0285cb87f92c517043a",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c05-p-q6": {
+   "sha": "c9af130d688c9160cfaca90614048320d7e70a6cbe1b57564eb5058b4a7e4e08",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Customer1 140\nCustomer2 1400\nCustomer3 875\nCustomer4 45\n2\n"
+   ],
+   "hidden": [
+    "Customer1 700\nCustomer2 115\nCustomer3 350\nCustomer4 875\nCustomer5 175\nCustomer6 735\nCustomer7 1400\nCustomer8 735\nCustomer9 700\nCustomer10 80\n4\n",
+    "Customer1 115\nCustomer2 875\nCustomer3 1400\nCustomer4 350\nCustomer5 735\nCustomer6 45\nCustomer7 1400\nCustomer8 875\nCustomer9 45\nCustomer10 80\nCustomer11 735\nCustomer12 45\nCustomer13 875\nCustomer14 735\nCustomer15 115\nCustomer16 700\nCustomer17 115\nCustomer18 350\nCustomer19 80\nCustomer20 140\nCustomer21 115\nCustomer22 735\nCustomer23 80\nCustomer24 875\nCustomer25 45\n10\n",
+    "Customer1 80\nCustomer2 140\nCustomer3 700\n0\n",
+    "Customer1 115\n0\n"
+   ],
+   "wrong": {
+    "sha": "d1aab016023379f6f1ef27f4a473c2ec0d73c034f7e18d8eb41ab8f6a6340e1c",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c05-p-q7": {
+   "sha": "b8260bf11f0f51d693671f74e7c476a5942313b5b30de271f2509c990e38aab6",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Student1 93.33\nStudent2 100\nStudent3 76.67\nStudent4 83.33\nStudent5 94.33\nStudent6 86\nStudent7 100\nStudent8 73.33\nStudent9 81.67\nStudent10 82.67\nStudent11 92.33\nStudent12 85.33\nStudent13 76.67\nStudent14 100\nStudent15 91\nStudent16 93.33\nStudent17 94.33\nStudent18 66.67\nStudent19 75.33\nStudent20 99.33\nStudent21 80\nStudent22 78.33\nStudent23 83.33\nStudent24 89.67\nStudent25 93\nStudent26 86.67\nStudent27 83.33\nStudent28 81.67\nStudent29 80\nStudent30 71.67\n3\n"
+   ],
+   "hidden": [
+    "Student1 100\nStudent2 100\nStudent3 95\nStudent4 68.33\nStudent5 83.33\nStudent6 100\nStudent7 78.33\nStudent8 95\nStudent9 83.33\nStudent10 80\nStudent11 95\nStudent12 76.67\nStudent13 98.67\nStudent14 81.67\nStudent15 99.67\nStudent16 76.67\nStudent17 100\nStudent18 86\nStudent19 98.67\nStudent20 83.67\nStudent21 76\nStudent22 93.67\nStudent23 90.33\nStudent24 86.67\nStudent25 83.33\nStudent26 80\nStudent27 78.33\nStudent28 99.33\nStudent29 89.33\nStudent30 76.67\n4\n",
+    "Student1 60\nStudent2 73.67\nStudent3 93.33\nStudent4 75.33\nStudent5 87.67\nStudent6 93\nStudent7 83.33\nStudent8 91.67\nStudent9 80\nStudent10 80\nStudent11 85\nStudent12 90\nStudent13 84.33\nStudent14 91.67\nStudent15 92.67\nStudent16 97\nStudent17 80.33\nStudent18 71.67\nStudent19 88.33\nStudent20 88.33\nStudent21 78.67\nStudent22 92.67\nStudent23 100\nStudent24 91.67\nStudent25 97.67\nStudent26 95\nStudent27 76.67\nStudent28 97\nStudent29 96.67\nStudent30 85\n1\n",
+    "Student1 90.33\nStudent2 100\nStudent3 100\nStudent4 93.33\nStudent5 90.33\nStudent6 78.67\nStudent7 72\nStudent8 85\nStudent9 82\nStudent10 92.33\nStudent11 100\nStudent12 90\nStudent13 91\nStudent14 90\nStudent15 91.67\nStudent16 83.33\nStudent17 99.33\nStudent18 81.67\nStudent19 91.67\nStudent20 89.33\nStudent21 82\nStudent22 79.33\nStudent23 87.67\nStudent24 91.67\nStudent25 76.67\nStudent26 81\nStudent27 77\nStudent28 91.33\nStudent29 87.67\nStudent30 78.33\n3\n",
+    "Student1 76.67\nStudent2 95\nStudent3 92.67\nStudent4 73.33\nStudent5 83.33\nStudent6 91.33\nStudent7 100\nStudent8 95\nStudent9 81.33\nStudent10 81.67\nStudent11 96.67\nStudent12 90.33\nStudent13 85\nStudent14 78.33\nStudent15 85\nStudent16 85\nStudent17 82\nStudent18 88.33\nStudent19 98.67\nStudent20 68.67\nStudent21 65\nStudent22 78.33\nStudent23 77.67\nStudent24 84.67\nStudent25 99.33\nStudent26 83.33\nStudent27 72.67\nStudent28 94.67\nStudent29 99.67\nStudent30 96\n1\n"
+   ],
+   "wrong": {
+    "sha": "7902d5c964134e0d42366b448aac582b75549787e7010e7061792f6c66cb6d8b",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "c05-p-q8": {
+   "sha": "20529dd51dfbae067e80aa3df9d7d8ad8d07247f47f13441e238d6e023ecd540",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": [
+    "TEKO\n",
+    "2\n",
+    "1\n",
+    "1\n"
+   ],
+   "wrong": {
+    "sha": "daed48f3418a3b0bb550dfb09bf7e16398d17663aaad38cd4f1f62a962555909",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c05-p-q9": {
+   "sha": "6331703076423a1c28902930b54ab5141d0c698b469976c34ff908237f5ee542",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "105\n20\n55\n120\n60\n125\n90\n135\n75\n95\n105\n100\n135\n60\n30\n105\n75\n80\n75\n45\n150\n85\n115\n95\n65\n95\n130\n10\n80\n75\n95\n10\n105\n20\n140\n100\n95\n95\n80\n110\n30\n140\n65\n95\n135\n135\n75\n30\n55\n45\n60\n45\n90\n100\n110\n15\n0\n30\n70\n30\n60\n105\n70\n130\n70\n70\n115\n130\n110\n80\n40\n85\n45\n60\n70\n140\n90\n105\n30\n30\n40\n45\n10\n60\n85\n80\n105\n95\n140\n95\n120\n65\n45\n115\n150\n55\n60\n40\n110\n60\n65\n140\n100\n130\n115\n0\n90\n120\n85\n125\n75\n65\n70\n70\n40\n80\n65\n60\n100\n70\n50\n30\n85\n120\n90\n125\n120\n45\n60\n90\n90\n105\n90\n45\n110\n75\n110\n15\n50\n115\n135\n10\n105\n80\n120\n115\n95\n105\n120\n50\n150\n10\n90\n50\n90\n65\n40\n35\n140\n75\n100\n105\n40\n30\n140\n110\n110\n90\n85\n45\n15\n10\n130\n0\n80\n105\n20\n105\n60\n95\n30\n110\n130\n40\n40\n120\n60\n110\n80\n50\n30\n0\n75\n60\n115\n80\n150\n100\n35\n60\n115\n0\n35\n90\n90\n40\n90\n120\n80\n25\n140\n80\n150\n120\n105\n110\n110\n30\n40\n125\n135\n40\n150\n0\n25\n105\n65\n50\n60\n50\n15\n100\n75\n65\n120\n35\n0\n90\n15\n90\n80\n40\n135\n100\n120\n70\n75\n60\n95\n40\n60\n85\n50\n110\n65\n55\n30\n60\n110\n115\n85\n60\n40\n95\n60\n70\n10\n115\n60\n115\n55\n100\n20\n25\n85\n0\n15\n90\n105\n135\n150\n65\n95\n50\n110\n120\n80\n100\n30\n70\n85\n40\n50\n40\n70\n25\n70\n125\n130\n45\n100\n85\n85\n55\n55\n95\n105\n40\n25\n40\n45\n45\n70\n50\n120\n55\n45\n100\n65\n55\n45\n10\n100\n65\n100\n100\n120\n80\n90\n95\n120\n60\n115\n115\n95\n60\n55\n100\n40\n60\n75\n35\n90\n30\n10\n15\n90\n25\n45\n95\n150\n65\n25\n100\n125\n40\n105\n120\n120\n75\n55\n120\n85\n35\n85\n15\n60\n105\n65\n55\n105\n20\n135\n55\n90\n100\n105\n125\n100\n95\n95\n25\n75\n60\n15\n75\n105\n30\n95\n35\n140\n100\n10\n75\n60\n115\n100\n0\n100\n75\n30735\n"
+   ],
+   "hidden": [
+    "95\n95\n30\n55\n125\n100\n70\n70\n110\n80\n115\n60\n120\n65\n70\n95\n105\n50\n55\n90\n10\n60\n75\n85\n75\n80\n55\n55\n110\n65\n75\n20\n90\n70\n75\n15\n50\n75\n100\n135\n80\n130\n45\n115\n95\n30\n75\n20\n30\n120\n95\n30\n85\n50\n30\n100\n90\n85\n10\n125\n125\n75\n70\n70\n120\n15\n90\n65\n40\n85\n35\n15\n95\n95\n90\n15\n45\n0\n20\n60\n135\n95\n85\n45\n40\n30\n75\n90\n85\n105\n25\n10\n140\n90\n80\n85\n70\n40\n90\n95\n60\n55\n10\n105\n70\n130\n15\n70\n65\n105\n50\n105\n20\n90\n100\n75\n125\n105\n140\n55\n90\n40\n120\n75\n125\n90\n40\n40\n75\n15\n110\n120\n50\n90\n140\n55\n0\n30\n45\n30\n40\n105\n85\n75\n75\n50\n120\n100\n30\n65\n60\n55\n15\n140\n60\n120\n45\n80\n75\n120\n105\n65\n50\n125\n80\n65\n150\n85\n125\n90\n80\n95\n25\n95\n135\n70\n75\n40\n150\n100\n85\n55\n140\n30\n70\n65\n90\n150\n110\n150\n75\n60\n75\n115\n30\n90\n35\n60\n50\n60\n40\n90\n135\n65\n120\n110\n85\n70\n40\n55\n15\n105\n70\n45\n135\n15\n135\n25\n15\n90\n20\n75\n65\n35\n100\n105\n75\n85\n70\n30\n150\n90\n80\n125\n75\n45\n90\n115\n80\n25\n85\n70\n115\n60\n35\n50\n40\n60\n0\n40\n70\n40\n95\n95\n40\n20\n45\n85\n135\n60\n55\n105\n60\n30\n100\n135\n50\n60\n75\n75\n95\n75\n80\n50\n90\n85\n150\n65\n80\n150\n60\n50\n130\n30\n80\n60\n125\n55\n140\n90\n0\n140\n140\n60\n30\n125\n115\n50\n50\n75\n70\n30\n55\n90\n120\n125\n50\n75\n75\n50\n90\n20\n75\n60\n70\n105\n150\n75\n85\n55\n50\n50\n45\n30\n95\n150\n35\n30\n120\n60\n140\n90\n60\n90\n55\n60\n125\n120\n95\n20\n30\n90\n95\n20\n90\n65\n35\n55\n70\n70\n55\n95\n90\n95\n15\n140\n95\n70\n120\n75\n100\n45\n55\n140\n65\n55\n25\n60\n95\n135\n115\n50\n20\n70\n75\n40\n70\n90\n105\n80\n55\n110\n30\n15\n35\n75\n30\n80\n90\n105\n95\n70\n100\n45\n65\n85\n105\n60\n55\n85\n29950\n",
+    "30\n20\n25\n30\n0\n25\n30\n15\n40\n10\n15\n35\n25\n15\n30\n25\n30\n50\n35\n0\n40\n15\n50\n25\n0\n15\n35\n25\n40\n10\n10\n0\n10\n40\n0\n50\n30\n20\n50\n40\n35\n20\n40\n25\n50\n35\n40\n35\n20\n20\n0\n30\n30\n10\n15\n10\n15\n50\n0\n0\n10\n50\n0\n35\n10\n40\n35\n25\n10\n15\n30\n10\n40\n35\n35\n50\n30\n0\n30\n25\n10\n10\n30\n50\n0\n40\n10\n35\n15\n30\n20\n0\n50\n35\n30\n40\n50\n50\n0\n35\n15\n0\n0\n30\n30\n10\n20\n50\n35\n20\n20\n40\n0\n35\n0\n35\n10\n15\n25\n20\n25\n15\n10\n30\n30\n50\n15\n20\n25\n40\n10\n25\n30\n40\n30\n40\n40\n0\n50\n0\n30\n15\n10\n15\n10\n40\n30\n35\n0\n35\n40\n50\n30\n35\n50\n35\n40\n50\n15\n0\n10\n50\n0\n25\n40\n0\n20\n50\n40\n30\n30\n15\n40\n35\n20\n20\n20\n0\n15\n0\n15\n50\n40\n15\n35\n40\n20\n0\n50\n15\n50\n25\n0\n40\n0\n10\n10\n0\n10\n15\n50\n50\n50\n0\n15\n35\n30\n25\n15\n50\n50\n50\n30\n50\n30\n10\n10\n15\n10\n35\n20\n30\n10\n20\n25\n0\n50\n15\n15\n50\n20\n25\n20\n0\n40\n35\n0\n25\n20\n30\n20\n0\n35\n25\n50\n30\n35\n20\n25\n40\n10\n10\n35\n10\n0\n40\n50\n0\n20\n35\n40\n25\n20\n25\n25\n35\n40\n35\n50\n20\n0\n10\n30\n40\n0\n35\n35\n10\n40\n35\n30\n0\n0\n10\n30\n15\n15\n50\n0\n50\n0\n15\n25\n30\n25\n25\n10\n50\n0\n0\n0\n10\n50\n0\n0\n0\n40\n40\n25\n15\n30\n0\n30\n15\n15\n10\n10\n35\n15\n50\n30\n30\n25\n30\n50\n25\n35\n50\n30\n0\n35\n10\n25\n40\n20\n20\n40\n10\n0\n15\n0\n15\n15\n35\n35\n25\n50\n20\n0\n50\n0\n10\n40\n10\n20\n15\n35\n35\n10\n10\n25\n50\n25\n35\n25\n40\n35\n50\n20\n15\n30\n25\n50\n30\n35\n35\n15\n50\n40\n0\n0\n40\n40\n15\n10\n10\n15\n25\n25\n35\n25\n15\n10\n25\n20\n40\n0\n35\n15\n30\n9805\n",
+    "150\n170\n90\n165\n80\n85\n60\n100\n155\n175\n100\n100\n45\n225\n45\n100\n0\n165\n100\n135\n135\n115\n40\n60\n210\n150\n110\n200\n100\n170\n145\n110\n145\n160\n95\n85\n100\n40\n170\n175\n15\n170\n150\n200\n160\n65\n110\n145\n145\n140\n150\n160\n85\n65\n160\n85\n100\n155\n105\n130\n105\n80\n70\n140\n80\n15\n150\n160\n170\n155\n240\n75\n100\n155\n190\n250\n75\n120\n170\n45\n100\n250\n45\n140\n190\n140\n105\n195\n165\n85\n135\n110\n135\n160\n205\n145\n40\n100\n65\n210\n60\n115\n160\n140\n45\n30\n75\n155\n150\n105\n150\n135\n105\n170\n30\n70\n140\n70\n110\n160\n170\n145\n125\n105\n95\n30\n130\n160\n135\n135\n150\n110\n120\n75\n135\n15\n165\n80\n75\n225\n120\n190\n160\n55\n50\n115\n115\n135\n195\n160\n125\n85\n130\n30\n215\n45\n55\n115\n130\n145\n225\n150\n130\n150\n30\n60\n120\n200\n160\n150\n15\n160\n15\n200\n215\n130\n15\n85\n150\n45\n80\n160\n175\n95\n90\n160\n60\n160\n145\n220\n20\n120\n220\n195\n130\n135\n95\n135\n65\n185\n160\n210\n125\n120\n115\n230\n175\n130\n80\n185\n135\n170\n160\n65\n200\n180\n20\n150\n180\n45\n185\n115\n170\n200\n185\n70\n220\n115\n155\n210\n10\n105\n205\n205\n70\n30\n210\n75\n160\n220\n175\n20\n65\n120\n155\n160\n130\n75\n80\n65\n145\n60\n115\n180\n55\n160\n170\n115\n85\n170\n85\n60\n150\n110\n165\n55\n15\n45\n85\n140\n165\n30\n120\n130\n120\n205\n35\n110\n135\n140\n60\n110\n145\n205\n105\n100\n120\n120\n115\n125\n130\n90\n85\n150\n65\n30\n105\n150\n175\n0\n150\n70\n250\n55\n220\n100\n100\n40\n140\n100\n145\n155\n75\n240\n165\n110\n100\n120\n40\n100\n150\n70\n95\n205\n125\n190\n150\n90\n95\n155\n200\n130\n90\n75\n15\n145\n145\n40\n100\n205\n90\n195\n220\n135\n135\n160\n95\n145\n175\n90\n40\n60\n75\n190\n220\n90\n170\n145\n130\n85\n210\n70\n70\n160\n45\n45\n125\n180\n145\n75\n160\n230\n85\n180\n230\n195\n160\n140\n60\n125\n145\n165\n115\n130\n135\n150\n80\n130\n105\n115\n145\n150\n60\n75\n45\n60\n160\n70\n145\n30\n49320\n",
+    "80\n110\n85\n40\n55\n85\n40\n85\n65\n60\n130\n75\n100\n120\n0\n40\n15\n135\n10\n50\n105\n75\n60\n90\n80\n95\n100\n80\n115\n40\n40\n140\n60\n150\n125\n55\n70\n120\n75\n0\n30\n150\n75\n75\n40\n85\n115\n125\n0\n140\n150\n80\n60\n95\n80\n45\n90\n25\n40\n80\n85\n65\n105\n25\n115\n50\n55\n45\n50\n25\n70\n60\n80\n70\n45\n135\n35\n120\n125\n25\n30\n50\n30\n45\n100\n30\n20\n65\n115\n40\n90\n90\n85\n45\n135\n45\n60\n65\n60\n135\n90\n60\n80\n140\n80\n30\n80\n110\n95\n135\n75\n70\n100\n110\n55\n10\n100\n10\n150\n65\n110\n105\n105\n55\n80\n95\n70\n70\n25\n120\n70\n90\n105\n105\n95\n50\n45\n135\n75\n75\n110\n30\n150\n45\n35\n85\n90\n110\n120\n30\n90\n110\n60\n55\n135\n135\n115\n20\n50\n110\n30\n35\n85\n0\n70\n45\n50\n40\n130\n85\n90\n75\n40\n35\n50\n90\n75\n95\n65\n25\n50\n45\n75\n105\n30\n105\n75\n30\n80\n105\n60\n65\n35\n150\n10\n45\n95\n110\n120\n55\n20\n90\n50\n70\n120\n65\n70\n70\n80\n15\n30\n80\n10\n65\n120\n50\n80\n110\n115\n45\n90\n40\n125\n75\n105\n65\n90\n70\n50\n60\n55\n110\n120\n65\n10\n80\n80\n130\n105\n65\n70\n20\n70\n15\n85\n110\n85\n100\n55\n135\n55\n50\n65\n140\n45\n60\n85\n65\n40\n45\n85\n90\n100\n55\n90\n55\n75\n20\n55\n115\n95\n25\n110\n90\n45\n65\n75\n95\n40\n90\n50\n35\n140\n70\n60\n70\n55\n40\n70\n50\n80\n100\n80\n75\n10\n90\n135\n30\n80\n80\n45\n40\n90\n25\n80\n110\n40\n110\n70\n75\n130\n140\n60\n105\n40\n10\n90\n90\n105\n110\n95\n55\n70\n45\n70\n75\n20\n120\n75\n90\n55\n100\n120\n50\n100\n80\n75\n110\n110\n40\n95\n55\n25\n110\n115\n95\n75\n30\n20\n120\n100\n20\n80\n105\n90\n150\n75\n80\n130\n20\n0\n85\n80\n30\n20\n115\n115\n95\n45\n55\n130\n65\n25\n50\n90\n50\n90\n40\n95\n70\n85\n55\n90\n120\n90\n50\n90\n125\n100\n30\n65\n55\n135\n110\n10\n55\n120\n70\n15\n135\n29890\n"
+   ],
+   "wrong": {
+    "sha": "0bdca5801115d676c08d3f4668c68f525273ff63aead5dab632ba1f86a393c9a",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c06-p-q1": {
+   "sha": "a2ea08dca09b78c14748b24c7e082ee93f46e4c9a367ed88591c3f7f7fce8810",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "6\n3\n5\n2\n"
+   ],
+   "hidden": [
+    "12\n19\n12\n19\n16\n19\n21\n9\n4\n",
+    "17\n11\n11\n17\n8\n18\n12\n15\n20\n9\n23\n16\n10\n19\n16\n3\n",
+    "9\n0\n",
+    "0\n"
+   ],
+   "wrong": {
+    "sha": "5b2b5fb03cb49ce4261df8a48f58ce4c0a978b4da36858e0cdbcccb685224c89",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c06-p-q2": {
+   "sha": "4107555e064c2b888aec36b1af7c4b3d3c3ed8761406d4af645a5c2fdcb9f1ed",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "94\n89\n91\n87\n90\n52\n89\n93\n99\n97\n97\n99\n89\n91\n89\n98\n95\n99\n91\n98\n71\n91\n94\n97\n96\n67\n95\n92\n99\n"
+   ],
+   "hidden": [
+    "95\n82\n86\n86\n93\n80\n99\n94\n91\n53\n99\n94\n97\n77\n81\n99\n97\n76\n63\n71\n81\n91\n85\n94\n91\n66\n96\n88\n99\n",
+    "98\n74\n76\n94\n95\n86\n91\n74\n91\n83\n98\n96\n92\n79\n97\n92\n86\n78\n90\n98\n99\n83\n94\n98\n99\n94\n81\n91\n99\n"
+   ],
+   "wrong": {
+    "sha": "d42bbd549e601dbfb570ebe9012f93bd8a769b7e2db64aea421a8b28f4f93f46",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true
+    ]
+   }
+  },
+  "c06-p-q3": {
+   "sha": "4d4627b27b3b33a88851976785eb4902c968a97b00e96da7ad1f4d1aa1be6094",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "97 2\n97 2\n100 1\n88 2\n92 1\n100 2\n97 2\n95 2\n97 2\n95 3\n92 1\n92 3\n88 1\n95 1\n92 2\n92 2\n100 1\n88 3\n100 1\n88 2\n88 2\n97 3\n100 1\n100 1\n92 1\n100 3\n100 2\n88 3\n100 12\n"
+   ],
+   "hidden": [
+    "100 1\n95 1\n92 2\n95 1\n100 2\n92 1\n92 2\n92 1\n95 3\n100 1\n95 2\n88 2\n97 2\n95 2\n95 3\n100 2\n100 2\n88 2\n95 3\n100 2\n97 1\n97 2\n100 3\n92 3\n97 2\n100 3\n95 2\n95 3\n100 16\n",
+    "97 1\n95 3\n92 2\n92 2\n100 1\n97 1\n100 2\n95 2\n88 2\n97 2\n88 3\n88 1\n95 1\n97 2\n97 2\n88 2\n92 2\n97 1\n95 2\n100 1\n95 2\n100 3\n100 1\n97 3\n100 2\n88 2\n95 1\n95 2\n100 10\n",
+    "97 3\n92 1\n97 1\n88 1\n92 2\n95 1\n88 1\n95 3\n97 2\n88 3\n100 2\n88 3\n95 1\n95 3\n95 3\n97 3\n97 3\n95 2\n92 2\n97 3\n95 1\n100 1\n100 1\n95 2\n95 1\n88 2\n95 1\n97 1\n100 4\n"
+   ],
+   "wrong": {
+    "sha": "175942f605541f7628e71a0306576363d736003922259a001b953d9b561a732d",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c06-p-q4": {
+   "sha": "f578c8d5b6435e19ec2316f0f4738703d20f2862a93b2d91c804e824e35711bf",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "20\n2\n30\n3\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n2.63\n"
+   ],
+   "hidden": [
+    "75.7\n7.57\n333.1\n33.31\n347\n34.7\n176.9\n17.69\n327\n32.7\n385.7\n38.57\n116.4\n11.64\n223.6\n22.36\n457.4\n45.74\n175.7\n17.57\n193.8\n19.38\n162.7\n16.27\n271.6\n27.16\n193.6\n19.36\n134.6\n13.46\n129.3\n12.93\n311.9\n31.19\n92\n9.2\n29.9\n2.99\n217.78\n",
+    "0\n0\n252.5\n25.25\n524.7\n52.47\n332.8\n33.28\n486.1\n48.61\n0\n0\n434\n43.4\n519.9\n51.99\n380.3\n38.03\n110.1\n11.01\n412.6\n41.26\n415.2\n41.52\n128.8\n12.88\n289.2\n28.92\n390.7\n39.07\n720.8\n72.08\n902\n90.2\n492.1\n49.21\n0\n0\n357.46\n",
+    "118.7\n11.87\n157.8\n15.78\n57.2\n5.72\n6.6\n0.66\n159.5\n15.95\n85.9\n8.59\n92\n9.2\n116.9\n11.69\n130.5\n13.05\n175.2\n17.52\n99.6\n9.96\n8\n0.8\n14.7\n1.47\n66.6\n6.66\n106.2\n10.62\n106.1\n10.61\n20.2\n2.02\n121.3\n12.13\n66\n6.6\n89.95\n",
+    "241.5\n24.15\n85.9\n8.59\n983.4\n98.34\n0\n0\n66.6\n6.66\n1055.7\n105.57\n984.7\n98.47\n487.4\n48.74\n576.7\n57.67\n884.4\n88.44\n701\n70.1\n942.8\n94.28\n258\n25.8\n515.2\n51.52\n1191.7\n119.17\n345.7\n34.57\n439\n43.9\n297.1\n29.71\n421.8\n42.18\n551.51\n"
+   ],
+   "wrong": {
+    "sha": "544700b16bf4c8ef78312ab00ad8f87d04528eac85a7fd79a08694efafb91056",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c06-p-q5": {
+   "sha": "0cf3a0d4f7eb17c5fbb48d2fe8d12781a22c2838a0e126632173893d8449068c",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "20\n32.5\n10\n62.5\n3\n20.83\n"
+   ],
+   "hidden": [
+    "7.5\n100\n150\n132.5\n115\n505\n5\n101\n",
+    "32.5\n32.5\n1\n32.5\n",
+    "42.5\n22.5\n20\n50\n27.5\n50\n55\n105\n72.5\n445\n9\n49.44\n"
+   ],
+   "wrong": {
+    "sha": "342f48b0fe9e51eaab4399d7cb9f8972417f388bc6376cd1a0a5b8f4c8c20eca",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c07-p-q1": {
+   "sha": "ea14af9defa07a75ddeed5cc5b98575bd0fca8e23265f27e10bd0cbd264b2baf",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "100\n"
+   ],
+   "hidden": [
+    "50\n",
+    "144.5\n",
+    "150\n",
+    "99.75\n"
+   ],
+   "wrong": {
+    "sha": "2f28a887a131ade35437fee92c16f7385616428a40d31496f457a47fd4ed7f0a",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c07-p-q10": {
+   "sha": "b97c911286fb76e9d5c1bf09aaf04bdc697d0ce8b44320724a9afc0334913fd7",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "566\n799\n211\n875\n424\n425\n544\n203\n779\n646\n"
+   ],
+   "hidden": []
+  },
+  "c07-p-q2": {
+   "sha": "242703283720491333ae4dc2ef6fa01f679322fb72abf4bd6b5010b05b736a87",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "True\n"
+   ],
+   "hidden": [
+    "True\n",
+    "True\n",
+    "False\n",
+    "False\n",
+    "True\n",
+    "False\n"
+   ],
+   "wrong": {
+    "sha": "5d06911ed517f743ca9fee90a2812c76c638faaea37689298f623cf44741d96e",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c07-p-q3": {
+   "sha": "1c78e538c9df71893d9b1953a20d9db67a07e3068cd03506489ce57098c64850",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "2\n1250\n"
+   ],
+   "hidden": [
+    "3\n2300\n",
+    "5\n3850\n",
+    "0\n0\n",
+    "5\n4250\n"
+   ],
+   "wrong": {
+    "sha": "d6c58c9496f3e865413803a05aea17404cca62d10e1979cf97672f4147cfe8a6",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true
+    ]
+   }
+  },
+  "c07-p-q4": {
+   "sha": "f140050807c11a7f9972642f5dd003983b246e3131b1c00f0f1c5e19b90204d3",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "123\n145\n"
+   ],
+   "hidden": [
+    "249\n285\n",
+    "143\n163\n",
+    "69\n74\n",
+    "232\n206\n"
+   ],
+   "wrong": {
+    "sha": "3f79fbfc9612618346aa8d05edc892dc1d6c2b405a0fb2b471d258731729b3e1",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c07-p-q5": {
+   "sha": "d52a036ce2fa663f539b02652752e18ef2c08c99bd255848a0bc86612f8b6eff",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "80\n"
+   ],
+   "hidden": [
+    "90\n",
+    "80\n",
+    "40\n",
+    "110\n",
+    "90\n"
+   ],
+   "wrong": {
+    "sha": "d3c1fa739ec138bcb3be07c1167e65ef33cb0312dc70feda58b12a1efbbef5ba",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c07-p-q6": {
+   "sha": "f8c22f9be427613a4a4bbeb99b4a8f3301967d2401ae6df53def65d50a41a1d4",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "0\n2\n2\n0\n0\n2\n1\n1\n0\n4\n0\n0\n1\n2\n1\n0\n1\n3\n3\n2\n1\n1\n0\n0\n1\n2\n0\n2\n1\n1\n1\n2\n2\n0\n2\n2\n2\n2\n1\n3\n1\n2\n0\n0\n0\n0\n2\n1\n2\n0\n"
+   ],
+   "hidden": [
+    "2\n3\n3\n3\n2\n1\n2\n3\n0\n3\n3\n2\n2\n3\n2\n5\n3\n1\n4\n3\n4\n0\n1\n4\n3\n1\n2\n0\n1\n0\n2\n0\n2\n3\n0\n2\n4\n1\n1\n1\n1\n3\n2\n0\n3\n1\n1\n3\n2\n2\n",
+    "1\n3\n0\n1\n1\n0\n1\n0\n1\n1\n1\n0\n1\n3\n0\n0\n1\n0\n1\n2\n2\n0\n0\n1\n2\n2\n0\n1\n1\n2\n1\n1\n2\n0\n0\n0\n0\n1\n1\n0\n0\n2\n0\n0\n1\n2\n0\n0\n0\n1\n",
+    "0\n8\n7\n5\n3\n3\n3\n7\n4\n1\n0\n0\n5\n3\n6\n7\n7\n8\n4\n0\n0\n0\n1\n5\n7\n7\n1\n8\n0\n3\n5\n2\n8\n5\n4\n1\n3\n1\n3\n3\n0\n7\n5\n3\n4\n5\n1\n5\n7\n6\n",
+    "0\n0\n1\n0\n0\n0\n0\n0\n0\n1\n1\n0\n0\n0\n0\n1\n0\n0\n0\n1\n1\n0\n0\n1\n1\n1\n0\n0\n0\n1\n0\n1\n0\n0\n0\n0\n2\n0\n2\n1\n2\n0\n0\n0\n0\n1\n1\n0\n1\n1\n"
+   ],
+   "wrong": {
+    "sha": "4629b7e61ca463e2a247748c96f8ca552fff7f2cb3f72978cf7441d330f2ffe6",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c07-p-q7": {
+   "sha": "5fca034ef65a5db3f88ceffb359c0d487a8fbaa942d276978a253ca1671f4216",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "2\n"
+   ],
+   "hidden": [
+    "2\n",
+    "3\n",
+    "0\n",
+    "1\n"
+   ],
+   "wrong": {
+    "sha": "e4084b6aa6c53579578b90ae5467e44d7a0567c8171f7cc14960ed084603a473",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c07-p-q8": {
+   "sha": "f7a91a476aa053cade88fb32b59b6e3261ab37257db960e05b39e33dba1efc48",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": [
+    "3\n",
+    "4\n",
+    "0\n",
+    "4\n"
+   ],
+   "wrong": {
+    "sha": "476a6df6ce8712fdd3f73427973c8f90df9f832ad9c80d75987e7c67cb066950",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true
+    ]
+   }
+  },
+  "c07-p-q9": {
+   "sha": "6086458d02307b14bc8138d71904225f6512166cd97f9295fec813bbe2118f29",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "FEMALES\n"
+   ],
+   "hidden": [
+    "MALES\n",
+    "EQUAL\n",
+    "EQUAL\n",
+    "MALES\n",
+    "EQUAL\n"
+   ],
+   "wrong": {
+    "sha": "3044e9fd79295a173b931ecb24ee9c64f71336bbe0e20d0fa7bfbe8ba20094de",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c08-p-q1": {
+   "sha": "26d12aa047b42214aa7314d307ff513f41a5bbeead8322ce118d894411c6c50a",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "A2B4C1D1\n"
+   ],
+   "hidden": [
+    "X3Y1Z2\n",
+    "A1B1A1B1\n",
+    "Q1\n",
+    "a12\n",
+    "Z2Y2Z2\n"
+   ],
+   "wrong": {
+    "sha": "5abc357d25c923c29857462dd86829b458299decd81179d6f58c923f9b2ad514",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     false,
+     false,
+     true
+    ]
+   }
+  },
+  "c08-p-q2": {
+   "sha": "1acc7341679b0b9d9e6ddabdb2ac1ebbc28d2ca2e0247b0f1c8c96350422951b",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "accd\n"
+   ],
+   "hidden": [
+    "cuccle coc\n",
+    "no letters here\n",
+    "ccc\n",
+    "accAcC\n"
+   ],
+   "wrong": {
+    "sha": "a0256c296e7f4a793735b5de7727e3c1405e166f94cdce6b186792e051f3aab0",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c08-p-q3": {
+   "sha": "9b43753c46ab8f9617e49b4c0aadfdec01c7cbff6096fe85d0b714d4c14081d3",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "7.8\n"
+   ],
+   "hidden": []
+  },
+  "c08-p-q4": {
+   "sha": "d5de6a6395928ba3ed6b7d1fe0ebf5c080673ab379323415e4e5899ef2f3fed4",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "uryyb\n"
+   ],
+   "hidden": [
+    "hello\n",
+    "gur dhvpx oebja sbk\n",
+    "nop klm\n",
+    "abcdefghijklm\n"
+   ],
+   "wrong": {
+    "sha": "9e61535babb31c6419e9bb03d8c369eab16102f4ea7437c5a32ff98398639de6",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c09-p-q1": {
+   "sha": "417402f0fc77af14bb0c49b1bfdcfa6db73e4c5935e8ed7ef1d0c2abbad0298e",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n3\n350.5 80 455.5 \n"
+   ],
+   "hidden": [
+    "3\n10 20 30 \n",
+    "3\n4\n5\n548 130.75 1168.5 903 1277.5 476.75 609.75 36.75 \n",
+    "100 100 100 100 \n",
+    "1\n4\n500 0 200 300 0 \n"
+   ],
+   "wrong": {
+    "sha": "90825282a4e7f24ac087e64410bb063d0d566a34e347faad81e2591209f7bd7c",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c09-p-q2": {
+   "sha": "f437e0c8291d2d466ac83b34191fd9bf2d311105fed449015cc7e5501fd02589",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "7\n18\n13\n"
+   ],
+   "hidden": []
+  },
+  "c09-p-q3": {
+   "sha": "5facf4c7083d226a0915ac44427663fd59a3ac6090db365ece76592c761a4d93",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "7\n"
+   ],
+   "hidden": [
+    "3\n",
+    "12\n",
+    "1\n"
+   ],
+   "wrong": {
+    "sha": "e5205bfb942720bc2f0f3e0654df4ad14e3dad2caabdfc6c24f2f422b7ad45f0",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c09-p-q4": {
+   "sha": "5f842feb8fc77deb05e5512cd26e01da42673810fc74741713d9107dba48787e",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n78\n"
+   ],
+   "hidden": [
+    "1\n78\n",
+    "1\n78\n"
+   ],
+   "wrong": {
+    "sha": "222b854b31265068741adf77576cb94bb0dced7eb39878a54fe3a3f65533a1fc",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true
+    ]
+   }
+  },
+  "c09-p-q5": {
+   "sha": "8c6600fa88fb262144b1e09c244638db3eafb3d86167606d1476bd6e9ef66213",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "2\n3\n"
+   ],
+   "hidden": [
+    "5\n3\n",
+    "3\n5\n",
+    "2\n1\n",
+    "7\n2\n",
+    "0\n1\n"
+   ],
+   "wrong": {
+    "sha": "cf3f32771192433b40fe711ef0794fa29bf0f45618a6a170a86eac7e73dedae9",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c09-p-q6": {
+   "sha": "874638cb22d286d02c58b2c7b282aa198a0001496e4f052c0bc4ccf8d2481895",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "8\n"
+   ],
+   "hidden": [
+    "4\n",
+    "-1\n",
+    "9\n",
+    "-1\n",
+    "-1\n"
+   ],
+   "wrong": {
+    "sha": "5ce0470d177f702093b08e719f438b2149566244fbb6a7002abe92ce8fc073c2",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c10-p-q1": {
+   "sha": "29cde232d54cb2872fe1d68288b2d28aa58f61b952ac9b29cebaeea7aeab8782",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": [
+    "0\n",
+    "1\n",
+    "9\n",
+    "1\n"
+   ],
+   "wrong": {
+    "sha": "b4e3dacf9041db92ba20b567242b5d417f398f1888b1dd4d997b1873f95b29b4",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c10-p-q2": {
+   "sha": "958f81730059ffed17654118e534448d5cd438763485c2faa3af73713860af16",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": []
+  },
+  "c10-p-q3": {
+   "sha": "f41716af385739f637b49f4b8a919d8afa6003770f7a1c9636dc69801c9352f7",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": [
+    "2\n",
+    "2\n",
+    "1\n",
+    "3\n"
+   ],
+   "wrong": {
+    "sha": "cdd448aed695948d89c7987c1e1cf85e5d7ae37c5425898448494ffc57164378",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c10-p-q4": {
+   "sha": "9afd8fbfc637a4e2208aa5581659cec89cf11060c677dd96e532cdcd534a1dd3",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "no\n"
+   ],
+   "hidden": [
+    "no\n",
+    "no\n",
+    "yes\n",
+    "no\n",
+    "no\n"
+   ],
+   "wrong": {
+    "sha": "4681e2a44102c1a3aa2d8a2d57faba2fbef778200d2377ae77e3567dae0974fd",
+    "compileExit": 0,
+    "fails": [
+     false,
+     true,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c10-p-q5": {
+   "sha": "111d1c0ffda6c632642c02f4a844be9eca98954caa96c215bc13d8fa175f0b81",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "9\n46\n56\n51\n50\n12\n31\n58\n63\n18\n23\n4\n11\n"
+   ],
+   "hidden": [
+    "13\n121\n104\n169\n160\n13\n86\n-29\n55\n61\n-8\n-14\n173\n136\n174\n2\n-23\n163\n137\n80\n114\n20\n",
+    "-1\n13\n86\n-29\n3\n",
+    "0\n97\n127\n2\n",
+    "11\n91\n140\n23\n141\n130\n5\n",
+    "8\n79\n41\n2\n"
+   ],
+   "wrong": {
+    "sha": "8ccfd7d1873f0fd6d47b58c69dece2de3e70b1f07becb6109f4324dda067d738",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c11-h-q1": {
+   "sha": "b4c2c15edcb26f277bfffbe4daa11457e4ceb83dbfaabdc7ed865b58c0bc0a61",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "3 1\nTRex 8 True False False\nRexy 8 False False False\n"
+   ],
+   "hidden": [
+    "4 2\nBrachiosaurus 50 True False False\nBrachy 50 False False False\n",
+    "2 1\nMosasaurus 15 False False True\nMosa 15 True False True\n",
+    "5 3\nArchelon 2 True False True\nTurtle 2 False False True\n",
+    "3 2\nDimorphodon 1 False True False\nDimo 1 True True False\n"
+   ],
+   "wrong": {
+    "sha": "26371e80de19a13617196b521c5607a0624cc606cdd5bfd1f2e57bc6f95f9f06",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c11-h-q2": {
+   "sha": "164253b54f75cee74d22688492517976198222f7bce622fd05f68d45cc4b2e82",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "-1\n93.5\n1\n"
+   ],
+   "hidden": [
+    "1\n88\n1\n",
+    "-1\n100\n-1\n",
+    "0\n100\n1\n",
+    "0\n100\n1\n"
+   ],
+   "wrong": {
+    "sha": "340ad980ff66b6acf7242fec54872ffc68d13c8a5fa0c9619c0d08f639e5b2e6",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     true,
+     true
+    ]
+   }
+  },
+  "c11-h-q3": {
+   "sha": "7f8eb6298e3a47fcf2ecde5b95df9899b31a6ecd833ae036f27b44efe2ba4e12",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "14\nTrue\nFalse\n"
+   ],
+   "hidden": [
+    "10\nFalse\nFalse\n",
+    "11\nTrue\nFalse\n",
+    "12\nFalse\nFalse\n",
+    "9\nTrue\nFalse\n"
+   ],
+   "wrong": {
+    "sha": "4f2c1c276c7f79f666c93be109fc1ce38a703a030913f9d154282962ef31ecfe",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  "c11-h-q4": {
+   "sha": "8d7a49b7a9caf2c1bca260b7b4ff8d8a3b32ab3767c0db48872c01e42c14863e",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "2\n1 2 2\n"
+   ],
+   "hidden": []
+  },
+  "c11-h-q5": {
+   "sha": "95cbdeafe68b22be3ce99adb926a77c419ab972143a2a660503f912c90e7082c",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "3\nSalad\nChicken\nRice\nhealthy\n"
+   ],
+   "hidden": [
+    "4\nApple\nBurger\nCarrot\nBanana\nhealthy\n",
+    "3\nSteak\nBread\nSoup\nhealthy\n",
+    "1\nTomato\nhealthy\n",
+    "4\nFish\nPasta\nGrapes\nNuts\nhealthy\n",
+    "3\nCheese\nEggs\nOlives\nnot healthy\n"
+   ],
+   "wrong": {
+    "sha": "e4f48073904f0832c1b23f1d9001f14a20e54db175a2b7505ba1e0f4f40d7aaf",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  "c11-p-q1": {
+   "sha": "69601a7b7ae9a75520d154f6f6debe5fa039eea585cd63dcc60efedffff93591",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "True\nFalse\n1600\nRobo 1300\nTiko 700\nMax 2200\n"
+   ],
+   "hidden": []
+  },
+  "c11-p-q2": {
+   "sha": "da8a8828ee639eddf22083d400a65344cf780bab7acdcd4f22b115027d85c693",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "Eilat S 52000 6\nFalse\nTrue\nFalse\n6.17\n"
+   ],
+   "hidden": [
+    "Arad S 28000 10\nTrue\nTrue\nFalse\n10.92\n",
+    "Rahat S 75000 4\nFalse\nFalse\nTrue\nTrue\n4.25\n",
+    "Mitzpe S 5000 2.5\nFalse\nFalse\n1.25\n",
+    "Hura S 23000 8.25\nTrue\nFalse\nTrue\nFalse\n8.19\n"
+   ],
+   "wrong": {
+    "sha": "20697d1d1bf30956530b091fe4ce3a771caa5f6d7960de020b7809f927988fa2",
+    "compileExit": 0,
+    "fails": [
+     true,
+     true,
+     false,
+     true
+    ]
+   }
+  },
+  "c11-p-q3": {
+   "sha": "264807f2532a544056a1166340efdcd0e3da09c81cf60e282b2d0dd4382a68e6",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "True False\nTrue False\nFalse False\nTrue False\nTrue False\nTrue False\nFalse False\nFalse True\n3\nTrue\n"
+   ],
+   "hidden": [
+    "True False\nFalse False\nTrue False\nTrue False\nFalse False\nTrue False\nTrue False\nTrue False\nTrue False\n4\nFalse\n",
+    "False False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nFalse False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\n12\nFalse\n",
+    "False False\nFalse False\nFalse False\nFalse True\nFalse False\nFalse False\nFalse False\nFalse False\n0\nTrue\n",
+    "True False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\n8\nFalse\n",
+    "False True\nTrue False\nTrue False\nTrue False\nFalse False\nFalse False\nTrue False\nTrue False\nFalse True\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\nTrue False\n15\nTrue\n"
+   ],
+   "wrong": {
+    "sha": "c1558ce688f95b3c61789916fdbd10255d6a7b3539eada7b1bb48a66f18e8429",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c11-p-q4": {
+   "sha": "0e2c3d40f0385d65d593bb17c9ad2dc1b9f0e7b0e82431e786f46ef548250a6b",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "True\nTrue\nTrue\nTrue\n9/3 Poetry\n10/3 Space\n11/3 Robots\n1/5 Health\n"
+   ],
+   "hidden": []
+  },
+  "c11-p-q5": {
+   "sha": "6e0491c40bf9f29c74f070906e3c1cb49f32f799065caf8a9d26a3330b05a453",
+   "compileExit": 0,
+   "exitCodes": [
+    0
+   ],
+   "public": [
+    "Snow\nSea: 0 0 1 0 1\nNight: 0 0 1\nSnow: 0 0 0 0\n"
+   ],
+   "hidden": []
+  }
+ }
+}

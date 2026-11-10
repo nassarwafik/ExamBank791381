@@ -1,0 +1,605 @@
+{
+ "module": "m11",
+ "scenes": [
+  {
+   "id": "m11-class-objects",
+   "page": "p01",
+   "after": "m11-l01-p01-b02",
+   "title": "الفئة مخطط، والكائنات نسخ منه بـ new",
+   "config": {
+    "w": 410,
+    "h": 280,
+    "alt": "الفئة Student مخطط فيه الحقول name وage وgrade بلا قيم. كل new ينشئ كائنًا جديدًا من المخطط له قيمه الخاصة: s1 فيه Lina وs2 فيه Omar، وتغيير أحدهما لا يمس الآخر.",
+    "items": [
+     {
+      "id": "prog",
+      "kind": "code",
+      "x": 8,
+      "y": 8,
+      "lines": [
+       "Student s1 = new Student(\"Lina\", 16, 95);",
+       "Student s2 = new Student(\"Omar\", 17, 82);"
+      ]
+     },
+     {
+      "id": "cls",
+      "kind": "cells",
+      "x": 121,
+      "y": 96,
+      "values": [
+       "name",
+       "age",
+       "grade"
+      ],
+      "size": 56,
+      "idx": false,
+      "label": "الفئة Student"
+     },
+     {
+      "id": "s1",
+      "kind": "cells",
+      "x": 121,
+      "y": 96,
+      "values": [
+       "",
+       "",
+       ""
+      ],
+      "size": 56,
+      "idx": false,
+      "label": "s1",
+      "show": false,
+      "tone": "accent"
+     },
+     {
+      "id": "s2",
+      "kind": "cells",
+      "x": 121,
+      "y": 96,
+      "values": [
+       "",
+       "",
+       ""
+      ],
+      "size": 56,
+      "idx": false,
+      "label": "s2",
+      "show": false,
+      "tone": "accent"
+     },
+     {
+      "id": "a1",
+      "kind": "arrow",
+      "x": 250,
+      "y": 156,
+      "x2": 300,
+      "y2": 200,
+      "label": "new",
+      "show": false
+     },
+     {
+      "id": "a2",
+      "kind": "arrow",
+      "x": 160,
+      "y": 156,
+      "x2": 110,
+      "y2": 200,
+      "label": "new",
+      "show": false
+     }
+    ],
+    "steps": [
+     {
+      "say": "الفئة `Student` مخطط: تحدد أن لكل طالب `name` و`age` و`grade`، لكنها لا تحمل طالبًا.",
+      "set": {
+       "cls": {
+        "tone": "accent"
+       }
+      }
+     },
+     {
+      "say": "`new Student(...)` يبني من المخطط كائنًا جديدًا: `s1`.",
+      "set": {
+       "prog": {
+        "hl": 1
+       },
+       "cls": {
+        "tone": "base"
+       },
+       "a1": {
+        "show": true
+       },
+       "s1": {
+        "show": true,
+        "x": 232,
+        "y": 218
+       }
+      }
+     },
+     {
+      "say": "المنشئ يضع في `s1` قيمه الخاصة: `\"Lina\"` و16 و95.",
+      "set": {
+       "s1": {
+        "values": [
+         "Lina",
+         "16",
+         "95"
+        ]
+       }
+      }
+     },
+     {
+      "say": "`new` مرة أخرى يبني كائنًا ثانيًا منفصلًا: `s2` فيه `\"Omar\"` و17 و82.",
+      "set": {
+       "prog": {
+        "hl": 2
+       },
+       "s1": {
+        "tone": "base"
+       },
+       "a2": {
+        "show": true
+       },
+       "s2": {
+        "show": true,
+        "x": 10,
+        "y": 218,
+        "values": [
+         "Omar",
+         "17",
+         "82"
+        ]
+       }
+      }
+     },
+     {
+      "say": "لكل كائن حالته: `s2.SetGrade(90)` يغيّر علامة `s2` فقط، و`s1` يبقى 95.",
+      "set": {
+       "prog": {
+        "hl": 0
+       },
+       "s2": {
+        "tone": "base",
+        "values": [
+         "Omar",
+         "17",
+         "90"
+        ],
+        "hi": [
+         2
+        ]
+       },
+       "s1": {
+        "tone": "ok"
+       }
+      }
+     },
+     {
+      "say": "فئة واحدة، وكائنات كثيرة: كل `new` نسخة جديدة لها قيمها.",
+      "set": {
+       "s2": {
+        "hi": []
+       },
+       "s1": {
+        "tone": "base"
+       },
+       "cls": {
+        "tone": "ok"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "m11-references-null",
+   "page": "p03",
+   "after": "m11-l01-p03-b04",
+   "title": "مرجعان لكائن واحد، وخانة null",
+   "config": {
+    "w": 420,
+    "h": 270,
+    "alt": "new Student[3] ينشئ ثلاث خانات مراجع قيمتها null. بعد new Student تشير الخانة 0 إلى كائن، والمتغير s ينسخ المرجع فيشير إلى الكائن نفسه، أما الخانة null فلا كائن خلفها.",
+    "items": [
+     {
+      "id": "prog",
+      "kind": "code",
+      "x": 8,
+      "y": 8,
+      "lines": [
+       "Student[] students = new Student[3];",
+       "students[0] = new Student(\"Lina\", 16, 95);",
+       "Student s = students[0];"
+      ]
+     },
+     {
+      "id": "ls",
+      "kind": "text",
+      "x": 100,
+      "y": 138,
+      "text": "students",
+      "anchor": "right",
+      "mono": true
+     },
+     {
+      "id": "st",
+      "kind": "cells",
+      "x": 110,
+      "y": 110,
+      "values": [
+       "null",
+       "null",
+       "null"
+      ],
+      "size": 56
+     },
+     {
+      "id": "obj",
+      "kind": "box",
+      "x": 240,
+      "y": 214,
+      "w": 166,
+      "h": 44,
+      "label": "Student",
+      "value": "Lina, 16, 95",
+      "show": false
+     },
+     {
+      "id": "r0",
+      "kind": "arrow",
+      "x": 140,
+      "y": 188,
+      "x2": 262,
+      "y2": 212,
+      "show": false
+     },
+     {
+      "id": "bsv",
+      "kind": "box",
+      "x": 20,
+      "y": 214,
+      "w": 60,
+      "h": 44,
+      "label": "s",
+      "value": "",
+      "show": false
+     },
+     {
+      "id": "ts",
+      "kind": "token",
+      "x": 138,
+      "y": 138,
+      "text": "●",
+      "show": false,
+      "tone": "accent"
+     },
+     {
+      "id": "rs",
+      "kind": "arrow",
+      "x": 82,
+      "y": 236,
+      "x2": 238,
+      "y2": 236,
+      "show": false
+     }
+    ],
+    "steps": [
+     {
+      "say": "`new Student[3]` ينشئ ثلاث خانات مراجع، قيمتها كلها `null`: لا يوجد أي طالب بعد.",
+      "set": {
+       "prog": {
+        "hl": 1
+       },
+       "st": {
+        "tone": "warn"
+       }
+      }
+     },
+     {
+      "say": "`new Student(\"Lina\", 16, 95)` ينشئ كائنًا، والخانة `students[0]` تحمل مرجعًا يشير إليه.",
+      "set": {
+       "prog": {
+        "hl": 2
+       },
+       "st": {
+        "tone": "base",
+        "values": [
+         "●",
+         "null",
+         "null"
+        ],
+        "hi": [
+         0
+        ]
+       },
+       "obj": {
+        "show": true,
+        "tone": "accent"
+       },
+       "r0": {
+        "show": true,
+        "tone": "accent"
+       }
+      }
+     },
+     {
+      "say": "`Student s = students[0];` ينسخ المرجع وليس الكائن.",
+      "set": {
+       "prog": {
+        "hl": 3
+       },
+       "obj": {
+        "tone": "base"
+       },
+       "r0": {
+        "tone": "base"
+       },
+       "bsv": {
+        "show": true
+       },
+       "ts": {
+        "show": true,
+        "x": 50,
+        "y": 236
+       }
+      }
+     },
+     {
+      "say": "الآن مرجعان يشيران إلى الكائن نفسه.",
+      "set": {
+       "rs": {
+        "show": true,
+        "tone": "accent"
+       },
+       "r0": {
+        "tone": "accent"
+       },
+       "obj": {
+        "tone": "accent"
+       }
+      }
+     },
+     {
+      "say": "`s.SetGrade(99)` يغيّر الكائن الوحيد، فيرى `students[0]` العلامة 99 أيضًا.",
+      "set": {
+       "prog": {
+        "hl": 0
+       },
+       "rs": {
+        "tone": "base"
+       },
+       "r0": {
+        "tone": "base"
+       },
+       "obj": {
+        "value": "Lina, 16, 99",
+        "tone": "ok"
+       }
+      }
+     },
+     {
+      "say": "الخانتان `students[1]` و`students[2]` ما زالتا `null`: لا كائن خلفهما.",
+      "set": {
+       "st": {
+        "hi": [
+         0
+        ],
+        "bad": [
+         1,
+         2
+        ]
+       },
+       "obj": {
+        "tone": "base"
+       }
+      }
+     },
+     {
+      "say": "استدعاء `students[1].GetGrade()` على `null` يوقف البرنامج بخطأ، لذلك يفحص الكتاب `students[i] != null` أولًا.",
+      "set": {
+       "st": {
+        "hi": []
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "m11-encapsulation",
+   "page": "p02",
+   "after": "m11-l01-p02-b02",
+   "title": "private: الوصول عبر Get وSet فقط",
+   "config": {
+    "w": 420,
+    "h": 250,
+    "alt": "الحقل grade خاص داخل الفئة. الكتابة المباشرة s.grade مرفوضة، وSetGrade يفحص القيمة فيرفض 150 ويقبل 95 ويضعها في grade، وGetGrade يعيدها إلى الخارج.",
+    "items": [
+     {
+      "id": "ho",
+      "kind": "text",
+      "x": 60,
+      "y": 14,
+      "text": "خارج الفئة",
+      "tone": "muted"
+     },
+     {
+      "id": "hi",
+      "kind": "text",
+      "x": 360,
+      "y": 14,
+      "text": "داخل الفئة",
+      "tone": "muted"
+     },
+     {
+      "id": "set",
+      "kind": "box",
+      "x": 150,
+      "y": 66,
+      "w": 130,
+      "h": 36,
+      "label": "public",
+      "value": "SetGrade",
+      "shape": "round"
+     },
+     {
+      "id": "get",
+      "kind": "box",
+      "x": 150,
+      "y": 186,
+      "w": 130,
+      "h": 36,
+      "label": "public",
+      "value": "GetGrade",
+      "shape": "round"
+     },
+     {
+      "id": "g",
+      "kind": "box",
+      "x": 320,
+      "y": 110,
+      "w": 80,
+      "h": 50,
+      "label": "private grade",
+      "value": "0"
+     },
+     {
+      "id": "direct",
+      "kind": "arrow",
+      "x": 100,
+      "y": 140,
+      "x2": 312,
+      "y2": 140,
+      "label": "s.grade = 150",
+      "dash": true,
+      "show": false
+     },
+     {
+      "id": "t150",
+      "kind": "token",
+      "x": 50,
+      "y": 84,
+      "text": "150",
+      "show": false,
+      "tone": "accent"
+     },
+     {
+      "id": "t95",
+      "kind": "token",
+      "x": 50,
+      "y": 84,
+      "text": "95",
+      "show": false,
+      "tone": "accent"
+     },
+     {
+      "id": "tr",
+      "kind": "token",
+      "x": 360,
+      "y": 135,
+      "text": "95",
+      "show": false,
+      "tone": "ok"
+     }
+    ],
+    "steps": [
+     {
+      "say": "الحقل `grade` معرَّف `private`: لا يصل إليه إلا كود داخل الفئة نفسها.",
+      "set": {
+       "g": {
+        "tone": "warn"
+       }
+      }
+     },
+     {
+      "say": "من الخارج، `s.grade = 150;` مرفوض: المترجم لا يسمح بالوصول إلى حقل `private`.",
+      "set": {
+       "g": {
+        "tone": "base"
+       },
+       "direct": {
+        "show": true,
+        "tone": "bad"
+       }
+      }
+     },
+     {
+      "say": "الطريق الصحيح هو `s.SetGrade(150)`: القيمة تصل إلى العملية، وهي تفحصها أولًا.",
+      "set": {
+       "direct": {
+        "show": false
+       },
+       "t150": {
+        "show": true,
+        "x": 122
+       },
+       "set": {
+        "tone": "accent"
+       }
+      }
+     },
+     {
+      "say": "الشرط `grade > 100` صحيح، فترفض العملية 150 ولا يتغير الحقل.",
+      "set": {
+       "t150": {
+        "tone": "bad"
+       },
+       "set": {
+        "tone": "bad"
+       }
+      }
+     },
+     {
+      "say": "`s.SetGrade(95)`: القيمة بين 0 و100 فتنجح في الفحص.",
+      "set": {
+       "t150": {
+        "show": false
+       },
+       "t95": {
+        "show": true,
+        "x": 122
+       },
+       "set": {
+        "tone": "ok"
+       }
+      }
+     },
+     {
+      "say": "`SetGrade` تكتب 95 في الحقل `grade` من الداخل.",
+      "set": {
+       "t95": {
+        "x": 360,
+        "y": 135
+       },
+       "g": {
+        "value": ""
+       },
+       "set": {
+        "tone": "base"
+       }
+      }
+     },
+     {
+      "say": "`s.GetGrade()` تقرأ الحقل وتعيد 95 إلى الخارج.",
+      "set": {
+       "get": {
+        "tone": "ok"
+       },
+       "t95": {
+        "show": false
+       },
+       "g": {
+        "value": "95"
+       },
+       "tr": {
+        "show": true,
+        "x": 112,
+        "y": 204
+       }
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

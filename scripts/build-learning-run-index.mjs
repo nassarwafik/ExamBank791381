@@ -6,7 +6,8 @@
 // From the SERVED module bodies (api/src/data/learning-content/<courseId>/*.json) it takes every C# `code` block that declares a
 // `static void Main`, wraps it exactly as the API does (api/src/lib/learning-run.js wrapProgram), and compiles and runs it once
 // with the csharp@1 settings (run-csharp-probes.mjs executeCSharp, empty input). A block enters the index only when it COMPILES
-// alone; one that needs code from another block (a method printed elsewhere) stays a plain code block.
+// alone; one that needs code from another block (a method printed elsewhere) stays a plain code block. The starter of a writing
+// question («حلّ وافحص», enrichment P14: `…-solve-qN`) is not a candidate: its own panel runs and checks it (learning-solve).
 // Output:
 //   api/src/data/learning-run/<courseId>.json   { schemaVersion, courseId, language, pages: { pageId: { blocks: { blockId: { moduleId, codeSha } } } } }
 //   scripts/learning-run/<courseId>.json         every candidate with its compile result (the evidence), bound to the code's sha256
@@ -25,13 +26,16 @@ export const INDEX_FILE = id => join(ROOT, "api", "src", "data", "learning-run",
 export const EVIDENCE_FILE = id => join(ROOT, "scripts", "learning-run", id + ".json");
 const MAIN = /static\s+void\s+Main\s*\(/;
 
-/** Every C# block with a `Main` in the served bodies, in module / lesson / page / block order → [{ moduleId, pageId, blockId, code }]. */
+const SOLVE_STARTER = /-solve-q\d+$/;
+
+/** Every C# block with a `Main` in the served bodies (a «حلّ وافحص» starter excepted), in module / lesson / page / block order →
+ *  [{ moduleId, pageId, blockId, code }]. */
 export function candidates(courseId) {
   const out = [];
   for (const f of readdirSync(CONTENT_DIR(courseId)).filter(f => f.endsWith(".json")).sort()) {
     const mod = JSON.parse(readFileSync(join(CONTENT_DIR(courseId), f), "utf8"));
     for (const lesson of mod.lessons || []) for (const page of lesson.pages || []) for (const b of page.blocks || [])
-      if (b && b.type === "code" && b.language === "csharp" && MAIN.test(b.code || "")) out.push({ moduleId: mod.id, pageId: page.id, blockId: b.id, code: b.code });
+      if (b && b.type === "code" && b.language === "csharp" && MAIN.test(b.code || "") && !SOLVE_STARTER.test(b.id || "")) out.push({ moduleId: mod.id, pageId: page.id, blockId: b.id, code: b.code });
   }
   return out;
 }

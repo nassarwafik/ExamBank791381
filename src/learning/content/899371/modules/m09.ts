@@ -473,6 +473,191 @@ const m09: ContentModule = {
               "code": "int[] a = new int[5];\na[5] = 10;  // ❌ هذا خاطئ لأن آخر فهرس هو 4"
             },
             {
+              "id": "m09-l01-p03-scene-array-cells",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: خانات المصفوفة من 0، وما بعدها خارج الحدود",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 230,
+                "alt": "new int[5] تنشئ خمس خانات قيمها 0 ومؤشراتها من 0 إلى 4. a[1] = 10 تكتب في الخانة الثانية، أما a[5] فخارج حدود المصفوفة وتسبب خطأ.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "int[] a = new int[5];",
+                      "a[1] = 10;",
+                      "a[5] = 10;"
+                    ]
+                  },
+                  {
+                    "id": "a",
+                    "kind": "cells",
+                    "x": 60,
+                    "y": 116,
+                    "values": [
+                      "0",
+                      "0",
+                      "0",
+                      "0",
+                      "0"
+                    ],
+                    "size": 48,
+                    "label": "a"
+                  },
+                  {
+                    "id": "ghost",
+                    "kind": "box",
+                    "x": 310,
+                    "y": 116,
+                    "w": 46,
+                    "h": 48,
+                    "value": "✗",
+                    "show": false,
+                    "tone": "bad"
+                  },
+                  {
+                    "id": "t1",
+                    "kind": "token",
+                    "x": 250,
+                    "y": 52,
+                    "text": "10",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "t2",
+                    "kind": "token",
+                    "x": 250,
+                    "y": 72,
+                    "text": "10",
+                    "show": false,
+                    "tone": "bad"
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 206,
+                    "text": "",
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`new int[5]` تنشئ خمس خانات متجاورة، في كل منها 0، ومؤشراتها من 0 إلى 4.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "a": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`a[1] = 10;`: المؤشر 1 هو الخانة الثانية، فتنتقل 10 إليها.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "a": {
+                        "tone": "base",
+                        "hi": [
+                          1
+                        ],
+                        "values": [
+                          "0",
+                          "",
+                          "0",
+                          "0",
+                          "0"
+                        ]
+                      },
+                      "t1": {
+                        "show": true,
+                        "x": 132,
+                        "y": 140
+                      }
+                    }
+                  },
+                  {
+                    "say": "الخانة الثانية تحمل 10، وباقي الخانات بقيت 0.",
+                    "set": {
+                      "t1": {
+                        "show": false
+                      },
+                      "a": {
+                        "values": [
+                          "0",
+                          "10",
+                          "0",
+                          "0",
+                          "0"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "`a.Length` يساوي 5، لذلك آخر مؤشر هو `a.Length - 1`، أي 4.",
+                    "set": {
+                      "prog": {
+                        "hl": 0
+                      },
+                      "a": {
+                        "hi": [
+                          4
+                        ]
+                      },
+                      "res": {
+                        "text": "a.Length = 5",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`a[5] = 10;`: لا توجد خانة مؤشرها 5، فالمؤشر خارج حدود المصفوفة.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "a": {
+                        "hi": []
+                      },
+                      "ghost": {
+                        "show": true
+                      },
+                      "t2": {
+                        "show": true,
+                        "x": 333,
+                        "y": 90
+                      }
+                    }
+                  },
+                  {
+                    "say": "لا يكتب البرنامج خارج المصفوفة، بل يتوقف بخطأ تنفيذ.",
+                    "set": {
+                      "res": {
+                        "text": "IndexOutOfRangeException",
+                        "tone": "bad"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m09-l01-p03-b15",
               "type": "heading",
               "origin": "book",
@@ -548,6 +733,218 @@ const m09: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "int max = arr[0];\nfor (int i = 1; i < arr.Length; i++)\n{\n    if (arr[i] > max)\n        max = arr[i];\n}"
+            },
+            {
+              "id": "m09-l01-p04-scene-find-max",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: أكبر قيمة: المؤشر يمشي ويحفظ الأكبر",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 240,
+                "alt": "المصفوفة 3، 8، 5، 9، 2. max يبدأ بأول عنصر، والمؤشر i يمشي من 1 إلى آخر المصفوفة، وكلما وجد عنصرًا أكبر من max انتقل العنصر إلى max، فيكون الناتج 9.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "int max = arr[0];",
+                      "for (int i = 1; i < arr.Length; i++)",
+                      "    if (arr[i] > max)",
+                      "        max = arr[i];"
+                    ]
+                  },
+                  {
+                    "id": "arr",
+                    "kind": "cells",
+                    "x": 40,
+                    "y": 130,
+                    "values": [
+                      "3",
+                      "8",
+                      "5",
+                      "9",
+                      "2"
+                    ],
+                    "size": 44,
+                    "label": "arr"
+                  },
+                  {
+                    "id": "pi",
+                    "kind": "token",
+                    "x": 106,
+                    "y": 214,
+                    "text": "i",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "bm",
+                    "kind": "box",
+                    "x": 300,
+                    "y": 130,
+                    "w": 80,
+                    "h": 44,
+                    "label": "max",
+                    "value": ""
+                  },
+                  {
+                    "id": "m3",
+                    "kind": "token",
+                    "x": 62,
+                    "y": 152,
+                    "text": "3",
+                    "show": false
+                  },
+                  {
+                    "id": "m8",
+                    "kind": "token",
+                    "x": 106,
+                    "y": 152,
+                    "text": "8",
+                    "show": false
+                  },
+                  {
+                    "id": "m9",
+                    "kind": "token",
+                    "x": 194,
+                    "y": 152,
+                    "text": "9",
+                    "show": false
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`max = arr[0];`: نفترض أن أول عنصر، 3، هو الأكبر.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "arr": {
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "m3": {
+                        "x": 340,
+                        "y": 152,
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 1`: `8 > 3` صحيح، فتنتقل 8 إلى `max`.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "arr": {
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "pi": {
+                        "show": true
+                      },
+                      "m3": {
+                        "show": false
+                      },
+                      "m8": {
+                        "x": 340,
+                        "y": 152,
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 2`: `5 > 8` خطأ، فيبقى `max` يساوي 8.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "arr": {
+                        "hi": [],
+                        "bad": [
+                          2
+                        ]
+                      },
+                      "pi": {
+                        "x": 150
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 3`: `9 > 8` صحيح، فتنتقل 9 إلى `max`.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "arr": {
+                        "hi": [
+                          3
+                        ],
+                        "bad": []
+                      },
+                      "pi": {
+                        "x": 194
+                      },
+                      "m8": {
+                        "show": false
+                      },
+                      "m9": {
+                        "x": 340,
+                        "y": 152,
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 4`: `2 > 9` خطأ، فلا يتغير شيء.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "arr": {
+                        "hi": [],
+                        "bad": [
+                          4
+                        ]
+                      },
+                      "pi": {
+                        "x": 238
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 5`: الشرط `5 < 5` خطأ، فتنتهي الحلقة وأكبر قيمة هي 9.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "arr": {
+                        "bad": []
+                      },
+                      "pi": {
+                        "x": 282,
+                        "tone": "muted"
+                      },
+                      "m9": {
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m09-l01-p04-b04",
@@ -750,6 +1147,300 @@ const m09: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "for (int i = 0; i < arr.Length; i++)\n{\n  int left = 0, right = 0;\n  for (int j = 0; j < i; j++) left += arr[j];\n  for (int j = i + 1; j < arr.Length; j++) right += arr[j];\n    if (left == right)\n    {\n      Console.WriteLine(\"نقطة التوازن في المؤشر: \" + i);\n      break;\n    }\n }"
+            },
+            {
+              "id": "m09-l01-p05-scene-counters",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: مصفوفة العدّادات: كل صوت يزيد خانته",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 280,
+                "alt": "خمسة أصوات للمرشحين 0 و1 و2. لكل مرشح خانة عدّاد، وكل صوت يزيد الخانة التي مؤشرها رقم المرشح، فينال المرشح 2 ثلاثة أصوات.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "int[] count = new int[3];",
+                      "for (int i = 0; i < votes.Length; i++)",
+                      "    count[votes[i]]++;"
+                    ]
+                  },
+                  {
+                    "id": "lv",
+                    "kind": "text",
+                    "x": 130,
+                    "y": 120,
+                    "text": "votes",
+                    "anchor": "right",
+                    "mono": true
+                  },
+                  {
+                    "id": "votes",
+                    "kind": "cells",
+                    "x": 140,
+                    "y": 100,
+                    "values": [
+                      "2",
+                      "0",
+                      "2",
+                      "1",
+                      "2"
+                    ],
+                    "size": 40
+                  },
+                  {
+                    "id": "lc",
+                    "kind": "text",
+                    "x": 130,
+                    "y": 236,
+                    "text": "count",
+                    "anchor": "right",
+                    "mono": true
+                  },
+                  {
+                    "id": "count",
+                    "kind": "cells",
+                    "x": 140,
+                    "y": 216,
+                    "values": [
+                      "0",
+                      "0",
+                      "0"
+                    ],
+                    "size": 40
+                  },
+                  {
+                    "id": "v0",
+                    "kind": "token",
+                    "x": 160,
+                    "y": 120,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "v1",
+                    "kind": "token",
+                    "x": 200,
+                    "y": 120,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "v2",
+                    "kind": "token",
+                    "x": 240,
+                    "y": 120,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "v3",
+                    "kind": "token",
+                    "x": 280,
+                    "y": 120,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "v4",
+                    "kind": "token",
+                    "x": 320,
+                    "y": 120,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`new int[3]` تنشئ ثلاثة عدّادات قيمتها 0: خانة لكل مرشح 0 و1 و2.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "count": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`votes[0]` يساوي 2، فيزيد `count[2]` واحدًا.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "votes": {
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "count": {
+                        "values": [
+                          "0",
+                          "0",
+                          "1"
+                        ],
+                        "hi": [
+                          2
+                        ],
+                        "tone": "base"
+                      },
+                      "v0": {
+                        "show": true,
+                        "x": 240,
+                        "y": 190
+                      }
+                    }
+                  },
+                  {
+                    "say": "`votes[1]` يساوي 0، فيزيد `count[0]`.",
+                    "set": {
+                      "votes": {
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "count": {
+                        "values": [
+                          "1",
+                          "0",
+                          "1"
+                        ],
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "v1": {
+                        "show": true,
+                        "x": 160,
+                        "y": 190
+                      },
+                      "v0": {
+                        "show": false
+                      }
+                    }
+                  },
+                  {
+                    "say": "`votes[2]` يساوي 2 مرة أخرى، فيصبح `count[2]` يساوي 2.",
+                    "set": {
+                      "votes": {
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "count": {
+                        "values": [
+                          "1",
+                          "0",
+                          "2"
+                        ],
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "v2": {
+                        "show": true,
+                        "x": 240,
+                        "y": 190
+                      },
+                      "v1": {
+                        "show": false
+                      }
+                    }
+                  },
+                  {
+                    "say": "`votes[3]` يساوي 1، فيزيد `count[1]`.",
+                    "set": {
+                      "votes": {
+                        "hi": [
+                          3
+                        ]
+                      },
+                      "count": {
+                        "values": [
+                          "1",
+                          "1",
+                          "2"
+                        ],
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "v3": {
+                        "show": true,
+                        "x": 200,
+                        "y": 190
+                      },
+                      "v2": {
+                        "show": false
+                      }
+                    }
+                  },
+                  {
+                    "say": "`votes[4]` يساوي 2، فيصبح `count[2]` يساوي 3.",
+                    "set": {
+                      "votes": {
+                        "hi": [
+                          4
+                        ]
+                      },
+                      "count": {
+                        "values": [
+                          "1",
+                          "1",
+                          "3"
+                        ],
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "v4": {
+                        "show": true,
+                        "x": 240,
+                        "y": 190
+                      },
+                      "v3": {
+                        "show": false
+                      }
+                    }
+                  },
+                  {
+                    "say": "الصوت نفسه هو مؤشر العدّاد: المرشح 2 نال 3 أصوات، والمرشحان 0 و1 صوتًا واحدًا لكل منهما.",
+                    "set": {
+                      "prog": {
+                        "hl": 0
+                      },
+                      "votes": {
+                        "hi": []
+                      },
+                      "count": {
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "v4": {
+                        "show": false
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -2867,6 +3558,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double[] StoresSums(int stores)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        double[] sums = StoresSums(n);\n        string line = \"\";\n        for (int i = 0; i < sums.Length; i++)\n            line += sums[i] + \" \";\n        Console.WriteLine(line);\n    }\n}\n"
             }
           ]
         },
@@ -2960,6 +3659,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3073,6 +3780,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3252,6 +3967,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3595,6 +4318,14 @@ const m09: ContentModule = {
                   "text": " ما وظيفة العملية Dog؟"
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int Igloo(int[] a, int num)\n    {\n        \n    }\n\n    public static int Dog(int[] a)\n    {\n        for (int i = 0; i < a.Length; i++)\n            if (Igloo(a, a[i]) != i)\n                return i;\n        return a.Length;\n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++)\n            a[i] = int.Parse(Console.ReadLine());\n        int num = int.Parse(Console.ReadLine());\n        Console.WriteLine(Igloo(a, num));\n        Console.WriteLine(Dog(a));\n    }\n}\n"
             }
           ]
         },
@@ -3760,6 +4491,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsBalanced(int[] arr, int index)\n    {\n        \n    }\n\n    public static int FBalanced(int[] arr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++)\n            a[i] = int.Parse(Console.ReadLine());\n        Console.WriteLine(FBalanced(a));\n    }\n}\n"
             }
           ]
         }

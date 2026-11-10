@@ -146,6 +146,8 @@
 .cx-run-controls .cx-run-button { min-height: 44px; padding: 0 18px; font-weight: 700; }
 .cx-run-button.is-secondary { font-weight: 600; }
 .cx-run-button:focus-visible, .cx-sample-pick button:focus-visible, .cx-stdin:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
+/* a box that can scroll (an example's input / output, a run's output) is reachable by keyboard: its focus is visible (899371 P15) */
+.cx-io-block pre:focus-visible { outline: var(--eb-focus-ring); outline-offset: 2px; }
 .cx-run-button[aria-busy="true"] { cursor: progress; }
 .cx-result-meta, .cx-result-note { margin: 0; font-size: 12px; color: var(--eb-muted, var(--eb-content-text)); }
 .cx-result-stale { margin: 0; padding: 6px 8px; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 12px; }

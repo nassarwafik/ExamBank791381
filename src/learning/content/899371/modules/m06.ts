@@ -105,6 +105,217 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l01-p01-scene-sentinel",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: قيمة الحارس -1 توقف الحلقة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 260,
+                "alt": "المستخدم يُدخل 80 ثم 90 ثم -1. كل قيمة تنتقل إلى mark، والحلقة تجمعها في sum ما دام الشرط mark != -1 صحيحًا، وحين تصل -1 تتوقف الحلقة دون أن تجمعها.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 8,
+                    "y": 8,
+                    "lines": [
+                      "mark = int.Parse(Console.ReadLine());",
+                      "while (mark != -1)",
+                      "{",
+                      "    sum += mark;",
+                      "    mark = int.Parse(Console.ReadLine());",
+                      "}"
+                    ]
+                  },
+                  {
+                    "id": "qh",
+                    "kind": "text",
+                    "x": 342,
+                    "y": 154,
+                    "text": "المدخلات",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "bs",
+                    "kind": "box",
+                    "x": 30,
+                    "y": 160,
+                    "w": 90,
+                    "h": 44,
+                    "label": "sum",
+                    "value": "0"
+                  },
+                  {
+                    "id": "bm",
+                    "kind": "box",
+                    "x": 160,
+                    "y": 160,
+                    "w": 80,
+                    "h": 44,
+                    "label": "mark",
+                    "value": ""
+                  },
+                  {
+                    "id": "cond",
+                    "kind": "box",
+                    "x": 130,
+                    "y": 222,
+                    "w": 140,
+                    "h": 34,
+                    "value": "mark != -1",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "t80",
+                    "kind": "token",
+                    "x": 296,
+                    "y": 186,
+                    "text": "80"
+                  },
+                  {
+                    "id": "t90",
+                    "kind": "token",
+                    "x": 342,
+                    "y": 186,
+                    "text": "90"
+                  },
+                  {
+                    "id": "tm",
+                    "kind": "token",
+                    "x": 388,
+                    "y": 186,
+                    "text": "-1",
+                    "tone": "warn"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "السطر 1: البرنامج يقرأ أول قيمة، 80، ويضعها في `mark`.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "t80": {
+                        "x": 200,
+                        "y": 182,
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `80 != -1` صحيح، فيُنفَّذ الجسم: `sum += mark` فيصبح `sum` يساوي 80.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "cond": {
+                        "tone": "ok"
+                      },
+                      "t80": {
+                        "tone": "base"
+                      },
+                      "bs": {
+                        "value": "80",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "في آخر الجسم يقرأ القيمة التالية، 90، فتحل محل 80.",
+                    "set": {
+                      "prog": {
+                        "hl": 5
+                      },
+                      "cond": {
+                        "tone": "base"
+                      },
+                      "bs": {
+                        "tone": "base"
+                      },
+                      "t80": {
+                        "show": false
+                      },
+                      "t90": {
+                        "x": 200,
+                        "y": 182,
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`90 != -1` صحيح، فيصبح `sum` يساوي 170.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "cond": {
+                        "tone": "ok"
+                      },
+                      "t90": {
+                        "tone": "base"
+                      },
+                      "bs": {
+                        "value": "170",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "يقرأ القيمة التالية `-1`، وهي قيمة الحارس التي اتفقنا أنها تعني «انتهيت».",
+                    "set": {
+                      "prog": {
+                        "hl": 5
+                      },
+                      "cond": {
+                        "tone": "base"
+                      },
+                      "bs": {
+                        "tone": "base"
+                      },
+                      "t90": {
+                        "show": false
+                      },
+                      "tm": {
+                        "x": 200,
+                        "y": 182
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `-1 != -1` خطأ، فتتوقف الحلقة قبل الجسم.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "cond": {
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "لذلك لا تُجمع `-1` أبدًا: `sum` يبقى 170، مجموع العلامتين فقط.",
+                    "set": {
+                      "bs": {
+                        "tone": "ok"
+                      },
+                      "qh": {
+                        "text": ""
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m06-l01-p01-b04",
               "type": "heading",
               "origin": "book",
@@ -239,6 +450,239 @@ const m06: ContentModule = {
               "code": "int number = 745;\nint sum = 0;\n\nwhile (number > 0)\n{\n    sum += number % 10;\n    number /= 10;\n}\n\nConsole.WriteLine(\"Sum of digits: \" + sum);"
             },
             {
+              "id": "m06-l01-p02-scene-digits",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: المنازل: % 10 يأخذ الآحاد و/ 10 يحذفها",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 250,
+                "alt": "العدد 745: في كل دورة يأخذ number % 10 آخر منزلة إلى sum، ثم يحذفها number /= 10، حتى يصبح العدد 0 والمجموع 16.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "while (number > 0)",
+                      "{",
+                      "    sum += number % 10;",
+                      "    number /= 10;",
+                      "}"
+                    ]
+                  },
+                  {
+                    "id": "bn",
+                    "kind": "box",
+                    "x": 40,
+                    "y": 146,
+                    "w": 110,
+                    "h": 44,
+                    "label": "number",
+                    "value": "745"
+                  },
+                  {
+                    "id": "bs",
+                    "kind": "box",
+                    "x": 260,
+                    "y": 146,
+                    "w": 90,
+                    "h": 44,
+                    "label": "sum",
+                    "value": "0"
+                  },
+                  {
+                    "id": "c5",
+                    "kind": "token",
+                    "x": 120,
+                    "y": 168,
+                    "text": "+5",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "c4",
+                    "kind": "token",
+                    "x": 120,
+                    "y": 168,
+                    "text": "+4",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "c7",
+                    "kind": "token",
+                    "x": 120,
+                    "y": 168,
+                    "text": "+7",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 228,
+                    "text": "",
+                    "big": true,
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`number = 745` و`sum = 0`، والشرط `745 > 0` صحيح فتبدأ الحلقة.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "bn": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`745 % 10` يعطي آخر منزلة 5، فتُضاف إلى `sum`.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bn": {
+                        "tone": "base"
+                      },
+                      "c5": {
+                        "x": 224,
+                        "y": 168,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "5",
+                        "tone": "accent"
+                      },
+                      "res": {
+                        "text": "745 % 10 = 5"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`number /= 10` يحذف المنزلة الأخيرة: `745 / 10 = 74`.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "c5": {
+                        "show": false
+                      },
+                      "bs": {
+                        "tone": "base"
+                      },
+                      "bn": {
+                        "value": "74",
+                        "tone": "accent"
+                      },
+                      "res": {
+                        "text": "745 / 10 = 74"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الدورة الثانية: `74 % 10` يعطي 4، فيصبح `sum` يساوي 9.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bn": {
+                        "tone": "base"
+                      },
+                      "c4": {
+                        "x": 224,
+                        "y": 168,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "9",
+                        "tone": "accent"
+                      },
+                      "res": {
+                        "text": "74 % 10 = 4"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`74 / 10 = 7`: بقيت منزلة واحدة.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "c4": {
+                        "show": false
+                      },
+                      "bs": {
+                        "tone": "base"
+                      },
+                      "bn": {
+                        "value": "7",
+                        "tone": "accent"
+                      },
+                      "res": {
+                        "text": "74 / 10 = 7"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الدورة الثالثة: `7 % 10` يعطي 7 فيصبح `sum` يساوي 16، ثم `7 / 10` يعطي 0.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "c7": {
+                        "x": 224,
+                        "y": 168,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "16",
+                        "tone": "accent"
+                      },
+                      "bn": {
+                        "value": "0",
+                        "tone": "muted"
+                      },
+                      "res": {
+                        "text": "7 % 10 = 7"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `0 > 0` خطأ، فتتوقف الحلقة: مجموع المنازل 16.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "c7": {
+                        "show": false
+                      },
+                      "bs": {
+                        "tone": "ok"
+                      },
+                      "res": {
+                        "text": "7 + 4 + 5 = 16",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m06-l01-p02-b08",
               "type": "text",
               "origin": "book",
@@ -302,6 +746,237 @@ const m06: ContentModule = {
                   "ينفذ مرة واحدة على الأقل ثم يفحص الشرط"
                 ]
               ]
+            },
+            {
+              "id": "m06-l01-p03-scene-while-vs-do",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: while يفحص أولًا، وdo-while ينفّذ أولًا",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 280,
+                "alt": "برنامجان يبدآن بـ x = 10 والشرط x < 5 خطأ من البداية. while يفحص الشرط أولًا فلا ينفّذ الجسم أبدًا، وdo-while ينفّذ الجسم مرة ثم يفحص.",
+                "items": [
+                  {
+                    "id": "hw",
+                    "kind": "text",
+                    "x": 310,
+                    "y": 12,
+                    "text": "while",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "hd",
+                    "kind": "text",
+                    "x": 100,
+                    "y": 12,
+                    "text": "do-while",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "cw",
+                    "kind": "code",
+                    "x": 238,
+                    "y": 30,
+                    "lines": [
+                      "while (x < 5)",
+                      "    x++;"
+                    ]
+                  },
+                  {
+                    "id": "cd",
+                    "kind": "code",
+                    "x": 26,
+                    "y": 30,
+                    "lines": [
+                      "do",
+                      "    x++;",
+                      "while (x < 5);"
+                    ]
+                  },
+                  {
+                    "id": "dw",
+                    "kind": "box",
+                    "x": 250,
+                    "y": 104,
+                    "w": 120,
+                    "h": 60,
+                    "value": "x < 5",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "aw",
+                    "kind": "arrow",
+                    "x": 310,
+                    "y": 166,
+                    "x2": 310,
+                    "y2": 190
+                  },
+                  {
+                    "id": "bw",
+                    "kind": "box",
+                    "x": 265,
+                    "y": 192,
+                    "w": 90,
+                    "h": 36,
+                    "value": "x++",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "rw",
+                    "kind": "text",
+                    "x": 310,
+                    "y": 258,
+                    "text": "x = 10",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "bd",
+                    "kind": "box",
+                    "x": 55,
+                    "y": 112,
+                    "w": 90,
+                    "h": 36,
+                    "value": "x++",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "ad",
+                    "kind": "arrow",
+                    "x": 100,
+                    "y": 150,
+                    "x2": 100,
+                    "y2": 174
+                  },
+                  {
+                    "id": "dd",
+                    "kind": "box",
+                    "x": 40,
+                    "y": 176,
+                    "w": 120,
+                    "h": 60,
+                    "value": "x < 5",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "rd",
+                    "kind": "text",
+                    "x": 100,
+                    "y": 262,
+                    "text": "x = 10",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "tw",
+                    "kind": "token",
+                    "x": 394,
+                    "y": 134,
+                    "text": "●",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "td",
+                    "kind": "token",
+                    "x": 22,
+                    "y": 130,
+                    "text": "●",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "في البرنامجين `x = 10`، والشرط `x < 5` خطأ منذ البداية."
+                  },
+                  {
+                    "say": "`while` يفحص الشرط أولًا: `10 < 5` خطأ.",
+                    "set": {
+                      "cw": {
+                        "hl": 1
+                      },
+                      "tw": {
+                        "show": true
+                      },
+                      "dw": {
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "فلا يُنفَّذ الجسم ولا مرة، ويبقى `x` يساوي 10.",
+                    "set": {
+                      "bw": {
+                        "tone": "muted"
+                      },
+                      "aw": {
+                        "tone": "muted"
+                      },
+                      "rw": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`do-while` يبدأ بالجسم دون فحص: `x++` يجعل `x` يساوي 11.",
+                    "set": {
+                      "cd": {
+                        "hl": 2
+                      },
+                      "td": {
+                        "show": true
+                      },
+                      "bd": {
+                        "tone": "accent"
+                      },
+                      "rd": {
+                        "text": "x = 11",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "ثم يفحص الشرط في النهاية: `11 < 5` خطأ، فيتوقف.",
+                    "set": {
+                      "cd": {
+                        "hl": 3
+                      },
+                      "td": {
+                        "y": 206
+                      },
+                      "bd": {
+                        "tone": "base"
+                      },
+                      "dd": {
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الخلاصة: `while` قد لا ينفّذ جسمه أبدًا، و`do-while` ينفّذه مرة واحدة على الأقل.",
+                    "set": {
+                      "bd": {
+                        "tone": "ok"
+                      },
+                      "rd": {
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -2546,6 +3221,14 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m06-l03-p01-b07",
               "type": "text",
               "origin": "book",
@@ -2598,6 +3281,14 @@ const m06: ContentModule = {
                   "text": "حساب وطباعة أعلى علامة بين جميع الصفوف (يُفترض أن هناك فقط علامة واحدة هي الأعلى)."
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p01-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2716,6 +3407,14 @@ const m06: ContentModule = {
                   "text": "إذا كانت مساوية للعلامة القصوى المدرسية: أضف العداد الصفّي إلى العداد المدرسي."
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p02-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2848,6 +3547,14 @@ const m06: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p03-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2980,6 +3687,14 @@ const m06: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p04-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

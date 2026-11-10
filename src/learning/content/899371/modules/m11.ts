@@ -136,6 +136,204 @@ const m11: ContentModule = {
               ]
             },
             {
+              "id": "m11-l01-p01-scene-class-objects",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: الفئة مخطط، والكائنات نسخ منه بـ new",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 410,
+                "h": 280,
+                "alt": "الفئة Student مخطط فيه الحقول name وage وgrade بلا قيم. كل new ينشئ كائنًا جديدًا من المخطط له قيمه الخاصة: s1 فيه Lina وs2 فيه Omar، وتغيير أحدهما لا يمس الآخر.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 8,
+                    "y": 8,
+                    "lines": [
+                      "Student s1 = new Student(\"Lina\", 16, 95);",
+                      "Student s2 = new Student(\"Omar\", 17, 82);"
+                    ]
+                  },
+                  {
+                    "id": "cls",
+                    "kind": "cells",
+                    "x": 121,
+                    "y": 96,
+                    "values": [
+                      "name",
+                      "age",
+                      "grade"
+                    ],
+                    "size": 56,
+                    "idx": false,
+                    "label": "الفئة Student"
+                  },
+                  {
+                    "id": "s1",
+                    "kind": "cells",
+                    "x": 121,
+                    "y": 96,
+                    "values": [
+                      "",
+                      "",
+                      ""
+                    ],
+                    "size": 56,
+                    "idx": false,
+                    "label": "s1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "s2",
+                    "kind": "cells",
+                    "x": 121,
+                    "y": 96,
+                    "values": [
+                      "",
+                      "",
+                      ""
+                    ],
+                    "size": 56,
+                    "idx": false,
+                    "label": "s2",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "a1",
+                    "kind": "arrow",
+                    "x": 250,
+                    "y": 156,
+                    "x2": 300,
+                    "y2": 200,
+                    "label": "new",
+                    "show": false
+                  },
+                  {
+                    "id": "a2",
+                    "kind": "arrow",
+                    "x": 160,
+                    "y": 156,
+                    "x2": 110,
+                    "y2": 200,
+                    "label": "new",
+                    "show": false
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "الفئة `Student` مخطط: تحدد أن لكل طالب `name` و`age` و`grade`، لكنها لا تحمل طالبًا.",
+                    "set": {
+                      "cls": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`new Student(...)` يبني من المخطط كائنًا جديدًا: `s1`.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "cls": {
+                        "tone": "base"
+                      },
+                      "a1": {
+                        "show": true
+                      },
+                      "s1": {
+                        "show": true,
+                        "x": 232,
+                        "y": 218
+                      }
+                    }
+                  },
+                  {
+                    "say": "المنشئ يضع في `s1` قيمه الخاصة: `\"Lina\"` و16 و95.",
+                    "set": {
+                      "s1": {
+                        "values": [
+                          "Lina",
+                          "16",
+                          "95"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "`new` مرة أخرى يبني كائنًا ثانيًا منفصلًا: `s2` فيه `\"Omar\"` و17 و82.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "s1": {
+                        "tone": "base"
+                      },
+                      "a2": {
+                        "show": true
+                      },
+                      "s2": {
+                        "show": true,
+                        "x": 10,
+                        "y": 218,
+                        "values": [
+                          "Omar",
+                          "17",
+                          "82"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "لكل كائن حالته: `s2.SetGrade(90)` يغيّر علامة `s2` فقط، و`s1` يبقى 95.",
+                    "set": {
+                      "prog": {
+                        "hl": 0
+                      },
+                      "s2": {
+                        "tone": "base",
+                        "values": [
+                          "Omar",
+                          "17",
+                          "90"
+                        ],
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "s1": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "فئة واحدة، وكائنات كثيرة: كل `new` نسخة جديدة لها قيمها.",
+                    "set": {
+                      "s2": {
+                        "hi": []
+                      },
+                      "s1": {
+                        "tone": "base"
+                      },
+                      "cls": {
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m11-l01-p01-b03",
               "type": "heading",
               "origin": "book",
@@ -273,6 +471,210 @@ const m11: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": " class Student\n{\n    // حقول خاصة\n    private string name;\n    private int age;\n    private int grade;\n\n    // منشئ\n    public Student(string name, int age, int grade)\n    {\n        SetName(name);\n        SetAge(age);\n        SetGrade(grade);\n    }\n\n    // وصول يدوي\n    public string GetName() { return name; }\n    public void SetName(string name)\n    {\n        if (string.IsNullOrWhiteSpace(name))\n            throw new ArgumentException(\"Name cannot be empty.\");\n        this.name = name;\n    }\n\n    public int GetAge() { return age; }\n    public void SetAge(int age)\n    {\n        if (age < 0) throw new ArgumentException(\"Age must be non-negative.\");\n        this.age = age;\n    }\n\n    public int GetGrade() { return grade; }\n    public void SetGrade(int grade)\n    {\n        if (grade < 0 || grade > 100)\n            throw new ArgumentException(\"Grade must be 0..100.\");\n        this.grade = grade;\n    }\n\n    // سلوك\n    public void PrintInfo()\n    {\n        Console.WriteLine($\"{GetName()} - Age: {GetAge()}, Grade: {GetGrade()}\");\n    }\n}"
+            },
+            {
+              "id": "m11-l01-p02-scene-encapsulation",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: private: الوصول عبر Get وSet فقط",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 250,
+                "alt": "الحقل grade خاص داخل الفئة. الكتابة المباشرة s.grade مرفوضة، وSetGrade يفحص القيمة فيرفض 150 ويقبل 95 ويضعها في grade، وGetGrade يعيدها إلى الخارج.",
+                "items": [
+                  {
+                    "id": "ho",
+                    "kind": "text",
+                    "x": 60,
+                    "y": 14,
+                    "text": "خارج الفئة",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "hi",
+                    "kind": "text",
+                    "x": 360,
+                    "y": 14,
+                    "text": "داخل الفئة",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "set",
+                    "kind": "box",
+                    "x": 150,
+                    "y": 66,
+                    "w": 130,
+                    "h": 36,
+                    "label": "public",
+                    "value": "SetGrade",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "get",
+                    "kind": "box",
+                    "x": 150,
+                    "y": 186,
+                    "w": 130,
+                    "h": 36,
+                    "label": "public",
+                    "value": "GetGrade",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "g",
+                    "kind": "box",
+                    "x": 320,
+                    "y": 110,
+                    "w": 80,
+                    "h": 50,
+                    "label": "private grade",
+                    "value": "0"
+                  },
+                  {
+                    "id": "direct",
+                    "kind": "arrow",
+                    "x": 100,
+                    "y": 140,
+                    "x2": 312,
+                    "y2": 140,
+                    "label": "s.grade = 150",
+                    "dash": true,
+                    "show": false
+                  },
+                  {
+                    "id": "t150",
+                    "kind": "token",
+                    "x": 50,
+                    "y": 84,
+                    "text": "150",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "t95",
+                    "kind": "token",
+                    "x": 50,
+                    "y": 84,
+                    "text": "95",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "tr",
+                    "kind": "token",
+                    "x": 360,
+                    "y": 135,
+                    "text": "95",
+                    "show": false,
+                    "tone": "ok"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "الحقل `grade` معرَّف `private`: لا يصل إليه إلا كود داخل الفئة نفسها.",
+                    "set": {
+                      "g": {
+                        "tone": "warn"
+                      }
+                    }
+                  },
+                  {
+                    "say": "من الخارج، `s.grade = 150;` مرفوض: المترجم لا يسمح بالوصول إلى حقل `private`.",
+                    "set": {
+                      "g": {
+                        "tone": "base"
+                      },
+                      "direct": {
+                        "show": true,
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الطريق الصحيح هو `s.SetGrade(150)`: القيمة تصل إلى العملية، وهي تفحصها أولًا.",
+                    "set": {
+                      "direct": {
+                        "show": false
+                      },
+                      "t150": {
+                        "show": true,
+                        "x": 122
+                      },
+                      "set": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `grade > 100` صحيح، فترفض العملية 150 ولا يتغير الحقل.",
+                    "set": {
+                      "t150": {
+                        "tone": "bad"
+                      },
+                      "set": {
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s.SetGrade(95)`: القيمة بين 0 و100 فتنجح في الفحص.",
+                    "set": {
+                      "t150": {
+                        "show": false
+                      },
+                      "t95": {
+                        "show": true,
+                        "x": 122
+                      },
+                      "set": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`SetGrade` تكتب 95 في الحقل `grade` من الداخل.",
+                    "set": {
+                      "t95": {
+                        "x": 360,
+                        "y": 135
+                      },
+                      "g": {
+                        "value": ""
+                      },
+                      "set": {
+                        "tone": "base"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s.GetGrade()` تقرأ الحقل وتعيد 95 إلى الخارج.",
+                    "set": {
+                      "get": {
+                        "tone": "ok"
+                      },
+                      "t95": {
+                        "show": false
+                      },
+                      "g": {
+                        "value": "95"
+                      },
+                      "tr": {
+                        "show": true,
+                        "x": 112,
+                        "y": 204
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -323,6 +725,228 @@ const m11: ContentModule = {
                   "text": " ‎new Student[3] لا ينشئ الطلاب أنفسهم، بل يهيّئ مصفوفة مراجع قيمها null حتى ننشئ كل عنصر بـ new."
                 }
               ]
+            },
+            {
+              "id": "m11-l01-p03-scene-references-null",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: مرجعان لكائن واحد، وخانة null",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 270,
+                "alt": "new Student[3] ينشئ ثلاث خانات مراجع قيمتها null. بعد new Student تشير الخانة 0 إلى كائن، والمتغير s ينسخ المرجع فيشير إلى الكائن نفسه، أما الخانة null فلا كائن خلفها.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 8,
+                    "y": 8,
+                    "lines": [
+                      "Student[] students = new Student[3];",
+                      "students[0] = new Student(\"Lina\", 16, 95);",
+                      "Student s = students[0];"
+                    ]
+                  },
+                  {
+                    "id": "ls",
+                    "kind": "text",
+                    "x": 100,
+                    "y": 138,
+                    "text": "students",
+                    "anchor": "right",
+                    "mono": true
+                  },
+                  {
+                    "id": "st",
+                    "kind": "cells",
+                    "x": 110,
+                    "y": 110,
+                    "values": [
+                      "null",
+                      "null",
+                      "null"
+                    ],
+                    "size": 56
+                  },
+                  {
+                    "id": "obj",
+                    "kind": "box",
+                    "x": 240,
+                    "y": 214,
+                    "w": 166,
+                    "h": 44,
+                    "label": "Student",
+                    "value": "Lina, 16, 95",
+                    "show": false
+                  },
+                  {
+                    "id": "r0",
+                    "kind": "arrow",
+                    "x": 140,
+                    "y": 188,
+                    "x2": 262,
+                    "y2": 212,
+                    "show": false
+                  },
+                  {
+                    "id": "bsv",
+                    "kind": "box",
+                    "x": 20,
+                    "y": 214,
+                    "w": 60,
+                    "h": 44,
+                    "label": "s",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "ts",
+                    "kind": "token",
+                    "x": 138,
+                    "y": 138,
+                    "text": "●",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "rs",
+                    "kind": "arrow",
+                    "x": 82,
+                    "y": 236,
+                    "x2": 238,
+                    "y2": 236,
+                    "show": false
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`new Student[3]` ينشئ ثلاث خانات مراجع، قيمتها كلها `null`: لا يوجد أي طالب بعد.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "st": {
+                        "tone": "warn"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`new Student(\"Lina\", 16, 95)` ينشئ كائنًا، والخانة `students[0]` تحمل مرجعًا يشير إليه.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "st": {
+                        "tone": "base",
+                        "values": [
+                          "●",
+                          "null",
+                          "null"
+                        ],
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "obj": {
+                        "show": true,
+                        "tone": "accent"
+                      },
+                      "r0": {
+                        "show": true,
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`Student s = students[0];` ينسخ المرجع وليس الكائن.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "obj": {
+                        "tone": "base"
+                      },
+                      "r0": {
+                        "tone": "base"
+                      },
+                      "bsv": {
+                        "show": true
+                      },
+                      "ts": {
+                        "show": true,
+                        "x": 50,
+                        "y": 236
+                      }
+                    }
+                  },
+                  {
+                    "say": "الآن مرجعان يشيران إلى الكائن نفسه.",
+                    "set": {
+                      "rs": {
+                        "show": true,
+                        "tone": "accent"
+                      },
+                      "r0": {
+                        "tone": "accent"
+                      },
+                      "obj": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s.SetGrade(99)` يغيّر الكائن الوحيد، فيرى `students[0]` العلامة 99 أيضًا.",
+                    "set": {
+                      "prog": {
+                        "hl": 0
+                      },
+                      "rs": {
+                        "tone": "base"
+                      },
+                      "r0": {
+                        "tone": "base"
+                      },
+                      "obj": {
+                        "value": "Lina, 16, 99",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الخانتان `students[1]` و`students[2]` ما زالتا `null`: لا كائن خلفهما.",
+                    "set": {
+                      "st": {
+                        "hi": [
+                          0
+                        ],
+                        "bad": [
+                          1,
+                          2
+                        ]
+                      },
+                      "obj": {
+                        "tone": "base"
+                      }
+                    }
+                  },
+                  {
+                    "say": "استدعاء `students[1].GetGrade()` على `null` يوقف البرنامج بخطأ، لذلك يفحص الكتاب `students[i] != null` أولًا.",
+                    "set": {
+                      "st": {
+                        "hi": []
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m11-l01-p03-b05",
@@ -1619,6 +2243,14 @@ const m11: ContentModule = {
                   "text": "1.5 - اكتبوا عملية AddAnimal داخلية في الفئة ، والتي تضيف حيوانًا ما قبل التاريخ إلى الفئة (يمكن الافتراض أنه في وقت الإضافة لا يوجد بعد 100 حيوان في المصفوفة ) عليكم الاهتمام بتغيير قيم متغير عدد الحيوانات ومتغير الحيوانات التي تستطيع العيش فوق اليابسة اذا كان هناك حاجة"
                 }
               ]
+            },
+            {
+              "id": "m11-l02-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class PreHistoricAnimal\n{\n    \n\n    public string GetName() { return name; }\n    public int GetWeight() { return weight; }\n    public bool GetAbility(int i) { return abilities[i]; }\n    public void SetAbility(int i, bool value) { abilities[i] = value; }\n\n    public PreHistoricAnimal(string name, bool land, bool air, bool water, int weight)\n    {\n        \n    }\n\n    public PreHistoricAnimal(PreHistoricAnimal other, string name)\n    {\n        \n    }\n}\n\npublic class JurassicPark\n{\n    \n\n    public JurassicPark()\n    {\n        animals = new PreHistoricAnimal[100];\n        count = 0;\n        landCount = 0;\n    }\n\n    public int GetCount() { return count; }\n    public int GetLandCount() { return landCount; }\n\n    public void AddAnimal(PreHistoricAnimal a)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        JurassicPark park = new JurassicPark();\n        int n = int.Parse(Console.ReadLine());\n        PreHistoricAnimal first = null;\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool land = bool.Parse(Console.ReadLine());\n            bool air = bool.Parse(Console.ReadLine());\n            bool water = bool.Parse(Console.ReadLine());\n            int weight = int.Parse(Console.ReadLine());\n            PreHistoricAnimal a = new PreHistoricAnimal(name, land, air, water, weight);\n            park.AddAnimal(a);\n            if (i == 0)\n                first = a;\n        }\n        PreHistoricAnimal copy = new PreHistoricAnimal(first, Console.ReadLine());\n        copy.SetAbility(0, !copy.GetAbility(0));\n        park.AddAnimal(copy);\n        Console.WriteLine(park.GetCount() + \" \" + park.GetLandCount());\n        Console.WriteLine(first.GetName() + \" \" + first.GetWeight() + \" \" + first.GetAbility(0) + \" \" + first.GetAbility(1) + \" \" + first.GetAbility(2));\n        Console.WriteLine(copy.GetName() + \" \" + copy.GetWeight() + \" \" + copy.GetAbility(0) + \" \" + copy.GetAbility(1) + \" \" + copy.GetAbility(2));\n    }\n}\n"
             }
           ]
         },
@@ -1963,6 +2595,14 @@ const m11: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m11-l02-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class ExcellentStudent\n{\n    private string name;\n    private double average;\n    private bool davidsonLovesYou;\n\n    public double GetAverage() { return average; }   // «لكل خاصية عملية Get» (as the book says)\n\n    public ExcellentStudent(string name, double average, bool davidsonLovesYou)\n    {\n        \n    }\n\n    public void RaisingStudentsAverageGrades()\n    {\n        \n    }\n\n    public int Compare(ExcellentStudent other)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ExcellentStudent a = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        ExcellentStudent b = new ExcellentStudent(Console.ReadLine(), double.Parse(Console.ReadLine()), bool.Parse(Console.ReadLine()));\n        Console.WriteLine(a.Compare(b));\n        a.RaisingStudentsAverageGrades();\n        Console.WriteLine(Math.Round(a.GetAverage(), 2));\n        Console.WriteLine(a.Compare(b));\n    }\n}\n"
             }
           ]
         },
@@ -2424,6 +3064,14 @@ const m11: ContentModule = {
                   "text": "إذا كان يشتمل على خط تحتي، بعد استدعاء العملية لن يشتمل على خط تحتي، والعكس صحيح، إذا لم يشتمل على خط تحتي، بعد استدعاء العملية سيشتمل على خط تحتي."
                 }
               ]
+            },
+            {
+              "id": "m11-l02-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Font\n{\n    private string name;\n    private int size;\n    private bool bold;\n    private bool underline;\n\n    public Font(string name, int size, bool bold, bool underline)\n    {\n        this.name = name;\n        this.size = size;\n        this.bold = bold;\n        this.underline = underline;\n    }\n\n    public int GetSize() { return size; }\n    public bool IsBold() { return bold; }\n    public bool IsUnderline() { return underline; }\n\n    public Font(string name, int size)\n    {\n        \n    }\n\n    public void Increase()\n    {\n        \n    }\n\n    public void Decrease()\n    {\n        \n    }\n\n    public void ToggleUnderline()\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        Font f = new Font(Console.ReadLine(), int.Parse(Console.ReadLine()));\n        foreach (char op in Console.ReadLine())\n        {\n            if (op == 'I') f.Increase();\n            else if (op == 'D') f.Decrease();\n            else if (op == 'U') f.ToggleUnderline();\n        }\n        Console.WriteLine(f.GetSize());\n        Console.WriteLine(f.IsUnderline());\n        Console.WriteLine(f.IsBold());\n    }\n}\n"
             }
           ]
         },
@@ -2817,6 +3465,14 @@ const m11: ContentModule = {
                   "text": "4.4 - يجب تنفيذ العملية SellerGroup في فئة AllSellers. من الضروري استخدام العملية التي كتبتموها في الفقرة a."
                 }
               ]
+            },
+            {
+              "id": "m11-l02-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Seller\n{\n    private int sId;\n    private string sName;\n    private bool isTopSeller;\n    private double rate;\n\n    public Seller(int sId, string sName, bool isTopSeller, double rate)\n    {\n        \n    }\n\n    public int GetSId() { return sId; }\n    public string GetSName() { return sName; }\n    public bool GetIsTopSeller() { return isTopSeller; }\n    public double GetRate() { return rate; }\n}\n\npublic class AllSellers\n{\n    private Seller[] allSellers = new Seller[200];\n\n    public void SetSeller(int i, Seller s) { allSellers[i] = s; }\n\n    public int FindSeller(int minRate, int maxRate)\n    {\n        \n    }\n\n    public int[] SellersGroup()\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        AllSellers site = new AllSellers();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            int id = int.Parse(Console.ReadLine());\n            string name = Console.ReadLine();\n            bool top = bool.Parse(Console.ReadLine());\n            double rate = double.Parse(Console.ReadLine());\n            site.SetSeller(i, new Seller(id, name, top, rate));\n        }\n        int minRate = int.Parse(Console.ReadLine());\n        int maxRate = int.Parse(Console.ReadLine());\n        Console.WriteLine(site.FindSeller(minRate, maxRate));\n        int[] groups = site.SellersGroup();\n        Console.WriteLine(groups[0] + \" \" + groups[1] + \" \" + groups[2]);\n    }\n}\n"
             }
           ]
         },
@@ -2973,6 +3629,14 @@ const m11: ContentModule = {
                   "text": "5.5 - اكتبوا عملية خارجية، تتلقى متغير m من نوع \"Meal\" كبارامتر، تعيد \"healthy\" إذا كان هناك المزيد من الأطعمة النباتية مقارنة بالأطعمة الحيوانية والمُصنّعة، و \"not healthy\" خلاف ذلك."
                 }
               ]
+            },
+            {
+              "id": "m11-l02-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Food\n{\n    private string name;\n    private int calories;\n    private int type;\n\n    public Food(string name, int calories, int type)\n    {\n        \n    }\n\n    public string GetName() { return name; }\n    public int GetCalories() { return calories; }\n    public int GetFoodType() { return type; }\n}\n\npublic class Meal\n{\n    private Food[] arrFood;\n    private int num;\n\n    public Meal()\n    {\n        \n    }\n\n    public Food[] GetArrFood() { return arrFood; }\n    public int GetNum() { return num; }\n\n    public void AddFood(Food f)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static string Healthy(Meal m)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        Meal m = new Meal();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            int calories = int.Parse(Console.ReadLine());\n            int type = int.Parse(Console.ReadLine());\n            m.AddFood(new Food(name, calories, type));\n        }\n        Console.WriteLine(m.GetNum());\n        for (int i = 0; i < m.GetNum(); i++)\n            Console.WriteLine(m.GetArrFood()[i].GetName());\n        Console.WriteLine(Healthy(m));\n    }\n}\n"
             }
           ]
         }
@@ -3295,6 +3959,14 @@ const m11: ContentModule = {
                   "text": "1.4 - احتفالاً بالعيد، تم خفض أسعار الروبوتات بمقدار 200 شيكل. اكتب عملية خارجية تُدعى SpecialOffer تُحدث وتحتلن أسعار الروبوتات في المصفوفة وفقًا لذلك (يمكن الافتراض بأنه لا يوجد روبوت بسعر أقل من 500 شيكل)."
                 }
               ]
+            },
+            {
+              "id": "m11-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Robot\n{\n    private string name;\n    private bool canTalk;\n    private int year;\n    private double price;\n\n    public Robot(string name, bool canTalk, int year, double price)\n    {\n        this.name = name;\n        this.canTalk = canTalk;\n        this.year = year;\n        this.price = price;\n    }\n\n    public string GetName() { return name; }\n    public bool GetCanTalk() { return canTalk; }\n    public int GetYear() { return year; }\n    public double GetPrice() { return price; }\n\n    public void AddMoney(double y)\n    {\n        \n    }\n\n    public bool Comp(Robot r)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static double AveragePrice(Robot[] arr)\n    {\n        \n    }\n\n    public static void SpecialOffer(Robot[] arr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Robot[] arr = new Robot[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool canTalk = bool.Parse(Console.ReadLine());\n            int year = int.Parse(Console.ReadLine());\n            double price = double.Parse(Console.ReadLine());\n            arr[i] = new Robot(name, canTalk, year, price);\n        }\n        for (int i = 1; i < n; i++)\n            Console.WriteLine(arr[0].Comp(arr[i]));\n        Console.WriteLine(AveragePrice(arr));\n        SpecialOffer(arr);\n        for (int i = 0; i < n; i++)\n            Console.WriteLine(arr[i].GetName() + \" \" + arr[i].GetPrice());\n    }\n}\n"
             }
           ]
         },
@@ -3763,6 +4435,14 @@ const m11: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "public static double AvgParkCity(City[] Arr);"
+            },
+            {
+              "id": "m11-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class City\n{\n    private string name;\n    private char part;\n    private int number;\n    private double park;\n\n    public City(string name, char part, int number, double park)\n    {\n        this.name = name;\n        this.part = part;\n        this.number = number;\n        this.park = park;\n    }\n\n    public City(string name, int number, double park)\n    {\n        \n    }\n\n    public int GetNumberPeople() { return number; }\n    public double GetPark() { return park; }\n    public void AddPeople(int x) { number += x; }\n    public string GetName() { return name; }\n    public char GetPart() { return part; }\n\n    public bool Comp(City c)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static double AvgParkCity(City[] Arr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string sName = Console.ReadLine();\n        int sNumber = int.Parse(Console.ReadLine());\n        double sPark = double.Parse(Console.ReadLine());\n        City s = new City(sName, sNumber, sPark);\n        Console.WriteLine(s.GetName() + \" \" + s.GetPart() + \" \" + s.GetNumberPeople() + \" \" + s.GetPark());\n        int n = int.Parse(Console.ReadLine());\n        City[] arr = new City[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            char part = char.Parse(Console.ReadLine());\n            int number = int.Parse(Console.ReadLine());\n            double park = double.Parse(Console.ReadLine());\n            arr[i] = new City(name, part, number, park);\n        }\n        for (int i = 0; i < n; i++)\n            Console.WriteLine(s.Comp(arr[i]));\n        Console.WriteLine(Math.Round(AvgParkCity(arr), 2));\n    }\n}\n"
             }
           ]
         },
@@ -3868,6 +4548,14 @@ const m11: ContentModule = {
                   "text": "3.4 - اكتب عملية داخلية لفئة المريض (Patient) تعيد صدق إذا كان هناك خلال اليوم اختبار واحد على الأقل يشكل خطراً على الحياة."
                 }
               ]
+            },
+            {
+              "id": "m11-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Test\n{\n    private int sugarLevel;\n    private int pulse;\n    private int oxygenSaturation;\n\n    public Test(int sugarLevel, int pulse, int oxygenSaturation)\n    {\n        this.sugarLevel = sugarLevel;\n        this.pulse = pulse;\n        this.oxygenSaturation = oxygenSaturation;\n    }\n\n    public bool IsNormal()\n    {\n        \n    }\n\n    public bool IsLifeThreatening()\n    {\n        \n    }\n}\n\npublic class Patient\n{\n    private string name;\n    private Test[] tests;\n\n    public Patient(string name, Test[] tests)\n    {\n        this.name = name;\n        this.tests = tests;\n    }\n\n    public void PrintLongestNormal()\n    {\n        \n    }\n\n    public bool HasLifeThreat()\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        string name = Console.ReadLine();\n        int n = int.Parse(Console.ReadLine());\n        Test[] tests = new Test[n];\n        for (int i = 0; i < n; i++)\n        {\n            int sugar = int.Parse(Console.ReadLine());\n            int pulse = int.Parse(Console.ReadLine());\n            int oxygen = int.Parse(Console.ReadLine());\n            tests[i] = new Test(sugar, pulse, oxygen);\n            Console.WriteLine(tests[i].IsNormal() + \" \" + tests[i].IsLifeThreatening());\n        }\n        Patient p = new Patient(name, tests);\n        p.PrintLongestNormal();\n        Console.WriteLine(p.HasLifeThreat());\n    }\n}\n"
             }
           ]
         },
@@ -3940,6 +4628,14 @@ const m11: ContentModule = {
                   "text": "4.1  - اكتبوا عملية في الفئة المناسبة تستقبل رقم يوم، رقم شهر ومحاضرة وتُرتب المحاضرة في التاريخ المناسب، وإذا كان التاريخ محجوزًا يجب إيجاد تاريخ آخر في نفس الشهر فقط، الأقرب إلى ذلك اليوم. كذلك، يجب أن تُعيد العملية صدق إذا تم ترتيب التاريخ، وإلا يجب إعادة كذب."
                 }
               ]
+            },
+            {
+              "id": "m11-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Lecture\n{\n    private string subject;\n    private string place;\n    private string lecturer;\n    private int minutes;\n\n    public Lecture(string subject, string place, string lecturer, int minutes)\n    {\n        this.subject = subject;\n        this.place = place;\n        this.lecturer = lecturer;\n        this.minutes = minutes;\n    }\n\n    public string GetSubject() { return subject; }\n}\n\npublic class ThinkAndDrink\n{\n    const int MONTH = 12, DAY = 31;\n    private Lecture[,] mat;\n\n    public ThinkAndDrink()\n    {\n        mat = new Lecture[MONTH, DAY];\n    }\n\n    public Lecture GetLecture(int day, int month) { return mat[month - 1, day - 1]; }\n\n    public bool AddLecture(int day, int month, Lecture lec)\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ThinkAndDrink plan = new ThinkAndDrink();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            int day = int.Parse(Console.ReadLine());\n            int month = int.Parse(Console.ReadLine());\n            Lecture lec = new Lecture(Console.ReadLine(), Console.ReadLine(), Console.ReadLine(), int.Parse(Console.ReadLine()));\n            Console.WriteLine(plan.AddLecture(day, month, lec));\n        }\n        for (int month = 1; month <= 12; month++)\n            for (int day = 1; day <= 31; day++)\n                if (plan.GetLecture(day, month) != null)\n                    Console.WriteLine(day + \"/\" + month + \" \" + plan.GetLecture(day, month).GetSubject());\n    }\n}\n"
             }
           ]
         },
@@ -4161,6 +4857,14 @@ const m11: ContentModule = {
                   "text": "5.4 - اكتب دالة خارجية تستقبل مصفوفة من الكائنات من نوع Picture، وتقوم بطباعة أسماء الصور التي تم تغيير لونها (بواسطة الدالة ChangeColor) لتصبح بيضاء بالكامل."
                 }
               ]
+            },
+            {
+              "id": "m11-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Color\n{\n    private bool isBlk;\n    private int[] colors;\n\n    public Color(bool isBlk, int[] colors)\n    {\n        \n    }\n\n    public int[] GetColors() { return colors; }\n\n    public void Not(int i)\n    {\n        colors[i] = 1 - colors[i];\n    }\n\n    public bool Blk()\n    {\n        int black = 0;\n        for (int i = 0; i < colors.Length; i++)\n            if (colors[i] == 1)\n                black++;\n        return black > colors.Length - black;\n    }\n\n    public void White()\n    {\n        \n    }\n}\n\npublic class Picture\n{\n    private string name;\n    private Color color;\n\n    public Picture(string name, Color color)\n    {\n        this.name = name;\n        this.color = color;\n    }\n\n    public string GetName() { return name; }\n    public Color GetColor() { return color; }\n\n    public bool ChangeColor()\n    {\n        \n    }\n}\n\npublic class Program\n{\n    public static void PrintWhitened(Picture[] arr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Picture[] arr = new Picture[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool isBlk = bool.Parse(Console.ReadLine());\n            int k = int.Parse(Console.ReadLine());\n            int[] c = new int[k];\n            for (int j = 0; j < k; j++)\n                c[j] = int.Parse(Console.ReadLine());\n            arr[i] = new Picture(name, new Color(isBlk, c));\n        }\n        PrintWhitened(arr);\n        for (int i = 0; i < n; i++)\n        {\n            int[] c = arr[i].GetColor().GetColors();\n            string line = arr[i].GetName() + \":\";\n            for (int j = 0; j < c.Length; j++)\n                line += \" \" + c[j];\n            Console.WriteLine(line);\n        }\n    }\n}\n"
             }
           ]
         }

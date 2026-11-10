@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §8) — the animated scenes (animation / csharp-scene / v1) of
-// chapters 1–4 in a REAL Chromium on the production build, next to the REAL API in process (browser-harness/learning-l8-api.cjs).
+// 899371 enrichment P11 + P12 (docs/enterprise-899371-enrichment-plan.md §8, §10) — the animated scenes (animation / csharp-scene / v1)
+// of every chapter (1–11) in a REAL Chromium on the production build, next to the REAL API in process (browser-harness/learning-l8-api.cjs).
 // Certification only.
 //
 //   1. TEACHER, every page holding a scene: each scene sits right after the book block it explains, is labelled «مشهد متحرك», arrives
@@ -8,7 +8,7 @@
 //      the sentence follows (polite live region); «شغّل» walks to the last step and STOPS there (no loop); «إيقاف» pauses; the shell's
 //      «إعادة تعيين» returns to step 1; «توسيع» opens it full screen and Escape closes it.
 //   2. Reduced motion (the system setting): the same steps, no transition and no animation.
-//   3. STUDENT (a class with m00–m04 published) steps through a chapter 1 scene: nothing is sent to any server.
+//   3. STUDENT (a class with m00–m06 published) steps through a chapter 1 scene: nothing is sent to any server.
 //   4. Presentation mode (وضع العرض): the scene is there, larger, and axe-clean.
 //   5. axe-core (WCAG 2.1 A/AA), overflow and touch targets at 390 (touch) and 1440, light and «داكن», on every scene page mid-way.
 //
@@ -87,12 +87,13 @@ async function studentOpens(page, pageId) {
 
 
 
+const SCENE_PAGES = 26;   // distinct summary pages that carry a scene (a page may explain two blocks)
 const scenePages = [];
-for (const n of ["01", "02", "03", "04"]) for (const p of served(CID + "-m" + n).lessons.flatMap(l => l.pages)) {
+for (const n of ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"]) for (const p of served(CID + "-m" + n).lessons.flatMap(l => l.pages)) {
   const scenes = p.blocks.filter(b => b.type === "animation" && b.animationType === "csharp-scene");
   if (scenes.length) scenePages.push({ id: p.id, scenes, blocks: p.blocks });
 }
-check(scenePages.reduce((n, p) => n + p.scenes.length, 0) === 12 && scenePages.length === 7, "the 12 scenes of chapters 1–4 are on 7 summary pages of the served bodies");
+check(scenePages.reduce((n, p) => n + p.scenes.length, 0) === 33 && scenePages.length === SCENE_PAGES, "the 33 scenes of chapters 1–11 are on " + SCENE_PAGES + " summary pages of the served bodies");
 const teacherOpens = async (page, pageId) => {
   await page.goto(origin + "/#/learning/" + CID + "/read/" + pageId);
   await page.reload();

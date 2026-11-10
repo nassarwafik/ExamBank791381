@@ -1,5 +1,6 @@
-// 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §3.1, §8) — the animated scenes (animation / csharp-scene / v1):
-//   • WHICH and WHERE: the scenes of the served course are exactly the work list's scenes of the chapters done so far (P10 SCENES, D6),
+// 899371 enrichment P11 + P12 (docs/enterprise-899371-enrichment-plan.md §3.1, §8, §10) — the animated scenes (animation / csharp-scene /
+// v1), all 33 (chapters 1–4 in P11, 5–11 in P12):
+//   • WHICH and WHERE: the scenes of the served course are exactly the work list's scenes (P10 SCENES, D6),
 //     each on its summary page, right after the book block it explains (and anything already attached to that block), never inside the
 //     book's own blocks (the book lock is untouched: bookLock.test.ts);
 //   • WHAT: each block is the authored scene as data (scenes/mNN.json), teacher-enrichment, labelled «مشهد متحرك: …», and it reads back
@@ -16,7 +17,7 @@ import { readScenes, sceneBlock, addScenes, SCENE_TITLE } from "../../../../scri
 import { SCENES } from "../../../../scripts/build-899371-enrichment-worklist.mjs";
 
 const CID = "899371";
-const DONE = ["m01", "m02", "m03", "m04"];   // P11: chapters 1–4 (P12 adds 5–11)
+const DONE = ["m01", "m02", "m03", "m04", "m05", "m06", "m07", "m08", "m09", "m10", "m11"];   // P11: chapters 1–4; P12: 5–11
 type Anim = Extract<ContentBlock, { type: "animation" }>;
 type Authored = { module: string; id: string; page: string; after: string; title: string; config: { alt: string; steps: { say: string }[] } };
 const authored = readScenes() as Authored[];
@@ -34,14 +35,14 @@ async function served() {
 }
 
 describe("899371 P11 — the animated scenes", () => {
-  it("are exactly the work list's scenes of chapters 1–4, in its order, each on the summary page it names", async () => {
-    expect(planned).toHaveLength(12);
+  it("are exactly the work list's 33 scenes, in its order, each on the summary page it names", async () => {
+    expect(planned).toHaveLength(33);
     expect(authored.map(s => [s.id, s.module, `${CID}-${s.module}-l01-${s.page}`])).toEqual(planned.map(s => [s.id, s.chapter, s.pageId]));
     const all = await served();
     // (in page order: on a page, a scene anchored earlier comes first)
     const key = (x: string[]) => x.join(" ");
     expect(all.map(x => key([x.block.id, x.page])).sort()).toEqual(authored.map(s => key([`${s.module}-l01-${s.page}-scene-${s.id.slice(4)}`, `${CID}-${s.module}-l01-${s.page}`])).sort());
-    expect(all).toHaveLength(12);
+    expect(all).toHaveLength(33);
   });
 
   it("each sits right after the book block it explains (after anything already attached to it), never between book blocks it splits", async () => {
@@ -75,8 +76,11 @@ describe("899371 P11 — the animated scenes", () => {
       for (const say of c!.says) {
         expect(say.trim().length, x.block.id).toBeGreaterThan(3);
         expect((say.split("`").length - 1) % 2, x.block.id + ": " + say).toBe(0);
-        // a C# call or operator written bare in an Arabic sentence would reorder; it must sit inside `…`
-        expect(say.replace(/`[^`]*`/g, ""), x.block.id + ": " + say).not.toMatch(/[A-Za-z]+\.[A-Za-z]+\(|[A-Za-z_]\w*\s*(==|>=|<=|&&|\|\||\+=)\s*\w/);
+        // C# written bare in an Arabic sentence would reorder; it must sit inside `…`: a member (`a.Length`), a call or an index
+        // (`Next(`, `a[`), or a name with an operator (`a.Length - 1`, `i <= 3`, `sum += x`, `i++`)
+        const bare = say.replace(/`[^`]*`/g, "");
+        expect(bare, x.block.id + ": " + say).not.toMatch(/[A-Za-z_]\w*\.[A-Za-z_]\w*|[A-Za-z_]\w*\s*[([]/);
+        expect(bare, x.block.id + ": " + say).not.toMatch(/[A-Za-z_]\w*\s*([-+*/%<>]|[=!<>]=|&&|\|\||\+\+|--)\s*[\w(]/);
       }
     }
   });

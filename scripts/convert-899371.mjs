@@ -33,11 +33,16 @@
 // Enrichment P11 (docs/enterprise-899371-enrichment-plan.md §3.1, §8): the ANIMATED SCENES of src/learning/content/899371/scenes/mNN.json
 // (animation / csharp-scene / v1, data only) are placed on the chapter's summary pages, each right after the book block it explains;
 // the book's own blocks are untouched (book lock) and every scene is teacher-enrichment.
+// Enrichment P14 (§11): every writing question of the book gets, right after its own blocks, a C# block holding the program the learner
+// starts from (the shell, or the question's locked template with its gap starters): the Reader's C# panel offers «حلّ وافحص» on it
+// when the server lists it (scripts/learning-solve-899371, api/src/data/learning-solve). Teacher-enrichment; never a solution.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readDocxBody, readZipEntry } from "./lib/docx-source.mjs";
+import { readSolve, starterProgram } from "./lib/solve-899371.mjs";
+import { questionSegment } from "./build-899371-enrichment-worklist.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const SOURCE_FILE = join(ROOT, "أسس علم الحاسوب 899371.docx");
@@ -296,7 +301,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications(), traceRuns = readTraceRuns(), scenes = readScenes()) {
+export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications(), traceRuns = readTraceRuns(), scenes = readScenes(), solve = readSolvePlacement()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -361,6 +366,7 @@ export function convert(body, practice = readPractice(), guided = readGuided(), 
   if (unused.length) throw new Error("practice files for no chapter: " + unused.join(", "));
   addClarifications(modules, clarifications);
   addScenes(modules, scenes);
+  addSolveBlocks(modules, solve);
   const unusedGuided = Object.keys(guided).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k && m.lessons.some(l => l.kind === "summary")));
   if (unusedGuided.length) throw new Error("walkthrough files for no chapter summary: " + unusedGuided.join(", "));
   if (applied.length !== CORRECTIONS.length) throw new Error("a correction did not apply: " + CORRECTIONS.filter(c => !applied.includes(c)).map(c => c.finding).join(", "));
@@ -619,6 +625,31 @@ export function addScenes(modules, scenes) {
     let end = at + 1;
     while (end < page.blocks.length && page.blocks[end].origin !== "book") end++;
     page.blocks.splice(end, 0, sceneBlock(s));
+  }
+}
+
+// ── Enrichment P14: the «حلّ وافحص» starter block after each writing question ─────────────────────────────────────────────────────
+const WORKLIST_FILE = join(ROOT, "docs", "enterprise-899371-learning", "analysis", "enrichment-worklist.json");
+/** [{ book, pageId, number, code }] — where each authored writing question is (P10 work list) and the program it starts from. */
+export function readSolvePlacement() {
+  if (!existsSync(WORKLIST_FILE)) return [];
+  const where = new Map(JSON.parse(readFileSync(WORKLIST_FILE, "utf8")).questions.filter(q => q.solve).map(q => [q.id, q]));
+  return readSolve().map(q => {
+    const w = where.get(q.book);
+    if (!w) throw new Error(q.book + ": a «حلّ وافحص» question that is not a writing question of the work list");
+    return { book: q.book, pageId: w.pageId, number: w.number, code: starterProgram(q) };
+  });
+}
+/** The starter block of one writing question (its id: the page's short id + «-solve-q» + the question number). */
+export const solveBlock = s => ({ id: s.pageId.slice(CID.length + 1) + "-solve-q" + s.number, type: "code", origin: "teacher-enrichment", language: "csharp", dir: "ltr", code: s.code });
+export function addSolveBlocks(modules, solve) {
+  const pages = new Map(modules.flatMap(m => m.lessons.flatMap(l => l.pages)).map(p => [p.id, p]));
+  for (const s of solve) {
+    const page = pages.get(s.pageId);
+    if (!page) throw new Error(s.book + ": no page " + s.pageId);
+    const seg = questionSegment(page, s.number);
+    if (seg.to <= seg.from) throw new Error(s.book + ": no blocks for question " + s.number + " on " + s.pageId);
+    page.blocks.splice(seg.to, 0, solveBlock(s));   // right after the question's own blocks, before the next question's first line
   }
 }
 

@@ -84,6 +84,19 @@ function labQuestions() {
   return out;
 }
 
+/** The blocks of question `number` on its page: the whole page, or (several questions on it) from its first line to the next
+ *  question's first line. Shared with the converter (P14 places a question's «حلّ وافحص» block right after them). Pure. */
+export function questionSegment(page, number) {
+  const numbers = numbersOfTitle(page.title);
+  if (numbers.length <= 1) return { from: 0, to: page.blocks.length };
+  const starts = page.blocks.map((b, i) => { if (b.type !== "text") return null; const t = spanText(b), s = START.exec(t); return s ? { i, n: s[1] ? (ORDINALS[s[1]] ?? Number(s[1])) : Number(s[2]) } : null; }).filter(Boolean);
+  const k = starts.findIndex(s => s.n === number);
+  // a question printed inside another's line (F21: «… السؤال 10 - …») has no first line of its own: it shares that question's blocks
+  const at = k >= 0 ? k : starts.reduce((best, s, j) => (s.n < number ? j : best), 0);
+  return { from: starts[at]?.i ?? 0, to: starts[at + 1]?.i ?? page.blocks.length };
+}
+export { numbersOfTitle };
+
 /** The work list (pure over the inventory, the served bodies and the P7 lab). Throws when a question cannot be placed. */
 export function buildWorklist(inventory = JSON.parse(readFileSync(INVENTORY, "utf8")), modules = readModules(), lab = labQuestions()) {
   const questions = [];
@@ -95,16 +108,10 @@ export function buildWorklist(inventory = JSON.parse(readFileSync(INVENTORY, "ut
       const page = lesson.pages.find(p => numbersOfTitle(p.title).includes(q.number));
       if (!page) throw new Error(q.id + ": no page names question " + q.number);
       // the blocks of this question: the page, or (several questions on it) from its first line to the next question's first line
-      const numbers = numbersOfTitle(page.title);
-      let blocks = page.blocks;
-      if (numbers.length > 1) {
-        const starts = page.blocks.map((b, i) => { if (b.type !== "text") return null; const t = spanText(b), s = START.exec(t); return s ? { i, n: s[1] ? (ORDINALS[s[1]] ?? Number(s[1])) : Number(s[2]) } : null; }).filter(Boolean);
-        const k = starts.findIndex(s => s.n === q.number);
-        // a question printed inside another's line (F21: «… السؤال 10 - …») has no first line of its own: it shares that question's blocks
-        const at = k >= 0 ? k : starts.reduce((best, s, j) => (s.n < q.number ? j : best), 0);
-        blocks = page.blocks.slice(starts[at]?.i ?? 0, starts[at + 1]?.i ?? page.blocks.length);
-      }
-      const programs = blocks.filter(b => b.type === "code" && b.language === "csharp").map(b => ({ blockId: b.id, kind: programKind(b.code) }));
+      const seg = questionSegment(page, q.number);
+      const blocks = page.blocks.slice(seg.from, seg.to);
+      // the BOOK's programs only (an added «حلّ وافحص» starter block, P14, is not the question's program)
+      const programs = blocks.filter(b => b.type === "code" && b.language === "csharp" && b.origin === "book").map(b => ({ blockId: b.id, kind: programKind(b.code) }));
       const patterns = [...new Set([...(q.pattern ? [q.pattern] : []), ...(q.parts || []).map(p => p.pattern).filter(Boolean)])].sort();
       const trace = patterns.some(p => TRACE.includes(p)) && programs.length > 0;
       const solve = patterns.some(p => SOLVE.includes(p)) ? (CHECK_CLASS[q.runner] ?? null) : null;

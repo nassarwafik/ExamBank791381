@@ -4,6 +4,7 @@ import { arabicCount, type ArabicCountForms } from "../arabicCount";
 import type { CodeRunAccess } from "../run/runClient";
 import { runnableList } from "../run/runAccess";
 import { traceList, traceSteps, type TraceState } from "../run/traceClient";
+import { solveList, solveRun, solveCheck, solveSolution, type SolveView } from "../run/solveClient";
 
 // 899371 P1 (docs/enterprise-899371-learning-plan.md §13) — the C# program panel of the Reader's `code` block, loaded LAZILY by
 // CodeBlockView only when a page has a C# block (it keeps the tokenizer out of the Reader's first-load graph, budget 40 KB):
@@ -17,11 +18,28 @@ import { traceList, traceSteps, type TraceState } from "../run/traceClient";
 //   • 899371 enrichment P13 (plan §9) — «شاهد التنفيذ خطوة بخطوة»: when the SERVER lists a recorded trace of this block for this learner
 //     (an exercise: shown, and watchable once answered; a book question: only once the teacher opened its module), a button opens the
 //     trace (CodeTracePanel.tsx, its own lazy chunk; the steps come from the server on demand).
+//   • 899371 enrichment P14 (plan §11) — «حلّ وافحص»: when the SERVER lists this block as the starter of a writing question, a button
+//     opens the editor, the check and the solution card (SolvePanel.tsx, its own lazy chunk).
 
 /** Where a run goes: the host's session access and the block's place in the course. */
 export type CodeRunTarget = { access: CodeRunAccess; courseId: string; pageId: string; blockId: string };
 const CodeRunPanel = lazy(() => import("./CodeRunPanel"));
 const CodeTracePanel = lazy(() => import("./CodeTracePanel"));
+const SolvePanel = lazy(() => import("./SolvePanel"));
+/** The writing question this block starts, as the server lists it for this learner (null until it says so; null on any failure).
+ *  Only a starter block (the converter's `…-solve-qN`) asks: a page without one sends no request. */
+function useSolve(run: CodeRunTarget | undefined): { view: SolveView; available: boolean } | null {
+  const [state, setState] = useState<{ view: SolveView; available: boolean } | null>(null);
+  useEffect(() => {
+    if (!run || !/-solve-q\d+$/.test(run.blockId)) return;
+    let alive = true;
+    solveList(run.access, run.courseId)
+      .then(r => { const v = r.questions[run.pageId + "/" + run.blockId]; if (alive) setState(v ? { view: v, available: r.available === true } : null); })
+      .catch(() => { if (alive) setState(null); });
+    return () => { alive = false; };
+  }, [run?.access, run?.courseId, run?.pageId, run?.blockId]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return state;
+}
 /** Whether the server lists a trace of this block for this learner (null until it says so; null on any failure). */
 function useTrace(run: CodeRunTarget | undefined): TraceState | null {
   const [state, setState] = useState<TraceState | null>(null);
@@ -58,6 +76,9 @@ export default function CSharpCodePanel({ code, run }: { code: string; run?: Cod
   const runnable = useRunnable(run);
   const [trying, setTrying] = useState(false);
   const traceState = useTrace(run);
+  const solve = useSolve(run);
+  const [solving, setSolving] = useState(false);
+  const solvePanelId = useId();
   const [watching, setWatching] = useState(false);
   const panelId = useId();
   const tracePanelId = useId();
@@ -79,6 +100,7 @@ export default function CSharpCodePanel({ code, run }: { code: string; run?: Cod
         <span className="learning-reader-code-lang" dir="ltr" lang="en">C#</span>
         <span className="learning-reader-code-status" role="status">{status}</span>
         {runnable && run && <button type="button" className="learning-reader-code-copy learning-reader-code-try" aria-expanded={trying} aria-controls={trying ? panelId : undefined} onClick={() => setTrying(t => !t)}>{trying ? "إغلاق التجربة" : "جرّب الكود"}</button>}
+        {solve && run && <button type="button" className="learning-reader-code-copy learning-reader-code-solve" aria-expanded={solving} aria-controls={solving ? solvePanelId : undefined} onClick={() => setSolving(v => !v)}>{solving ? "إغلاق المحرر" : "حلّ وافحص"}</button>}
         {traceState && run && <button type="button" className="learning-reader-code-copy learning-reader-code-trace" aria-expanded={watching} aria-controls={watching ? tracePanelId : undefined} title={traceState === "answer-first" ? "بعد أن تجيب عن التمرين" : undefined} onClick={() => setWatching(w => !w)}>{watching ? "إغلاق التنفيذ" : "شاهد التنفيذ خطوة بخطوة"}</button>}
         <button type="button" className="learning-reader-code-copy" onClick={copy}>نسخ الكود</button>
       </div>
@@ -92,6 +114,14 @@ export default function CSharpCodePanel({ code, run }: { code: string; run?: Cod
   return (
     <>
       {panel}
+      {solving && solve && run && (
+        <Suspense fallback={<p className="learning-run-loading" role="status">جارٍ فتح المحرر…</p>}>
+          <SolvePanel id={solvePanelId} courseId={run.courseId} view={solve.view} available={solve.available}
+            run={(a, stdin) => solveRun(run.access, run.courseId, solve.view.questionId, a, stdin)}
+            check={a => solveCheck(run.access, run.courseId, solve.view.questionId, a)}
+            solution={() => solveSolution(run.access, run.courseId, solve.view.questionId)} />
+        </Suspense>
+      )}
       {watching && traceState && run && (
         <Suspense fallback={<p className="learning-run-loading" role="status">جارٍ فتح التنفيذ…</p>}>
           <CodeTracePanel id={tracePanelId} target={run} load={() => traceSteps(run.access, run.courseId, run.pageId, run.blockId)}

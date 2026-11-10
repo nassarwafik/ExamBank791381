@@ -11,7 +11,7 @@ export function ResultBody({ result, sample }: { result: CodeExecutionResult; sa
     {m !== "none" && <span>{MATCH_TEXT[m]}</span>}
     {meta !== "" && <span className="cx-result-meta" data-testid="coding-result-meta">{meta}</span>}
     {result.status === "output-limit" && <p className="cx-result-note" data-testid="coding-output-truncated">{RUN_TRUNCATED_MESSAGE}</p>}
-    {result.stdout !== "" && <div className="cx-io-block"><span>المخرجات</span><pre className="cx-run-output" dir="ltr">{result.stdout}</pre></div>}
-    {result.stderr !== "" && <div className="cx-io-block"><span>{result.status === "compile-error" ? "رسائل المترجم" : "رسائل الخطأ"}</span><pre className="cx-run-output" dir="ltr">{result.stderr}</pre></div>}
+    {result.stdout !== "" && <div className="cx-io-block"><span>المخرجات</span><pre className="cx-run-output" dir="ltr" tabIndex={0} role="region" aria-label="المخرجات">{result.stdout}</pre></div>}
+    {result.stderr !== "" && <div className="cx-io-block"><span>{result.status === "compile-error" ? "رسائل المترجم" : "رسائل الخطأ"}</span><pre className="cx-run-output" dir="ltr" tabIndex={0} role="region" aria-label={result.status === "compile-error" ? "رسائل المترجم" : "رسائل الخطأ"}>{result.stderr}</pre></div>}
   </>;
 }

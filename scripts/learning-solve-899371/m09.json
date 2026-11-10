@@ -1,0 +1,104 @@
+{
+ "module": "m09",
+ "questions": [
+  {
+   "book": "c09-p-q1",
+   "version": 3,
+   "text": "اكتب جسم العملية StoresSums التي تستقبل عدد المتاجر. لكل متجر بالترتيب تقرأ العملية مبالغ المشتريات (عدد حقيقي، كل مبلغ في سطر) حتى يُدخل عدد سالب (لا يُحتسب)، وتحفظ مجموع كل متجر في مصفوفة. المعدل العام هو مجموع مشتريات كل المتاجر مقسومًا على عدد المتاجر. تطبع العملية أرقام المتاجر التي مجموع مشترياتها أكبر من المعدل (المتجر الأول رقمه 1، كل رقم في سطر)، وتعيد المصفوفة. الدالة Main مقفلة: تقرأ عدد المتاجر، تستدعي عمليتك، ثم تطبع في سطر المجاميع التي أعادتها.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static double[] StoresSums(int stores)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        double[] sums = StoresSums(n);\n        string line = \"\";\n        for (int i = 0; i < sums.Length; i++)\n            line += sums[i] + \" \";\n        Console.WriteLine(line);\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        double[] sums = new double[stores];\n        double total = 0;\n        for (int i = 0; i < stores; i++)\n        {\n            double x = double.Parse(Console.ReadLine());\n            while (x >= 0)\n            {\n                sums[i] += x;\n                x = double.Parse(Console.ReadLine());\n            }\n            total += sums[i];\n        }\n        double average = total / stores;\n        for (int i = 0; i < stores; i++)\n            if (sums[i] > average)\n                Console.WriteLine(i + 1);\n        return sums;\n"
+   },
+   "public": [
+    "3\n100\n250.5\n-1\n80\n-1\n400\n20\n35.5\n-1\n"
+   ],
+   "hidden": [
+    "3\n10\n-1\n20\n-1\n30\n-1\n",
+    "8\n342.25\n205.75\n-1\n123.5\n7.25\n-1\n150.5\n194.5\n347.25\n210.75\n265.5\n-1\n123.75\n240\n319.75\n219.5\n-1\n35.25\n346\n315\n379.5\n201.75\n-1\n72.75\n404\n-1\n272.5\n337.25\n-1\n36.75\n-1\n",
+    "4\n50\n50\n-1\n100\n-1\n25\n75\n-1\n100\n-1\n",
+    "5\n500\n-1\n-1\n120.25\n79.75\n-1\n300\n-1\n0\n-1\n"
+   ],
+   "wrongGaps": {
+    "body": "        double[] sums = new double[stores];\n        double total = 0;\n        for (int i = 0; i < stores; i++)\n        {\n            double x = double.Parse(Console.ReadLine());\n            while (x >= 0)\n            {\n                sums[i] += x;\n                x = double.Parse(Console.ReadLine());\n            }\n            total += sums[i];\n        }\n        double average = total / stores;\n        for (int i = 0; i < stores; i++)\n            if (sums[i] >= average)\n                Console.WriteLine(i + 1);\n        return sums;\n"
+   },
+   "explanation": "مصفوفة `sums` بحجم عدد المتاجر، وفي كل متجر حلقة `while (x >= 0)` تضيف المبالغ إلى `sums[i]` وإلى المجموع الكلي. بعد الإدخال نحسب المعدل `total / stores`، ثم نمر على المصفوفة مرة ثانية ونطبع `i + 1` لكل متجر مجموعه أكبر من المعدل، ونعيد المصفوفة."
+  },
+  {
+   "book": "c09-p-q2",
+   "version": 2,
+   "check": false,
+   "text": "يقرأ البرنامج لكل حكم من الحكام العشرة أرقام الأغاني العشر التي اختارها (أرقام الأغاني من 1 إلى 20، كل رقم في سطر) من المركز الأول إلى العاشر، ويمنح النقاط حسب الجدول في توضيح المعلم (12، 10، 8، 7، 6، 5، 4، 3، 2، 1). يطبع أرقام الأغاني الثلاث الأعلى نقاطًا، من الأعلى، كل رقم في سطر.",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int[] points = { 12, 10, 8, 7, 6, 5, 4, 3, 2, 1 };\n        int[] sum = new int[21];\n        for (int judge = 1; judge <= 10; judge++)\n        {\n            for (int place = 0; place < 10; place++)\n            {\n                int song = int.Parse(Console.ReadLine());\n                sum[song] += points[place];\n            }\n        }\n        for (int k = 1; k <= 3; k++)\n        {\n            int best = 1;\n            for (int s = 2; s <= 20; s++)\n                if (sum[s] > sum[best])\n                    best = s;\n            Console.WriteLine(best);\n            sum[best] = -1;\n        }\n    }\n}\n",
+   "public": [
+    "13\n7\n20\n8\n10\n16\n11\n9\n6\n3\n18\n7\n2\n4\n17\n8\n3\n6\n12\n15\n13\n18\n5\n9\n15\n6\n14\n17\n1\n19\n7\n17\n9\n15\n8\n3\n6\n20\n4\n1\n7\n2\n6\n1\n10\n12\n8\n4\n9\n16\n2\n18\n5\n7\n20\n19\n15\n4\n12\n3\n7\n18\n5\n3\n14\n6\n15\n16\n1\n9\n5\n13\n7\n1\n15\n9\n6\n4\n17\n8\n18\n13\n5\n2\n11\n12\n6\n19\n20\n1\n7\n18\n13\n9\n3\n14\n19\n1\n15\n11\n"
+   ],
+   "explanation": "المصفوفة `points` تحفظ نقاط المراكز، فالأغنية التي في المركز `place` تأخذ `points[place]`، ومصفوفة التراكم `sum` فهرسها رقم الأغنية. لإيجاد المراتب الثلاث نبحث ثلاث مرات عن صاحب أكبر مجموع، ونطبعه ثم نضع في خانته -1 كي لا يُختار مرة أخرى."
+  },
+  {
+   "book": "c09-p-q3",
+   "reuse": "CL899371-09-Q01",
+   "explanation": "مصفوفة عدّادات `count` بحجم 13 يكون فيها رقم المرشح هو الفهرس، فكل صوت هو `count[v]++` دون أي `if`. بعد انتهاء التصويت نبحث عن الفهرس صاحب أكبر عداد ونطبعه."
+  },
+  {
+   "book": "c09-p-q4",
+   "reuse": "CL899371-09-Q02",
+   "explanation": "مصفوفتان فهرسهما رقم اللاعب: `goals` لمجموع الأهداف و`games` لعدد المباريات التي سجّل فيها. ملك الأهداف صاحب أكبر `goals[i]`، وأفضل هدّاف صاحب أكبر معدل `(double)goals[i] / games[i]` بين من سجّلوا (`games[i] > 0`)."
+  },
+  {
+   "book": "c09-p-q5",
+   "version": 3,
+   "text": "اكتب جسم العملية Igloo (القسم 5.1). العملية Dog من الكتاب مقفلة كما هي. الدالة Main مقفلة: تقرأ عدد عناصر المصفوفة ثم عناصرها (أعداد صحيحة مختلفة) ثم العدد num، كل قيمة في سطر، وتطبع Igloo(a, num) ثم Dog(a)، كل نتيجة في سطر.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static int Igloo(int[] a, int num)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "igloo",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static int Dog(int[] a)\n    {\n        for (int i = 0; i < a.Length; i++)\n            if (Igloo(a, a[i]) != i)\n                return i;\n        return a.Length;\n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++)\n            a[i] = int.Parse(Console.ReadLine());\n        int num = int.Parse(Console.ReadLine());\n        Console.WriteLine(Igloo(a, num));\n        Console.WriteLine(Dog(a));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "igloo": "        int count = 0;\n        for (int i = 0; i < a.Length; i++)\n        {\n            if (a[i] == num)\n                return count;\n            if (a[i] < num)\n                count++;\n        }\n        return count;\n"
+   },
+   "public": [
+    "8\n2\n8\n17\n14\n42\n11\n5\n12\n14\n"
+   ],
+   "hidden": [
+    "8\n2\n8\n17\n14\n42\n11\n5\n12\n13\n",
+    "5\n5\n9\n12\n20\n33\n20\n",
+    "5\n30\n1\n2\n3\n4\n3\n",
+    "7\n4\n10\n7\n25\n1\n40\n3\n100\n",
+    "3\n9\n3\n6\n1\n"
+   ],
+   "wrongGaps": {
+    "igloo": "        int count = 0;\n        for (int i = 0; i < a.Length; i++)\n            if (a[i] < num)\n                count++;\n        return count;\n"
+   },
+   "explanation": "نمر على المصفوفة من بدايتها ونعدّ القيم الأصغر من `num`؛ إذا وصلنا إلى `num` نفسه نعيد العدد فورًا (فلا تُحتسب القيم التي بعده)، وإذا انتهت الحلقة دون إيجاده نعيد عدد كل القيم الأصغر. في 5.4 (مصفوفة مرتبة) نضيف في بداية العملية `if (num <= a[0]) return 0;` فلا نمشّط المصفوفة. و`Dog` تعيد طول الجزء المرتب تصاعديًا في بداية المصفوفة، فهي تعيد 3 للمصفوفة في 5.5."
+  },
+  {
+   "book": "c09-p-q6",
+   "reuse": "CL899371-09-Q03",
+   "explanation": "`IsBalanced` تجمع العناصر قبل المؤشر في حلقة والعناصر بعده في حلقة ثانية، وتقارن المجموعين. `FBalanced` تمر على كل المؤشرات وتعيد أول عنصر تعيد له `IsBalanced` القيمة `true`، وإذا لم تجد تعيد -1."
+  }
+ ]
+}

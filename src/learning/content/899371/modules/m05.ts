@@ -156,6 +156,318 @@ const m05: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m05-l01-p01-scene-for-anatomy",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: تشريح for: المهيّئ ثم الشرط ثم الجسم ثم التحديث",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 270,
+                "alt": "حلقة for بأجزائها الأربعة: المهيّئ يُنفَّذ مرة واحدة، ثم يُفحص الشرط قبل كل دورة، فيُنفَّذ الجسم، ثم التحديث، ويعود البرنامج إلى الشرط حتى يصبح خطأ.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "for (int i = 1; i <= 2; i++)",
+                      "    Console.WriteLine(i);"
+                    ]
+                  },
+                  {
+                    "id": "bi",
+                    "kind": "box",
+                    "x": 300,
+                    "y": 22,
+                    "w": 56,
+                    "h": 40,
+                    "label": "i",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "scr",
+                    "kind": "screen",
+                    "x": 364,
+                    "y": 22,
+                    "w": 48,
+                    "h": 52,
+                    "label": "الشاشة",
+                    "text": ""
+                  },
+                  {
+                    "id": "init",
+                    "kind": "box",
+                    "x": 296,
+                    "y": 120,
+                    "w": 118,
+                    "h": 40,
+                    "label": "المهيّئ",
+                    "value": "int i = 1"
+                  },
+                  {
+                    "id": "cond",
+                    "kind": "box",
+                    "x": 150,
+                    "y": 108,
+                    "w": 110,
+                    "h": 64,
+                    "label": "الشرط",
+                    "value": "i <= 2",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "body",
+                    "kind": "box",
+                    "x": 10,
+                    "y": 120,
+                    "w": 90,
+                    "h": 40,
+                    "label": "الجسم",
+                    "value": "اطبع i",
+                    "mono": false
+                  },
+                  {
+                    "id": "upd",
+                    "kind": "box",
+                    "x": 150,
+                    "y": 228,
+                    "w": 110,
+                    "h": 36,
+                    "label": "التحديث",
+                    "value": "i++"
+                  },
+                  {
+                    "id": "a1",
+                    "kind": "arrow",
+                    "x": 294,
+                    "y": 140,
+                    "x2": 263,
+                    "y2": 140
+                  },
+                  {
+                    "id": "a2",
+                    "kind": "arrow",
+                    "x": 147,
+                    "y": 140,
+                    "x2": 102,
+                    "y2": 140,
+                    "label": "true"
+                  },
+                  {
+                    "id": "a3",
+                    "kind": "arrow",
+                    "x": 80,
+                    "y": 162,
+                    "x2": 147,
+                    "y2": 240
+                  },
+                  {
+                    "id": "a4",
+                    "kind": "arrow",
+                    "x": 248,
+                    "y": 226,
+                    "x2": 239,
+                    "y2": 158
+                  },
+                  {
+                    "id": "mk",
+                    "kind": "token",
+                    "x": 355,
+                    "y": 178,
+                    "text": "●",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "المهيّئ `int i = 1` يُنفَّذ أولًا، ومرة واحدة فقط: يُنشئ العدّاد `i` بقيمة 1.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "init": {
+                        "tone": "accent"
+                      },
+                      "bi": {
+                        "show": true,
+                        "value": "1",
+                        "tone": "accent"
+                      },
+                      "mk": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "ثم يُفحص الشرط `1 <= 2`: صحيح، فيدخل البرنامج إلى الجسم.",
+                    "set": {
+                      "init": {
+                        "tone": "base"
+                      },
+                      "bi": {
+                        "tone": "base"
+                      },
+                      "cond": {
+                        "tone": "ok"
+                      },
+                      "a2": {
+                        "tone": "ok"
+                      },
+                      "mk": {
+                        "x": 282,
+                        "y": 112
+                      }
+                    }
+                  },
+                  {
+                    "say": "الجسم `Console.WriteLine(i);` يطبع 1.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "cond": {
+                        "tone": "base"
+                      },
+                      "a2": {
+                        "tone": "base"
+                      },
+                      "body": {
+                        "tone": "accent"
+                      },
+                      "scr": {
+                        "text": "1",
+                        "tone": "accent"
+                      },
+                      "mk": {
+                        "x": 55,
+                        "y": 178
+                      }
+                    }
+                  },
+                  {
+                    "say": "بعد الجسم يأتي التحديث `i++`: يصبح `i` يساوي 2، ثم يعود البرنامج إلى الشرط.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "body": {
+                        "tone": "base"
+                      },
+                      "scr": {
+                        "tone": "base"
+                      },
+                      "upd": {
+                        "tone": "accent"
+                      },
+                      "a4": {
+                        "tone": "accent"
+                      },
+                      "bi": {
+                        "value": "2",
+                        "tone": "accent"
+                      },
+                      "mk": {
+                        "x": 288,
+                        "y": 244
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `2 <= 2` صحيح، فيُنفَّذ الجسم مرة ثانية ويطبع 2.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "upd": {
+                        "tone": "base"
+                      },
+                      "a4": {
+                        "tone": "base"
+                      },
+                      "bi": {
+                        "tone": "base"
+                      },
+                      "body": {
+                        "tone": "accent"
+                      },
+                      "scr": {
+                        "text": "1\n2",
+                        "tone": "accent"
+                      },
+                      "mk": {
+                        "x": 55,
+                        "y": 178
+                      }
+                    }
+                  },
+                  {
+                    "say": "التحديث `i++` يجعل `i` يساوي 3، ثم يعود إلى الشرط.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "body": {
+                        "tone": "base"
+                      },
+                      "scr": {
+                        "tone": "base"
+                      },
+                      "upd": {
+                        "tone": "accent"
+                      },
+                      "a4": {
+                        "tone": "accent"
+                      },
+                      "bi": {
+                        "value": "3",
+                        "tone": "accent"
+                      },
+                      "mk": {
+                        "x": 288,
+                        "y": 244
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط `3 <= 2` خطأ فتتوقف الحلقة، والمهيّئ لم يُنفَّذ إلا مرة واحدة في البداية.",
+                    "set": {
+                      "upd": {
+                        "tone": "base"
+                      },
+                      "a4": {
+                        "tone": "base"
+                      },
+                      "bi": {
+                        "tone": "base"
+                      },
+                      "cond": {
+                        "tone": "bad"
+                      },
+                      "init": {
+                        "tone": "warn"
+                      },
+                      "mk": {
+                        "x": 282,
+                        "y": 112,
+                        "tone": "bad"
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -224,6 +536,241 @@ const m05: ContentModule = {
               "code": "int sum = 0;\nfor (int i = 1; i <= 100; i++)\n{\n    sum += i;\n}\nConsole.WriteLine(\"المجموع = \" + sum);"
             },
             {
+              "id": "m05-l01-p02-scene-accumulator",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: المجمِّع: sum += i يضيف في كل دورة",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 230,
+                "alt": "صندوق sum يبدأ من 0، وفي كل دورة تنتقل قيمة i إليه فيكبر: 1 ثم 3 ثم 6 ثم 10، وهكذا حتى 100 فيصبح المجموع 5050.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "int sum = 0;",
+                      "for (int i = 1; i <= 100; i++)",
+                      "    sum += i;"
+                    ]
+                  },
+                  {
+                    "id": "bi",
+                    "kind": "box",
+                    "x": 60,
+                    "y": 124,
+                    "w": 80,
+                    "h": 44,
+                    "label": "i",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "bs",
+                    "kind": "box",
+                    "x": 250,
+                    "y": 124,
+                    "w": 100,
+                    "h": 44,
+                    "label": "sum",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "c1",
+                    "kind": "token",
+                    "x": 100,
+                    "y": 146,
+                    "text": "+1",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "c2",
+                    "kind": "token",
+                    "x": 100,
+                    "y": 146,
+                    "text": "+2",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "c3",
+                    "kind": "token",
+                    "x": 100,
+                    "y": 146,
+                    "text": "+3",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "c4",
+                    "kind": "token",
+                    "x": 100,
+                    "y": 146,
+                    "text": "+4",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 206,
+                    "text": "",
+                    "big": true,
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "السطر 1: `int sum = 0;` يُنشئ المجمِّع `sum` ويبدأ من 0.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "bs": {
+                        "show": true,
+                        "value": "0",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 1`: الأمر `sum += i` يضيف 1 إلى `sum`، فيصبح 1.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bi": {
+                        "show": true,
+                        "value": "1",
+                        "tone": "accent"
+                      },
+                      "c1": {
+                        "x": 216,
+                        "y": 146,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "1"
+                      },
+                      "res": {
+                        "text": "0 + 1 = 1"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 2`: يُضاف 2 إلى ما في `sum`، فيصبح 3.",
+                    "set": {
+                      "bi": {
+                        "value": "2"
+                      },
+                      "c1": {
+                        "show": false
+                      },
+                      "c2": {
+                        "x": 216,
+                        "y": 146,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "3"
+                      },
+                      "res": {
+                        "text": "1 + 2 = 3"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 3`: يُضاف 3، فيصبح `sum` يساوي 6.",
+                    "set": {
+                      "bi": {
+                        "value": "3"
+                      },
+                      "c2": {
+                        "show": false
+                      },
+                      "c3": {
+                        "x": 216,
+                        "y": 146,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "6"
+                      },
+                      "res": {
+                        "text": "3 + 3 = 6"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 4`: يُضاف 4 فيصبح `sum` يساوي 10، فالمجمِّع يحفظ ما جمعناه حتى الآن.",
+                    "set": {
+                      "bi": {
+                        "value": "4"
+                      },
+                      "c3": {
+                        "show": false
+                      },
+                      "c4": {
+                        "x": 216,
+                        "y": 146,
+                        "show": true
+                      },
+                      "bs": {
+                        "value": "10"
+                      },
+                      "res": {
+                        "text": "6 + 4 = 10"
+                      }
+                    }
+                  },
+                  {
+                    "say": "وهكذا في كل دورة حتى `i = 100`: يصبح `sum` يساوي 5050.",
+                    "set": {
+                      "bi": {
+                        "value": "100"
+                      },
+                      "c4": {
+                        "show": false
+                      },
+                      "bs": {
+                        "value": "5050",
+                        "tone": "ok"
+                      },
+                      "res": {
+                        "text": "1 + 2 + … + 100 = 5050",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "حين يصبح `i` يساوي 101 يكون الشرط `101 <= 100` خطأ، فتتوقف الحلقة ويبقى المجموع 5050.",
+                    "set": {
+                      "prog": {
+                        "hl": 2
+                      },
+                      "bi": {
+                        "value": "101",
+                        "tone": "bad"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m05-l01-p02-b08",
               "type": "heading",
               "origin": "book",
@@ -282,6 +829,264 @@ const m05: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "for (int i = 1; i <= 5; i++)\n{\n    for (int j = 1; j <= i; j++)\n        Console.Write(\"*\");\n    Console.WriteLine();\n}"
+            },
+            {
+              "id": "m05-l01-p02-scene-nested-stars",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: حلقتان متداخلتان ترسمان مثلث نجوم",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 240,
+                "alt": "الحلقة الخارجية i تختار السطر، والداخلية j تطبع في السطر i نجمة. في السطر 3 يمشي j على ثلاث خانات ثم ينتقل المؤشر إلى سطر جديد، فيظهر مثلث النجوم.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 6,
+                    "y": 8,
+                    "lines": [
+                      "for (int i = 1; i <= 5; i++)",
+                      "    for (int j = 1; j <= i; j++)",
+                      "        Console.Write(\"*\");",
+                      "    Console.WriteLine();"
+                    ]
+                  },
+                  {
+                    "id": "scr",
+                    "kind": "screen",
+                    "x": 318,
+                    "y": 30,
+                    "w": 76,
+                    "h": 108,
+                    "label": "الشاشة",
+                    "text": ""
+                  },
+                  {
+                    "id": "bi",
+                    "kind": "box",
+                    "x": 30,
+                    "y": 172,
+                    "w": 60,
+                    "h": 44,
+                    "label": "i",
+                    "value": "1"
+                  },
+                  {
+                    "id": "row",
+                    "kind": "cells",
+                    "x": 150,
+                    "y": 184,
+                    "values": [
+                      "",
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "base": 1
+                  },
+                  {
+                    "id": "tj",
+                    "kind": "token",
+                    "x": 166,
+                    "y": 158,
+                    "text": "j",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`i = 1`: الحلقة الداخلية تعمل من `j = 1` حتى `j <= 1`، فتطبع نجمة واحدة.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bi": {
+                        "tone": "accent"
+                      },
+                      "row": {
+                        "values": [
+                          "*",
+                          "",
+                          "",
+                          "",
+                          ""
+                        ],
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "tj": {
+                        "show": true
+                      },
+                      "scr": {
+                        "text": "*"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`Console.WriteLine();` ينقل المؤشر إلى سطر جديد، ثم في `i = 2` تُطبع نجمتان.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "bi": {
+                        "value": "2"
+                      },
+                      "row": {
+                        "values": [
+                          "*",
+                          "*",
+                          "",
+                          "",
+                          ""
+                        ],
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "tj": {
+                        "x": 198
+                      },
+                      "scr": {
+                        "text": "*\n**"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 3`: تبدأ الحلقة الداخلية من جديد بـ `j = 1`، وتطبع أول نجمة في السطر الثالث.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "bi": {
+                        "value": "3"
+                      },
+                      "row": {
+                        "values": [
+                          "*",
+                          "",
+                          "",
+                          "",
+                          ""
+                        ],
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "tj": {
+                        "x": 166
+                      },
+                      "scr": {
+                        "text": "*\n**\n*"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`j = 2`: نجمة ثانية في السطر نفسه، لأن `Write` لا ينقل المؤشر.",
+                    "set": {
+                      "row": {
+                        "values": [
+                          "*",
+                          "*",
+                          "",
+                          "",
+                          ""
+                        ],
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "tj": {
+                        "x": 198
+                      },
+                      "scr": {
+                        "text": "*\n**\n**"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`j = 3`: نجمة ثالثة، لأن الشرط `3 <= 3` ما زال صحيحًا.",
+                    "set": {
+                      "row": {
+                        "values": [
+                          "*",
+                          "*",
+                          "*",
+                          "",
+                          ""
+                        ],
+                        "hi": [
+                          2
+                        ]
+                      },
+                      "tj": {
+                        "x": 230
+                      },
+                      "scr": {
+                        "text": "*\n**\n***"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`j = 4`: الشرط `4 <= 3` خطأ، فتتوقف الحلقة الداخلية، و`WriteLine` ينهي السطر.",
+                    "set": {
+                      "prog": {
+                        "hl": 4
+                      },
+                      "row": {
+                        "hi": []
+                      },
+                      "tj": {
+                        "x": 262,
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`i = 4` ثم `i = 5` بالطريقة نفسها: في كل سطر عدد النجوم يساوي `i`.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "bi": {
+                        "value": "5",
+                        "tone": "ok"
+                      },
+                      "row": {
+                        "values": [
+                          "*",
+                          "*",
+                          "*",
+                          "*",
+                          "*"
+                        ],
+                        "hi": [
+                          4
+                        ]
+                      },
+                      "tj": {
+                        "x": 294,
+                        "tone": "accent"
+                      },
+                      "scr": {
+                        "text": "*\n**\n***\n****\n*****",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m05-l01-p02-b16",
@@ -2301,6 +3106,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p01-b06",
               "type": "text",
               "origin": "book",
@@ -2387,6 +3200,14 @@ const m05: ContentModule = {
                   "text": "ملاحظة : ليس هناك حاجة لفحص سلامة المدخلات"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p01-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2471,6 +3292,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p02-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p02-b06",
               "type": "text",
               "origin": "book",
@@ -2503,6 +3332,14 @@ const m05: ContentModule = {
                   "text": "اذا قام التقني بصيانة وتصليح اكثر من 25 جهاز في اليوم , البرنامج سوف يقوم بطباعة اسمه والرسالة ”BONUS” كذلك يقوم البرنامج بحساب العدد الكلي لعمليات الصيانة التي قام بها العاملين في نفس اليوم"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p02-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2605,6 +3442,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p03-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p03-b07",
               "type": "text",
               "origin": "book",
@@ -2667,6 +3512,14 @@ const m05: ContentModule = {
                   "text": "كذلك البرنامج يعد ويحسب عدد الزبائن الذين طلبوا اكثر من 20 صندوق للمشروب"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p03-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2777,6 +3630,14 @@ const m05: ContentModule = {
                   "text": "ملاحظة : افترض ان المدخلات سليمة"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p04-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2889,6 +3750,14 @@ const m05: ContentModule = {
                   "text": "اذا جمع كل من الصفين نفس عدد النقاط المخرج سيكون \"TEKO\""
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p05-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2995,6 +3864,14 @@ const m05: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p06-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3089,6 +3966,14 @@ const m05: ContentModule = {
                   "text": "🔚 في نهاية البرنامج، اطبع عدد الأعداد التي تحقق هذا الشرط."
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p07-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

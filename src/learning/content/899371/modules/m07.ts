@@ -239,6 +239,146 @@ const m07: ContentModule = {
               "code": "int Square(int x)\n{\n    return x * x;\n}"
             },
             {
+              "id": "m07-l01-p02-scene-call-return",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: الاستدعاء والعودة: إطار يُدفع ثم يُسحب",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 410,
+                "h": 260,
+                "alt": "البرنامج يستدعي Square(4): يُدفع إطار جديد فوق إطار Main فيه x = 4، ويحسب 16 ويعيدها، ثم يُسحب الإطار ويكمل Main من سطر الاستدعاء فتصبح r = 16.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 8,
+                    "y": 8,
+                    "lines": [
+                      "int Square(int x)",
+                      "{",
+                      "    return x * x;",
+                      "}",
+                      "int r = Square(4);"
+                    ]
+                  },
+                  {
+                    "id": "st",
+                    "kind": "text",
+                    "x": 316,
+                    "y": 24,
+                    "text": "مكدس الاستدعاءات",
+                    "tone": "muted"
+                  },
+                  {
+                    "id": "fm",
+                    "kind": "box",
+                    "x": 226,
+                    "y": 196,
+                    "w": 180,
+                    "h": 48,
+                    "value": "Main: r = ?"
+                  },
+                  {
+                    "id": "fs",
+                    "kind": "box",
+                    "x": 226,
+                    "y": 64,
+                    "w": 180,
+                    "h": 48,
+                    "value": "Square: x = 4",
+                    "show": false
+                  },
+                  {
+                    "id": "r16",
+                    "kind": "token",
+                    "x": 196,
+                    "y": 154,
+                    "text": "16",
+                    "show": false,
+                    "tone": "ok"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "البرنامج الرئيسي يعمل في إطاره `Main`، ويصل إلى `Square(4)`.",
+                    "set": {
+                      "prog": {
+                        "hl": 5
+                      },
+                      "fm": {
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الاستدعاء يدفع إطارًا جديدًا فوق المكدس، فيه البارامتر `x = 4`، ويُحفظ مكان العودة.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "fm": {
+                        "tone": "base"
+                      },
+                      "fs": {
+                        "show": true,
+                        "y": 130,
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "داخل العملية: `return x * x;` يحسب `4 * 4 = 16`.",
+                    "set": {
+                      "prog": {
+                        "hl": 3
+                      },
+                      "fs": {
+                        "value": "Square: 4*4=16"
+                      },
+                      "r16": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`return` يعيد 16 إلى من استدعى، ويُسحب إطار `Square` من المكدس.",
+                    "set": {
+                      "fs": {
+                        "show": false,
+                        "y": 64
+                      },
+                      "r16": {
+                        "y": 220
+                      }
+                    }
+                  },
+                  {
+                    "say": "يكمل `Main` من سطر الاستدعاء نفسه: القيمة 16 تُوضع في `r`.",
+                    "set": {
+                      "prog": {
+                        "hl": 5
+                      },
+                      "r16": {
+                        "show": false
+                      },
+                      "fm": {
+                        "value": "Main: r = 16",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m07-l01-p02-b06",
               "type": "heading",
               "origin": "book",
@@ -403,6 +543,200 @@ const m07: ContentModule = {
               ]
             },
             {
+              "id": "m07-l01-p03-scene-value-ref-out",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: بالقيمة نسخة، وref الصندوق نفسه",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 420,
+                "h": 230,
+                "alt": "يمينًا الإرسال بالقيمة: تُنسخ 5 من a إلى n، فيتغير n إلى 6 ويبقى a يساوي 5. يسارًا الإرسال بـ ref: n اسم آخر للصندوق a نفسه فيصبح a يساوي 6، ثم out تضع قيمة جديدة في a.",
+                "items": [
+                  {
+                    "id": "hv",
+                    "kind": "text",
+                    "x": 316,
+                    "y": 12,
+                    "text": "بالقيمة",
+                    "big": true
+                  },
+                  {
+                    "id": "hr",
+                    "kind": "text",
+                    "x": 104,
+                    "y": 12,
+                    "text": "بالمرجع ref",
+                    "big": true
+                  },
+                  {
+                    "id": "cv",
+                    "kind": "code",
+                    "x": 226,
+                    "y": 30,
+                    "lines": [
+                      "void Add(int n)",
+                      "{ n++; }",
+                      "Add(a);"
+                    ]
+                  },
+                  {
+                    "id": "cr",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 30,
+                    "lines": [
+                      "void Add(ref int n)",
+                      "{ n++; }",
+                      "Add(ref a);"
+                    ]
+                  },
+                  {
+                    "id": "va",
+                    "kind": "box",
+                    "x": 236,
+                    "y": 140,
+                    "w": 64,
+                    "h": 44,
+                    "label": "a",
+                    "value": "5"
+                  },
+                  {
+                    "id": "vn",
+                    "kind": "box",
+                    "x": 336,
+                    "y": 140,
+                    "w": 64,
+                    "h": 44,
+                    "label": "n",
+                    "value": "",
+                    "show": false
+                  },
+                  {
+                    "id": "vt",
+                    "kind": "token",
+                    "x": 268,
+                    "y": 162,
+                    "text": "5",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "ra",
+                    "kind": "box",
+                    "x": 30,
+                    "y": 140,
+                    "w": 70,
+                    "h": 44,
+                    "label": "a",
+                    "value": "5"
+                  },
+                  {
+                    "id": "rn",
+                    "kind": "arrow",
+                    "x": 184,
+                    "y": 162,
+                    "x2": 104,
+                    "y2": 162,
+                    "label": "n",
+                    "show": false
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "في الجهتين `a = 5`، والعملية `Add` تزيد البارامتر `n` واحدًا."
+                  },
+                  {
+                    "say": "بالقيمة: `Add(a)` يُنشئ صندوقًا جديدًا `n` ويَنسخ إليه 5.",
+                    "set": {
+                      "cv": {
+                        "hl": 3
+                      },
+                      "vn": {
+                        "show": true
+                      },
+                      "vt": {
+                        "show": true,
+                        "x": 368
+                      }
+                    }
+                  },
+                  {
+                    "say": "`n++` يغيّر النسخة فقط: `n` يصبح 6، و`a` يبقى 5.",
+                    "set": {
+                      "cv": {
+                        "hl": 2
+                      },
+                      "vt": {
+                        "show": false
+                      },
+                      "vn": {
+                        "value": "6",
+                        "tone": "accent"
+                      },
+                      "va": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "بالمرجع: `Add(ref a)` لا ينسخ شيئًا، فـ `n` اسم آخر للصندوق `a` نفسه.",
+                    "set": {
+                      "cv": {
+                        "hl": 0
+                      },
+                      "cr": {
+                        "hl": 3
+                      },
+                      "rn": {
+                        "show": true,
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`n++` يغيّر الصندوق الأصلي: `a` يصبح 6.",
+                    "set": {
+                      "cr": {
+                        "hl": 2
+                      },
+                      "ra": {
+                        "value": "6",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`out` يرسل الصندوق نفسه أيضًا، والعملية مُلزمة أن تضع فيه قيمة: هكذا تُرجع أكثر من قيمة.",
+                    "set": {
+                      "hr": {
+                        "text": "out"
+                      },
+                      "cr": {
+                        "lines": [
+                          "void Get(out int n)",
+                          "{ n = 9; }",
+                          "Get(out a);"
+                        ],
+                        "hl": 2
+                      },
+                      "ra": {
+                        "value": "9",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m07-l01-p03-b03",
               "type": "text",
               "origin": "book",
@@ -526,6 +860,221 @@ const m07: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "static int CountAbove90(int a, int b, int c)\n{\n    int count = 0;\n    if (a > 90) count++;\n    if (b > 90) count++;\n    if (c > 90) count++;\n    return count;\n}"
+            },
+            {
+              "id": "m07-l01-p04-scene-return-value",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: القيمة المعادة تحل مكان الاستدعاء",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 410,
+                "h": 240,
+                "alt": "الاستدعاء CountAbove90(95, 80, 99) ينسخ القيم إلى a وb وc، والعملية تعدّ ما فوق 90 فتجد 2، ثم تعود 2 وتحل مكان الاستدعاء كله.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 8,
+                    "y": 8,
+                    "lines": [
+                      "int n = CountAbove90(95, 80, 99);"
+                    ]
+                  },
+                  {
+                    "id": "call",
+                    "kind": "box",
+                    "x": 50,
+                    "y": 56,
+                    "w": 300,
+                    "h": 40,
+                    "value": "CountAbove90(95, 80, 99)",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "a",
+                    "kind": "box",
+                    "x": 40,
+                    "y": 168,
+                    "w": 60,
+                    "h": 44,
+                    "label": "a",
+                    "value": ""
+                  },
+                  {
+                    "id": "b",
+                    "kind": "box",
+                    "x": 120,
+                    "y": 168,
+                    "w": 60,
+                    "h": 44,
+                    "label": "b",
+                    "value": ""
+                  },
+                  {
+                    "id": "c",
+                    "kind": "box",
+                    "x": 200,
+                    "y": 168,
+                    "w": 60,
+                    "h": 44,
+                    "label": "c",
+                    "value": ""
+                  },
+                  {
+                    "id": "cnt",
+                    "kind": "box",
+                    "x": 300,
+                    "y": 168,
+                    "w": 90,
+                    "h": 44,
+                    "label": "count",
+                    "value": "0",
+                    "show": false
+                  },
+                  {
+                    "id": "ta",
+                    "kind": "token",
+                    "x": 120,
+                    "y": 76,
+                    "text": "95",
+                    "show": false
+                  },
+                  {
+                    "id": "tb",
+                    "kind": "token",
+                    "x": 200,
+                    "y": 76,
+                    "text": "80",
+                    "show": false
+                  },
+                  {
+                    "id": "tc",
+                    "kind": "token",
+                    "x": 280,
+                    "y": 76,
+                    "text": "99",
+                    "show": false
+                  },
+                  {
+                    "id": "r2",
+                    "kind": "token",
+                    "x": 345,
+                    "y": 190,
+                    "text": "2",
+                    "show": false,
+                    "tone": "ok"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "الاستدعاء ينسخ القيم 95 و80 و99 إلى البارامترات `a` و`b` و`c`.",
+                    "set": {
+                      "prog": {
+                        "hl": 1
+                      },
+                      "call": {
+                        "tone": "accent"
+                      },
+                      "ta": {
+                        "show": true,
+                        "x": 70,
+                        "y": 190
+                      },
+                      "tb": {
+                        "show": true,
+                        "x": 150,
+                        "y": 190
+                      },
+                      "tc": {
+                        "show": true,
+                        "x": 230,
+                        "y": 190
+                      }
+                    }
+                  },
+                  {
+                    "say": "داخل العملية `count = 0`، ثم `a > 90`: `95 > 90` صحيح، فيصبح `count` يساوي 1.",
+                    "set": {
+                      "call": {
+                        "tone": "base"
+                      },
+                      "cnt": {
+                        "show": true,
+                        "value": "1",
+                        "tone": "accent"
+                      },
+                      "ta": {
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`80 > 90` خطأ، فلا يتغير `count`.",
+                    "set": {
+                      "tb": {
+                        "tone": "bad"
+                      },
+                      "cnt": {
+                        "tone": "base"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`99 > 90` صحيح، فيصبح `count` يساوي 2.",
+                    "set": {
+                      "tc": {
+                        "tone": "ok"
+                      },
+                      "cnt": {
+                        "value": "2",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`return count;` يعيد 2 إلى سطر الاستدعاء.",
+                    "set": {
+                      "cnt": {
+                        "tone": "base"
+                      },
+                      "r2": {
+                        "show": true,
+                        "x": 200,
+                        "y": 126
+                      }
+                    }
+                  },
+                  {
+                    "say": "القيمة المعادة تحل مكان الاستدعاء كله: كأن السطر صار `int n = 2;`.",
+                    "set": {
+                      "r2": {
+                        "show": false
+                      },
+                      "call": {
+                        "value": "2",
+                        "tone": "ok"
+                      },
+                      "ta": {
+                        "tone": "muted"
+                      },
+                      "tb": {
+                        "tone": "muted"
+                      },
+                      "tc": {
+                        "tone": "muted"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m07-l01-p04-b03",
@@ -2296,6 +2845,14 @@ const m07: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double DiscountMinPrice(double price1, double price2, double price3)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(DiscountMinPrice(a, b, c));\n    }\n}\n"
             }
           ]
         },
@@ -2482,6 +3039,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsTeenListener(int age)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(IsTeenListener(age));\n    }\n}\n"
             }
           ]
         },
@@ -2774,6 +3339,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int GiftCard(int years, int amount)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3005,6 +3578,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsInRange(int month, int year)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3262,6 +3843,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int DriverMaxSpeed(int age, int years, int speedLimit)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        int years = int.Parse(Console.ReadLine());\n        int limit = int.Parse(Console.ReadLine());\n        Console.WriteLine(DriverMaxSpeed(age, years, limit));\n    }\n}\n"
             }
           ]
         },
@@ -3569,6 +4158,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int Check(int standardSize, int caps)\n    {\n        \n    }\n\n    public static void AllMachines()\n    {\n        \n    }\n\n    public static void Main()\n    {\n        AllMachines();\n    }\n}\n"
             }
           ]
         },
@@ -3805,6 +4402,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p07-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int GradesAbove90(int grade1, int grade2, int grade3)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(GradesAbove90(a, b, c));\n    }\n}\n"
             }
           ]
         },
@@ -4052,6 +4657,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p08-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsShippingFree(int numOfProducts)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -4358,6 +4971,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p09-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static char Twins(string first, string second)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -4617,6 +5238,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p10-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

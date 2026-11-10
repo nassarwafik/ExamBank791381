@@ -207,6 +207,177 @@ const m08: ContentModule = {
               "code": "string word = \"cat\";\nConsole.WriteLine(word[0]); // 'c'"
             },
             {
+              "id": "m08-l01-p02-scene-string-index",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: النص أحرف لها مؤشرات: s[i] وLength",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 220,
+                "alt": "النص hello خمسة أحرف في خانات مؤشراتها من 0 إلى 4. s[0] هو h وs[4] هو o، وs.Length يساوي 5، أما s[5] فخارج النص.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "string s = \"hello\";"
+                    ]
+                  },
+                  {
+                    "id": "s",
+                    "kind": "cells",
+                    "x": 100,
+                    "y": 72,
+                    "values": [
+                      "h",
+                      "e",
+                      "l",
+                      "l",
+                      "o"
+                    ],
+                    "size": 40,
+                    "label": "s"
+                  },
+                  {
+                    "id": "ghost",
+                    "kind": "box",
+                    "x": 304,
+                    "y": 72,
+                    "w": 38,
+                    "h": 40,
+                    "value": "✗",
+                    "show": false,
+                    "tone": "bad"
+                  },
+                  {
+                    "id": "p",
+                    "kind": "token",
+                    "x": 120,
+                    "y": 150,
+                    "text": "s[0]",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 196,
+                    "text": "",
+                    "big": true,
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "النص `\"hello\"` خمسة أحرف، كل حرف في خانة لها مؤشر يبدأ من 0."
+                  },
+                  {
+                    "say": "`s[0]` هو أول حرف `'h'`، لأن المؤشر الأول 0 وليس 1.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "p": {
+                        "show": true
+                      },
+                      "res": {
+                        "text": "s[0] = 'h'"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s[1]` هو الحرف الثاني: `'e'`.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          1
+                        ]
+                      },
+                      "p": {
+                        "x": 160,
+                        "text": "s[1]"
+                      },
+                      "res": {
+                        "text": "s[1] = 'e'"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s[4]` هو الحرف الأخير: `'o'`.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          4
+                        ]
+                      },
+                      "p": {
+                        "x": 280,
+                        "text": "s[4]"
+                      },
+                      "res": {
+                        "text": "s[4] = 'o'"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s.Length` يعدّ الأحرف فيعطي 5، لذلك آخر مؤشر هو `s.Length - 1`، أي 4.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          0,
+                          1,
+                          2,
+                          3,
+                          4
+                        ]
+                      },
+                      "p": {
+                        "show": false
+                      },
+                      "res": {
+                        "text": "s.Length = 5",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s[5]` لا يوجد: لا خانة بعد المؤشر 4، فيتوقف البرنامج بخطأ.",
+                    "set": {
+                      "s": {
+                        "hi": []
+                      },
+                      "ghost": {
+                        "show": true
+                      },
+                      "p": {
+                        "show": true,
+                        "x": 323,
+                        "text": "s[5]",
+                        "tone": "bad"
+                      },
+                      "res": {
+                        "text": "s[5] ✗",
+                        "tone": "bad"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m08-l01-p02-b10",
               "type": "text",
               "origin": "book",
@@ -553,6 +724,181 @@ const m08: ContentModule = {
               "code": "string s = \"fantastic\";\nConsole.WriteLine(s.Substring(0, 3)); // \"fan\""
             },
             {
+              "id": "m08-l01-p03-scene-substring",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: Substring: نافذة تنزلق على النص",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 236,
+                "alt": "نافذة على النص fantastic تبدأ من المؤشر start وتأخذ length حرفًا: Substring(0, 3) تعطي fan، ثم تنزلق النافذة إلى المؤشر 3 فتعطي Substring(3, 4) النص tast.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "string s = \"fantastic\";"
+                    ]
+                  },
+                  {
+                    "id": "expr",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 62,
+                    "text": "s.Substring(0, 3)",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "s",
+                    "kind": "cells",
+                    "x": 38,
+                    "y": 88,
+                    "values": [
+                      "f",
+                      "a",
+                      "n",
+                      "t",
+                      "a",
+                      "s",
+                      "t",
+                      "i",
+                      "c"
+                    ],
+                    "size": 36
+                  },
+                  {
+                    "id": "st",
+                    "kind": "token",
+                    "x": 56,
+                    "y": 162,
+                    "text": "start",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "r1",
+                    "kind": "token",
+                    "x": 92,
+                    "y": 106,
+                    "text": "\"fan\"",
+                    "show": false,
+                    "tone": "ok"
+                  },
+                  {
+                    "id": "r2",
+                    "kind": "token",
+                    "x": 218,
+                    "y": 106,
+                    "text": "\"tast\"",
+                    "show": false,
+                    "tone": "ok"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "النص `\"fantastic\"` تسعة أحرف، مؤشراتها من 0 إلى 8."
+                  },
+                  {
+                    "say": "`Substring(0, 3)`: الرقم الأول هو البداية، فتبدأ النافذة عند المؤشر 0.",
+                    "set": {
+                      "st": {
+                        "show": true
+                      },
+                      "s": {
+                        "hi": [
+                          0
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "الرقم الثاني هو الطول: تأخذ النافذة 3 أحرف.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          0,
+                          1,
+                          2
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "النتيجة نص جديد: `\"fan\"`.",
+                    "set": {
+                      "r1": {
+                        "show": true,
+                        "x": 200,
+                        "y": 206
+                      }
+                    }
+                  },
+                  {
+                    "say": "`Substring(3, 4)`: تنزلق النافذة إلى المؤشر 3.",
+                    "set": {
+                      "expr": {
+                        "text": "s.Substring(3, 4)"
+                      },
+                      "r1": {
+                        "show": false
+                      },
+                      "st": {
+                        "x": 164
+                      },
+                      "s": {
+                        "hi": [
+                          3
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "وتأخذ 4 أحرف، فالنتيجة `\"tast\"`.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          3,
+                          4,
+                          5,
+                          6
+                        ]
+                      },
+                      "r2": {
+                        "show": true,
+                        "x": 200,
+                        "y": 206
+                      }
+                    }
+                  },
+                  {
+                    "say": "النص `s` نفسه لم يتغير: `Substring` تُعيد نصًا جديدًا فقط.",
+                    "set": {
+                      "s": {
+                        "hi": []
+                      },
+                      "st": {
+                        "show": false
+                      },
+                      "r2": {
+                        "tone": "accent"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m08-l01-p03-b06",
               "type": "text",
               "origin": "book",
@@ -600,6 +946,196 @@ const m08: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "string s = \"hello world\";\nConsole.WriteLine(s.Replace(\"hello\", \"hi\")); // \"hi world\""
+            },
+            {
+              "id": "m08-l01-p03-scene-indexof-replace",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: IndexOf يبحث، وReplace يصنع نصًا جديدًا",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 250,
+                "alt": "IndexOf يمشي على النص hello world من المؤشر 0 حتى يجد أول o عند المؤشر 4. ثم Replace تبني نصًا جديدًا hi world ويبقى النص الأصلي كما هو.",
+                "items": [
+                  {
+                    "id": "prog",
+                    "kind": "code",
+                    "x": 10,
+                    "y": 8,
+                    "lines": [
+                      "string s = \"hello world\";"
+                    ]
+                  },
+                  {
+                    "id": "expr",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 54,
+                    "text": "s.IndexOf('o')",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "s",
+                    "kind": "cells",
+                    "x": 35,
+                    "y": 84,
+                    "values": [
+                      "h",
+                      "e",
+                      "l",
+                      "l",
+                      "o",
+                      "␣",
+                      "w",
+                      "o",
+                      "r",
+                      "l",
+                      "d"
+                    ],
+                    "size": 30,
+                    "label": "s"
+                  },
+                  {
+                    "id": "p",
+                    "kind": "token",
+                    "x": 50,
+                    "y": 146,
+                    "text": "?",
+                    "show": false,
+                    "tone": "accent"
+                  },
+                  {
+                    "id": "n",
+                    "kind": "cells",
+                    "x": 35,
+                    "y": 194,
+                    "values": [
+                      "h",
+                      "e",
+                      "l",
+                      "l",
+                      "o",
+                      "␣",
+                      "w",
+                      "o",
+                      "r",
+                      "l",
+                      "d"
+                    ],
+                    "size": 30,
+                    "label": "النص الجديد",
+                    "show": false,
+                    "tone": "accent"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`s.IndexOf('o')` يبحث عن أول `'o'` في النص، ويبدأ من المؤشر 0.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          0
+                        ]
+                      },
+                      "p": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "`'h'` و`'e'` و`'l'` و`'l'` ليست `'o'`، فيتابع البحث.",
+                    "set": {
+                      "s": {
+                        "hi": [],
+                        "bad": [
+                          0,
+                          1,
+                          2,
+                          3
+                        ]
+                      },
+                      "p": {
+                        "x": 140
+                      }
+                    }
+                  },
+                  {
+                    "say": "عند المؤشر 4 يجد `'o'`، فيُعيد 4 ويتوقف: لا يرى الحرف `'o'` الثاني.",
+                    "set": {
+                      "s": {
+                        "hi": [
+                          4
+                        ],
+                        "bad": []
+                      },
+                      "p": {
+                        "x": 170,
+                        "text": "4",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`s.Replace(\"hello\", \"hi\")` لا يغيّر `s`، بل يبدأ بنسخة جديدة منه.",
+                    "set": {
+                      "expr": {
+                        "text": "s.Replace(\"hello\", \"hi\")"
+                      },
+                      "s": {
+                        "hi": []
+                      },
+                      "p": {
+                        "show": false
+                      },
+                      "n": {
+                        "show": true
+                      }
+                    }
+                  },
+                  {
+                    "say": "في النسخة الجديدة يحل `\"hi\"` محل `\"hello\"`، فيصبح النص أقصر.",
+                    "set": {
+                      "n": {
+                        "values": [
+                          "h",
+                          "i",
+                          "␣",
+                          "w",
+                          "o",
+                          "r",
+                          "l",
+                          "d"
+                        ],
+                        "hi": [
+                          0,
+                          1
+                        ],
+                        "tone": "base"
+                      }
+                    }
+                  },
+                  {
+                    "say": "النص الأصلي `s` بقي `\"hello world\"`، ولنحفظ النتيجة نكتب `s = s.Replace(\"hello\", \"hi\");`.",
+                    "set": {
+                      "n": {
+                        "hi": []
+                      },
+                      "s": {
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m08-l01-p03-b10",
@@ -2449,6 +2985,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string CompressString(string str)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CompressString(s));\n    }\n}\n"
             }
           ]
         },
@@ -2606,6 +3150,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string ReplaceBWithC(string str)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(ReplaceBWithC(s));\n    }\n}\n"
             }
           ]
         },
@@ -2796,6 +3348,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double CalculateExpression(string expr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string expr = Console.ReadLine();\n        Console.WriteLine(CalculateExpression(expr));\n    }\n}\n"
             }
           ]
         },
@@ -2971,6 +3531,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string CodeANBO(string text)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CodeANBO(s));\n    }\n}\n"
             }
           ]
         }

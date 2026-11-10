@@ -170,6 +170,17 @@ describe("17E-B IDE8–IDE18 — practice run identity, single flight, outcomes 
     fireEvent.click(btn);
     expect(c.run).toHaveBeenCalledTimes(2);
   });
+  it("IDE27 every box that can scroll — an example's input and output, the run's output — is reachable by keyboard: a focusable named region (axe scrollable-region-focusable, 899371 P15)", async () => {
+    const c = await mountInjected();
+    await editorBox();
+    const pres = Array.from(screen.getByTestId("coding-public-tests").querySelectorAll("pre"));
+    expect(pres.length).toBeGreaterThan(0);
+    for (const pre of pres) expect([pre.getAttribute("tabindex"), pre.getAttribute("role"), !!pre.getAttribute("aria-label")]).toEqual(["0", "region", true]);
+    fireEvent.click(await runButton());
+    await act(async () => { c.pending[0].d.resolve(ok("5\n")); });
+    const out = (await screen.findByTestId("coding-result")).querySelector("pre")!;
+    expect([out.getAttribute("tabindex"), out.getAttribute("role"), out.getAttribute("aria-label")]).toEqual(["0", "region", "المخرجات"]);
+  });
   it("IDE10 success: Arabic status, stdout as LTR text, practical meta (duration, exit code)", async () => {
     const c = await mountInjected();
     fireEvent.click(await runButton());
@@ -354,6 +365,8 @@ describe("17E-B IDE25–IDE28 — RTL/LTR, accessibility, mobile, teacher previe
     const out = screen.getByTestId("coding-output-panel");
     expect(out.getAttribute("aria-live")).toBe("polite");
     expect(out.getAttribute("aria-label")).toBe("نتيجة التشغيل");
+    // a NAMED region: a name on a plain <div> is prohibited ARIA (axe aria-prohibited-attr, 899371 P14)
+    expect(screen.getByRole("region", { name: "نتيجة التشغيل" })).toBe(out);
     const btn = await runButton();
     fireEvent.click(btn);
     expect(btn.getAttribute("aria-busy")).toBe("true");
