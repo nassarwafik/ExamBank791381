@@ -95,6 +95,15 @@ timing-sensitive: a failure there is real (`AGENTS.md` §12). The general policy
 is unchanged: not patched inside that PR; one re-run (owner-triggered when the agent lacks permission); a second failure on
 the same head is real.
 
+`src/qrLogin/linkedDevices.qr3.test.tsx`, «ending an owner device asks for the authenticator code…», failed once in a loaded
+local full run, during 899371 P9 (plan §22.9). The assertion was «expected [ …(4) ] to deeply equal [ …(5) ]»: 4 requests
+seen instead of 5. The test then passed in isolation and on the re-run. Root cause: «انتهت جلسة» renders in the same commit
+that bumps the list's nonce, and the list refresh (the 5th request) is sent by the `useEffect` that runs after that commit.
+The test read the request list as soon as the notice appeared, so it raced that effect. 25 runs under a 4-core CPU load did
+not force it, so there is no reproducing run, only the recorded failure. The test now waits for the refreshed list (one device
+left) before reading the requests, exactly as its teacher / student sibling already did. No assertion and no timeout changed.
+A mutant that drops the refresh after ending a device still fails both tests.
+
 ### 4.1 Known capture flake — `studio-home`, the «الموديل» select (visual gate)
 
 The visual gate (`ux-visual-regression-r19b.yml`, `scripts/ux-visual-gate.mjs`) occasionally reports an **undeclared**
