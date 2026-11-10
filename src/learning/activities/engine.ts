@@ -343,4 +343,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./CSharpTraceActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  {
+    // 899371 P11 (enrichment plan §3.1, §8) — the ANIMATED SCENE engine: one renderer for every animated panel of the course; a
+    // scene is data (items + steps, csharpScene.ts) checked by a strict validator. Never starts by itself, no infinite loop, reduced
+    // motion honoured; its own lazy chunk; no network, no persistence.
+    kind: "animation",
+    key: "csharp-scene",
+    versions: [1],
+    load: () => import("./CSharpSceneActivity"),
+    capabilities: { fullscreen: true, reset: true, animated: true, interactive: true },
+  },
 ]);

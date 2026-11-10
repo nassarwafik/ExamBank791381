@@ -715,3 +715,38 @@
 .learning-trace-out{ margin:0; min-height:2.5em; padding:var(--eb-space-2); overflow-x:auto; border-radius:var(--eb-r-sm); background:var(--eb-code-bg); color:var(--eb-code-fg); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-14); text-align:left; white-space:pre; }
 .learning-trace-out:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .learning-trace-empty{ margin:0; color:var(--eb-muted); }
+
+/* 899371 P11 (docs/enterprise-899371-enrichment-plan.md §7.3, §8) — the animated scene (animation / csharp-scene / v1): design tokens
+   only (light and dark), a short ease-out transition on what a step moves or changes, none under reduced motion, 44 px controls. */
+.learning-scene{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.learning-scene-svg{ display:block; width:100%; max-width:560px; height:auto; margin-inline:auto; overflow:visible; font-family:var(--eb-font); }
+.learning-scene.is-full .learning-scene-svg{ max-width:min(960px, 100%); }
+.learning-scene-say{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r-sm); background:var(--eb-primary-050); color:var(--eb-text-heading); font-size:var(--eb-fs-16); line-height:var(--eb-lh-body); min-height:3em; }
+.learning-scene-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-scene .cs-i{ --cs-fill:var(--eb-surface); --cs-stroke:var(--eb-content-axis); --cs-ink:var(--eb-content-ink); transition:transform 320ms ease-out, opacity 320ms ease-out; }
+.learning-scene .cs-t-accent{ --cs-fill:var(--eb-book-blue-soft); --cs-stroke:var(--eb-book-blue); --cs-ink:var(--eb-book-blue-ink); }
+.learning-scene .cs-t-ok{ --cs-fill:var(--eb-book-green-soft); --cs-stroke:var(--eb-book-green); --cs-ink:var(--eb-book-green-ink); }
+.learning-scene .cs-t-bad{ --cs-fill:var(--eb-book-red-soft); --cs-stroke:var(--eb-book-red); --cs-ink:var(--eb-book-red-ink); }
+.learning-scene .cs-t-warn{ --cs-fill:var(--eb-book-amber-soft); --cs-stroke:var(--eb-book-amber); --cs-ink:var(--eb-book-amber-ink); }
+.learning-scene .cs-t-muted{ --cs-fill:var(--eb-surface-2); --cs-stroke:var(--eb-line); --cs-ink:var(--eb-text-secondary); }
+.learning-scene .cs-i.is-off{ opacity:0; }
+.learning-scene .cs-sh{ fill:var(--cs-fill); stroke:var(--cs-stroke); stroke-width:2; transition:fill 320ms ease-out, stroke 320ms ease-out; }
+.learning-scene .cs-ln{ stroke:var(--cs-stroke); stroke-width:2; }
+.learning-scene-code{ font-family:var(--eb-font-mono); font-size:.92em; padding:0 .25em; border-radius:var(--eb-r-xs); background:var(--eb-surface); }
+.learning-scene .cs-ln.is-arrow{ stroke-width:2.5; }
+.learning-scene .cs-ln.is-dash{ stroke-dasharray:6 5; }
+.learning-scene .cs-head{ fill:var(--cs-stroke); }
+.learning-scene .cs-tx{ fill:var(--cs-ink); font-size:14px; }
+.learning-scene .cs-tx.is-big{ font-size:18px; font-weight:700; }
+.learning-scene .cs-tx.is-mono, .learning-scene .cs-codetx, .learning-scene .cs-codeno{ font-family:var(--eb-font-mono); }
+.learning-scene .cs-tx.is-label{ font-size:13px; font-weight:600; }
+.learning-scene .cs-tx.is-idx{ fill:var(--eb-muted); font-size:11px; }
+.learning-scene .cs-codebg{ fill:var(--eb-code-bg); stroke:var(--eb-code-line); stroke-width:1; }
+.learning-scene .cs-codehl{ fill:var(--eb-code-hover); stroke:var(--eb-book-amber); stroke-width:1.5; }
+.learning-scene .cs-codetx{ fill:var(--eb-code-fg); font-size:13px; }
+.learning-scene .cs-codeno{ fill:var(--eb-code-gutter); font-size:11px; }
+.learning-scene .is-new{ animation:cs-pop 360ms ease-out 1; transform-box:fill-box; transform-origin:center; }
+@keyframes cs-pop{ from{ opacity:.35; transform:scale(.92); } to{ opacity:1; transform:scale(1); } }
+.learning-scene.is-still .cs-i, .learning-scene.is-still .cs-sh, .learning-scene.is-still .is-new{ transition:none; animation:none; }
+@media (prefers-reduced-motion: reduce){ .learning-scene .cs-i, .learning-scene .cs-sh, .learning-scene .is-new{ transition:none; animation:none; } }
+@media print{ .learning-scene-controls{ display:none; } }

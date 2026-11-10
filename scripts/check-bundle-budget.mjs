@@ -186,6 +186,8 @@ const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 // 12.2, largest visual group chunk 6.5, all 27 visual chunks 64.4 — each budget leaves room for normal growth, not for a design
 // change (a body bundled again, the visuals packed into one chunk, the table of contents carrying page bodies).
 export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 40, manifest: 15, visualGroup: 9, visualsTotal: 75 });
+// 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §7.3) — the scene engine's own lazy chunk, gzip KB (measured 4.0).
+export const SCENE_ENGINE_GZIP_BUDGET_KB = 8;
 // The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`, and for the summary
 // booklet course `"791381s-m01-l01-p01"` — a course id is the 6-digit book number with an optional letter suffix).
 const MANIFEST_SIGNATURE = /[`"']\d{6}[a-z]?-m\d\d-l\d\d-p\d\d[`"']/;
@@ -613,6 +615,16 @@ function main() {
   for (const f of examItemChunks) if (initial.includes(f) || readerClosure.includes(f)) failures.push(`${f} (the exam-item view) is part of a static graph — it must load through import() only`);
   for (const f of readerClosure) if (/^StudentQuestionCard-[^.]+\.js$/.test(f)) failures.push(`${f} (the student question card) is in the Reader's first-load graph — exam items must stay lazy`);
   console.log(`Exam-item view chunk: ${examItemChunks.join(", ") || "(missing)"} — none in the Reader's first load`);
+  // 899371 enrichment P11 — the animated scene engine (animation / csharp-scene / v1): ONE lazy chunk, never in the initial or the
+  // Reader's first-load graph, within its 8 KB gzip budget (plan §7.3: every scene is data, the engine is small).
+  const sceneChunks = all.filter(f => /^CSharpSceneActivity-[^.]+\.js$/.test(f));
+  if (sceneChunks.length !== 1) failures.push(`expected ONE CSharpSceneActivity-*.js lazy chunk, found ${sceneChunks.length}`);
+  for (const f of sceneChunks) {
+    if (initial.includes(f) || readerClosure.includes(f)) failures.push(`${f} (the scene engine) is part of a static graph — it must load through import() only`);
+    const gz = zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length / 1024;
+    if (gz > SCENE_ENGINE_GZIP_BUDGET_KB) failures.push(`the scene engine ${f} is ${gz.toFixed(1)} KB gzip — over its ${SCENE_ENGINE_GZIP_BUDGET_KB} KB budget`);
+    console.log(`Scene engine chunk: ${f} (${gz.toFixed(1)} KB gzip, budget ${SCENE_ENGINE_GZIP_BUDGET_KB}) — lazy, none in the Reader's first load`);
+  }
   const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
   console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
   console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);
