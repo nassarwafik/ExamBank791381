@@ -39,6 +39,12 @@
 .ai-composer-issues{margin:0;padding-inline-start:18px;font-size:12px;max-height:180px;overflow:auto}
 .ai-composer-blocking{border-inline-start:3px solid var(--eb-danger);padding-inline-start:8px}
 .ai-composer-warnings{border-inline-start:3px solid var(--eb-warn);padding-inline-start:8px}
+/* 21S — warnings grouped by question */
+.ai-composer-warn-group{margin-block:8px;padding-block-end:6px;border-block-end:1px solid var(--eb-border)}
+.ai-composer-warn-group:last-child{border-block-end:0}
+.ai-composer-warn-head{margin:0 0 4px}
+.ai-composer-warn-section,.ai-composer-warn-excerpt{color:var(--eb-muted)}
+.ai-composer-warn-excerpt{overflow-wrap:anywhere}
 .ai-composer-plan ol{margin:0;padding-inline-start:18px;font-size:12px}
 .ai-composer-confirm,.ai-composer-staged-note{border:1px solid var(--eb-warn);background:var(--eb-warn-bg,#fffbeb);color:var(--eb-warn-tx,#92400e);border-radius:var(--eb-r-sm,6px);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
 .ai-composer-confirm p,.ai-composer-staged-note p{margin:0;font-weight:700}
