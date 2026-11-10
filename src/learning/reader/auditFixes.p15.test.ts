@@ -3,7 +3,8 @@
 // 44 px touch targets), each pinned here at the source:
 //   1. the template editor's «استعادة كل الفراغات» (a workspace button) was 30 px high on a phone (WCAG 2.5.5, the 44 px rule the
 //      template's own per-gap «استعادة» already follows) → on a narrow screen it is ≥ 44 px too — in the Reader and in the exam alike;
-//   2. (P14, pinned) the Reader's editor draws Monaco's dimmed last line number in the editor's own text colour (axe color-contrast);
+//   2. (P14) Monaco's dimmed last line number — now fixed in the editor themes themselves for the exam and the Reader alike
+//      (P17, src/coding/editor/editorTheme.p17.test.ts);
 //   3. an example's input / output box and a run's output scroll but could not be reached by keyboard (axe scrollable-region-focusable,
 //      24 «حلّ وافحص» pages × 4) → each is a focusable named region (coding.17e-b IDE27, codingTemplate.19f U6) with a visible focus
 //      ring (here).
@@ -41,8 +42,5 @@ describe("899371 P15 — the second final audit's fixes", () => {
   });
   it("3. a focusable example / output box shows its focus", () => {
     expect(decls(read("src/coding/coding.css"), ".cx-io-block pre:focus-visible").outline).toBe("var(--eb-focus-ring)");
-  });
-  it("2. (P14) the Reader's editor draws Monaco's dimmed last line number in the editor's text colour", () => {
-    expect(decls(read("src/learning/reader/codeRun.css"), ".learning-solve .monaco-editor .line-numbers.dimmed-line-number").color).toBe("inherit");
   });
 });

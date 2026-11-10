@@ -39,6 +39,3 @@
 .learning-solve-card{ margin-top:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
 .learning-solve-idea{ margin:0 0 var(--eb-space-2); color:var(--eb-text); }
 .learning-solve-reference{ max-height:28em; overflow:auto; }
-/* Monaco dims the number of the last empty line to 40 % of the line-number colour (axe: below the contrast minimum); in the Reader's
-   editor it inherits the editor's own text colour instead (light or dark theme alike). */
-.learning-solve .monaco-editor .line-numbers.dimmed-line-number{ color:inherit; }
