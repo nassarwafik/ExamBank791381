@@ -63,7 +63,6 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 
 const failures = [];
 const check = (ok, what) => { console.log((ok ? "  ✓ " : "  ✗ ") + what); if (!ok) failures.push(what); };
-const served = id => JSON.parse(fs.readFileSync(path.join(root, "api/src/data/learning-content", CID, id + ".json"), "utf8"));
 const shot = async (page, name) => { if (process.env.SHOT_DIR) await page.screenshot({ path: path.join(process.env.SHOT_DIR, name + ".png") }); };
 
 async function session(role, viewport, { touch = false, readTheme = "light" } = {}) {
@@ -96,7 +95,7 @@ const INDEX = JSON.parse(fs.readFileSync(path.join(root, "api/src/data/learning-
 const EXKEY = "899371-m05-l04-p01/m05-l04-p01-q01-code";
 const EX = INDEX[EXKEY];
 const [BOOKKEY, BOOK] = Object.entries(INDEX).find(([, t]) => t.kind === "book" && t.moduleId === "899371-m05");
-const BOOKPAGE = BOOKKEY.split("/")[0], BOOKBLOCK = BOOKKEY.split("/")[1];
+const BOOKPAGE = BOOKKEY.split("/")[0];
 check(!!EX && !!BOOK, "the chapter 5 exercise and book traces exist in the server's index (" + BOOKKEY + ")");
 const lastOut = t => t.steps[t.steps.length - 1].out;
 const WATCH = "شاهد التنفيذ خطوة بخطوة";

@@ -135,7 +135,7 @@ function main() {
   for (const t of todo) {
     delete runs[t.key]; delete skipped[t.key];
     if (t.skip) { skipped[t.key] = t.skip; console.log("  – " + t.key + ": " + t.skip); continue; }
-    const { source, offset } = runSource(t);
+    const { source } = runSource(t);
     const inst = instrumented[t.key];
     if (inst.error) { skipped[t.key] = "instrumenter: " + inst.error; bad++; console.log("  ✗ " + t.key + ": " + inst.error); continue; }
     const clean = executeCSharp(source, [t.stdin ?? ""], env);
