@@ -4,7 +4,7 @@ import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
-import { groupComposerWarnings, reviewPatchWarnings, type GroupedWarnings } from "./composerWarningGroups";
+import { groupComposerWarnings, reviewPatchWarnings, type GroupedWarnings, type WarningGroup } from "./composerWarningGroups";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
 import { composerSimulatorsBySubject } from "./composerSimSummary";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
@@ -37,6 +37,8 @@ type Props = {
   disabled?: boolean;
   /** Phase 21I — the builder prompt's request mapped onto the generate form (the teacher reviews it; nothing runs before «توليد»). */
   prefill?: ComposerPrefill | null;
+  /** Phase 21U — after an apply, «تحرير هذا السؤال» closes the dialog and asks the builder to open that question (by its id). */
+  onRevealQuestion?: (questionId: string) => void;
 };
 
 type Tab = "generate" | "modifyExam" | "generateSection" | "question" | "presentation";
@@ -80,6 +82,9 @@ function stagedVerdict(exam: StructuredExam, result: GenerationResult): Composer
   return extra.length ? { ...v, ok: false, blocking: [...v.blocking, ...extra], summary: { ...v.summary, blocking: v.blocking.length + extra.length } } : v;
 }
 
+/** Every warning of a staged generated draft: the plan's, the sections', and the verdict's on the draft as it is now. */
+const stagedWarnings = (s: { result: GenerationResult; verdict: ComposerVerdict }) => [...s.result.planWarnings, ...s.result.warnings, ...s.verdict.warnings];
+
 function IssueList({ issues, label }: { issues: { message: string }[]; label: string }) {
   if (!issues.length) return null;
   return (
@@ -91,7 +96,7 @@ function IssueList({ issues, label }: { issues: { message: string }[]; label: st
 }
 
 /** 21S / 21T — warnings grouped by question: the exam-level ones first, then one group per question with a preview of that question alone. */
-function WarningGroups({ grouped, heading, testId, onPreview, note }: { grouped: GroupedWarnings; heading: string; testId: string; onPreview: (exam: StructuredExam) => void; note?: string }) {
+function WarningGroups({ grouped, heading, testId, onPreview, note, onEdit }: { grouped: GroupedWarnings; heading: string; testId: string; onPreview: (exam: StructuredExam) => void; note?: string; onEdit?: (questionId: string) => void }) {
   return (
     <div className="ai-composer-warnings" data-testid={testId}>
       <h4>{heading}</h4>
@@ -110,14 +115,17 @@ function WarningGroups({ grouped, heading, testId, onPreview, note }: { grouped:
             {q.excerpt && <span className="ai-composer-warn-excerpt"> — {q.excerpt}</span>}
           </p>
           <IssueList issues={q.messages.map(m => ({ message: "⚠ " + m }))} label={"تنبيهات السؤال " + q.number} />
-          <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
+          <div className="ai-composer-warn-actions">
+            {onEdit && <button type="button" className="sb-btn sb-btn-small sb-btn-primary" onClick={() => onEdit(q.questionId)}>تحرير هذا السؤال</button>}
+            <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
+          </div>
         </div>
       ))}
     </div>
   );
 }
 
-export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled, prefill }: Props) {
+export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled, prefill, onRevealQuestion }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [m, dispatch] = useReducer(composerReducer<ReadyResult>, undefined, () => initialComposer<ReadyResult>());
   const [tab, setTab] = useState<Tab>("generate");
@@ -229,6 +237,8 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
   // An apply is ONE functional builder update; only that updater knows whether the exam it received was still the one the result was
   // computed for (an edit may be queued between the dry run and the update). Its verdict is read after the update ran (next task), so a
   // refused update is reported STALE — never «تم التطبيق» with nothing applied.
+  // 21U — the questions the applied result still warns about (ids as they are in the builder after the apply), for «تحرير هذا السؤال»
+  const [appliedReview, setAppliedReview] = useState<WarningGroup[]>([]);
   const applyBox = () => ({ v: "pending" as "pending" | "applied" | "stale" });
   const settle = (box: { v: "pending" | "applied" | "stale" }, onApplied?: () => void) => {
     setTimeout(() => { if (box.v === "applied") { onApplied?.(); dispatch({ type: "APPLIED" }); } else dispatch({ type: "STALE" }); }, 0);
@@ -261,7 +271,8 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
       return withComposerHistory(next, entry);
     });
     if (outcome !== "ok") { dispatch({ type: "STALE" }); return; }
-    settle(box, () => { setStaged(null); setModifyTarget("builder"); });
+    const review = groupComposerWarnings(s.result.exam, stagedWarnings(s)).questions;   // the generated sections land as they are (same ids)
+    settle(box, () => { setStaged(null); setModifyTarget("builder"); setAppliedReview(review); });
   };
 
   // ── apply: a patch → builder exam, or → the staged generated draft ────────────────────────────────────────────────────────────────
@@ -294,11 +305,12 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     if (examRevision(latest) !== mod.patch.baseRevision) { dispatch({ type: "STALE" }); return; }
     const dry = applyComposerPatch(latest, mod.patch, { selected, now, request });
     if (!dry.ok) { if (dry.code === "STALE_REVISION") dispatch({ type: "STALE" }); else setApplyIssues(dry.issues); return; }
+    const review = reviewPatchWarnings(latest, mod.patch, { selected })?.introduced.questions ?? [];   // what THIS apply introduces
     dispatch({ type: "APPLY" });
     const box = applyBox();
     const outcome = onApply(prev => { const r = applyComposerPatch(prev, mod.patch, { selected, now, request }); box.v = r.ok ? "applied" : "stale"; return r.ok ? r.exam : prev; });
     if (outcome !== "ok") { dispatch({ type: "STALE" }); return; }
-    settle(box);
+    settle(box, () => setAppliedReview(review));
   };
   const cancelPatch = () => { setApplyIssues([]); if (readyModify?.target === "staged" && staged) showStaged(); else dispatch({ type: "RESET" }); };
   const refineStaged = () => { setModifyTarget("staged"); setTab("modifyExam"); setInstruction(""); setSectionScope(""); dispatch({ type: "RESET" }); };
@@ -356,7 +368,7 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
 
   const generationView = (s: Staged) => {
     const v = s.verdict, sum = v.summary;
-    const warnings = [...s.result.planWarnings, ...s.result.warnings, ...v.warnings];
+    const warnings = stagedWarnings(s);
     const typeMix = Object.entries(sum.typeMix);
     return (
       <section className="ai-composer-result" aria-labelledby={uid + "-gen-head"}>
@@ -480,6 +492,12 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     <section className="ai-composer-result" aria-labelledby={uid + "-applied-head"}>
       <h3 id={uid + "-applied-head"} ref={resultHeadRef} tabIndex={-1}>تم التطبيق</h3>
       <p className="sb-hint">طُبّق التعديل كخطوة واحدة في سجل التعديلات.</p>
+      {appliedReview.length > 0 && onRevealQuestion && (
+        // 21U: from the warning to the editor — each question the applied result still warns about opens in the builder
+        <WarningGroups grouped={{ examLevel: [], questions: appliedReview, total: appliedReview.reduce((n, g) => n + g.messages.length, 0) }}
+          heading="أسئلة تحتاج مراجعتك في المحرر" testId="ai-composer-applied-warnings" onPreview={onPreview}
+          note="«تحرير هذا السؤال» يغلق النافذة ويفتح السؤال في المحرر." onEdit={id => { onClose(); onRevealQuestion(id); }} />
+      )}
       <div className="ai-composer-actions">
         {onUndo && <button type="button" className="sb-btn" onClick={() => { onUndo(); onClose(); }}>تراجع</button>}
         <button type="button" className="sb-btn sb-btn-primary" onClick={onClose}>إغلاق</button>
