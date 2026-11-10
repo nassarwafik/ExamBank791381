@@ -6,6 +6,10 @@
 //     GET  /healthz           → { ok: true }                               (no auth; reveals nothing)
 //     GET  /v1/capabilities   → { ok, available, languages: [{ key, languageVersion }] }   (signed)
 //     POST /v1/execute        → { ok: true, result } | { ok: false, code }                  (signed)
+//     POST /v1/check          → { ok: true, suite: { compile?, cases: [{ token, status, stdout, stderr, exitCode?, durationMs }] } }
+//                               | 400 REQUEST_INVALID | 422 LANGUAGE_UNAVAILABLE | 503 RUNNER_BUSY | 502 CHECK_FAILED   (signed;
+//                               899371 enrichment P18, decision D4-b: one program on a few inputs, compiled ONCE, a fresh sandbox
+//                               per case, one case at a time, raw evidence only — it holds ONE practice slot and never an official one)
 //     POST /v1/official-grading-jobs → 202 { ok, accepted, duplicate } | 409 JOB_ID_CONFLICT | 409 STALE_REVISION (17D-B2) |
 //                               503 RUNNER_BUSY (full, or the job could not be journaled) | 503 GRADING_UNAVAILABLE (no callback
 //                               destination or no durable journal configured)  (signed; Phase 17C, official.js)
@@ -17,11 +21,13 @@ const http = require("node:http");
 const { verifyRequest, createReplayGuard, HEADERS } = require("./auth.js");
 const { validateExecuteRequest } = require("./validate.js");
 const { resolveLanguage } = require("./registry.js");
-const { validateOfficialJobRequest } = require("./official.js");
+const { validateOfficialJobRequest, validateCheckRequest, checkWallMs } = require("./official.js");
 
 const MAX_BODY_BYTES = 512 * 1024;
 const OFFICIAL_MAX_BODY_BYTES = 2 * 1024 * 1024;     // 64 KB source + 256 KB stdin, with worst-case JSON escaping
-const ROUTES = new Set(["GET /v1/capabilities", "POST /v1/execute", "POST /v1/official-grading-jobs"]);
+const ROUTES = new Set(["GET /v1/capabilities", "POST /v1/execute", "POST /v1/check", "POST /v1/official-grading-jobs"]);
+// a practice check runs its cases one at a time inside the ONE practice slot it holds: its own pool, never the official slots
+const PRACTICE_CASE_POOL = Object.freeze({ acquire: async () => () => {} });
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 
 class BodyTooLarge extends Error {}
@@ -65,6 +71,7 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
     let parsed;
     try { parsed = JSON.parse(body.toString("utf8")); } catch { return send(res, 400, { ok: false, code: "REQUEST_INVALID" }); }
     if (route === "POST /v1/official-grading-jobs") return official(res, parsed, auth.requestId);
+    if (route === "POST /v1/check") return check(req, res, parsed, auth.requestId);
     if (!parsed || typeof parsed !== "object" || parsed.requestId !== auth.requestId) {
       if (parsed && typeof parsed === "object" && typeof parsed.requestId === "string") { log("warn", "runner.request.unauthorized", { reason: "request-id-binding" }); return send(res, 401, { ok: false, code: "UNAUTHORIZED" }); }
       return send(res, 400, { ok: false, code: "REQUEST_INVALID" });
@@ -87,6 +94,40 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
       log("warn", "runner.execute.failed", { requestId: request.requestId, language: entry.key, durationMs: now() - t0 });
       return send(res, 200, { ok: true, result: { status: "internal-error", stdout: "", stderr: "" } });
     } finally {
+      active--;
+    }
+  }
+
+  async function check(req, res, parsed, requestId) {
+    if (!parsed || typeof parsed !== "object" || parsed.requestId !== requestId) {
+      if (parsed && typeof parsed === "object" && typeof parsed.requestId === "string") { log("warn", "runner.request.unauthorized", { reason: "request-id-binding" }); return send(res, 401, { ok: false, code: "UNAUTHORIZED" }); }
+      return send(res, 400, { ok: false, code: "REQUEST_INVALID" });
+    }
+    if (typeof sandbox.runOfficialSuite !== "function") return send(res, 404, { ok: false, code: "NOT_FOUND" });
+    const v = validateCheckRequest(parsed);
+    if (!v.ok) { log("warn", "runner.check.refused", { requestId, reason: "invalid" }); return send(res, 400, { ok: false, code: "REQUEST_INVALID" }); }
+    const job = v.check, entry = resolveLanguage(job.language, job.languageVersion);
+    let offered = [];
+    try { offered = await sandbox.availableLanguages(); } catch { offered = []; }
+    if (!offered.some(l => l.key === entry.key && l.languageVersion === entry.languageVersion)) return send(res, 422, { ok: false, code: "LANGUAGE_UNAVAILABLE" });
+    if (active >= maxConcurrency) { log("warn", "runner.check.busy", { requestId, active }); return send(res, 503, { ok: false, code: "RUNNER_BUSY" }); }
+    active++;
+    const t0 = now();
+    // a hard wall, and the client hanging up, both stop the remaining cases (no sandbox is left behind: each run is force-removed)
+    const controller = new AbortController();
+    const wall = setTimeout(() => controller.abort(), checkWallMs(entry, job));
+    const hangUp = () => { if (!res.writableEnded) controller.abort(); };
+    res.on("close", hangUp);
+    try {
+      const suite = await sandbox.runOfficialSuite(entry, job, { signal: controller.signal, caseConcurrency: 1, slotPool: PRACTICE_CASE_POOL });
+      log("info", "runner.check.completed", { requestId, language: entry.key, cases: job.cases.length, compile: suite.compile ? suite.compile.status : "none", statuses: (suite.cases || []).map(c => c.status), durationMs: now() - t0 });
+      return send(res, 200, { ok: true, suite });
+    } catch {
+      log("warn", "runner.check.failed", { requestId, language: entry.key, cases: job.cases.length, durationMs: now() - t0 });
+      if (!res.writableEnded && !res.destroyed) return send(res, 502, { ok: false, code: "CHECK_FAILED" });
+    } finally {
+      clearTimeout(wall);
+      res.off("close", hangUp);
       active--;
     }
   }
