@@ -76,8 +76,11 @@ describe("899371 P11 — the animated scenes", () => {
       for (const say of c!.says) {
         expect(say.trim().length, x.block.id).toBeGreaterThan(3);
         expect((say.split("`").length - 1) % 2, x.block.id + ": " + say).toBe(0);
-        // a C# call or operator written bare in an Arabic sentence would reorder; it must sit inside `…`
-        expect(say.replace(/`[^`]*`/g, ""), x.block.id + ": " + say).not.toMatch(/[A-Za-z]+\.[A-Za-z]+\(|[A-Za-z_]\w*\s*(==|>=|<=|&&|\|\||\+=)\s*\w/);
+        // C# written bare in an Arabic sentence would reorder; it must sit inside `…`: a member (`a.Length`), a call or an index
+        // (`Next(`, `a[`), or a name with an operator (`a.Length - 1`, `i <= 3`, `sum += x`, `i++`)
+        const bare = say.replace(/`[^`]*`/g, "");
+        expect(bare, x.block.id + ": " + say).not.toMatch(/[A-Za-z_]\w*\.[A-Za-z_]\w*|[A-Za-z_]\w*\s*[([]/);
+        expect(bare, x.block.id + ": " + say).not.toMatch(/[A-Za-z_]\w*\s*([-+*/%<>]|[=!<>]=|&&|\|\||\+\+|--)\s*[\w(]/);
       }
     }
   });
