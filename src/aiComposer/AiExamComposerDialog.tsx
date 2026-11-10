@@ -4,7 +4,7 @@ import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
-import { groupComposerWarnings } from "./composerWarningGroups";
+import { groupComposerWarnings, reviewPatchWarnings, type GroupedWarnings } from "./composerWarningGroups";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
 import { composerSimulatorsBySubject } from "./composerSimSummary";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
@@ -87,6 +87,33 @@ function IssueList({ issues, label }: { issues: { message: string }[]; label: st
       {issues.slice(0, ISSUE_LIMIT).map((i, n) => <li key={n}>{i.message}</li>)}
       {issues.length > ISSUE_LIMIT && <li>… و{issues.length - ISSUE_LIMIT} أخرى</li>}
     </ul>
+  );
+}
+
+/** 21S / 21T — warnings grouped by question: the exam-level ones first, then one group per question with a preview of that question alone. */
+function WarningGroups({ grouped, heading, testId, onPreview, note }: { grouped: GroupedWarnings; heading: string; testId: string; onPreview: (exam: StructuredExam) => void; note?: string }) {
+  return (
+    <div className="ai-composer-warnings" data-testid={testId}>
+      <h4>{heading}</h4>
+      {note && <p className="sb-hint">{note}</p>}
+      {grouped.examLevel.length > 0 && (
+        <div className="ai-composer-warn-group">
+          <p className="ai-composer-warn-head"><strong>على مستوى الامتحان</strong></p>
+          <IssueList issues={grouped.examLevel.map(m => ({ message: "⚠ " + m }))} label="تنبيهات على مستوى الامتحان" />
+        </div>
+      )}
+      {grouped.questions.map(q => (
+        <div key={q.questionId} className="ai-composer-warn-group" data-testid="ai-composer-warn-question" data-question-id={q.questionId}>
+          <p className="ai-composer-warn-head">
+            <strong>السؤال {q.number}</strong>
+            {q.sectionTitle && <span className="ai-composer-warn-section"> · {q.sectionTitle}</span>}
+            {q.excerpt && <span className="ai-composer-warn-excerpt"> — {q.excerpt}</span>}
+          </p>
+          <IssueList issues={q.messages.map(m => ({ message: "⚠ " + m }))} label={"تنبيهات السؤال " + q.number} />
+          <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -241,6 +268,13 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
   const readyModify = m.name === "ready" && m.result?.kind === "modify" ? m.result : null;
   const groups = useMemo(() => (readyModify ? patchGroups(readyModify.mod.patch) : []), [readyModify]);
   const selectedOps = (all: boolean): number[] => (all ? groups.flat() : groups.filter((_, g) => !unselectedGroups.has(g)).flat()).sort((a, b) => a - b);
+  // 21T: the warnings the SELECTED operations would introduce, computed by a dry run of the real apply against the exam the patch targets
+  const patchReview = useMemo(() => {
+    if (!readyModify) return null;
+    const base = readyModify.target === "staged" ? staged?.result.exam : exam;
+    const selected = groups.filter((_, g) => !unselectedGroups.has(g)).flat().sort((a, b) => a - b);
+    return base ? reviewPatchWarnings(base, readyModify.mod.patch, { selected, intent: readyModify.target === "staged" ? staged?.result.intent : null }) : null;
+  }, [readyModify, staged, exam, groups, unselectedGroups]);
   const applyPatch = (all: boolean) => {
     if (!readyModify || disabled) return;
     const selected = selectedOps(all);
@@ -348,32 +382,10 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
           </table>
         )}
         {v.blocking.length > 0 && <div className="ai-composer-blocking"><h4>مشكلات مانعة</h4><IssueList issues={v.blocking} label="مشكلات مانعة" /></div>}
-        {warnings.length > 0 && (() => {
+        {warnings.length > 0 && (
           // 21S: warnings grouped by question (exam order), each with a preview of that question alone; the rest at exam level
-          const g = groupComposerWarnings(s.result.exam, warnings);
-          return (
-            <div className="ai-composer-warnings" data-testid="ai-composer-warnings">
-              <h4>تنبيهات</h4>
-              {g.examLevel.length > 0 && (
-                <div className="ai-composer-warn-group">
-                  <p className="ai-composer-warn-head"><strong>على مستوى الامتحان</strong></p>
-                  <IssueList issues={g.examLevel.map(m => ({ message: "⚠ " + m }))} label="تنبيهات على مستوى الامتحان" />
-                </div>
-              )}
-              {g.questions.map(q => (
-                <div key={q.questionId} className="ai-composer-warn-group" data-testid="ai-composer-warn-question" data-question-id={q.questionId}>
-                  <p className="ai-composer-warn-head">
-                    <strong>السؤال {q.number}</strong>
-                    {q.sectionTitle && <span className="ai-composer-warn-section"> · {q.sectionTitle}</span>}
-                    {q.excerpt && <span className="ai-composer-warn-excerpt"> — {q.excerpt}</span>}
-                  </p>
-                  <IssueList issues={q.messages.map(m => ({ message: "⚠ " + m }))} label={"تنبيهات السؤال " + q.number} />
-                  <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+          <WarningGroups grouped={groupComposerWarnings(s.result.exam, warnings)} heading="تنبيهات" testId="ai-composer-warnings" onPreview={onPreview} />
+        )}
         {showPlan && (
           <div className="ai-composer-plan" data-testid="ai-composer-plan">
             <h4>خطة الامتحان</h4>
@@ -440,6 +452,15 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
         </ul>
         {r.mod.diff.length > DIFF_LIMIT && <p className="sb-hint">يُعرض أول {DIFF_LIMIT} تعديل من {r.mod.diff.length}.</p>}
         {r.mod.warnings.length > 0 && <IssueList issues={r.mod.warnings.map(w => ({ message: "⚠ " + w.message }))} label="تنبيهات" />}
+        {patchReview && (patchReview.introduced.total > 0 || patchReview.resolved > 0) && (
+          <WarningGroups
+            grouped={patchReview.introduced}
+            heading={patchReview.introduced.total > 0 ? "تنبيهات جديدة بعد التعديل" : "التنبيهات بعد التعديل"}
+            testId="ai-composer-patch-warnings"
+            onPreview={onPreview}
+            note={(patchReview.introduced.total > 0 ? "تنبيهات يُدخلها التعديل المحدد؛ المعاينة تعرض السؤال بعد التعديل." : "لا يُدخل التعديل المحدد تنبيهات جديدة.") + (patchReview.resolved > 0 ? " ويزيل " + patchReview.resolved + " من تنبيهات الامتحان الحالية." : "")}
+          />
+        )}
         {applyIssues.length > 0 && (
           <div role="alert" className="ai-composer-alert">
             <p className="ai-composer-alert-title">رُفض التطبيق: التعديل المحدد يُدخل مشكلة جديدة أو غير صالح. لم يتغيّر الامتحان.</p>
