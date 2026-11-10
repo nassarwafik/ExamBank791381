@@ -4,7 +4,7 @@ import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
-import { groupComposerWarnings, reviewPatchWarnings, type GroupedWarnings, type WarningGroup } from "./composerWarningGroups";
+import { groupComposerWarnings, regenerateInstruction, reviewPatchWarnings, type GroupedWarnings, type WarningGroup } from "./composerWarningGroups";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
 import { composerSimulatorsBySubject } from "./composerSimSummary";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
@@ -96,7 +96,7 @@ function IssueList({ issues, label }: { issues: { message: string }[]; label: st
 }
 
 /** 21S / 21T — warnings grouped by question: the exam-level ones first, then one group per question with a preview of that question alone. */
-function WarningGroups({ grouped, heading, testId, onPreview, note, onEdit }: { grouped: GroupedWarnings; heading: string; testId: string; onPreview: (exam: StructuredExam) => void; note?: string; onEdit?: (questionId: string) => void }) {
+function WarningGroups({ grouped, heading, testId, onPreview, note, onEdit, onRegenerate }: { grouped: GroupedWarnings; heading: string; testId: string; onPreview: (exam: StructuredExam) => void; note?: string; onEdit?: (questionId: string) => void; onRegenerate?: (questionId: string, messages: readonly string[]) => void }) {
   return (
     <div className="ai-composer-warnings" data-testid={testId}>
       <h4>{heading}</h4>
@@ -117,6 +117,7 @@ function WarningGroups({ grouped, heading, testId, onPreview, note, onEdit }: { 
           <IssueList issues={q.messages.map(m => ({ message: "⚠ " + m }))} label={"تنبيهات السؤال " + q.number} />
           <div className="ai-composer-warn-actions">
             {onEdit && <button type="button" className="sb-btn sb-btn-small sb-btn-primary" onClick={() => onEdit(q.questionId)}>تحرير هذا السؤال</button>}
+            {onRegenerate && <button type="button" className="sb-btn sb-btn-small" onClick={() => onRegenerate(q.questionId, q.messages)}>أعد توليد هذا السؤال</button>}
             <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
           </div>
         </div>
@@ -215,7 +216,17 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     const req = modifyRequest();
     const text = instruction.trim();
     if (!req || !text || busy || disabled) return;
-    const target: "builder" | "staged" = modifyTarget === "staged" && staged ? "staged" : "builder";
+    await runModifyRequest(req, text, modifyTarget === "staged" && staged ? "staged" : "builder");
+  };
+  // 21V — «أعد توليد هذا السؤال»: a one-question replacement (mode replaceQuestion, scope that question) asked with its own warnings.
+  // The «السؤال المحدد» form is set to the same request, so «إعادة الطلب» repeats it and the teacher sees the instruction sent.
+  const regenerate = (questionId: string, messages: readonly string[], target: "builder" | "staged") => {
+    if (busy || disabled || (target === "staged" && !staged)) return;
+    const text = regenerateInstruction(messages);
+    setModifyTarget(target); setTab("question"); setQuestionId(questionId); setQuestionAction("replaceQuestion"); setInstruction(text); setSectionScope("");
+    void runModifyRequest({ mode: "replaceQuestion", scope: { kind: "question", questionId } }, text, target);
+  };
+  const runModifyRequest = async (req: { mode: ComposerMode; scope: ComposerScope }, text: string, target: "builder" | "staged") => {
     const base = target === "staged" && staged ? staged.result.exam : getLatestExam();
     setLastAction("modify");
     const { run, ctrl } = begin();
@@ -396,7 +407,8 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
         {v.blocking.length > 0 && <div className="ai-composer-blocking"><h4>مشكلات مانعة</h4><IssueList issues={v.blocking} label="مشكلات مانعة" /></div>}
         {warnings.length > 0 && (
           // 21S: warnings grouped by question (exam order), each with a preview of that question alone; the rest at exam level
-          <WarningGroups grouped={groupComposerWarnings(s.result.exam, warnings)} heading="تنبيهات" testId="ai-composer-warnings" onPreview={onPreview} />
+          <WarningGroups grouped={groupComposerWarnings(s.result.exam, warnings)} heading="تنبيهات" testId="ai-composer-warnings" onPreview={onPreview}
+            onRegenerate={disabled ? undefined : (id, msgs) => regenerate(id, msgs, "staged")} />
         )}
         {showPlan && (
           <div className="ai-composer-plan" data-testid="ai-composer-plan">
@@ -496,7 +508,8 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
         // 21U: from the warning to the editor — each question the applied result still warns about opens in the builder
         <WarningGroups grouped={{ examLevel: [], questions: appliedReview, total: appliedReview.reduce((n, g) => n + g.messages.length, 0) }}
           heading="أسئلة تحتاج مراجعتك في المحرر" testId="ai-composer-applied-warnings" onPreview={onPreview}
-          note="«تحرير هذا السؤال» يغلق النافذة ويفتح السؤال في المحرر." onEdit={id => { onClose(); onRevealQuestion(id); }} />
+          note="«تحرير هذا السؤال» يغلق النافذة ويفتح السؤال في المحرر." onEdit={id => { onClose(); onRevealQuestion(id); }}
+          onRegenerate={disabled ? undefined : (id, msgs) => regenerate(id, msgs, "builder")} />
       )}
       <div className="ai-composer-actions">
         {onUndo && <button type="button" className="sb-btn" onClick={() => { onUndo(); onClose(); }}>تراجع</button>}

@@ -10,6 +10,7 @@ import type { BuilderQuestion, BuilderSection, StructuredExam } from "../examTyp
 import type { AiExamIntentV1 } from "./composerIntent";
 import { composerVerdict } from "./composerExam";
 import { applyComposerPatch, type AiExamPatchV1 } from "./composerPatch";
+import { COMPOSER_LIMITS } from "./composerLimits";
 
 export type ComposerWarning = { message: string; code?: string; questionId?: string };
 export type WarningGroup = { questionId: string; number: number; sectionTitle: string; excerpt: string; messages: string[]; preview: StructuredExam };
@@ -50,4 +51,18 @@ export function reviewPatchWarnings(exam: StructuredExam, patch: AiExamPatchV1, 
   const after = composerVerdict(r.exam, { intent: opts.intent ?? null }).warnings;
   const had = new Set(before.map(warningKey)), has = new Set(after.map(warningKey));
   return { introduced: groupComposerWarnings(r.exam, after.filter(w => !had.has(warningKey(w)))), resolved: new Set(before.filter(w => !has.has(warningKey(w))).map(warningKey)).size };
+}
+
+// Phase 21V — «أعد توليد هذا السؤال»: the instruction a one-question replacement is asked with — the same idea, the same type and the
+// same marks, and the question's own warnings to fix. Code-built (the teacher sees and can edit it in «السؤال المحدد»), bounded by the
+// composer's instruction limit; the replacement still goes through the patch validator, the diff and an explicit «تطبيق».
+export const REGENERATE_LEAD = "أعد كتابة هذا السؤال كاملًا بسؤال بديل يقيس الفكرة نفسها، بالنوع نفسه والعلامة نفسها، وعالج هذه الملاحظات:";
+export function regenerateInstruction(messages: readonly string[]): string {
+  let out = REGENERATE_LEAD;
+  for (const m of unique(messages.map(x => String(x).replace(/\s+/g, " ").trim()).filter(Boolean))) {
+    const line = "\n- " + m;
+    if (out.length + line.length > COMPOSER_LIMITS.instructionChars) break;
+    out += line;
+  }
+  return out;
 }
