@@ -84,17 +84,32 @@
   {
    "book": "c11-h-q2",
    "reuse": "CL899371-11-Q01",
+   "hidden": [
+    "Huda\n70\nTrue\nKarim\n85\nFalse\n",
+    "Basel\n91\nFalse\nDana\n91\nFalse\n",
+    "Ziad\n100\nTrue\nLama\n60\nTrue\n",
+    "Omar\n50\nFalse\nSara\n54\nTrue\n",
+    "Tala\n0\nFalse\nNour\n0\nFalse\n",
+    "Fadi\n88.5\nTrue\nRuba\n97.25\nTrue\n"
+   ],
    "explanation": "البنائية تنسخ البارامترات إلى الحقول بـ `this`. رفع المتوسط هو `average * 1.1` مع `Math.Min(100, ...)` كي لا يتجاوز 100. في `Compare` نفحص أولًا حب المدير (إذا اختلف بين الطالبين حسم المقارنة)، وإن تساوى نقارن المتوسطين."
   },
   {
    "book": "c11-h-q3",
    "reuse": "CL899371-11-Q02",
+   "hidden": [
+    "Times\n20\nUUUU\n",
+    "Courier\n8\nDDD\n",
+    "Arial Black\n12\nIIIIIIIIII\n",
+    "Segoe\n18\nUDUIU\n",
+    "Georgia\n13\nIUDU\n",
+    "Helvetica\n72\nDUUDUU\n"
+   ],
    "explanation": "البنائية المبسطة تعطي `name` و`size` قيمتيهما، و`false` للتشديد وللخط التحتي. `Increase` و`Decrease` تغيّران `size` بواحد، و`ToggleUnderline` تقلب الحالة بـ `underline = !underline`."
   },
   {
    "book": "c11-h-q4",
    "version": 3,
-   "check": false,
    "text": "في الكتاب تعارض في الأسماء (isTopSeller مقابل IsLeadingSeller، وSellersGroup مقابل SellerGroup)؛ هنا الخاصية isTopSeller وعمليتها GetIsTopSeller، والعملية SellersGroup. اكتب البنائية (4.1) وFindSeller (4.3) وSellersGroup (4.4). خانات المصفوفة غير المستعملة فارغة (null). الدالة Main مقفلة: تقرأ عدد البائعين ثم لكل بائع رقمه واسمه وTrue/False (متميز) وتقييمه، كل قيمة في سطر، ثم minRate وmaxRate؛ وتطبع ما تعيده FindSeller، ثم خانات SellersGroup الثلاث في سطر.",
    "template": [
     {
@@ -134,15 +149,27 @@
     "find": "        for (int i = 0; i < allSellers.Length; i++)\n        {\n            Seller s = allSellers[i];\n            if (s != null && s.GetIsTopSeller() && s.GetRate() > minRate && s.GetRate() < maxRate)\n                return i;\n        }\n        return -1;\n",
     "group": "        int[] groups = new int[3];\n        for (int i = 0; i < allSellers.Length; i++)\n        {\n            if (allSellers[i] != null)\n            {\n                double r = allSellers[i].GetRate();\n                if (r < 3)\n                    groups[0]++;\n                else if (r < 4)\n                    groups[1]++;\n                else\n                    groups[2]++;\n            }\n        }\n        return groups;\n"
    },
+   "wrongGaps": {
+    "ctor": "        this.sId = sId;\n        this.sName = sName;\n        this.isTopSeller = isTopSeller;\n        this.rate = rate;\n",
+    "find": "        for (int i = 0; i < allSellers.Length; i++)\n        {\n            Seller s = allSellers[i];\n            if (s != null && s.GetIsTopSeller() && s.GetRate() >= minRate && s.GetRate() <= maxRate)\n                return i;\n        }\n        return -1;\n",
+    "group": "        int[] groups = new int[3];\n        for (int i = 0; i < allSellers.Length; i++)\n        {\n            if (allSellers[i] != null)\n            {\n                double r = allSellers[i].GetRate();\n                if (r < 3)\n                    groups[0]++;\n                else if (r < 4)\n                    groups[1]++;\n                else\n                    groups[2]++;\n            }\n        }\n        return groups;\n"
+   },
    "public": [
     "5\n101\nDana\nFalse\n4.5\n102\nKarim\nTrue\n2.8\n103\nSalma\nTrue\n3.6\n104\nFadi\nTrue\n4.2\n105\nHuda\nFalse\n3\n3\n5\n"
+   ],
+   "hidden": [
+    "2\n1\nAli\nTrue\n3\n2\nMona\nTrue\n3.5\n3\n5\n",
+    "2\n7\nRami\nTrue\n5\n8\nLina\nFalse\n4\n3\n5\n",
+    "3\n1\nA\nFalse\n2.9\n2\nB\nTrue\n3\n3\nC\nTrue\n4\n2\n6\n",
+    "1\n4\nD\nTrue\n1\n0\n1\n",
+    "3\n5\nE\nTrue\n4.99\n6\nF\nTrue\n0.5\n9\nG\nFalse\n3.99\n4\n5\n"
    ],
    "explanation": "`FindSeller` تمر على المصفوفة بالترتيب وتعيد فهرس أول بائع متميز تقييمه بين الحدين (دون مساواة)، وإلا -1؛ ونفحص `!= null` لأن المصفوفة بحجم 200 وليست كلها ممتلئة. `SellersGroup` تنشئ `new int[3]` وتزيد الخانة المناسبة لكل بائع بجملة `if - else if - else`."
   },
   {
    "book": "c11-h-q5",
    "version": 3,
-   "text": "أكمل البنائية في Food (5.1)، والبنائية في Meal (5.3)، والعملية AddFood التي تضيف الطعام f فقط إذا بقي مجموع سعرات الوجبة بعد إضافته لا يزيد عن 1000 (5.4)، والعملية الخارجية Healthy (5.5). الدالة Main مقفلة: تقرأ عدد الأطعمة ثم لكل طعام اسمه وسعراته ونوعه (1 نباتي، 2 حيواني، 3 مُصنّع)، كل قيمة في سطر، وتضيفه بـ AddFood؛ ثم تطبع num وأسماء الأطعمة التي في الوجبة وما تعيده Healthy.",
+   "text": "أكمل البنائية في Food (5.1)، والبنائية في Meal (5.3)، والعملية AddFood التي تضيف الطعام f فقط إذا بقي مجموع سعرات الوجبة بعد إضافته لا يزيد عن 1000 (5.4)، والعملية الخارجية Healthy (5.5) التي تعيد healthy إذا كانت الأطعمة النباتية أكثر من الحيوانية والمصنّعة معًا. الدالة Main مقفلة: تقرأ عدد الأطعمة ثم لكل طعام اسمه وسعراته ونوعه (1 نباتي، 2 حيواني، 3 مُصنّع)، كل قيمة في سطر، وتضيفه بـ AddFood؛ ثم تطبع num وأسماء الأطعمة التي في الوجبة وما تعيده Healthy.",
    "template": [
     {
      "kind": "locked",
@@ -212,7 +239,6 @@
   {
    "book": "c11-p-q1",
    "version": 3,
-   "check": false,
    "text": "في الكتاب الخاصية canTalk وفي وصف Comp اسمها CanSpeak؛ هنا اسمها canTalk. اكتب AddMoney (1.1) وComp (1.2) والعملية الخارجية AveragePrice التي تعيد متوسط الأسعار (1.3) وSpecialOffer (1.4). الدالة Main مقفلة: تقرأ عدد الروبوتات ثم لكل روبوت اسمه وTrue/False (يتكلم) وسنة إنتاجه وسعره، كل قيمة في سطر؛ تطبع مقارنة الروبوت الأول بكل روبوت آخر، ثم متوسط السعر، ثم تنفّذ SpecialOffer وتطبع اسم كل روبوت وسعره الجديد.",
    "template": [
     {
@@ -262,8 +288,20 @@
     "avg": "        double sum = 0;\n        for (int i = 0; i < arr.Length; i++)\n            sum += arr[i].GetPrice();\n        return sum / arr.Length;\n",
     "offer": "        for (int i = 0; i < arr.Length; i++)\n            arr[i].AddMoney(-200);\n"
    },
+   "wrongGaps": {
+    "add": "        price += y;\n",
+    "comp": "        return canTalk == r.canTalk && Math.Abs(year - r.year) < 3;\n",
+    "avg": "        double sum = 0;\n        for (int i = 0; i < arr.Length; i++)\n            sum += arr[i].GetPrice();\n        return sum / arr.Length;\n",
+    "offer": "        for (int i = 0; i < arr.Length; i++)\n            arr[i].AddMoney(-200);\n"
+   },
    "public": [
     "3\nRobo\nTrue\n2020\n1500\nTiko\nTrue\n2022\n900\nMax\nFalse\n2021\n2400\n"
+   ],
+   "hidden": [
+    "3\nA\nTrue\n2020\n1000\nB\nTrue\n2023\n500\nC\nTrue\n2017\n300\n",
+    "1\nSolo\nFalse\n2010\n250\n",
+    "3\nX\nFalse\n2000\n0\nY\nFalse\n2004\n200\nZ\nTrue\n2000\n199.5\n",
+    "3\nP\nTrue\n2015\n1200.5\nQ\nFalse\n2015\n800\nR\nTrue\n2012\n600\n"
    ],
    "explanation": "`Comp` تعيد شرطًا مركبًا: `canTalk == r.canTalk && Math.Abs(year - r.year) <= 3`. `AveragePrice` تجمع الأسعار بحلقة وتقسم على `arr.Length`. `SpecialOffer` تخفض كل سعر بـ 200 باستدعاء `AddMoney(-200)` لكل روبوت، لأن الحقل `price` خاص (private) ولا يُغيَّر مباشرة من خارج الفئة."
   },
@@ -398,7 +436,6 @@
   {
    "book": "c11-p-q4",
    "version": 3,
-   "check": false,
    "text": "في الكتاب تعرّف البنائية متغيرًا محليًا mat، فلا يُهيّأ أي حقل؛ هنا mat حقل في الفئة وتنشئه البنائية. اكتب العملية AddLecture(day, month, lec) (4.1): اليوم من 1 إلى 31 والشهر من 1 إلى 12؛ إذا كان التاريخ محجوزًا توضع المحاضرة في أقرب يوم فارغ في الشهر نفسه (عند تساوي البعد يُختار اليوم الأسبق)، وتعيد true، أو false إذا كان الشهر كله محجوزًا. الدالة Main مقفلة: تقرأ عدد المحاضرات ثم لكل محاضرة اليوم والشهر والموضوع والمكان والمحاضر والمدة، كل قيمة في سطر؛ تطبع نتيجة كل إضافة، ثم كل تاريخ محجوز مع موضوعه.",
    "template": [
     {
@@ -418,8 +455,17 @@
    "referenceGaps": {
     "add": "        int m = month - 1, d = day - 1;\n        for (int dist = 0; dist < DAY; dist++)\n        {\n            if (d - dist >= 0 && mat[m, d - dist] == null)\n            {\n                mat[m, d - dist] = lec;\n                return true;\n            }\n            if (d + dist < DAY && mat[m, d + dist] == null)\n            {\n                mat[m, d + dist] = lec;\n                return true;\n            }\n        }\n        return false;\n"
    },
+   "wrongGaps": {
+    "add": "        int m = month - 1, d = day - 1;\n        for (int dist = 0; dist < DAY; dist++)\n        {\n            if (d + dist < DAY && mat[m, d + dist] == null)\n            {\n                mat[m, d + dist] = lec;\n                return true;\n            }\n            if (d - dist >= 0 && mat[m, d - dist] == null)\n            {\n                mat[m, d - dist] = lec;\n                return true;\n            }\n        }\n        return false;\n"
+   },
    "public": [
     "4\n10\n3\nSpace\nHaifa\nDr. Nadia\n60\n10\n3\nPoetry\nAkko\nMr. Sami\n45\n10\n3\nRobots\nNazareth\nDr. Omar\n90\n1\n5\nHealth\nJaffa\nDr. Rana\n50\n"
+   ],
+   "hidden": [
+    "4\n10\n3\nA\nHall\nDr. X\n45\n10\n3\nB\nHall\nDr. X\n45\n10\n3\nC\nHall\nDr. X\n45\n10\n3\nD\nHall\nDr. X\n45\n",
+    "4\n1\n1\nFirst\nHall\nDr. X\n45\n1\n1\nSecond\nHall\nDr. X\n45\n31\n12\nLast\nHall\nDr. X\n45\n31\n12\nBefore\nHall\nDr. X\n45\n",
+    "32\n1\n2\nS1\nHall\nDr. X\n45\n2\n2\nS2\nHall\nDr. X\n45\n3\n2\nS3\nHall\nDr. X\n45\n4\n2\nS4\nHall\nDr. X\n45\n5\n2\nS5\nHall\nDr. X\n45\n6\n2\nS6\nHall\nDr. X\n45\n7\n2\nS7\nHall\nDr. X\n45\n8\n2\nS8\nHall\nDr. X\n45\n9\n2\nS9\nHall\nDr. X\n45\n10\n2\nS10\nHall\nDr. X\n45\n11\n2\nS11\nHall\nDr. X\n45\n12\n2\nS12\nHall\nDr. X\n45\n13\n2\nS13\nHall\nDr. X\n45\n14\n2\nS14\nHall\nDr. X\n45\n15\n2\nS15\nHall\nDr. X\n45\n16\n2\nS16\nHall\nDr. X\n45\n17\n2\nS17\nHall\nDr. X\n45\n18\n2\nS18\nHall\nDr. X\n45\n19\n2\nS19\nHall\nDr. X\n45\n20\n2\nS20\nHall\nDr. X\n45\n21\n2\nS21\nHall\nDr. X\n45\n22\n2\nS22\nHall\nDr. X\n45\n23\n2\nS23\nHall\nDr. X\n45\n24\n2\nS24\nHall\nDr. X\n45\n25\n2\nS25\nHall\nDr. X\n45\n26\n2\nS26\nHall\nDr. X\n45\n27\n2\nS27\nHall\nDr. X\n45\n28\n2\nS28\nHall\nDr. X\n45\n29\n2\nS29\nHall\nDr. X\n45\n30\n2\nS30\nHall\nDr. X\n45\n31\n2\nS31\nHall\nDr. X\n45\n15\n2\nFull\nHall\nDr. X\n45\n",
+    "4\n5\n6\nOne\nHall\nDr. X\n45\n7\n6\nTwo\nHall\nDr. X\n45\n6\n6\nMid\nHall\nDr. X\n45\n6\n6\nTie\nHall\nDr. X\n45\n"
    ],
    "explanation": "الصف في `mat` هو الشهر والعمود هو اليوم، فنطرح 1 من كل منهما. نبحث بمسافة `dist` تكبر من 0: نفحص اليوم `d - dist` ثم `d + dist` (داخل حدود الشهر)، وأول خانة فارغة `null` نضع فيها المحاضرة ونعيد `true`؛ وإذا انتهت كل المسافات نعيد `false`."
   },

@@ -3,7 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { buildWorklist, OUT, INVENTORY, SCENES, CHECK_CLASS } from "./build-899371-enrichment-worklist.mjs";
+import { buildWorklist, OUT, INVENTORY, SCENES, CHECK_CLASS, CORRECTED } from "./build-899371-enrichment-worklist.mjs";
 
 const ROOT = process.cwd();
 const committed = JSON.parse(readFileSync(OUT, "utf8"));
@@ -33,17 +33,21 @@ describe("899371 P10 — the work list", () => {
   });
 
   it("the tracks follow the patterns and the decisions; the totals are pinned", () => {
-    expect(committed.decisions).toEqual({ D1: "teacher-release", D2: "follows-D1", D3: "badge-only", D4: "no-runner-change", D5: "run-only-until-corrected", D6: "scenes-as-listed" });
+    expect(committed.decisions).toEqual({ D1: "teacher-release", D2: "follows-D1", D3: "badge-only", D4: "no-runner-change", D5: "corrected-by-owner", D6: "scenes-as-listed" });
     for (const q of committed.questions) {
       expect(q.trace, q.id).toBe(q.patterns.some(p => ["PO", "TT", "EX", "TV"].includes(p)) && q.programs.length > 0);
-      if (q.patterns.some(p => ["WP", "WM", "WC"].includes(p))) expect(q.solve, q.id).toBe(CHECK_CLASS[q.runnerClass]);
+      // D5 closed by the owner (2026-11-10, P16): the six corrected questions are checked; every other one keeps its P0 class
+      if (q.patterns.some(p => ["WP", "WM", "WC"].includes(p))) expect(q.solve, q.id).toBe(CORRECTED.includes(q.id) ? "check" : CHECK_CLASS[q.runnerClass]);
       else expect(q.solve, q.id).toBeNull();
       expect(q.gate, q.id).toBe(q.trace || q.solve ? "teacher-release" : null);   // D1 / D2: every book solution and output tracer is gated
     }
     expect(committed.totals).toEqual({
       questions: 161, trace: 70, solve: 80, tryInput: 13,
-      solveByClass: { check: 63, "check-small-n": 5, "run-only-until-corrected": 6, "run-only": 6 }, solveFromLab: 36, scenes: 33,
+      solveByClass: { check: 69, "check-small-n": 5, "run-only-until-corrected": 0, "run-only": 6 }, solveFromLab: 36, scenes: 33,
     });
+    // exactly the six that waited (P0 class needs-correction), each flagged as corrected
+    expect(committed.questions.filter(q => q.corrected).map(q => q.id).sort()).toEqual([...CORRECTED].sort());
+    expect(committed.questions.filter(q => q.runnerClass === "needs-correction").map(q => q.id).sort()).toEqual([...CORRECTED].sort());
   });
 
   it("every P7 coding-lab question is reused once, by the book question it was built on", () => {

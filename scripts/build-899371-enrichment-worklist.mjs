@@ -25,6 +25,9 @@ const LAB = join(ROOT, "scripts/coding-lab-899371");
 const TRACE = ["PO", "TT", "EX", "TV"], SOLVE = ["WP", "WM", "WC"];
 // decision D4 (no runner change) + D5 (a question whose wording needs the owner's correction is run-only until corrected)
 export const CHECK_CLASS = Object.freeze({ auto: "check", "auto-small-n": "check-small-n", "needs-correction": "run-only-until-corrected", nondeterministic: "run-only", "incomplete-spec": "run-only" });
+// decision D5, closed (owner, 2026-11-10: «قم بها جميعها»): the corrections proposed in plan §11.7 are approved, so these questions are
+// checked like any other; each one's corrected wording is shown to the student in its «حلّ وافحص» text (enrichment P16)
+export const CORRECTED = Object.freeze(["c04-p-q10", "c08-p-q3", "c10-p-q2", "c11-h-q4", "c11-p-q1", "c11-p-q4"]);
 const ORDINALS = { "الأول": 1, "الثاني": 2, "الثالث": 3, "الرابع": 4, "الخامس": 5, "السادس": 6, "السابع": 7, "الثامن": 8, "التاسع": 9, "العاشر": 10 };
 const START = new RegExp("^\\s*(?:السؤال|سؤال)\\s*(\\d+|" + Object.keys(ORDINALS).join("|") + ")|^\\s*(\\d{1,2})\\.\\s");
 const spanText = b => (Array.isArray(b.spans) ? b.spans.map(s => s.text || "").join("") : "");
@@ -114,10 +117,10 @@ export function buildWorklist(inventory = JSON.parse(readFileSync(INVENTORY, "ut
       const programs = blocks.filter(b => b.type === "code" && b.language === "csharp" && b.origin === "book").map(b => ({ blockId: b.id, kind: programKind(b.code) }));
       const patterns = [...new Set([...(q.pattern ? [q.pattern] : []), ...(q.parts || []).map(p => p.pattern).filter(Boolean)])].sort();
       const trace = patterns.some(p => TRACE.includes(p)) && programs.length > 0;
-      const solve = patterns.some(p => SOLVE.includes(p)) ? (CHECK_CLASS[q.runner] ?? null) : null;
+      const solve = patterns.some(p => SOLVE.includes(p)) ? (CORRECTED.includes(q.id) ? "check" : (CHECK_CLASS[q.runner] ?? null)) : null;
       questions.push({
         id: q.id, chapter: m.moduleId.slice(-3), section: a.section, number: q.number, brief: q.brief || "", pageId: page.id, patterns, programs,
-        trace, solve, ...(solve ? { runnerClass: q.runner ?? null, lab: lab[q.id] ?? null } : {}), tryInput: patterns.includes("GI"),
+        trace, solve, ...(solve ? { runnerClass: q.runner ?? null, ...(CORRECTED.includes(q.id) ? { corrected: true } : {}), lab: lab[q.id] ?? null } : {}), tryInput: patterns.includes("GI"),
         gate: trace || solve ? "teacher-release" : null,
       });
     }
@@ -127,7 +130,7 @@ export function buildWorklist(inventory = JSON.parse(readFileSync(INVENTORY, "ut
   const count = f => questions.filter(f).length;
   return {
     schemaVersion: 1, courseId: "899371", plan: "docs/enterprise-899371-enrichment-plan.md",
-    decisions: { D1: "teacher-release", D2: "follows-D1", D3: "badge-only", D4: "no-runner-change", D5: "run-only-until-corrected", D6: "scenes-as-listed" },
+    decisions: { D1: "teacher-release", D2: "follows-D1", D3: "badge-only", D4: "no-runner-change", D5: "corrected-by-owner", D6: "scenes-as-listed" },
     totals: {
       questions: questions.length, trace: count(q => q.trace), solve: count(q => q.solve), tryInput: count(q => q.tryInput),
       solveByClass: Object.fromEntries(Object.values(CHECK_CLASS).filter((v, i, a) => a.indexOf(v) === i).map(c => [c, count(q => q.solve === c)])),
