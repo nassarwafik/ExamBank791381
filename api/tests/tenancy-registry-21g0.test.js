@@ -40,7 +40,10 @@ const REGISTRY = {
     "learning-run.js",
     // 899371 P13 — «شاهد التنفيذ»: the recorded traces of a platform course (a private store under api/data); it reads only the
     // caller's class and the caller's OWN study record (keyed by the verified session subject) and writes nothing.
-    "learning-trace.js"],
+    "learning-trace.js",
+    // 899371 P14 — «حلّ وافحص»: platform course questions (a private store under api/data) run in the isolated runner; it reads only the
+    // caller's class; the only writes are the caller's own rate-limit buckets (keyed by the verified session subject).
+    "learning-solve.js"],
   // Tadris+ P2-A2 — a teacher ends their OWN session (the verified token subject and session id; nothing else is read or written).
   // platform-session describes the caller's OWN session (role, display name, expiry) and reads only that account.
   ownSession: { "teacher-session-end.js": /revokeTeacherSession\(container, auth\.user\.sub, auth\.user\.sid/, "platform-session.js": /await requireTeacherSession\(request, \{ requireBuilderAuth: \(\) => \(\{ ok: false \}\)/,

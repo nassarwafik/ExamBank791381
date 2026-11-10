@@ -354,6 +354,8 @@ describe("17E-B IDE25–IDE28 — RTL/LTR, accessibility, mobile, teacher previe
     const out = screen.getByTestId("coding-output-panel");
     expect(out.getAttribute("aria-live")).toBe("polite");
     expect(out.getAttribute("aria-label")).toBe("نتيجة التشغيل");
+    // a NAMED region: a name on a plain <div> is prohibited ARIA (axe aria-prohibited-attr, 899371 P14)
+    expect(screen.getByRole("region", { name: "نتيجة التشغيل" })).toBe(out);
     const btn = await runButton();
     fireEvent.click(btn);
     expect(btn.getAttribute("aria-busy")).toBe("true");

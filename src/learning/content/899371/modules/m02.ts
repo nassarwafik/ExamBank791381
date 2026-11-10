@@ -2669,6 +2669,14 @@ const m02: ContentModule = {
               "language": "csharp",
               "dir": "ltr",
               "code": "Console.WriteLine(...);"
+            },
+            {
+              "id": "m02-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },

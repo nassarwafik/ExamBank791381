@@ -27,3 +27,18 @@
 .learning-trace-verdict.is-match{ border-inline-start-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
 .learning-trace-verdict-head{ margin:0; font-weight:var(--eb-fw-semibold); }
 .learning-trace-verdict-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:var(--eb-space-2); margin-top:var(--eb-space-2); }
+
+/* 899371 enrichment P14 — «حلّ وافحص»: the verdict of a check, its cases, the learner's «✓ حُلَّ» and the solution card */
+.learning-solve-text{ margin:0; font-size:var(--eb-fs-14); color:var(--eb-text); }
+.learning-solve-done{ font-weight:var(--eb-fw-bold); color:var(--eb-success-tx); }
+.learning-solve-result{ margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); border-inline-start:4px solid var(--eb-warn); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.learning-solve-result.is-passed{ border-inline-start-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-solve-result.is-compile-error{ border-inline-start-color:var(--eb-danger); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-solve-verdict{ margin:0 0 var(--eb-space-1); font-weight:var(--eb-fw-semibold); }
+.learning-solve-cases{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.learning-solve-card{ margin-top:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.learning-solve-idea{ margin:0 0 var(--eb-space-2); color:var(--eb-text); }
+.learning-solve-reference{ max-height:28em; overflow:auto; }
+/* Monaco dims the number of the last empty line to 40 % of the line-number colour (axe: below the contrast minimum); in the Reader's
+   editor it inherits the editor's own text colour instead (light or dark theme alike). */
+.learning-solve .monaco-editor .line-numbers.dimmed-line-number{ color:inherit; }

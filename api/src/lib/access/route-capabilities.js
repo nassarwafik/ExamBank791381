@@ -39,7 +39,8 @@ const ROUTE_CAPABILITIES = Object.freeze({
   "learning-training.js": { "*": "learning.course.view" },
   "learning-exam-item.js": { "*": "learning.course.view" },
   "learning-run.js": { "*": "learning.course.view" },   // 899371 P8 — «جرّب الكود»: a teacher previewing a course may run its programs
-  "learning-trace.js": { "*": "learning.course.view" },   // 899371 P13 — «شاهد التنفيذ»: a teacher previewing a course sees every trace
+  "learning-trace.js": { "*": "learning.course.view" },
+  "learning-solve.js": { "*": "learning.course.view" },   // 899371 P14 — «حلّ وافحص»: a teacher previewing a course may run, check and see solutions   // 899371 P13 — «شاهد التنفيذ»: a teacher previewing a course sees every trace
   "learning-class-progress.js": { "*": "learning.progress.view" },
 
   // Exam library, question bank, imports.

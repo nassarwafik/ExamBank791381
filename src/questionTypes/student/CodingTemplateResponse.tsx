@@ -216,7 +216,7 @@ export default function CodingTemplateResponse({ q, id, answer, onAnswer, disabl
             </div>
           </>
         : <p className="cx-run-note" data-testid={preview ? "coding-run-preview" : "coding-run-unavailable"} role="note">{preview ? RUN_PREVIEW_MESSAGE : loading ? "جارٍ التحقق من بيئة التشغيل…" : RUN_UNAVAILABLE_MESSAGE}</p>}
-      <div className="cx-run-results" data-testid="coding-output-panel" aria-live="polite" aria-label="نتيجة التشغيل">
+      <div className="cx-run-results" data-testid="coding-output-panel" role="region" aria-live="polite" aria-label="نتيجة التشغيل">
         {runError !== "" && <p className="cx-run-error" data-testid="coding-run-error">{runError}</p>}
         {view?.mode === "custom" && <div className="cx-result" data-testid="coding-result" data-status={view.result.status} data-run-stale={stale ? "true" : undefined}>
           <span className="cx-result-status">{(view.title ? view.title + ": " : "") + EXECUTION_STATUS_LABELS[view.result.status]}</span>

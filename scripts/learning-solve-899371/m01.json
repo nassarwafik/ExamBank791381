@@ -1,0 +1,156 @@
+{
+ "module": "m01",
+ "questions": [
+  {
+   "book": "c01-h-q4",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"a = \" + a + \", b = \" + b + \", sum = \" + (a + b));\n    }\n}\n",
+   "public": [
+    "5\n7\n"
+   ],
+   "hidden": [
+    "3\n4\n",
+    "-2\n10\n",
+    "0\n0\n",
+    "120\n35\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"a = \" + a + \", b = \" + b + \", sum = \" + a + b);\n    }\n}\n",
+   "explanation": "نقرأ العددين بـ `int.Parse(Console.ReadLine())` ونبني سطر الطباعة بوصل النصوص بالمتغيرات بالعامل `+`. الأقواس في `(a + b)` ضرورية: بدونها يُوصل العددان كنص (5 ثم 7 = 57) بدل جمعهما."
+  },
+  {
+   "book": "c01-h-q5",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double average = (a + b) / 2;\n        Console.WriteLine(\"Average = \" + average);\n    }\n}\n",
+   "public": [
+    "80\n86\n"
+   ],
+   "hidden": [
+    "90\n75.5\n",
+    "100\n100\n",
+    "0\n59\n",
+    "72.5\n88.25\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double average = a + b / 2;\n        Console.WriteLine(\"Average = \" + average);\n    }\n}\n",
+   "explanation": "العلامتان كسريتان فنقرأهما بـ `double.Parse` ونخزّنهما في متغيرين من نوع `double`. المتوسط هو `(a + b) / 2`، والأقواس ضرورية لأن القسمة تُنفَّذ قبل الجمع."
+  },
+  {
+   "book": "c01-p-q1",
+   "version": 2,
+   "text": "اكتب برنامجًا يطبع في سطر واحد الجملة التالية بالضبط (اسم اللغة هو C#، أي الحرف C ثم #):\nمرحباً بكم في عالم C#",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"مرحباً بكم في عالم C#\");\n    }\n}\n",
+   "public": [
+    ""
+   ],
+   "hidden": [
+    "\n",
+    "0\n",
+    "1\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Console.WriteLine(\"مرحباً بكم في عالم #C\");\n    }\n}\n",
+   "explanation": "يكفي أمر واحد: `Console.WriteLine(\"...\")` يطبع النص الموجود بين علامتي التنصيص كما هو، ثم ينتقل إلى سطر جديد."
+  },
+  {
+   "book": "c01-p-q2",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int tens = int.Parse(Console.ReadLine());\n        int units = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"العدد المكوّن هو \" + tens + units);\n    }\n}\n",
+   "public": [
+    "5\n7\n"
+   ],
+   "hidden": [
+    "1\n0\n",
+    "9\n9\n",
+    "3\n8\n",
+    "6\n2\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int tens = int.Parse(Console.ReadLine());\n        int units = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"العدد المكوّن هو \" + (tens + units));\n    }\n}\n",
+   "explanation": "نعرّف متغيرين من نوع `int`: `tens` للعشرات و`units` للآحاد. عند وصلهما بعد نص بالعامل `+` يُكتب كل منهما كما هو، فيظهر العدد المكوّن (5 و7 ← 57)؛ ويمكن أيضًا حسابه بـ `tens * 10 + units`."
+  },
+  {
+   "book": "c01-p-q3",
+   "reuse": "CL899371-01-Q01",
+   "explanation": "نقرأ العدد بـ `int.Parse(Console.ReadLine())` ونخزّنه في متغير، ثم نطبع حاصل ضربه في نفسه `n * n`."
+  },
+  {
+   "book": "c01-p-q4",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"المجموع = \" + (a + b));\n    }\n}\n",
+   "public": [
+    "8\n4\n"
+   ],
+   "hidden": [
+    "10\n20\n",
+    "-3\n5\n",
+    "0\n0\n",
+    "99\n1\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"المجموع = \" + a + b);\n    }\n}\n",
+   "explanation": "نقرأ العددين في متغيرين من نوع `int`، ثم نطبع `\"المجموع = \" + (a + b)`. الأقواس تجعل الحاسوب يجمع العددين أولًا، وبدونها يصِل النص بالعدد الأول ثم بالثاني."
+  },
+  {
+   "book": "c01-p-q5",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        string name = Console.ReadLine();\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"مرحباً يا \" + name + \"! عمرك \" + age + \" سنة.\");\n    }\n}\n",
+   "public": [
+    "أحمد\n16\n"
+   ],
+   "hidden": [
+    "سارة\n15\n",
+    "Omar\n17\n",
+    "ليان\n9\n",
+    "يوسف\n40\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        string name = Console.ReadLine();\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(\"مرحباً يا \" + name + \"! عمرك \" + age + \"سنة.\");\n    }\n}\n",
+   "explanation": "الاسم نص فنقرؤه مباشرة بـ `Console.ReadLine()` في متغير `string`، والعمر عدد فنحوّله بـ `int.Parse`. ثم نصل أجزاء الجملة بالمتغيرين بالعامل `+` مع الانتباه إلى المسافات داخل النصوص."
+  },
+  {
+   "book": "c01-p-q6",
+   "reuse": "CL899371-01-Q02",
+   "explanation": "نستخرج المنازل بالقسمة الصحيحة وباقي القسمة: المئات `n / 100`، والعشرات `n / 10 % 10`، والآحاد `n % 10`، ثم نجمعها ونطبع المجموع."
+  },
+  {
+   "book": "c01-p-q7",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int mark = int.Parse(Console.ReadLine());\n        int units = int.Parse(Console.ReadLine());\n        int bonus = int.Parse(Console.ReadLine());\n        int finalMark = units * (mark + bonus);\n        Console.WriteLine(finalMark);\n    }\n}\n",
+   "public": [
+    "80\n5\n10\n"
+   ],
+   "hidden": [
+    "90\n4\n5\n",
+    "100\n3\n0\n",
+    "70\n5\n20\n",
+    "0\n1\n1\n",
+    "65\n2\n15\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int mark = int.Parse(Console.ReadLine());\n        int units = int.Parse(Console.ReadLine());\n        int bonus = int.Parse(Console.ReadLine());\n        int finalMark = units * mark + bonus;\n        Console.WriteLine(finalMark);\n    }\n}\n",
+   "explanation": "نقرأ الأعداد الثلاثة بالترتيب، ثم نكتب المعادلة كما هي: `units * (mark + bonus)`. الأقواس ضرورية لأن الضرب يُنفَّذ قبل الجمع."
+  },
+  {
+   "book": "c01-p-q8",
+   "reuse": "CL899371-01-Q03",
+   "explanation": "نستخرج المنازل الأربع: الآلاف `n / 1000`، والمئات `n / 100 % 10`، والعشرات `n / 10 % 10`، والآحاد `n % 10`. نطبع مجموع المنازل الأربع، ثم مجموع العشرات والآحاد فقط."
+  },
+  {
+   "book": "c01-p-q9",
+   "reuse": "CL899371-01-Q04",
+   "explanation": "لنضع المنزلة الجديدة في آخر العدد نزيح منازل العدد القديم منزلة واحدة إلى اليسار بضربه في 10، ثم نضيف المنزلة الجديدة: `n * 10 + d`."
+  },
+  {
+   "book": "c01-p-q10",
+   "version": 2,
+   "text": "اكتب برنامجًا يقرأ درجة حرارة بالسلزيوس C (عدد صحيح)، ويحسب F = C × 9 / 5 + 32 بأعداد صحيحة (int، بالترتيب المكتوب)، ثم يطبع سطرًا واحدًا بالشكل:\n100°C = 212°F",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int c = int.Parse(Console.ReadLine());\n        int f = c * 9 / 5 + 32;\n        Console.WriteLine(c + \"°C = \" + f + \"°F\");\n    }\n}\n",
+   "public": [
+    "100\n"
+   ],
+   "hidden": [
+    "0\n",
+    "37\n",
+    "-40\n",
+    "25\n",
+    "-7\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int c = int.Parse(Console.ReadLine());\n        int f = c * (9 / 5) + 32;\n        Console.WriteLine(c + \"°C = \" + f + \"°F\");\n    }\n}\n",
+   "explanation": "نحسب `c * 9 / 5 + 32` بأعداد صحيحة: الضرب في 9 أولًا ثم القسمة الصحيحة على 5. لو كتبنا `9 / 5` وحدها لكان ناتجها 1 في القسمة الصحيحة وفسد الحساب."
+  }
+ ]
+}

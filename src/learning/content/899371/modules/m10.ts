@@ -3554,6 +3554,14 @@ const m10: ContentModule = {
                   "text": "لا حاجة لفحص صحة المصفوفة أو الأبعاد."
                 }
               ]
+            },
+            {
+              "id": "m10-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int NodeElement(int[,] mat, int row, int col)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int rows = int.Parse(Console.ReadLine());\n        int cols = int.Parse(Console.ReadLine());\n        int[,] m = new int[rows, cols];\n        for (int i = 0; i < rows; i++)\n        {\n            string[] parts = Console.ReadLine().Split(' ');\n            for (int j = 0; j < cols; j++)\n                m[i, j] = int.Parse(parts[j]);\n        }\n        int count = 0;\n        for (int i = 1; i < rows - 1; i++)\n            for (int j = 1; j < cols - 1; j++)\n                count += NodeElement(m, i, j);\n        Console.WriteLine(count);\n    }\n}\n"
             }
           ]
         },
@@ -4005,6 +4013,14 @@ const m10: ContentModule = {
                   "text": "يجب استخدام الدالة من الجزء ب."
                 }
               ]
+            },
+            {
+              "id": "m10-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsRightDiagonalThree(int[,] mat, int row, int col)\n    {\n        \n    }\n\n    public static int IsUnifiedRightDiagonalThree(int[,] mat, int row, int col)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int rows = int.Parse(Console.ReadLine());\n        int cols = int.Parse(Console.ReadLine());\n        int[,] m = new int[rows, cols];\n        for (int i = 0; i < rows; i++)\n        {\n            string[] parts = Console.ReadLine().Split(' ');\n            for (int j = 0; j < cols; j++)\n                m[i, j] = int.Parse(parts[j]);\n        }\n        int count = 0;\n        for (int i = 0; i < rows; i++)\n            for (int j = 0; j < cols; j++)\n                count += IsUnifiedRightDiagonalThree(m, i, j);\n        Console.WriteLine(count);\n    }\n}\n"
             }
           ]
         },
@@ -4329,6 +4345,14 @@ const m10: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m10-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int RepeatRowFromJ(int[,] arr, int k, int j)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int rows = int.Parse(Console.ReadLine());\n        int cols = int.Parse(Console.ReadLine());\n        int[,] m = new int[rows, cols];\n        for (int i = 0; i < rows; i++)\n        {\n            string[] parts = Console.ReadLine().Split(' ');\n            for (int j = 0; j < cols; j++)\n                m[i, j] = int.Parse(parts[j]);\n        }\n        int jj = int.Parse(Console.ReadLine());\n        int count = 0;\n        for (int k = 0; k < rows - 1; k++)\n            count += RepeatRowFromJ(m, k, jj);\n        Console.WriteLine(count);\n    }\n}\n"
             }
           ]
         },
@@ -4684,6 +4708,14 @@ const m10: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m10-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int PositiveRow(int[,] arr, int k)\n    {\n        \n    }\n\n    public static int PositiveColomn(int[,] arr, int j)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int rows = int.Parse(Console.ReadLine());\n        int cols = int.Parse(Console.ReadLine());\n        int[,] m = new int[rows, cols];\n        for (int i = 0; i < rows; i++)\n        {\n            string[] parts = Console.ReadLine().Split(' ');\n            for (int j = 0; j < cols; j++)\n                m[i, j] = int.Parse(parts[j]);\n        }\n        int pr = 0, pc = 0;\n        for (int i = 0; i < rows; i++) pr += PositiveRow(m, i);\n        for (int j = 0; j < cols; j++) pc += PositiveColomn(m, j);\n        Console.WriteLine(pr > pc ? \"yes\" : \"no\");\n    }\n}\n"
             }
           ]
         },
@@ -5077,6 +5109,14 @@ const m10: ContentModule = {
                   "text": "يمكن الاعتماد على دالة Place لتحديد ترتيب أي رقم داخل المصفوفة."
                 }
               ]
+            },
+            {
+              "id": "m10-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int Place(int[,] mat, int num)\n    {\n        \n    }\n\n    public static int PrintAndCount(int[,] mat, int prev1, int prev2)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int rows = int.Parse(Console.ReadLine());\n        int cols = int.Parse(Console.ReadLine());\n        int[,] m = new int[rows, cols];\n        for (int i = 0; i < rows; i++)\n        {\n            string[] parts = Console.ReadLine().Split(' ');\n            for (int j = 0; j < cols; j++)\n                m[i, j] = int.Parse(parts[j]);\n        }\n        int num = int.Parse(Console.ReadLine());\n        Console.WriteLine(Place(m, num));\n        int prev1 = int.Parse(Console.ReadLine());\n        int prev2 = int.Parse(Console.ReadLine());\n        Console.WriteLine(PrintAndCount(m, prev1, prev2));\n    }\n}\n"
             }
           ]
         }

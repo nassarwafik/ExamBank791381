@@ -2985,6 +2985,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string CompressString(string str)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CompressString(s));\n    }\n}\n"
             }
           ]
         },
@@ -3142,6 +3150,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string ReplaceBWithC(string str)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(ReplaceBWithC(s));\n    }\n}\n"
             }
           ]
         },
@@ -3332,6 +3348,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double CalculateExpression(string expr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string expr = Console.ReadLine();\n        Console.WriteLine(CalculateExpression(expr));\n    }\n}\n"
             }
           ]
         },
@@ -3507,6 +3531,14 @@ const m08: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m08-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static string CodeANBO(string text)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        string s = Console.ReadLine();\n        Console.WriteLine(CodeANBO(s));\n    }\n}\n"
             }
           ]
         }

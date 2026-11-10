@@ -1943,6 +1943,14 @@ const m03: ContentModule = {
               ]
             },
             {
+              "id": "m03-l02-p07-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m03-l02-p07-b03",
               "type": "text",
               "origin": "book",
@@ -1955,6 +1963,14 @@ const m03: ContentModule = {
                   "text": " 8: اكتب برنامجًا يستقبل عددًا ثلاثي المنازل، ويفحص إذا كان تربيع منزلة الآحاد يساوي معدل العشرات والمئات."
                 }
               ]
+            },
+            {
+              "id": "m03-l02-p07-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             },
             {
               "id": "m03-l02-p07-b04",
@@ -2003,6 +2019,14 @@ const m03: ContentModule = {
               ]
             },
             {
+              "id": "m03-l02-p07-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m03-l02-p07-b06",
               "type": "text",
               "origin": "book",
@@ -2015,6 +2039,14 @@ const m03: ContentModule = {
                   "text": " 10: اكتب برنامجًا يولّد 5 علامات عشوائية بين 0 و100، ثم يحسب ويطبع معدلها الصحيح."
                 }
               ]
+            },
+            {
+              "id": "m03-l02-p07-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }
@@ -2368,6 +2400,14 @@ const m03: ContentModule = {
               ]
             },
             {
+              "id": "m03-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m03-l03-p06-b06",
               "type": "text",
               "origin": "book",
@@ -2389,6 +2429,14 @@ const m03: ContentModule = {
               ]
             },
             {
+              "id": "m03-l03-p06-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m03-l03-p06-b08",
               "type": "text",
               "origin": "book",
@@ -2408,6 +2456,14 @@ const m03: ContentModule = {
                   "text": "اكتب برنامجًا يقرأ ثلاث علامات (أعداد صحيحة)، ثم يحسب معدلها ويطبع النتيجة الصحيحة (بدون كسور عشرية) على الشاشة."
                 }
               ]
+            },
+            {
+              "id": "m03-l03-p06-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             },
             {
               "id": "m03-l03-p06-b10",
@@ -2488,6 +2544,14 @@ const m03: ContentModule = {
                   "text": "ملاحظة: يمكن الاستعانة بالدالة Random."
                 }
               ]
+            },
+            {
+              "id": "m03-l03-p06-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2579,6 +2643,14 @@ const m03: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m03-l03-p07-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

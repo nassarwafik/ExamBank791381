@@ -130,6 +130,8 @@ describe("19F-U1 — the coding@3 student editor: locked vs editable, values-onl
     fireEvent.change(g1, { target: { value: "s = a + b\n" } });
     fireEvent.click(await screen.findByRole("button", { name: "تشغيل" }, { timeout: 3000 }));
     await screen.findByTestId("coding-result");
+    // the output panel is a NAMED region (a name on a plain <div> is prohibited ARIA: axe aria-prohibited-attr, 899371 P14)
+    expect(screen.getByRole("region", { name: "نتيجة التشغيل" })).toBe(screen.getByTestId("coding-output-panel"));
     const run = calls.find(c => c.path === "/api/coding/run")!;
     expect(Object.keys(run.body!).sort()).toEqual(["assignmentId", "language", "languageVersion", "questionId", "stdin", "values"]);
     expect(run.body!.values).toEqual({ gap1: "s = a + b\n", gap2: "" });

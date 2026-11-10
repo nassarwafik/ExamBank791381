@@ -3106,6 +3106,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p01-b06",
               "type": "text",
               "origin": "book",
@@ -3192,6 +3200,14 @@ const m05: ContentModule = {
                   "text": "ملاحظة : ليس هناك حاجة لفحص سلامة المدخلات"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p01-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3276,6 +3292,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p02-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p02-b06",
               "type": "text",
               "origin": "book",
@@ -3308,6 +3332,14 @@ const m05: ContentModule = {
                   "text": "اذا قام التقني بصيانة وتصليح اكثر من 25 جهاز في اليوم , البرنامج سوف يقوم بطباعة اسمه والرسالة ”BONUS” كذلك يقوم البرنامج بحساب العدد الكلي لعمليات الصيانة التي قام بها العاملين في نفس اليوم"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p02-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3410,6 +3442,14 @@ const m05: ContentModule = {
               ]
             },
             {
+              "id": "m05-l03-p03-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m05-l03-p03-b07",
               "type": "text",
               "origin": "book",
@@ -3472,6 +3512,14 @@ const m05: ContentModule = {
                   "text": "كذلك البرنامج يعد ويحسب عدد الزبائن الذين طلبوا اكثر من 20 صندوق للمشروب"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p03-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3582,6 +3630,14 @@ const m05: ContentModule = {
                   "text": "ملاحظة : افترض ان المدخلات سليمة"
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p04-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3694,6 +3750,14 @@ const m05: ContentModule = {
                   "text": "اذا جمع كل من الصفين نفس عدد النقاط المخرج سيكون \"TEKO\""
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p05-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3800,6 +3864,14 @@ const m05: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p06-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3894,6 +3966,14 @@ const m05: ContentModule = {
                   "text": "🔚 في نهاية البرنامج، اطبع عدد الأعداد التي تحقق هذا الشرط."
                 }
               ]
+            },
+            {
+              "id": "m05-l03-p07-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

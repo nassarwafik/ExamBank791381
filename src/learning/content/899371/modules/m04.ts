@@ -2724,6 +2724,14 @@ const m04: ContentModule = {
                   "text": "إذا كان التاريخ قانونيًا، يحسب أيضًا عدد الأيام التي مرّت منذ بداية السنة حتى هذا التاريخ (بفرض أن كل شهر فيه 30 يومًا)."
                 }
               ]
+            },
+            {
+              "id": "m04-l02-p05-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -2873,6 +2881,14 @@ const m04: ContentModule = {
                   "text": "إذا كان الراتب أكبر من 7000 شاقل فتخصم ضريبة بقيمة 400 شاقل + 35% من المبلغ الذي يزيد عن 7000 شاقل."
                 }
               ]
+            },
+            {
+              "id": "m04-l02-p07-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3057,6 +3073,14 @@ const m04: ContentModule = {
                   "text": "لو اشتغل العامل يوم السبت 11 ساعة، فإن أجرته: 470 = 50 * 3 + 40 * 8."
                 }
               ]
+            },
+            {
+              "id": "m04-l02-p09-solve-q11",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }
@@ -3297,6 +3321,14 @@ const m04: ContentModule = {
               ]
             },
             {
+              "id": "m04-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m04-l03-p06-b03",
               "type": "text",
               "origin": "book",
@@ -3341,6 +3373,14 @@ const m04: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m04-l03-p06-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             },
             {
               "id": "m04-l03-p06-b05",
@@ -3405,6 +3445,14 @@ const m04: ContentModule = {
               ]
             },
             {
+              "id": "m04-l03-p06-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m04-l03-p06-b07",
               "type": "text",
               "origin": "book",
@@ -3457,6 +3505,14 @@ const m04: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m04-l03-p06-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3564,6 +3620,14 @@ const m04: ContentModule = {
                   "الطقس معتدل – استمتع بيومك"
                 ]
               ]
+            },
+            {
+              "id": "m04-l03-p07-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

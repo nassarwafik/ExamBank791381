@@ -2845,6 +2845,14 @@ const m07: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double DiscountMinPrice(double price1, double price2, double price3)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        Console.WriteLine(DiscountMinPrice(a, b, c));\n    }\n}\n"
             }
           ]
         },
@@ -3031,6 +3039,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsTeenListener(int age)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        Console.WriteLine(IsTeenListener(age));\n    }\n}\n"
             }
           ]
         },
@@ -3323,6 +3339,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int GiftCard(int years, int amount)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3554,6 +3578,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsInRange(int month, int year)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3811,6 +3843,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int DriverMaxSpeed(int age, int years, int speedLimit)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        int years = int.Parse(Console.ReadLine());\n        int limit = int.Parse(Console.ReadLine());\n        Console.WriteLine(DriverMaxSpeed(age, years, limit));\n    }\n}\n"
             }
           ]
         },
@@ -4118,6 +4158,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int Check(int standardSize, int caps)\n    {\n        \n    }\n\n    public static void AllMachines()\n    {\n        \n    }\n\n    public static void Main()\n    {\n        AllMachines();\n    }\n}\n"
             }
           ]
         },
@@ -4354,6 +4402,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p07-solve-q7",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int GradesAbove90(int grade1, int grade2, int grade3)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int a = int.Parse(Console.ReadLine());\n        int b = int.Parse(Console.ReadLine());\n        int c = int.Parse(Console.ReadLine());\n        Console.WriteLine(GradesAbove90(a, b, c));\n    }\n}\n"
             }
           ]
         },
@@ -4601,6 +4657,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p08-solve-q8",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsShippingFree(int numOfProducts)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -4907,6 +4971,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p09-solve-q9",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static char Twins(string first, string second)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -5166,6 +5238,14 @@ const m07: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m07-l03-p10-solve-q10",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

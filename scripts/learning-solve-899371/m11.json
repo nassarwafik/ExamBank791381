@@ -1,0 +1,485 @@
+{
+ "module": "m11",
+ "questions": [
+  {
+   "book": "c11-h-q1",
+   "version": 3,
+   "text": "أكمل الفئة PreHistoricAnimal: الحقول بالأسماء التي في الكتاب (name نص، abilities مصفوفة من 3 قيم بوليانية، weight عدد صحيح)، والعملية البنائية (1.2)، والعملية البنائية التي تنسخ حيوانًا آخر باسم جديد دون أن تغيّر الحيوان الأصلي (1.3). وأكمل في الفئة JurassicPark الحقول animals (مصفوفة حيوانات) وcount (عدد الحيوانات) وlandCount (عدد الحيوانات التي تبقى على اليابسة أكثر من ساعة)، والعملية AddAnimal (1.5). الدالة Main مقفلة: تقرأ عدد الحيوانات ثم لكل حيوان اسمه وقدراته الثلاث (True/False) ووزنه، كل قيمة في سطر، وتضيفها إلى الحديقة؛ ثم تقرأ اسمًا جديدًا وتنسخ به الحيوان الأول، وتقلب قدرة النسخة على اليابسة وتضيفها. تطبع count وlandCount، ثم بيانات الحيوان الأول، ثم بيانات النسخة.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class PreHistoricAnimal\n{\n"
+    },
+    {
+     "kind": "editable",
+     "id": "fields",
+     "starter": "    \n"
+    },
+    {
+     "kind": "locked",
+     "text": "\n    public string GetName() { return name; }\n    public int GetWeight() { return weight; }\n    public bool GetAbility(int i) { return abilities[i]; }\n    public void SetAbility(int i, bool value) { abilities[i] = value; }\n\n    public PreHistoricAnimal(string name, bool land, bool air, bool water, int weight)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public PreHistoricAnimal(PreHistoricAnimal other, string name)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "copy",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class JurassicPark\n{\n"
+    },
+    {
+     "kind": "editable",
+     "id": "parkFields",
+     "starter": "    \n"
+    },
+    {
+     "kind": "locked",
+     "text": "\n    public JurassicPark()\n    {\n        animals = new PreHistoricAnimal[100];\n        count = 0;\n        landCount = 0;\n    }\n\n    public int GetCount() { return count; }\n    public int GetLandCount() { return landCount; }\n\n    public void AddAnimal(PreHistoricAnimal a)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "add",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        JurassicPark park = new JurassicPark();\n        int n = int.Parse(Console.ReadLine());\n        PreHistoricAnimal first = null;\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool land = bool.Parse(Console.ReadLine());\n            bool air = bool.Parse(Console.ReadLine());\n            bool water = bool.Parse(Console.ReadLine());\n            int weight = int.Parse(Console.ReadLine());\n            PreHistoricAnimal a = new PreHistoricAnimal(name, land, air, water, weight);\n            park.AddAnimal(a);\n            if (i == 0)\n                first = a;\n        }\n        PreHistoricAnimal copy = new PreHistoricAnimal(first, Console.ReadLine());\n        copy.SetAbility(0, !copy.GetAbility(0));\n        park.AddAnimal(copy);\n        Console.WriteLine(park.GetCount() + \" \" + park.GetLandCount());\n        Console.WriteLine(first.GetName() + \" \" + first.GetWeight() + \" \" + first.GetAbility(0) + \" \" + first.GetAbility(1) + \" \" + first.GetAbility(2));\n        Console.WriteLine(copy.GetName() + \" \" + copy.GetWeight() + \" \" + copy.GetAbility(0) + \" \" + copy.GetAbility(1) + \" \" + copy.GetAbility(2));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "fields": "    private string name;\n    private bool[] abilities;\n    private int weight;\n",
+    "ctor": "        this.name = name;\n        abilities = new bool[3];\n        abilities[0] = land;\n        abilities[1] = air;\n        abilities[2] = water;\n        this.weight = weight;\n",
+    "copy": "        this.name = name;\n        weight = other.weight;\n        abilities = new bool[3];\n        for (int i = 0; i < 3; i++)\n            abilities[i] = other.abilities[i];\n",
+    "parkFields": "    private PreHistoricAnimal[] animals;\n    private int count;\n    private int landCount;\n",
+    "add": "        animals[count] = a;\n        count++;\n        if (a.GetAbility(0))\n            landCount++;\n"
+   },
+   "public": [
+    "2\nTRex\nTrue\nFalse\nFalse\n8\nPterodactyl\nFalse\nTrue\nFalse\n1\nRexy\n"
+   ],
+   "hidden": [
+    "3\nBrachiosaurus\nTrue\nFalse\nFalse\n50\nPlesiosaurus\nFalse\nFalse\nTrue\n12\nStegosaurus\nTrue\nFalse\nFalse\n5\nBrachy\n",
+    "1\nMosasaurus\nFalse\nFalse\nTrue\n15\nMosa\n",
+    "4\nArchelon\nTrue\nFalse\nTrue\n2\nQuetzalcoatlus\nTrue\nTrue\nFalse\n1\nIchthyosaurus\nFalse\nFalse\nTrue\n6\nTriceratops\nTrue\nFalse\nFalse\n9\nTurtle\n",
+    "2\nDimorphodon\nFalse\nTrue\nFalse\n1\nVelociraptor\nTrue\nFalse\nFalse\n1\nDimo\n"
+   ],
+   "wrongGaps": {
+    "fields": "    private string name;\n    private bool[] abilities;\n    private int weight;\n",
+    "ctor": "        this.name = name;\n        abilities = new bool[3];\n        abilities[0] = land;\n        abilities[1] = air;\n        abilities[2] = water;\n        this.weight = weight;\n",
+    "copy": "        this.name = name;\n        weight = other.weight;\n        abilities = other.abilities;\n",
+    "parkFields": "    private PreHistoricAnimal[] animals;\n    private int count;\n    private int landCount;\n",
+    "add": "        animals[count] = a;\n        count++;\n        if (a.GetAbility(0))\n            landCount++;\n"
+   },
+   "explanation": "البنائية الأولى تنشئ `abilities = new bool[3]` وتضع فيها القيم الثلاث. البنائية الناسخة تنشئ مصفوفة جديدة وتنسخ إليها القيم واحدة واحدة؛ لو كتبنا `abilities = other.abilities` لأشار الحيوانان إلى المصفوفة نفسها، وتغيير النسخة يغيّر الأصل. `AddAnimal` تضع الحيوان في الخانة `count` ثم تزيده، وتزيد `landCount` إذا كان `a.GetAbility(0)` صحيحًا."
+  },
+  {
+   "book": "c11-h-q2",
+   "reuse": "CL899371-11-Q01",
+   "explanation": "البنائية تنسخ البارامترات إلى الحقول بـ `this`. رفع المتوسط هو `average * 1.1` مع `Math.Min(100, ...)` كي لا يتجاوز 100. في `Compare` نفحص أولًا حب المدير (إذا اختلف بين الطالبين حسم المقارنة)، وإن تساوى نقارن المتوسطين."
+  },
+  {
+   "book": "c11-h-q3",
+   "reuse": "CL899371-11-Q02",
+   "explanation": "البنائية المبسطة تعطي `name` و`size` قيمتيهما، و`false` للتشديد وللخط التحتي. `Increase` و`Decrease` تغيّران `size` بواحد، و`ToggleUnderline` تقلب الحالة بـ `underline = !underline`."
+  },
+  {
+   "book": "c11-h-q4",
+   "version": 3,
+   "check": false,
+   "text": "في الكتاب تعارض في الأسماء (isTopSeller مقابل IsLeadingSeller، وSellersGroup مقابل SellerGroup)؛ هنا الخاصية isTopSeller وعمليتها GetIsTopSeller، والعملية SellersGroup. اكتب البنائية (4.1) وFindSeller (4.3) وSellersGroup (4.4). خانات المصفوفة غير المستعملة فارغة (null). الدالة Main مقفلة: تقرأ عدد البائعين ثم لكل بائع رقمه واسمه وTrue/False (متميز) وتقييمه، كل قيمة في سطر، ثم minRate وmaxRate؛ وتطبع ما تعيده FindSeller، ثم خانات SellersGroup الثلاث في سطر.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Seller\n{\n    private int sId;\n    private string sName;\n    private bool isTopSeller;\n    private double rate;\n\n    public Seller(int sId, string sName, bool isTopSeller, double rate)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public int GetSId() { return sId; }\n    public string GetSName() { return sName; }\n    public bool GetIsTopSeller() { return isTopSeller; }\n    public double GetRate() { return rate; }\n}\n\npublic class AllSellers\n{\n    private Seller[] allSellers = new Seller[200];\n\n    public void SetSeller(int i, Seller s) { allSellers[i] = s; }\n\n    public int FindSeller(int minRate, int maxRate)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "find",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public int[] SellersGroup()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "group",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        AllSellers site = new AllSellers();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            int id = int.Parse(Console.ReadLine());\n            string name = Console.ReadLine();\n            bool top = bool.Parse(Console.ReadLine());\n            double rate = double.Parse(Console.ReadLine());\n            site.SetSeller(i, new Seller(id, name, top, rate));\n        }\n        int minRate = int.Parse(Console.ReadLine());\n        int maxRate = int.Parse(Console.ReadLine());\n        Console.WriteLine(site.FindSeller(minRate, maxRate));\n        int[] groups = site.SellersGroup();\n        Console.WriteLine(groups[0] + \" \" + groups[1] + \" \" + groups[2]);\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "ctor": "        this.sId = sId;\n        this.sName = sName;\n        this.isTopSeller = isTopSeller;\n        this.rate = rate;\n",
+    "find": "        for (int i = 0; i < allSellers.Length; i++)\n        {\n            Seller s = allSellers[i];\n            if (s != null && s.GetIsTopSeller() && s.GetRate() > minRate && s.GetRate() < maxRate)\n                return i;\n        }\n        return -1;\n",
+    "group": "        int[] groups = new int[3];\n        for (int i = 0; i < allSellers.Length; i++)\n        {\n            if (allSellers[i] != null)\n            {\n                double r = allSellers[i].GetRate();\n                if (r < 3)\n                    groups[0]++;\n                else if (r < 4)\n                    groups[1]++;\n                else\n                    groups[2]++;\n            }\n        }\n        return groups;\n"
+   },
+   "public": [
+    "5\n101\nDana\nFalse\n4.5\n102\nKarim\nTrue\n2.8\n103\nSalma\nTrue\n3.6\n104\nFadi\nTrue\n4.2\n105\nHuda\nFalse\n3\n3\n5\n"
+   ],
+   "explanation": "`FindSeller` تمر على المصفوفة بالترتيب وتعيد فهرس أول بائع متميز تقييمه بين الحدين (دون مساواة)، وإلا -1؛ ونفحص `!= null` لأن المصفوفة بحجم 200 وليست كلها ممتلئة. `SellersGroup` تنشئ `new int[3]` وتزيد الخانة المناسبة لكل بائع بجملة `if - else if - else`."
+  },
+  {
+   "book": "c11-h-q5",
+   "version": 3,
+   "text": "أكمل البنائية في Food (5.1)، والبنائية في Meal (5.3)، والعملية AddFood التي تضيف الطعام f فقط إذا بقي مجموع سعرات الوجبة بعد إضافته لا يزيد عن 1000 (5.4)، والعملية الخارجية Healthy (5.5). الدالة Main مقفلة: تقرأ عدد الأطعمة ثم لكل طعام اسمه وسعراته ونوعه (1 نباتي، 2 حيواني، 3 مُصنّع)، كل قيمة في سطر، وتضيفه بـ AddFood؛ ثم تطبع num وأسماء الأطعمة التي في الوجبة وما تعيده Healthy.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Food\n{\n    private string name;\n    private int calories;\n    private int type;\n\n    public Food(string name, int calories, int type)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "food",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public string GetName() { return name; }\n    public int GetCalories() { return calories; }\n    public int GetFoodType() { return type; }\n}\n\npublic class Meal\n{\n    private Food[] arrFood;\n    private int num;\n\n    public Meal()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "meal",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public Food[] GetArrFood() { return arrFood; }\n    public int GetNum() { return num; }\n\n    public void AddFood(Food f)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "add",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static string Healthy(Meal m)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "healthy",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        Meal m = new Meal();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            int calories = int.Parse(Console.ReadLine());\n            int type = int.Parse(Console.ReadLine());\n            m.AddFood(new Food(name, calories, type));\n        }\n        Console.WriteLine(m.GetNum());\n        for (int i = 0; i < m.GetNum(); i++)\n            Console.WriteLine(m.GetArrFood()[i].GetName());\n        Console.WriteLine(Healthy(m));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "food": "        this.name = name;\n        this.calories = calories;\n        this.type = type;\n",
+    "meal": "        arrFood = new Food[15];\n        num = 0;\n",
+    "add": "        int total = 0;\n        for (int i = 0; i < num; i++)\n            total += arrFood[i].GetCalories();\n        if (total + f.GetCalories() <= 1000)\n        {\n            arrFood[num] = f;\n            num++;\n        }\n",
+    "healthy": "        Food[] arr = m.GetArrFood();\n        int plant = 0, other = 0;\n        for (int i = 0; i < m.GetNum(); i++)\n        {\n            if (arr[i].GetFoodType() == 1)\n                plant++;\n            else\n                other++;\n        }\n        if (plant > other)\n            return \"healthy\";\n        return \"not healthy\";\n"
+   },
+   "public": [
+    "4\nSalad\n150\n1\nChicken\n400\n2\nRice\n300\n1\nCake\n450\n3\n"
+   ],
+   "hidden": [
+    "5\nApple\n100\n1\nBurger\n700\n3\nFries\n300\n3\nCarrot\n50\n1\nBanana\n150\n1\n",
+    "3\nSteak\n600\n2\nBread\n250\n1\nSoup\n150\n1\n",
+    "2\nPizza\n1200\n3\nTomato\n30\n1\n",
+    "5\nFish\n350\n2\nPasta\n500\n1\nJuice\n200\n1\nGrapes\n100\n1\nNuts\n50\n1\n",
+    "3\nCheese\n300\n2\nEggs\n200\n2\nOlives\n100\n1\n"
+   ],
+   "wrongGaps": {
+    "food": "        this.name = name;\n        this.calories = calories;\n        this.type = type;\n",
+    "meal": "        arrFood = new Food[15];\n        num = 0;\n",
+    "add": "        int total = 0;\n        for (int i = 0; i < num; i++)\n            total += arrFood[i].GetCalories();\n        if (total <= 1000)\n        {\n            arrFood[num] = f;\n            num++;\n        }\n",
+    "healthy": "        Food[] arr = m.GetArrFood();\n        int plant = 0, other = 0;\n        for (int i = 0; i < m.GetNum(); i++)\n        {\n            if (arr[i].GetFoodType() == 1)\n                plant++;\n            else\n                other++;\n        }\n        if (plant > other)\n            return \"healthy\";\n        return \"not healthy\";\n"
+   },
+   "explanation": "`AddFood` تجمع سعرات الأطعمة الموجودة (حتى `num`)، وتضيف `f` في الخانة `num` وتزيد `num` فقط إذا كان `total + f.GetCalories() <= 1000`. `Healthy` تعدّ الأطعمة النباتية (النوع 1) وبقية الأطعمة، وتعيد \"healthy\" فقط إذا كانت النباتية أكثر."
+  },
+  {
+   "book": "c11-p-q1",
+   "version": 3,
+   "check": false,
+   "text": "في الكتاب الخاصية canTalk وفي وصف Comp اسمها CanSpeak؛ هنا اسمها canTalk. اكتب AddMoney (1.1) وComp (1.2) والعملية الخارجية AveragePrice التي تعيد متوسط الأسعار (1.3) وSpecialOffer (1.4). الدالة Main مقفلة: تقرأ عدد الروبوتات ثم لكل روبوت اسمه وTrue/False (يتكلم) وسنة إنتاجه وسعره، كل قيمة في سطر؛ تطبع مقارنة الروبوت الأول بكل روبوت آخر، ثم متوسط السعر، ثم تنفّذ SpecialOffer وتطبع اسم كل روبوت وسعره الجديد.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Robot\n{\n    private string name;\n    private bool canTalk;\n    private int year;\n    private double price;\n\n    public Robot(string name, bool canTalk, int year, double price)\n    {\n        this.name = name;\n        this.canTalk = canTalk;\n        this.year = year;\n        this.price = price;\n    }\n\n    public string GetName() { return name; }\n    public bool GetCanTalk() { return canTalk; }\n    public int GetYear() { return year; }\n    public double GetPrice() { return price; }\n\n    public void AddMoney(double y)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "add",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public bool Comp(Robot r)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "comp",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static double AveragePrice(Robot[] arr)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "avg",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void SpecialOffer(Robot[] arr)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "offer",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Robot[] arr = new Robot[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool canTalk = bool.Parse(Console.ReadLine());\n            int year = int.Parse(Console.ReadLine());\n            double price = double.Parse(Console.ReadLine());\n            arr[i] = new Robot(name, canTalk, year, price);\n        }\n        for (int i = 1; i < n; i++)\n            Console.WriteLine(arr[0].Comp(arr[i]));\n        Console.WriteLine(AveragePrice(arr));\n        SpecialOffer(arr);\n        for (int i = 0; i < n; i++)\n            Console.WriteLine(arr[i].GetName() + \" \" + arr[i].GetPrice());\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "add": "        price += y;\n",
+    "comp": "        return canTalk == r.canTalk && Math.Abs(year - r.year) <= 3;\n",
+    "avg": "        double sum = 0;\n        for (int i = 0; i < arr.Length; i++)\n            sum += arr[i].GetPrice();\n        return sum / arr.Length;\n",
+    "offer": "        for (int i = 0; i < arr.Length; i++)\n            arr[i].AddMoney(-200);\n"
+   },
+   "public": [
+    "3\nRobo\nTrue\n2020\n1500\nTiko\nTrue\n2022\n900\nMax\nFalse\n2021\n2400\n"
+   ],
+   "explanation": "`Comp` تعيد شرطًا مركبًا: `canTalk == r.canTalk && Math.Abs(year - r.year) <= 3`. `AveragePrice` تجمع الأسعار بحلقة وتقسم على `arr.Length`. `SpecialOffer` تخفض كل سعر بـ 200 باستدعاء `AddMoney(-200)` لكل روبوت، لأن الحقل `price` خاص (private) ولا يُغيَّر مباشرة من خارج الفئة."
+  },
+  {
+   "book": "c11-p-q2",
+   "version": 3,
+   "text": "اكتب البنائية المبسّطة (2.1) وComp (2.2) والعملية الخارجية AvgParkCity (2.3). الدالة Main مقفلة: تقرأ مدينة بالبنائية المبسّطة (الاسم، عدد السكان، تكلفة الركن) وتطبع اسمها ومنطقتها وعدد سكانها وتكلفة الركن؛ ثم تقرأ عدد المدن ثم لكل مدينة اسمها ومنطقتها (N أو C أو S) وعدد سكانها وتكلفة الركن، كل قيمة في سطر. تطبع نتيجة Comp بين المدينة الأولى وكل مدينة، ثم ما تعيده AvgParkCity مقرّبًا إلى منزلتين: Math.Round(x, 2).",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class City\n{\n    private string name;\n    private char part;\n    private int number;\n    private double park;\n\n    public City(string name, char part, int number, double park)\n    {\n        this.name = name;\n        this.part = part;\n        this.number = number;\n        this.park = park;\n    }\n\n    public City(string name, int number, double park)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public int GetNumberPeople() { return number; }\n    public double GetPark() { return park; }\n    public void AddPeople(int x) { number += x; }\n    public string GetName() { return name; }\n    public char GetPart() { return part; }\n\n    public bool Comp(City c)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "comp",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static double AvgParkCity(City[] Arr)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "avg",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        string sName = Console.ReadLine();\n        int sNumber = int.Parse(Console.ReadLine());\n        double sPark = double.Parse(Console.ReadLine());\n        City s = new City(sName, sNumber, sPark);\n        Console.WriteLine(s.GetName() + \" \" + s.GetPart() + \" \" + s.GetNumberPeople() + \" \" + s.GetPark());\n        int n = int.Parse(Console.ReadLine());\n        City[] arr = new City[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            char part = char.Parse(Console.ReadLine());\n            int number = int.Parse(Console.ReadLine());\n            double park = double.Parse(Console.ReadLine());\n            arr[i] = new City(name, part, number, park);\n        }\n        for (int i = 0; i < n; i++)\n            Console.WriteLine(s.Comp(arr[i]));\n        Console.WriteLine(Math.Round(AvgParkCity(arr), 2));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "ctor": "        this.name = name;\n        part = 'S';\n        this.number = number;\n        this.park = park;\n",
+    "comp": "        return part == c.part && Math.Abs(park - c.park) <= 2.5;\n",
+    "avg": "        double sum = 0;\n        for (int i = 0; i < Arr.Length; i++)\n            sum += Arr[i].GetPark();\n        return sum / Arr.Length;\n"
+   },
+   "public": [
+    "Eilat\n52000\n6\n3\nHaifa\nN\n285000\n8\nBeersheba\nS\n210000\n7.5\nDimona\nS\n34000\n3\n"
+   ],
+   "hidden": [
+    "Arad\n28000\n10\n3\nOfakim\nS\n35000\n12.5\nYeruham\nS\n11000\n7.5\nNetivot\nS\n45000\n12.75\n",
+    "Rahat\n75000\n4\n4\nNazareth\nN\n78000\n5\nLod\nC\n85000\n4\nSderot\nS\n33000\n6.5\nKuseife\nS\n25000\n1.5\n",
+    "Mitzpe\n5000\n2.5\n2\nAkko\nN\n50000\n2.5\nTamra\nN\n35000\n0\n",
+    "Hura\n23000\n8.25\n4\nLaqiya\nS\n15000\n5.75\nRamla\nC\n78000\n8.25\nOmer\nS\n8000\n10.75\nTiberias\nN\n47000\n8\n"
+   ],
+   "wrongGaps": {
+    "ctor": "        this.name = name;\n        part = 'S';\n        this.number = number;\n        this.park = park;\n",
+    "comp": "        return part == c.part && Math.Abs(park - c.park) < 2.5;\n",
+    "avg": "        double sum = 0;\n        for (int i = 0; i < Arr.Length; i++)\n            sum += Arr[i].GetPark();\n        return sum / Arr.Length;\n"
+   },
+   "explanation": "البنائية المبسّطة تعطي الحقول قيم البارامترات وتضع `part = 'S'` لأن المدينة في الجنوب. `Comp` تعيد `part == c.part && Math.Abs(park - c.park) <= 2.5` (فرق 2.5 تمامًا مسموح). `AvgParkCity` تجمع `GetPark()` لكل مدينة وتقسم على `Arr.Length`."
+  },
+  {
+   "book": "c11-p-q3",
+   "version": 3,
+   "text": "اكتب في Test العمليتين IsNormal (3.1) وIsLifeThreatening (3.2)، وفي Patient العمليتين PrintLongestNormal التي تطبع طول أطول تسلسل متتالٍ من الفحوصات السليمة (3.3)، وHasLifeThreat (3.4). الدالة Main مقفلة: تقرأ اسم المريض ثم عدد الفحوصات ثم لكل فحص مستوى السكر والنبض ونسبة الأكسجين، كل قيمة في سطر؛ تطبع لكل فحص نتيجتي IsNormal وIsLifeThreatening، ثم تستدعي PrintLongestNormal، ثم تطبع ما تعيده HasLifeThreat.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Test\n{\n    private int sugarLevel;\n    private int pulse;\n    private int oxygenSaturation;\n\n    public Test(int sugarLevel, int pulse, int oxygenSaturation)\n    {\n        this.sugarLevel = sugarLevel;\n        this.pulse = pulse;\n        this.oxygenSaturation = oxygenSaturation;\n    }\n\n    public bool IsNormal()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "normal",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public bool IsLifeThreatening()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "danger",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Patient\n{\n    private string name;\n    private Test[] tests;\n\n    public Patient(string name, Test[] tests)\n    {\n        this.name = name;\n        this.tests = tests;\n    }\n\n    public void PrintLongestNormal()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "longest",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public bool HasLifeThreat()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "threat",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        string name = Console.ReadLine();\n        int n = int.Parse(Console.ReadLine());\n        Test[] tests = new Test[n];\n        for (int i = 0; i < n; i++)\n        {\n            int sugar = int.Parse(Console.ReadLine());\n            int pulse = int.Parse(Console.ReadLine());\n            int oxygen = int.Parse(Console.ReadLine());\n            tests[i] = new Test(sugar, pulse, oxygen);\n            Console.WriteLine(tests[i].IsNormal() + \" \" + tests[i].IsLifeThreatening());\n        }\n        Patient p = new Patient(name, tests);\n        p.PrintLongestNormal();\n        Console.WriteLine(p.HasLifeThreat());\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "normal": "        return sugarLevel >= 70 && sugarLevel <= 100 && pulse >= 60 && pulse <= 90 && oxygenSaturation >= 97;\n",
+    "danger": "        return sugarLevel < 50 || pulse < 40 || pulse > 120 || oxygenSaturation < 93;\n",
+    "longest": "        int max = 0, current = 0;\n        for (int i = 0; i < tests.Length; i++)\n        {\n            if (tests[i].IsNormal())\n            {\n                current++;\n                if (current > max)\n                    max = current;\n            }\n            else\n                current = 0;\n        }\n        Console.WriteLine(max);\n",
+    "threat": "        for (int i = 0; i < tests.Length; i++)\n            if (tests[i].IsLifeThreatening())\n                return true;\n        return false;\n"
+   },
+   "public": [
+    "Samir\n8\n100\n90\n99\n100\n90\n99\n80\n70\n95\n100\n90\n99\n85\n72\n98\n90\n80\n100\n110\n75\n98\n85\n35\n97\n"
+   ],
+   "hidden": [
+    "Layla\n9\n70\n60\n97\n130\n100\n94\n85\n72\n98\n70\n60\n97\n65\n58\n96\n100\n90\n99\n75\n65\n97\n100\n90\n99\n85\n72\n98\n",
+    "Yousef\n24\n110\n75\n98\n85\n72\n98\n90\n80\n100\n85\n72\n98\n85\n72\n98\n85\n72\n98\n100\n90\n99\n100\n90\n99\n75\n65\n97\n75\n65\n97\n90\n80\n100\n85\n72\n98\n90\n80\n100\n110\n75\n98\n90\n80\n100\n75\n65\n97\n100\n90\n99\n70\n60\n97\n90\n80\n100\n85\n72\n98\n100\n90\n99\n100\n90\n99\n90\n80\n100\n100\n90\n99\n",
+    "Mona\n8\n130\n100\n94\n110\n75\n98\n110\n75\n98\n85\n35\n97\n130\n100\n94\n85\n95\n97\n65\n58\n96\n80\n70\n95\n",
+    "Tariq\n8\n100\n90\n99\n85\n72\n98\n75\n65\n97\n75\n65\n97\n75\n65\n97\n75\n65\n97\n100\n90\n99\n100\n90\n99\n",
+    "Rima\n24\n90\n125\n99\n100\n90\n99\n90\n80\n100\n90\n80\n100\n65\n58\n96\n65\n58\n96\n75\n65\n97\n90\n80\n100\n85\n35\n97\n85\n72\n98\n70\n60\n97\n90\n80\n100\n100\n90\n99\n100\n90\n99\n100\n90\n99\n75\n65\n97\n90\n80\n100\n85\n72\n98\n75\n65\n97\n100\n90\n99\n100\n90\n99\n100\n90\n99\n100\n90\n99\n70\n60\n97\n"
+   ],
+   "wrongGaps": {
+    "normal": "        return sugarLevel >= 70 && sugarLevel <= 100 && pulse >= 60 && pulse <= 90 && oxygenSaturation >= 97;\n",
+    "danger": "        return sugarLevel < 50 || pulse < 40 || pulse > 120 || oxygenSaturation < 93;\n",
+    "longest": "        int max = 0, current = 0;\n        for (int i = 0; i < tests.Length; i++)\n        {\n            if (tests[i].IsNormal())\n                current++;\n            else\n            {\n                if (current > max)\n                    max = current;\n                current = 0;\n            }\n        }\n        Console.WriteLine(max);\n",
+    "threat": "        for (int i = 0; i < tests.Length; i++)\n            if (tests[i].IsLifeThreatening())\n                return true;\n        return false;\n"
+   },
+   "explanation": "`IsNormal` و`IsLifeThreatening` تعيدان شرطين مركبين: الأول بـ `&&` (كل القيم في المجال) والثاني بـ `||` (يكفي شرط واحد). لأطول تسلسل نزيد `current` عند كل فحص سليم ونصفّره عند غير السليم، ونحدّث `max` بعد كل زيادة كي لا نخسر تسلسلًا ينتهي في آخر المصفوفة. `HasLifeThreat` تعيد `true` عند أول فحص خطر، و`false` بعد انتهاء الحلقة."
+  },
+  {
+   "book": "c11-p-q4",
+   "version": 3,
+   "check": false,
+   "text": "في الكتاب تعرّف البنائية متغيرًا محليًا mat، فلا يُهيّأ أي حقل؛ هنا mat حقل في الفئة وتنشئه البنائية. اكتب العملية AddLecture(day, month, lec) (4.1): اليوم من 1 إلى 31 والشهر من 1 إلى 12؛ إذا كان التاريخ محجوزًا توضع المحاضرة في أقرب يوم فارغ في الشهر نفسه (عند تساوي البعد يُختار اليوم الأسبق)، وتعيد true، أو false إذا كان الشهر كله محجوزًا. الدالة Main مقفلة: تقرأ عدد المحاضرات ثم لكل محاضرة اليوم والشهر والموضوع والمكان والمحاضر والمدة، كل قيمة في سطر؛ تطبع نتيجة كل إضافة، ثم كل تاريخ محجوز مع موضوعه.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Lecture\n{\n    private string subject;\n    private string place;\n    private string lecturer;\n    private int minutes;\n\n    public Lecture(string subject, string place, string lecturer, int minutes)\n    {\n        this.subject = subject;\n        this.place = place;\n        this.lecturer = lecturer;\n        this.minutes = minutes;\n    }\n\n    public string GetSubject() { return subject; }\n}\n\npublic class ThinkAndDrink\n{\n    const int MONTH = 12, DAY = 31;\n    private Lecture[,] mat;\n\n    public ThinkAndDrink()\n    {\n        mat = new Lecture[MONTH, DAY];\n    }\n\n    public Lecture GetLecture(int day, int month) { return mat[month - 1, day - 1]; }\n\n    public bool AddLecture(int day, int month, Lecture lec)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "add",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void Main()\n    {\n        ThinkAndDrink plan = new ThinkAndDrink();\n        int n = int.Parse(Console.ReadLine());\n        for (int i = 0; i < n; i++)\n        {\n            int day = int.Parse(Console.ReadLine());\n            int month = int.Parse(Console.ReadLine());\n            Lecture lec = new Lecture(Console.ReadLine(), Console.ReadLine(), Console.ReadLine(), int.Parse(Console.ReadLine()));\n            Console.WriteLine(plan.AddLecture(day, month, lec));\n        }\n        for (int month = 1; month <= 12; month++)\n            for (int day = 1; day <= 31; day++)\n                if (plan.GetLecture(day, month) != null)\n                    Console.WriteLine(day + \"/\" + month + \" \" + plan.GetLecture(day, month).GetSubject());\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "add": "        int m = month - 1, d = day - 1;\n        for (int dist = 0; dist < DAY; dist++)\n        {\n            if (d - dist >= 0 && mat[m, d - dist] == null)\n            {\n                mat[m, d - dist] = lec;\n                return true;\n            }\n            if (d + dist < DAY && mat[m, d + dist] == null)\n            {\n                mat[m, d + dist] = lec;\n                return true;\n            }\n        }\n        return false;\n"
+   },
+   "public": [
+    "4\n10\n3\nSpace\nHaifa\nDr. Nadia\n60\n10\n3\nPoetry\nAkko\nMr. Sami\n45\n10\n3\nRobots\nNazareth\nDr. Omar\n90\n1\n5\nHealth\nJaffa\nDr. Rana\n50\n"
+   ],
+   "explanation": "الصف في `mat` هو الشهر والعمود هو اليوم، فنطرح 1 من كل منهما. نبحث بمسافة `dist` تكبر من 0: نفحص اليوم `d - dist` ثم `d + dist` (داخل حدود الشهر)، وأول خانة فارغة `null` نضع فيها المحاضرة ونعيد `true`؛ وإذا انتهت كل المسافات نعيد `false`."
+  },
+  {
+   "book": "c11-p-q5",
+   "version": 3,
+   "check": false,
+   "text": "المواصفة في الكتاب ناقصة: الفئة Picture والعمليتان Blk وNot غير معرّفة. نفترض هنا: Not(i) تقلب لون الخانة i، وBlk() تعيد true إذا كان عدد الخانات السوداء (1) أكبر، وPicture فيها اسم name وكائن Color باسم color. اكتب البنائية (5.1) وWhite (5.2) وChangeColor (5.3) والعملية الخارجية PrintWhitened (5.4). الدالة Main مقفلة: تقرأ عدد الصور ثم لكل صورة اسمها وisBlk (True/False) وعدد الألوان ثم الألوان (0 أو 1)، كل قيمة في سطر؛ تستدعي PrintWhitened ثم تطبع ألوان كل صورة بعد التغيير.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Color\n{\n    private bool isBlk;\n    private int[] colors;\n\n    public Color(bool isBlk, int[] colors)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "ctor",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public int[] GetColors() { return colors; }\n\n    public void Not(int i)\n    {\n        colors[i] = 1 - colors[i];\n    }\n\n    public bool Blk()\n    {\n        int black = 0;\n        for (int i = 0; i < colors.Length; i++)\n            if (colors[i] == 1)\n                black++;\n        return black > colors.Length - black;\n    }\n\n    public void White()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "white",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Picture\n{\n    private string name;\n    private Color color;\n\n    public Picture(string name, Color color)\n    {\n        this.name = name;\n        this.color = color;\n    }\n\n    public string GetName() { return name; }\n    public Color GetColor() { return color; }\n\n    public bool ChangeColor()\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "change",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n}\n\npublic class Program\n{\n    public static void PrintWhitened(Picture[] arr)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "print",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        Picture[] arr = new Picture[n];\n        for (int i = 0; i < n; i++)\n        {\n            string name = Console.ReadLine();\n            bool isBlk = bool.Parse(Console.ReadLine());\n            int k = int.Parse(Console.ReadLine());\n            int[] c = new int[k];\n            for (int j = 0; j < k; j++)\n                c[j] = int.Parse(Console.ReadLine());\n            arr[i] = new Picture(name, new Color(isBlk, c));\n        }\n        PrintWhitened(arr);\n        for (int i = 0; i < n; i++)\n        {\n            int[] c = arr[i].GetColor().GetColors();\n            string line = arr[i].GetName() + \":\";\n            for (int j = 0; j < c.Length; j++)\n                line += \" \" + c[j];\n            Console.WriteLine(line);\n        }\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "ctor": "        this.isBlk = isBlk;\n        this.colors = new int[colors.Length];\n        for (int i = 0; i < colors.Length; i++)\n        {\n            if (isBlk)\n                this.colors[i] = 1 - colors[i];\n            else\n                this.colors[i] = colors[i];\n        }\n",
+    "white": "        for (int i = 0; i < colors.Length; i++)\n            if (colors[i] == 1)\n                Not(i);\n",
+    "change": "        if (color.Blk())\n        {\n            int[] c = color.GetColors();\n            for (int i = 0; i < c.Length; i++)\n                color.Not(i);\n            return true;\n        }\n        color.White();\n        return false;\n",
+    "print": "        for (int i = 0; i < arr.Length; i++)\n            if (!arr[i].ChangeColor())\n                Console.WriteLine(arr[i].GetName());\n"
+   },
+   "public": [
+    "3\nSea\nFalse\n5\n1\n1\n0\n1\n0\nNight\nTrue\n3\n0\n0\n1\nSnow\nFalse\n4\n0\n1\n0\n0\n"
+   ],
+   "explanation": "البنائية تنسخ المصفوفة، وإذا كان `isBlk` صحيحًا تضع `1 - colors[i]` بدل كل لون فتعكسه. `White` تستدعي `Not(i)` لكل خانة سوداء فتصبح كل الخانات 0. `ChangeColor` تسأل `color.Blk()`: إن كان الأسود أكثر تعكس كل الخانات بـ `Not` وتعيد `true`، وإلا تستدعي `White()` وتعيد `false`، و`PrintWhitened` تطبع اسم كل صورة أعادت لها `ChangeColor` القيمة `false`."
+  }
+ ]
+}

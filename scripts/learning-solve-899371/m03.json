@@ -1,0 +1,92 @@
+{
+ "module": "m03",
+ "questions": [
+  {
+   "book": "c03-h-q7",
+   "version": 2,
+   "text": "اكتب برنامجًا يقرأ المعاملات a ثم b ثم c (أعداد حقيقية، كل عدد في سطر) للمعادلة ax² + bx + c = 0 التي لها حلّان حقيقيان، ويطبع في السطر الأول الحل (-b + √(b² - 4ac)) / (2a)، وفي السطر الثاني الحل (-b - √(b² - 4ac)) / (2a)، كما يطبعهما Console.WriteLine.",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        double root = Math.Sqrt(b * b - 4 * a * c);\n        double x1 = (-b + root) / (2 * a);\n        double x2 = (-b - root) / (2 * a);\n        Console.WriteLine(x1);\n        Console.WriteLine(x2);\n    }\n}\n",
+   "public": [
+    "1\n-3\n2\n"
+   ],
+   "hidden": [
+    "2\n-10\n12\n",
+    "1\n2\n-8\n",
+    "4\n0\n-1\n",
+    "-1\n1\n6\n",
+    "3\n-15\n0\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double a = double.Parse(Console.ReadLine());\n        double b = double.Parse(Console.ReadLine());\n        double c = double.Parse(Console.ReadLine());\n        double root = Math.Sqrt(b * b - 4 * a * c);\n        double x1 = (-b + root) / 2 * a;\n        double x2 = (-b - root) / 2 * a;\n        Console.WriteLine(x1);\n        Console.WriteLine(x2);\n    }\n}\n",
+   "explanation": "نحسب الجذر التربيعي للمميّز مرة واحدة: `Math.Sqrt(b * b - 4 * a * c)`، ثم نطبّق القانون العام مرتين: مرة بالجمع ومرة بالطرح. المقام `(2 * a)` يجب أن يكون بين قوسين، وإلا قُسم على 2 ثم ضُرب في a."
+  },
+  {
+   "book": "c03-h-q8",
+   "version": 2,
+   "text": "اكتب برنامجًا يقرأ عددًا ثلاثي المنازل، ويطبع True إذا كان مربّع منزلة الآحاد يساوي معدل منزلتي العشرات والمئات (المعدل الحقيقي بكسوره)، وإلا يطبع False (كما يطبع Console.WriteLine قيمة من نوع bool).",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int hundreds = n / 100;\n        int tens = n / 10 % 10;\n        int units = n % 10;\n        bool result = units * units == (hundreds + tens) / 2.0;\n        Console.WriteLine(result);\n    }\n}\n",
+   "public": [
+    "532\n"
+   ],
+   "hidden": [
+    "121\n",
+    "111\n",
+    "993\n",
+    "482\n",
+    "750\n",
+    "201\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int hundreds = n / 100;\n        int tens = n / 10 % 10;\n        int units = n % 10;\n        bool result = units * units == (hundreds + tens) / 2;\n        Console.WriteLine(result);\n    }\n}\n",
+   "explanation": "نستخرج المنازل بـ `/` و`%`، ثم نقارن مربع الآحاد بالمعدل الحقيقي `(hundreds + tens) / 2.0` ونخزّن نتيجة المقارنة في متغير `bool` ونطبعه. القسمة على `2.0` مهمة: معدل 1 و2 هو 1.5 وليس 1."
+  },
+  {
+   "book": "c03-h-q9",
+   "reuse": "CL899371-03-Q04",
+   "explanation": "نحسب الوتر بـ `Math.Sqrt(a * a + b * b)` ونخزّنه في متغير لأننا نحتاجه مرتين. المساحة `a * b / 2`، والمحيط `a + b + c`، ونقرّب الوتر والمحيط بـ `Math.Round(x, 2)`."
+  },
+  {
+   "book": "c03-h-q10",
+   "version": 2,
+   "check": false,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Random rnd = new Random();\n        int m1 = rnd.Next(0, 101);\n        int m2 = rnd.Next(0, 101);\n        int m3 = rnd.Next(0, 101);\n        int m4 = rnd.Next(0, 101);\n        int m5 = rnd.Next(0, 101);\n        Console.WriteLine(m1 + \" \" + m2 + \" \" + m3 + \" \" + m4 + \" \" + m5);\n        int average = (m1 + m2 + m3 + m4 + m5) / 5;\n        Console.WriteLine(average);\n    }\n}\n",
+   "public": [
+    ""
+   ],
+   "explanation": "ننشئ مولّدًا `Random rnd = new Random();` ونستعمل `rnd.Next(0, 101)` خمس مرات، لأن الحد الأعلى لا يدخل في المجال. المعدل الصحيح هو القسمة الصحيحة `(m1 + m2 + m3 + m4 + m5) / 5`. طبعنا العلامات أيضًا لنتأكد من الحساب، وكل تشغيل يعطي نتيجة مختلفة."
+  },
+  {
+   "book": "c03-p-q6",
+   "reuse": "CL899371-03-Q01",
+   "explanation": "حسب فيتاغورس الوتر هو الجذر التربيعي لمجموع مربعي القائمين: `Math.Sqrt(a * a + b * b)`، ونقرّبه إلى منزلتين بـ `Math.Round(c, 2)`."
+  },
+  {
+   "book": "c03-p-q7",
+   "reuse": "CL899371-03-Q02",
+   "explanation": "الدالة `Math.Max` تعيد الأكبر بين قيمتين، فنستعملها مرتين لثلاث قيم: `Math.Max(a, Math.Max(b, c))`."
+  },
+  {
+   "book": "c03-p-q8",
+   "reuse": "CL899371-03-Q03",
+   "explanation": "نجمع العلامات الثلاث ونقسم على 3. لأن العلامات من نوع `int` فالقسمة `(a + b + c) / 3` صحيحة وتحذف الكسور تلقائيًا."
+  },
+  {
+   "book": "c03-p-q9",
+   "version": 2,
+   "check": false,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Random rnd = new Random();\n        int number = rnd.Next(1, 1001);\n        Console.WriteLine(number);\n        Console.WriteLine(number % 7 == 0);\n    }\n}\n",
+   "public": [
+    ""
+   ],
+   "explanation": "`rnd.Next(1, 1001)` يختار عددًا من 1 حتى 1000. العدد من مضاعفات 7 إذا كان باقي قسمته على 7 صفرًا، فطباعة التعبير `number % 7 == 0` تطبع True أو False مباشرة."
+  },
+  {
+   "book": "c03-p-q10",
+   "version": 2,
+   "check": false,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        Random rnd = new Random();\n        int die1 = rnd.Next(1, 7);\n        int die2 = rnd.Next(1, 7);\n        Console.WriteLine(die1 + \" \" + die2);\n        Console.WriteLine((die1 == 5 && die2 == 6) || (die1 == 6 && die2 == 5));\n    }\n}\n",
+   "public": [
+    ""
+   ],
+   "explanation": "كل رمية هي `rnd.Next(1, 7)` (من 1 حتى 6). القيمتان 5 و6 معًا تعني حالتين: الأول 5 والثاني 6، أو العكس، فنربط الحالتين بـ `||` وكل حالة شرطاها مربوطان بـ `&&`."
+  }
+ ]
+}

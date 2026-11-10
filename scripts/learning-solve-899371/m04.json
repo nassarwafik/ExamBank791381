@@ -1,0 +1,94 @@
+{
+ "module": "m04",
+ "questions": [
+  {
+   "book": "c04-h-q7",
+   "version": 2,
+   "text": "اكتب برنامجًا يقرأ اليوم d ثم الشهر m ثم السنة y (أعداد صحيحة، كل عدد في سطر). إذا كان اليوم بين 1 و30 والشهر بين 1 و12 والسنة بين 2001 و2100 يطبع في السطر الأول: التاريخ قانوني، وفي السطر الثاني عدد الأيام منذ بداية السنة حتى هذا التاريخ (اليوم نفسه محسوب، وفي كل شهر 30 يومًا: 1/1 ← 1). وإلا يطبع: التاريخ غير قانوني.",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int d = int.Parse(Console.ReadLine());\n        int m = int.Parse(Console.ReadLine());\n        int y = int.Parse(Console.ReadLine());\n        if (d >= 1 && d <= 30 && m >= 1 && m <= 12 && y >= 2001 && y <= 2100)\n        {\n            Console.WriteLine(\"التاريخ قانوني\");\n            int days = (m - 1) * 30 + d;\n            Console.WriteLine(days);\n        }\n        else\n        {\n            Console.WriteLine(\"التاريخ غير قانوني\");\n        }\n    }\n}\n",
+   "public": [
+    "20\n5\n2025\n"
+   ],
+   "hidden": [
+    "15\n3\n2024\n",
+    "30\n12\n2100\n",
+    "31\n1\n2020\n",
+    "10\n13\n2010\n",
+    "1\n1\n2000\n",
+    "1\n1\n2001\n",
+    "0\n6\n2050\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int d = int.Parse(Console.ReadLine());\n        int m = int.Parse(Console.ReadLine());\n        int y = int.Parse(Console.ReadLine());\n        if (d >= 1 && d < 30 && m >= 1 && m <= 12 && y >= 2001 && y <= 2100)\n        {\n            Console.WriteLine(\"التاريخ قانوني\");\n            int days = (m - 1) * 30 + d;\n            Console.WriteLine(days);\n        }\n        else\n        {\n            Console.WriteLine(\"التاريخ غير قانوني\");\n        }\n    }\n}\n",
+   "explanation": "نجمع الشروط الستة بـ `&&` في شرط واحد، لأن التاريخ قانوني فقط إذا تحققت كلها. إذا كان قانونيًا فالأشهر الكاملة التي مضت هي `m - 1` وفي كل منها 30 يومًا، فعدد الأيام `(m - 1) * 30 + d`."
+  },
+  {
+   "book": "c04-h-q9",
+   "reuse": "CL899371-04-Q03",
+   "explanation": "نحسب الراتب `h * rate`، ثم نختار شريحة الضريبة بسلسلة `if` / `else if` تبدأ من الشريحة الأعلى: `s > 7000` ثم `s >= 4500`. الضريبة تُحسب على المبلغ الزائد فقط، مثل `(s - 4500) * 0.2`، ونطبع `s - tax` مقرّبًا."
+  },
+  {
+   "book": "c04-h-q11",
+   "reuse": "CL899371-04-Q04",
+   "explanation": "نحدد أولًا أجرتي الساعة حسب اليوم بـ `if` / `else if`، ثم نحسب الأجرة: إذا كانت الساعات 8 أو أقل فهي `hours * low`، وإلا `8 * low + (hours - 8) * high`، لأن الساعات الثماني الأولى بالأجرة الأقل دائمًا."
+  },
+  {
+   "book": "c04-p-q6",
+   "version": 2,
+   "text": "اكتب برنامجًا يقرأ العمر (عددًا صحيحًا، دون طباعة رسالة طلب) ويطبع سطرًا واحدًا: أقل من 16: لا يمكن الحصول على رخصة قيادة، 16 أو 17: يمكن الحصول على رخصة مؤقتة، 18 أو أكثر: يمكن الحصول على رخصة كاملة.",
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        if (age < 16)\n            Console.WriteLine(\"لا يمكن الحصول على رخصة قيادة\");\n        else if (age <= 17)\n            Console.WriteLine(\"يمكن الحصول على رخصة مؤقتة\");\n        else\n            Console.WriteLine(\"يمكن الحصول على رخصة كاملة\");\n    }\n}\n",
+   "public": [
+    "17\n"
+   ],
+   "hidden": [
+    "16\n",
+    "18\n",
+    "15\n",
+    "40\n",
+    "5\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int age = int.Parse(Console.ReadLine());\n        if (age <= 16)\n            Console.WriteLine(\"لا يمكن الحصول على رخصة قيادة\");\n        else if (age <= 17)\n            Console.WriteLine(\"يمكن الحصول على رخصة مؤقتة\");\n        else\n            Console.WriteLine(\"يمكن الحصول على رخصة كاملة\");\n    }\n}\n",
+   "explanation": "نستعمل سلسلة `if` / `else if` / `else`: نفحص أولًا `age < 16`، ثم `age <= 17`. الوصول إلى الفحص الثاني يعني أن العمر 16 أو أكثر، فلا حاجة لإعادة فحصه، و`else` الأخيرة تبقى لعمر 18 فما فوق."
+  },
+  {
+   "book": "c04-p-q7",
+   "reuse": "CL899371-04-Q01",
+   "explanation": "نحسب السعر الكلي `n * p`، ثم نفحص الشرط الأوسع أولًا `n > 10` (خصم 20% أي الضرب في 0.8)، ثم `else if (n >= 5)` (الضرب في 0.9)، وفي غير ذلك يبقى السعر كما هو."
+  },
+  {
+   "book": "c04-p-q8",
+   "version": 2,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int mark = int.Parse(Console.ReadLine());\n        if (mark >= 90)\n            Console.WriteLine(\"ممتاز\");\n        else if (mark >= 80)\n            Console.WriteLine(\"جيد جدًا\");\n        else if (mark >= 70)\n            Console.WriteLine(\"جيد\");\n        else if (mark >= 60)\n            Console.WriteLine(\"مقبول\");\n        else\n            Console.WriteLine(\"راسب\");\n    }\n}\n",
+   "public": [
+    "85\n"
+   ],
+   "hidden": [
+    "90\n",
+    "89\n",
+    "80\n",
+    "70\n",
+    "69\n",
+    "60\n",
+    "59\n",
+    "100\n",
+    "0\n"
+   ],
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int mark = int.Parse(Console.ReadLine());\n        if (mark > 90)\n            Console.WriteLine(\"ممتاز\");\n        else if (mark > 80)\n            Console.WriteLine(\"جيد جدًا\");\n        else if (mark > 70)\n            Console.WriteLine(\"جيد\");\n        else if (mark > 60)\n            Console.WriteLine(\"مقبول\");\n        else\n            Console.WriteLine(\"راسب\");\n    }\n}\n",
+   "explanation": "نرتّب الفحوص من الأعلى إلى الأدنى: `mark >= 90` ثم `mark >= 80` وهكذا. كل `else if` يُفحص فقط إذا فشلت الشروط قبله، فلا نحتاج لكتابة الحد الأعلى لكل مجال."
+  },
+  {
+   "book": "c04-p-q9",
+   "reuse": "CL899371-04-Q02",
+   "explanation": "نحسب مرة واحدة متغيرين منطقيين: `bool even = n % 2 == 0` و`bool five = n % 5 == 0`. ثم نفحص الحالة المركّبة `even && five` أولًا، وبعدها كل شرط وحده، و`else` الأخيرة للحالة الباقية."
+  },
+  {
+   "book": "c04-p-q10",
+   "version": 2,
+   "check": false,
+   "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int temp = int.Parse(Console.ReadLine());\n        int humidity = int.Parse(Console.ReadLine());\n        if (temp < 10)\n            Console.WriteLine(\"البس جاكيت\");\n        else if (temp <= 25 && humidity > 70)\n            Console.WriteLine(\"الجو رطب – لا تنسَ شرب الماء\");\n        else if (temp > 30 && humidity < 40)\n            Console.WriteLine(\"الجو جاف – البس قبعة واحمل معك ماء\");\n        else if (temp > 35 && humidity > 60)\n            Console.WriteLine(\"تحذير من موجة حر – تجنّب التعرض للشمس\");\n        else\n            Console.WriteLine(\"الطقس معتدل – استمتع بيومك\");\n    }\n}\n",
+   "public": [
+    "28\n50\n"
+   ],
+   "explanation": "نقرأ الحرارة ثم الرطوبة ونفحص صفوف الجدول بالترتيب بسلسلة `if` / `else if`، وكل صف شرطاه مربوطان بـ `&&`. الجدول فيه فجوة (25–30) وصفّان تتداخل حرارتهما (أكثر من 30 وأكثر من 35)، لذلك ترتيب الفحص هو الذي يقرّر، وكل ما لم يطابق صفًا يذهب إلى `else`: الطقس معتدل."
+  }
+ ]
+}

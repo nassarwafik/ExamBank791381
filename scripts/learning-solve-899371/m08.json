@@ -1,0 +1,48 @@
+{
+ "module": "m08",
+ "questions": [
+  {
+   "book": "c08-p-q1",
+   "reuse": "CL899371-08-Q01",
+   "explanation": "نمر على النص ونزيد العداد ما دام الحرف الحالي يساوي الحرف الذي قبله `str[i] == str[i - 1]`. عندما يتغير الحرف أو ينتهي النص نضيف إلى الناتج الحرف السابق ثم عدده، ونعيد العداد إلى 1."
+  },
+  {
+   "book": "c08-p-q2",
+   "reuse": "CL899371-08-Q02",
+   "explanation": "نبني نصًا جديدًا حرفًا بعد حرف: إذا كان الحرف `'b'` أو `'B'` نضيف `'c'`، وإلا نضيف الحرف نفسه. النص الأصلي لا يتغير لأن النصوص في C# لا تُعدَّل، بل نبني نصًا جديدًا ونعيده."
+  },
+  {
+   "book": "c08-p-q3",
+   "version": 3,
+   "check": false,
+   "text": "اكتب جسم العملية CalculateExpression. الدالة Main مقفلة: تقرأ سطرًا فيه التعبير (مثل 7.5/2.5، دون مسافات) وتطبع ما تعيده عمليتك.",
+   "template": [
+    {
+     "kind": "locked",
+     "text": "using System;\n\npublic class Program\n{\n    public static double CalculateExpression(string expr)\n    {\n"
+    },
+    {
+     "kind": "editable",
+     "id": "body",
+     "starter": "        \n"
+    },
+    {
+     "kind": "locked",
+     "text": "    }\n\n    public static void Main()\n    {\n        string expr = Console.ReadLine();\n        Console.WriteLine(CalculateExpression(expr));\n    }\n}\n"
+    }
+   ],
+   "referenceGaps": {
+    "body": "        int pos = 1;\n        while (expr[pos] != '+' && expr[pos] != '-' && expr[pos] != '*' && expr[pos] != '/')\n            pos++;\n        double a = double.Parse(expr.Substring(0, pos));\n        double b = double.Parse(expr.Substring(pos + 1));\n        char op = expr[pos];\n        if (op == '+')\n            return a + b;\n        else if (op == '-')\n            return a - b;\n        else if (op == '*')\n            return a * b;\n        else\n            return a / b;\n"
+   },
+   "public": [
+    "5.5+2.3\n"
+   ],
+   "explanation": "نبحث عن موقع رمز العملية بحلقة `while` تبدأ من الموقع 1، ثم نقطع العددين بـ `Substring` ونحوّلهما بـ `double.Parse`. جملة `if-else` على الرمز تختار العملية الحسابية التي نعيد ناتجها."
+  },
+  {
+   "book": "c08-p-q4",
+   "reuse": "CL899371-08-Q03",
+   "explanation": "لكل حرف صغير نحسب موقعه في الأبجدية `ch - 'a'`، ونضيف 13 ونأخذ باقي القسمة على 26 كي نعود إلى a بعد z، ثم نرجعه حرفًا بـ `(char)(... + 'a')`. الفراغ وأي رمز آخر نضيفه كما هو."
+  }
+ ]
+}

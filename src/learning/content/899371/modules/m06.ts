@@ -3221,6 +3221,14 @@ const m06: ContentModule = {
               ]
             },
             {
+              "id": "m06-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
+            },
+            {
               "id": "m06-l03-p01-b07",
               "type": "text",
               "origin": "book",
@@ -3273,6 +3281,14 @@ const m06: ContentModule = {
                   "text": "حساب وطباعة أعلى علامة بين جميع الصفوف (يُفترض أن هناك فقط علامة واحدة هي الأعلى)."
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p01-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3391,6 +3407,14 @@ const m06: ContentModule = {
                   "text": "إذا كانت مساوية للعلامة القصوى المدرسية: أضف العداد الصفّي إلى العداد المدرسي."
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p02-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3523,6 +3547,14 @@ const m06: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p03-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3655,6 +3687,14 @@ const m06: ContentModule = {
                   "style": "strong"
                 }
               ]
+            },
+            {
+              "id": "m06-l03-p04-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         }

@@ -3558,6 +3558,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p01-solve-q1",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static double[] StoresSums(int stores)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        double[] sums = StoresSums(n);\n        string line = \"\";\n        for (int i = 0; i < sums.Length; i++)\n            line += sums[i] + \" \";\n        Console.WriteLine(line);\n    }\n}\n"
             }
           ]
         },
@@ -3651,6 +3659,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p02-solve-q2",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3764,6 +3780,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p03-solve-q3",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -3943,6 +3967,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p04-solve-q4",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        \n    }\n}\n"
             }
           ]
         },
@@ -4286,6 +4318,14 @@ const m09: ContentModule = {
                   "text": " ما وظيفة العملية Dog؟"
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p05-solve-q5",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static int Igloo(int[] a, int num)\n    {\n        \n    }\n\n    public static int Dog(int[] a)\n    {\n        for (int i = 0; i < a.Length; i++)\n            if (Igloo(a, a[i]) != i)\n                return i;\n        return a.Length;\n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++)\n            a[i] = int.Parse(Console.ReadLine());\n        int num = int.Parse(Console.ReadLine());\n        Console.WriteLine(Igloo(a, num));\n        Console.WriteLine(Dog(a));\n    }\n}\n"
             }
           ]
         },
@@ -4451,6 +4491,14 @@ const m09: ContentModule = {
                   ]
                 }
               ]
+            },
+            {
+              "id": "m09-l03-p06-solve-q6",
+              "type": "code",
+              "origin": "teacher-enrichment",
+              "language": "csharp",
+              "dir": "ltr",
+              "code": "using System;\n\npublic class Program\n{\n    public static bool IsBalanced(int[] arr, int index)\n    {\n        \n    }\n\n    public static int FBalanced(int[] arr)\n    {\n        \n    }\n\n    public static void Main()\n    {\n        int n = int.Parse(Console.ReadLine());\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++)\n            a[i] = int.Parse(Console.ReadLine());\n        Console.WriteLine(FBalanced(a));\n    }\n}\n"
             }
           ]
         }

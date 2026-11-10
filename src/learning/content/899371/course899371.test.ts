@@ -152,11 +152,23 @@ describe("899371 — the bodies", () => {
   it("every block of a book page is a book block of a faithful type; the only enrichment is the exercise and walkthrough pages", async () => {
     const all = blocksOf(await loadAll());
     expect(all.filter(x => !x.enrichment && x.b.origin === "book").length).toBe(1602);
-    // the only enrichment on a book page: the 8 teacher clarifications of F9 / F15 and their 2 lists of choices (§18), and the
-    // animated scenes of the enrichment plan (P11, csharp-scene) on the summary pages
+    // the only enrichment on a book page: the 8 teacher clarifications of F9 / F15 and their 2 lists of choices (§18), the
+    // animated scenes of the enrichment plan (P11, csharp-scene) on the summary pages, and the starter program of each writing
+    // question of the book («حلّ وافحص», enrichment P14)
     const added = all.filter(x => !x.enrichment && x.b.origin !== "book");
     const scenes = added.filter(x => x.b.type === "animation");
-    const clarifications = added.filter(x => x.b.type !== "animation");
+    const starters = added.filter(x => x.b.type === "code");
+    const clarifications = added.filter(x => x.b.type !== "animation" && x.b.type !== "code");
+    // exactly one per writing question of the P10 work list, on that question's page
+    const worklist = JSON.parse(readFileSync(fileURLToPath(new URL("../../../../docs/enterprise-899371-learning/analysis/enrichment-worklist.json", import.meta.url)), "utf8")) as { questions: { solve?: string; pageId: string; number: number }[] };
+    const want = worklist.questions.filter(q => q.solve).map(q => q.pageId + " " + q.pageId.slice(CID.length + 1) + "-solve-q" + q.number).sort();
+    expect(want).toHaveLength(80);
+    expect(starters.map(x => x.page + " " + x.b.id).sort()).toEqual(want);
+    for (const { b } of starters) {
+      const c = b as Extract<ContentBlock, { type: "code" }>;
+      expect([c.origin, c.language, c.dir], c.id).toEqual(["teacher-enrichment", "csharp", "ltr"]);
+      expect(c.code, c.id).toMatch(/class\s+\w+/);
+    }
     expect(clarifications.map(x => x.b.type + (x.b.type === "callout" ? ":" + x.b.kind : "")).sort()).toEqual([...Array(8).fill("callout:clarification"), "list", "list"].sort());
     expect(scenes.length).toBe(33);   // P11: chapters 1–4 (12), P12: chapters 5–11 (21)
     for (const { page, b } of scenes) {
@@ -171,6 +183,7 @@ describe("899371 — the bodies", () => {
       if (enrichment) { expect(b.origin, where).toBe("teacher-enrichment"); expect(note === PRACTICE_NOTE ? ["code", "practice"] : ["code", "guided", "simulation"], where).toContain(b.type); continue; }
       if (b.origin !== "book" && /-(clarify|choices)$/.test(b.id)) continue;   // a teacher clarification (§18)
       if (b.origin !== "book" && /-scene-[a-z0-9-]+$/.test(b.id)) continue;      // an animated scene (enrichment P11)
+      if (b.origin !== "book" && /-solve-q\d+$/.test(b.id)) continue;           // a writing question's starter (enrichment P14)
       expect(b.origin, where).toBe("book");
       expect(BOOK_BLOCKS.has(b.type), where + " type " + b.type).toBe(true);
     }
@@ -179,7 +192,7 @@ describe("899371 — the bodies", () => {
   it("every program is a C# code block shown left to right", async () => {
     const code = blocksOf(await loadAll()).filter(x => x.b.type === "code").map(x => x.b as Extract<ContentBlock, { type: "code" }>);
     expect(code.filter(c => c.origin === "book").length).toBe(224);
-    expect(code.length).toBe(224 + 77 + 43);
+    expect(code.length).toBe(224 + 77 + 43 + 80);   // book, exercises, walkthroughs, and the starters of «حلّ وافحص» (P14)
     for (const c of code) expect([c.language, c.dir], c.id).toEqual(["csharp", "ltr"]);
   }, 30000);
 
