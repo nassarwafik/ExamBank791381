@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
@@ -135,6 +135,15 @@ describe("899371 P8 — who may run (GET the list, POST a run)", () => {
   });
 });
 
+// The runner request names no identity, course, page or block. Its requestId is RANDOM (crypto.randomBytes(16) → 22 base64url
+// characters), so it is checked as an opaque token and left out of the text scan: ~1 % of random ids contain «u1» or «cA» by
+// chance, which failed CI run 42849056593 with nothing leaked.
+const expectMinimalRunnerRequest = req => {
+  expect(req.requestId).toMatch(/^[A-Za-z0-9_-]{22}$/);
+  const { requestId: _random, ...named } = req;
+  expect(JSON.stringify(named)).not.toMatch(/u1|cA|899371|teacher|m04-l01/);
+};
+
 describe("899371 P8 — a run", () => {
   it("the runner receives only language, the WRAPPED source, the input and the server's limits; the student gets the result", async () => {
     const ctx = seed(["899371-m04"]);
@@ -147,12 +156,23 @@ describe("899371 P8 — a run", () => {
     const req = p.calls[0];
     expect(Object.keys(req).sort()).toEqual(["language", "languageVersion", "limits", "requestId", "source", "stdin"]);
     expect(req).toMatchObject({ language: "csharp", languageVersion: 1, source: L.wrapProgram(SOURCE), stdin: "IN-CANARY\n", limits: { timeMs: 2000, memoryMb: 128, outputBytes: 16384 } });
-    expect(JSON.stringify(req)).not.toMatch(/u1|cA|899371|teacher|m04-l01/);
+    expectMinimalRunnerRequest(req);
     // NO RECORD: the only new document is the rate-limit bucket
     const added = ctx.names("").sort().filter(n => !before.includes(n));
     expect(added).toHaveLength(1);
     expect(added[0]).toMatch(/^platform\/throttle\/coding-run-[0-9a-f]{64}\.json$/);
     expect(r.headers["Cache-Control"]).toBe("no-store");
+  });
+  it("a random requestId that happens to contain «u1» / «cA» is still a minimal request (CI run 42849056593)", async () => {
+    const crypto = cjs("node:crypto");
+    const forced = Buffer.from("u1cAu1cAu1cAu1cAu1cAu1", "base64url");                // 16 bytes whose base64url spells «u1cA…»
+    const spy = vi.spyOn(crypto, "randomBytes").mockImplementation(n => (n === 16 ? Buffer.from(forced) : Buffer.alloc(n)));
+    try {
+      const p = provider();
+      expect((await run(studentDeps(seed(["899371-m04"]), p), body())).status).toBe(200);
+      expect(p.calls[0].requestId).toBe(forced.toString("base64url"));                   // «u1cA…u1cAuw»
+      expectMinimalRunnerRequest(p.calls[0]);
+    } finally { spy.mockRestore(); }
   });
   it("a teacher previewing the course may run any indexed block (and is rate-limited too)", async () => {
     const ctx = seed(null);
