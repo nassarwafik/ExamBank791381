@@ -823,7 +823,16 @@ const m01: ContentModule = {
                     "y": 168,
                     "x2": 195,
                     "y2": 196,
-                    "label": "int.Parse",
+                    "show": false
+                  },
+                  {
+                    "id": "convl",
+                    "kind": "text",
+                    "x": 204,
+                    "y": 182,
+                    "text": "int.Parse",
+                    "anchor": "left",
+                    "mono": true,
                     "show": false
                   },
                   {
@@ -907,6 +916,10 @@ const m01: ContentModule = {
                         "show": true,
                         "tone": "accent"
                       },
+                      "convl": {
+                        "show": true,
+                        "tone": "accent"
+                      },
                       "ba": {
                         "show": true,
                         "value": "17",
@@ -921,6 +934,9 @@ const m01: ContentModule = {
                         "hl": 3
                       },
                       "conv": {
+                        "tone": "base"
+                      },
+                      "convl": {
                         "tone": "base"
                       },
                       "ba": {

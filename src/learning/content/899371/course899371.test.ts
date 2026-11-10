@@ -158,7 +158,7 @@ describe("899371 — the bodies", () => {
     const scenes = added.filter(x => x.b.type === "animation");
     const clarifications = added.filter(x => x.b.type !== "animation");
     expect(clarifications.map(x => x.b.type + (x.b.type === "callout" ? ":" + x.b.kind : "")).sort()).toEqual([...Array(8).fill("callout:clarification"), "list", "list"].sort());
-    expect(scenes.length).toBe(12);
+    expect(scenes.length).toBe(33);   // P11: chapters 1–4 (12), P12: chapters 5–11 (21)
     for (const { page, b } of scenes) {
       expect([b.origin, (b as { animationType?: string }).animationType, /-l01-p\d\d$/.test(page)], b.id).toEqual(["teacher-enrichment", "csharp-scene", true]);
       expect(b.id, page).toMatch(/-scene-[a-z0-9-]+$/);
