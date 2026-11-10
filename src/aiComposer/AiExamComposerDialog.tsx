@@ -4,6 +4,7 @@ import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
+import { groupComposerWarnings } from "./composerWarningGroups";
 import { buildComposerCatalog, COMPOSER_ITEM_KINDS, COMPOSER_PRESETS } from "./composerCatalog";
 import { composerSimulatorsBySubject } from "./composerSimSummary";
 import { applyComposerPatch, patchGroups, type ComposerMode, type DiffEntry } from "./composerPatch";
@@ -347,7 +348,32 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
           </table>
         )}
         {v.blocking.length > 0 && <div className="ai-composer-blocking"><h4>مشكلات مانعة</h4><IssueList issues={v.blocking} label="مشكلات مانعة" /></div>}
-        {warnings.length > 0 && <div className="ai-composer-warnings"><h4>تنبيهات</h4><IssueList issues={warnings.map(w => ({ message: "⚠ " + w.message }))} label="تنبيهات" /></div>}
+        {warnings.length > 0 && (() => {
+          // 21S: warnings grouped by question (exam order), each with a preview of that question alone; the rest at exam level
+          const g = groupComposerWarnings(s.result.exam, warnings);
+          return (
+            <div className="ai-composer-warnings" data-testid="ai-composer-warnings">
+              <h4>تنبيهات</h4>
+              {g.examLevel.length > 0 && (
+                <div className="ai-composer-warn-group">
+                  <p className="ai-composer-warn-head"><strong>على مستوى الامتحان</strong></p>
+                  <IssueList issues={g.examLevel.map(m => ({ message: "⚠ " + m }))} label="تنبيهات على مستوى الامتحان" />
+                </div>
+              )}
+              {g.questions.map(q => (
+                <div key={q.questionId} className="ai-composer-warn-group" data-testid="ai-composer-warn-question" data-question-id={q.questionId}>
+                  <p className="ai-composer-warn-head">
+                    <strong>السؤال {q.number}</strong>
+                    {q.sectionTitle && <span className="ai-composer-warn-section"> · {q.sectionTitle}</span>}
+                    {q.excerpt && <span className="ai-composer-warn-excerpt"> — {q.excerpt}</span>}
+                  </p>
+                  <IssueList issues={q.messages.map(m => ({ message: "⚠ " + m }))} label={"تنبيهات السؤال " + q.number} />
+                  <button type="button" className="sb-btn sb-btn-small" onClick={() => onPreview(q.preview)}>معاينة هذا السؤال</button>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         {showPlan && (
           <div className="ai-composer-plan" data-testid="ai-composer-plan">
             <h4>خطة الامتحان</h4>
