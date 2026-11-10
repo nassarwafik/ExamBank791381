@@ -107,6 +107,10 @@ describe("QR-3 «الأجهزة المرتبطة»", () => {
     fireEvent.change(await screen.findByLabelText(/رمز التحقق من تطبيق المصادقة/), { target: { value: "123 456" } });
     fireEvent.click(screen.getByRole("button", { name: "تأكيد وإنهاء الجلسة" }));
     expect((await screen.findByText(/انتهت جلسة/)).textContent).toContain("Edge على Windows");
+    // The notice renders first; the list refresh (the 5th request) is sent by the effect that runs after that render. Wait for the
+    // refreshed list (one device left), as the teacher / student test above does, before reading the requests — asserting at once
+    // raced that effect and failed once under a loaded full run (4 requests seen instead of 5).
+    await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
     expect(calls.map(c => [c.url, c.body])).toEqual([
       ["/api/owner-session/devices", {}],
       ["/api/owner-session/end-device", { id: H("2") }],
