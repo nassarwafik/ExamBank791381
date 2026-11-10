@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { clampPercent } from "./percent";
 
 /**
  * ProgressBar — a semantic progress meter (role="progressbar", min 0 / max 100 / now = clamped value).
@@ -18,12 +19,6 @@ export type ProgressBarProps = {
   size?: "md" | "sm";
   className?: string;
 };
-
-function clampPercent(value: number): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(100, Math.round(n)));
-}
 
 export default function ProgressBar({ value, label, ariaLabel, showValue = true, tone = "primary", size = "md", className }: ProgressBarProps) {
   const pct = clampPercent(value);

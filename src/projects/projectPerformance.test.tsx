@@ -73,20 +73,22 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     expect(cards[0].textContent).toContain("التقدم80%"); expect(cards[0].textContent).toContain("العلامة70 / 100"); expect(cards[0].textContent).toContain("القوةتنين النار");
     expect(cards[1].textContent).toContain("التقدم20%"); expect(cards[1].textContent).toContain("العلامة15 / 100"); expect(cards[1].textContent).toContain("القوةشعلة صغيرة");
     fireEvent.click(within(cards[0]).getByRole("button", { name: "فتح المشروع" }));
-    expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
+    expect(strengthLine()).toBe("رتبتك في المشروع: 450 / 600");                                       // UX-S4: the student's name for the project rank
+    expect(document.querySelector(".eb-prh-facts")).toBeNull();                                           // UX-S4: grade and progress live only in the circle
     expect(r.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
     expect(r.getByRole("progressbar", { name: "التقدم في المشروع" }).getAttribute("aria-valuenow")).toBe("80");
     expect(r.getByText("العلامة 70 من 100، والتقدم في المشروع 80 بالمئة.")).toBeTruthy();
     // stage rows: teacher score + project value, read-only (no inputs), unscored stage says لم تُقيّم بعد
     const rows = r.getAllByRole("listitem").filter(li => li.classList.contains("eb-sp-stage"));
-    expect(rows[0].textContent).toContain("العلامة: 85 / 100"); expect(rows[0].textContent).toContain("القيمة في المشروع: 8.5 / 10"); expect(rows[0].textContent).toContain("ملاحظة من المعلم: ممتاز");
-    expect(rows[1].textContent).toContain("العلامة: لم تُقيّم بعد"); expect(rows[1].textContent).toContain("القيمة في المشروع: 0 / 10");
+    expect(rows[0].textContent).toContain("العلامة: 85 / 100"); expect(rows[0].textContent).toContain("تضيف إلى علامة المشروع: 8.5 / 10"); expect(rows[0].textContent).toContain("ملاحظة من المعلم: ممتاز");
+    // UX-S4 — before a mark the stage shows its worth alone, never «0 / 10» (which reads as a zero mark)
+    expect(rows[1].textContent).toContain("العلامة: لم تُقيّم بعد"); expect(rows[1].textContent).toContain("قيمتها في المشروع: 10"); expect(rows[1].textContent).not.toContain("0 / 10");
     expect(document.querySelector("input, select, textarea")).toBeNull();
     expect(r.queryByText(/SecureBank|شعلة صغيرة|105 \/ 600/)).toBeNull();                               // nothing of B while A is open
     // back → cards; open B → only B's values (no stale A numbers)
     fireEvent.click(r.getByRole("button", { name: "العودة إلى المشاريع" }));
     fireEvent.click(within(r.getAllByRole("article")[1]).getByRole("button", { name: "فتح المشروع" }));
-    expect(strengthLine()).toBe("قوة المشروع: 105 / 600");
+    expect(strengthLine()).toBe("رتبتك في المشروع: 105 / 600");
     expect(r.getByRole("img", { name: "رتبة المشروع: شعلة صغيرة — المستوى 2" })).toBeTruthy();
     expect(r.getByRole("progressbar", { name: "التقدم في المشروع" }).getAttribute("aria-valuenow")).toBe("20");
     expect(r.queryByText(/450 \/ 600|تنين النار|AquaSense/)).toBeNull();
@@ -98,8 +100,8 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     const r = within(await region());
     expect(r.queryByRole("button", { name: "فتح المشروع" })).toBeNull();
     expect(r.queryByRole("button", { name: "العودة إلى المشاريع" })).toBeNull();
-    expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
-    expect(r.getByText(/نقاط القوة من المشروع:/).textContent).toBe("تقدم المشروع: 80% · نقاط القوة من المشروع: 320 / 400");
+    expect(strengthLine()).toBe("رتبتك في المشروع: 450 / 600");
+    expect(r.getByText(/يضيف إلى قوتك العامة:/).textContent).toBe("يضيف إلى قوتك العامة: 320 / 400");   // UX-S4: named apart from the project rank
   });
   it("an older payload without `performance` still renders (progress bars, no grade / rank / stage scores)", async () => {
     const legacy = { ...TWO, projects: [{ ...TWO.projects[0], performance: undefined }] };
@@ -107,7 +109,7 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     render(<StudentProjectPanel token="t" />);
     const r = within(await region());
     expect(r.getByRole("progressbar", { name: "التقدم العام" })).toBeTruthy();
-    expect(r.queryByText(/قوة المشروع|العلامة/)).toBeNull();
+    expect(r.queryByText(/قوة المشروع|رتبتك في المشروع|العلامة/)).toBeNull();
   });
 });
 

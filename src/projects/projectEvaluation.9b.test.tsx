@@ -67,6 +67,7 @@ const openDetails = (stageId: string) => menu(stageId, "التفاصيل وال�
 const closeDetails = async () => { fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "إغلاق" })); await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull()); };
 const type = (stageId: string, v: string) => fireEvent.change(scoreInput(stageId), { target: { value: v } });
 const card = () => document.querySelector(".eb-eval-card") as HTMLElement;
+const evalLine = () => card().querySelector(".eb-eval-summary")?.textContent;
 const fact = (label: string) => { const dt = Array.from(card().querySelectorAll("dt")).find(d => d.textContent === label); return dt?.nextElementSibling?.textContent; };
 const flush = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
 
@@ -127,15 +128,18 @@ describe("9B card — RTL-safe read-only summary", () => {
     expect(card().querySelectorAll("button, input, textarea, select").length).toBe(0);
     expect(card().textContent).not.toContain("مراحل لم تُقيّم بعد:");                                 // the ungraded list is the student's
   });
-  it("student variant: lists the ungraded stages by id + title; a fully graded project says so; zero stages is explicit", () => {
+  // UX-S4 (docs/enterprise-ux-student-s4.md §2.2) — the student's card is ONE summary line over the bar: no four facts and no
+  // list of ungraded stages (every stage row says «لم تُقيّم بعد» itself). The teacher's card above keeps both.
+  it("student variant: one line «قيّم المعلم X من N … · التقييم العام: …», the bar; no facts, no ungraded list; zero stages is explicit", () => {
     render(<ProjectEvaluationCard id="y" variant="student" evaluation={EVAL} />);
-    expect(screen.getByRole("region", { name: "تقييم مشروعك" }).textContent).toContain("مراحل لم تُقيّم بعد: S03 — الفصل الثاني، S04 — الفصل الثالث");
-    cleanup();
-    render(<ProjectEvaluationCard id="z" variant="student" evaluation={{ ...EVAL, stages: EVAL.stages.map(s => ({ ...s, score: s.score ?? 50, graded: true })), gradedStages: 7, ungradedStages: 0, evaluationProgress: 100 }} />);
-    expect(card().textContent).toContain("قُيّمت جميع المراحل.");
+    const region = screen.getByRole("region", { name: "تقييم مشروعك" });
+    expect(region.querySelector(".eb-eval-summary")!.textContent).toBe("قيّم المعلم 5 من 7 مراحل · التقييم العام: 84 / 100");
+    expect(region.querySelector("dl")).toBeNull();
+    expect(region.textContent).not.toContain("مراحل لم تُقيّم بعد"); expect(region.textContent).not.toContain("S03");
+    expect(screen.getByRole("progressbar", { name: "نسبة التقييم" }).getAttribute("aria-valuenow")).toBe("71");
     cleanup();
     render(<ProjectEvaluationCard id="w" variant="student" evaluation={{ ...EVAL, totalStages: 0, gradedStages: 0, ungradedStages: 0, evaluationProgress: 0, projectScore: null, projectScorePrecise: null, stages: [], updatedAt: "" }} />);
-    expect(card().textContent).toContain("لا توجد مراحل فعّالة في هذا المشروع بعد."); expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL); expect(card().textContent).toContain("لم يُسجَّل أي تقييم بعد.");
+    expect(card().textContent).toContain("لا توجد مراحل فعّالة في هذا المشروع بعد."); expect(card().querySelector(".eb-eval-summary")!.textContent).toBe("قيّم المعلم 0 من 0 مرحلة · التقييم العام: " + NOT_GRADED_LABEL); expect(card().textContent).toContain("لم يُسجَّل أي تقييم بعد.");
   });
 });
 
@@ -248,8 +252,9 @@ describe("9B student block — read-only, isolated per project", () => {
     render(<StudentProjectPanel token="t" />);
     const region = within(await screen.findByRole("region", { name: /مشاريعي/ }));
     expect(region.getByRole("region", { name: "تقييم مشروعك" })).toBeTruthy();
-    expect(fact("التقييم العام")).toBe("43 / 100"); expect(fact("المراحل المقيّمة")).toBe("2 / 3"); expect(fact("نسبة التقييم")).toBe("67%");
-    expect(card().textContent).toContain("مراحل لم تُقيّم بعد: S03 — الفصل الثاني");
+    expect(evalLine()).toBe("قيّم المعلم 2 من 3 مراحل · التقييم العام: 43 / 100");        // UX-S4: one line
+    expect(screen.getByRole("progressbar", { name: "نسبة التقييم" }).getAttribute("aria-valuenow")).toBe("67");
+    expect(card().textContent).not.toContain("مراحل لم تُقيّم بعد");
     // P3 opens the stage list on «المتبقية»; «الكل» shows every stage row this case reads (updated deliberately).
     fireEvent.click(region.getByRole("button", { name: /^الكل/ }));
     const rows = region.getAllByRole("listitem").filter(li => li.className.includes("eb-sp-stage"));
@@ -265,11 +270,11 @@ describe("9B student block — read-only, isolated per project", () => {
     const cards = region.getAllByRole("article");
     expect(cards[0].textContent).toContain("التقييم43 / 100 · 2/3"); expect(cards[1].textContent).toContain("التقييم" + NOT_GRADED_LABEL + " · 0/3");
     fireEvent.click(within(cards[1]).getByRole("button", { name: "فتح المشروع" }));
-    expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL); expect(fact("المراحل المقيّمة")).toBe("0 / 3");
+    expect(evalLine()).toBe("قيّم المعلم 0 من 3 مراحل · التقييم العام: " + NOT_GRADED_LABEL);
     expect(card().textContent).not.toContain("43");
     fireEvent.click(region.getByRole("button", { name: "العودة إلى المشاريع" }));
     fireEvent.click(within(region.getAllByRole("article")[0]).getByRole("button", { name: "فتح المشروع" }));
-    expect(fact("التقييم العام")).toBe("43 / 100");
+    expect(evalLine()).toBe("قيّم المعلم 2 من 3 مراحل · التقييم العام: 43 / 100");
   });
   it("H3 an older payload without `evaluation` renders the project exactly as before (no card, no invented numbers)", async () => {
     mockStudent({ ok: true, enrolled: true, projects: [project("A", "AquaSense", undefined, {})] });
