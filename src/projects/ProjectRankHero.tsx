@@ -10,7 +10,9 @@ import { visualImgProps } from "../studentVisualSizes";
  * Phase P10 — the layout follows the header's OWN width (`.eb-prh-box` is a size container): one row only when the header
  * is at least 560 px wide, stacked otherwise — the student portal shows it in a narrow column even on a wide screen.
  */
-export default function ProjectRankHero({ title, performance, compact }: { title: string; performance: ProjectPerformance; compact?: boolean }) {
+/** UX-S4 — `audience="student"` (the student's own «المشاريع»): the grade and progress live ONLY in the circle (no facts list
+ *  beside it), and the project rank is named for what it is, «رتبتك في المشروع». The teacher's view keeps both, unchanged. */
+export default function ProjectRankHero({ title, performance, compact, audience = "teacher" }: { title: string; performance: ProjectPerformance; compact?: boolean; audience?: "teacher" | "student" }) {
   const v = projectRankVisual(performance.tier);
   const max = performance.maxStrength || PROJECT_STRENGTH_MAX;
   return (
@@ -21,14 +23,16 @@ export default function ProjectRankHero({ title, performance, compact }: { title
           <div className="eb-prh-text">
             <p className="eb-prh-title">{title}</p>
             <p className="eb-prh-rank-title">{v.title}<span className="eb-prh-level">المستوى {v.level}</span></p>
-            <p className="eb-prh-strength">قوة المشروع: <strong dir="ltr">{performance.projectStrength} / {max}</strong></p>
+            <p className="eb-prh-strength">{audience === "student" ? "رتبتك في المشروع: " : "قوة المشروع: "}<strong dir="ltr">{performance.projectStrength} / {max}</strong></p>
           </div>
         </div>
         <ProjectPerformanceCircle grade={performance.grade} progress={performance.overallProgress} size={compact ? 112 : 132} />
-        <dl className="eb-prh-facts">
-          <div><dt>علامة المشروع</dt><dd dir="ltr">{performance.grade} / 100</dd></div>
-          <div><dt>التقدم</dt><dd dir="ltr">{performance.overallProgress}%</dd></div>
-        </dl>
+        {audience === "teacher" && (
+          <dl className="eb-prh-facts">
+            <div><dt>علامة المشروع</dt><dd dir="ltr">{performance.grade} / 100</dd></div>
+            <div><dt>التقدم</dt><dd dir="ltr">{performance.overallProgress}%</dd></div>
+          </dl>
+        )}
       </div>
     </div>
   );

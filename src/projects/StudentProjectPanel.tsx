@@ -6,6 +6,7 @@ import ProjectRankHero from "./ProjectRankHero";
 import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { evaluationBriefs, fmtProjectScore, normalizeProjectEvaluation, type ProjectEvaluationBrief } from "./projectEvaluation";
 import ProgressBar from "../ui/ProgressBar";
+import { clampPercent } from "../ui/percent";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconCheck, IconChevronBack, IconChevronDown } from "../icons";
@@ -52,7 +53,7 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
           {evaluation && <div><dt>التقييم</dt><dd dir={evaluation.projectScore === null ? undefined : "ltr"}>{fmtProjectScore(evaluation.projectScore)} · {evaluation.gradedStages}/{evaluation.totalStages}</dd></div>}
           {rank && <div><dt>القوة</dt><dd>{rank.title}</dd></div>}
         </dl>
-        {contribution && <p className="eb-sp-project-strength">مساهمته في قوتك العامة: <strong dir="ltr">{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>}
+        {contribution && <p className="eb-sp-project-strength">يضيف إلى قوتك العامة: <strong dir="ltr">{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>}
         <button type="button" className="eb-button is-primary is-small" onClick={onOpen}>فتح المشروع</button>
       </div>
     </article>
@@ -74,6 +75,8 @@ function stageKind(entry: StageProgressEntry | undefined): "remaining" | "pendin
   if (status !== "approved") return "remaining";
   return entry?.selfReportedAt ? "pending" : "approved";
 }
+/** Whether the teacher has put a mark on the stage (the same reading as `fmtStageScore`). */
+const isScored = (entry: StageProgressEntry | undefined) => typeof entry?.score === "number" && Number.isFinite(entry.score);
 const countWord = (n: number) => (n === 1 ? "مرحلة واحدة" : n === 2 ? "مرحلتين" : n + " مراحل");
 // The view a track opens on: what is left to do, or everything once nothing is left. Chosen when the track is shown and
 // never switched by the student's own taps (marking the last stage shows «أحسنت» rather than jumping to another view).
@@ -145,27 +148,32 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
   return (
     <div className="eb-sp-project" data-project-code={project.projectCode}>
       {onBack && <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={onBack}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشاريع</button>}
-      {perf ? <ProjectRankHero title={project.title} performance={perf} /> : <ProgressBar label="التقدم العام" value={s.overallProgress} />}
+      {perf ? <ProjectRankHero title={project.title} performance={perf} audience="student" /> : <ProgressBar label="التقدم العام" value={s.overallProgress} />}
       {/* This project's share of the GLOBAL Strength as the SERVER derived it (round(overallProgress × 4), ≤ 400) —
-          distinct from the project-specific Strength (/600) in the hero. Rendered, never computed here. */}
+          distinct from the project rank (/600) in the hero. Rendered, never computed here. UX-S4: the progress is the
+          hero's circle, so this line names only what the project adds to the student's general Strength. */}
       {contribution && (
-        <p className="eb-sp-project-strength">تقدم المشروع: <strong>{contribution.overallProgress}%</strong> · نقاط القوة من المشروع: <strong>{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>
+        <p className="eb-sp-project-strength">يضيف إلى قوتك العامة: <strong dir="ltr">{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>
+      )}
+      {/* UX-S4 — the next step comes right after the hero (on a phone: on the first screen), by its NAME; the stage code
+          stays in the button's accessible name and on the stage row. */}
+      {next && trackMeta && (
+        <div className="eb-sp-project-next eb-sp-next-card">
+          <p>الخطوة التالية في {trackMeta.title}: <strong>{next.title}</strong></p>
+          {kindOf(next.stageId) === "remaining" && doneButton(next, " is-primary")}
+        </div>
       )}
       {/* Phase 9B — the EVALUATION axis (graded / ungraded stages, average of graded scores), read-only, server-derived. */}
       {evaluation && <ProjectEvaluationCard id={"eb-sp-eval-" + project.projectCode} variant="student" evaluation={evaluation} />}
-      <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
-        {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
-      </ul>
-      {project.tracks.length > 1 && (
-        <div className="eb-sp-filters" role="group" aria-label="مسارات المشروع">
-          {project.tracks.map(t => <button key={t.trackId} type="button" className="eb-chip-button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setFilter(openingFilter(project, t.trackId)); }}>{t.title}</button>)}
+      {/* UX-S4 — one control per track: several tracks are buttons that carry their own progress; one track is one bar. */}
+      {project.tracks.length > 1 ? (
+        <div className="eb-sp-filters eb-sp-track-chips" role="group" aria-label="مسارات المشروع">
+          {project.tracks.map(t => <button key={t.trackId} type="button" className="eb-chip-button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setFilter(openingFilter(project, t.trackId)); }}>{t.title} · <span dir="ltr">{clampPercent(s.trackProgress[t.trackId] || 0)}%</span></button>)}
         </div>
-      )}
-      {next && trackMeta && (
-        <div className="eb-sp-project-next eb-sp-next-card">
-          <p>الخطوة التالية في {trackMeta.title}: <strong>{next.stageId} — {next.title}</strong></p>
-          {kindOf(next.stageId) === "remaining" && doneButton(next, " is-primary")}
-        </div>
+      ) : (
+        <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
+          {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
+        </ul>
       )}
       <div className="eb-sp-filters eb-sp-stage-filters" role="group" aria-label="عرض المراحل">
         {([["remaining", "المتبقية"], ["pending", "بانتظار تأكيد المعلم"], ["approved", "المعتمدة"], ["all", "الكل"]] as [StageFilter, string][]).map(([key, text]) => (
@@ -212,8 +220,8 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
                         {kind === "pending"
                           ? <StatusBadge tone="warn">منفّذة — بانتظار تأكيد المعلم</StatusBadge>
                           : <StatusBadge tone={STAGE_STATUS_TONE[status]}>{statusLabel(status)}</StatusBadge>}
-                        <span className="eb-sp-stage-code">{stage.stageId}</span>
                         <span className="eb-sp-stage-title">{stage.title}</span>
+                        <span className="eb-sp-stage-code">{stage.stageId}</span>
                         <span className="eb-sp-stage-action">
                           {kind === "remaining" && doneButton(stage)}
                           {kind === "pending" && !readOnly && <button type="button" className="eb-button is-quiet is-small eb-sp-undo-btn" disabled={pending.has(stage.stageId)} onClick={() => void send([stage.stageId], false, stage.stageId)} aria-label={"تراجع عن تحديد " + label}>تراجع</button>}
@@ -223,7 +231,10 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
                       {perf && (
                         <p className="eb-sp-stage-score">
                           <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>
-                          {value && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>}
+                          {/* UX-S4 — before a mark, the stage's worth alone (never «0 / 7.5», which reads as a zero mark). */}
+                          {value && (isScored(entry)
+                            ? <span>تضيف إلى علامة المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>
+                            : <span>قيمتها في المشروع: <strong dir="ltr">{fmtContribution(value.maxContribution)}</strong></span>)}
                         </p>
                       )}
                       {entry?.note ? <p className="eb-sp-stage-note">ملاحظة من المعلم: {entry.note}</p> : null}

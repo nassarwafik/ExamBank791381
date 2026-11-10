@@ -10,13 +10,12 @@ import { STAGE_VISUALS, stageVisual } from "../studentStageVisuals";
 import type { StudentStrength } from "./types";
 
 afterEach(cleanup);
-const stats = { assigned: 3, completed: 3, average: 80, pendingReview: 0, finalized: 3, inProgress: 0, averageFinalized: 80 };
 /** A SERVER-shaped payload for a raw total (mirrors the API formula only to build mocks; the component reads the fields verbatim). */
 function serverStrength(raw: number): StudentStrength {
   const stagePoints = Math.min(raw, 2000), max = stagePoints >= 1920, stageNumber = max ? 25 : Math.floor(stagePoints / 80) + 1, stageFloor = (stageNumber - 1) * 80, within = Math.min(80, stagePoints - stageFloor);
   return { rawTotalPoints: raw, totalPoints: raw, examPoints: raw, practicePoints: 0, studyPoints: 0, gamePoints: 0, projectPoints: 0, stagePoints, stageMaxPoints: 2000, stageNumber, stageCount: 25, stageBlockSize: 80, stageFloor, withinStagePoints: within, stagePercent: Math.round(within * 100 / 80), nextStageNumber: max ? null : stageNumber + 1, nextStageRemaining: max ? 0 : 80 - within, pointsToMaximum: 2000 - stagePoints, isMaximumStage: max, pathComplete: stagePoints >= 2000, legacyRank: null, projects: [] };
 }
-const draw = (raw: number) => { render(<StudentProgressSection stats={stats} medals={[]} strength={serverStrength(raw)} recognition={null} averageFinalized={80} />); return within(screen.getByRole("region", { name: /تقدّمي/ })); };
+const draw = (raw: number) => { render(<StudentProgressSection medals={[]} strength={serverStrength(raw)} recognition={null} averageFinalized={80} />); return within(screen.getByRole("region", { name: /تقدّمي/ })); };
 
 describe("StudentProgressSection — every stage of the path", () => {
   it("renders each of the 25 stages with its own image, title, group and «المرحلة n من 25» (at the stage's first point: 0 / 80, 0%)", () => {

@@ -240,6 +240,28 @@
 /* Phase L.8 — touch tablets. The phone rules above give 44 px targets below 720 / 767 px only; a tablet (834 px, a coarse pointer)
    still got 34–42 px top-bar links, filter chips and card buttons. Any coarse pointer now gets the same 44 px, whatever the width;
    a mouse keeps the desktop density. */
+/* UX-S4 — «التقدم» and «المشاريع» (docs/enterprise-ux-student-s4.md §2). Presentation only, tokens only, logical sides only. */
+/* The stage sentence is the view's headline: what the ring's «N / 80» means, in words. */
+.eb-sp-v2 .eb-sp-stage-headline{ display:flex; align-items:center; gap:var(--eb-space-2); margin:var(--eb-space-1) 0 0; color:var(--eb-text-heading); font-size:var(--eb-fs-15); font-weight:var(--eb-fw-bold); }
+.eb-sp-v2 .eb-sp-stage-headline .eb-sp-rank-next-art{ opacity:1; }
+/* «من أين جاءت نقاطك؟» — a real disclosure; its summary is a 44 px touch target. */
+.eb-sp-v2 .eb-sp-strength-details > summary{ display:flex; align-items:center; gap:var(--eb-space-2); list-style:none; min-height:44px; cursor:pointer; color:var(--eb-text-secondary); font-weight:var(--eb-fw-semibold); }
+.eb-sp-v2 .eb-sp-strength-details > summary::-webkit-details-marker{ display:none; }
+.eb-sp-v2 .eb-sp-strength-details > summary .eb-disclosure-chevron{ transition:transform .15s ease; }
+.eb-sp-v2 .eb-sp-strength-details[open] > summary .eb-disclosure-chevron{ transform:rotate(180deg); }
+@media (prefers-reduced-motion: reduce){ .eb-sp-v2 .eb-sp-strength-details > summary .eb-disclosure-chevron{ transition:none; } }
+.eb-sp-v2 .eb-sp-strength-details > summary:focus-visible{ outline:var(--eb-focus-ring); outline-offset:2px; border-radius:var(--eb-r-sm); }
+.eb-sp-v2 .eb-sp-recognition-empty{ margin:var(--eb-space-2) 0 0; }
+.eb-sp-v2 .eb-sp-progress-next{ display:flex; justify-content:flex-start; margin:var(--eb-space-4) 0 0; }
+.eb-sp-v2 .eb-sp-progress-next .eb-button{ min-height:44px; }
+/* On a phone the Strength card takes the full width and the average sits under it (it was a small ring squeezed beside it). */
+@media (max-width: 639px){
+  .eb-sp-v2 .eb-sp-progress-row{ grid-template-columns:minmax(0,1fr); }
+  .eb-sp-v2 .eb-sp-progress-row > .eb-sp-average{ order:2; }
+}
+/* «المشاريع»: the stage name first, its code after it, small and quiet. */
+.eb-sp-v2 .eb-sp-stage-main .eb-sp-stage-code{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-regular); }
+
 @media (pointer: coarse) {
   .eb-student-shell .student-topbar-link,
   .eb-student-shell .student-logout,

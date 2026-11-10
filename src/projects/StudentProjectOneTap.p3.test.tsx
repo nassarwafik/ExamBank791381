@@ -118,7 +118,7 @@ describe("P3 filters — what is left to do first", () => {
     expect(groupToggle(T1).getAttribute("aria-expanded")).toBe("true");   // a finished track keeps its scores in view
     expect(shownCodes()).toEqual(BOOK.map(s => s.stageId));
     const accessTitle = (getProjectDefinition(CODE).tracks as { trackId: string; title: string }[]).find(t => t.trackId === "access")!.title;
-    fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: accessTitle }));
+    fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: new RegExp("^" + accessTitle + " · ") }));
     expect(pressed()).toEqual(["المتبقية (" + ACCESS.length + ")"]);
   });
 });
@@ -158,9 +158,11 @@ describe("P3 actions — the next step, a whole group, a double tap", () => {
     const s = server();
     await mount();
     const card = document.querySelector(".eb-sp-next-card") as HTMLElement;
-    expect(card.textContent).toContain(G1[0] + " — " + stageTitle(G1[0]));
+    expect(card.textContent).toContain("الخطوة التالية في الكتاب: " + stageTitle(G1[0]));            // UX-S4: by name; the code stays in the button's name
+    expect(card.querySelector("p")!.textContent).not.toContain(G1[0]);
     fireEvent.click(within(card).getByRole("button", { name: doneName(G1[0]) }));
-    await waitFor(() => expect((document.querySelector(".eb-sp-next-card") as HTMLElement).textContent).toContain(G2[0] + " — " + stageTitle(G2[0])));
+    await waitFor(() => expect((document.querySelector(".eb-sp-next-card") as HTMLElement).textContent).toContain(": " + stageTitle(G2[0])));
+    expect(within(document.querySelector(".eb-sp-next-card") as HTMLElement).getByRole("button", { name: doneName(G2[0]) })).toBeTruthy();
     expect(s.posts).toEqual([{ projectCode: CODE, stageIds: [G1[0]], mark: true }]);
     expect(s.doc().stages[G1[0]]).toMatchObject({ status: "approved", selfReportedBy: "s1" });
   });
@@ -169,7 +171,7 @@ describe("P3 actions — the next step, a whole group, a double tap", () => {
     const s = server({ [AC[1]]: TEACHER, [AC[2]]: SELF });
     await mount();
     const accessTitle = (getProjectDefinition(CODE).tracks as { trackId: string; title: string }[]).find(t => t.trackId === "access")!.title;
-    fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: accessTitle }));
+    fireEvent.click(within(screen.getByRole("group", { name: "مسارات المشروع" })).getByRole("button", { name: new RegExp("^" + accessTitle + " · ") }));
     fireEvent.click(chip(/^الكل/));
     const group = groupOf(TAC);
     fireEvent.click(within(group).getByRole("button", { name: "أنجزت المجموعة كلها (2)" }));

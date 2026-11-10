@@ -153,13 +153,15 @@ async function measureHero(page) {
     const title = hero.querySelector(".eb-prh-title"), text = hero.querySelector(".eb-prh-text"), circle = hero.querySelector(".eb-ppc"), facts = hero.querySelector(".eb-prh-facts");
     const lh = parseFloat(getComputedStyle(title).lineHeight) || parseFloat(getComputedStyle(title).fontSize) * 1.4;
     const em = parseFloat(getComputedStyle(title).fontSize);
-    const parts = { text: r(text), circle: r(circle), facts: r(facts) };
+    // UX-S4 (docs/enterprise-ux-student-s4.md §2.2): the student's header has no facts list (grade and progress are the circle).
+    const parts = facts ? { text: r(text), circle: r(circle), facts: r(facts) } : { text: r(text), circle: r(circle) };
     const overlap = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
     const box = r(hero);
     return {
       heroWidth: Math.round(box.w), direction: getComputedStyle(hero).flexDirection,
       titleWidth: Math.round(r(title).w), titleLines: Math.round(r(title).h / lh), minTitleWidth: Math.round(6 * em),
-      overlaps: [["text", "circle"], ["text", "facts"], ["circle", "facts"]].filter(([a, b]) => overlap(parts[a], parts[b])).map(p => p.join("×")),
+      hasFacts: !!facts,
+      overlaps: [["text", "circle"], ["text", "facts"], ["circle", "facts"]].filter(([a, b]) => parts[a] && parts[b] && overlap(parts[a], parts[b])).map(p => p.join("×")),
       outside: Object.entries(parts).filter(([, p]) => p.l < box.l - 1 || p.r > box.r + 1 || p.t < box.t - 1 || p.b > box.b + 1).map(([k]) => k),
       pageOverflow: document.documentElement.scrollWidth - innerWidth
     };
@@ -188,6 +190,7 @@ for (const vp of VIEWPORTS) {
   await page.waitForTimeout(400);
   const m = await measureHero(page);
   checkHero("portal " + at, m);
+  if (m) check("portal " + at, m.hasFacts === false, m.hasFacts ? "the student's header still repeats grade / progress beside the circle" : "UX-S4: grade and progress appear once (the circle), no facts list");
   if (m && m.heroWidth < 560) check("portal " + at, m.direction === "column", "a " + m.heroWidth + " px header stacks its parts (" + m.direction + ")");
   await page.locator(".eb-prh").first().screenshot({ path: path.join(out, "portal-hero-" + vp.width + ".png") });
   const violations = await axe(page, "portal " + at);
@@ -204,6 +207,7 @@ for (const vp of VIEWPORTS) {
   await page.waitForTimeout(400);
   const m = await measureHero(page);
   checkHero("profile " + at, m);
+  if (m) check("profile " + at, m.hasFacts === true, m.hasFacts ? "the teacher's header keeps the grade / progress facts" : "the teacher's header lost its facts list");
   check("profile " + at, m && m.heroWidth >= 560 && m.direction === "row", "the wide profile header (" + (m && m.heroWidth) + " px) keeps its single row (" + (m && m.direction) + ")");
   await page.locator(".eb-prh").first().screenshot({ path: path.join(out, "profile-hero-" + vp.width + ".png") });
   const violations = await axe(page, "profile " + at);

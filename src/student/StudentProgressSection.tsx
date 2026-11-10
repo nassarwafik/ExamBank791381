@@ -1,24 +1,29 @@
-import { IconMedal, IconHeart, IconSparkles } from "../icons";
+import { IconChevronDown, IconMedal, IconHeart, IconSparkles } from "../icons";
 import { MEDAL_LABELS, type MedalTier } from "../medals";
 import ProgressRing from "../ui/ProgressRing";
 import SectionHeader from "../ui/SectionHeader";
-import StatCard from "../ui/StatCard";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { stagePresentationFromStrength } from "./strengthPresentation";
 import { countMedals } from "./portalPresentation";
 import { REACTIONS } from "../achievements";
-import type { Stats, StudentRecognition, StudentStrength } from "./types";
+import type { StudentRecognition, StudentStrength } from "./types";
 import { visualImgProps, type VisualImageSet } from "../studentVisualSizes";
 
 /**
- * "تقدّمي" (UX-7a): the server's own counts as StatCards, the finalized-only average as a ring (always with a
+ * "تقدّمي" (UX-7a; UX-S4 docs/enterprise-ux-student-s4.md §2.1 — no task-count cards, the stage sentence as headline, the
+ * sources folded, one line for zero recognition, a next step): the finalized-only average as a ring (always with a
  * textual equivalent), medals (finalized-only) and the STUDENT STRENGTH PATH — the current stage's owner artwork
  * inside a circular progress ring that fills through the current 80-point stage, with the stage title, the journey
  * group, «المرحلة X من 25», «نقاط القوة: X / 2000», «Y / 80», the percentage and the next stage's icon / name.
  * Everything comes from the SERVER's `dashboard.strength` (25 stages × 80 points, decided by the API); presentation
  * only: nothing here recomputes a stage, a percentage or a point from a total.
  */
-type Props = { stats: Stats; medals: MedalTier[]; strength: StudentStrength | null; recognition: StudentRecognition | null; averageFinalized: number | null };
+type Props = {
+  medals: MedalTier[]; strength: StudentStrength | null; recognition: StudentRecognition | null; averageFinalized: number | null;
+  /** UX-S4 — the view's next step: «افتح الواجبات» while something needs action (the same count as «مطلوب الآن» in
+   *  «اليوم»), otherwise «تابع القراءة في المواد». Absent → no next-step row (a section rendered on its own). */
+  nextStep?: { actionable: number; onOpenTasks: () => void; onOpenLearning: () => void };
+};
 
 /**
  * The three kinds of recognition side by side — الميداليات (finalized assessment), التفاعلات (reactions RECEIVED on
@@ -30,6 +35,8 @@ function RecognitionTiles({ recognition, medalCount }: { recognition: StudentRec
   const reactions = recognition?.reactionsReceived.total ?? 0;
   const achievements = recognition?.achievements.total ?? 0;
   const byType = recognition?.reactionsReceived.byType;
+  // UX-S4 — three zero tiles say nothing: while all three are zero, one line says so instead.
+  if (medals === 0 && reactions === 0 && achievements === 0) return <p className="eb-sp-rank-hint eb-sp-recognition-empty">لا ميداليات ولا تفاعلات ولا إنجازات بعد.</p>;
   return (
     <ul className="eb-sp-recognition" aria-label="التقدير">
       <li className="eb-sp-recognition-tile">
@@ -56,7 +63,9 @@ function RecognitionTiles({ recognition, medalCount }: { recognition: StudentRec
   );
 }
 
-/** «نقاط القوة: 510 / 2000» + the four-source breakdown (the raw total is shown when it exceeds the visible path). */
+/** «نقاط القوة: 510 / 2000» + the five-source breakdown (the raw total is shown when it exceeds the visible path).
+ *  UX-S4 — the sources fold under «من أين جاءت نقاطك؟»: open when the student has points, folded at zero (five zero rows
+ *  tell a new student nothing; the view's next step does). The order of the sources never changes. */
 function StrengthBreakdown({ strength }: { strength: StudentStrength }) {
   return (
     <div className="eb-sp-strength" aria-label="نقاط القوة">
@@ -64,6 +73,8 @@ function StrengthBreakdown({ strength }: { strength: StudentStrength }) {
       {strength.rawTotalPoints > strength.stageMaxPoints && (
         <p className="eb-sp-rank-hint">إجمالي نقاطك الفعلي: <span dir="ltr">{strength.rawTotalPoints}</span> — أكملت مسار القوة كاملًا.</p>
       )}
+      <details className="eb-sp-strength-details" open={strength.rawTotalPoints > 0 || undefined}>
+        <summary><IconChevronDown size={16} className="eb-disclosure-chevron" aria-hidden="true" />من أين جاءت نقاطك؟</summary>
       <ul className="eb-sp-strength-breakdown">
         <li><span>الواجبات النهائية</span><strong>{strength.examPoints}</strong></li>
         <li><span>التدريبات والامتحانات التدريبية</span><strong>{strength.practicePoints}</strong></li>
@@ -71,6 +82,7 @@ function StrengthBreakdown({ strength }: { strength: StudentStrength }) {
         <li><span>الألعاب التعليمية</span><strong>{strength.gamePoints}</strong></li>
         <li><span>المشاريع</span><strong>{strength.projectPoints}</strong></li>
       </ul>
+      </details>
     </div>
   );
 }
@@ -110,6 +122,11 @@ function StrengthStage({ strength }: { strength: StudentStrength }) {
           <p className="eb-sp-rank-title eb-sp-stage-title">{stage.current.title}</p>
           <p className="eb-sp-stage-label">{stage.stageLabel}</p>
           <p className="eb-sp-stage-group">{stage.current.group.label}</p>
+          {/* UX-S4 — the headline: what the ring's «N / 80» means for the student, in one sentence (server values). */}
+          <p className={"eb-sp-stage-headline" + (stage.next ? " eb-sp-rank-next" : " eb-sp-stage-final")}>
+            {stage.next && <img className="eb-sp-rank-next-art" {...visualImgProps(stage.next.images, 40)} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />}
+            <span>{stage.remainingText}</span>
+          </p>
           <p className="eb-sp-rank-meta">
             <span className="eb-sp-rank-level eb-sp-stage-within" dir="ltr">{strength.withinStagePoints} / {strength.stageBlockSize}</span>
             <span className="eb-sp-rank-percent" dir="ltr">{strength.stagePercent}%</span>
@@ -117,26 +134,17 @@ function StrengthStage({ strength }: { strength: StudentStrength }) {
         </div>
       </div>
       <StrengthBreakdown strength={strength} />
-      <p className={"eb-sp-rank-hint" + (stage.next ? " eb-sp-rank-next" : " eb-sp-stage-final")}>
-        {stage.next && <img className="eb-sp-rank-next-art" {...visualImgProps(stage.next.images, 40)} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />}
-        <span>{stage.remainingText}</span>
-      </p>
     </div>
   );
 }
 
-export default function StudentProgressSection({ stats, medals, strength, recognition, averageFinalized }: Props) {
+export default function StudentProgressSection({ medals, strength, recognition, averageFinalized, nextStep }: Props) {
   const grouped = countMedals(medals);
   const medalCount = grouped.reduce((n, g) => n + g.count, 0);
   return (
     <section className="eb-sp-panel eb-sp-progress" aria-labelledby="eb-sp-progress-title">
-      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي وقوتي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ومرحلتك في مسار القوة من نقاط القوة (الواجبات النهائية والتدريبات وتمارين الدراسة والألعاب التعليمية والمشاريع)، وتقديرك من الميداليات والتفاعلات والإنجازات." />
-      <div className="eb-sp-stats">
-        <StatCard label="المهام" value={stats.assigned} />
-        <StatCard label="قيد الحل" value={stats.inProgress ?? 0} tone="info" />
-        <StatCard label="بانتظار التصحيح" value={stats.pendingReview ?? 0} tone={(stats.pendingReview ?? 0) > 0 ? "attention" : "neutral"} />
-        <StatCard label="مكتملة" value={stats.finalized ?? 0} tone="success" />
-      </div>
+      {/* UX-S4 — one line, and no task-count cards: «اليوم» and «الواجبات» already count the tasks. */}
+      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي وقوتي" description="مرحلتك في مسار القوة، ومعدّلك من النتائج النهائية، وتقديرك." />
       <div className="eb-sp-progress-row">
         <article className="eb-sp-average">
           <ProgressRing value={averageFinalized} label="المعدل النهائي" emptyText="لا يوجد معدل نهائي بعد" size={92} tone={averageFinalized !== null && averageFinalized >= 70 ? "success" : "primary"} />
@@ -162,6 +170,13 @@ export default function StudentProgressSection({ stats, medals, strength, recogn
         </div>
       </div>
       <RecognitionTiles recognition={recognition} medalCount={medalCount} />
+      {nextStep && (
+        <p className="eb-sp-progress-next">
+          {nextStep.actionable > 0
+            ? <button type="button" className="eb-button is-primary" onClick={nextStep.onOpenTasks}>افتح الواجبات ({nextStep.actionable} مطلوب الآن)</button>
+            : <button type="button" className="eb-button" onClick={nextStep.onOpenLearning}>تابع القراءة في المواد</button>}
+        </p>
+      )}
     </section>
   );
 }

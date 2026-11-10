@@ -830,6 +830,11 @@
       "page": "state-ai-composer",
       "viewport": "all",
       "reason": "Phase 21R — the composer's «امتحان جديد» tab lists one more question type the AI composer can now generate («فراغات أوامر CLI») as a type toggle beside the existing ones; the toggle row may wrap onto one more line. Nothing else in the dialog moves."
+    },
+    {
+      "page": "student-progress",
+      "viewport": "all",
+      "reason": "Tadris+ UX-S4 (approved design docs/enterprise-ux-student-s4.md §2.1) — «التقدم»: the four task-count cards are removed, the description is one line, the stage sentence is the headline under the stage group, the point sources fold under «من أين جاءت نقاطك؟» (folded at zero), zero recognition is one line, a next-step button closes the view, and on a phone the average sits under the Strength card."
     }
   ]
 }

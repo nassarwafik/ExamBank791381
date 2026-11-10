@@ -226,10 +226,12 @@ describe("UX-7a StudentPortal — projects (read-only, presentation on the share
     const region = within(sectionEl);
     expect(region.getByRole("progressbar", { name: "التقدم العام" }).getAttribute("aria-valuenow")).toBe("64");
     expect(region.getByText("64%")).toBeTruthy();
-    const tracks = within(region.getByRole("list", { name: "تقدم المسارات" }));
-    expect(tracks.getByRole("progressbar", { name: "الكتاب" }).getAttribute("aria-valuenow")).toBe("80");
-    expect(tracks.getByRole("progressbar", { name: "التدريب العملي" }).getAttribute("aria-valuenow")).toBe("49");
-    expect(region.getByText(/الخطوة التالية في الكتاب:/).textContent).toContain("B02 — تلخيص الفصل");
+    // UX-S4 — two tracks: each track button carries the server's track progress (no separate bars); the next step by name.
+    const trackGroup = within(region.getByRole("group", { name: "مسارات المشروع" }));
+    expect(trackGroup.getByRole("button", { name: /^الكتاب/ }).textContent).toBe("الكتاب · 80%");
+    expect(trackGroup.getByRole("button", { name: /^التدريب العملي/ }).textContent).toBe("التدريب العملي · 49%");
+    expect(region.queryByRole("list", { name: "تقدم المسارات" })).toBeNull();
+    expect(region.getByText(/الخطوة التالية في الكتاب:/).textContent).toBe("الخطوة التالية في الكتاب: تلخيص الفصل");
     // P3 opens the stage list on «المتبقية»; «الكل» shows the approved B01 this case reads (updated deliberately, no request).
     fireEvent.click(region.getByRole("button", { name: /^الكل/ }));
     const b01 = region.getByText("B01").closest("li") as HTMLElement;
@@ -250,10 +252,10 @@ describe("UX-7a StudentPortal — projects (read-only, presentation on the share
     const region = within(await projectsRegion());
     expect(region.queryByRole("tablist")).toBeNull();
     const group = within(region.getByRole("group", { name: "مسارات المشروع" }));
-    expect(group.getByRole("button", { name: "الكتاب" }).getAttribute("aria-pressed")).toBe("true");
+    expect(group.getByRole("button", { name: /^الكتاب/ }).getAttribute("aria-pressed")).toBe("true");
     const before = calls.length;
-    fireEvent.click(group.getByRole("button", { name: "التدريب العملي" }));
-    expect(group.getByRole("button", { name: "التدريب العملي" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(group.getByRole("button", { name: /^التدريب العملي/ }));
+    expect(group.getByRole("button", { name: /^التدريب العملي/ }).getAttribute("aria-pressed")).toBe("true");
     expect(region.getByText("P01")).toBeTruthy();
     expect(region.queryByText("B01")).toBeNull();
     expect(region.queryByText(/الخطوة التالية/)).toBeNull();                                          // nextStages.pt is null → nothing invented
@@ -546,7 +548,7 @@ describe("UX-7a source guards", () => {
     expect(portal.match(/onLogout\(\)/g)?.length).toBe(4);                     // dashboard, avatar, share, open — never the feed
     expect(portal).toMatch(/"\/api\/achievement-feed"[\s\S]*?if \(r\.status === 401\) \{ setFeedError\(""\); return; \}/);
     expect(portal).toContain('from "./ui/SectionHeader"'); expect(portal).toContain('from "./ui/EmptyState"');
-    expect(sources["./student/StudentProgressSection.tsx"]).toContain('from "../ui/StatCard"');
+    expect(sources["./student/StudentProgressSection.tsx"]).not.toContain('from "../ui/StatCard"');     // UX-S4: no task-count cards in «التقدم»
     expect(sources["./student/AvatarPickerDialog.tsx"]).toContain('from "../ui/Dialog"');
     expect(sources["./student/StudentProgressSection.tsx"]).toContain('from "../ui/ProgressRing"');
     expect(sources["./student/StudentAssignmentCard.tsx"]).toContain('from "../ui/StatusBadge"');

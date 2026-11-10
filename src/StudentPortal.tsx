@@ -554,7 +554,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
               </section>
             </div>
             <div {...viewProps("progress")}>
-              <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
+              <StudentProgressSection medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized}
+                nextStep={{ actionable: now_.actionable.length, onOpenTasks: () => goView("tasks"), onOpenLearning: () => goView("learning") }} />
               <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
             </div>
             <div {...viewProps("projects")}>

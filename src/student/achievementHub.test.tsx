@@ -14,14 +14,13 @@ import type { StudentRecognition } from "./types";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-const stats = { assigned: 5, completed: 4, average: 80, pendingReview: 0, finalized: 4, inProgress: 1, averageFinalized: 82 };
 // 1888 raw points → the SERVER says stage 24 (1840–1919), 48 / 80, 60%, 32 to stage 25.
 const strength = { rawTotalPoints: 1888, totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, gamePoints: 0, projectPoints: 600, stagePoints: 1888, stageMaxPoints: 2000, stageNumber: 24, stageCount: 25, stageBlockSize: 80, stageFloor: 1840, withinStagePoints: 48, stagePercent: 60, nextStageNumber: 25, nextStageRemaining: 32, pointsToMaximum: 112, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [] };
 const recognition: StudentRecognition = { medals: { total: 12, gold: 5, silver: 4, bronze: 3 }, reactionsReceived: { total: 36, byType: { heart: 18, clap: 10, cheer: 5, fire: 3 } }, achievements: { total: 7, byType: { global_rank_up: 4, project_rank_up: 2, project_complete: 1 } } };
 
 describe("Achievement Hub — تقدّمي وقوتي", () => {
   it("keeps the stage artwork central with the Strength breakdown, and shows medals / reactions received / achievements as three separate tiles", () => {
-    render(<StudentProgressSection stats={stats} medals={["gold", "gold", "silver"]} strength={strength} recognition={recognition} averageFinalized={82} />);
+    render(<StudentProgressSection medals={["gold", "gold", "silver"]} strength={strength} recognition={recognition} averageFinalized={82} />);
     expect(screen.getByRole("heading", { level: 2, name: "تقدّمي وقوتي" })).toBeTruthy();
     expect(screen.getByText("ملك السيادة")).toBeTruthy();                                   // stage 24's title
     expect(screen.getByText("المرحلة 24 من 25")).toBeTruthy();
@@ -36,7 +35,7 @@ describe("Achievement Hub — تقدّمي وقوتي", () => {
     expect(document.body.textContent).not.toMatch(/\b55\b/);
   });
   it("without a server recognition payload the medal tile falls back to the finalized medal list and the others read 0", () => {
-    render(<StudentProgressSection stats={stats} medals={["gold", "bronze"]} strength={null} recognition={null} averageFinalized={null} />);
+    render(<StudentProgressSection medals={["gold", "bronze"]} strength={null} recognition={null} averageFinalized={null} />);
     const tiles = within(screen.getByRole("list", { name: "التقدير" })).getAllByRole("listitem");
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-count")?.textContent)).toEqual(["2", "0", "0"]);
     expect(screen.queryByLabelText("التفاعلات حسب النوع")).toBeNull();
