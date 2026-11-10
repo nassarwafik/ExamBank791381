@@ -3,9 +3,13 @@
 // Two distinct concepts live in ONE field so a class document stays small and self-describing:
 //   * COURSE ASSIGNMENT  — the class uses book/course X          → an entry { courseId } exists
 //   * MODULE PUBLICATION — which of X's modules students may see  → that entry's visibleModuleIds
+//   * SOLUTIONS RELEASE  — (899371 enrichment P13, decision D1) the modules whose BOOK solutions and output tracers the teacher has
+//     opened to this class → that entry's releasedModuleIds (only a course that has them: registry `courseHasSolutionRelease`);
+//     stored only when non-empty, so a class that never released anything keeps its exact earlier shape
 //
 // Canonical storage shape (authorization/delivery METADATA only — never lesson bodies, pages, blocks or PDF text):
-//   classroom.learningMaterials = [ { courseId: "791381", visibleModuleIds: ["791381-m01", "791381-m02"] } ]
+//   classroom.learningMaterials = [ { courseId: "791381", visibleModuleIds: ["791381-m01", "791381-m02"] },
+//                                   { courseId: "899371", visibleModuleIds: ["899371-m01"], releasedModuleIds: ["899371-m01"] } ]
 //
 // DEFAULT-DENY: a missing / malformed field normalizes to [] (no course, nothing published). Nothing is ever
 // assigned or published automatically — not by deploying new book content, not by registering a new module.
@@ -34,21 +38,27 @@ function rawEntries(classroom) {
  */
 function getClassLearningMaterials(classroom, registry = defaultRegistry) {
   const merged = new Map();   // courseId -> Set(rawModuleIds)
+  const released = new Map();   // courseId -> Set(rawModuleIds) — the solutions release (P13 D1)
   for (const entry of rawEntries(classroom)) {
     if (!entry || typeof entry !== "object") continue;
     const courseId = cleanId(entry.courseId);
     if (!courseId || !registry.findLearningCourse(courseId)) continue;
-    if (!merged.has(courseId)) merged.set(courseId, new Set());
+    if (!merged.has(courseId)) { merged.set(courseId, new Set()); released.set(courseId, new Set()); }
     const ids = Array.isArray(entry.visibleModuleIds) ? entry.visibleModuleIds : [];
     for (const id of ids) { const clean = cleanId(id); if (clean) merged.get(courseId).add(clean); }
+    const rel = Array.isArray(entry.releasedModuleIds) ? entry.releasedModuleIds : [];
+    for (const id of rel) { const clean = cleanId(id); if (clean) released.get(courseId).add(clean); }
   }
   const out = [];
   for (const course of registry.listLearningCourses()) {
     if (!merged.has(course.courseId)) continue;
-    out.push({ courseId: course.courseId, visibleModuleIds: registry.canonicalizeLearningModuleIds(course.courseId, [...merged.get(course.courseId)]) });
+    // a release counts only for a course that has one; an unknown / stale id never surfaces
+    const rel = releasesSolutions(registry, course.courseId) ? registry.canonicalizeLearningModuleIds(course.courseId, [...released.get(course.courseId)]) : [];
+    out.push({ courseId: course.courseId, visibleModuleIds: registry.canonicalizeLearningModuleIds(course.courseId, [...merged.get(course.courseId)]), ...(rel.length ? { releasedModuleIds: rel } : {}) });
   }
   return out;
 }
+const releasesSolutions = (registry, courseId) => typeof registry.courseHasSolutionRelease === "function" && registry.courseHasSolutionRelease(courseId);
 
 /** The normalized entry for one course, or null when the class does not use that course. */
 function getClassLearningCourse(classroom, courseId, registry = defaultRegistry) {
@@ -72,6 +82,22 @@ function classCanSeeLearningModule(classroom, courseId, moduleId, registry = def
   return getVisibleLearningModuleIds(classroom, courseId, registry).includes(cleanId(moduleId));
 }
 
+/** 899371 P13 (D1) — the module ids whose book solutions / output tracers the teacher released to this class ([] when none). */
+function getReleasedLearningModuleIds(classroom, courseId, registry = defaultRegistry) {
+  const entry = getClassLearningCourse(classroom, courseId, registry);
+  return entry && entry.releasedModuleIds ? entry.releasedModuleIds.slice() : [];
+}
+
+/**
+ * 899371 P13 (D1) — whether students of this class may open the BOOK solutions and output tracers of one module: the module is
+ * published to them AND the teacher released its solutions. Default-deny: a course without release, an unattached course, a hidden
+ * module or no release → false.
+ */
+function classSolutionsReleased(classroom, courseId, moduleId, registry = defaultRegistry) {
+  const id = cleanId(moduleId);
+  return classCanSeeLearningModule(classroom, courseId, id, registry) && getReleasedLearningModuleIds(classroom, courseId, registry).includes(id);
+}
+
 /**
  * Pure mutation: attach the course if needed and set its published modules (already VALIDATED + canonical ids —
  * callers validate through the registry first). Returns a NEW classroom object; every other field, including any
@@ -79,11 +105,32 @@ function classCanSeeLearningModule(classroom, courseId, moduleId, registry = def
  */
 function setClassLearningCourseModules(classroom, courseId, canonicalModuleIds, registry = defaultRegistry) {
   const id = cleanId(courseId);
-  const others = getClassLearningMaterials(classroom, registry).filter(e => e.courseId !== id);
-  const next = [...others, { courseId: id, visibleModuleIds: registry.canonicalizeLearningModuleIds(id, canonicalModuleIds) }];
+  const all = getClassLearningMaterials(classroom, registry);
+  const others = all.filter(e => e.courseId !== id);
+  const released = (all.find(e => e.courseId === id) || {}).releasedModuleIds;   // publication never drops a release (P13)
+  const next = [...others, { courseId: id, visibleModuleIds: registry.canonicalizeLearningModuleIds(id, canonicalModuleIds), ...(released && released.length ? { releasedModuleIds: released } : {}) }];
   // keep registry course order in storage too (deterministic documents)
   const rank = new Map(registry.listLearningCourses().map((c, i) => [c.courseId, i]));
   next.sort((a, b) => (rank.get(a.courseId) ?? 1e9) - (rank.get(b.courseId) ?? 1e9));
+  return { ...classroom, [FIELD]: next };
+}
+
+/**
+ * 899371 P13 (D1) — pure mutation: set EXACTLY which modules of an ATTACHED course have their book solutions released (already
+ * VALIDATED + canonical ids; [] = nothing released). Returns a NEW classroom; the publication and every other field and course entry
+ * are untouched. Throws when the course is not attached or has no solutions release (callers check first).
+ */
+function setClassLearningCourseReleases(classroom, courseId, canonicalModuleIds, registry = defaultRegistry) {
+  const id = cleanId(courseId);
+  if (!releasesSolutions(registry, id)) throw new Error("course " + id + " has no solutions release");
+  const all = getClassLearningMaterials(classroom, registry);
+  if (!all.some(e => e.courseId === id)) throw new Error("course " + id + " is not attached to the class");
+  const rel = registry.canonicalizeLearningModuleIds(id, canonicalModuleIds);
+  const next = all.map(e => {
+    if (e.courseId !== id) return e;
+    const { releasedModuleIds: _drop, ...rest } = e;
+    return rel.length ? { ...rest, releasedModuleIds: rel } : rest;
+  });
   return { ...classroom, [FIELD]: next };
 }
 
@@ -120,5 +167,6 @@ function buildStudentLearningMaterials(classroom, registry = defaultRegistry) {
 module.exports = {
   LEARNING_MATERIALS_FIELD: FIELD,
   getClassLearningMaterials, getClassLearningCourse, classHasLearningCourse, getVisibleLearningModuleIds, classCanSeeLearningModule,
+  getReleasedLearningModuleIds, classSolutionsReleased, setClassLearningCourseReleases,
   setClassLearningCourseModules, removeClassLearningCourse, buildStudentLearningMaterials
 };

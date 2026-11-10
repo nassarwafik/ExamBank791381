@@ -30,6 +30,9 @@
 // Decisions (§18): where the book promises data it does not print (F9: the inputs of five traces; F15: a points table and two sets of
 // choices), a clarification callout «توضيح المعلم» (teacher-enrichment) right after that line completes the question — the book's
 // text is untouched (book lock) and no answer is shown (Q3). Data: src/learning/content/899371/clarifications.json.
+// Enrichment P11 (docs/enterprise-899371-enrichment-plan.md §3.1, §8): the ANIMATED SCENES of src/learning/content/899371/scenes/mNN.json
+// (animation / csharp-scene / v1, data only) are placed on the chapter's summary pages, each right after the book block it explains;
+// the book's own blocks are untouched (book lock) and every scene is teacher-enrichment.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
@@ -293,7 +296,7 @@ const dedent = lines => {
 };
 
 // ── conversion ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications(), traceRuns = readTraceRuns()) {
+export function convert(body, practice = readPractice(), guided = readGuided(), clarifications = readClarifications(), traceRuns = readTraceRuns(), scenes = readScenes()) {
   const log = [], applied = [];
   const item = i => { const it = body[i]; if (!it) throw new Error("no source item " + i); return it; };
   const corrected = (it) => {
@@ -357,6 +360,7 @@ export function convert(body, practice = readPractice(), guided = readGuided(), 
   const unused = Object.keys(practice).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k));
   if (unused.length) throw new Error("practice files for no chapter: " + unused.join(", "));
   addClarifications(modules, clarifications);
+  addScenes(modules, scenes);
   const unusedGuided = Object.keys(guided).filter(k => !STRUCTURE.some(m => `m${String(m.n).padStart(2, "0")}` === k && m.lessons.some(l => l.kind === "summary")));
   if (unusedGuided.length) throw new Error("walkthrough files for no chapter summary: " + unusedGuided.join(", "));
   if (applied.length !== CORRECTIONS.length) throw new Error("a correction did not apply: " + CORRECTIONS.filter(c => !applied.includes(c)).map(c => c.finding).join(", "));
@@ -579,6 +583,42 @@ function addClarifications(modules, clarifications) {
     const at = page.blocks.findIndex(b => b.id === c.after);
     if (page.blocks[at].origin !== "book") throw new Error(c.finding + ": " + c.after + " is not a book block");
     page.blocks.splice(at + 1, 0, ...clarificationBlocks(c));
+  }
+}
+
+// ── Enrichment P11: the animated scenes on the summary pages ──────────────────────────────────────────────────────────────────────
+export const SCENES_DIR = join(OUT, "scenes");
+export const SCENE_TITLE = "مشهد متحرك";
+/** The authored scenes: [{ module, id, page, after, title, config }] in file and list order. */
+export function readScenes(dir = SCENES_DIR) {
+  const out = [];
+  if (!existsSync(dir)) return out;
+  for (const f of readdirSync(dir).filter(f => /^m\d\d\.json$/.test(f)).sort()) {
+    const file = JSON.parse(readFileSync(join(dir, f), "utf8"));
+    if (file.module !== f.slice(0, 3)) throw new Error(f + ": module " + file.module);
+    for (const s of file.scenes) out.push({ module: file.module, ...s });
+  }
+  return out;
+}
+/** The scene block: the registry key, the title the reader shows and the scene's data (validated again by the renderer). */
+export function sceneBlock(s) {
+  return { id: `${s.module}-l01-${s.page}-scene-${s.id.slice(4)}`, type: "animation", origin: "teacher-enrichment", animationType: "csharp-scene", version: 1, title: SCENE_TITLE + ": " + s.title,
+    capabilities: { fullscreen: true, reset: true, animated: true, interactive: true }, config: s.config };
+}
+export function addScenes(modules, scenes) {
+  const ids = new Set();
+  for (const s of scenes) {
+    if (!/^m\d\d-[a-z0-9-]+$/.test(s.id) || !s.id.startsWith(s.module + "-") || ids.has(s.id)) throw new Error("scene " + s.id + ": bad or duplicate id");
+    ids.add(s.id);
+    const pageId = `${CID}-${s.module}-l01-${s.page}`;
+    const page = modules.flatMap(m => m.lessons.flatMap(l => l.pages)).find(p => p.id === pageId);
+    if (!page) throw new Error("scene " + s.id + ": no page " + pageId);
+    const at = page.blocks.findIndex(b => b.id === s.after);
+    if (at < 0 || page.blocks[at].origin !== "book") throw new Error("scene " + s.id + ": " + s.after + " is not a book block of " + pageId);
+    // after the anchor and any enrichment already attached to it (a clarification), before the next book block
+    let end = at + 1;
+    while (end < page.blocks.length && page.blocks[end].origin !== "book") end++;
+    page.blocks.splice(end, 0, sceneBlock(s));
   }
 }
 

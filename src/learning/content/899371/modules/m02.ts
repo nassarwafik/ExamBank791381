@@ -205,6 +205,312 @@ const m02: ContentModule = {
               ]
             },
             {
+              "id": "m02-l01-p02-scene-int-division",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: القسمة الصحيحة والكسرية: 7 / 2 و7.0 / 2",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 210,
+                "alt": "سبع حبات توزّع على مجموعتين: كل مجموعة تأخذ 3 وتبقى حبة. القسمة الصحيحة 7 / 2 تعطي 3، والكسرية 7.0 / 2 تعطي 3.5.",
+                "items": [
+                  {
+                    "id": "expr",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 14,
+                    "text": "7 / 2",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "c7",
+                    "kind": "cells",
+                    "x": 88,
+                    "y": 44,
+                    "values": [
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●"
+                    ],
+                    "idx": false
+                  },
+                  {
+                    "id": "g1",
+                    "kind": "box",
+                    "x": 60,
+                    "y": 112,
+                    "w": 120,
+                    "h": 46,
+                    "label": "المجموعة 1",
+                    "value": ""
+                  },
+                  {
+                    "id": "g2",
+                    "kind": "box",
+                    "x": 220,
+                    "y": 112,
+                    "w": 120,
+                    "h": 46,
+                    "label": "المجموعة 2",
+                    "value": ""
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 190,
+                    "text": "",
+                    "big": true,
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`7 / 2` بين عددين صحيحين: نوزّع 7 حبات على مجموعتين متساويتين."
+                  },
+                  {
+                    "say": "كل مجموعة تأخذ 3 حبات.",
+                    "set": {
+                      "c7": {
+                        "hi": [
+                          0,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5
+                        ]
+                      },
+                      "g1": {
+                        "value": "●●●"
+                      },
+                      "g2": {
+                        "value": "●●●"
+                      }
+                    }
+                  },
+                  {
+                    "say": "تبقى حبة واحدة لا تكفي لجولة جديدة.",
+                    "set": {
+                      "c7": {
+                        "bad": [
+                          6
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "say": "القسمة الصحيحة تعطي 3 فقط: الجزء العشري يُحذف، والحبة الباقية لا تظهر في الناتج.",
+                    "set": {
+                      "res": {
+                        "text": "7 / 2 = 3",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "إذا كان أحد العددين عشريًا مثل `7.0` تصبح القسمة كسرية: الحبة الباقية تُقسم أيضًا، فالناتج `3.5`.",
+                    "set": {
+                      "expr": {
+                        "text": "7.0 / 2"
+                      },
+                      "c7": {
+                        "bad": [],
+                        "hi": [
+                          0,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5,
+                          6
+                        ]
+                      },
+                      "g1": {
+                        "value": "●●● ½"
+                      },
+                      "g2": {
+                        "value": "●●● ½"
+                      },
+                      "res": {
+                        "text": "7.0 / 2 = 3.5",
+                        "tone": "accent"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "m02-l01-p02-scene-remainder",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: باقي القسمة: 7 % 3 توزيع حبات على مجموعات",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 210,
+                "alt": "سبع حبات توزّع في مجموعات من 3: مجموعتان كاملتان وتبقى حبة واحدة، فـ 7 % 3 يساوي 1.",
+                "items": [
+                  {
+                    "id": "expr",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 14,
+                    "text": "7 % 3",
+                    "big": true,
+                    "mono": true
+                  },
+                  {
+                    "id": "c7",
+                    "kind": "cells",
+                    "x": 88,
+                    "y": 44,
+                    "values": [
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●",
+                      "●"
+                    ],
+                    "idx": false
+                  },
+                  {
+                    "id": "g1",
+                    "kind": "box",
+                    "x": 30,
+                    "y": 112,
+                    "w": 100,
+                    "h": 46,
+                    "label": "مجموعة 1",
+                    "value": ""
+                  },
+                  {
+                    "id": "g2",
+                    "kind": "box",
+                    "x": 150,
+                    "y": 112,
+                    "w": 100,
+                    "h": 46,
+                    "label": "مجموعة 2",
+                    "value": ""
+                  },
+                  {
+                    "id": "rem",
+                    "kind": "box",
+                    "x": 270,
+                    "y": 112,
+                    "w": 100,
+                    "h": 46,
+                    "label": "الباقي",
+                    "value": "",
+                    "show": false,
+                    "tone": "warn"
+                  },
+                  {
+                    "id": "res",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 190,
+                    "text": "",
+                    "big": true,
+                    "mono": true
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "`7 % 3` يسأل: إذا وزّعنا 7 حبات في مجموعات من 3 حبات، كم يبقى؟"
+                  },
+                  {
+                    "say": "المجموعة الأولى تأخذ 3 حبات.",
+                    "set": {
+                      "c7": {
+                        "hi": [
+                          0,
+                          1,
+                          2
+                        ]
+                      },
+                      "g1": {
+                        "value": "●●●",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "المجموعة الثانية تأخذ 3 أخرى. بقيت حبة واحدة، وهي أقل من 3 فلا تكوّن مجموعة.",
+                    "set": {
+                      "c7": {
+                        "hi": [
+                          0,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5
+                        ]
+                      },
+                      "g1": {
+                        "tone": "base"
+                      },
+                      "g2": {
+                        "value": "●●●",
+                        "tone": "accent"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الحبة الباقية هي باقي القسمة.",
+                    "set": {
+                      "g2": {
+                        "tone": "base"
+                      },
+                      "c7": {
+                        "bad": [
+                          6
+                        ]
+                      },
+                      "rem": {
+                        "show": true,
+                        "value": "●"
+                      }
+                    }
+                  },
+                  {
+                    "say": "إذن `7 % 3 = 1`. وعدد المجموعات الكاملة 2 هو `7 / 3`.",
+                    "set": {
+                      "res": {
+                        "text": "7 % 3 = 1",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "id": "m02-l01-p02-b05",
               "type": "heading",
               "origin": "book",
@@ -252,6 +558,173 @@ const m02: ContentModule = {
                 "ltr",
                 "rtl"
               ]
+            },
+            {
+              "id": "m02-l01-p02-scene-logic-gates",
+              "type": "animation",
+              "origin": "teacher-enrichment",
+              "animationType": "csharp-scene",
+              "version": 1,
+              "title": "مشهد متحرك: && و|| بوابتان تضيئان",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "animated": true,
+                "interactive": true
+              },
+              "config": {
+                "w": 400,
+                "h": 220,
+                "alt": "شرطان x > 0 وx < 10 يدخلان بوابة. && تضيء فقط إذا صح الشرطان معًا، و|| تضيء إذا صح أحدهما. نجرّب x = 5 ثم x = 12.",
+                "items": [
+                  {
+                    "id": "cond",
+                    "kind": "text",
+                    "x": 200,
+                    "y": 12,
+                    "text": "x > 0 && x < 10",
+                    "mono": true,
+                    "big": true
+                  },
+                  {
+                    "id": "xv",
+                    "kind": "box",
+                    "x": 10,
+                    "y": 92,
+                    "w": 64,
+                    "h": 44,
+                    "label": "x",
+                    "value": "5"
+                  },
+                  {
+                    "id": "c1",
+                    "kind": "box",
+                    "x": 120,
+                    "y": 50,
+                    "w": 110,
+                    "h": 40,
+                    "label": "x > 0",
+                    "value": "?",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "c2",
+                    "kind": "box",
+                    "x": 120,
+                    "y": 140,
+                    "w": 110,
+                    "h": 40,
+                    "label": "x < 10",
+                    "value": "?",
+                    "shape": "round"
+                  },
+                  {
+                    "id": "a1",
+                    "kind": "arrow",
+                    "x": 76,
+                    "y": 108,
+                    "x2": 118,
+                    "y2": 72
+                  },
+                  {
+                    "id": "a2",
+                    "kind": "arrow",
+                    "x": 76,
+                    "y": 120,
+                    "x2": 118,
+                    "y2": 158
+                  },
+                  {
+                    "id": "a3",
+                    "kind": "arrow",
+                    "x": 232,
+                    "y": 70,
+                    "x2": 290,
+                    "y2": 106
+                  },
+                  {
+                    "id": "a4",
+                    "kind": "arrow",
+                    "x": 232,
+                    "y": 160,
+                    "x2": 290,
+                    "y2": 124
+                  },
+                  {
+                    "id": "gate",
+                    "kind": "box",
+                    "x": 290,
+                    "y": 80,
+                    "w": 100,
+                    "h": 70,
+                    "label": "&&",
+                    "value": "?",
+                    "shape": "diamond"
+                  }
+                ],
+                "steps": [
+                  {
+                    "say": "نفحص الشرط `x > 0 && x < 10` حين `x = 5`."
+                  },
+                  {
+                    "say": "الشرط الأول: `5 > 0` صحيح، فيضيء.",
+                    "set": {
+                      "c1": {
+                        "value": "true",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "الشرط الثاني: `5 < 10` صحيح أيضًا.",
+                    "set": {
+                      "c2": {
+                        "value": "true",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "`&&` تضيء فقط إذا أضاء المدخلان معًا: النتيجة `true`.",
+                    "set": {
+                      "gate": {
+                        "value": "true",
+                        "tone": "ok"
+                      }
+                    }
+                  },
+                  {
+                    "say": "حين `x = 12`: الشرط `12 > 0` صحيح لكن `12 < 10` خطأ، فـ `&&` تعطي `false`.",
+                    "set": {
+                      "xv": {
+                        "value": "12",
+                        "tone": "accent"
+                      },
+                      "c2": {
+                        "value": "false",
+                        "tone": "bad"
+                      },
+                      "gate": {
+                        "value": "false",
+                        "tone": "bad"
+                      }
+                    }
+                  },
+                  {
+                    "say": "مع `||` يكفي مدخل واحد صحيح: `12 > 0` يضيء البوابة، فالنتيجة `true`.",
+                    "set": {
+                      "cond": {
+                        "text": "x > 0 || x < 10"
+                      },
+                      "gate": {
+                        "label": "||",
+                        "value": "true",
+                        "tone": "ok"
+                      }
+                    }
+                  }
+                ]
+              }
             },
             {
               "id": "m02-l01-p02-b07",

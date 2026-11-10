@@ -23,6 +23,7 @@ import {useConfirm} from "./ui/useConfirm";
 import ClassesPane from "./students/ClassesPane";
 import RosterPane from "./students/RosterPane";
 import ClassLearningMaterialsPanel from "./students/ClassLearningMaterialsPanel";
+import { classReleasedModuleIds } from "./students/classSolutionsRelease";
 import {classLearningMaterials} from "./students/classLearningMaterials";
 import StudentDialog from "./students/StudentDialog";
 import {CreateClassDialog,EditClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
@@ -501,6 +502,22 @@ function TeacherPlatform(props:TeacherPlatformProps){
   const order=learningCatalog?.find(c=>c.courseId===courseId)?.modules.map(m=>m.moduleId)||[];
   const next=[...order.filter(id=>wanted.has(id)),...[...wanted].filter(id=>!order.includes(id))];
   await setLearningCourseModules(classroom,courseId,next,publish?("✓ نُشر فصل «"+moduleTitle+"» لطلاب الصف."):("✓ أُخفي فصل «"+moduleTitle+"» عن طلاب الصف (المحتوى محفوظ)."));
+ }
+ // 899371 enrichment P13 (D1) — open / close the BOOK solutions and output tracers of ONE published module for the class. Closing
+ // is confirmed (students lose access to the solutions they were reading); the server decides and records it.
+ async function toggleSolutionsRelease(classroom:Classroom,courseId:string,moduleId:string,open:boolean){
+  if(actionBusy)return;
+  const current=classReleasedModuleIds(classroom,courseId);
+  const moduleTitle=learningModuleTitle(courseId,moduleId);
+  if(!open&&!(await confirm({message:"ستُقفل حلول أسئلة الكتاب ومحاكي ناتجها في فصل \""+moduleTitle+"\" عن طلاب الصف.",confirmLabel:"إقفال الحلول"})))return;
+  const next=open?[...current.filter(id=>id!==moduleId),moduleId]:current.filter(id=>id!==moduleId);
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const result=await teacherApi<{ok:true;classId:string;learningMaterials:ClassLearningMaterial[]}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setLearningCourseReleases",classId:classroom.classId,courseId,moduleIds:next})});
+   commitLearningMaterials(classroom.classId,Array.isArray(result.learningMaterials)?result.learningMaterials:[]);
+   setNotice(open?("✓ فُتحت حلول أسئلة الكتاب في فصل «"+moduleTitle+"» لطلاب الصف."):("✓ أُقفلت حلول أسئلة الكتاب في فصل «"+moduleTitle+"»."));
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير حالة الحلول.")}
+  finally{setActionBusy(false)}
  }
  // Detach the whole course from THIS class (its publication list goes with it). Never deletes book content.
  async function removeLearningCourse(classroom:Classroom,courseId:string){
@@ -1003,6 +1020,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
    onRetryCatalog={()=>void loadLearningCatalog()}
    onAddCourse={(classroom,courseId,moduleIds)=>void addLearningCourse(classroom,courseId,moduleIds)}
    onToggleModule={(classroom,courseId,moduleId,publish)=>void toggleLearningModule(classroom,courseId,moduleId,publish)}
+   onToggleRelease={(classroom,courseId,moduleId,open)=>void toggleSolutionsRelease(classroom,courseId,moduleId,open)}
    onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
 
   <CreateClassDialog open={dialog==="createClass"} onClose={closeDialog} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}

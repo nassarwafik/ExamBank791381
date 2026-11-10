@@ -155,7 +155,11 @@ describe("899371 — the course is the owner's Word source", () => {
 
   it("every Markdown marker read as formatting is listed in the log (decision P2-a), and none is left in the book text", async () => {
     expect(conversionLog.markers.length).toBe(51);
-    const text = JSON.stringify(bookBlocks(await modules()));
+    // the BOOK's text: the blocks of origin "book" (an animated scene on a summary page — enrichment P11 — marks code in its own
+    // sentences with `…`, which is its data format, not a marker left in the book)
+    const book = bookBlocks(await modules()).filter(b => b.origin === "book");
+    expect(book.length).toBe(1602);
+    const text = JSON.stringify(book);
     expect(text).not.toMatch(/\*\*|`|\\\\[#[\]]/);
   }, 30000);
 

@@ -58,8 +58,9 @@ describe("«جرّب الكود» — when it appears", () => {
     const calls = server({ json: { ...LISTED.json, blocks: { "899371-m04-l01-p05": ["b1", "b2", "b3"] } } });
     show(access(), ["b1", "b2", "b3"]);
     expect(await screen.findAllByRole("button", { name: "جرّب الكود" })).toHaveLength(3);
-    expect(calls.map(c => [c.method, c.url])).toEqual([["GET", "/api/learning-run/899371"]]);
-    expect(calls[0].headers["x-student-token"]).toBe("T");
+    // once each for the course: the runnable list, and (899371 enrichment P13) the list of traces this learner may watch
+    expect(calls.map(c => [c.method, c.url]).sort()).toEqual([["GET", "/api/learning-run/899371"], ["GET", "/api/learning-trace/899371"]]);
+    for (const c of calls) expect(c.headers["x-student-token"]).toBe("T");
   });
 });
 
