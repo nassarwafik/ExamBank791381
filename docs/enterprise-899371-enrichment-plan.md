@@ -1307,7 +1307,44 @@
 
 ### 14.5 النشر على المشغّل الحي (عملك، حين تقرر)
 
-1. انشر صورة البوابة الجديدة على الآلة، كما في `runner/deploy/azure-vm/`. **صور العمال لم تتغير.**
-2. أضف `/v1/check` إلى سطر `@runner path` في Caddy الحي، كما في `Caddyfile.example`.
-3. لا شيء في الـ API: يكتشف المسار وحده.
-4. قبل ذلك يبقى كل شيء يعمل بالطريق القديم (D4-أ).
+**الحالة: مؤجَّل بقرار المالك (2026-11-11).** المشغّل الحي لم يُحدَّث. «افحص حلي» على الإنتاج يعمل بالطريق القديم (D4-أ):
+تشغيل لكل مدخل، بالحكم نفسه، بلا خطأ ولا ضرر. التصحيح الرسمي لا يتأثر. يمكن تنفيذ الخطوتين 4 و6 أدناه ضمن أي تحديث قادم للآلة.
+
+**تصحيح (2026-11-11):** النسخة الأولى من هذا القسم قالت «انشر صورة البوابة». هذا غير دقيق: **البوابة ليست صورة Docker**، بل كود Node
+يعمل من مجلد الإصدار `/opt/smartassess-runner/current` (الخدمة `smartassess-runner.service`، `ExecStart=/usr/bin/node gateway/main.js`).
+تحديثها نسخة جديدة من المستودع وإعادة تشغيل الخدمة. **صور العمال الثلاث** هي وحدها صور Docker، وP18 لم يغيّرها.
+
+**ما يغيّره النشر:** «افحص حلي» يترجم البرنامج **مرة واحدة** بدل مرة لكل مدخل: 10 مدخلات بـ C# في نحو 5 ثوانٍ بدل نحو 14 (14.3، 14.6).
+**الإضافة نفسها خطوتان: 4 و6.** الباقي إجراء الترقية الآمن في `runner/deploy/azure-vm/README.md` §9، كي لا ينقطع تصحيح أثناء إعادة التشغيل.
+
+| # | أين | الخطوة | المرجع |
+|---|---|---|---|
+| 0 | الآلة (SSH ثم `sudo -i`) | اعرف الإصدار الحالي: `readlink /opt/smartassess-runner/current` و`cat /opt/smartassess-runner/current/DEPLOYED_SHA`. قارن هذا الـ SHA بالإصدار الجديد في نسخة كاملة من المستودع: `git diff --stat <SHA> <الوسم> -- runner/workers runner/scripts/build-images.sh runner/scripts/pull-base-images.sh`. إن لم يظهر فرق، فلا حاجة لإعادة بناء الصور | README §5.7 |
+| 1 | بوابة Azure، ثم الآلة | وقت خارج الامتحانات. `CODING_RUNNER_ENABLED=false` في إعدادات Static Web App (Production)؛ التدريب يتوقف مؤقتًا، والتسليمات تنجح وتبقى «قيد المراجعة»، **بلا صفر**. انتظر `received 0 · running 0 · executed 0` في `journal-status.js` | README §9، rollback.md R1 |
+| 2 | بوابة Azure | لقطة (snapshot) لقرص البيانات `/data/smartassess-runner` | README §9 |
+| 3 | جهازك أو GitHub Releases | وسم إصدار على `main`، مثل `runner-<التاريخ>` (الوسم الوحيد اليوم `v1.0`، وهو قديم) | README §5.7 |
+| **4** | الآلة | `git clone --depth 1 --branch <الوسم> …` إلى `/opt/smartassess-runner/<الوسم>`، ثم `DEPLOYED_SHA`، و`chown -R root:root` و`chmod -R go-w`. **إن ظهر فرق في الخطوة 0 فقط:** `build-and-record-images.sh /etc/smartassess-runner/images.manifest`. ثم `ln -sfn /opt/smartassess-runner/<الوسم> /opt/smartassess-runner/current && systemctl restart smartassess-runner`. لا `npm install`: المشغّل بلا اعتماديات | README §5.7، §5.8 |
+| 5 | الآلة | `sh /opt/smartassess-runner/current/runner/deploy/azure-vm/readiness.sh --deep`: كل البنود PASS. فحص الإقلاع يُبقي الخدمة مغلقة عند أي فشل | README §5.10، §9 |
+| **6** | الآلة | **عدّل سطرًا واحدًا** في `/etc/caddy/Caddyfile` الحي، ولا تنسخ `Caddyfile.example` فوقه (فيه نطاقك وبريدك): خذ نسخة احتياطية، ثم أضف `/v1/check` إلى سطر `@runner path`، فيصير `@runner path /healthz /v1/capabilities /v1/execute /v1/check /v1/official-grading-jobs`. ثم `caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy` | README §5.12 |
+| 7 | أي جهاز (بلا مفاتيح) | `curl -sS -X POST https://runner.<domain>/v1/check -w ' [%{http_code}]\n'`. **`401 UNAUTHORIZED`** = البوابة الجديدة وCaddy جاهزان. **404 بلا نص** = Caddy لم يُحدَّث. **`404 NOT_FOUND`** = البوابة القديمة ما زالت تعمل (`server.js`: المسار يُعرف قبل التوقيع) | `runner/gateway/server.js` |
+| 8 | جهاز المشغِّل، والمفتاح من مخزن الأسرار | `smoke.js runner`؛ لا يُكتب المفتاح في أمر يُحفظ | README §5.14 |
+| 9 | بوابة Azure، ثم الموقع | `CODING_RUNNER_ENABLED=true`، ثم «إعادة المحاولة الجماعية» للمعلم إن بقي شيء «قيد المراجعة» | README §9، rollback.md R7 |
+| 10 | الموقع، ثم الآلة | جرّب «افحص حلي»، ثم `journalctl -u smartassess-runner -o cat --since -10min \| grep runner.check.completed`. السطر لا يحوي كودًا ولا مدخلات | 14.2 |
+
+**التراجع** (rollback.md R6):
+- أعد الرابط `current` إلى الإصدار السابق، ثم `systemctl restart smartassess-runner`؛
+- واستعد نسخة Caddy الاحتياطية، ثم `caddy validate` و`systemctl reload caddy`.
+
+التراجع عن أحدهما وحده آمن أيضًا: أي 404 يعيد الـ API إلى الطريق القديم (14.4).
+
+**لا شيء في الـ API:** يكتشف المسار وحده عند أول «افحص حلي».
+
+## 15. حالة الخطة (2026-11-11)
+
+- **اكتملت مراحل الخطة كلها، من P10 إلى P18.**
+  - دُمجت كلها، آخرها PR #601 (دمج `736a5395`).
+  - CI على `main` بعد الدمج أخضر، والنشر على Static Web Apps نجح.
+  - تحققتُ من الإنتاج دون جلسة: ألوان P17 (`#5b6779` و`#938da6`) في حزمة المحرر المنشورة، ومسار `learning-solve` يرفض بلا جلسة (401).
+- **مؤجَّل بقرار المالك:** نشر P18 على المشغّل الحي (14.5). حتى ذلك الحين يعمل «افحص حلي» بالطريق القديم.
+- **قرار اختياري مفتوح:** أرقام الأسطر العادية في سمة المحرر الفاتحة (13.4).
+- **لا مرحلة برمجية متبقية في هذه الخطة.** أي عمل جديد على المقرر يأتي من الاستعمال الفعلي، أو من قرار جديد للمالك.
