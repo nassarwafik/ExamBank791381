@@ -175,9 +175,6 @@ function composerVerdict(exam, opts = {}) {
             else
                 seen.set(k, q.examQuestionId);
         }
-        const opts2 = Array.isArray(q.options) ? q.options.map(o => normStem(o.text)) : [];
-        if (opts2.length && new Set(opts2).size !== opts2.length)
-            warnings.push({ code: "COMPOSER_DUPLICATE_OPTIONS", message: "خيارات متطابقة في السؤال نفسه.", questionId: q.examQuestionId });
     }
     const meta = (0, exports.composerMetadataOf)(exam);
     const marksOf = new Map(qs.map(q => [q.examQuestionId, Number(q.marks) || 0]));

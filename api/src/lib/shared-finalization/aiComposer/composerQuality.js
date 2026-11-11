@@ -15,6 +15,11 @@ const jaccard = (a, b) => { let n = 0; for (const t of a)
         n++; return n / (a.size + b.size - n || 1); };
 const containsWords = (hay, needle) => needle.length > 0 && (" " + hay + " ").includes(" " + needle + " ");
 const mentions = (hay, needle) => containsWords(hay, needle) || ["و", "ف", "ب", "ل", "ك"].some(p => containsWords(hay, p + needle));
+const CHOICE_TYPES = new Set(["multipleChoice", "multipleSelect"]);
+const CATCH_ALL = new Set(["كل ما سبق", "جميع ما سبق", "كل ما ذكر", "جميع ما ذكر", "كل ما سبق صحيح", "جميع ما سبق صحيح", "جميع الإجابات صحيحة", "كل الإجابات صحيحة", "جميع الإجابات السابقة",
+    "لا شيء مما سبق", "لا شيء مما ذكر", "ليس مما سبق", "لا شيء مما سبق صحيح", "لا شيء مما ذكر صحيح", "لا أحد مما سبق", "all of the above", "none of the above"].map(norm));
+const NEGATORS = new Set(["لا", "ليس", "ليست", "ليسا", "ليستا", "ليسوا", "لم", "لن", "غير", "not", "no", "never", "none", "cannot"].map(norm));
+const negations = (text) => norm(text).split(" ").filter(t => NEGATORS.has(t)).length;
 function units(exam) {
     const out = [];
     for (const s of exam.sections || [])
@@ -111,6 +116,19 @@ function qualityWarnings(exam, intent, difficultyOf) {
             else if (intent.difficulty !== "mixed" && share[intent.difficulty] / known < Q.difficultyLevelShare)
                 out.push({ code: "COMPOSER_DIFFICULTY_DRIFT", message: "المطلوب امتحان «" + intent.difficulty + "»، لكن " + pct(intent.difficulty) + "% فقط من العلامات لأسئلة بهذا المستوى." });
         }
+    }
+    for (const u of all) {
+        const opts = optionTexts(u.node);
+        if (CHOICE_TYPES.has(u.type) && opts.length >= 2) {
+            const n = opts.map(norm);
+            if (n.some((t, i) => t && n.indexOf(t) !== i))
+                out.push({ code: "COMPOSER_DUPLICATE_OPTIONS", message: "خياران متطابقان في السؤال نفسه (بعد تجاهل المسافات والتشكيل)؛ اجعل كل خيار مختلفًا.", questionId: u.id });
+            const catchAll = opts.find((_, i) => CATCH_ALL.has(n[i]));
+            if (catchAll !== undefined)
+                out.push({ code: "COMPOSER_CATCH_ALL_OPTION", message: "الخيار «" + catchAll.trim().slice(0, 40) + "» يضعف السؤال (يكفي تمييز خيارين لاختياره أو استبعاده)؛ استبدله بمشتّت حقيقي.", questionId: u.id });
+        }
+        if (negations(u.text) >= 2)
+            out.push({ code: "COMPOSER_DOUBLE_NEGATIVE", message: "نص السؤال يجمع نفيين فيصعب فهمه؛ أعد صياغته بنفي واحد أو دون نفي.", questionId: u.id });
     }
     return out;
 }

@@ -28,6 +28,13 @@ const containsWords = (hay: string, needle: string) => needle.length > 0 && (" "
 /** Like containsWords, also accepting a one-letter Arabic proclitic (و ف ب ل ك) glued to the word: «الشبكة والنقل» names both options. */
 const mentions = (hay: string, needle: string) => containsWords(hay, needle) || ["و", "ف", "ب", "ل", "ك"].some(p => containsWords(hay, p + needle));
 
+// Phase 21X — catch-all options and negation words, compared after `norm` (alef / taa marbuta / yaa forms, diacritics, punctuation).
+const CHOICE_TYPES = new Set(["multipleChoice", "multipleSelect"]);
+const CATCH_ALL = new Set(["كل ما سبق", "جميع ما سبق", "كل ما ذكر", "جميع ما ذكر", "كل ما سبق صحيح", "جميع ما سبق صحيح", "جميع الإجابات صحيحة", "كل الإجابات صحيحة", "جميع الإجابات السابقة",
+  "لا شيء مما سبق", "لا شيء مما ذكر", "ليس مما سبق", "لا شيء مما سبق صحيح", "لا شيء مما ذكر صحيح", "لا أحد مما سبق", "all of the above", "none of the above"].map(norm));
+const NEGATORS = new Set(["لا", "ليس", "ليست", "ليسا", "ليستا", "ليسوا", "لم", "لن", "غير", "not", "no", "never", "none", "cannot"].map(norm));
+const negations = (text: string) => norm(text).split(" ").filter(t => NEGATORS.has(t)).length;
+
 type Unit = { id: string; type: string; text: string; node: Rec; marks: number };
 /** Every gradable unit: each question, and each composite child part (ids "question::part"). */
 function units(exam: StructuredExam): Unit[] {
@@ -107,6 +114,18 @@ export function qualityWarnings(exam: StructuredExam, intent?: AiExamIntentV1 | 
       } else if (intent.difficulty !== "mixed" && share[intent.difficulty] / known < Q.difficultyLevelShare)
         out.push({ code: "COMPOSER_DIFFICULTY_DRIFT", message: "المطلوب امتحان «" + intent.difficulty + "»، لكن " + pct(intent.difficulty) + "% فقط من العلامات لأسئلة بهذا المستوى." });
     }
+  }
+  // ── Phase 21X: option and stem wording (every choice question and part; the builder shows them too via 21W) ──
+  for (const u of all) {
+    const opts = optionTexts(u.node);
+    if (CHOICE_TYPES.has(u.type) && opts.length >= 2) {
+      const n = opts.map(norm);
+      // two options identical once spacing, diacritics, letter forms and punctuation are ignored (was an exact check in the verdict)
+      if (n.some((t, i) => t && n.indexOf(t) !== i)) out.push({ code: "COMPOSER_DUPLICATE_OPTIONS", message: "خياران متطابقان في السؤال نفسه (بعد تجاهل المسافات والتشكيل)؛ اجعل كل خيار مختلفًا.", questionId: u.id });
+      const catchAll = opts.find((_, i) => CATCH_ALL.has(n[i]));
+      if (catchAll !== undefined) out.push({ code: "COMPOSER_CATCH_ALL_OPTION", message: "الخيار «" + catchAll.trim().slice(0, 40) + "» يضعف السؤال (يكفي تمييز خيارين لاختياره أو استبعاده)؛ استبدله بمشتّت حقيقي.", questionId: u.id });
+    }
+    if (negations(u.text) >= 2) out.push({ code: "COMPOSER_DOUBLE_NEGATIVE", message: "نص السؤال يجمع نفيين فيصعب فهمه؛ أعد صياغته بنفي واحد أو دون نفي.", questionId: u.id });
   }
   return out;
 }
