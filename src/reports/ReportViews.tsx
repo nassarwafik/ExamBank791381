@@ -25,6 +25,7 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import { toneForTrack } from "../projects/teacherPresentation";
 import type { ProjectAnalytics as AnalyticsData, TrackMeta } from "../projects/types";
 import type { AssignmentDrillTarget } from "../assignments/drillTarget";
+import { reasonText, criteriaText, type FollowUp, type FollowUpStudent } from "./followUp";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler);
 
@@ -80,7 +81,30 @@ function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level
   );
 }
 
-function ClassReport({ token, filters }: { token: string; filters: Filters }) {
+// Phase R-5c — «طلاب يحتاجون متابعة». The server decided who is here and why (the owner's criteria); this only shows it: each
+// reason in words with its own number (a reason this client does not know is left out, never guessed), the criteria in one
+// sentence, and a way to the student's own report. Neutral wording: nobody here is "failing" — there is no pass mark.
+function FollowUpSection({ followUp, onOpenStudent }: { followUp: FollowUp; onOpenStudent?: (studentId: string) => void }) {
+  const rows = useMemo(() => followUp.students.map(s => ({ ...s, texts: s.reasons.map(reasonText).filter((t): t is string => t !== null) })).filter(s => s.texts.length > 0), [followUp]);
+  type R = FollowUpStudent & { texts: string[] };
+  return (
+    <section className="eb-report-follow-up" aria-labelledby="eb-report-follow-up-title">
+      <h3 id="eb-report-follow-up-title" className="eb-subheading">طلاب يحتاجون متابعة <StatusBadge tone={rows.length ? "warn" : "neutral"}>{rows.length}</StatusBadge></h3>
+      <ReportNote>{criteriaText(followUp.criteria, followUp.classAverage)}</ReportNote>
+      {rows.length === 0
+        ? <EmptyState text="لا يوجد طالب تنطبق عليه معايير المتابعة في هذه الفترة." />
+        : <ReportTable<R> capped caption="طلاب يحتاجون متابعة: الأسباب ومتوسط النتائج المصحَّحة وعدد التقييمات غير المسلَّمة" search={{ label: "بحث عن طالب", text: r => r.displayName }} columns={[
+            { key: "displayName", label: "الطالب", sortValue: r => r.displayName },
+            { key: "reasons", label: "الأسباب", render: r => <span className="eb-report-reasons">{r.texts.map((t, i) => <StatusBadge key={i} tone="warn">{t}</StatusBadge>)}</span>, sortValue: r => r.texts.length, numeric: false },
+            { key: "average", label: "المتوسط", render: r => pct(r.average), numeric: true, sortValue: r => finiteOrNull(r.average) },
+            { key: "missing", label: MISSING_LABEL, numeric: true, sortValue: r => r.missing },
+            ...(onOpenStudent ? [{ key: "open", label: "فتح", render: (r: R) => <button type="button" className="eb-button is-quiet is-small eb-report-noprint" onClick={() => onOpenStudent(r.studentId)}>تقرير الطالب<VisuallyHidden> — {r.displayName}</VisuallyHidden></button> }] : [])
+          ]} rows={rows} />}
+    </section>
+  );
+}
+
+function ClassReport({ token, filters, onOpenStudent }: { token: string; filters: Filters; onOpenStudent?: (studentId: string) => void }) {
   type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; insights?: ClassInsights | null; projects: ClassProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." description="سيعرض التقرير أرقام الصف، تطوّر متوسطه ونسبة تسليمه من تقييم لآخر، ترتيب الطلاب، وتقدّمه في مشاريعه." />;
@@ -133,6 +157,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
               <StatCard primary label="الانحراف المعياري" value={insights.summary.stdDev === null ? "—" : String(insights.summary.stdDev)} hint="تباعد متوسطات الطلاب (نقاط مئوية)" />
             </div>
           )}
+          {insights.followUp && <FollowUpSection followUp={insights.followUp} onOpenStudent={onOpenStudent} />}
           <section aria-labelledby="eb-report-class-students">
             <h3 id="eb-report-class-students" className="eb-subheading">طلاب الصف</h3>
             <ReportTable<StudentStanding> capped caption="طلاب الصف: متوسط النتائج المصحَّحة وعدد التقييمات في كل حالة" search={{ label: "بحث عن طالب", text: r => r.displayName }} columns={[
@@ -553,14 +578,14 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
 
 // Phase R-5a — the report's entrance motion (cards rise, progress bars grow) is CSS keyed on this wrapper, so it follows the same
 // preference as the charts: the viewer's explicit choice, else the OS hint. The wrapper has no box (display: contents).
-export default function ReportView(props: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
+export default function ReportView(props: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void; /** Phase R-5c — from a follow-up row to that student's report */ onOpenStudent?: (studentId: string) => void }) {
   const reduced = usePrefersReducedMotion();
   return <div className="eb-report-motion" data-motion={reduced ? "off" : "on"}><ReportBody {...props} /></div>;
 }
 
-function ReportBody({ type, token, filters, onOpenProject, onOpenAssignment }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
+function ReportBody({ type, token, filters, onOpenProject, onOpenAssignment, onOpenStudent }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void; onOpenStudent?: (studentId: string) => void }) {
   switch (type) {
-    case "class": return <ClassReport token={token} filters={filters} />;
+    case "class": return <ClassReport token={token} filters={filters} onOpenStudent={onOpenStudent} />;
     case "student": return <StudentReport token={token} filters={filters} />;
     case "assignments": return <AssignmentsReport token={token} filters={filters} onOpenAssignment={onOpenAssignment} />;
     case "project": return <ProjectReport token={token} filters={filters} onOpenProject={onOpenProject} />;

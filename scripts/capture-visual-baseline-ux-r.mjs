@@ -124,11 +124,12 @@ const REPORTS = {
   // of the reportsInsights.r5a fixtures: the hub and two more opened reports render their charts, state bars and tables.
   overview: { ok: true, type: "overview", withheld: [], overview: {
     classes: [
-      { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", studentCount: 6, assessments: 3, average: 68.5, submissionRate: 78, pendingReview: 2, graded: 12, pending: 2, missing: 4 },
-      { classId: "c2", name: CLASSES[1].name, schoolYear: "2026", studentCount: 4, assessments: 2, average: 74, submissionRate: 88, pendingReview: 1, graded: 6, pending: 1, missing: 1 },
+      { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", studentCount: 6, assessments: 3, average: 68.5, submissionRate: 78, pendingReview: 2, graded: 12, pending: 2, missing: 4, needsFollowUp: 2 },
+      { classId: "c2", name: CLASSES[1].name, schoolYear: "2026", studentCount: 4, assessments: 2, average: 74, submissionRate: 88, pendingReview: 1, graded: 6, pending: 1, missing: 1, needsFollowUp: 0 },
       { classId: "c3", name: CLASSES[2].name, schoolYear: "2026", studentCount: 0, assessments: 0, average: null, submissionRate: 0, pendingReview: 0, graded: 0, pending: 0, missing: 0 }],
     totals: { classes: 3, students: 10, assessments: 5, average: 70.3, submissionRate: 81, pendingReview: 3 },
-    trend: [{ month: "2026-08", assessments: 1, average: 62, submissionRate: 70 }, { month: "2026-09", assessments: 2, average: 69, submissionRate: 80 }, { month: "2026-10", assessments: 2, average: 76, submissionRate: 88 }] } },
+    trend: [{ month: "2026-08", assessments: 1, average: 62, submissionRate: 70 }, { month: "2026-09", assessments: 2, average: 69, submissionRate: 80 }, { month: "2026-10", assessments: 2, average: 76, submissionRate: 88 }],
+    followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, total: 2 } } },   // Phase R-5c — «يحتاج انتباهك» on the hub
   class: { ok: true, type: "class", withheld: [], class: { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", status: "active", studentCount: 6 },
     kpis: { assignments: 3, averageScore: 68.5, submissionRate: 78, pendingReview: 2 }, projects: [],
     insights: {
@@ -139,7 +140,11 @@ const REPORTS = {
       students: STUDENTS.slice(0, 6).map((s, i) => ({ studentId: s.userId, displayName: s.displayName, average: [91, 78, 74, 63, null, 52][i], graded: [3, 3, 2, 3, 0, 1][i], pending: [0, 0, 1, 0, 1, 0][i], missing: [0, 0, 0, 0, 2, 2][i] })),
       submission: { graded: 12, pending: 2, missing: 4 },
       // Phase R-5b — the spread of the students' averages (summary tiles above the students table)
-      summary: { highest: { studentId: "u1", displayName: STUDENTS[0].displayName, average: 91 }, lowest: { studentId: "u6", displayName: STUDENTS[5].displayName, average: 52 }, median: 74, stdDev: 13.4, withAverage: 5 } } },
+      summary: { highest: { studentId: "u1", displayName: STUDENTS[0].displayName, average: 91 }, lowest: { studentId: "u6", displayName: STUDENTS[5].displayName, average: 52 }, median: 74, stdDev: 13.4, withAverage: 5 },
+      // Phase R-5c — «طلاب يحتاجون متابعة» (the server's list and reasons)
+      followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, classAverage: 68.5, students: [
+        { studentId: "u6", displayName: STUDENTS[5].displayName, average: 52, missing: 2, pending: 0, reasons: [{ code: "missing", count: 2 }, { code: "belowClass", gap: 16.5 }] },
+        { studentId: "u5", displayName: STUDENTS[4].displayName, average: null, missing: 2, pending: 1, reasons: [{ code: "missing", count: 2 }] }] } } },
   student: { ok: true, type: "student", withheld: [], student: { studentId: STUDENTS[0].userId, displayName: STUDENTS[0].displayName, classId: "c1", className: CLASSES[0].name, schoolYear: "2026" },
     academic: { average: 73, submittedCount: 3, assessmentCount: 4, submissionRate: 75, pendingCount: 1 }, projects: [],
     insights: { assessments: [

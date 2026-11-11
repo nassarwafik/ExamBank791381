@@ -9,10 +9,10 @@ export type StudentStanding = { studentId: string; displayName: string; average:
 export type SubmissionSplit = { graded: number; pending: number; missing: number };
 /** Phase R-5b — the spread of the students' averages and who holds the highest / the lowest (final results only). */
 export type StandingsSummary = { highest: { studentId: string; displayName: string; average: number } | null; lowest: { studentId: string; displayName: string; average: number } | null; median: number | null; stdDev: number | null; withAverage: number };
-export type ClassInsights = { assessments: AssessmentPoint[]; students: StudentStanding[]; submission: SubmissionSplit; summary?: StandingsSummary | null };
+export type ClassInsights = { assessments: AssessmentPoint[]; students: StudentStanding[]; submission: SubmissionSplit; summary?: StandingsSummary | null; /** Phase R-5c */ followUp?: import("./followUp").FollowUp | null };
 export type StudentAssessmentPoint = { assignmentId: string; title: string; date?: string; state: string; percentage: number | null; attempts: number; classAverage: number | null };
 export type StudentInsights = { assessments: StudentAssessmentPoint[]; submission: SubmissionSplit };
-export type OverviewClass = { classId: string; name: string; schoolYear: string; studentCount: number; assessments: number; average: number | null; submissionRate: number; pendingReview: number; graded: number; pending: number; missing: number };
+export type OverviewClass = { classId: string; name: string; schoolYear: string; studentCount: number; assessments: number; average: number | null; submissionRate: number; pendingReview: number; graded: number; pending: number; missing: number; /** Phase R-5c — students with an academic follow-up reason */ needsFollowUp?: number };
 export type OverviewData = {
   classes: OverviewClass[];
   totals: { classes: number; students: number; assessments: number; average: number | null; submissionRate: number; pendingReview: number };

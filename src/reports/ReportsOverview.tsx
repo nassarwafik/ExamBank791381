@@ -8,6 +8,7 @@ import StatCard from "../ui/StatCard";
 import { IconRefresh } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { GRADED_LABEL, PENDING_LABEL, MISSING_LABEL, monthLabel, type OverviewData } from "./insights";
+import { studentsNeedFollowUp } from "./followUp";
 
 export const OVERVIEW_NOTE = "الأرقام هنا لصفوفك النشطة فقط، ومبنية على نتيجة آخر محاولة مسلّمة لكل طالب في كل تقييم. التسليمات التي ما زالت بانتظار تصحيح المعلم تُحسب في نسبة التسليم ولا تدخل في أي متوسط؛ وهذه الأرقام ليست درجات نهائية معتمدة.";
 
@@ -20,7 +21,7 @@ export type OverviewResponse = { overview: OverviewData | null; withheld?: strin
  * The hub unmounts while a report is open, so the Reports Center keeps what was loaded (`kept`, told through `onLoaded`): coming
  * back shows it with no request; «تحديث» drops it (`onDrop`) and asks again.
  */
-export default function ReportsOverview({ token, onOpenClass, kept, onLoaded, onDrop }: { token: string; onOpenClass: (classId: string, schoolYear: string) => void; kept: OverviewResponse | null; onLoaded: (data: OverviewResponse) => void; onDrop: () => void }) {
+export default function ReportsOverview({ token, onOpenClass, onOpenAssessments, kept, onLoaded, onDrop }: { token: string; onOpenClass: (classId: string, schoolYear: string) => void; /** Phase R-5c — a class's assessments report (its results awaiting correction) */ onOpenAssessments?: (classId: string, schoolYear: string) => void; kept: OverviewResponse | null; onLoaded: (data: OverviewResponse) => void; onDrop: () => void }) {
   const [initial] = useState(kept);                              // what was kept when this hub mounted
   const [useKept, setUseKept] = useState(!!initial);
   const { data: fetched, loading, error, reload } = useReport<OverviewResponse>(token, useKept ? null : { type: "overview" });
@@ -30,6 +31,10 @@ export default function ReportsOverview({ token, onOpenClass, kept, onLoaded, on
   if (data && !data.overview) return null;
   const o = data?.overview || null;
   const split = o ? o.classes.reduce((s, c) => ({ graded: s.graded + c.graded, pending: s.pending + c.pending, missing: s.missing + c.missing }), { graded: 0, pending: 0, missing: 0 }) : null;
+  const attention = (o ? o.classes : []).flatMap(c => [
+    ...((c.needsFollowUp ?? 0) > 0 ? [{ key: c.classId + ":follow", name: c.name, text: studentsNeedFollowUp(c.needsFollowUp as number) + " في التقييمات", open: () => onOpenClass(c.classId, c.schoolYear) }] : []),
+    ...(c.pendingReview > 0 && onOpenAssessments ? [{ key: c.classId + ":pending", name: c.name, text: c.pendingReview + " " + PENDING_LABEL, open: () => onOpenAssessments(c.classId, c.schoolYear) }] : [])
+  ]);
   return (
     <section className="eb-reports-overview" aria-labelledby="eb-reports-overview-title">
       <div className="eb-reports-overview-head">
@@ -68,6 +73,16 @@ export default function ReportsOverview({ token, onOpenClass, kept, onLoaded, on
                 <ReportNote>{OVERVIEW_NOTE}</ReportNote>
               </>
             ) : <EmptyState text="لا توجد تقييمات منشورة لصفوفك النشطة بعد." />}
+            {/* Phase R-5c — what asks for the teacher's attention, each item opening the report that shows it: students who need
+                follow-up in the assessments (the class report lists them with the reasons) and results awaiting correction. */}
+            {attention.length > 0 && (
+              <section className="eb-overview-attention" aria-labelledby="eb-overview-attention-title">
+                <h3 id="eb-overview-attention-title" className="eb-subheading">يحتاج انتباهك</h3>
+                <ul className="eb-overview-attention-list">
+                  {attention.map(a => <li key={a.key}><button type="button" className="eb-button is-small" onClick={a.open}><span className="eb-overview-attention-class">{a.name}</span>{a.text}</button></li>)}
+                </ul>
+              </section>
+            )}
             <ul className="eb-overview-classes" aria-label="فتح تقرير صف">
               {o.classes.map(c => (
                 <li key={c.classId}>

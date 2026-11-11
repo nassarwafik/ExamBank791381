@@ -159,7 +159,9 @@ describe("R-5a B — the REAL reports handler: class and student `insights`", ()
     const none = await report(ctx, "type=class&classId=c1&from=2027-01-01&to=2027-01-31");
     expect(none.insights).toEqual({ assessments: [], students: [{ studentId: "s1", displayName: "أحمد", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s2", displayName: "بلال", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s3", displayName: "جمال", average: null, graded: 0, pending: 0, missing: 0 }], submission: { graded: 0, pending: 0, missing: 0 },
       // Reports R-5b added `summary` (additive): with no final result every figure of it is null — never 0
-      summary: { highest: null, lowest: null, median: null, stdDev: null, withAverage: 0 } });
+      summary: { highest: null, lowest: null, median: null, stdDev: null, withAverage: 0 },
+      // Reports R-5c added `followUp` (additive): no assessment in the range → nobody is listed
+      followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, classAverage: null, students: [] } });
   });
   it("read cost: the student report downloads no document twice, and a repeated request over unchanged storage downloads none of the class's", async () => {
     const ctx = seed(), st = instrument(ctx);
@@ -334,7 +336,8 @@ describe("R-5a D — the hub overview (type=overview)", () => {
     const recent = (await as(ctx, SARA, "/api/reports?type=overview&from=2026-01-01&to=2026-12-31")).jsonBody.overview;
     expect(recent.totals.assessments).toBeLessThan(all.totals.assessments);    // P_old (a year earlier) is out
     expect(recent.trend.every(m => m.month.startsWith("2026-"))).toBe(true);
-    expect((await as(ctx, SARA, "/api/reports?type=overview&schoolYear=1999-2000")).jsonBody.overview).toEqual({ classes: [], totals: { classes: 0, students: 0, assessments: 0, average: null, submissionRate: 0, pendingReview: 0 }, trend: [] });
+    expect((await as(ctx, SARA, "/api/reports?type=overview&schoolYear=1999-2000")).jsonBody.overview).toEqual({ classes: [], totals: { classes: 0, students: 0, assessments: 0, average: null, submissionRate: 0, pendingReview: 0 }, trend: [],
+      followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, total: 0 } });   // Reports R-5c added `followUp` (additive)
     expect((await as(ctx, SARA, "/api/reports?type=overview&from=2026-05-01&to=2026-01-01")).status).toBe(400);
   });
   it("the academic part withheld → overview: null, and no class, assignment or submission is read for it", async () => {
