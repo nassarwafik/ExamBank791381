@@ -32,6 +32,8 @@ const RULES = [
   "- Never put an answer, an expected value or a hint to the answer in a student-visible stem.",
   // Phase 21Q — the same defects the verdict reports (composerQuality), asked for up front
   "- Vary the position of the correct option across multiple-choice questions, keep options of similar length, mix true and false answers, and never ask two questions that say the same thing.",
+  // Phase 22A — the wording defects the 21X checks report (catch-all options, duplicate options, double negatives), asked for up front
+  "- Every option of a choice question is a real, distinct answer: never write «كل ما سبق», «جميع ما سبق», «لا شيء مما سبق», \"all of the above\" or \"none of the above\", and never two options that mean the same thing. Word each stem with at most ONE negation (no double negatives such as «لا … غير»).",
   "- If a question needs an image that does not exist, describe the needed image in assetRequest (never a URL); prefer a simulator or a table when that teaches the same thing."
 ].join("\n");
 // `<` / `>` inside the data are JSON-escaped (\u003c / \u003e — the same JSON value), so content can never open or close a fence.
