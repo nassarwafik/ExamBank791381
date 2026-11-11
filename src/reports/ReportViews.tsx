@@ -7,9 +7,8 @@ import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyS
 import { useTableSort } from "./useTableSort";
 import { sortRows, matchesQuery } from "./tableTools";
 import { pct, isoDay } from "./format";
-import { downloadCsv } from "./csv";
 import { resolveTrack } from "./trackState";
-import * as csvRows from "./reportCsv";
+import * as ex from "./reportExport";
 import { PerformanceTrendChart, SubmissionStatusChart, StudentStandingChart, StudentTrendChart, GapToClassChart, StageStatusChart, WeeklyChangeChart } from "./ReportCharts";
 import SegmentedBar from "./SegmentedBar";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
@@ -52,6 +51,8 @@ function withRange(params: Record<string, string>, f: Filters): Record<string, s
 }
 
 function usePalette() { return useMemo(() => reportPalette(), []); }
+// Phase R-4 — what an export says about the filters in force (the period only for the reports the period applies to).
+const exportCtx = (f: Filters, timeAware = true): ex.ExportContext => ({ schoolYear: f.schoolYear, ...(timeAware ? { from: f.from, to: f.to } : {}) });
 
 /* ---------------- Academic ---------------- */
 
@@ -111,24 +112,13 @@ function ClassReport({ token, filters, onOpenStudent }: { token: string; filters
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const archived = data.class.status === "archived";
-  // CSV parity: the exact legacy KPI labels/values (unchanged since the first Reports release).
-  const csvKpis: csvRows.Kpi[] = [
-    { label: "الحالة", value: archived ? "مؤرشف" : "نشط" },
-    { label: "عدد الطلاب", value: data.class.studentCount },
-    // Tadris+ P7-A1 — `kpis: null`: the teacher's access does not include assignments, so the server did not compute them.
-    ...(data.kpis ? [
-      { label: "عدد الواجبات", value: data.kpis.assignments },
-      { label: "متوسط العلامات", value: pct(data.kpis.averageScore) },
-      { label: "نسبة التسليم", value: pct(data.kpis.submissionRate) }
-    ] : [])
-  ];
   const kpis = data.kpis;
   // Phase R-5a — the chart series (academic part; absent on an older API or when withheld → the report is the figures alone).
   const insights = kpis ? data.insights || null : null;
   return (
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={archived ? "neutral" : "success"}>{archived ? "مؤرشف" : "نشط"}</StatusBadge></>} description={data.class.schoolYear}
-        onExportCsv={() => downloadCsv(csvRows.classReportFilename(data), csvRows.classReportRows(csvKpis, data))} />
+        report={() => ({ data: ex.classExport(data, exportCtx(filters)), ctx: exportCtx(filters) })} />
       <div className="eb-stat-grid is-primary eb-report-stats">
         <StatCard primary label="الطلاب" value={data.class.studentCount} />
         {kpis && <>
@@ -203,22 +193,13 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." description="اختر الصف ثم الطالب. سيعرض التقرير نتائجه في كل تقييم بجانب متوسط الصف، حالة كل تقييم، وتقدّمه في مشاريع صفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
-  const csvKpis: csvRows.Kpi[] = [
-    { label: "الصف", value: data.student.className || "—" },
-    // Tadris+ P7-A1 — `academic: null`: not part of this teacher's access (the server did not compute it).
-    ...(data.academic ? [
-      { label: "متوسط التقييمات", value: pct(data.academic.average) },
-      { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
-      { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
-    ] : [])
-  ];
   const academic = data.academic, projectsWithheld = (data.withheld || []).includes("projects");
   // Phase R-5a — the chart series (academic part; absent on an older API or when withheld → the report is the figures alone).
   const insights = academic ? data.insights || null : null;
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.student.displayName} description={(data.student.className || "—") + " · " + data.student.schoolYear}
-        onExportCsv={() => downloadCsv(csvRows.studentReportFilename(data), csvRows.studentReportRows(csvKpis, data))} />
+        report={() => ({ data: ex.studentExport(data, exportCtx(filters)), ctx: exportCtx(filters) })} />
       <div className="eb-stat-grid is-primary eb-report-stats">
         {academic && <>
           <StatCard primary label="متوسط التقييمات" value={pct(academic.average)} hint={averageHint(academic.pendingCount)} />
@@ -295,7 +276,7 @@ function StudentAssessmentsTable({ points }: { points: StudentAssessmentPoint[] 
 
 function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string; filters: Filters; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
   // Phase R-5b — the row's day and highest / lowest / median are optional: an API that does not send them shows the earlier columns.
-  type Row = csvRows.AssignmentRow & { assignmentId: string; date?: string; highest?: number | null; lowest?: number | null; median?: number | null };
+  type Row = ex.AssignmentRow & { assignmentId: string };
   type Cell = { studentId: string; state: string; percentage: number | null; zero?: boolean };
   type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
@@ -328,7 +309,7 @@ function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={"تقييمات الصف ضمن الفترة المختارة — " + LATEST_ATTEMPT_LABEL}
-        onExportCsv={() => downloadCsv(csvRows.assignmentsReportFilename(data.class.name), csvRows.assignmentsReportRows(data.perAssignment))} />
+        report={() => ({ data: ex.assignmentsExport(data, exportCtx(filters)), ctx: exportCtx(filters) })} />
       <div className="eb-stat-grid is-primary eb-report-stats">
         <StatCard primary label="التقييمات" value={data.overall.assessmentCount} />
         <StatCard primary label="التسليمات" value={data.overall.participants} hint="طالب × تقييم" />
@@ -414,22 +395,11 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
-  // CSV parity: exact legacy KPI labels/values.
-  const csvKpis: csvRows.Kpi[] = [
-    { label: "عدد الطلاب", value: data.summary.studentCount },
-    { label: "التقدم العام", value: pct(data.summary.avgOverall) },
-    ...data.tracks.map(t => ({ label: t.title, value: pct(data.summary.trackAverages[t.trackId] || 0) })),
-    { label: "✅ مكتملون", value: data.summary.completedCount },
-    { label: "🔵 ينتظرون الفحص", value: data.summary.studentsReadyForReview },
-    { label: "⚠ متأخرون", value: data.summary.staleCount },
-    // Phase P-5d — appended (the frozen rows above are unchanged) and only when the server reports students who have not started.
-    ...(data.summary.notStartedCount ? [{ label: "لم يبدأوا", value: data.summary.notStartedCount }] : [])
-  ];
   const track = resolveTrack(stageTrack, data.tracks.map(t => t.trackId), data.tracks[0]?.trackId || "");
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={"مشروع " + filters.projectCode + " — الوضع الحالي"}
-        onExportCsv={() => downloadCsv(csvRows.projectReportFilename(filters.projectCode, data.class.name), csvRows.projectReportRows(csvKpis))}>
+        report={() => ({ data: ex.projectExport(data, filters.projectCode), ctx: exportCtx(filters, false) })}>
         {onOpenProject && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenProject(filters.projectCode)}>فتح في مساحة المشاريع</button>}
       </ReportHeader>
       <div className="eb-stat-grid is-primary eb-report-stats">
@@ -449,7 +419,7 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
 }
 
 function TrackReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: csvRows.TrackRow[] };
+  type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: ex.TrackRow[] };
   // The track/group start empty for every project + class: ReportView keys this component by both (Phase R-2), so a stale
   // track from another project (e.g. "access") never carries over — and is never sent, not even once, before a reset.
   const [track, setTrack] = useState("");
@@ -468,7 +438,7 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={"مسار " + trackTitle + " — حالة كل مرحلة عبر طلاب الصف"}
-        onExportCsv={() => downloadCsv(csvRows.trackReportFilename(data.track, data.class.name), csvRows.trackReportRows(data.rows))} />
+        report={() => ({ data: ex.trackExport(data, filters.projectCode, trackTitle), ctx: exportCtx(filters, false) })} />
       <div className="eb-report-subfilters eb-report-noprint" role="region" aria-label="خيارات تقرير المسار">
         <div className="eb-segmented" role="group" aria-label="المسار">
           {data.tracks.map(t => <button key={t.trackId} type="button" aria-pressed={data.track === t.trackId} onClick={() => { setTrack(t.trackId); setGroupId(""); }}>{t.title}</button>)}
@@ -498,7 +468,7 @@ function ReadyReport({ token, filters, onOpenProject }: { token: string; filters
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={data.totalReady > 0 ? "info" : "neutral"}>{data.totalReady} مرحلة بانتظار الفحص</StatusBadge></>}
         description={data.class.status === "archived" ? "الصف مؤرشف — عرض للقراءة فقط." : "المراحل التي علّمها الطلاب جاهزة للفحص؛ الاعتماد يتم من مساحة المشاريع."}
-        onExportCsv={() => downloadCsv(csvRows.readyReportFilename(filters.projectCode, data.class.name), csvRows.readyReportRows(data.students))}>
+        report={() => ({ data: ex.readyExport(data, filters.projectCode), ctx: exportCtx(filters, false) })}>
         {onOpenProject && data.class.status !== "archived" && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenProject(filters.projectCode)}>فتح في مساحة المشاريع</button>}
       </ReportHeader>
       {!data.students.length ? <EmptyState text="لا توجد مراحل بانتظار الفحص." /> : data.students.map(s => (
@@ -514,7 +484,7 @@ function ReadyReport({ token, filters, onOpenProject }: { token: string; filters
 }
 
 function DelayedReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = csvRows.DelayedRow & { studentId: string };
+  type Row = ex.DelayedRow & { studentId: string };
   type Resp = { tracks: TrackMeta[]; lateThreshold: number; class: { name: string }; students: Row[] };
   const params = filters.projectCode && filters.classId ? { type: "delayed", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
@@ -524,7 +494,7 @@ function DelayedReport({ token, filters }: { token: string; filters: Filters }) 
   return (
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={data.students.length ? "warn" : "neutral"}>{data.students.length} متأخرون</StatusBadge></>} description={"عتبة التأخّر حسب إعداد الصف: " + data.lateThreshold + "%"}
-        onExportCsv={() => downloadCsv(csvRows.delayedReportFilename(filters.projectCode, data.class.name), csvRows.delayedReportRows(data.tracks, data.students))} />
+        report={() => ({ data: ex.delayedExport(data, filters.projectCode), ctx: exportCtx(filters, false) })} />
       <ReportTable capped search={{ label: "بحث عن طالب", text: (r: Row) => r.displayName }} caption="الطلاب المتأخرون: التقدم العام وتقدم كل مسار وآخر تحديث وسبب التأخر" columns={[
         { key: "displayName", label: "الطالب", sortValue: (r: Row) => r.displayName },
         { key: "overall", label: "التقدم العام", render: (r: Row) => <ProgressBar ariaLabel={"التقدم العام " + r.displayName} value={r.overall} size="sm" />, numeric: true, sortValue: (r: Row) => r.overall },
@@ -551,7 +521,7 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={data.scope === "student" ? "طالب محدد — متوسط التقدّم الأسبوعي" : "الصف كامل — متوسط التقدّم الأسبوعي"}
-        onExportCsv={() => downloadCsv(csvRows.timelineReportFilename(filters.projectCode, data.class.name), csvRows.timelineReportRows(data.trend))} />
+        report={() => ({ data: ex.timelineExport(data, filters.projectCode, exportCtx(filters)), ctx: exportCtx(filters) })} />
       {data.trend.length > 1 && (() => {
         // Phase R-5a — where the period started, where it ended and the net change between the two (the chart's own points).
         const first = data.trend[0].avgOverall, last = data.trend[data.trend.length - 1].avgOverall, net = Math.round((last - first) * 10) / 10;

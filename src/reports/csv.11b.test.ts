@@ -5,7 +5,7 @@
 // the user's text (including its leading spacing) is exported unchanged.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { csvCell, toCsv, downloadCsv } from "./csv";
-import { readyReportRows } from "./reportCsv";
+import { readyExport, exportRows } from "./reportExport";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -59,13 +59,15 @@ describe("report export (downloadCsv + a real report row builder) — end to end
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; });
     (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = vi.fn();
-    const rows = readyReportRows([{ displayName: "  =HYPERLINK(\"http://x\")", stages: [{ stageId: "B02", title: " \t@cmd" }] }] as unknown as Parameters<typeof readyReportRows>[0]);
+    // Reports R-4: the rows now come from the unified export (reportExport.ts) — the guard is the same csv.ts encoder.
+    const rows = exportRows(readyExport({ class: { name: "ص" }, tracks: [], students: [{ displayName: "  =HYPERLINK(\"http://x\")", stages: [{ stageId: "B02", title: " \t@cmd" }] }] }, "794589"), "2026-11-11 10:00").rows;
     downloadCsv("ready-794589", rows);
     const blob = captured as unknown as Blob;
     expect(blob.type).toBe("text/csv;charset=utf-8;");
     const bytes = new Uint8Array(await new Response(blob).arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes).slice(1);
-    expect(text.split("\r\n")[1]).toBe('"\'  =HYPERLINK(""http://x"")","B02","\' \t@cmd"');
+    const lines = text.split("\r\n");
+    expect(lines[lines.indexOf('"الطالب","المرحلة","العنوان","المسار"') + 1]).toBe('"\'  =HYPERLINK(""http://x"")","B02","\' \t@cmd",""');
   });
 });

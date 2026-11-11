@@ -284,3 +284,13 @@
   .eb-overview-attention-list{ flex-direction:column; }
   .eb-overview-attention-list .eb-button{ min-height:44px; justify-content:flex-start; }
 }
+
+/* ============================================================
+   Phase R-4 — one export for every report (docs/enterprise-reports-export-r4.md)
+   ============================================================ */
+.eb-report-head-wrap{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-report-export{ display:inline-flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+@media (max-width:767px){
+  .eb-report-export{ display:flex; width:100%; }
+  .eb-report-export .eb-button{ flex:1 1 auto; justify-content:center; }
+}

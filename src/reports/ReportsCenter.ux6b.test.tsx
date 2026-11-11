@@ -293,9 +293,18 @@ describe("UX-6b report types", () => {
     const bytes = new Uint8Array(await new Response(captured as unknown as Blob).arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
-    expect(text).toBe("﻿" + ['"القسم","المؤشر","القيمة"', '"أكاديمي","الحالة","نشط"', '"أكاديمي","عدد الطلاب","24"', '"أكاديمي","عدد الواجبات","3"', '"أكاديمي","متوسط العلامات","71%"', '"أكاديمي","نسبة التسليم","83%"', '"مشروع 794589","التقدم العام","55"', '"مشروع 794589","الكتاب","70"', '"مشروع 794589","Packet Tracer","40"', '"مشروع 794589","مكتملون","2"'].join("\r\n"));
-    fireEvent.click(screen.getByRole("button", { name: "طباعة" }));
-    expect(window.print).toHaveBeenCalledTimes(1);
+    // Reports R-4 (owner decision D-4): the unified export — the report's identity, then each section, with NUMBERS as numbers.
+    // Before R-4 this file was: "القسم","المؤشر","القيمة" / "أكاديمي","متوسط العلامات","71%" / … (the frozen text is in csvParity.ux6b.test.ts).
+    expect(text.replace(/"أُنشئ في","[^"]*"/, '"أُنشئ في","<الآن>"')).toBe("﻿" + ['"تقرير الصف — الحادي عشر"', '"الصف","الحادي عشر"', '"السنة الدراسية","2025-2026"', '"الفترة","كل الفترة"', '"أُنشئ في","<الآن>"', '',
+      '"المؤشرات"', '"المؤشر","القيمة"', '"الحالة","نشط"', '"عدد الطلاب","24"', '"عدد التقييمات","3"', '"متوسط النتائج %","71.3"', '"نسبة التسليم %","83"', '"بانتظار التصحيح","0"', '',
+      '"المشاريع"', '"المشروع","المؤشر","القيمة"', '"مشروع 794589","التقدم العام %","55"', '"مشروع 794589","الكتاب %","70"', '"مشروع 794589","Packet Tracer %","40"', '"مشروع 794589","مكتملون","2"'].join("\r\n"));
+    // R-4 (audit P1-3): «طباعة / PDF» prints the REPORT's own document from a hidden iframe — never the application page.
+    const framePrint = vi.fn(), append = document.body.appendChild.bind(document.body);
+    vi.spyOn(document.body, "appendChild").mockImplementation(<T extends Node>(node: T) => { const r = append(node); const w = (node as unknown as HTMLIFrameElement).contentWindow as unknown as { print?: () => void } | null; if (w && (node as unknown as Element).tagName === "IFRAME") w.print = framePrint; return r; });
+    fireEvent.click(screen.getByRole("button", { name: "طباعة / PDF" }));
+    expect(framePrint).toHaveBeenCalledTimes(1);
+    expect(window.print).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(calls.length).toBe(n);
     expect(document.querySelector(".eb-report-filters")?.classList.contains("eb-report-noprint")).toBe(true);
     expect(document.querySelector(".eb-report-ws-head")?.classList.contains("eb-report-noprint")).toBe(true);
