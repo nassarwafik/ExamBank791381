@@ -39,6 +39,9 @@ type Props = {
   prefill?: ComposerPrefill | null;
   /** Phase 21U — after an apply, «تحرير هذا السؤال» closes the dialog and asks the builder to open that question (by its id). */
   onRevealQuestion?: (questionId: string) => void;
+  /** Phase 21Y — open on «تعديل الامتحان» with this prepared request (the builder's quality notes); the teacher reviews it and presses
+   *  «اقتراح التعديل» — nothing is sent before. */
+  modifyPrefill?: { instruction: string } | null;
 };
 
 type Tab = "generate" | "modifyExam" | "generateSection" | "question" | "presentation";
@@ -126,12 +129,12 @@ function WarningGroups({ grouped, heading, testId, onPreview, note, onEdit, onRe
   );
 }
 
-export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled, prefill, onRevealQuestion }: Props) {
+export default function AiExamComposerDialog({ open, onClose, transport, exam, getLatestExam, onApply, onPreview, onUndo, selectedQuestionId, disabled, prefill, onRevealQuestion, modifyPrefill }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [m, dispatch] = useReducer(composerReducer<ReadyResult>, undefined, () => initialComposer<ReadyResult>());
-  const [tab, setTab] = useState<Tab>("generate");
+  const [tab, setTab] = useState<Tab>(modifyPrefill ? "modifyExam" : "generate");
   const [form, setForm] = useState<GenForm>(() => (prefill ? formFromPrefill(prefill) : initialForm()));
-  const [instruction, setInstruction] = useState("");
+  const [instruction, setInstruction] = useState(modifyPrefill?.instruction ?? "");
   const [sectionScope, setSectionScope] = useState("");
   const [questionId, setQuestionId] = useState(selectedQuestionId ?? "");
   const [questionAction, setQuestionAction] = useState<"replaceQuestion" | "improveContent">("improveContent");
@@ -588,6 +591,11 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
 
   const modifyForm = (
     <div className="ai-composer-form">
+      {modifyPrefill && tab === "modifyExam" && modifyTarget === "builder" && (
+        <div className="ai-composer-prefill" role="note" data-testid="ai-composer-fix-notes">
+          <p>جُهّز هذا الطلب من «ملاحظات الجودة» في المحرر. راجعه وعدّله، ثم اضغط «اقتراح التعديل» — لا يُرسل شيء قبل ذلك، ولا يتغيّر الامتحان قبل «تطبيق».</p>
+        </div>
+      )}
       {modifyTarget === "staged" && staged && (
         <div className="ai-composer-staged-note">
           <p>تعديل المسودة المولّدة (لم تُفتح في المحرر بعد).</p>

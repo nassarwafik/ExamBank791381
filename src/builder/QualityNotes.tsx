@@ -1,11 +1,11 @@
 import { useDeferredValue, useId, useMemo, useState } from "react";
 import type { StructuredExam } from "../examTypes";
-import { editorQualityNotes } from "./qualityNotes";
+import { editorQualityNotes, type QualityNote } from "./qualityNotes";
 
 // Phase 21W — «ملاحظات الجودة»: a collapsed, advisory list under the builder's issues (never part of them). Each note that names a
 // question opens it in the builder; nothing here blocks saving or finalization. Computed from a deferred copy of the exam so typing
 // never waits for it.
-export default function QualityNotes({ exam, onOpenQuestion }: { exam: StructuredExam; onOpenQuestion: (questionId: string) => void }) {
+export default function QualityNotes({ exam, onOpenQuestion, onFixWithAi }: { exam: StructuredExam; onOpenQuestion: (questionId: string) => void; onFixWithAi?: (notes: readonly QualityNote[]) => void }) {
   const deferred = useDeferredValue(exam);
   const notes = useMemo(() => editorQualityNotes(deferred), [deferred]);
   const [open, setOpen] = useState(false);
@@ -29,6 +29,10 @@ export default function QualityNotes({ exam, onOpenQuestion }: { exam: Structure
             );
           })}
         </ul>
+      )}
+      {open && onFixWithAi && (
+        // 21Y: opens the AI composer with a prepared request for these notes; nothing is sent or applied without the teacher
+        <button type="button" className="sb-btn sb-btn-small" onClick={() => onFixWithAi(notes)}>أصلح بالمؤلف الذكي</button>
       )}
     </div>
   );
