@@ -92,13 +92,31 @@ describe("RP — signed sweep replay protection", () => {
   });
 
   it("RP5 a validly signed but STALE request is refused (401) with no storage access — no ledger record", async () => {
-    const ctx = emptyStore(), { c, n } = counted(ctx.container), h = harness(ctx, { container: c });
+    // The server verifies against the SAME instant the request is signed against (an injected clock): «301 s» is then 301 s at
+    // verification whatever the runner's speed — never 300.x s shrinking to ≤ 300 s across a second boundary (see RP5b).
+    const at = Date.now();
+    const ctx = emptyStore(), { c, n } = counted(ctx.container), h = harness(ctx, { container: c, now: () => at });
     for (const skew of [-301, 301, -100000]) {
-      const r = await h.call(request(sign(BODY, { timestamp: Math.floor(Date.now() / 1000) + skew })));
+      const r = await h.call(request(sign(BODY, { timestamp: Math.floor(at / 1000) + skew })));
       expect(r.status, String(skew)).toBe(401);
     }
     expect(n.count).toBe(0);
     expect(ctx.names(LEDGER)).toEqual([]);
+  });
+
+  // Hotfix — why RP5 pins the clock. The window is ±300 s of the host's clock AT VERIFICATION. A request signed "301 s ahead" of the
+  // whole second (floor) is only 300.001…301 s ahead of the real clock, and it falls to ≤ 300 s as soon as the clock crosses a second
+  // boundary between signing and verifying — then it is, correctly, fresh. That race failed RP5 on a slow runner (main f7279f94,
+  // Quality Gate run 43035627715: "301: expected 200 to be 401"). Reproduced here with an injected clock.
+  it("RP5b the freshness window is measured at verification: «floor + 301 s» signed just before a second boundary is fresh once it is crossed", async () => {
+    const signedAt = 1_800_000_000_999;                                               // …999 ms: one millisecond before the boundary
+    const headers = sign(BODY, { timestamp: Math.floor(signedAt / 1000) + 301 });
+    const stale = await harness(emptyStore(), { now: () => signedAt }).call(request(headers));          // verified in the same second: 300.001 s ahead
+    expect(stale.status).toBe(401);
+    const fresh = await harness(emptyStore(), { now: () => signedAt + 2 }).call(request(headers));      // verified 2 ms later: 299.999 s ahead
+    expect(fresh.status).toBe(200);                                                   // inside the window, so it is accepted (RP5's old "401" raced this)
+    const edge = await harness(emptyStore(), { now: () => signedAt + 1 }).call(request(headers));       // exactly 300.000 s ahead: the window is inclusive
+    expect(edge.status).toBe(200);
   });
 
   it("RP6 distinct request ids with the same body / route / key are independent sweeps (replay protection, not body dedupe)", async () => {
