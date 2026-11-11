@@ -26,7 +26,7 @@ const { teacherCourseDecision, classCourseDecision, courseRefusal } = require(".
 // own unit is published to that class. Teachers (builder token) preview every item. A parametric question is generated from
 // the server-side context (learning:<course>:<item>, the learner, attempt 1) — the same instance on GET and on check.
 // An item the store could not validate is answered 503 retryable — never graded, never a "wrong" (AGENTS.md §10).
-const CLASS_PREFIX = "platform/classes/";
+const { classroomServing, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C — the class that serves a shared student
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "السؤال غير موجود." } };
 const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذا السؤال غير متاح لصفك بعد. سيصبح متاحًا عند نشر الوحدة المرتبطة به." } };
@@ -80,8 +80,8 @@ async function handler(request, deps = {}, obs = null) {
     // The gate comes before anything about the item (its validity included) reaches a student.
     let learnerId = "teacher-preview";
     if (actor.kind === "student") {
-      const classId = String(actor.student?.classId || "").trim();
-      const classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
+      // P11-C — the student's class that offers this course: the home class, else a class the owner added the student to.
+      const classroom = await classroomServing(actor.student, name => dl(actor.container, name), offersCourse(courseId));
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       const moduleId = typeof found.item?.moduleId === "string" ? found.item.moduleId : "";
       if (!classroom || !classHasLearningCourse(classroom, courseId) || !moduleId || !classCanSeeLearningModule(classroom, courseId, moduleId)) return UNAVAILABLE;

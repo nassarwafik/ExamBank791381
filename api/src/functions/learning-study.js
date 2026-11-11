@@ -37,7 +37,7 @@ const { SMART_SIM_LIMITS } = require("../lib/shared-finalization/trustedSimRegis
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
-const CLASS_PREFIX = "platform/classes/";
+const { classroomServing, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C — the class that serves a shared student
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const ARCHIVED = { status: 403, jsonBody: { ok: false, error: "هذا الصف مؤرشف وانتهت السنة الدراسية." } };
 const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذه الصفحة غير متاحة لصفك بعد." } };
@@ -96,8 +96,8 @@ async function handler(request, deps = {}, obs = null) {
     // Student context: persisted class → lifecycle → course attached (ONE class read, ONE study read).
     let classroom = null, studyDoc = null;
     if (actor.kind === "student") {
-      const classId = String(actor.student?.classId || "").trim();
-      classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
+      // P11-C — the student's class that offers this course: the home class, else a class the owner added the student to.
+      classroom = await classroomServing(actor.student, name => dl(actor.container, name), offersCourse(courseId));
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       if (!classroom || !classHasLearningCourse(classroom, courseId)) return UNAVAILABLE;
       const course = await classCourseDecision(actor.container, classroom, courseId, deps);   // Tadris+ P5-A

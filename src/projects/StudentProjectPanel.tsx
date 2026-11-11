@@ -30,6 +30,9 @@ type StudentProject = {
   groups: ProjectGroup[];
   progress: Record<string, StageProgressEntry>;
   nextStages: Record<string, ProjectStage | null>;
+  /** Tadris+ P11-C — a student of several classes: the class that runs this project, and whether it is read-only there. */
+  className?: string;
+  readOnly?: boolean;
 };
 type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?: StudentProject[]; /** QA-16 — archived class: a read-only record */ readOnly?: boolean };
 
@@ -48,6 +51,7 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
       <div className="eb-sp-project-card-body">
         <h3 id={headingId} className="eb-sp-project-card-title">{project.title}</h3>
         <dl className="eb-sp-project-card-facts">
+          {project.className && <div><dt>الصف</dt><dd data-testid="project-class">{project.className}</dd></div>}
           <div><dt>التقدم</dt><dd dir="ltr">{project.summary.overallProgress}%</dd></div>
           {perf && <div><dt>العلامة</dt><dd dir="ltr">{fmtGrade(perf.grade)}</dd></div>}
           {evaluation && <div><dt>التقييم</dt><dd dir={evaluation.projectScore === null ? undefined : "ltr"}>{fmtProjectScore(evaluation.projectScore)} · {evaluation.gradedStages}/{evaluation.totalStages}</dd></div>}
@@ -318,7 +322,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
     <section className="eb-sp-panel eb-sp-projects" aria-labelledby="eb-sp-projects-title">
       <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك وعلاماتك في مشاريع صفك. اضغط «أنجزتها» على كل مرحلة تنهيها لتظهر لمعلمك." />
       {open ? (
-        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} token={token} onChanged={() => setReloadNonce(n => n + 1)} readOnly={!!load?.data?.readOnly} />
+        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} token={token} onChanged={() => setReloadNonce(n => n + 1)} readOnly={!!(load?.data?.readOnly || open.readOnly)} />
       ) : (
         <ul className="eb-sp-project-cards" aria-label="المشاريع">
           {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => { setListOnlyFor(null); setOpenCode(p.projectCode); }} /></li>)}

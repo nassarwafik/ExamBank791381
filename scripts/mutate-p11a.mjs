@@ -25,7 +25,6 @@ const SUB = "api/src/functions/student-submission.js";
 const DASH = "api/src/functions/student-dashboard.js";
 const UI_OWNER = "src/owner/OwnerClassRoster.tsx";
 const UI_ROSTER = "src/students/RosterPane.tsx";
-const UI_LIVE = "src/games/liveChallenge/liveSessionClient.ts";
 const TRAINING = "api/src/functions/learning-training.js";
 
 export const MUTANTS = [
@@ -63,7 +62,8 @@ export const MUTANTS = [
   { id: "P11A-M25", what: "the owner's roster offers to MOVE a shared student from here", edits: [{ file: UI_OWNER, find: "{st.shared || moving?.userId === st.userId ? null :", replace: "{moving?.userId === st.userId ? null :" }] },
   { id: "P11A-M26", what: "the teacher's roster offers the account actions on a shared student", edits: [{ file: UI_ROSTER, find: "{student.shared ? <ActionMenu label=", replace: "{false ? <ActionMenu label=" }] },
   // (until P11-B this mutant was the messaging picker; since P11-B that picker offers shared students on purpose)
-  { id: "P11A-M27", what: "the live-game lobby offers a shared student", edits: [{ file: UI_LIVE, find: "j.students.filter((s: { shared?: boolean }) => !s.shared) : [];", replace: "j.students : [];" }] }
+  // (P11A-M27 pinned «the live-game lobby does not offer a shared student». Since P11-C a shared student plays in the class's live
+  // room on purpose, so that mutant is retired; the room's membership rule is proven by scripts/mutate-p11c.mjs.)
 ];
 
 const originals = new Map();

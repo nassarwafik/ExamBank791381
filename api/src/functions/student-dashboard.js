@@ -20,7 +20,7 @@ const {buildStrengthSummary}=require("../lib/student-strength");
 const {studyDocName,studyModulesForStrength,latestStudyActivity}=require("../lib/learning-study");
 const {progressDocName,latestReadingPosition}=require("../lib/learning-progress");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
-const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
+const {loadStudentProjectsAcross}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
 const {gameResultsDocName,eligibleGamePercentages}=require("../lib/game-results-store");
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
@@ -116,7 +116,8 @@ async function handler(request,deps={},obs=null){
   // Study Practice: ONE completion-state read; points re-derived against the generated key index (never stored).
   const studyDoc=await dl(c,studyDocName(student.userId));
   const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
-  const projects=classroom&&!homeArchived?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
+  // Tadris+ P11-C — the projects of every OPEN class of the student (a project is served by the first class that runs it: home first).
+  const projects=await loadStudentProjectsAcross(c,[...(classroom&&!homeArchived?[{classId:String(student.classId||""),classroom}]:[]),...sharedOpen.map(x=>({classId:x.classId,classroom:x.doc}))],student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency});
   // Phase 4E — educational-game Strength: ONE read of the per-student ASSIGNED-game results store; gamePoints is the sum
   // of each recorded game's best-percentage contribution (≤20 each). A missing/corrupt doc fails safe to [] → 0, so a
   // student with no assigned-game result keeps their exact previous Strength.

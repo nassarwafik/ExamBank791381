@@ -7,7 +7,7 @@ const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, Storage
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
 const { isSafeSegment } = require("../lib/blob-names");
-const { isStudentClassMember } = require("../lib/class-membership");
+const { isStudentInClass } = require("../lib/class-membership");   // Tadris+ P11-C: a shared student's posts in this class's feed
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordEventSafely } = require("../lib/notification-events");
 
@@ -51,7 +51,7 @@ async function readScope(request, container, tenant = null) {
   if (!classroom || !canAccessDocument(classroom, tenant)) return missing("الصف غير موجود.");
   if (studentId) {
     const student = await downloadJsonOrNull(container, "platform/users/" + studentId + ".json");
-    if (!isStudentClassMember(student, classId)) return missing("الطالب غير موجود في هذا الصف.");
+    if (!isStudentInClass(student, classId)) return missing("الطالب غير موجود في هذا الصف.");
   }
   return { ok: true, classId, studentId, classroom };
 }

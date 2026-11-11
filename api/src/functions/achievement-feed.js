@@ -6,6 +6,8 @@ const { withheldAssignmentIds } = require("../lib/results-release");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost, isVisibleToStudent, reactionCounts } = require("../lib/achievement-feed");
 const { isSafeSegment } = require("../lib/blob-names");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
+const { sharedClassEntries } = require("../lib/class-membership");
+const { studentClasses } = require("../lib/student-classes");
 
 const UP = "platform/users/", AP = "platform/assignments/";
 // Phase 21G.5 (D2) — an assessment medal reveals a mark band, so its post is shown (to anyone, its owner included) only once the
@@ -41,17 +43,32 @@ async function handler(request, deps = {}, obs = null) {
       if (!sess.ok) return sess.response;
       const container = sess.container;
       const student = sess.student;
-      const classId = String(student.classId || "");
+      const homeId = String(student.classId || "");
       // QA-15 — an archived class is read-only: its feed stays readable as a record (flagged readOnly) but takes no reaction.
       const dlc = deps.downloadJsonOrNull || downloadJsonOrNull;
-      const classroom = classId ? await dlc(container, "platform/classes/" + classId + ".json") : null;
-      const archived = !!classroom && normalizeClassStatus(classroom) === "archived";
+      // Tadris+ P11-C — the feeds of EVERY class of the student: the home class (as before, an archived one stays a readable record) and
+      // the OPEN classes the owner added the student to (P11-A). A student of one class takes the path of before: one class read.
+      let feeds;   // [{ classId, archived, name }]
+      if (sharedClassEntries(student).length) {
+        const classes = await studentClasses(student, name => dlc(container, name));
+        feeds = [
+          ...(homeId ? [{ classId: homeId, archived: classes.home.archived, name: String(classes.home.classroom && classes.home.classroom.name || "") }] : []),
+          ...classes.shared.filter(c => !c.archived).map(c => ({ classId: c.classId, archived: false, name: String(c.classroom.name || "") }))
+        ];
+      } else {
+        const classroom = homeId ? await dlc(container, "platform/classes/" + homeId + ".json") : null;
+        feeds = homeId ? [{ classId: homeId, archived: !!classroom && normalizeClassStatus(classroom) === "archived", name: "" }] : [];
+      }
+      const archived = feeds.length > 0 && feeds.every(f => f.archived);
+      const several = feeds.length > 1;
 
       if (request.method === "GET") {
-        if (!classId) return { status: 200, jsonBody: { ok: true, posts: [] } };
+        if (!feeds.length) return { status: 200, jsonBody: { ok: true, posts: [] } };
         // Privacy: a classmate's event is listed only when shared with the class; the student's own events always.
         const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
-        const visible = (await listJson(container, FEED_PREFIX + classId + "/")).filter(post => isVisibleToStudent(post, student.userId));
+        const all = [];
+        for (const feed of feeds) for (const post of await listJson(container, FEED_PREFIX + feed.classId + "/")) all.push(several ? { ...post, __feed: feed } : post);
+        const visible = all.filter(post => isVisibleToStudent(post, student.userId));
         const notSharing = await authorsNotSharing(container, dl, visible, student.userId);   // QA2-9
         const listed = visible.filter(post => !notSharing.has(String(post.studentId || "")));
         const withheld = await withheldAssignmentIds(listed.map(assessmentMedalOf), id => dl(container, AP + id + ".json"));
@@ -62,7 +79,9 @@ async function handler(request, deps = {}, obs = null) {
           .map(post => ({
             ...publicPost(post),
             isOwnPost: String(post.studentId || "") === String(student.userId),
-            myReaction: myReaction(post.reactions, String(student.userId))
+            myReaction: myReaction(post.reactions, String(student.userId)),
+            // several classes: which class the event belongs to, and whether that class still takes reactions
+            ...(post.__feed ? { className: post.__feed.name, ...(post.__feed.archived ? { readOnly: true } : {}) } : {})
           }));
         return { status: 200, jsonBody: { ok: true, posts, ...(archived ? { readOnly: true } : {}) } };
       }
@@ -80,8 +99,16 @@ async function handler(request, deps = {}, obs = null) {
       if (!isSafeSegment(postId)) return { status: 400, jsonBody: { ok: false, error: "معرّف المنشور غير صالح." } };
 
       const studentId = String(student.userId);
+      // The post is looked for in the feeds of the student's OWN classes only (the home class first) — never in another class's feed.
+      let classId = feeds.length ? feeds[0].classId : "", target = null;
+      for (const feed of feeds) {
+        const found = await dlc(container, feedBlobName(feed.classId, postId));
+        if (!found) continue;
+        if (feed.archived) return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — لا يمكن التفاعل مع الإنجازات." } };
+        classId = feed.classId; target = found;
+        break;
+      }
       // A medal post that is not shown (its assignment's results are not released) cannot be reacted to either.
-      const target = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, feedBlobName(classId, postId));
       const unreleasedMedal = !!target && (await withheldAssignmentIds([assessmentMedalOf(target)], id => (deps.downloadJsonOrNull || downloadJsonOrNull)(container, AP + id + ".json"))).size > 0;
       const authorNotSharing = !!target && (await authorsNotSharing(container, deps.downloadJsonOrNull || downloadJsonOrNull, [target], studentId)).size > 0;   // QA2-9
       let updatedReactions = null;

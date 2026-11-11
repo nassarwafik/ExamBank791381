@@ -11,6 +11,8 @@ const { isValidBits } = require("../lib/number-conversion");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isSafeId } = require("../lib/roster-input");
 const { requireStudentService } = require("../lib/access/student-services");
+const { sharedClassEntries } = require("../lib/class-membership");
+const { studentClasses, studentOfClass } = require("../lib/student-classes");
 const NO_CLASS = { status: 403, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, code: "NO_ACTIVE_CLASS", error: "لا يمكنك اللعب لأنك غير مسجل في صف نشط." } };
 
 // Number Conversion Challenge API — the SERVER AUTHORITY for the Phase 2 solo game (FREE PLAY only). Routes:
@@ -41,10 +43,24 @@ async function handler(request, deps = {}, obs = null) {
     if (!studentId) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
     const container = sess.container;
     const classId = String(sess.student.classId || "");
-    const classroom = isSafeId(classId) ? await dl(container, "platform/classes/" + classId + ".json") : null;
-    if (!classroom || normalizeClassStatus(classroom) === "archived") return NO_CLASS;   // P7-B2 — the class check
-    const serviceDenial = await requireStudentService(container, sess.student, "game:number-conversion", deps, obs, { classroom });
-    if (serviceDenial) return serviceDenial;
+    if (!sharedClassEntries(sess.student).length) {
+      const classroom = isSafeId(classId) ? await dl(container, "platform/classes/" + classId + ".json") : null;
+      if (!classroom || normalizeClassStatus(classroom) === "archived") return NO_CLASS;   // P7-B2 — the class check
+      const serviceDenial = await requireStudentService(container, sess.student, "game:number-conversion", deps, obs, { classroom });
+      if (serviceDenial) return serviceDenial;
+    } else {
+      // Tadris+ P11-C — a student of several classes plays when ANY of their open classes' teachers offers the game (the home class
+      // first). No open class → the class refusal of before; none offers it → the refusal of the first open class.
+      const classes = await studentClasses(sess.student, name => dl(container, name));
+      if (!classes.open.length) return NO_CLASS;
+      let firstDenial = null, offered = false;
+      for (const c of classes.open) {
+        const denial = await requireStudentService(container, c.home ? sess.student : studentOfClass(sess.student, c.classroom), "game:number-conversion", deps, obs, { classroom: c.classroom });
+        if (!denial) { offered = true; break; }
+        firstDenial = firstDenial || denial;
+      }
+      if (!offered) return firstDenial;
+    }
     const name = gameDocName(studentId);
     const action = String(request.params?.action || "").trim().toLowerCase();
     const method = String(request.method || "GET").toUpperCase();
