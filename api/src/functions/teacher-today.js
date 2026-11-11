@@ -34,7 +34,7 @@ const { widgetsOf } = require("../lib/dashboard-widgets");
 const {getContainer,listJson,listBlobNames,downloadManyJson,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
-const {isStudentClassMember}=require("../lib/class-membership");
+const {isStudentInClass,studentClassIds}=require("../lib/class-membership");   // Tadris+ P11-A: a student counts in every class of theirs
 const {attemptState,activeAttemptOf,deriveAttemptStatus,normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {technicalGradingPending}=require("../lib/technical-grading-hold");
@@ -109,7 +109,7 @@ function deriveTeacherToday({assignments,classes,users,submissionsByAssignment,n
  const activeClasses=new Map();
  for(const c of classes){if(c&&c.classId&&normalizeClassStatus(c)==="active")activeClasses.set(String(c.classId),{classId:String(c.classId),name:String(c.name||"")})}
  const membersByClass=new Map();
- for(const u of users){if(!u||u.role!=="student")continue;const cid=String(u.classId||"");if(!activeClasses.has(cid)||!isStudentClassMember(u,cid))continue;if(!membersByClass.has(cid))membersByClass.set(cid,[]);membersByClass.get(cid).push(u)}
+ for(const u of users){if(!u||u.role!=="student")continue;for(const cid of studentClassIds(u)){if(!activeClasses.has(cid)||!isStudentInClass(u,cid))continue;if(!membersByClass.has(cid))membersByClass.set(cid,[]);membersByClass.get(cid).push(u)}}
  const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeClasses.has(String(a.classId||"")));
  const active=[],stale=[],notStarted=[],pending=[],recent=[],dueSoon=[],unreleased=[],opening=[];
  let activeCount=0,staleCount=0,notStartedCount=0,pendingCount=0;

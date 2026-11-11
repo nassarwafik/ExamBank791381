@@ -12,6 +12,10 @@ import { openCredentialBatch } from "../credentialBatch";
  * import: nothing is created before «استيراد»). The students are the teacher's; the teacher keeps adding, editing and archiving them.
  * The temporary passwords are shown ONCE (download the CSV or print the login cards before closing). Every change goes through the
  * page's `send` (a second-factor check is asked inline, then the same request is retried — the import keeps its retry key).
+ *
+ * Tadris+ P11-A — «الطالب يستطيع ان يتعلم عند اكثر من معلم»: a student whose identity number already has an account (with another
+ * teacher) is no longer only a «مكرر» row. The server preview names that account («existing»), and the owner adds the SAME account
+ * to this class too: the student keeps the login and the first teacher, and sees both teachers' assignments. No password is created.
  */
 
 type Send = <T>(call: () => Promise<ApiResult<T>>, onOk: (data: T) => void) => Promise<void>;
@@ -26,6 +30,7 @@ function download(text: string, type: string, name: string) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+const fileName = (r: OwnerStudentRow) => [r.firstName, r.familyName].filter(Boolean).join(" ") || "—";
 
 export default function OwnerClassStudents({ token, classId, className, busy, send, onChanged }: {
   token: string; classId: string; className: string; busy: boolean; send: Send; onChanged: () => void;
@@ -38,6 +43,7 @@ export default function OwnerClassStudents({ token, classId, className, busy, se
   const [fileError, setFileError] = useState("");
   const [batch, setBatch] = useState<OwnerCredential[] | null>(null);
   const [result, setResult] = useState("");
+  const [enrollErrors, setEnrollErrors] = useState<string[]>([]);
 
   const showCredentials = (credentials: OwnerCredential[], text: string) => { setBatch(credentials); setResult(text); onChanged(); };
   const batchOf = () => openCredentialBatch(classId, className, batch || []);
@@ -47,16 +53,26 @@ export default function OwnerClassStudents({ token, classId, className, busy, se
     const row = { firstName: one.firstName.trim(), familyName: one.familyName.trim(), identityNumber: one.identityNumber.trim() };
     if (!row.firstName || !row.familyName || !row.identityNumber) { setMissing(true); return; }
     setMissing(false);
-    void send(() => ownerStudentsApi.add(token, classId, { ...row, ...(one.password ? { password: one.password } : {}) }), d => {
+    // P11-A — an identity number that is already taken (409): the same server preview says whether that account can join this class.
+    let taken = false;
+    void send(async () => {
+      const r = await ownerStudentsApi.add(token, classId, { ...row, ...(one.password ? { password: one.password } : {}) });
+      taken = !r.ok && r.status === 409;
+      return r;
+    }, d => {
       setOne(EMPTY);
       showCredentials([{ ...d.student, password: d.temporaryPassword }], "أُضيف الطالب " + d.student.displayName + ".");
+    }).then(async () => {
+      if (!taken) return;
+      const p = await ownerStudentsApi.preview(token, classId, [row]);
+      if (p.ok && p.data.preview.some(x => x.status === "existing")) { setRows([row]); setPreview(p.data.preview); setImportId(newImportId()); setEnrollErrors([]); }
     });
   }
 
   async function pickFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files && event.target.files[0];
     event.target.value = "";
-    setFileError(""); setPreview(null); setRows([]);
+    setFileError(""); setPreview(null); setRows([]); setEnrollErrors([]);
     if (!file) return;
     let parsed: OwnerStudentRow[];
     try { parsed = parseBulkStudents(await readImportFileText(file), file.name).students; } catch (e) { setFileError(e instanceof Error ? e.message : "الملف غير صالح."); return; }
@@ -66,17 +82,31 @@ export default function OwnerClassStudents({ token, classId, className, busy, se
   }
 
   const valid = (preview || []).filter(r => r.status === "valid");
+  const existing = (preview || []).filter(r => r.status === "existing" && r.existingStudent && r.existingStudent.userId);
   function importValid() {
     const payload = valid.map(r => ({ firstName: r.firstName, familyName: r.familyName, identityNumber: r.identityNumber }));
     void send(() => ownerStudentsApi.import(token, classId, payload, importId), d => {
-      setPreview(null); setRows([]);
+      setPreview(p => { const rest = (p || []).filter(r => r.status === "existing"); return rest.length ? rest : null; });
+      if (!existing.length) setRows([]);
       showCredentials(d.credentials, "استُورد " + d.imported + " طالبًا" + (d.failed ? "، وتعذر " + d.failed + "." : "."));
+    });
+  }
+  function enrollExisting() {
+    const ids = existing.map(r => String(r.existingStudent?.userId));
+    void send(() => ownerStudentsApi.enroll(token, classId, ids), d => {
+      const failed = new Map(d.errors.map(e => [e.userId, e.error]));
+      setEnrollErrors(existing.filter(r => failed.has(String(r.existingStudent?.userId))).map(r => (r.existingStudent?.displayName || fileName(r)) + ": " + failed.get(String(r.existingStudent?.userId))));
+      setPreview(p => { const rest = (p || []).filter(r => r.status !== "existing"); return rest.some(r => r.status === "valid") ? rest : null; });
+      if (!valid.length) setRows([]);
+      setResult("أُضيف " + d.enrolled + " طالبًا إلى هذا الصف بحساباتهم نفسها" + (d.already ? "، و" + d.already + " كانوا فيه مسبقًا" : "") + (d.failed ? "، وتعذر " + d.failed : "") + ". لا كلمات مرور جديدة: يدخل كل طالب ببياناته الحالية.");
+      onChanged();
     });
   }
 
   return (
     <div className="eb-owner-class-students" role="region" aria-label={"طلاب " + className}>
       {result && <p className="eb-owner-hint eb-owner-done" role="status">{result}</p>}
+      {enrollErrors.length > 0 && <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />لم يُضَف: <ul>{enrollErrors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
       {batch && batch.length > 0 && (
         <div className="eb-owner-confirm" role="group" aria-label="كلمات المرور المؤقتة">
           <p><strong>كلمات المرور المؤقتة تظهر الآن فقط.</strong> نزّل الملف أو اطبع البطاقات قبل الإغلاق، وسلّمها للمعلم.</p>
@@ -108,13 +138,29 @@ export default function OwnerClassStudents({ token, classId, className, busy, se
         {fileError && <p className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{fileError}</p>}
         {preview && (
           <>
-            <p className="eb-owner-hint" role="status">المعاينة: {valid.length} صالح، {preview.filter(r => r.status === "duplicate").length} مكرر، {preview.filter(r => r.status === "invalid").length} غير صالح (من {rows.length}).</p>
+            <p className="eb-owner-hint" role="status">المعاينة: {valid.length} صالح، {preview.filter(r => r.status === "duplicate").length} مكرر، {preview.filter(r => r.status === "invalid").length} غير صالح (من {rows.length}).{existing.length > 0 ? " " + existing.length + " لهم حساب مسبقًا عند معلم آخر." : ""}</p>
             <ul className="eb-owner-hint" aria-label="معاينة الاستيراد">
-              {preview.filter(r => r.status !== "valid").map((r, i) => <li key={i}><bdi>{[r.firstName, r.familyName].filter(Boolean).join(" ") || "—"}</bdi> · <span dir="ltr">{r.identityNumber}</span>: {r.error || r.message || (r.status === "duplicate" ? "مكرر" : "غير صالح")}</li>)}
+              {preview.filter(r => r.status !== "valid" && r.status !== "existing").map((r, i) => <li key={i}><bdi>{fileName(r)}</bdi> · <span dir="ltr">{r.identityNumber}</span>: {r.error || r.message || (r.status === "duplicate" ? "مكرر" : "غير صالح")}</li>)}
             </ul>
+            {existing.length > 0 && (
+              <div className="eb-owner-confirm" role="group" aria-label="طلاب لهم حساب مسبقًا">
+                <p><strong>{existing.length} طالبًا لهم حساب مسبقًا عند معلم آخر.</strong> يمكن إضافتهم إلى «{className}» أيضًا بحساباتهم نفسها:</p>
+                <ul className="eb-owner-hint">
+                  <li>يدخل الطالب برقم الهوية وكلمة المرور نفسيهما، ويرى واجبات المعلمَين.</li>
+                  <li>يبقى عند معلمه الأول كما هو. كل معلم يرى علامات صفه فقط.</li>
+                  <li>لا يُنشأ حساب جديد ولا كلمة مرور، ولا يتغير الاسم المسجَّل.</li>
+                </ul>
+                <ul className="eb-owner-hint" aria-label="الطلاب الموجودون">
+                  {existing.map((r, i) => <li key={i}><bdi>{r.existingStudent?.displayName || fileName(r)}</bdi> · <span dir="ltr">{r.identityNumber}</span>{r.existingStudent?.className ? <> · الصف الحالي: <bdi>{r.existingStudent.className}</bdi></> : null}</li>)}
+                </ul>
+                <div className="eb-owner-actions">
+                  <button type="button" className="auth-submit" disabled={busy} onClick={enrollExisting}>إضافة {existing.length} طالبًا إلى هذا الصف أيضًا</button>
+                </div>
+              </div>
+            )}
             <div className="eb-owner-actions">
               <button type="button" className="auth-submit" disabled={busy || !valid.length} onClick={importValid}>استيراد {valid.length} طالبًا</button>
-              <button type="button" className="eb-owner-secondary" onClick={() => { setPreview(null); setRows([]); }}>إلغاء</button>
+              <button type="button" className="eb-owner-secondary" onClick={() => { setPreview(null); setRows([]); setEnrollErrors([]); }}>إلغاء</button>
             </div>
           </>
         )}

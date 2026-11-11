@@ -12,6 +12,8 @@ export type Summary = {
   /** D5 (item 10) — the assignment's due date has passed but the teacher's late window is still open (until lateUntil). */
   inLateWindow?: boolean; lateUntil?: string; lateDeductionPercent?: number; gradingStatus?: GradingStatus; attemptsUsed: number; allowedAttempts: number; canAttempt: boolean;
   attemptStatus?: string; hasActiveAttempt?: boolean; latestScore: number | null; latestPercentage: number | null; latestResult?: LatestResult | null; createdAt: string;
+  /** Tadris+ P11-A — the class the assignment belongs to (a student may be in more than one class, with different teachers). */
+  classId?: string; className?: string;
 };
 export type Stats = { assigned: number; completed: number; average: number | null; submitted?: number; inProgress?: number; pendingReview?: number; finalized?: number; scheduled?: number; available?: number; closedUnsubmitted?: number; averageFinalized?: number | null };
 export type StudentInfo = { userId: string; code: string; displayName: string; classId: string; avatarId?: string; shareAchievements?: boolean; profilePhoto?: { version: number; updatedAt: string } | null };
@@ -54,7 +56,7 @@ export type StudentRecognition = {
 };
 /** Phase 9A — the server's most recent study completion (Today Hub «تابع القراءة» fallback across devices). */
 export type StudyLastActivity = { courseId: string; moduleId: string; pageId: string; completedAt: string };
-export type Dashboard = { student: StudentInfo; classroom: Classroom | null; assignments: Summary[]; stats: Stats; strength: StudentStrength | null; recognition: StudentRecognition | null; study?: { lastActivity: StudyLastActivity | null } };
+export type Dashboard = { student: StudentInfo; classroom: Classroom | null; /** Tadris+ P11-A — every open class of the student (home first); `shared`: added from another teacher. */ classes?: Array<Classroom & { shared: boolean }>; assignments: Summary[]; stats: Stats; strength: StudentStrength | null; recognition: StudentRecognition | null; study?: { lastActivity: StudyLastActivity | null } };
 export type Detail = {
   assignmentId: string; title: string; instructions: string; openAt: string; dueAt: string; effectiveDueAt?: string; maxAttempts: number; questionCount: number; totalMarks: number; durationMinutes?: number; requiresStart?: boolean; timed?: boolean;
   marksDistribution?: { rows: { title: string; marks: number }[]; total: number };

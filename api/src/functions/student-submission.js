@@ -93,19 +93,23 @@ function attemptEpochOk(a,doc,b){
 function expectedEpoch(b){const ee=b&&b.expectedAttemptEpoch;return typeof ee==="number"&&Number.isInteger(ee)&&ee>=1?ee:0}
 // Phase 7A audit on a completed model-3 attempt: how many times it was paused (additive; never on older models).
 function modelThreeAudit(a,active){return attemptModelVersion(a)>=3?{pauseCount:Math.max(0,Number(active&&active.pauseCount)||0)}:{}}
+const {studentAssignmentAccess}=require("../lib/student-class-access");   // Tadris+ P11-A
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||syncAssessmentMedal,wl=deps.withAssignmentLock||withAssignmentLock;
  try{const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
-  const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
-  if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
   // QA-18 — membership needs a REAL class on both sides: a student and an assignment that BOTH lack a classId never match.
-  const a=await dl(c,AP+id+".json");if(!a||!a.classId||!student.classId||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};const name=SP+id+"/"+student.userId+".json";
+  // Tadris+ P11-A — the assignment must belong to a class of the student's (home or shared); ITS class decides «archived», and the
+  // submission is stamped with that class (`member`), never with the student's home class.
+  const access=await studentAssignmentAccess(student,n=>dl(c,n),()=>dl(c,AP+id+".json"));
+  if(access.denied==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
+  if(access.denied)return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};
+  const a=access.assignment,member={...student,classId:access.classId};const name=SP+id+"/"+student.userId+".json";
   const s=await dl(c,name);
   // QA-17 — an assignment that is not published is only readable as the student's OWN history (an existing submission of an
   // archived task); otherwise its timing (due date, duration) never reaches a student who merely knows its id.
-  if(request.method==="GET"){if(a.status!=="published"&&!s)return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};return {status:200,jsonBody:{ok:true,state:state(a,s||defaultSubmission(id,student))}}}
+  if(request.method==="GET"){if(a.status!=="published"&&!s)return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};return {status:200,jsonBody:{ok:true,state:state(a,s||defaultSubmission(id,member))}}}
   // Roadmap #7: ALL student write mutations (startAttempt/saveDraft/submit/finalizeTimedOutAttempt) require
   // a PUBLISHED assignment. A draft or archived assignment blocks every mutation BEFORE any grading/write.
   // The GET above stays readable so a student can still review a historical submission of an archived task.
@@ -146,7 +150,7 @@ async function handler(request,deps={},obs=null){
    // teacher's day blind to it). Each side now writes, then reads the other's state: the archive re-checks pending work after it commits
    // (manage-classrooms), and a start re-reads the class after it commits and withdraws the attempt it just created if the class was
    // archived meanwhile. At least one side always sees the other.
-   const classArchivedNow=async()=>{if(!student.classId)return false;const cls=await dl(c,"platform/classes/"+student.classId+".json");return !!cls&&normalizeClassStatus(cls)==="archived"};
+   const classArchivedNow=async()=>{const cls=await dl(c,"platform/classes/"+member.classId+".json");return !!cls&&normalizeClassStatus(cls)==="archived"};
    const archivedError=()=>{const err=new Error("هذا الصف مؤرشف وانتهت السنة الدراسية.");err.httpStatus=403;return err};
    try{
     await maybeLock(()=>mut(c,name,async current=>{
@@ -154,7 +158,7 @@ async function handler(request,deps={},obs=null){
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      if(await classArchivedNow())throw archivedError();   // QA2-8: an archive that landed after this request loaded the class
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      const rj=startRejection(a,doc,Date.now()); // re-check under the lock (race backstop)
      if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
      const existing=activeAttemptOf(doc);
@@ -198,7 +202,7 @@ async function handler(request,deps={},obs=null){
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      if(isModernAttempt(a,doc)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
@@ -247,7 +251,7 @@ async function handler(request,deps={},obs=null){
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      replayOf=null;
      const lastDone=Array.isArray(doc.attempts)&&doc.attempts.length?doc.attempts[doc.attempts.length-1]:null;
      if(submitKey&&lastDone&&lastDone.submitKey===submitKey){replayOf=lastDone;finalState=state(a,doc,Date.now());return doc}   // QA-14: the same submit again
@@ -281,7 +285,7 @@ async function handler(request,deps={},obs=null){
    }
    if(replayOf){obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,replay:true});return {status:200,jsonBody:{ok:true,result:pub(replayOf,a),state:finalState,replay:true}}}
    if(resultAttempt.finalized){
-    await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
+    await recFn(c,{classId:member.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
    await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,finalized:!!resultAttempt.finalized});
@@ -298,7 +302,7 @@ async function handler(request,deps={},obs=null){
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      const active=activeAttemptOf(doc);
      if(!active){already=true;finalState=state(a,doc,Date.now());return doc} // already finalized — no-op
      const ts=timerState(a,doc,Date.now());
@@ -328,7 +332,7 @@ async function handler(request,deps={},obs=null){
     throw e;
    }
    if(!already&&resultAttempt&&resultAttempt.finalized){
-    await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
+    await recFn(c,{classId:member.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
    if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action:"finalizeTimedOutAttempt",assignmentId:id,timedOut:true});
@@ -360,7 +364,7 @@ async function handler(request,deps={},obs=null){
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      await reread();
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      if(!attemptIdentityOk(doc,b))throw stale();
      const act=doc.activeAttempt,ep=attemptEpochOf(act),exp=expectedEpoch(b);
      if(!exp)throw stale();
@@ -393,7 +397,7 @@ async function handler(request,deps={},obs=null){
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      await reread();
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      if(!attemptIdentityOk(doc,b))throw stale();
      const act=doc.activeAttempt,ep=attemptEpochOf(act),exp=expectedEpoch(b);
      if(!exp)throw stale();
@@ -428,7 +432,7 @@ async function handler(request,deps={},obs=null){
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      await reread();
-     const doc=current||defaultSubmission(id,student);
+     const doc=current||defaultSubmission(id,member);
      const active=activeAttemptOf(doc);
      if(!active){already=true;finalState=state(a,doc,Date.now());return doc}
      if(!attemptIdentityOk(doc,b)||!attemptEpochOk(a,doc,b))throw stale();
@@ -446,7 +450,7 @@ async function handler(request,deps={},obs=null){
     }));
    }catch(e){return lifecycleFailure(e)}
    if(!already&&resultAttempt&&resultAttempt.finalized){
-    await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
+    await recFn(c,{classId:member.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
    if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id,endReason:resultAttempt?resultAttempt.endReason:""});

@@ -260,13 +260,22 @@ export const ownerLibraryApi = {
 // Tadris+ P5-B4 — the owner adds students to a teacher's class (/api/owner-classes): one, or a list after the server preview. The
 // temporary passwords come back once, in the answer only.
 export type OwnerStudentRow = { firstName: string; familyName: string; identityNumber: string };
-export type OwnerImportPreviewRow = OwnerStudentRow & { index?: number; status: "valid" | "duplicate" | "invalid"; error?: string; message?: string };
+// Tadris+ P11-A — "existing": the identity number already has an account in ANOTHER class (`existingStudent` names it); the owner may
+// add that same account to this class too (enroll), instead of the transfer that takes the student away from the first teacher.
+export type OwnerExistingStudent = { userId: string; displayName: string; classId: string; className: string; active: boolean; archived: boolean };
+export type OwnerImportPreviewRow = OwnerStudentRow & { index?: number; status: "valid" | "duplicate" | "invalid" | "existing"; error?: string; message?: string; existingStudent?: OwnerExistingStudent | null };
+export type OwnerEnrollResult = { ok: true; enrolled: number; already: number; failed: number; students: Array<{ userId: string; displayName: string; identityNumber: string }>; errors: Array<{ userId: string; code: string; error: string }> };
 export type OwnerCredential = { userId?: string; firstName?: string; familyName?: string; displayName?: string; identityNumber?: string; code: string; password: string; recovered?: boolean };
 export const ownerStudentsApi = {
   add: (token: string, classId: string, row: OwnerStudentRow & { password?: string }) =>
     call<{ ok: true; student: { userId: string; firstName: string; familyName: string; displayName: string; identityNumber: string; code: string }; temporaryPassword: string }>("/api/owner-classes/add-student", { method: "POST", token, body: { classId, ...row } }),
   preview: (token: string, classId: string, students: OwnerStudentRow[]) =>
-    call<{ ok: true; preview: OwnerImportPreviewRow[]; valid: number; duplicates: number; invalid: number }>("/api/owner-classes/preview-import", { method: "POST", token, body: { classId, students } }),
+    call<{ ok: true; preview: OwnerImportPreviewRow[]; valid: number; duplicates: number; invalid: number; existing?: number }>("/api/owner-classes/preview-import", { method: "POST", token, body: { classId, students } }),
+  // P11-A — existing accounts join this class too (the same account: no password, the first teacher keeps the student)
+  enroll: (token: string, classId: string, userIds: string[]) =>
+    call<OwnerEnrollResult>("/api/owner-classes/enroll-students", { method: "POST", token, body: { classId, userIds } }),
+  unenroll: (token: string, classId: string, userId: string) =>
+    call<{ ok: true; removed: boolean }>("/api/owner-classes/unenroll-student", { method: "POST", token, body: { classId, userId } }),
   import: (token: string, classId: string, students: OwnerStudentRow[], importId: string) =>
     call<{ ok: true; imported: number; failed: number; duplicates: number; recovered: number; credentials: OwnerCredential[]; errors: Array<OwnerStudentRow & { error: string }> }>("/api/owner-classes/import-students", { method: "POST", token, body: { classId, students, importId } })
 };
@@ -285,7 +294,7 @@ export const ownerTransferApi = {
 };
 
 // Tadris+ P5-B3b — one student into another teacher's class (/api/owner-classes).
-export type OwnerRosterStudent = { userId: string; displayName: string; identityNumber: string; active: boolean; archived: boolean };
+export type OwnerRosterStudent = { userId: string; displayName: string; identityNumber: string; active: boolean; archived: boolean; shared?: boolean };   // P11-A: shared = added from another class
 export type StudentTransferPreview = { userId: string; displayName: string; archived: boolean; fromClassId: string; fromClassName: string; from: string; toClassId: string; toClassName: string; to: string; pendingGrading: number };
 export const ownerStudentTransferApi = {
   roster: (token: string, classId: string) => call<{ ok: true; classId: string; students: OwnerRosterStudent[] }>("/api/owner-classes/students?classId=" + encodeURIComponent(classId), { token }),

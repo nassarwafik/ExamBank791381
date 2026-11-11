@@ -31,7 +31,7 @@
 //   the scan (kept). The pending writer's own idempotent add/remove then lands on top. The drift, if any,
 //   is simply repaired on the next reconcile cycle.
 const { mutateJsonWithRetry, StorageConflictError } = require("./platform-storage");
-const { isStudentClassMember } = require("./class-membership");
+const { isStudentInClass } = require("./class-membership");
 
 const CLASS_PREFIX = "platform/classes/";
 const CLOCK_SKEW_TOLERANCE_MS = 2000;
@@ -51,10 +51,12 @@ function normalizeRosterIds(ids) {
   return out;
 }
 
-// The authoritative member ids of a class from a set of user documents (the ONE membership predicate).
+// The authoritative member ids of a class from a set of user documents (the ONE membership predicate). Tadris+ P11-A: a student the
+// owner ADDED to this class (a shared class) is a member of its roster too — the class's count, its pending-grading guard on archive
+// and its reconciliation all see that student.
 function canonicalMemberIds(users, classId) {
   const ids = (Array.isArray(users) ? users : [])
-    .filter(user => isStudentClassMember(user, classId))
+    .filter(user => isStudentInClass(user, classId))
     .map(user => String(user.userId || "").trim());
   return normalizeRosterIds(ids).sort();
 }

@@ -35,6 +35,8 @@ export type RosterPaneProps = {
   onAddStudent: () => void; onImport: () => void; onRefresh: () => void; onExportCsv: () => void;
   onOpenProfile: (student: Student) => void; onOpenHistory: (student: Student) => void; onEdit: (student: Student) => void;
   onCopyIdentity: (student: Student) => void; onToggleActive: (student: Student) => void; onArchive: (student: Student) => void; onDelete: (student: Student) => void;
+  /** Tadris+ P11-A — «إزالة من صفي» for a student shared from another teacher (the only change this teacher may make to that student). */
+  onUnenroll?: (student: Student) => void;
   bulk: { targetClasses: Classroom[]; targetClassId: string; onTargetChange: (id: string) => void; onAction: (operation: BulkOperation) => void };
   credentialBox: { name: string; identityNumber: string; password: string } | null;
   onCopyCredentialBox: () => void; onHideCredentialBox: () => void;
@@ -160,23 +162,27 @@ export default function RosterPane(p: RosterPaneProps) {
             const familyName = student.familyName || p.splitName(student.displayName).familyName || "";
             const lastLogin = relativeTime(student.lastLoginAt);
             return <tr key={student.userId} className={[student.archived ? "student-row-archived" : "", selected ? "is-selected" : ""].filter(Boolean).join(" ")}>
-            <td className="eb-col-select"><label className="eb-check-hit"><input type="checkbox" checked={selected} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></label></td>
+            <td className="eb-col-select"><label className="eb-check-hit"><input type="checkbox" checked={selected && !student.shared} disabled={!!student.shared} onChange={() => p.onToggleSelected(student.userId)} aria-label={"تحديد " + student.displayName} /></label></td>
             <td className="eb-col-name" data-label="الاسم"><span className="eb-name-cell"><StudentAvatar token={p.token} studentId={student.userId} name={student.displayName} avatarId={student.avatarId} profilePhoto={student.profilePhoto} /><strong data-family={familyName || undefined}>{firstName}</strong>{student.likesCount > 0 && <span className="student-likes-badge" title={student.likesCount + " ردّ فعل على إنجازاته"}><IconHeart size={12} aria-hidden="true" /> {student.likesCount}<VisuallyHidden> ردود فعل على إنجازاته</VisuallyHidden></span>}</span></td>
             <td data-label="اسم العائلة" className="eb-col-family">{familyName || "—"}</td>
             <td dir="ltr" data-label="رقم الهوية" className="eb-col-identity">{student.identityNumber || student.code || "يحتاج تحديث"}</td>
-            <td data-label="الحالة" className="eb-col-status"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge></td>
+            <td data-label="الحالة" className="eb-col-status"><StatusBadge tone={statusTone(student)}>{p.statusLabel(student)}</StatusBadge>{student.shared && <>{" "}<StatusBadge tone="info">من معلم آخر</StatusBadge></>}</td>
             <td data-label="آخر دخول" className="eb-col-login">{lastLogin ? <time dateTime={student.lastLoginAt} title={lastLogin.full}>{lastLogin.label}</time> : <span className="never-login">لم يدخل بعد</span>}</td>
             <td data-label="الواجبات" className="eb-col-tasks">{student.submittedAssignmentsCount > 0 ? <button type="button" className="eb-link-button" onClick={() => p.onOpenHistory(student)} disabled={p.busy}><IconHistory size={14} />الواجبات ({student.submittedAssignmentsCount})<VisuallyHidden> — {student.displayName}</VisuallyHidden></button> : <span className="eb-muted"><span aria-hidden="true">—</span><VisuallyHidden>لا واجبات مسلّمة</VisuallyHidden></span>}</td>
             <td className="eb-col-actions"><div className="eb-row-actions">
               <button type="button" className="eb-button is-quiet is-small eb-icon-action" title={"تفاصيل " + student.displayName} onClick={() => p.onOpenProfile(student)} disabled={p.busy}><IconUser size={16} aria-hidden="true" /><VisuallyHidden>{"تفاصيل " + student.displayName}</VisuallyHidden></button>
-              <ActionMenu label={"إجراءات " + student.displayName}>
+              {student.shared ? <ActionMenu label={"إجراءات " + student.displayName}>
+                <button type="button" className="eb-menu-item" onClick={() => p.onCopyIdentity(student)}><IconCopy size={16} />نسخ رقم الهوية</button>
+                {p.onUnenroll && can("students.student.archive") && <><hr className="eb-menu-sep" />
+                <button type="button" className="eb-menu-item is-danger" onClick={() => p.onUnenroll?.(student)} disabled={p.busy}><IconTrash size={16} />إزالة من صفي</button></>}
+              </ActionMenu> : <ActionMenu label={"إجراءات " + student.displayName}>
                 {can("students.student.edit") && <button type="button" className="eb-menu-item" onClick={() => p.onEdit(student)} disabled={p.busy}><IconEdit size={16} />تعديل</button>}
                 <button type="button" className="eb-menu-item" onClick={() => p.onCopyIdentity(student)}><IconCopy size={16} />نسخ رقم الهوية</button>
                 {!student.archived && can("students.student.edit") && <button type="button" className="eb-menu-item" onClick={() => p.onToggleActive(student)} disabled={p.busy}>{student.active ? "تعطيل الحساب" : "تفعيل الحساب"}</button>}
                 {can(student.archived ? "students.student.restore" : "students.student.archive") && <button type="button" className="eb-menu-item" onClick={() => p.onArchive(student)} disabled={p.busy}>{student.archived ? <><IconRestore size={16} />استعادة</> : <><IconArchive size={16} />أرشفة</>}</button>}
                 {can("students.student.delete") && <><hr className="eb-menu-sep" />
                 <button type="button" className="eb-menu-item is-danger" onClick={() => p.onDelete(student)} disabled={p.busy}><IconTrash size={16} />حذف نهائي</button></>}
-              </ActionMenu>
+              </ActionMenu>}
             </div></td>
           </tr>;
           })}</tbody>

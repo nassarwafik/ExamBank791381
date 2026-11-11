@@ -6,7 +6,7 @@ import { STATE_TONE, actionLabel, dueText, formatWhen, stateOf } from "./portalP
 import type { Summary } from "./types";
 
 /** One task card (UX-7). The wording of the result line is unchanged: provisional vs final comes from the result's own grading status. */
-export default function StudentAssignmentCard({ item, busy, onOpen, now }: { item: Summary; busy: boolean; onOpen: (item: Summary) => void; /** UX-S3 — the portal's clock (one reading per render of the list). */ now: number }) {
+export default function StudentAssignmentCard({ item, busy, onOpen, now, showClass }: { item: Summary; busy: boolean; onOpen: (item: Summary) => void; /** UX-S3 — the portal's clock (one reading per render of the list). */ now: number; /** Tadris+ P11-A — the student is in more than one class: each task names its class. */ showClass?: boolean }) {
   const st = stateOf(item);
   const lr = item.latestResult || null;
   const lrGs = lr ? resolveGradingStatus(lr) : null;
@@ -22,6 +22,7 @@ export default function StudentAssignmentCard({ item, busy, onOpen, now }: { ite
       </div>
       {item.instructions && <p className="eb-sp-task-desc">{item.instructions}</p>}
       <ul className="eb-sp-task-meta" aria-label="تفاصيل المهمة">
+        {showClass && item.className && <li className="eb-sp-task-class" data-testid="card-class">الصف: <bdi>{item.className}</bdi></li>}
         <li>{item.questionCount} سؤال</li>
         <li>{item.totalMarks} علامة</li>
         {!!item.durationMinutes && <li>{item.durationMinutes} دقيقة</li>}
