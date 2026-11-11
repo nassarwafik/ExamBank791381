@@ -51,6 +51,7 @@ const PROTECTED: [string, string, string, string][] = [
   // nested views
   ["./TeacherPlatform.tsx", "TeacherDashboard", "./TeacherDashboard", "teacher-dashboard"],
   ["./reports/ReportsCenter.tsx", "ReportView", "./ReportViews", "teacher-report-views"],
+  ["./reports/ReportsCenter.tsx", "ReportsOverview", "./ReportsOverview", "teacher-reports-overview"],   // Reports R-5a — the hub overview (its own lazy chunk)
   ["./StudentPortal.tsx", "StudentReader", "./student/StudentReader", "student-reader"],
   ["./learning/LearningMaterialsPage.tsx", "LearningReaderWithTraining", "./training/LearningReaderWithTraining", "learning-reader-with-training"],
   ["./learning/training/LearningReaderWithTraining.tsx", "LearningTrainingRunner", "./LearningTrainingRunner", "learning-training-runner"],
