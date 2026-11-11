@@ -12,6 +12,8 @@ import IconButton from "../ui/IconButton";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconChevronBack } from "../icons";
 import { REPORT_CARDS, CATEGORIES, GROUPS, PERIODS, TIME_AWARE, type Category, type Need } from "./catalog";
+import { readRememberedFilters, rememberFilters, activeFilterChips } from "./filterMemory";
+import type { AssignmentDrillTarget } from "../assignments/drillTarget";
 import "../reports-pro.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
@@ -29,6 +31,25 @@ const CUSTOM_RANGE_DELAY_MS = 400;
 const INVERTED_RANGE_TEXT = "لا يمكن أن يكون تاريخ «من» بعد تاريخ «إلى».";
 const errorMessage = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
 
+/** Phase R-5d — the remembered ids the loaded options still offer ("" for one they do not). A reply without a list offers nothing. */
+function validRemembered(o: FiltersResp, r: { schoolYear: string; classId: string; projectCode: string }) {
+  const schoolYear = (o.schoolYears || []).includes(r.schoolYear) ? r.schoolYear : "";
+  const projectCode = (o.projects || []).some(p => p.projectCode === r.projectCode) ? r.projectCode : "";
+  const cls = (o.classes || []).find(c => c.classId === r.classId);
+  return { schoolYear, projectCode, classId: cls && (!schoolYear || cls.schoolYear === schoolYear) ? cls.classId : "" };
+}
+/** Phase R-5d — the class of a teacher who has exactly ONE, when the open report can use it (its year and, for a project report,
+ *  its project match what is chosen); "" otherwise — several classes are never narrowed to a choice. */
+function onlyClassFor(o: FiltersResp | null, type: ReportType | null, projectCode: string, schoolYear: string): string {
+  const list = (o && o.classes) || [];
+  if (!type || list.length !== 1) return "";
+  const c = list[0];
+  if (schoolYear && c.schoolYear !== schoolYear) return "";
+  const forProject = !!REPORT_CARDS.find(card => card.type === type)?.needs.includes("project");
+  if (forProject && projectCode && !getClassProgramCodes(c).includes(projectCode)) return "";
+  return c.classId;
+}
+
 /**
  * Reports Center (UX-6b): Hub (categories → grouped report cards) → report workspace (back, compact identity,
  * only the relevant filters, result). ReportsCenter owns every filter/state decision; the API semantics
@@ -36,12 +57,18 @@ const errorMessage = (e: unknown, fallback: string) => (e instanceof Error && e.
  * Phase R-2: an authoritative 401 calls the shell's onSessionExpired (like TeacherPlatform); the filter options and the
  * student list each show their own loading / error / retry; a superseded request is aborted.
  */
-export default function ReportsCenter({ token, onOpenProject, onSessionExpired }: { token: string; onOpenProject?: (projectCode: string) => void; onSessionExpired?: () => void }) {
+export default function ReportsCenter({ token, onOpenProject, onOpenAssignment, onSessionExpired }: { token: string; onOpenProject?: (projectCode: string) => void; /** Phase R-5d — an assessment row opens that exact assignment's gradebook (the shell's existing drill). */ onOpenAssignment?: (target: AssignmentDrillTarget) => void; onSessionExpired?: () => void }) {
   const [opts, setOpts] = useState<FiltersResp | null>(null);
   const [active, setActive] = useState<ReportType | null>(null);
   const [category, setCategory] = useState<Category>("all");
-  const [filters, setFilters] = useState<Filters>({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "", from: "", to: "" });
-  const [period, setPeriod] = useState<Period>("all");
+  // Phase R-5d — the school year, class, project and period chosen last time on THIS device are the starting point (ids and a
+  // period key only; never a student, never dates typed by hand). The period applies at once; the ids are applied only when
+  // the options arrive and only if the options offer them (below) — a remembered id is never requested on trust.
+  const [remembered] = useState(readRememberedFilters);
+  const restored = useRef(false);
+  const activeRef = useRef<ReportType | null>(null);
+  const [filters, setFilters] = useState<Filters>(() => ({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "", ...rangeForPeriod(remembered.period) }));
+  const [period, setPeriod] = useState<Period>(remembered.period);
   const [studentsFor, setStudentsFor] = useState<{ classId: string; list: { studentId: string; displayName: string }[]; error: string; nonce: number }>({ classId: "", list: [], error: "", nonce: 0 });
   const [studentsNonce, setStudentsNonce] = useState(0);
   // The custom range as typed; it reaches `filters` (and so the request) only when valid, after CUSTOM_RANGE_DELAY_MS.
@@ -62,7 +89,21 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
     const controller = new AbortController();
     setOptsLoading(true); setOptsError("");
     reportGet<FiltersResp>(token, { type: "filters" }, controller.signal)
-      .then(r => { if (!cancelled) setOpts(r); })
+      .then(r => {
+        if (cancelled) return;
+        setOpts(r);
+        // Phase R-5d — once, when the options arrive: restore the remembered ids the options still offer (one they no longer
+        // offer — a class archived away, another teacher's device — is dropped here, before any request could name it), then
+        // choose the only class for the report that is already open.
+        const first = !restored.current;
+        restored.current = true;
+        setFilters(f => {
+          const kept = first ? validRemembered(r, remembered) : null;
+          const next = kept ? { ...f, schoolYear: f.schoolYear || kept.schoolYear, projectCode: f.projectCode || kept.projectCode, classId: f.classId || kept.classId } : f;
+          const only = next.classId ? "" : onlyClassFor(r, activeRef.current, next.projectCode, next.schoolYear);
+          return only ? { ...next, classId: only, studentId: "" } : next;
+        });
+      })
       .catch(e => {
         if (cancelled || isAbortError(e)) return;
         if (isSessionExpired(e)) onSessionExpired?.();
@@ -89,6 +130,13 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
     const id = setTimeout(() => setFilters(f => ({ ...f, from: customRange.from, to: customRange.to })), CUSTOM_RANGE_DELAY_MS);
     return () => clearTimeout(id);
   }, [period, rangeInverted, customRange.from, customRange.to, filters.from, filters.to]);
+
+  // Phase R-5d — remember every choice (a custom range is not kept: it starts as «كل الفترة» next time). Nothing is written before
+  // the options arrived, so a failed load never erases what was remembered.
+  useEffect(() => {
+    if (!opts) return;
+    rememberFilters({ schoolYear: filters.schoolYear, classId: filters.classId, projectCode: filters.projectCode, period });
+  }, [opts, filters.schoolYear, filters.classId, filters.projectCode, period]);
 
   const activeCard = REPORT_CARDS.find(c => c.type === active) || null;
   const needs = (k: Need) => !!activeCard?.needs.includes(k);
@@ -126,7 +174,19 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
   // Canonical class ↔ project membership (programCodes[] wins; legacy scalar only when absent) via the ONE helper.
   const classChoices = classesForYear.filter(c => !needs("project") || !filters.projectCode || getClassProgramCodes(c).includes(filters.projectCode));
 
-  function openReport(type: ReportType) { setActive(type); }
+  function resetFilters() {
+    setPeriod("all"); setCustomRange({ from: "", to: "" });
+    setFilters({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "", from: "", to: "" });
+  }
+
+  // Phase R-5d — a teacher who has exactly ONE class does not have to pick it: it is chosen when a report opens, when the options
+  // arrive (above), and again after the year or the project is changed (which clears the class). A list merely NARROWED to one
+  // class by the year or the project is not chosen for the teacher — with several classes no report is requested before they
+  // pick one. Clearing the class by hand is respected: nothing chooses it again until one of those steps.
+  function openReport(type: ReportType) {
+    setActive(type);
+    setFilters(f => { const only = f.classId ? "" : onlyClassFor(opts, type, f.projectCode, f.schoolYear); return only ? { ...f, classId: only, studentId: "" } : f; });
+  }
   // Phase R-5a — a class picked in the hub overview opens its class report with that class (and its school year) selected.
   function openClassReport(classId: string, schoolYear: string) {
     setFilters(f => ({ ...f, schoolYear, classId, studentId: "" }));
@@ -136,7 +196,7 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
     focusBackPending.current = active;
     setActive(null);
   }
-  useEffect(() => { if (active) headingRef.current?.focus(); }, [active]);
+  useEffect(() => { activeRef.current = active; if (active) headingRef.current?.focus(); }, [active]);
   useEffect(() => {
     if (active || !focusBackPending.current) return;
     const type = focusBackPending.current; focusBackPending.current = null;
@@ -201,6 +261,14 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
 
   const card = activeCard!;
   const timeAware = TIME_AWARE.includes(card.type);
+  // Only the filters THIS report uses are named (a project chosen earlier is not a filter of the class report).
+  const chips = activeFilterChips({
+    schoolYear: filters.schoolYear,
+    project: needs("project") ? opts?.projects.find(p => p.projectCode === filters.projectCode)?.title || "" : "",
+    className: opts?.classes.find(c => c.classId === filters.classId)?.name || "",
+    student: needsStudentList ? students.find(s => s.studentId === filters.studentId)?.displayName || "" : "",
+    period: timeAware ? (period === "custom" ? (filters.from || filters.to ? (filters.from || "…") + " → " + (filters.to || "…") : "") : period === "all" ? "" : PERIODS.find(p => p.key === period)?.label || "") : ""
+  });
   return (
     <section className="eb-report-workspace" aria-labelledby="eb-report-ws-title">
       <div className="eb-report-ws-head eb-report-noprint">
@@ -216,14 +284,14 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
         {optsLoading && !opts && <LoadingState text="جارٍ تحميل خيارات التصفية..." />}
         <div className="eb-report-filter-row">
           <label className="eb-field-inline">السنة الدراسية
-            <select value={filters.schoolYear} onChange={e => setFilters(f => ({ ...f, schoolYear: e.target.value, classId: "", studentId: "" }))}>
+            <select value={filters.schoolYear} onChange={e => { const schoolYear = e.target.value; setFilters(f => ({ ...f, schoolYear, classId: onlyClassFor(opts, active, f.projectCode, schoolYear), studentId: "" })); }}>
               <option value="">كل السنوات</option>
               {opts?.schoolYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </label>
           {needs("project") && (
             <label className="eb-field-inline">المشروع
-              <select value={filters.projectCode} onChange={e => setFilters(f => ({ ...f, projectCode: e.target.value, classId: "", studentId: "" }))}>
+              <select value={filters.projectCode} onChange={e => { const projectCode = e.target.value; setFilters(f => ({ ...f, projectCode, classId: onlyClassFor(opts, active, projectCode, f.schoolYear), studentId: "" })); }}>
                 <option value="">اختر مشروعًا</option>
                 {opts?.projects.map(p => <option key={p.projectCode} value={p.projectCode}>{p.title}</option>)}
               </select>
@@ -269,10 +337,17 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
           </div>
         )}
         {rangeInverted && <p id="eb-report-range-error" className="platform-error assignment-inline-message" role="alert">{INVERTED_RANGE_TEXT}</p>}
+        {/* Phase R-5d — what the report is filtered by, in words, and one button back to nothing chosen. */}
+        {chips.length > 0 && (
+          <div className="eb-report-active-filters">
+            <ul className="eb-report-chips" aria-label="المرشحات النشطة">{chips.map(c => <li key={c.key} className="eb-report-chip"><span className="eb-muted">{c.label}:</span> {c.value}</li>)}</ul>
+            <button type="button" className="eb-button is-quiet is-small" onClick={resetFilters}>إعادة تعيين</button>
+          </div>
+        )}
       </div>
       <ReportSessionContext.Provider value={onSessionExpired}>
         <Suspense fallback={<LoadingState />}>
-          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} />
+          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} onOpenAssignment={onOpenAssignment} />
         </Suspense>
       </ReportSessionContext.Provider>
     </section>

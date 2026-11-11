@@ -875,6 +875,21 @@
       "page": "report-assignments",
       "viewport": "all",
       "reason": "Reports R-5b (docs/enterprise-reports-tables-r5b.md §2.1) — the assessments report's tables get headers that sort (an arrow beside each label), a search box above the matrix and a capped height that keeps the header in view."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "Reports R-5d (docs/enterprise-reports-filters-r5d.md §2) — once a class is picked, a line under the filters names the active filters («الصف: …») with an «إعادة تعيين» button, and «ملخص كل تقييم» gains a last column «فتح» whose buttons open that assignment's gradebook."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-5d (docs/enterprise-reports-filters-r5d.md §2) — once a class is picked, a line under the filters names the active filters («الصف: …») with an «إعادة تعيين» button; nothing else on the page moves."
+    },
+    {
+      "page": "report-student",
+      "viewport": "all",
+      "reason": "Reports R-5d (docs/enterprise-reports-filters-r5d.md §2) — once a class is picked, a line under the filters names the active filters («الصف: …») with an «إعادة تعيين» button; nothing else on the page moves."
     }
   ]
 }

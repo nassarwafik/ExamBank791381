@@ -237,3 +237,34 @@
   .eb-report-table-scroll.is-capped,.eb-report-matrix-section .eb-report-table-scroll{ max-height:none; overflow:visible; }
   .eb-report-sort-icon{ display:none; }
 }
+
+/* ============================================================
+   Phase R-5d — easier filters (docs/enterprise-reports-filters-r5d.md)
+   Active filters in words, a whole report row that opens its report, row actions, and loading placeholders.
+   ============================================================ */
+.eb-report-active-filters{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); }
+.eb-report-chips{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-report-chip{ padding:2px var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-heading); font-size:var(--eb-fs-13); }
+/* the whole row of a report card opens it: its button stretches over the row (the button stays the one focusable control) */
+.eb-report-card{ position:relative; cursor:pointer; }
+.eb-report-card .eb-button::after{ content:""; position:absolute; inset:0; }
+.eb-report-row-actions{ display:inline-flex; flex-wrap:nowrap; gap:var(--eb-space-1); }
+/* A table's scroll box is the containing block of what is inside it: text hidden for assistive technology (position: absolute)
+   in a cell scrolled out of view is clipped with that cell, instead of widening the PAGE (found by the capture harness: the
+   «فتح» column's hidden assessment titles gave the phone and tablet a sideways scroll). */
+.eb-report-table-scroll{ position:relative; }
+.eb-report-skeleton{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-report-skeleton span{ display:block; block-size:72px; border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.eb-report-skeleton span:nth-child(2){ block-size:180px; }
+.eb-report-skeleton span:nth-child(3){ block-size:120px; inline-size:60%; }
+@keyframes ebReportPulse{ 50%{ opacity:.55; } }
+@media (prefers-reduced-motion: no-preference){
+  :root:not([data-eb-motion="off"]) .eb-report-skeleton span{ animation:ebReportPulse 1.4s ease-in-out infinite; }
+}
+:root[data-eb-motion="on"] .eb-report-skeleton span{ animation:ebReportPulse 1.4s ease-in-out infinite; }
+@media (max-width:767px){
+  .eb-report-active-filters{ align-items:flex-start; }
+}
+@media print{
+  .eb-report-active-filters .eb-button,.eb-report-skeleton{ display:none !important; }
+}
