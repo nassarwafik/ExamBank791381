@@ -151,8 +151,7 @@ export function composerVerdict(exam: StructuredExam, opts: VerdictOptions = {})
   for (const q of qs) {
     const k = normStem(q.text);
     if (k.length >= 12) { const prev = seen.get(k); if (prev) warnings.push({ code: "COMPOSER_DUPLICATE_STEM", message: "نص سؤال مكرر.", questionId: q.examQuestionId }); else seen.set(k, q.examQuestionId); }
-    const opts2 = Array.isArray(q.options) ? q.options.map(o => normStem((o as Rec).text)) : [];
-    if (opts2.length && new Set(opts2).size !== opts2.length) warnings.push({ code: "COMPOSER_DUPLICATE_OPTIONS", message: "خيارات متطابقة في السؤال نفسه.", questionId: q.examQuestionId });
+    // duplicate options: Phase 21X moved this check into qualityWarnings (spacing / diacritics ignored), so the builder shows it too
   }
   const meta = composerMetadataOf(exam);
   const marksOf = new Map(qs.map(q => [q.examQuestionId, Number(q.marks) || 0]));
