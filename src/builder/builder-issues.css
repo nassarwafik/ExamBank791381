@@ -41,3 +41,6 @@
   .sb-issues.sb-issues-summary .sb-issues-head,
   .sb-issue-link { min-height: 44px; }
 }
+/* Phase 21W — «ملاحظات الجودة» (QualityNotes.tsx): advisory, so it reads as information, never as an error or a warning. Token-only. */
+.sb-quality-notes { border: 1px solid var(--eb-border); background: var(--eb-surface); }
+.sb-quality-hint { font-style: normal; font-weight: var(--eb-fw-regular); color: var(--eb-muted); }
