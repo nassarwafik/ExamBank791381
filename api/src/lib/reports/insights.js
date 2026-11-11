@@ -5,12 +5,52 @@
 //   - a result still awaiting the teacher is "pending": it has NO percentage, is never a zero and never enters an average;
 //   - a student who never handed in is "missing": no percentage either — never a zero;
 //   - an outcome this code cannot classify is counted as pending (handed in, no number) — it never becomes a number.
-const { studentOutcome, assignmentStats, average } = require("./aggregate");
+const { studentOutcome, assignmentStats, average, round1 } = require("./aggregate");
 
 // Calendar day (YYYY-MM-DD) of an ISO timestamp, or "" when it is absent or not a date.
 function isoDay(iso) {
   const s = String(iso || "");
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : "";
+}
+
+// Phase R-5b — the spread of a set of FINAL percentages: highest, lowest, median and (population) standard deviation, each
+// rounded to 1 dp. Every figure is null when there is no final result — never 0. No threshold and no pass mark is implied.
+function spread(values) {
+  const v = values.filter(n => typeof n === "number" && Number.isFinite(n)).sort((a, b) => a - b);
+  if (!v.length) return { highest: null, lowest: null, median: null, stdDev: null };
+  const mid = Math.floor(v.length / 2);
+  const mean = v.reduce((s, x) => s + x, 0) / v.length;
+  return {
+    highest: round1(v[v.length - 1]), lowest: round1(v[0]),
+    median: round1(v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2),
+    stdDev: round1(Math.sqrt(v.reduce((s, x) => s + (x - mean) * (x - mean), 0) / v.length))
+  };
+}
+
+// The FINAL percentages of the roster in one assessment (pending and missing carry none).
+function finalPercentages(students, subs) {
+  const out = [];
+  for (const s of students) {
+    const o = studentOutcome(subs.get(String(s.studentId)));
+    if (o.state === "submitted") out.push(o.percentage);
+  }
+  return out;
+}
+
+// highest / lowest / median of one assessment's final results (the per-assessment row's three extra figures).
+function assessmentSpread(students, subs) {
+  const { highest, lowest, median } = spread(finalPercentages(students, subs));
+  return { highest, lowest, median };
+}
+
+// The class at a glance, over the students' averages: the spread, and WHO holds the highest and the lowest average (the first
+// in roster order on a tie). Students with no final result are left out — they are not the lowest.
+function standingsSummary(standings) {
+  const ranked = standings.filter(s => typeof s.average === "number" && Number.isFinite(s.average));
+  const pick = (better) => ranked.reduce((best, s) => (best === null || better(s.average, best.average) ? s : best), null);
+  const who = s => (s ? { studentId: s.studentId, displayName: s.displayName, average: s.average } : null);
+  const { median, stdDev } = spread(ranked.map(s => s.average));
+  return { highest: who(pick((a, b) => a > b)), lowest: who(pick((a, b) => a < b)), median, stdDev, withAverage: ranked.length };
 }
 
 // One point per assessment, in the order given (the caller passes them by createdAt, oldest first): the SAME figures as the
@@ -128,4 +168,4 @@ function overviewRollup(classInputs) {
   };
 }
 
-module.exports = { overviewRollup, isoDay, assessmentSeries, studentStandings, submissionSplit, classAverages, studentSeries, studentSplit };
+module.exports = { overviewRollup, spread, assessmentSpread, standingsSummary, isoDay, assessmentSeries, studentStandings, submissionSplit, classAverages, studentSeries, studentSplit };

@@ -223,7 +223,10 @@ async function handler(request, deps = {}, obs = null) {
         let insights = null;
         if (academic) {
           const standings = ins.studentStandings(students, subsByAssignment);
-          insights = { assessments: ins.assessmentSeries(assignments, students, subsByAssignment), students: standings, submission: ins.submissionSplit(standings) };
+          // Phase R-5b — `summary`: the spread of the students' averages and who holds the highest / the lowest.
+          // Each assessment point also carries the highest / lowest / median of its final results.
+          const points = ins.assessmentSeries(assignments, students, subsByAssignment).map((p, i) => ({ ...p, ...ins.assessmentSpread(students, subsByAssignment[i]) }));
+          insights = { assessments: points, students: standings, submission: ins.submissionSplit(standings), summary: ins.standingsSummary(standings) };
         }
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: academic ? {
           assignments: assignments.length,
@@ -303,7 +306,8 @@ async function handler(request, deps = {}, obs = null) {
           const subs = subsByAssignment[i];
           const entries = students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) }));
           const st = agg.assignmentStats(entries);
-          perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st });
+          // Phase R-5b — the row also carries the creation day and the highest / lowest / median of its final results (additive).
+          perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st, date: ins.isoDay(a.createdAt), ...ins.assessmentSpread(students, subs) });
           const outcomes = entries.map(e => ({ studentId: e.studentId, o: agg.studentOutcome(e.submission) }));
           // `zero` is the same rule as assignmentStats.zeroScores (a FINAL score of 0), so the cell and the count never disagree.
           matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: outcomes.map(({ studentId, o }) => ({ studentId, state: o.state, percentage: o.percentage, zero: o.state === "submitted" && o.score === 0 })) });

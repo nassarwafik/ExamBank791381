@@ -137,7 +137,9 @@ const REPORTS = {
         { assignmentId: "a4", title: ASSIGNMENTS[3].title, date: "2026-09-15", students: 6, submitted: 5, missing: 1, pendingReview: 1, submissionRate: 83, average: 69 },
         { assignmentId: "a5", title: "اختبار قصير: المتباينات", date: "2026-10-12", students: 6, submitted: 5, missing: 1, pendingReview: 1, submissionRate: 83, average: 76 }],
       students: STUDENTS.slice(0, 6).map((s, i) => ({ studentId: s.userId, displayName: s.displayName, average: [91, 78, 74, 63, null, 52][i], graded: [3, 3, 2, 3, 0, 1][i], pending: [0, 0, 1, 0, 1, 0][i], missing: [0, 0, 0, 0, 2, 2][i] })),
-      submission: { graded: 12, pending: 2, missing: 4 } } },
+      submission: { graded: 12, pending: 2, missing: 4 },
+      // Phase R-5b — the spread of the students' averages (summary tiles above the students table)
+      summary: { highest: { studentId: "u1", displayName: STUDENTS[0].displayName, average: 91 }, lowest: { studentId: "u6", displayName: STUDENTS[5].displayName, average: 52 }, median: 74, stdDev: 13.4, withAverage: 5 } } },
   student: { ok: true, type: "student", withheld: [], student: { studentId: STUDENTS[0].userId, displayName: STUDENTS[0].displayName, classId: "c1", className: CLASSES[0].name, schoolYear: "2026" },
     academic: { average: 73, submittedCount: 3, assessmentCount: 4, submissionRate: 75, pendingCount: 1 }, projects: [],
     insights: { assessments: [

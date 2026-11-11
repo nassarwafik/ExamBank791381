@@ -157,7 +157,9 @@ describe("R-5a B — the REAL reports handler: class and student `insights`", ()
     const s2 = await report(ctx, "type=student&studentId=s2&from=2026-03-01&to=2026-03-31");
     expect(s2.insights.assessments.map(p => p.assignmentId)).toEqual(["a2"]);
     const none = await report(ctx, "type=class&classId=c1&from=2027-01-01&to=2027-01-31");
-    expect(none.insights).toEqual({ assessments: [], students: [{ studentId: "s1", displayName: "أحمد", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s2", displayName: "بلال", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s3", displayName: "جمال", average: null, graded: 0, pending: 0, missing: 0 }], submission: { graded: 0, pending: 0, missing: 0 } });
+    expect(none.insights).toEqual({ assessments: [], students: [{ studentId: "s1", displayName: "أحمد", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s2", displayName: "بلال", average: null, graded: 0, pending: 0, missing: 0 }, { studentId: "s3", displayName: "جمال", average: null, graded: 0, pending: 0, missing: 0 }], submission: { graded: 0, pending: 0, missing: 0 },
+      // Reports R-5b added `summary` (additive): with no final result every figure of it is null — never 0
+      summary: { highest: null, lowest: null, median: null, stdDev: null, withAverage: 0 } });
   });
   it("read cost: the student report downloads no document twice, and a repeated request over unchanged storage downloads none of the class's", async () => {
     const ctx = seed(), st = instrument(ctx);
