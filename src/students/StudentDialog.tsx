@@ -135,9 +135,11 @@ export default function StudentDialog(p: StudentDialogProps) {
           <div><dt>آخر دخول</dt><dd>{profile.stats.lastLoginAt ? p.fmtDate(profile.stats.lastLoginAt) : "لم يسجل الدخول بعد"}</dd></div>
           <div><dt>إنشاء الحساب</dt><dd>{p.fmtDate(profile.student.createdAt)}</dd></div>
         </dl>
-        <div className="eb-inline-actions">
+        {profile.student.shared
+          ? <p className="eb-dialog-lead" role="note">هذا الطالب مضاف إلى صفك من معلم آخر. حسابه (الاسم، كلمة المرور، حالة الدخول) يديره معلمه الأول أو المالك. تظهر هنا واجبات صفك وعلاماته فقط.</p>
+          : <div className="eb-inline-actions">
           {can("students.credential.reset") && <button type="button" className="eb-button is-small" onClick={p.onResetPassword} disabled={p.busy}><IconKey size={14} />كلمة مرور جديدة</button>}
-        </div>
+        </div>}
         {p.passwordReveal && <ResetPasswordBox key={p.passwordReveal.password} reveal={p.passwordReveal} onCopy={p.onCopyPassword} />}
       </section>
 

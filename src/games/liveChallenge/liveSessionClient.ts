@@ -108,7 +108,8 @@ export function createTeacherLiveSessionClient(token: string): TeacherLiveSessio
     async listStudents(classId) {
       const r = await fetch("/api/students?classId=" + encodeURIComponent(classId), { headers });
       const j = await r.json().catch(() => ({}));
-      return Array.isArray(j.students) ? j.students : [];
+      // Tadris+ P11-A — a student shared from another teacher's class cannot join this class's live room yet (P11-C): not offered.
+      return Array.isArray(j.students) ? j.students.filter((s: { shared?: boolean }) => !s.shared) : [];
     },
   };
 }
