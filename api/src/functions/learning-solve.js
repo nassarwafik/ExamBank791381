@@ -9,8 +9,9 @@
 // shows a solution and is open whenever the question is.
 // WHAT: the program is the learner's whole program (version 2) or the PUBLISHED locked template with the learner's gap values
 // (version 3: locked text never comes from the request); ≤ 16 KB. The server fixes language (csharp@1), wrapper and limits.
-// HOW (decision D4-a, no Runner change): through the 17B CodingExecutionProvider only — the isolated Coding Runner, never this host —
-// one practice run per input, in order: the public example, then every hidden input. The SERVER compares (normalizeWhitespace, as the
+// HOW: through the 17B CodingExecutionProvider only — the isolated Coding Runner, never this host. Enrichment P18 (decision D4-b): ONE
+// synchronous check when the Runner offers it (compiled once, a fresh sandbox per input); otherwise — a Runner that predates it —
+// one practice run per input, in order (decision D4-a): the public example, then every hidden input. The SERVER compares (normalizeWhitespace, as the
 // official grading); the reply shows the public example in full and, for each hidden input, pass / fail only — never its input or its
 // expected output. A compile error stops the check with the compiler's message. A question that cannot be checked (run-only: random,
 // wording awaiting the owner's correction) refuses the check (409) and keeps «تشغيل». RUNNER_BUSY / no runner → 503 retryable, never a
@@ -27,7 +28,7 @@ const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule, classSolutionsReleased } = require("../lib/class-learning-materials");
 const { teacherCourseDecision, classCourseDecision, courseRefusal } = require("../lib/access/course-access");
-const { resolveCodingExecutionProvider, loadCodingCapabilities, runCodingExecution } = require("../lib/coding/execution-provider");
+const { resolveCodingExecutionProvider, loadCodingCapabilities, runCodingExecution, runCodingCheck } = require("../lib/coding/execution-provider");
 const { reserveCodingRun } = require("../lib/coding/run-rate-limit");
 const { compareOutput } = require("../lib/shared-finalization/codingContract");
 const { RUN_LANGUAGE, RUN_LIMITS } = require("../lib/learning-run");
@@ -174,22 +175,34 @@ async function handler(request, deps = {}, obs = null) {
       return reply(200, { ok: true, result: r.result });
     }
 
-    // «افحص حلي»: the public example(s), then every hidden input, one practice run each, compared by the server.
+    // «افحص حلي»: the public example(s), then every hidden input, compared by the server.
     const pub = s.node.publicTests || [];
+    const all = [...pub.map(t => ({ isPublic: true, input: t.input, expected: t.sampleOutput })), ...s.hidden.map(h => ({ isPublic: false, input: h.input, expected: h.expected }))];
+    const total = all.length;
+    const compileError = stderr => {
+      obs?.logInfo("learning.solve.check", { courseId, actor: actor.kind, outcome: "compile-error", path });
+      return reply(200, { ok: true, check: { outcome: "compile-error", message: shown(stderr), passed: 0, total, cases: [] } });
+    };
+    // D4-b first: ONE check, compiled once; a Runner without it answers «unsupported» and the inputs run one at a time (D4-a)
+    let path = "check", results = null;
+    const suite = await runCodingCheck(provider, { requestId: crypto.randomBytes(16).toString("base64url"), language: RUN_LANGUAGE.language, languageVersion: RUN_LANGUAGE.languageVersion, source: program.source, inputs: all.map(c => c.input), limits: { ...RUN_LIMITS } });
+    if (!suite.ok) return refuse(suite.status, suite.code, obs);   // no partial verdict: a runner failure is never a «failed»
+    if (suite.compileError) return compileError(suite.compileError.stderr);
+    if (!suite.unsupported) results = suite.results;
+    else path = "runs";
     const cases = [];
-    for (let k = 0; k < pub.length + s.hidden.length; k++) {
-      const isPublic = k < pub.length;
-      const input = isPublic ? pub[k].input : s.hidden[k - pub.length].input;
-      const expected = isPublic ? pub[k].sampleOutput : s.hidden[k - pub.length].expected;
-      const r = await execute(provider, program.source, input);
-      if (!r.ok) return refuse(r.status, r.code, obs);   // no partial verdict: a runner failure is never a «failed»
-      const res = r.result;
+    for (let k = 0; k < total; k++) {
+      const { isPublic, input, expected } = all[k];
+      let res;
+      if (results) res = results[k];
+      else {
+        const r = await execute(provider, program.source, input);
+        if (!r.ok) return refuse(r.status, r.code, obs);   // no partial verdict: a runner failure is never a «failed»
+        res = r.result;
+      }
       // the Runner could not judge this run (its own fault, never the learner's): no verdict at all
       if (res.status === "internal-error") return refuse(503, "EXECUTION_FAILED", obs);
-      if (res.status === "compile-error") {
-        obs?.logInfo("learning.solve.check", { courseId, actor: actor.kind, outcome: "compile-error" });
-        return reply(200, { ok: true, check: { outcome: "compile-error", message: shown(res.stderr), passed: 0, total: pub.length + s.hidden.length, cases: [] } });
-      }
+      if (res.status === "compile-error") return compileError(res.stderr);
       const passed = res.status === "success" && compareOutput(res.stdout, expected, COMPARATOR);
       const why = passed ? undefined : res.status === "success" ? "wrong-output" : ["timeout", "output-limit"].includes(res.status) ? res.status : "runtime-error";
       cases.push(isPublic
@@ -197,7 +210,7 @@ async function handler(request, deps = {}, obs = null) {
         : { kind: "hidden", passed, ...(why ? { why } : {}) });
     }
     const passedCount = cases.filter(c => c.passed).length;
-    obs?.logInfo("learning.solve.check", { courseId, actor: actor.kind, outcome: passedCount === cases.length ? "passed" : "failed", passed: passedCount, total: cases.length });
+    obs?.logInfo("learning.solve.check", { courseId, actor: actor.kind, outcome: passedCount === cases.length ? "passed" : "failed", passed: passedCount, total: cases.length, path });
     return reply(200, { ok: true, check: { outcome: passedCount === cases.length ? "passed" : "failed", passed: passedCount, total: cases.length, cases } });
   } catch (e) {
     obs?.logError("learning.solve.error", e);

@@ -154,6 +154,9 @@ export const SMARTASSESS_EDITOR_THEME = deepFreeze({
       "editor.lineHighlightBorder": "#eef2f7",
       "editorLineNumber.foreground": "#94a3b8",
       "editorLineNumber.activeForeground": "#334155",
+      // 899371 enrichment P17 — the last, empty line's number: Monaco dims it to 40 % of the line-number colour unless the theme
+      // gives it one (axe color-contrast); this one reads at 5.4:1 on the gutter, between the ordinary and the active number
+      "editorLineNumber.dimmedForeground": "#5b6779",
       "editorGutter.background": "#f7f9fc",
       "editor.selectionBackground": "#dbe7fb",
       "editor.inactiveSelectionBackground": "#e9eef7",
@@ -213,6 +216,7 @@ export const SMARTASSESS_EDITOR_THEME_DARK = deepFreeze({
       "editor.lineHighlightBorder": "#2e2a3a",
       "editorLineNumber.foreground": "#5e5870",
       "editorLineNumber.activeForeground": "#a7a1b8",
+      "editorLineNumber.dimmedForeground": "#938da6",   // 899371 P17: 5.0:1 on the dark gutter (see the light theme)
       "editorGutter.background": "#231f2e",
       "editor.selectionBackground": "#3d3360",
       "editor.inactiveSelectionBackground": "#2e2a3a",

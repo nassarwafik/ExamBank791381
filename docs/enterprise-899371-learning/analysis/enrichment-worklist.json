@@ -7,7 +7,7 @@
   "D2": "follows-D1",
   "D3": "badge-only",
   "D4": "no-runner-change",
-  "D5": "run-only-until-corrected",
+  "D5": "corrected-by-owner",
   "D6": "scenes-as-listed"
  },
  "totals": {
@@ -16,9 +16,9 @@
   "solve": 80,
   "tryInput": 13,
   "solveByClass": {
-   "check": 63,
+   "check": 69,
    "check-small-n": 5,
-   "run-only-until-corrected": 6,
+   "run-only-until-corrected": 0,
    "run-only": 6
   },
   "solveFromLab": 36,
@@ -1793,8 +1793,9 @@
    ],
    "programs": [],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"
@@ -2830,8 +2831,9 @@
     }
    ],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"
@@ -3272,8 +3274,9 @@
     }
    ],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"
@@ -3483,8 +3486,9 @@
     }
    ],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"
@@ -3529,8 +3533,9 @@
     }
    ],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"
@@ -3635,8 +3640,9 @@
     }
    ],
    "trace": false,
-   "solve": "run-only-until-corrected",
+   "solve": "check",
    "runnerClass": "needs-correction",
+   "corrected": true,
    "lab": null,
    "tryInput": false,
    "gate": "teacher-release"

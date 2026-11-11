@@ -167,7 +167,9 @@ describe("899371 P14 — «افحص حلي»", () => {
     expect(new Set(p.calls.map(x => x.source))).toEqual(new Set([SRC]));
     // the runner receives the minimal request: no identity, course or question
     expect(Object.keys(p.calls[0]).sort()).toEqual(["language", "languageVersion", "limits", "requestId", "source", "stdin"]);
-    expect(JSON.stringify(p.calls)).not.toMatch(/u1|899371|c0\d-p-q/);
+    // (the requestId is random and opaque: it can contain any letters, so only the rest of the request is scanned — cf. hotfix #597)
+    expect(JSON.stringify(p.calls.map(c => ({ ...c, requestId: undefined })))).not.toMatch(/u1|899371|c0\d-p-q/);
+    for (const c of p.calls) expect(c.requestId).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
   });
   it("the server compares (whitespace-normalised, as official grading): a wrong hidden case fails with no input and no output", async () => {
     const ctx = seed(visible(["899371-m02"]));
@@ -291,5 +293,49 @@ describe("899371 P14 — no record, its own buckets, quiet telemetry", () => {
     expect(obs.all.length).toBeGreaterThanOrEqual(3);
     expect(JSON.stringify(obs.all)).not.toMatch(/SRC-CANARY|IN-CANARY|OUT-CANARY|GAP-CANARY/);
     for (const h of V2.hidden) if (h.input.trim().length > 3) expect(JSON.stringify(obs.all)).not.toContain(JSON.stringify(h.input).slice(1, -1));
+  });
+});
+
+// 899371 enrichment P16 (plan §13) — the owner's decisions of 2026-11-10: practice never rehearses an official test, and D5 is closed.
+describe("899371 P16 — own hidden inputs, and the six corrected questions", () => {
+  const fs = cjs("node:fs"), path = cjs("node:path");
+  const ITEMS = path.join(__dirname, "..", "src", "data", "exam-library", "items");
+  // the hidden inputs of each lab question as SHIPPED, by the book question it was built on
+  const labOf = new Map(fs.readdirSync(ITEMS).filter(f => /^CL899371-\d\d\.json$/.test(f))
+    .flatMap(f => JSON.parse(fs.readFileSync(path.join(ITEMS, f), "utf8")).examSnapshot.questions.map(q => [q.sourceQuestionId, new Set(q.answer.hiddenTests.map(t => t.input))])));
+  it("a reused question never practises on its coding-lab question's hidden inputs (CL899371-*, as shipped)", async () => {
+    const { readSolve } = await import("../../scripts/lib/solve-899371.mjs");
+    const reused = readSolve().filter(q => q.reuse);
+    expect(reused).toHaveLength(36);
+    for (const q of reused) {
+      const lab = labOf.get(q.book);
+      expect(lab && lab.size, q.book + " has its lab question").toBeGreaterThan(0);
+      expect(INDEX.questions[q.book].hidden.filter(h => lab.has(h.input)).map(h => h.input), q.book).toEqual([]);
+      expect(INDEX.questions[q.book].hidden.length, q.book).toBeGreaterThanOrEqual(4);
+    }
+  });
+  it("every checked question has at least 3 hidden inputs; the six questions that waited for the owner's correction (D5) are checked", () => {
+    for (const q of all.filter(x => x.check)) expect(q.hidden.length, q.id).toBeGreaterThanOrEqual(3);
+    for (const id of ["c04-p-q10", "c08-p-q3", "c10-p-q2", "c11-h-q4", "c11-p-q1", "c11-p-q4"]) {
+      expect(INDEX.questions[id].check, id).toBe(true);
+      expect((INDEX.questions[id].text || "").length, id + " shows its corrected wording").toBeGreaterThan(40);
+    }
+    expect(all.filter(q => q.check)).toHaveLength(74);
+  });
+});
+
+describe("899371 P16 — the authoring reader refuses a reused question without its own hidden inputs", () => {
+  it("no hidden inputs, or a coding-lab hidden input among them → refused (the index can never be built from it)", async () => {
+    const os = cjs("node:os"), fs = cjs("node:fs"), path = cjs("node:path");
+    const { readSolve } = await import("../../scripts/lib/solve-899371.mjs");
+    const { readLab } = await import("../../scripts/build-899371-coding-lab.mjs");
+    const lab = readLab();
+    const base = lab.m01[0];   // CL899371-01-Q01
+    const write = q => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solve-p16-")); fs.writeFileSync(path.join(dir, "m01.json"), JSON.stringify({ module: "m01", questions: [q] })); return dir; };
+    const entry = { book: base.book, reuse: "CL899371-01-Q01", explanation: "فكرة." };
+    expect(() => readSolve(write(entry), lab)).toThrow(/needs its own hidden inputs/);
+    expect(() => readSolve(write({ ...entry, hidden: [base.hidden[0], "123456\n", "-7\n"] }), lab)).toThrow(/also a coding-lab hidden input/);
+    expect(() => readSolve(write({ ...entry, hidden: ["123456\n", "-7\n"] }), lab)).toThrow(/≥ 3 hidden inputs/);
+    expect(readSolve(write({ ...entry, hidden: ["123456\n", "-7\n", "31\n"] }), lab)[0].hidden).toEqual(["123456\n", "-7\n", "31\n"]);
   });
 });

@@ -27,7 +27,10 @@ runner.example.invalid {
 		max_size 3MiB
 	}
 
-	@runner path /healthz /v1/capabilities /v1/execute /v1/official-grading-jobs
+	# /v1/check (899371 P18, D4-b): the synchronous practice check. The API gives up after 40 s, and a hang-up stops the gateway's
+	# remaining inputs, so the 90 s header timeout below is never the bound that matters. A gateway or a proxy without it answers 404
+	# and SmartAssess falls back to one /v1/execute per input.
+	@runner path /healthz /v1/capabilities /v1/execute /v1/check /v1/official-grading-jobs
 	handle @runner {
 		reverse_proxy 127.0.0.1:8787 {
 			transport http {

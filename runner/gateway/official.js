@@ -102,6 +102,49 @@ function validateOfficialJobRequest(body) {
   return { ok: true, job };
 }
 
+// ── 899371 enrichment P18 (decision D4-b) — the synchronous PRACTICE check ─────────────────────────────────────────────────────
+// One signed request runs ONE program on a few inputs and answers with the raw evidence at once (no queue, no journal, no
+// callback): compile ONCE (compiled toolchains), then a fresh runtime sandbox per case, ONE case at a time. It is practice, not
+// grading: it holds exactly ONE practice slot of the gateway (the same budget as /v1/execute; full → RUNNER_BUSY at once) and never
+// touches the official container slots, so practice can never delay an official grading job. Same allow-listed shape as an
+// official job, with the practice request id in place of the job id and tighter bounds; the gateway never compares or grades.
+const CHECK_BOUNDS = Object.freeze({ maxCases: 12, stdinBytes: OFFICIAL_BOUNDS.stdinBytes, totalStdinBytes: 65536, maxWallMs: 240000 });
+const CHECK_KEYS = ["cases", "language", "languageVersion", "limits", "requestId", "source"];
+const REQUEST_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/** The server-owned hard wall of one practice check: compile + every case, one at a time. */
+function checkWallMs(entry, check) {
+  return (entry.compileSandbox ? compileWallMs(entry) : 0) + check.cases.length * officialCaseWallMs(entry, check.limits.timeMs) + 10000;
+}
+
+/** Validates the ONE practice check shape. Returns { ok: true, check } (a fresh allow-listed copy) or { ok: false, code }. A check whose
+ *  hard wall would exceed CHECK_BOUNDS.maxWallMs is refused (fewer cases or a lower time limit). */
+function validateCheckRequest(body) {
+  const bad = { ok: false, code: "REQUEST_INVALID" };
+  if (!isPlainObject(body) || !exactKeys(body, CHECK_KEYS)) return bad;
+  const { requestId, language, languageVersion, source, cases, limits } = body;
+  if (typeof requestId !== "string" || !REQUEST_ID.test(requestId)) return bad;
+  const entry = resolveLanguage(language, languageVersion);
+  if (!entry) return bad;
+  if (typeof source !== "string" || Buffer.byteLength(source, "utf8") > OFFICIAL_BOUNDS.sourceBytes) return bad;
+  if (!isPlainObject(limits) || !exactKeys(limits, LIMIT_KEYS) || !inRange(limits.timeMs, OFFICIAL_BOUNDS.timeMs) || !inRange(limits.memoryMb, OFFICIAL_BOUNDS.memoryMb) || !inRange(limits.outputBytes, OFFICIAL_BOUNDS.outputBytes)) return bad;
+  if (!Array.isArray(cases) || cases.length < 1 || cases.length > CHECK_BOUNDS.maxCases) return bad;
+  let total = 0;
+  const out = [];
+  for (let i = 0; i < cases.length; i++) {
+    const c = cases[i];
+    if (!isPlainObject(c) || !exactKeys(c, CASE_KEYS) || c.token !== tokenFor(i) || typeof c.stdin !== "string") return bad;
+    const n = Buffer.byteLength(c.stdin, "utf8");
+    if (n > CHECK_BOUNDS.stdinBytes) return bad;
+    total += n;
+    if (total > CHECK_BOUNDS.totalStdinBytes) return bad;
+    out.push({ token: c.token, stdin: c.stdin });
+  }
+  const check = { requestId, language, languageVersion, source, cases: out, limits: { timeMs: limits.timeMs, memoryMb: limits.memoryMb, outputBytes: limits.outputBytes } };
+  if (checkWallMs(entry, check) > CHECK_BOUNDS.maxWallMs) return bad;
+  return { ok: true, check };
+}
+
 /** The payload identity of a validated job (canonical key order). */
 function officialPayloadHash(job) {
   const canonical = JSON.stringify({ jobId: job.jobId, language: job.language, languageVersion: job.languageVersion, source: job.source, cases: job.cases.map(c => [c.token, c.stdin]), limits: [job.limits.timeMs, job.limits.memoryMb, job.limits.outputBytes], ...(job.targetRef ? { revision: job.revision, targetRef: job.targetRef } : {}) });
@@ -727,4 +770,4 @@ function createOfficialGradingQueue({ sandbox, deliver, journal, maxPending = 8,
   return api;
 }
 
-module.exports = { OFFICIAL_BOUNDS, OFFICIAL_JOB_MAX_MS, CALLBACK_POLICY, EXECUTION_POLICY, validateOfficialJobRequest, officialPayloadHash, officialJobWallMs, createOfficialGradingQueue };
+module.exports = { OFFICIAL_BOUNDS, OFFICIAL_JOB_MAX_MS, CALLBACK_POLICY, EXECUTION_POLICY, validateOfficialJobRequest, officialPayloadHash, officialJobWallMs, createOfficialGradingQueue, CHECK_BOUNDS, validateCheckRequest, checkWallMs };

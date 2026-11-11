@@ -24,11 +24,30 @@
   {
    "book": "c04-h-q9",
    "reuse": "CL899371-04-Q03",
+   "hidden": [
+    "90\n50\n",
+    "140\n50\n",
+    "0\n30\n",
+    "112\n40\n",
+    "250\n30\n",
+    "160\n62.5\n",
+    "141\n50\n"
+   ],
    "explanation": "نحسب الراتب `h * rate`، ثم نختار شريحة الضريبة بسلسلة `if` / `else if` تبدأ من الشريحة الأعلى: `s > 7000` ثم `s >= 4500`. الضريبة تُحسب على المبلغ الزائد فقط، مثل `(s - 4500) * 0.2`، ونطبع `s - tax` مقرّبًا."
   },
   {
    "book": "c04-h-q11",
    "reuse": "CL899371-04-Q04",
+   "hidden": [
+    "5\n8\n",
+    "4\n9\n",
+    "1\n0\n",
+    "6\n13\n",
+    "7\n3\n",
+    "2\n1\n",
+    "5\n10\n",
+    "7\n9\n"
+   ],
    "explanation": "نحدد أولًا أجرتي الساعة حسب اليوم بـ `if` / `else if`، ثم نحسب الأجرة: إذا كانت الساعات 8 أو أقل فهي `hours * low`، وإلا `8 * low + (hours - 8) * high`، لأن الساعات الثماني الأولى بالأجرة الأقل دائمًا."
   },
   {
@@ -52,6 +71,16 @@
   {
    "book": "c04-p-q7",
    "reuse": "CL899371-04-Q01",
+   "hidden": [
+    "10\n4.5\n",
+    "5\n9.99\n",
+    "4\n12\n",
+    "11\n8\n",
+    "0\n15\n",
+    "1\n100\n",
+    "30\n1.25\n",
+    "10\n37.5\n"
+   ],
    "explanation": "نحسب السعر الكلي `n * p`، ثم نفحص الشرط الأوسع أولًا `n > 10` (خصم 20% أي الضرب في 0.8)، ثم `else if (n >= 5)` (الضرب في 0.9)، وفي غير ذلك يبقى السعر كما هو."
   },
   {
@@ -78,15 +107,36 @@
   {
    "book": "c04-p-q9",
    "reuse": "CL899371-04-Q02",
+   "hidden": [
+    "30\n",
+    "-8\n",
+    "25\n",
+    "-35\n",
+    "11\n",
+    "2\n",
+    "-100\n",
+    "1\n"
+   ],
    "explanation": "نحسب مرة واحدة متغيرين منطقيين: `bool even = n % 2 == 0` و`bool five = n % 5 == 0`. ثم نفحص الحالة المركّبة `even && five` أولًا، وبعدها كل شرط وحده، و`else` الأخيرة للحالة الباقية."
   },
   {
    "book": "c04-p-q10",
    "version": 2,
-   "check": false,
+   "text": "اكتب برنامجًا يقرأ درجة الحرارة ثم نسبة الرطوبة (عددان صحيحان، كل منهما في سطر)، ويطبع توصية واحدة حسب الجدول. تُفحص صفوف الجدول بالترتيب من الأعلى، و«بين 10 و25» تشمل الحدّين، و«أكثر من» و«أقل من» لا تشملان الحد. ما لا يطابق أي صف (مثل حرارة بين 26 و30) يأخذ توصية «في غير ذلك».",
    "reference": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int temp = int.Parse(Console.ReadLine());\n        int humidity = int.Parse(Console.ReadLine());\n        if (temp < 10)\n            Console.WriteLine(\"البس جاكيت\");\n        else if (temp <= 25 && humidity > 70)\n            Console.WriteLine(\"الجو رطب – لا تنسَ شرب الماء\");\n        else if (temp > 30 && humidity < 40)\n            Console.WriteLine(\"الجو جاف – البس قبعة واحمل معك ماء\");\n        else if (temp > 35 && humidity > 60)\n            Console.WriteLine(\"تحذير من موجة حر – تجنّب التعرض للشمس\");\n        else\n            Console.WriteLine(\"الطقس معتدل – استمتع بيومك\");\n    }\n}\n",
+   "wrong": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int temp = int.Parse(Console.ReadLine());\n        int humidity = int.Parse(Console.ReadLine());\n        if (temp < 10)\n            Console.WriteLine(\"البس جاكيت\");\n        else if (temp <= 25 && humidity >= 70)\n            Console.WriteLine(\"الجو رطب – لا تنسَ شرب الماء\");\n        else if (temp > 30 && humidity < 40)\n            Console.WriteLine(\"الجو جاف – البس قبعة واحمل معك ماء\");\n        else if (temp > 35 && humidity > 60)\n            Console.WriteLine(\"تحذير من موجة حر – تجنّب التعرض للشمس\");\n        else\n            Console.WriteLine(\"الطقس معتدل – استمتع بيومك\");\n    }\n}\n",
    "public": [
     "28\n50\n"
+   ],
+   "hidden": [
+    "25\n70\n",
+    "10\n71\n",
+    "31\n39\n",
+    "36\n61\n",
+    "28\n90\n",
+    "9\n100\n",
+    "30\n30\n",
+    "35\n61\n"
    ],
    "explanation": "نقرأ الحرارة ثم الرطوبة ونفحص صفوف الجدول بالترتيب بسلسلة `if` / `else if`، وكل صف شرطاه مربوطان بـ `&&`. الجدول فيه فجوة (25–30) وصفّان تتداخل حرارتهما (أكثر من 30 وأكثر من 35)، لذلك ترتيب الفحص هو الذي يقرّر، وكل ما لم يطابق صفًا يذهب إلى `else`: الطقس معتدل."
   }

@@ -153,9 +153,10 @@
    }
   },
   "c01-p-q3": {
-   "sha": "04063c2b9528f27d5bf1f43fe1262c1585f57effe20c4c96cfd4446cf86791bd",
+   "sha": "105c3948d04ba37e93be1caaaf8532626303579482b04e0a27ed15c986e62c3f",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -167,19 +168,21 @@
     "49\n"
    ],
    "hidden": [
-    "81\n",
-    "16\n",
-    "0\n",
-    "144\n",
-    "10000\n"
+    "4\n",
+    "169\n",
+    "1\n",
+    "2147395600\n",
+    "625\n",
+    "9\n"
    ],
    "wrong": {
-    "sha": "d83ff50984285a10740336350113e8697593a4faaaec5cfba83cee4c4d8edfb8",
+    "sha": "9380045d2d69b63876b3309556186b7d84276de786a183ce1c7cc5c86d67b6e6",
     "compileExit": 0,
     "fails": [
-     true,
-     true,
      false,
+     true,
+     true,
+     true,
      true,
      true
     ]
@@ -246,9 +249,10 @@
    }
   },
   "c01-p-q6": {
-   "sha": "12854b4321774f189d26f5e8a6200ee3c1278f5afad69d7cc8ee1649b28ef51a",
+   "sha": "5fc88da725f61b60d092b785d83057546e16b1e305633813459a891152d728de",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -260,19 +264,21 @@
     "6\n"
    ],
    "hidden": [
-    "27\n",
-    "1\n",
-    "12\n",
-    "12\n",
-    "7\n"
+    "2\n",
+    "10\n",
+    "18\n",
+    "15\n",
+    "14\n",
+    "3\n"
    ],
    "wrong": {
-    "sha": "1d35039d23a62db9fdfbe19bed843fc17f788a98df32d84afed7dcd7407ee0b5",
+    "sha": "09bedee802a9b825d6d3e0e5c80431b9256811821a32a4c2fecc7687fcda4892",
     "compileExit": 0,
     "fails": [
+     false,
      true,
      false,
-     false,
+     true,
      true,
      true
     ]
@@ -312,9 +318,10 @@
    }
   },
   "c01-p-q8": {
-   "sha": "3622ab5df82ae17b0b5022c329932ecf8d3bb16653b23512635f8442d374bec8",
+   "sha": "fbcc06a9fddb9d6b84d504e94166c580d011e06d16cdfbb9fb7339a17358aeb9",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -326,28 +333,32 @@
     "10\n7\n"
    ],
    "hidden": [
-    "36\n18\n",
-    "1\n0\n",
-    "12\n8\n",
-    "19\n8\n",
-    "8\n6\n"
+    "2\n1\n",
+    "10\n0\n",
+    "18\n11\n",
+    "18\n9\n",
+    "10\n5\n",
+    "32\n16\n"
    ],
    "wrong": {
-    "sha": "22933f9af1a5512fbc1ab671b15cb688253aeb7cc7b39e820e9e167d66a2bf59",
+    "sha": "795de12317edcd4565b1c4170a754adbbb7fb875d281729b6196491452df0b23",
     "compileExit": 0,
     "fails": [
      false,
      true,
      true,
-     true,
-     true
+     false,
+     false,
+     false
     ]
    }
   },
   "c01-p-q9": {
-   "sha": "ee3630d314f1979bd00a1a82d68040283febc4cf4874f4870a58c0f42a2c90dd",
+   "sha": "d9335ac1e11a0845286318b67d36a426af0152a391ae561539aacad1d949006a",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -358,26 +369,31 @@
     "1234\n"
    ],
    "hidden": [
-    "9000\n",
-    "5079\n",
-    "1001\n",
-    "3862\n"
+    "9999\n",
+    "1000\n",
+    "4507\n",
+    "2122\n",
+    "8088\n",
+    "5555\n"
    ],
    "wrong": {
-    "sha": "0515797324e59cea90070efcfba39c9e0109c38fc6d5f0913f8490a3089fad16",
+    "sha": "d9fcb15c53535962dcbcddafc995efc8da448425ae5f2b76dacbb810360abf12",
     "compileExit": 0,
     "fails": [
+     false,
      true,
      true,
      true,
-     true
+     true,
+     false
     ]
    }
   },
   "c02-p-q5": {
-   "sha": "84efa1c2bcab61f30bd22e61690ba7e16ab4779047f2ae99ac90f8328f254e8c",
+   "sha": "939e04ed8572d62237f63dd0baed9ca8db0a0ddee36849bdee2397cd0379ec39",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -389,21 +405,23 @@
     "10\n24\n5\n"
    ],
    "hidden": [
-    "7\n12\n3.5\n",
-    "-3\n-10\n-1.5\n",
-    "0\n0\n0\n",
-    "107\n700\n53.5\n",
-    "18\n81\n9\n"
+    "-10\n21\n-5\n",
+    "1\n0\n0.5\n",
+    "3\n-4\n1.5\n",
+    "-7\n-18\n-3.5\n",
+    "100\n2500\n50\n",
+    "-11\n0\n-5.5\n"
    ],
    "wrong": {
-    "sha": "022401794cdba7a3622665dddabcba0a6a1f9c656375cc489d327b1701e7f66d",
+    "sha": "928c5422b5f30b6df4f4f83a77849385d70259953fdac4129143b1a66f2c2268",
     "compileExit": 0,
     "fails": [
+     false,
+     true,
      true,
      true,
      false,
-     true,
-     false
+     true
     ]
    }
   },
@@ -414,7 +432,7 @@
     0
    ],
    "public": [
-    "9 3 59 23 72\n33\n"
+    "28 54 6 46 55\n37\n"
    ],
    "hidden": []
   },
@@ -488,9 +506,11 @@
    }
   },
   "c03-h-q9": {
-   "sha": "86eca0aef3be5d29fae4dbec5bbf7b8621e8490c46e67806ef0e448361c9baab",
+   "sha": "87eda20ae4a1017ba88530005732c24e5d4927c6efef8325589805c768ce97b2",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -501,15 +521,19 @@
     "5\n6\n12\n"
    ],
    "hidden": [
-    "1.41\n0.5\n3.41\n",
-    "10\n24\n24\n",
-    "3.61\n3\n8.61\n",
-    "7.07\n12.5\n17.07\n"
+    "13\n30\n30\n",
+    "1.3\n0.3\n3\n",
+    "41\n180\n90\n",
+    "25\n84\n56\n",
+    "4.72\n5\n11.22\n",
+    "10.05\n5\n21.05\n"
    ],
    "wrong": {
-    "sha": "0b9af47033ca796aa9d2bd5911387ea8f48b2d7a12843f47b61de0665726337c",
+    "sha": "8070b11c26aaff21e7c43a1ee064405958260c5e586e4ade491e03c4014e8d71",
     "compileExit": 0,
     "fails": [
+     true,
+     true,
      true,
      true,
      true,
@@ -524,14 +548,15 @@
     0
    ],
    "public": [
-    "3 3\nFalse\n"
+    "1 1\nFalse\n"
    ],
    "hidden": []
   },
   "c03-p-q6": {
-   "sha": "deb443e1c7257a401ea4172856d800b5ced42cab5a1fb1f4c5a691768d0d54bf",
+   "sha": "30a0df4a4f58b9149d7f537c059b7ae66751da5bceb6ee489b16c8ce6060ac46",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -543,18 +568,20 @@
     "5\n"
    ],
    "hidden": [
-    "13\n",
-    "1.41\n",
-    "6.5\n",
-    "7.62\n",
-    "17\n"
+    "10\n",
+    "15\n",
+    "2.83\n",
+    "2.5\n",
+    "29\n",
+    "0.5\n"
    ],
    "wrong": {
-    "sha": "d2a50c53eeca8e5c1e55b60e884148e2ae70f7cef717a2747fcc6225d978aafe",
+    "sha": "8e5d9b9f24475e6a587817aa236d7b703d04c47b4a3489b5ba8ebd62e4027e69",
     "compileExit": 0,
     "fails": [
      true,
-     false,
+     true,
+     true,
      true,
      true,
      true
@@ -562,9 +589,12 @@
    }
   },
   "c03-p-q7": {
-   "sha": "091a2b24e8184c013a08d3bf48c2edc8f320da7079bebd505acada3cdbbb4134",
+   "sha": "d312c8b4b56c1d3c10487624f842953312b98690b40348fafaeb4afe639e9a7e",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0,
@@ -576,25 +606,33 @@
    ],
    "hidden": [
     "1.9\n",
-    "1.95\n",
-    "1.6\n",
-    "1.82\n"
+    "1.88\n",
+    "1.93\n",
+    "1.7\n",
+    "1.8\n",
+    "2.01\n",
+    "1.77\n"
    ],
    "wrong": {
-    "sha": "63067017275f772c9de9bed9f9efe358bc77b132a2225aebe4950bbe5f213e09",
+    "sha": "a9180b2ed9ae179c53346424405e08d010b3ee49be082ad55b691817f1866a44",
     "compileExit": 0,
     "fails": [
-     true,
+     false,
      false,
      true,
-     false
+     false,
+     false,
+     false,
+     true
     ]
    }
   },
   "c03-p-q8": {
-   "sha": "663fe40303976e6223794cd328320d10c3d2508719a05849bfa23e89ca9a12e6",
+   "sha": "45a0d3ace7a5dad4dc1a09bf87d27854599f2c50aa2f81963713c9a6cbb45c94",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -605,16 +643,20 @@
     "90\n"
    ],
    "hidden": [
-    "75\n",
+    "100\n",
     "0\n",
-    "99\n",
-    "60\n"
+    "50\n",
+    "70\n",
+    "89\n",
+    "0\n"
    ],
    "wrong": {
-    "sha": "4620223c174b005a8dfe45d26200f5171e60844406ecc7612b8aeb950a261616",
+    "sha": "a97bddb0987c88af7e175cc485f17ddc70152ebdc0c3ecc001474e5faa247e4c",
     "compileExit": 0,
     "fails": [
      false,
+     false,
+     true,
      false,
      true,
      false
@@ -628,14 +670,17 @@
     0
    ],
    "public": [
-    "455\nTrue\n"
+    "810\nFalse\n"
    ],
    "hidden": []
   },
   "c04-h-q11": {
-   "sha": "b250bce4b320695744917a0d3bf6bd2d47be567361f52da738d3c16ea6f822e8",
+   "sha": "c280efd62562f0d02c1f7e1e73333d6fbbe49fcadbbd663acc74a03a35656a4e",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0,
@@ -647,20 +692,26 @@
     "470\n"
    ],
    "hidden": [
-    "320\n",
+    "200\n",
+    "230\n",
+    "0\n",
+    "415\n",
+    "120\n",
+    "25\n",
     "260\n",
-    "275\n",
-    "150\n",
-    "320\n"
+    "370\n"
    ],
    "wrong": {
-    "sha": "c2318d8bc69f2c325797c838d303cb47af7679386767c8ac7da31af7fbb4dfb9",
+    "sha": "0b22ab29ef6da635154c78ef0951901b658462e337e4e31e294aab6730940d11",
     "compileExit": 0,
     "fails": [
      false,
      true,
+     false,
      true,
      false,
+     false,
+     true,
      true
     ]
    }
@@ -705,9 +756,11 @@
    }
   },
   "c04-h-q9": {
-   "sha": "29803b73807abb4eb997f781e87e50ba9117c0d491e323bd11516441574c846d",
+   "sha": "0d41b40d1e777fcd9d56fa6b3779b1d03e2c8de63b8846b0f7b1b24a5587edc2",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -719,18 +772,22 @@
     "5700\n"
    ],
    "hidden": [
-    "4000\n",
+    "4500\n",
     "6500\n",
-    "7250\n",
-    "7315\n",
-    "4500\n"
+    "0\n",
+    "4480\n",
+    "6925\n",
+    "8550\n",
+    "6632.5\n"
    ],
    "wrong": {
-    "sha": "255e45a4c2556afae77265c9b88995083bee83c3b08dc54b621524213595c2a2",
+    "sha": "9fccf7042f11d8dfdd8bb56e5803783c8579976d6965c34eb5dd4411264baa3a",
     "compileExit": 0,
     "fails": [
-     false,
      true,
+     true,
+     false,
+     false,
      true,
      true,
      true
@@ -738,15 +795,46 @@
    }
   },
   "c04-p-q10": {
-   "sha": "5031aaaabcd20bb2c45f3044e772701135ef00578e41882f400caf0d2b6a124a",
+   "sha": "46a4a4c7549450f39bce84125d1c48e943338b4c69ce92bab534db1ca8dde4ba",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     0
    ],
    "public": [
     "الطقس معتدل – استمتع بيومك\n"
    ],
-   "hidden": []
+   "hidden": [
+    "الطقس معتدل – استمتع بيومك\n",
+    "الجو رطب – لا تنسَ شرب الماء\n",
+    "الجو جاف – البس قبعة واحمل معك ماء\n",
+    "تحذير من موجة حر – تجنّب التعرض للشمس\n",
+    "الطقس معتدل – استمتع بيومك\n",
+    "البس جاكيت\n",
+    "الطقس معتدل – استمتع بيومك\n",
+    "الطقس معتدل – استمتع بيومك\n"
+   ],
+   "wrong": {
+    "sha": "a5d39821f5d173c9af35405039e4f406a51179233beeb509a02cab1657d42039",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
   },
   "c04-p-q6": {
    "sha": "d222cc50182e5bc756b90f03b1476ec9bd0ea73dd409be9d8b8ddd4b1c7c2f52",
@@ -782,9 +870,12 @@
    }
   },
   "c04-p-q7": {
-   "sha": "d6f3e8a44a4a1f4f006dde71b4dd6586657c2ae3df0b21e381b6fe99cd397378",
+   "sha": "21f1961df92975cfd6c136b54ce4fd6af35c71902ec98ed0666d953af2c5a122",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0,
@@ -796,21 +887,27 @@
     "96\n"
    ],
    "hidden": [
-    "90\n",
-    "90\n",
+    "40.5\n",
+    "44.96\n",
+    "48\n",
+    "70.4\n",
+    "0\n",
     "100\n",
-    "22\n",
-    "20.79\n"
+    "30\n",
+    "337.5\n"
    ],
    "wrong": {
-    "sha": "89fa4e0679c3e8b99e367a108c4bdf8f5754f3d1945e8c9da73e0b724500ebec",
+    "sha": "b902e495e132dfe4877fc3d23f4d697f2a8b8440c6a7dc2ac71608ef15dd75f4",
     "compileExit": 0,
     "fails": [
      true,
      false,
      false,
      false,
-     false
+     false,
+     false,
+     false,
+     true
     ]
    }
   },
@@ -860,9 +957,11 @@
    }
   },
   "c04-p-q9": {
-   "sha": "d16efd020f7924dcac5bf68b34704f3addde3ab10cb70e37de9fdf6f57102e3b",
+   "sha": "bb34c0a0f55f68f7710c469ffecea451e2eb1ff86804a6461119da1e6fa63774",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -875,30 +974,36 @@
     "Even and divisible by 5\n"
    ],
    "hidden": [
+    "Even and divisible by 5\n",
     "Even but not divisible by 5\n",
     "Divisible by 5 but not even\n",
+    "Divisible by 5 but not even\n",
     "Neither even nor divisible by 5\n",
-    "Even and divisible by 5\n",
+    "Even but not divisible by 5\n",
     "Even and divisible by 5\n",
     "Neither even nor divisible by 5\n"
    ],
    "wrong": {
-    "sha": "7e5be45a6d828be49fb5b87825f86539cdeb5a911cd7ae5750334555021d6ce0",
+    "sha": "7948d04f6395e8448b70f92a03fc59823f7b3ddcff054a443510b2bcb18d56b2",
     "compileExit": 0,
     "fails": [
-     false,
-     false,
-     false,
      true,
+     false,
+     false,
+     false,
+     false,
+     false,
      true,
      false
     ]
    }
   },
   "c05-p-q1": {
-   "sha": "a0e022cbb898c0c11fee33b3e720bb46a67f201f6793a6bd28352872276c109b",
+   "sha": "5d2a110568b5cb5d90fd36dec0996c3639667abfc3661ee40d1d80bd8b83706d",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -908,16 +1013,20 @@
     "Section2\nSection3\nSection5\nSection6\nSection7\nSection8\nSection11\nSection12\nSection13\nSection17\nSection19\nSection20\nSection22\nSection23\nSection24\nSection25\nSection26\nSection35\nSection37\nSection40\nSection41\nSection42\nSection44\n439.5\n"
    ],
    "hidden": [
-    "Section2\nSection3\nSection4\nSection6\nSection10\nSection11\nSection12\nSection14\nSection20\nSection22\nSection24\nSection29\nSection30\nSection31\nSection38\nSection39\nSection42\n445.7\n",
-    "Section1\nSection2\nSection5\nSection6\nSection7\nSection9\nSection10\nSection11\nSection13\nSection16\nSection17\nSection18\nSection19\nSection22\nSection26\nSection31\nSection34\nSection36\nSection41\nSection42\nSection43\n463.8\n",
-    "Section1\nSection3\nSection4\nSection6\nSection8\nSection9\nSection15\nSection18\nSection21\nSection23\nSection28\nSection33\nSection34\nSection35\nSection36\nSection37\nSection41\nSection43\nSection44\n420.8\n"
+    "Section2\nSection5\nSection8\nSection11\nSection12\nSection14\nSection17\nSection20\nSection23\nSection24\nSection26\nSection29\nSection32\nSection35\nSection36\nSection38\nSection41\nSection44\n490.95\n",
+    "440\n",
+    "Road1\nRoad2\nRoad3\nRoad4\nRoad5\nRoad6\nRoad7\nRoad8\nRoad9\nRoad10\nRoad11\nRoad12\nRoad13\nRoad14\nRoad15\nRoad16\nRoad17\nRoad18\nRoad19\nRoad20\nRoad21\nRoad22\nRoad23\nRoad24\nRoad25\nRoad26\nRoad27\nRoad28\nRoad29\nRoad30\nRoad31\nRoad32\nRoad33\nRoad34\nRoad35\nRoad36\nRoad37\nRoad38\nRoad39\nRoad40\nRoad41\nRoad42\nRoad43\nRoad44\n641.5\n",
+    "233.9\n",
+    "Section2\nSection3\nSection6\nSection8\nSection11\nSection14\nSection15\nSection18\nSection20\nSection24\nSection26\nSection27\nSection30\nSection32\nSection35\nSection36\nSection38\nSection39\nSection42\nSection44\n311.9\n"
    ],
    "wrong": {
-    "sha": "a0f4a7170db9fcb796d594425c442e9afe593e75666a5d87c7e6511f4e61f19c",
+    "sha": "45a6ae93029feb1c9a3353ae0ea8e01b13ef7ce3228a61c8c3b32da3ad1303ff",
     "compileExit": 0,
     "fails": [
      true,
      true,
+     false,
+     false,
      true
     ]
    }
@@ -950,9 +1059,11 @@
    }
   },
   "c05-p-q2": {
-   "sha": "d0d1f4b3d7d8e2ec0f6fb9eda7cafd588ae2fe743bffea252da27cc597c0120a",
+   "sha": "78d7c8dce4012628a5b52b0e283de9e6326d7b6326187c40cb703b8727340b08",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -962,14 +1073,18 @@
     "36\n0\n36\n1\n31\n3\n-5\n0\n42\n0\n46\n2\n-7\nindivisible\n30\n0\n-12\nindivisible\n38\nindivisible\n51\n1\n23\n3\n54\n0\n49\nindivisible\n37\nindivisible\n-23\nindivisible\n-4\n0\n46\nindivisible\n33\n1\n22\n2\n4\n-5\n2\n-1\n33\nindivisible\n54\nindivisible\n31\n1\n31\n4\n-17\n-2\n12\n0\n38\n2\n-27\nindivisible\n42\nindivisible\n21\nindivisible\n12\n2\n-22\nindivisible\n57\nindivisible\n-1\n-1\n-17\n-3\n23\n3\n"
    ],
    "hidden": [
-    "33\n0\n63\n0\n59\n3\n-7\n-2\n-25\n-1\n34\n1\n59\n3\n54\n2\n8\n-1\n-34\n-2\n-5\n-5\n18\n0\n15\n1\n-27\n-3\n-5\nindivisible\n39\n3\n62\n2\n-19\nindivisible\n-14\n-5\n-2\nindivisible\n31\n3\n-11\n-1\n-4\n-4\n6\n2\n42\n0\n59\nindivisible\n42\n0\n34\nindivisible\n17\n1\n19\n3\n37\n2\n52\n2\n39\nindivisible\n52\nindivisible\n-3\n0\n19\n3\n63\n3\n59\n2\n",
-    "6\n0\n58\n0\n55\n1\n56\n0\n-1\n0\n-14\nindivisible\n40\n0\n7\nindivisible\n26\n0\n53\n1\n-26\n-2\n-12\nindivisible\n10\n3\n26\n0\n6\n2\n6\n-1\n36\n0\n28\n0\n29\n1\n53\nindivisible\n10\n2\n54\n0\n65\n2\n36\n0\n-6\n-6\n63\n0\n39\n0\n9\n1\n1\n-8\n18\n0\n24\n3\n-1\n3\n10\n0\n-18\n-2\n41\n5\n-4\n0\n2\n0\n63\n3\n",
-    "-21\n-1\n68\n5\n4\n1\n5\n2\n-14\n0\n15\n1\n62\n2\n20\nindivisible\n5\n1\n14\n2\n7\n3\n59\n5\n-10\n0\n43\n1\n-9\nindivisible\n53\nindivisible\n-19\n-3\n13\nindivisible\n-17\n-2\n1\n-4\n17\n1\n22\n2\n-18\nindivisible\n40\n0\n55\n3\n-7\nindivisible\n41\n5\n58\n0\n11\n4\n51\n1\n35\n2\n37\n1\n-17\nindivisible\n-16\n-1\n5\nindivisible\n-26\n0\n22\nindivisible\n66\n3\n"
+    "-18\nindivisible\n-17\nindivisible\n-16\nindivisible\n-15\nindivisible\n-14\nindivisible\n-13\nindivisible\n-12\nindivisible\n-11\nindivisible\n-10\nindivisible\n-9\nindivisible\n-8\nindivisible\n-7\nindivisible\n-6\nindivisible\n-5\nindivisible\n-4\nindivisible\n-3\nindivisible\n-2\nindivisible\n-1\nindivisible\n0\nindivisible\n1\nindivisible\n2\nindivisible\n3\nindivisible\n4\nindivisible\n5\nindivisible\n6\nindivisible\n7\nindivisible\n8\nindivisible\n9\nindivisible\n10\nindivisible\n11\nindivisible\n12\nindivisible\n13\nindivisible\n14\nindivisible\n15\nindivisible\n16\nindivisible\n17\nindivisible\n18\nindivisible\n19\nindivisible\n",
+    "-31\n0\n-22\n0\n-17\n0\n-8\n0\n-3\n0\n6\n0\n11\n0\n20\n0\n25\n0\n-27\n0\n-22\n0\n-13\n0\n-8\n0\n1\n0\n6\n0\n15\n0\n20\n0\n29\n0\n-27\n0\n-18\n0\n-13\n0\n-4\n0\n1\n0\n10\n0\n15\n0\n24\n0\n29\n0\n-23\n0\n-18\n0\n-9\n0\n-4\n0\n5\n0\n10\n0\n19\n0\n24\n0\n-28\n0\n-23\n0\n-14\n0\n",
+    "-10\n-4\n4\n-3\n-10\n-2\n8\n-1\n-10\n0\n7\n1\n-5\n2\n11\n3\n-5\n4\n6\n-4\n-9\n-3\n5\n-2\n-9\n-1\n9\n0\n-9\n1\n8\n2\n-4\n3\n12\n4\n-13\n-4\n7\n-3\n-8\n-2\n6\n-1\n-8\n0\n10\n1\n-8\n2\n9\n3\n-3\n4\n4\n-4\n-12\n-3\n8\n-2\n-7\n-1\n7\n0\n-7\n1\n11\n2\n-7\n3\n10\n4\n-11\n-4\n5\n-3\n",
+    "-45\n0\n-40\n0\n-22\nindivisible\n-1\n-1\n2\n0\n28\n6\n31\n0\n46\n1\n-46\n-1\n-28\nindivisible\n-7\n-7\n-4\n0\n22\n0\n25\n0\n40\n1\n-52\n-2\n-34\nindivisible\n-13\n-5\n-10\n0\n16\n5\n19\n0\n34\n1\n39\n4\n-40\nindivisible\n-19\n-3\n-16\n0\n10\n-1\n13\n0\n28\n1\n33\n3\n-46\nindivisible\n-25\n-1\n-22\n0\n4\n-7\n7\n0\n22\n1\n27\n2\n45\nindivisible\n",
+    "-4\n0\n0\n0\n9\n0\n-6\n0\n21\n0\n16\n0\n6\n0\n0\n0\n-3\n0\n14\n0\n12\n0\n-24\n0\n-9\n0\n0\n0\n7\n0\n8\n0\n-18\n0\n36\n0\n3\n0\n0\n0\n4\n0\n-12\n0\n27\n0\n-12\n0\n-7\n0\n0\n0\n-6\n0\n18\n0\n-9\n0\n28\n0\n-4\n0\n0\n0\n9\n0\n-6\n0\n21\n0\n16\n0\n6\n0\n0\n0\n"
    ],
    "wrong": {
-    "sha": "6f90a4e2d776e23af3b2c417563b942ad1588a15ff36e0f8e7047fb3788e7b7f",
+    "sha": "cdf0c32727e4523fd739f03a249cdd4523e5b3201aa9a324759732d281c1ec0a",
     "compileExit": 0,
     "fails": [
+     false,
+     true,
      true,
      true,
      true
@@ -1007,9 +1122,12 @@
    }
   },
   "c05-p-q4": {
-   "sha": "3fe2cd8775d37e2f7ff716a16765a09d8931b5039a2713607122e5d56cad7bee",
+   "sha": "1275a87490818d4debcab465c15c53645c27b1d1d637c80199a9abf71c55a5df",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0
@@ -1018,22 +1136,30 @@
     "Tech2 BONUS\nTech3 BONUS\nTech5 BONUS\nTech7 BONUS\nTech16 BONUS\nTech17 BONUS\nTech23 BONUS\nTech24 BONUS\nTech25 BONUS\nTech26 BONUS\nTech30 BONUS\nTech38 BONUS\nTech42 BONUS\nTech43 BONUS\nTech47 BONUS\nTech52 BONUS\nTech56 BONUS\nTech58 BONUS\nTech63 BONUS\nTech66 BONUS\nTech68 BONUS\nTech70 BONUS\nTech71 BONUS\nTech76 BONUS\nTech78 BONUS\nTech81 BONUS\nTech84 BONUS\nTech85 BONUS\nTech88 BONUS\nTech95 BONUS\nTech102 BONUS\nTech108 BONUS\nTech110 BONUS\nTech113 BONUS\nTech115 BONUS\nTech121 BONUS\nTech122 BONUS\nTech123 BONUS\nTech130 BONUS\nTech133 BONUS\nTech138 BONUS\nTech143 BONUS\nTech149 BONUS\nTech150 BONUS\nTech151 BONUS\nTech152 BONUS\nTech153 BONUS\nTech157 BONUS\nTech161 BONUS\nTech165 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech176 BONUS\nTech180 BONUS\nTech189 BONUS\nTech190 BONUS\nTech192 BONUS\nTech196 BONUS\nTech200 BONUS\nTech204 BONUS\nTech205 BONUS\nTech207 BONUS\nTech208 BONUS\nTech212 BONUS\nTech216 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech229 BONUS\nTech234 BONUS\nTech239 BONUS\nTech245 BONUS\nTech249 BONUS\nTech251 BONUS\nTech253 BONUS\nTech254 BONUS\nTech257 BONUS\nTech258 BONUS\nTech263 BONUS\nTech267 BONUS\nTech268 BONUS\nTech269 BONUS\nTech270 BONUS\nTech272 BONUS\nTech273 BONUS\nTech275 BONUS\nTech279 BONUS\nTech281 BONUS\nTech283 BONUS\nTech285 BONUS\nTech286 BONUS\n6032\n"
    ],
    "hidden": [
-    "Tech4 BONUS\nTech5 BONUS\nTech14 BONUS\nTech17 BONUS\nTech19 BONUS\nTech21 BONUS\nTech24 BONUS\nTech28 BONUS\nTech30 BONUS\nTech33 BONUS\nTech37 BONUS\nTech44 BONUS\nTech49 BONUS\nTech54 BONUS\nTech55 BONUS\nTech58 BONUS\nTech60 BONUS\nTech61 BONUS\nTech64 BONUS\nTech65 BONUS\nTech69 BONUS\nTech71 BONUS\nTech74 BONUS\nTech77 BONUS\nTech78 BONUS\nTech83 BONUS\nTech86 BONUS\nTech91 BONUS\nTech97 BONUS\nTech106 BONUS\nTech109 BONUS\nTech110 BONUS\nTech113 BONUS\nTech116 BONUS\nTech118 BONUS\nTech119 BONUS\nTech123 BONUS\nTech134 BONUS\nTech135 BONUS\nTech146 BONUS\nTech152 BONUS\nTech153 BONUS\nTech154 BONUS\nTech156 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech169 BONUS\nTech171 BONUS\nTech172 BONUS\nTech179 BONUS\nTech185 BONUS\nTech187 BONUS\nTech190 BONUS\nTech195 BONUS\nTech197 BONUS\nTech199 BONUS\nTech205 BONUS\nTech206 BONUS\nTech209 BONUS\nTech222 BONUS\nTech223 BONUS\nTech227 BONUS\nTech228 BONUS\nTech231 BONUS\nTech237 BONUS\nTech247 BONUS\nTech257 BONUS\nTech264 BONUS\nTech265 BONUS\nTech266 BONUS\n5744\n",
-    "Tech4 BONUS\nTech6 BONUS\nTech7 BONUS\nTech13 BONUS\nTech16 BONUS\nTech17 BONUS\nTech21 BONUS\nTech22 BONUS\nTech25 BONUS\nTech30 BONUS\nTech33 BONUS\nTech36 BONUS\nTech38 BONUS\nTech41 BONUS\nTech43 BONUS\nTech45 BONUS\nTech46 BONUS\nTech47 BONUS\nTech55 BONUS\nTech59 BONUS\nTech61 BONUS\nTech63 BONUS\nTech65 BONUS\nTech72 BONUS\nTech78 BONUS\nTech80 BONUS\nTech85 BONUS\nTech87 BONUS\nTech89 BONUS\nTech92 BONUS\nTech93 BONUS\nTech101 BONUS\nTech105 BONUS\nTech106 BONUS\nTech111 BONUS\nTech114 BONUS\nTech127 BONUS\nTech130 BONUS\nTech132 BONUS\nTech134 BONUS\nTech135 BONUS\nTech140 BONUS\nTech141 BONUS\nTech144 BONUS\nTech153 BONUS\nTech163 BONUS\nTech164 BONUS\nTech168 BONUS\nTech171 BONUS\nTech175 BONUS\nTech176 BONUS\nTech178 BONUS\nTech180 BONUS\nTech181 BONUS\nTech192 BONUS\nTech193 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech200 BONUS\nTech206 BONUS\nTech208 BONUS\nTech209 BONUS\nTech215 BONUS\nTech222 BONUS\nTech223 BONUS\nTech226 BONUS\nTech227 BONUS\nTech233 BONUS\nTech234 BONUS\nTech236 BONUS\nTech241 BONUS\nTech243 BONUS\nTech247 BONUS\nTech248 BONUS\nTech252 BONUS\nTech253 BONUS\nTech260 BONUS\nTech263 BONUS\nTech265 BONUS\nTech268 BONUS\nTech269 BONUS\nTech279 BONUS\nTech281 BONUS\nTech284 BONUS\nTech285 BONUS\n6025\n"
+    "7150\n",
+    "0\n",
+    "Tech3 BONUS\nTech5 BONUS\nTech8 BONUS\nTech10 BONUS\nTech13 BONUS\nTech15 BONUS\nTech18 BONUS\nTech20 BONUS\nTech23 BONUS\nTech25 BONUS\nTech28 BONUS\nTech30 BONUS\nTech33 BONUS\nTech35 BONUS\nTech38 BONUS\nTech40 BONUS\nTech43 BONUS\nTech45 BONUS\nTech48 BONUS\nTech50 BONUS\nTech53 BONUS\nTech55 BONUS\nTech58 BONUS\nTech60 BONUS\nTech63 BONUS\nTech65 BONUS\nTech68 BONUS\nTech70 BONUS\nTech73 BONUS\nTech75 BONUS\nTech78 BONUS\nTech80 BONUS\nTech83 BONUS\nTech85 BONUS\nTech88 BONUS\nTech90 BONUS\nTech93 BONUS\nTech95 BONUS\nTech98 BONUS\nTech100 BONUS\nTech103 BONUS\nTech105 BONUS\nTech108 BONUS\nTech110 BONUS\nTech113 BONUS\nTech115 BONUS\nTech118 BONUS\nTech120 BONUS\nTech123 BONUS\nTech125 BONUS\nTech128 BONUS\nTech130 BONUS\nTech133 BONUS\nTech135 BONUS\nTech138 BONUS\nTech140 BONUS\nTech143 BONUS\nTech145 BONUS\nTech148 BONUS\nTech150 BONUS\nTech153 BONUS\nTech155 BONUS\nTech158 BONUS\nTech160 BONUS\nTech163 BONUS\nTech165 BONUS\nTech168 BONUS\nTech170 BONUS\nTech173 BONUS\nTech175 BONUS\nTech178 BONUS\nTech180 BONUS\nTech183 BONUS\nTech185 BONUS\nTech188 BONUS\nTech190 BONUS\nTech193 BONUS\nTech195 BONUS\nTech198 BONUS\nTech200 BONUS\nTech203 BONUS\nTech205 BONUS\nTech208 BONUS\nTech210 BONUS\nTech213 BONUS\nTech215 BONUS\nTech218 BONUS\nTech220 BONUS\nTech223 BONUS\nTech225 BONUS\nTech228 BONUS\nTech230 BONUS\nTech233 BONUS\nTech235 BONUS\nTech238 BONUS\nTech240 BONUS\nTech243 BONUS\nTech245 BONUS\nTech248 BONUS\nTech250 BONUS\nTech253 BONUS\nTech255 BONUS\nTech258 BONUS\nTech260 BONUS\nTech263 BONUS\nTech265 BONUS\nTech268 BONUS\nTech270 BONUS\nTech273 BONUS\nTech275 BONUS\nTech278 BONUS\nTech280 BONUS\nTech283 BONUS\nTech285 BONUS\n9999\n",
+    "Tech5 BONUS\nTech6 BONUS\nTech7 BONUS\nTech8 BONUS\nTech12 BONUS\nTech13 BONUS\nTech14 BONUS\nTech15 BONUS\nTech20 BONUS\nTech21 BONUS\nTech22 BONUS\nTech27 BONUS\nTech28 BONUS\nTech29 BONUS\nTech30 BONUS\nTech34 BONUS\nTech35 BONUS\nTech36 BONUS\nTech37 BONUS\nTech42 BONUS\nTech43 BONUS\nTech44 BONUS\nTech49 BONUS\nTech50 BONUS\nTech51 BONUS\nTech56 BONUS\nTech57 BONUS\nTech58 BONUS\nTech59 BONUS\nTech63 BONUS\nTech64 BONUS\nTech65 BONUS\nTech66 BONUS\nTech71 BONUS\nTech72 BONUS\nTech73 BONUS\nTech78 BONUS\nTech79 BONUS\nTech80 BONUS\nTech81 BONUS\nTech85 BONUS\nTech86 BONUS\nTech87 BONUS\nTech88 BONUS\nTech93 BONUS\nTech94 BONUS\nTech95 BONUS\nTech100 BONUS\nTech101 BONUS\nTech102 BONUS\nTech107 BONUS\nTech108 BONUS\nTech109 BONUS\nTech110 BONUS\nTech114 BONUS\nTech115 BONUS\nTech116 BONUS\nTech117 BONUS\nTech122 BONUS\nTech123 BONUS\nTech124 BONUS\nTech129 BONUS\nTech130 BONUS\nTech131 BONUS\nTech132 BONUS\nTech136 BONUS\nTech137 BONUS\nTech138 BONUS\nTech139 BONUS\nTech144 BONUS\nTech145 BONUS\nTech146 BONUS\nTech151 BONUS\nTech152 BONUS\nTech153 BONUS\nTech158 BONUS\nTech159 BONUS\nTech160 BONUS\nTech161 BONUS\nTech165 BONUS\nTech166 BONUS\nTech167 BONUS\nTech168 BONUS\nTech173 BONUS\nTech174 BONUS\nTech175 BONUS\nTech180 BONUS\nTech181 BONUS\nTech182 BONUS\nTech183 BONUS\nTech187 BONUS\nTech188 BONUS\nTech189 BONUS\nTech190 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech202 BONUS\nTech203 BONUS\nTech204 BONUS\nTech209 BONUS\nTech210 BONUS\nTech211 BONUS\nTech212 BONUS\nTech216 BONUS\nTech217 BONUS\nTech218 BONUS\nTech219 BONUS\nTech224 BONUS\nTech225 BONUS\nTech226 BONUS\nTech231 BONUS\nTech232 BONUS\nTech233 BONUS\nTech234 BONUS\nTech238 BONUS\nTech239 BONUS\nTech240 BONUS\nTech241 BONUS\nTech246 BONUS\nTech247 BONUS\nTech248 BONUS\nTech253 BONUS\nTech254 BONUS\nTech255 BONUS\nTech260 BONUS\nTech261 BONUS\nTech262 BONUS\nTech263 BONUS\nTech267 BONUS\nTech268 BONUS\nTech269 BONUS\nTech270 BONUS\nTech275 BONUS\nTech276 BONUS\nTech277 BONUS\nTech282 BONUS\nTech283 BONUS\nTech284 BONUS\nTech285 BONUS\n7131\n",
+    "Tech1 BONUS\nTech2 BONUS\nTech3 BONUS\nTech4 BONUS\nTech5 BONUS\nTech6 BONUS\nTech7 BONUS\nTech8 BONUS\nTech9 BONUS\nTech10 BONUS\nTech11 BONUS\nTech12 BONUS\nTech13 BONUS\nTech14 BONUS\nTech15 BONUS\nTech16 BONUS\nTech17 BONUS\nTech18 BONUS\nTech19 BONUS\nTech20 BONUS\nTech21 BONUS\nTech22 BONUS\nTech23 BONUS\nTech24 BONUS\nTech25 BONUS\nTech26 BONUS\nTech27 BONUS\nTech28 BONUS\nTech29 BONUS\nTech30 BONUS\nTech31 BONUS\nTech32 BONUS\nTech33 BONUS\nTech34 BONUS\nTech35 BONUS\nTech36 BONUS\nTech37 BONUS\nTech38 BONUS\nTech39 BONUS\nTech40 BONUS\nTech41 BONUS\nTech42 BONUS\nTech43 BONUS\nTech44 BONUS\nTech45 BONUS\nTech46 BONUS\nTech47 BONUS\nTech48 BONUS\nTech49 BONUS\nTech50 BONUS\nTech51 BONUS\nTech52 BONUS\nTech53 BONUS\nTech54 BONUS\nTech55 BONUS\nTech56 BONUS\nTech57 BONUS\nTech58 BONUS\nTech59 BONUS\nTech60 BONUS\nTech61 BONUS\nTech62 BONUS\nTech63 BONUS\nTech64 BONUS\nTech65 BONUS\nTech66 BONUS\nTech67 BONUS\nTech68 BONUS\nTech69 BONUS\nTech70 BONUS\nTech71 BONUS\nTech72 BONUS\nTech73 BONUS\nTech74 BONUS\nTech75 BONUS\nTech76 BONUS\nTech77 BONUS\nTech78 BONUS\nTech79 BONUS\nTech80 BONUS\nTech81 BONUS\nTech82 BONUS\nTech83 BONUS\nTech84 BONUS\nTech85 BONUS\nTech86 BONUS\nTech87 BONUS\nTech88 BONUS\nTech89 BONUS\nTech90 BONUS\nTech91 BONUS\nTech92 BONUS\nTech93 BONUS\nTech94 BONUS\nTech95 BONUS\nTech96 BONUS\nTech97 BONUS\nTech98 BONUS\nTech99 BONUS\nTech100 BONUS\nTech101 BONUS\nTech102 BONUS\nTech103 BONUS\nTech104 BONUS\nTech105 BONUS\nTech106 BONUS\nTech107 BONUS\nTech108 BONUS\nTech109 BONUS\nTech110 BONUS\nTech111 BONUS\nTech112 BONUS\nTech113 BONUS\nTech114 BONUS\nTech115 BONUS\nTech116 BONUS\nTech117 BONUS\nTech118 BONUS\nTech119 BONUS\nTech120 BONUS\nTech121 BONUS\nTech122 BONUS\nTech123 BONUS\nTech124 BONUS\nTech125 BONUS\nTech126 BONUS\nTech127 BONUS\nTech128 BONUS\nTech129 BONUS\nTech130 BONUS\nTech131 BONUS\nTech132 BONUS\nTech133 BONUS\nTech134 BONUS\nTech135 BONUS\nTech136 BONUS\nTech137 BONUS\nTech138 BONUS\nTech139 BONUS\nTech140 BONUS\nTech141 BONUS\nTech142 BONUS\nTech143 BONUS\nTech144 BONUS\nTech145 BONUS\nTech146 BONUS\nTech147 BONUS\nTech148 BONUS\nTech149 BONUS\nTech150 BONUS\nTech151 BONUS\nTech152 BONUS\nTech153 BONUS\nTech154 BONUS\nTech155 BONUS\nTech156 BONUS\nTech157 BONUS\nTech158 BONUS\nTech159 BONUS\nTech160 BONUS\nTech161 BONUS\nTech162 BONUS\nTech163 BONUS\nTech164 BONUS\nTech165 BONUS\nTech166 BONUS\nTech167 BONUS\nTech168 BONUS\nTech169 BONUS\nTech170 BONUS\nTech171 BONUS\nTech172 BONUS\nTech173 BONUS\nTech174 BONUS\nTech175 BONUS\nTech176 BONUS\nTech177 BONUS\nTech178 BONUS\nTech179 BONUS\nTech180 BONUS\nTech181 BONUS\nTech182 BONUS\nTech183 BONUS\nTech184 BONUS\nTech185 BONUS\nTech186 BONUS\nTech187 BONUS\nTech188 BONUS\nTech189 BONUS\nTech190 BONUS\nTech191 BONUS\nTech192 BONUS\nTech193 BONUS\nTech194 BONUS\nTech195 BONUS\nTech196 BONUS\nTech197 BONUS\nTech198 BONUS\nTech199 BONUS\nTech200 BONUS\nTech201 BONUS\nTech202 BONUS\nTech203 BONUS\nTech204 BONUS\nTech205 BONUS\nTech206 BONUS\nTech207 BONUS\nTech208 BONUS\nTech209 BONUS\nTech210 BONUS\nTech211 BONUS\nTech212 BONUS\nTech213 BONUS\nTech214 BONUS\nTech215 BONUS\nTech216 BONUS\nTech217 BONUS\nTech218 BONUS\nTech219 BONUS\nTech220 BONUS\nTech221 BONUS\nTech222 BONUS\nTech223 BONUS\nTech224 BONUS\nTech225 BONUS\nTech226 BONUS\nTech227 BONUS\nTech228 BONUS\nTech229 BONUS\nTech230 BONUS\nTech231 BONUS\nTech232 BONUS\nTech233 BONUS\nTech234 BONUS\nTech235 BONUS\nTech236 BONUS\nTech237 BONUS\nTech238 BONUS\nTech239 BONUS\nTech240 BONUS\nTech241 BONUS\nTech242 BONUS\nTech243 BONUS\nTech244 BONUS\nTech245 BONUS\nTech246 BONUS\nTech247 BONUS\nTech248 BONUS\nTech249 BONUS\nTech250 BONUS\nTech251 BONUS\nTech252 BONUS\nTech253 BONUS\nTech254 BONUS\nTech255 BONUS\nTech256 BONUS\nTech257 BONUS\nTech258 BONUS\nTech259 BONUS\nTech260 BONUS\nTech261 BONUS\nTech262 BONUS\nTech263 BONUS\nTech264 BONUS\nTech265 BONUS\nTech266 BONUS\nTech267 BONUS\nTech268 BONUS\nTech269 BONUS\nTech270 BONUS\nTech271 BONUS\nTech272 BONUS\nTech273 BONUS\nTech274 BONUS\nTech275 BONUS\nTech276 BONUS\nTech277 BONUS\nTech278 BONUS\nTech279 BONUS\nTech280 BONUS\nTech281 BONUS\nTech282 BONUS\nTech283 BONUS\nTech284 BONUS\nTech285 BONUS\nTech286 BONUS\n7436\n"
    ],
    "wrong": {
-    "sha": "83f6ddaf9e2d82ee534daf076657c8ecb039e257021d9ccf389771efd9e28371",
+    "sha": "eaf9316bdf30309a72bf6b3f77e718eea8ad0953297663ecb48e58c2d0b574eb",
     "compileExit": 0,
     "fails": [
      true,
-     true
+     false,
+     true,
+     true,
+     false
     ]
    }
   },
   "c05-p-q5": {
-   "sha": "062b45a815c2589a914f369538d1f4385ebdc6b282d7224780b7ec3cfdfdb656",
+   "sha": "075ecd5c067122d3c046ea32106c618a28e6b5ae12ca77b145274030f390d5bb",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1043,17 +1169,21 @@
     "Student1 3 99\nA\nStudent2 3 95\nStudent3 4 60\nStudent4 4 88\n0\n"
    ],
    "hidden": [
-    "Student1 3 96\nA\nStudent2 4 100\nA\nStudent3 4 99\nA\nStudent4 3 60\nStudent5 3 74\nStudent6 5 60\nStudent7 5 74\nStudent8 3 95\nStudent9 3 99\nA\nStudent10 4 100\nA\nStudent11 4 99\nA\nStudent12 3 74\n2\n",
-    "Student1 4 96\nA\nStudent2 5 99\nA\nStudent3 4 74\nStudent4 5 99\nA\nStudent5 5 88\nStudent6 5 95\nStudent7 5 99\nA\nStudent8 3 95\nStudent9 5 74\nStudent10 4 88\nStudent11 3 74\nStudent12 5 96\nA\nStudent13 3 74\nStudent14 3 74\nStudent15 4 100\nA\nStudent16 5 60\nStudent17 5 100\nA\nStudent18 5 95\nStudent19 4 88\nStudent20 3 74\nStudent21 3 88\nStudent22 4 88\nStudent23 3 74\nStudent24 3 60\nStudent25 5 100\nA\nStudent26 5 96\nA\nStudent27 4 95\nStudent28 5 99\nA\nStudent29 5 99\nA\nStudent30 5 99\nA\n15\n",
-    "Student1 5 60\n1\n"
+    "Student1 4 95\n0\n",
+    "Student1 5 94\nStudent2 5 95\nStudent3 3 96\nA\nStudent4 4 100\nA\nStudent5 5 0\nStudent6 5 95\n4\n",
+    "Student1 3 95\nStudent2 4 96\nA\nStudent3 5 70\nStudent4 3 100\nA\nStudent5 4 94\nStudent6 5 85\nStudent7 3 0\nStudent8 4 99\nA\nStudent9 5 95\nStudent10 3 96\nA\nStudent11 4 70\nStudent12 5 100\nA\nStudent13 3 94\nStudent14 4 85\nStudent15 5 0\nStudent16 3 99\nA\nStudent17 4 95\nStudent18 5 96\nA\nStudent19 3 70\nStudent20 4 100\nA\nStudent21 5 94\nStudent22 3 85\nStudent23 4 0\nStudent24 5 99\nA\nStudent25 3 95\nStudent26 4 96\nA\nStudent27 5 70\nStudent28 3 100\nA\nStudent29 4 94\nStudent30 5 85\nStudent31 3 0\nStudent32 4 99\nA\nStudent33 5 95\nStudent34 3 96\nA\nStudent35 4 70\nStudent36 5 100\nA\nStudent37 3 94\nStudent38 4 85\nStudent39 5 0\nStudent40 3 99\nA\n13\n",
+    "Student1 5 97\nA\nStudent2 5 97\nA\nStudent3 5 97\nA\n3\n",
+    "Student1 3 90\nStudent2 5 91\nStudent3 4 92\nStudent4 3 93\nStudent5 5 94\nStudent6 4 95\nStudent7 3 96\nA\nStudent8 5 97\nA\nStudent9 4 98\nA\n3\n"
    ],
    "wrong": {
-    "sha": "03467819cb0682cf3476f6a5a7f91851f17919b94811b0285cb87f92c517043a",
+    "sha": "cc24523c5a3127adea64435f7c7622f5964e50115cb03117bc7fd8e0fe4bacb5",
     "compileExit": 0,
     "fails": [
      true,
      true,
-     false
+     true,
+     false,
+     true
     ]
    }
   },
@@ -1178,9 +1308,10 @@
    }
   },
   "c06-p-q1": {
-   "sha": "a2ea08dca09b78c14748b24c7e082ee93f46e4c9a367ed88591c3f7f7fce8810",
+   "sha": "de8265d53de61c50fdd7347ac90793c86d65880a05341e5b2257132e7a5a27e0",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -1191,26 +1322,30 @@
     "6\n3\n5\n2\n"
    ],
    "hidden": [
-    "12\n19\n12\n19\n16\n19\n21\n9\n4\n",
-    "17\n11\n11\n17\n8\n18\n12\n15\n20\n9\n23\n16\n10\n19\n16\n3\n",
-    "9\n0\n",
-    "0\n"
+    "3\n1\n",
+    "27\n2\n15\n3\n",
+    "9\n12\n6\n16\n2\n",
+    "18\n15\n12\n9\n14\n14\n11\n11\n18\n7\n3\n",
+    "2\n11\n12\n4\n14\n15\n7\n17\n18\n10\n12\n12\n13\n14\n15\n16\n17\n18\n19\n11\n13\n22\n14\n15\n25\n9\n10\n3\n12\n13\n11\n"
    ],
    "wrong": {
-    "sha": "5b2b5fb03cb49ce4261df8a48f58ce4c0a978b4da36858e0cdbcccb685224c89",
+    "sha": "b9d3f866ed4b8ea4644345582f240c041f47d8cc821311ee283d636adbe299d8",
     "compileExit": 0,
     "fails": [
+     false,
+     false,
      true,
      true,
-     true,
-     false
+     true
     ]
    }
   },
   "c06-p-q2": {
-   "sha": "4107555e064c2b888aec36b1af7c4b3d3c3ed8761406d4af645a5c2fdcb9f1ed",
+   "sha": "cb5763e79f3f516ea3a48090b8d96b7c42e3c1aba6263cc3325b5714666c8da7",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0
@@ -1219,22 +1354,28 @@
     "94\n89\n91\n87\n90\n52\n89\n93\n99\n97\n97\n99\n89\n91\n89\n98\n95\n99\n91\n98\n71\n91\n94\n97\n96\n67\n95\n92\n99\n"
    ],
    "hidden": [
-    "95\n82\n86\n86\n93\n80\n99\n94\n91\n53\n99\n94\n97\n77\n81\n99\n97\n76\n63\n71\n81\n91\n85\n94\n91\n66\n96\n88\n99\n",
-    "98\n74\n76\n94\n95\n86\n91\n74\n91\n83\n98\n96\n92\n79\n97\n92\n86\n78\n90\n98\n99\n83\n94\n98\n99\n94\n81\n91\n99\n"
+    "10\n13\n16\n19\n22\n25\n28\n31\n34\n37\n40\n43\n46\n49\n52\n55\n58\n61\n64\n67\n70\n73\n76\n79\n82\n85\n88\n91\n91\n",
+    "100\n69\n68\n67\n66\n65\n64\n63\n62\n61\n60\n59\n58\n57\n56\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n100\n",
+    "0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n",
+    "0\n40\n80\n97\n91\n99\n1\n41\n81\n98\n92\n100\n2\n42\n82\n99\n93\n87\n3\n43\n83\n100\n94\n88\n4\n44\n84\n78\n100\n"
    ],
    "wrong": {
-    "sha": "d42bbd549e601dbfb570ebe9012f93bd8a769b7e2db64aea421a8b28f4f93f46",
+    "sha": "39c51241670503e4bb185d7ab22eda91357fc3db9f8d751548f5d2f6e87ae5d8",
     "compileExit": 0,
     "fails": [
+     false,
      true,
+     false,
      true
     ]
    }
   },
   "c06-p-q3": {
-   "sha": "4d4627b27b3b33a88851976785eb4902c968a97b00e96da7ad1f4d1aa1be6094",
+   "sha": "5604f3ce33ab46636c4ceb890c628b735e8f4671ebc0f092dcf0017f56360239",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1244,14 +1385,18 @@
     "97 2\n97 2\n100 1\n88 2\n92 1\n100 2\n97 2\n95 2\n97 2\n95 3\n92 1\n92 3\n88 1\n95 1\n92 2\n92 2\n100 1\n88 3\n100 1\n88 2\n88 2\n97 3\n100 1\n100 1\n92 1\n100 3\n100 2\n88 3\n100 12\n"
    ],
    "hidden": [
-    "100 1\n95 1\n92 2\n95 1\n100 2\n92 1\n92 2\n92 1\n95 3\n100 1\n95 2\n88 2\n97 2\n95 2\n95 3\n100 2\n100 2\n88 2\n95 3\n100 2\n97 1\n97 2\n100 3\n92 3\n97 2\n100 3\n95 2\n95 3\n100 16\n",
-    "97 1\n95 3\n92 2\n92 2\n100 1\n97 1\n100 2\n95 2\n88 2\n97 2\n88 3\n88 1\n95 1\n97 2\n97 2\n88 2\n92 2\n97 1\n95 2\n100 1\n95 2\n100 3\n100 1\n97 3\n100 2\n88 2\n95 1\n95 2\n100 10\n",
-    "97 3\n92 1\n97 1\n88 1\n92 2\n95 1\n88 1\n95 3\n97 2\n88 3\n100 2\n88 3\n95 1\n95 3\n95 3\n97 3\n97 3\n95 2\n92 2\n97 3\n95 1\n100 1\n100 1\n95 2\n95 1\n88 2\n95 1\n97 1\n100 4\n"
+    "60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n99 3\n58 1\n60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n59 1\n58 1\n60 1\n99 3\n",
+    "100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 2\n100 1\n98 2\n98 2\n100 21\n",
+    "0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 2\n0 56\n",
+    "77 1\n95 1\n99 1\n94 1\n98 1\n95 1\n90 1\n94 1\n98 1\n93 1\n97 1\n85 1\n96 1\n93 1\n95 1\n92 1\n96 1\n98 1\n95 1\n99 1\n87 1\n98 1\n93 1\n97 1\n99 1\n82 1\n93 1\n97 1\n99 3\n",
+    "88 1\n88 1\n91 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n88 1\n91 2\n91 3\n"
    ],
    "wrong": {
-    "sha": "175942f605541f7628e71a0306576363d736003922259a001b953d9b561a732d",
+    "sha": "f9363cba7a617e01b856b229b41f037865a2fbc78f03d7ff6c787bec84525f15",
     "compileExit": 0,
     "fails": [
+     false,
+     true,
      true,
      true,
      true
@@ -1289,9 +1434,11 @@
    }
   },
   "c06-p-q5": {
-   "sha": "0cf3a0d4f7eb17c5fbb48d2fe8d12781a22c2838a0e126632173893d8449068c",
+   "sha": "17129eead049883f4444389cfed4a04bba9ddb46d07a2bb8d171c5f3ca30857a",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1301,24 +1448,29 @@
     "20\n32.5\n10\n62.5\n3\n20.83\n"
    ],
    "hidden": [
-    "7.5\n100\n150\n132.5\n115\n505\n5\n101\n",
-    "32.5\n32.5\n1\n32.5\n",
-    "42.5\n22.5\n20\n50\n27.5\n50\n55\n105\n72.5\n445\n9\n49.44\n"
+    "25\n25\n1\n25\n",
+    "0\n12.5\n12.5\n2\n6.25\n",
+    "100\n0.5\n33.25\n133.75\n3\n44.58\n",
+    "12.5\n55.5\n100.75\n168.75\n3\n56.25\n",
+    "5\n17.5\n42.5\n45\n55\n60\n72.5\n97.5\n100\n110\n605\n10\n60.5\n"
    ],
    "wrong": {
-    "sha": "342f48b0fe9e51eaab4399d7cb9f8972417f388bc6376cd1a0a5b8f4c8c20eca",
+    "sha": "b6462afbb549133eb618d78b9c7786e0ab41d9532aff2c751706acec05b0e394",
     "compileExit": 0,
     "fails": [
+     false,
      true,
+     false,
      true,
      true
     ]
    }
   },
   "c07-p-q1": {
-   "sha": "ea14af9defa07a75ddeed5cc5b98575bd0fca8e23265f27e10bd0cbd264b2baf",
+   "sha": "f3ce78e661f2475ae89e9b6bed35f1383e62d533f0db3d5678e0606a8393860f",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -1329,17 +1481,19 @@
     "100\n"
    ],
    "hidden": [
-    "50\n",
-    "144.5\n",
-    "150\n",
-    "99.75\n"
+    "75\n",
+    "82\n",
+    "350\n",
+    "27.25\n",
+    "5\n"
    ],
    "wrong": {
-    "sha": "2f28a887a131ade35437fee92c16f7385616428a40d31496f457a47fd4ed7f0a",
+    "sha": "442b22e72a48aa7bf767ae8a690348af310d0af0f3a498c2c1b0b542b934f13b",
     "compileExit": 0,
     "fails": [
      true,
      true,
+     false,
      true,
      true
     ]
@@ -1352,14 +1506,15 @@
     0
    ],
    "public": [
-    "566\n799\n211\n875\n424\n425\n544\n203\n779\n646\n"
+    "543\n465\n455\n221\n465\n747\n556\n667\n200\n542\n"
    ],
    "hidden": []
   },
   "c07-p-q2": {
-   "sha": "242703283720491333ae4dc2ef6fa01f679322fb72abf4bd6b5010b05b736a87",
+   "sha": "d7676eeb163f8b4f71a7e5ba01086d66ba1f833a73cb1d96eec6eb00c3ed3e66",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -1376,15 +1531,17 @@
     "True\n",
     "False\n",
     "False\n",
-    "True\n",
+    "False\n",
+    "False\n",
     "False\n"
    ],
    "wrong": {
-    "sha": "5d06911ed517f743ca9fee90a2812c76c638faaea37689298f623cf44741d96e",
+    "sha": "1926d26d6a56830ad2d46f7500a4febf8e0412946ca1f1ef138ba2c3fdff1be9",
     "compileExit": 0,
     "fails": [
      true,
      true,
+     false,
      false,
      false,
      false,
@@ -1453,9 +1610,11 @@
    }
   },
   "c07-p-q5": {
-   "sha": "d52a036ce2fa663f539b02652752e18ef2c08c99bd255848a0bc86612f8b6eff",
+   "sha": "18071c04e404db449bee16c5715a36da13391cca1c7c4f63f51c038b2e053e99",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1467,21 +1626,25 @@
     "80\n"
    ],
    "hidden": [
-    "90\n",
-    "80\n",
-    "40\n",
+    "60\n",
     "110\n",
-    "90\n"
+    "70\n",
+    "30\n",
+    "90\n",
+    "100\n",
+    "30\n"
    ],
    "wrong": {
-    "sha": "d3c1fa739ec138bcb3be07c1167e65ef33cb0312dc70feda58b12a1efbbef5ba",
+    "sha": "28ae4d4e58fabae02f12f5ce560b110818f31197c79b97944dbca8276db87793",
     "compileExit": 0,
     "fails": [
      true,
      false,
      false,
      false,
-     false
+     false,
+     false,
+     true
     ]
    }
   },
@@ -1516,9 +1679,11 @@
    }
   },
   "c07-p-q7": {
-   "sha": "5fca034ef65a5db3f88ceffb359c0d487a8fbaa942d276978a253ca1671f4216",
+   "sha": "1476600fa06846e656e4f1ac500dfac72274a8f2b02fae2a8fbd6f19123984aa",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1529,19 +1694,23 @@
     "2\n"
    ],
    "hidden": [
-    "2\n",
-    "3\n",
     "0\n",
+    "0\n",
+    "2\n",
+    "1\n",
+    "3\n",
     "1\n"
    ],
    "wrong": {
-    "sha": "e4084b6aa6c53579578b90ae5467e44d7a0567c8171f7cc14960ed084603a473",
+    "sha": "88b450741773e59b3c7877b4a256d8855a38482dbdddb0123bafbb406808e917",
     "compileExit": 0,
     "fails": [
      true,
      false,
      true,
-     true
+     true,
+     false,
+     false
     ]
    }
   },
@@ -1609,9 +1778,11 @@
    }
   },
   "c08-p-q1": {
-   "sha": "26d12aa047b42214aa7314d307ff513f41a5bbeead8322ce118d894411c6c50a",
+   "sha": "bd12a0c303bec93b9b52a025ef160f24a1c8e9bae21b212d90a0c551d6211970",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1623,28 +1794,35 @@
     "A2B4C1D1\n"
    ],
    "hidden": [
-    "X3Y1Z2\n",
-    "A1B1A1B1\n",
-    "Q1\n",
-    "a12\n",
-    "Z2Y2Z2\n"
+    "a1b1c1d1e1\n",
+    "a1A1a1A1\n",
+    "M30\n",
+    "a1b2a1\n",
+    "H1e1l2o1\n",
+    "z5y5z5\n",
+    "k1\n"
    ],
    "wrong": {
-    "sha": "5abc357d25c923c29857462dd86829b458299decd81179d6f58c923f9b2ad514",
+    "sha": "dab4d22214f5cffbe178139cd257b3a1bbd00ad2fa564a03a14d24ed2a6f0e42",
     "compileExit": 0,
     "fails": [
      false,
      true,
      false,
+     true,
      false,
-     true
+     true,
+     false
     ]
    }
   },
   "c08-p-q2": {
-   "sha": "1acc7341679b0b9d9e6ddabdb2ac1ebbc28d2ca2e0247b0f1c8c96350422951b",
+   "sha": "0cbd983c9ec9518613f1819286eb773b642e7d93a9120edcc7eced664a4eb05c",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0,
@@ -1655,37 +1833,70 @@
     "accd\n"
    ],
    "hidden": [
-    "cuccle coc\n",
-    "no letters here\n",
     "ccc\n",
-    "accAcC\n"
+    "cig crown cear\n",
+    "xyz 123\n",
+    "c\n",
+    "c\n",
+    "Acca cAcc\n",
+    "cac Cac CAc\n"
    ],
    "wrong": {
-    "sha": "a0256c296e7f4a793735b5de7727e3c1405e166f94cdce6b186792e051f3aab0",
+    "sha": "36321df85d177c2eeff0940fb948f252b330dac9b0d8badef844d410f4e7b89e",
     "compileExit": 0,
     "fails": [
+     false,
      true,
      false,
+     false,
+     true,
      true,
      true
     ]
    }
   },
   "c08-p-q3": {
-   "sha": "9b43753c46ab8f9617e49b4c0aadfdec01c7cbff6096fe85d0b714d4c14081d3",
+   "sha": "80c8317965b119b52284c5f82b74bfc3bde8402d78c0c353cd70e74fc71bd0a6",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
     0
    ],
    "public": [
     "7.8\n"
    ],
-   "hidden": []
+   "hidden": [
+    "-12\n",
+    "-8\n",
+    "2.25\n",
+    "0.75\n",
+    "-3\n",
+    "0\n"
+   ],
+   "wrong": {
+    "sha": "12bcc69a053122c7dd72642bfa81e194195a68ec102cbed6564aac236f40da9e",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     false,
+     true,
+     false
+    ]
+   }
   },
   "c08-p-q4": {
-   "sha": "d5de6a6395928ba3ed6b7d1fe0ebf5c080673ab379323415e4e5899ef2f3fed4",
+   "sha": "2462d040755c7da8ada42b531982df04d2c32291a456d844ba7f8b78cece9c58",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1696,15 +1907,19 @@
     "uryyb\n"
    ],
    "hidden": [
-    "hello\n",
-    "gur dhvpx oebja sbk\n",
-    "nop klm\n",
-    "abcdefghijklm\n"
+    "nopqrstuvwxyz\n",
+    "mroen\n",
+    "z a\n",
+    "cebtenzzvat vf sha\n",
+    "whzcf bire gur ynml qbt\n",
+    "l\n"
    ],
    "wrong": {
-    "sha": "9e61535babb31c6419e9bb03d8c369eab16102f4ea7437c5a32ff98398639de6",
+    "sha": "2ed46a460a4e7c8856bf0840dede69c2c515a99cd1c759a2789420fb8addff46",
     "compileExit": 0,
     "fails": [
+     false,
+     true,
      true,
      true,
      true,
@@ -1754,9 +1969,11 @@
    "hidden": []
   },
   "c09-p-q3": {
-   "sha": "5facf4c7083d226a0915ac44427663fd59a3ac6090db365ece76592c761a4d93",
+   "sha": "d07d1a2941883b8644df6b6e7e0fecb7edf6dec20ff517b7debe7a963ae376e1",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1766,24 +1983,31 @@
     "7\n"
    ],
    "hidden": [
+    "12\n",
+    "1\n",
     "3\n",
     "12\n",
-    "1\n"
+    "6\n"
    ],
    "wrong": {
-    "sha": "e5205bfb942720bc2f0f3e0654df4ad14e3dad2caabdfc6c24f2f422b7ad45f0",
+    "sha": "06914f48f72e967f31d63a3b244e27457547643aa0b46ab0676ebb3acbd9c03f",
     "compileExit": 0,
     "fails": [
      true,
+     true,
+     false,
      true,
      true
     ]
    }
   },
   "c09-p-q4": {
-   "sha": "5f842feb8fc77deb05e5512cd26e01da42673810fc74741713d9107dba48787e",
+   "sha": "3f27269c26529a5447bc648df4119ac17a2ac7dc3ed13b39b3d28b8f405e0c17",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
     0,
     0,
     0
@@ -1792,14 +2016,20 @@
     "1\n78\n"
    ],
    "hidden": [
-    "1\n78\n",
-    "1\n78\n"
+    "78\n1\n",
+    "40\n40\n",
+    "5\n63\n",
+    "33\n33\n",
+    "20\n21\n"
    ],
    "wrong": {
-    "sha": "222b854b31265068741adf77576cb94bb0dced7eb39878a54fe3a3f65533a1fc",
+    "sha": "87ef8aa679c99a84e32676b8aedfd904d6226842d03a36f429fc75d350adceb7",
     "compileExit": 0,
     "fails": [
      true,
+     false,
+     true,
+     false,
      true
     ]
    }
@@ -1838,9 +2068,10 @@
    }
   },
   "c09-p-q6": {
-   "sha": "874638cb22d286d02c58b2c7b282aa198a0001496e4f052c0bc4ccf8d2481895",
+   "sha": "7e7aafcadaa8c8dc677fe887a63ab5cd7a9564f900fd7bce316d10a7c0f5e8c9",
    "compileExit": 0,
    "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -1852,28 +2083,32 @@
     "8\n"
    ],
    "hidden": [
-    "4\n",
+    "-4\n",
     "-1\n",
-    "9\n",
-    "-1\n",
+    "0\n",
+    "10\n",
+    "8\n",
     "-1\n"
    ],
    "wrong": {
-    "sha": "5ce0470d177f702093b08e719f438b2149566244fbb6a7002abe92ce8fc073c2",
+    "sha": "9224b52ebc159995e9a22b174fa6a601bf34e6ab4078e7172794fead8e60db50",
     "compileExit": 0,
     "fails": [
      true,
+     false,
+     false,
      true,
      true,
-     true,
-     true
+     false
     ]
    }
   },
   "c10-p-q1": {
-   "sha": "29cde232d54cb2872fe1d68288b2d28aa58f61b952ac9b29cebaeea7aeab8782",
+   "sha": "f8361faebc32f64b31e53d46c2c0406ea5d4ed19949b066a934eeef69867dcc0",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1885,36 +2120,30 @@
    ],
    "hidden": [
     "0\n",
+    "0\n",
     "1\n",
-    "9\n",
-    "1\n"
+    "1\n",
+    "1\n",
+    "0\n"
    ],
    "wrong": {
-    "sha": "b4e3dacf9041db92ba20b567242b5d417f398f1888b1dd4d997b1873f95b29b4",
+    "sha": "bd0c121c8a74c2792ad0cf22d9ebffe01fb8cc03f6ace88d84249c83b32b99e4",
     "compileExit": 0,
     "fails": [
      false,
+     false,
+     true,
      true,
      false,
-     true
+     false
     ]
    }
   },
   "c10-p-q2": {
-   "sha": "958f81730059ffed17654118e534448d5cd438763485c2faa3af73713860af16",
+   "sha": "5b12fb377cfacd83c2c8613deeed956816cfd1215302966bed7156a037dee141",
    "compileExit": 0,
    "exitCodes": [
-    0
-   ],
-   "public": [
-    "1\n"
-   ],
-   "hidden": []
-  },
-  "c10-p-q3": {
-   "sha": "f41716af385739f637b49f4b8a919d8afa6003770f7a1c9636dc69801c9352f7",
-   "compileExit": 0,
-   "exitCodes": [
+    0,
     0,
     0,
     0,
@@ -1925,26 +2154,63 @@
     "1\n"
    ],
    "hidden": [
+    "0\n",
+    "4\n",
+    "0\n",
     "2\n",
-    "2\n",
-    "1\n",
-    "3\n"
+    "1\n"
    ],
    "wrong": {
-    "sha": "cdd448aed695948d89c7987c1e1cf85e5d7ae37c5425898448494ffc57164378",
+    "sha": "f878bba36fe7411353d7e5436d2537cf4f908f324433625286e3939b1eeadae1",
     "compileExit": 0,
     "fails": [
      true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  "c10-p-q3": {
+   "sha": "18d77dba1e1ce36608990711edffc5e031e8a141c51ee849b9104339c3ef5008",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "1\n"
+   ],
+   "hidden": [
+    "1\n",
+    "3\n",
+    "3\n",
+    "4\n",
+    "0\n"
+   ],
+   "wrong": {
+    "sha": "1d850cb002406f341222ff5d92664569ba0ae08dfad986265f1e38303d43b283",
+    "compileExit": 0,
+    "fails": [
      true,
      false,
-     true
+     true,
+     true,
+     false
     ]
    }
   },
   "c10-p-q4": {
-   "sha": "9afd8fbfc637a4e2208aa5581659cec89cf11060c677dd96e532cdcd534a1dd3",
+   "sha": "808ca817dc67bed78c913fd708a8c4eaf5c511342849a1ffc3263eefe9f864e6",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -1960,17 +2226,21 @@
     "no\n",
     "yes\n",
     "no\n",
+    "yes\n",
+    "no\n",
     "no\n"
    ],
    "wrong": {
-    "sha": "4681e2a44102c1a3aa2d8a2d57faba2fbef778200d2377ae77e3567dae0974fd",
+    "sha": "14abac0ea4fe2b8e7143294c91a74f45df34f4593b6e019917b69b814042aba8",
     "compileExit": 0,
     "fails": [
+     false,
+     false,
      false,
      true,
      false,
      false,
-     false
+     true
     ]
    }
   },
@@ -2038,9 +2308,11 @@
    }
   },
   "c11-h-q2": {
-   "sha": "164253b54f75cee74d22688492517976198222f7bce622fd05f68d45cc4b2e82",
+   "sha": "9ed03b8654a67b091e118e485fbab4f081cd22cc39b8de68f44c4a0aeafa6eec",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -2051,26 +2323,32 @@
     "-1\n93.5\n1\n"
    ],
    "hidden": [
-    "1\n88\n1\n",
-    "-1\n100\n-1\n",
+    "1\n77\n1\n",
     "0\n100\n1\n",
-    "0\n100\n1\n"
+    "1\n100\n1\n",
+    "-1\n55\n-1\n",
+    "0\n0\n0\n",
+    "-1\n97.35\n1\n"
    ],
    "wrong": {
-    "sha": "340ad980ff66b6acf7242fec54872ffc68d13c8a5fa0c9619c0d08f639e5b2e6",
+    "sha": "1b612580cebb44f8e206c7580f96bbaacf15053bb5401fe50a41810d072ebd7b",
     "compileExit": 0,
     "fails": [
      true,
      true,
      true,
-     true
+     true,
+     false,
+     false
     ]
    }
   },
   "c11-h-q3": {
-   "sha": "7f8eb6298e3a47fcf2ecde5b95df9899b31a6ecd833ae036f27b44efe2ba4e12",
+   "sha": "999b1fc07747505da09dec65c1747e040b4f8e95f13a2c0fd89bc2243e9baf32",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
     0,
     0,
     0,
@@ -2081,32 +2359,58 @@
     "14\nTrue\nFalse\n"
    ],
    "hidden": [
-    "10\nFalse\nFalse\n",
-    "11\nTrue\nFalse\n",
-    "12\nFalse\nFalse\n",
-    "9\nTrue\nFalse\n"
+    "20\nFalse\nFalse\n",
+    "5\nFalse\nFalse\n",
+    "22\nFalse\nFalse\n",
+    "18\nTrue\nFalse\n",
+    "13\nFalse\nFalse\n",
+    "70\nFalse\nFalse\n"
    ],
    "wrong": {
-    "sha": "4f2c1c276c7f79f666c93be109fc1ce38a703a030913f9d154282962ef31ecfe",
+    "sha": "e01009675ad795f7056bfca6f4970dd8dfdb096899da16a29c8a594b016414ca",
     "compileExit": 0,
     "fails": [
+     true,
+     false,
+     false,
+     false,
+     true,
+     true
+    ]
+   }
+  },
+  "c11-h-q4": {
+   "sha": "3fecff96353f48bc501188df33120f2389f52b48e6fb7f591cafbd3634a8180c",
+   "compileExit": 0,
+   "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "public": [
+    "2\n1 2 2\n"
+   ],
+   "hidden": [
+    "1\n0 2 0\n",
+    "-1\n0 0 2\n",
+    "1\n1 1 1\n",
+    "-1\n1 0 0\n",
+    "0\n1 1 1\n"
+   ],
+   "wrong": {
+    "sha": "316b247049c16b8d8ec19939ec707b315664c43d45c7dec68d13031938056389",
+    "compileExit": 0,
+    "fails": [
+     true,
      true,
      false,
      true,
      false
     ]
    }
-  },
-  "c11-h-q4": {
-   "sha": "8d7a49b7a9caf2c1bca260b7b4ff8d8a3b32ab3767c0db48872c01e42c14863e",
-   "compileExit": 0,
-   "exitCodes": [
-    0
-   ],
-   "public": [
-    "2\n1 2 2\n"
-   ],
-   "hidden": []
   },
   "c11-h-q5": {
    "sha": "95cbdeafe68b22be3ce99adb926a77c419ab972143a2a660503f912c90e7082c",
@@ -2142,15 +2446,34 @@
    }
   },
   "c11-p-q1": {
-   "sha": "69601a7b7ae9a75520d154f6f6debe5fa039eea585cd63dcc60efedffff93591",
+   "sha": "6d13a73b4c48b7873d6adcd4e73ee48d421741ffe803ae8b1c465d4846b51c16",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
+    0,
     0
    ],
    "public": [
     "True\nFalse\n1600\nRobo 1300\nTiko 700\nMax 2200\n"
    ],
-   "hidden": []
+   "hidden": [
+    "True\nTrue\n600\nA 800\nB 300\nC 100\n",
+    "250\nSolo 50\n",
+    "False\nFalse\n133.16666666666666\nX -200\nY 0\nZ -0.5\n",
+    "False\nTrue\n866.8333333333334\nP 1000.5\nQ 600\nR 400\n"
+   ],
+   "wrong": {
+    "sha": "882798d9bc4e626a06efcd19592ec77f12d831b620f53bc00bfec85e9bb9eb5f",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true
+    ]
+   }
   },
   "c11-p-q2": {
    "sha": "da8a8828ee639eddf22083d400a65344cf780bab7acdcd4f22b115027d85c693",
@@ -2216,15 +2539,34 @@
    }
   },
   "c11-p-q4": {
-   "sha": "0e2c3d40f0385d65d593bb17c9ad2dc1b9f0e7b0e82431e786f46ef548250a6b",
+   "sha": "d886da2d41a1cf79dc5fe5b4579beb424f31077e6866892beba93831877989fe",
    "compileExit": 0,
    "exitCodes": [
+    0,
+    0,
+    0,
+    0,
     0
    ],
    "public": [
     "True\nTrue\nTrue\nTrue\n9/3 Poetry\n10/3 Space\n11/3 Robots\n1/5 Health\n"
    ],
-   "hidden": []
+   "hidden": [
+    "True\nTrue\nTrue\nTrue\n8/3 D\n9/3 B\n10/3 A\n11/3 C\n",
+    "True\nTrue\nTrue\nTrue\n1/1 First\n2/1 Second\n30/12 Before\n31/12 Last\n",
+    "True\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nFalse\n1/2 S1\n2/2 S2\n3/2 S3\n4/2 S4\n5/2 S5\n6/2 S6\n7/2 S7\n8/2 S8\n9/2 S9\n10/2 S10\n11/2 S11\n12/2 S12\n13/2 S13\n14/2 S14\n15/2 S15\n16/2 S16\n17/2 S17\n18/2 S18\n19/2 S19\n20/2 S20\n21/2 S21\n22/2 S22\n23/2 S23\n24/2 S24\n25/2 S25\n26/2 S26\n27/2 S27\n28/2 S28\n29/2 S29\n30/2 S30\n31/2 S31\n",
+    "True\nTrue\nTrue\nTrue\n4/6 Tie\n5/6 One\n6/6 Mid\n7/6 Two\n"
+   ],
+   "wrong": {
+    "sha": "20c42afb7c7612edebb25f195ba180eca3c969666642234610a386afc4e612d5",
+    "compileExit": 0,
+    "fails": [
+     true,
+     false,
+     false,
+     true
+    ]
+   }
   },
   "c11-p-q5": {
    "sha": "6e0491c40bf9f29c74f070906e3c1cb49f32f799065caf8a9d26a3330b05a453",

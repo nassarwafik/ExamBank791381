@@ -4,18 +4,35 @@
   {
    "book": "c08-p-q1",
    "reuse": "CL899371-08-Q01",
+   "hidden": [
+    "abcde\n",
+    "aAaA\n",
+    "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMM\n",
+    "abba\n",
+    "Hello\n",
+    "zzzzzyyyyyzzzzz\n",
+    "k\n"
+   ],
    "explanation": "نمر على النص ونزيد العداد ما دام الحرف الحالي يساوي الحرف الذي قبله `str[i] == str[i - 1]`. عندما يتغير الحرف أو ينتهي النص نضيف إلى الناتج الحرف السابق ثم عدده، ونعيد العداد إلى 1."
   },
   {
    "book": "c08-p-q2",
    "reuse": "CL899371-08-Q02",
+   "hidden": [
+    "bbb\n",
+    "Big Brown Bear\n",
+    "xyz 123\n",
+    "b\n",
+    "B\n",
+    "AbBa bAbB\n",
+    "cab Cab CAB\n"
+   ],
    "explanation": "نبني نصًا جديدًا حرفًا بعد حرف: إذا كان الحرف `'b'` أو `'B'` نضيف `'c'`، وإلا نضيف الحرف نفسه. النص الأصلي لا يتغير لأن النصوص في C# لا تُعدَّل، بل نبني نصًا جديدًا ونعيده."
   },
   {
    "book": "c08-p-q3",
    "version": 3,
-   "check": false,
-   "text": "اكتب جسم العملية CalculateExpression. الدالة Main مقفلة: تقرأ سطرًا فيه التعبير (مثل 7.5/2.5، دون مسافات) وتطبع ما تعيده عمليتك.",
+   "text": "اكتب جسم العملية CalculateExpression. الدالة Main مقفلة: تقرأ سطرًا فيه التعبير (مثل 7.5/2.5، دون مسافات) وتطبع ما تعيده عمليتك. العددان عشريان (double) والعملية واحدة من + - * /. قد يكون العدد الأول سالبًا (مثل -3*4)، والعدد الثاني غير سالب، ولا قسمة على صفر.",
    "template": [
     {
      "kind": "locked",
@@ -34,14 +51,33 @@
    "referenceGaps": {
     "body": "        int pos = 1;\n        while (expr[pos] != '+' && expr[pos] != '-' && expr[pos] != '*' && expr[pos] != '/')\n            pos++;\n        double a = double.Parse(expr.Substring(0, pos));\n        double b = double.Parse(expr.Substring(pos + 1));\n        char op = expr[pos];\n        if (op == '+')\n            return a + b;\n        else if (op == '-')\n            return a - b;\n        else if (op == '*')\n            return a * b;\n        else\n            return a / b;\n"
    },
+   "wrongGaps": {
+    "body": "        int pos = 0;\n        while (expr[pos] != '+' && expr[pos] != '-' && expr[pos] != '*' && expr[pos] != '/')\n            pos++;\n        double a = double.Parse(expr.Substring(0, pos));\n        double b = double.Parse(expr.Substring(pos + 1));\n        char op = expr[pos];\n        if (op == '+')\n            return a + b;\n        else if (op == '-')\n            return a - b;\n        else if (op == '*')\n            return a * b;\n        else\n            return a / b;\n"
+   },
    "public": [
     "5.5+2.3\n"
+   ],
+   "hidden": [
+    "-3*4\n",
+    "12-20\n",
+    "9/4\n",
+    "0.5+0.25\n",
+    "-7.5/2.5\n",
+    "7*0\n"
    ],
    "explanation": "نبحث عن موقع رمز العملية بحلقة `while` تبدأ من الموقع 1، ثم نقطع العددين بـ `Substring` ونحوّلهما بـ `double.Parse`. جملة `if-else` على الرمز تختار العملية الحسابية التي نعيد ناتجها."
   },
   {
    "book": "c08-p-q4",
    "reuse": "CL899371-08-Q03",
+   "hidden": [
+    "abcdefghijklm\n",
+    "zebra\n",
+    "m n\n",
+    "programming is fun\n",
+    "jumps over the lazy dog\n",
+    "y\n"
+   ],
    "explanation": "لكل حرف صغير نحسب موقعه في الأبجدية `ch - 'a'`، ونضيف 13 ونأخذ باقي القسمة على 26 كي نعود إلى a بعد z، ثم نرجعه حرفًا بـ `(char)(... + 'a')`. الفراغ وأي رمز آخر نضيفه كما هو."
   }
  ]

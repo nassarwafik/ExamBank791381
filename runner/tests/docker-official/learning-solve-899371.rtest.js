@@ -112,3 +112,66 @@ test("end to end through the API: passed for a reference, failed for a wrong pro
   assert.match(ce.message, /\(6,\d+\): error CS1002/, "the compiler names the learner's line 6");
   assert.equal(orphans(), "", "no container left behind");
 });
+
+// 899371 enrichment P18 (decision D4-b) — the same checks through the REAL gateway on loopback and the API's own REMOTE provider:
+// ONE signed POST /v1/check per check (compiled once, a fresh sandbox per input) and no /v1/execute; the same verdicts as the per-input
+// path; a gateway that predates the route (its sandbox has no suite runner → 404) is driven one input at a time, with the same answer.
+test("D4-b: through the real gateway, one check request per «افحص حلي», the same verdicts; an older gateway falls back", async () => {
+  const crypto = require("node:crypto");
+  const { createGatewayServer } = require("../../gateway/server.js");
+  const { resolveCodingExecutionProvider } = require("../../../api/src/lib/coding/execution-provider.js");
+  const a = await loadAuthored();
+  const KEY = crypto.randomBytes(32).toString("base64url");
+  const events = [];
+  const logger = { info: m => events.push(JSON.parse(m).event), warn: m => events.push(JSON.parse(m).event), error: () => {} };
+  const sb = createDockerSandbox();
+  const start = async sandbox => { const g = createGatewayServer({ key: KEY, sandbox, maxConcurrency: 2, logger }); await new Promise(r => g.listen(0, "127.0.0.1", r)); return g; };
+  const viaGateway = (g, extra = {}) => resolveCodingExecutionProvider({ env: { CODING_RUNNER_URL: "http://127.0.0.1:" + g.address().port, CODING_RUNNER_HMAC_KEY: KEY }, now: Date.now, ...extra });
+  const checkWith = async (provider, id, answer) => {
+    const s = INDEX.questions[id];
+    const ctx = createMemoryContainer({
+      "platform/users/u1.json": { userId: "u1", role: "student", active: true, archived: false, authVersion: 1, classId: "cA" },
+      "platform/classes/cA.json": { classId: "cA", name: "صف", active: true, status: "active", studentIds: ["u1"], learningMaterials: [{ courseId: CID, visibleModuleIds: [s.moduleId] }] },
+    });
+    const t0 = Date.now();
+    const r = await handler({ method: "POST", url: "https://x/api/learning-solve/" + CID + "/check", headers: { get: () => null }, params: { courseId: CID, action: "check" }, text: async () => JSON.stringify({ questionId: id, ...answer }) },
+      { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: {} } }), requireStudentAuth: () => ({ ok: true, user: { sub: "u1", sv: 1, role: "student" } }), container: ctx.container, getContainer: () => ctx.container, codingExecutionProvider: provider });
+    assert.equal(r.status, 200, id + " " + JSON.stringify(r.jsonBody));
+    return { check: r.jsonBody.check, ms: Date.now() - t0 };
+  };
+  const g = await start(sb);
+  try {
+    const picked = [ids_ => ids_.find(id => INDEX.questions[id].check && INDEX.questions[id].version === 2), ids_ => ids_.find(id => INDEX.questions[id].check && INDEX.questions[id].version === 3), () => "c11-p-q4"].map(f => f(ids));
+    for (const id of picked) {
+      const s = INDEX.questions[id];
+      events.length = 0;
+      const ok = await checkWith(viaGateway(g), id, answerOf(s, a[id], "reference"));
+      assert.deepEqual([ok.check.outcome, ok.check.passed], ["passed", s.node.publicTests.length + s.hidden.length], id + " reference");
+      assert.deepEqual([events.filter(e => e === "runner.check.completed").length, events.filter(e => e === "runner.execute.completed").length], [1, 0], id + ": ONE check request, no practice run");
+      const bad = await checkWith(viaGateway(g), id, answerOf(s, a[id], "wrong"));
+      assert.equal(bad.check.outcome, "failed", id + " known-wrong");
+    }
+    // the largest checked C# question, both paths, the same answer; how long each took (the 45 s Static Web Apps ceiling)
+    const big = ids_ => ids_.filter(id => INDEX.questions[id].check).sort((x, y) => (INDEX.questions[y].hidden.length + INDEX.questions[y].node.publicTests.length) - (INDEX.questions[x].hidden.length + INDEX.questions[x].node.publicTests.length))[0];
+    const id = big(ids), s = INDEX.questions[id];
+    const remote = viaGateway(g);
+    const perInput = { capabilities: () => remote.capabilities(), execute: req => remote.execute(req) };   // no checkSuite: D4-a
+    const one = await checkWith(remote, id, answerOf(s, a[id], "reference"));
+    const each = await checkWith(perInput, id, answerOf(s, a[id], "reference"));
+    assert.deepEqual(one.check, each.check, id + ": the same verdict on both paths");
+    console.log(`  ${id}: ${s.node.publicTests.length + s.hidden.length} inputs — one check ${one.ms} ms, one run per input ${each.ms} ms`);
+    assert.ok(one.ms < each.ms, "compiled once is faster than compiling per input");
+  } finally { g.close(); }
+  // a gateway that predates the route: its sandbox has no suite runner → 404 → the API runs one input at a time
+  const oldSandbox = { ...sb };
+  delete oldSandbox.runOfficialSuite;
+  const old = await start(oldSandbox);
+  try {
+    const id = ids.find(x => INDEX.questions[x].check && INDEX.questions[x].version === 2), s = INDEX.questions[id];
+    events.length = 0;
+    const ok = await checkWith(viaGateway(old), id, answerOf(s, a[id], "reference"));
+    assert.equal(ok.check.outcome, "passed");
+    assert.equal(events.filter(e => e === "runner.execute.completed").length, s.node.publicTests.length + s.hidden.length, "one practice run per input");
+  } finally { old.close(); }
+  assert.equal(orphans(), "", "no container left behind");
+});

@@ -5,9 +5,15 @@ never execute student code; they forward an authenticated, minimal request to th
 hardened Docker runtime sandbox per execution** (Java / C# are compiled beforehand in a separate compile sandbox) and returns a
 bounded result. V1 supports exactly **Python, Java and C#**.
 
-Two paths share the images, the hardened sandbox profile and the request-signing key:
+The paths share the images, the hardened sandbox profile and the request-signing key:
 
 - **Practice** (Phase 17B) — `POST /v1/execute`: one run with the student's own stdin; the result is shown to the student only.
+- **Practice check** (899371 enrichment P18, decision D4-b) — `POST /v1/check`: ONE program on a few inputs (`requestId`, language,
+  source, `cases: [{ token, stdin }]` ≤ 12, limits), synchronous: compiled ONCE, a fresh runtime container per input, one input at a
+  time, raw evidence `{ suite: { compile?, cases } }` back at once. It holds exactly ONE practice slot (the `/v1/execute` budget:
+  full → `503 RUNNER_BUSY`, never queued) and never an official container slot, so practice can never delay official grading. A
+  client that hangs up aborts the remaining inputs. SmartAssess («حلّ وافحص» in the Reader) compares; the gateway never does. An
+  older gateway answers `404`, and SmartAssess then sends one `/v1/execute` per input (D4-a).
 - **Official grading** (Phase 17C) — `POST /v1/official-grading-jobs`: SmartAssess sends an opaque job (`jobId`, language,
   source, `cases: [{ token, stdin }]`, limits — never expected outputs, weights, titles, marks or any identity). The gateway
   answers `202`, compiles ONCE (Java / C#), runs every hidden case in a FRESH runtime container with no in-container grading
@@ -39,7 +45,7 @@ SmartAssess API (after the attempt commit) ──signed POST /v1/official-gradin
 | path | what |
 |---|---|
 | `gateway/main.js` | entry point (`npm start`); reads `RUNNER_*` settings, sweeps leftover sandboxes, listens |
-| `gateway/server.js` | HTTP surface: `GET /healthz`, signed `GET /v1/capabilities`, signed `POST /v1/execute`, signed `POST /v1/official-grading-jobs` (17C) |
+| `gateway/server.js` | HTTP surface: `GET /healthz`, signed `GET /v1/capabilities`, signed `POST /v1/execute`, signed `POST /v1/check` (P18), signed `POST /v1/official-grading-jobs` (17C) |
 | `gateway/official.js` | 17C: strict official job validation, payload-hash dedupe (`JOB_ID_CONFLICT`), bounded queue (`RUNNER_BUSY`), server-owned job wall, result cache |
 | `gateway/callback.js` | 17C: fixed callback destination from the host config, SA-CODING-CALLBACK-1 signing, raw-evidence-only body, no redirects; 17D-B2: one classified attempt per call (`attempt()`) |
 | `gateway/journal.js` | 17D-B2: the DURABLE journal of official jobs (`RUNNER_JOURNAL_DIR`, file per job, atomic rename + fsync, lock, bounded scans, quarantine, fail-closed on ephemeral storage) |

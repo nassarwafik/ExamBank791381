@@ -6,6 +6,8 @@
 // api/tests/coding-guards-17b.test.js). A provider is reached ONLY through this interface:
 //     provider.capabilities() → { available, languages: [{ key, languageVersion, ... }] }   (may be async)
 //     provider.execute(request: CodingExecutionRequest) → CodeExecutionResult-like (normalised here)
+//     provider.checkSuite(check) → { suite } | { unsupported: true }   (OPTIONAL; 899371 enrichment P18, decision D4-b — one program on
+//                                   a few inputs, compiled once; a provider without it is driven one execute() per input instead)
 // Phase 17B adds the REMOTE provider: a signed HTTPS client of the Coding Runner Gateway (runner/), which runs each request in
 // ONE disposable, hardened Docker sandbox. It is enabled only by a complete, well-formed configuration (runner-config.js);
 // otherwise resolveCodingExecutionProvider() returns the UNAVAILABLE provider — a normal state, never a local fallback, never a
@@ -34,6 +36,11 @@ const EXECUTE_TIMEOUT_MS = 60000;              // > the gateway's hard wall (com
 const CAPABILITIES_TTL_MS = 30000, CAPABILITIES_FAILURE_TTL_MS = 5000;
 const CAPABILITIES_MAX_BYTES = 16 * 1024;
 const executeResponseCap = outputBytes => 12 * outputBytes + 64 * 1024;     // stdout + stderr ≤ outputBytes each, JSON-escaped
+// 899371 P18 — the synchronous practice check: under the Static Web Apps API ceiling (45 s, docs/enterprise-coding-assessment-17f-a1.md
+// P1); a gateway without the route answers 404 and is not asked again for a while (the caller then runs one input at a time)
+const CHECK_TIMEOUT_MS = 40000;
+const CHECK_UNSUPPORTED_TTL_MS = 5 * 60 * 1000;
+const checkResponseCap = (outputBytes, cases) => cases * (12 * outputBytes + 16 * 1024) + 64 * 1024;
 
 async function readBounded(res, maxBytes) {
   if (!res.body || typeof res.body.getReader !== "function") {
@@ -58,7 +65,9 @@ function createRemoteExecutionProvider(config, deps = {}) {
   const now = deps.now || Date.now;
   const executeTimeoutMs = deps.executeTimeoutMs || EXECUTE_TIMEOUT_MS;
   const capabilitiesTimeoutMs = deps.capabilitiesTimeoutMs || CAPABILITIES_TIMEOUT_MS;
+  const checkTimeoutMs = deps.checkTimeoutMs || CHECK_TIMEOUT_MS;
   let cache = null;
+  let checkUnsupportedUntil = 0;
 
   async function call(method, path, bodyText, requestId, timeoutMs, maxBytes) {
     const body = Buffer.from(bodyText, "utf8");
@@ -92,6 +101,20 @@ function createRemoteExecutionProvider(config, deps = {}) {
       if (r.status === 422 && code === "LANGUAGE_UNAVAILABLE") throw codeError("LANGUAGE_UNAVAILABLE");
       if (r.status !== 200 || !r.json || r.json.ok !== true || !r.json.result || typeof r.json.result !== "object") throw codeError("EXECUTION_FAILED");
       return r.json.result;
+    },
+    async checkSuite(check) {
+      if (now() < checkUnsupportedUntil) return { unsupported: true };
+      let r;
+      try { r = await call("POST", "/v1/check", JSON.stringify(check), check.requestId, checkTimeoutMs, checkResponseCap(check.limits.outputBytes, check.cases.length)); }
+      catch { throw codeError("EXECUTION_FAILED"); }
+      const code = r.json && typeof r.json.code === "string" ? r.json.code : "";
+      // a gateway that predates the route (the live Runner until the owner deploys P18) answers 404 NOT_FOUND, and the VM's reverse
+      // proxy a BARE 404 for a path it does not forward: either way the route is not there — the caller falls back, no harm done
+      if (r.status === 404) { checkUnsupportedUntil = now() + CHECK_UNSUPPORTED_TTL_MS; return { unsupported: true }; }
+      if (r.status === 503 && code === "RUNNER_BUSY") throw codeError("RUNNER_BUSY");
+      if (r.status === 422 && code === "LANGUAGE_UNAVAILABLE") throw codeError("LANGUAGE_UNAVAILABLE");
+      if (r.status !== 200 || !r.json || r.json.ok !== true || !r.json.suite || typeof r.json.suite !== "object") throw codeError("EXECUTION_FAILED");
+      return { suite: r.json.suite };
     }
   };
 }
@@ -99,7 +122,7 @@ function createRemoteExecutionProvider(config, deps = {}) {
 // One remote provider per configuration per Function host, so the short capability cache is shared across invocations.
 const remoteProviders = new Map();
 function remoteProviderFor(config, deps) {
-  if (deps.fetch || deps.now || deps.executeTimeoutMs || deps.capabilitiesTimeoutMs) return createRemoteExecutionProvider(config, deps);
+  if (deps.fetch || deps.now || deps.executeTimeoutMs || deps.capabilitiesTimeoutMs || deps.checkTimeoutMs) return createRemoteExecutionProvider(config, deps);
   const id = config.baseUrl + "\n" + crypto.createHash("sha256").update(config.key).digest("hex");
   if (!remoteProviders.has(id)) { if (remoteProviders.size > 8) remoteProviders.clear(); remoteProviders.set(id, createRemoteExecutionProvider(config, {})); }
   return remoteProviders.get(id);
@@ -160,4 +183,54 @@ async function runCodingExecution(provider, input) {
   return { ok: true, result: normalizeExecutionResult(raw, req.limits.outputBytes) };
 }
 
-module.exports = { UNAVAILABLE_PROVIDER, resolveCodingExecutionProvider, createRemoteExecutionProvider, codingCapabilities, loadCodingCapabilities, runCodingExecution };
+const CHECK_TOKEN = i => "c" + String(i + 1).padStart(2, "0");
+const COMPILE_STATUSES = ["compiled", "compile-error"];
+const CASE_STATUSES = ["success", "runtime-error", "timeout", "output-limit", "internal-error"];
+
+/**
+ * 899371 P18 (decision D4-b) — runs ONE program on several inputs through the provider's synchronous check, when it has one.
+ *   → { ok: true, unsupported: true }   the provider (or the live gateway) has no check: the caller runs one input at a time;
+ *   → { ok: true, compileError: { stderr } }   the program does not compile (nothing ran);
+ *   → { ok: true, results: [CodeExecutionResult-like, …] }   one normalised result per input, in order;
+ *   → { ok: false, status, code }   no verdict at all (busy, unavailable, or evidence that is not exactly what was asked).
+ * The request is built from the same allow-list as one practice run; the reply is checked case by case (count, tokens, statuses,
+ * bounded output) — anything else is EXECUTION_FAILED, never a partial result.
+ */
+async function runCodingCheck(provider, { requestId, language, languageVersion, source, inputs, limits }) {
+  const caps = await loadCodingCapabilities(provider);
+  if (!caps.available) return { ok: false, status: 503, code: "EXECUTION_UNAVAILABLE" };
+  if (typeof provider.checkSuite !== "function") return { ok: true, unsupported: true };
+  const built = buildExecutionRequest({ requestId, language, languageVersion, source, stdin: "", limits });
+  if (!built.ok || !Array.isArray(inputs) || inputs.length < 1 || inputs.length > 12 || inputs.some(x => typeof x !== "string")) return { ok: false, status: 400, code: "REQUEST_INVALID" };
+  const req = built.request;
+  if (!caps.languages.some(l => l.key === req.language && l.languageVersion === req.languageVersion)) return { ok: false, status: 422, code: "LANGUAGE_UNAVAILABLE" };
+  const check = { requestId: req.requestId, language: req.language, languageVersion: req.languageVersion, source: req.source, cases: inputs.map((stdin, i) => ({ token: CHECK_TOKEN(i), stdin })), limits: req.limits };
+  let r;
+  try { r = await provider.checkSuite(check); }
+  catch (e) {
+    const code = e && e.code;
+    if (code === "RUNNER_BUSY") return { ok: false, status: 503, code: "RUNNER_BUSY" };
+    if (code === "LANGUAGE_UNAVAILABLE") return { ok: false, status: 422, code: "LANGUAGE_UNAVAILABLE" };
+    if (code === "EXECUTION_UNAVAILABLE") return { ok: false, status: 503, code: "EXECUTION_UNAVAILABLE" };
+    return { ok: false, status: 502, code: "EXECUTION_FAILED" };
+  }
+  if (r && r.unsupported === true) return { ok: true, unsupported: true };
+  const failed = { ok: false, status: 502, code: "EXECUTION_FAILED" };
+  const suite = r && r.suite;
+  if (!suite || typeof suite !== "object" || !Array.isArray(suite.cases)) return failed;
+  if (suite.compile !== undefined && (!suite.compile || !COMPILE_STATUSES.includes(suite.compile.status))) return failed;
+  if (suite.compile && suite.compile.status === "compile-error") {
+    if (suite.cases.length !== 0) return failed;
+    return { ok: true, compileError: { stderr: normalizeExecutionResult({ status: "compile-error", stdout: "", stderr: typeof suite.compile.stderr === "string" ? suite.compile.stderr : "" }, req.limits.outputBytes).stderr } };
+  }
+  if (suite.cases.length !== inputs.length) return failed;
+  const results = [];
+  for (let i = 0; i < inputs.length; i++) {
+    const c = suite.cases[i];
+    if (!c || typeof c !== "object" || c.token !== CHECK_TOKEN(i) || !CASE_STATUSES.includes(c.status) || typeof c.stdout !== "string" || typeof c.stderr !== "string") return failed;
+    results.push(normalizeExecutionResult({ status: c.status, stdout: c.stdout, stderr: c.stderr, ...(Number.isInteger(c.exitCode) ? { exitCode: c.exitCode } : {}), ...(Number.isFinite(c.durationMs) ? { durationMs: c.durationMs } : {}) }, req.limits.outputBytes));
+  }
+  return { ok: true, results };
+}
+
+module.exports = { UNAVAILABLE_PROVIDER, resolveCodingExecutionProvider, createRemoteExecutionProvider, codingCapabilities, loadCodingCapabilities, runCodingExecution, runCodingCheck };

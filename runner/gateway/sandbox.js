@@ -309,8 +309,10 @@ function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = pr
   }
 
   /** Runs one validated official job: compile ONCE (compiled toolchains), then a fresh runtime sandbox per case (bounded case
-   *  concurrency + global slots). Resolves with raw evidence { compile?, cases[] }; throws on any infrastructure failure. */
-  async function runOfficialSuite(entry, job, { signal, caseConcurrency = 2 } = {}) {
+   *  concurrency + global slots). Resolves with raw evidence { compile?, cases[] }; throws on any infrastructure failure.
+   *  899371 P18: a PRACTICE check passes its own `slotPool` (it already holds one practice slot of the gateway) so it never draws on
+   *  — or waits for — the official container slots. */
+  async function runOfficialSuite(entry, job, { signal, caseConcurrency = 2, slotPool = slots } = {}) {
     if (!isRegistered(entry)) throw new Error("unregistered language entry");
     const limits = { timeMs: job.limits.timeMs, memoryMb: job.limits.memoryMb, outputBytes: job.limits.outputBytes, compileTimeoutMs: entry.compileTimeoutMs };
     const ensureLive = () => { if (signal && signal.aborted) throw new Error("official suite aborted"); };
@@ -333,7 +335,7 @@ function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = pr
         const i = next++;
         ensureLive();
         const c = job.cases[i];
-        const release = await slots.acquire(signal);
+        const release = await slotPool.acquire(signal);
         let r;
         try { r = await officialRuntimeOnce(entry, { ...setupBase, limits }, Buffer.from(c.stdin, "utf8"), limits, signal); }
         finally { release(); }
@@ -352,4 +354,4 @@ function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = pr
   return { run, availableLanguages, sweep, runOfficialSuite };
 }
 
-module.exports = { buildDockerRunArgs, createDockerSandbox, boundResult, validateArtifact, resultCapBytes, encodeOfficialFrame, OFFICIAL_EXEC_MARKER, OFFICIAL_STDERR_CAPTURE_BYTES, LABEL };
+module.exports = { createSlots, buildDockerRunArgs, createDockerSandbox, boundResult, validateArtifact, resultCapBytes, encodeOfficialFrame, OFFICIAL_EXEC_MARKER, OFFICIAL_STDERR_CAPTURE_BYTES, LABEL };
