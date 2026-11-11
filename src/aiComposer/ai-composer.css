@@ -19,7 +19,17 @@
 .ai-composer-stages li{counter-increment:stage;font-size:12px;padding:4px 10px;border-radius:var(--eb-pill,999px);border:1px solid var(--eb-border,var(--eb-content-grid));color:var(--eb-text-secondary,var(--eb-content-text))}
 .ai-composer-stages li::before{content:counter(stage) ". "}
 .ai-composer-stages li.is-current{border-color:var(--eb-primary,var(--eb-content-accent));color:var(--eb-primary,var(--eb-content-accent));font-weight:800}
-.ai-composer-stages li.is-current::after{content:" ←"}
+/* Phase 21Z — step states: ✓ done (text mark, not colour alone), a spinner on the running step, an elapsed clock and a sections bar. */
+.ai-composer-stages li{display:inline-flex;align-items:center;gap:4px}
+.ai-composer-stages li.is-done{border-color:var(--eb-success,var(--eb-content-accent));color:var(--eb-text,var(--eb-content-text))}
+.ai-composer-step-mark{font-weight:800;color:var(--eb-success,var(--eb-content-accent))}
+.ai-composer-spinner{inline-size:10px;block-size:10px;border-radius:50%;border:2px solid currentColor;border-block-start-color:transparent;flex:0 0 auto;animation:ai-composer-spin .8s linear infinite}
+@keyframes ai-composer-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.ai-composer-spinner{animation:none;border-block-start-color:currentColor;opacity:.6}}
+.ai-composer-bar{block-size:6px;border-radius:var(--eb-pill,999px);background:var(--eb-border,var(--eb-content-grid));overflow:hidden}
+.ai-composer-bar i{display:block;block-size:100%;background:var(--eb-primary,var(--eb-content-accent));transition:inline-size .3s ease}
+@media (prefers-reduced-motion: reduce){.ai-composer-bar i{transition:none}}
+.ai-composer-elapsed,.ai-composer-still{margin:0}
 .ai-composer-status{font-weight:700;margin:0}
 .ai-composer-detail{margin:0}
 .ai-composer-result{display:flex;flex-direction:column;gap:10px}

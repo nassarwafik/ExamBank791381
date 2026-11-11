@@ -16,7 +16,8 @@ import type { ComposerFailure } from "./composerState";
 type Rec = Record<string, unknown>;
 /** POSTs one stage to /api/ai-exam-composer; resolves with the JSON body, or rejects (transport / abort, or an HTTP error carrying `payload`). */
 export type ComposerTransport = (body: Rec, signal?: AbortSignal) => Promise<Rec>;
-export type StageReporter = (name: "planning" | "generating" | "validating" | "repairing", stage: string, detail?: string) => void;
+/** `progress` (21Z): sections finished out of the planned total, reported with each section request. */
+export type StageReporter = (name: "planning" | "generating" | "validating" | "repairing", stage: string, detail?: string, progress?: { done: number; total: number }) => void;
 export const STAGE_LABELS = Object.freeze({ intent: "تحليل طلب الامتحان", plan: "إنشاء خطة الامتحان", sections: "إنشاء الأسئلة", validate: "فحص البنية", repair: "إصلاح الأخطاء", ready: "جاهز للمراجعة", modify: "تحليل التعديل المطلوب" });
 
 const failure = (kind: ComposerFailure["kind"], message: string, issues: ComposerIssue[] = []): ComposerFailure => ({ kind, message, issues: issues.slice(0, 40).map(i => ({ code: i.code, message: i.message })) });
@@ -77,7 +78,7 @@ export async function runGeneration(transport: ComposerTransport, intentInput: u
     const nonce = opts.nonce ?? newComposerNonce();
     const sections: BuilderSection[] = [], meta: ComposerItemMeta[] = [], warnings: ComposerIssue[] = [];
     for (let i = 0; i < plan.sections.length; i++) {
-      opts.report("generating", STAGE_LABELS.sections, "القسم " + (i + 1) + " من " + plan.sections.length + ": " + plan.sections[i].title);
+      opts.report("generating", STAGE_LABELS.sections, "القسم " + (i + 1) + " من " + plan.sections.length + ": " + plan.sections[i].title, { done: i, total: plan.sections.length });
       const s = await stageWithRepair(transport, { stage: "section", intent: intentInput, planRaw, sectionIndex: i, nonce }, opts.signal, a => opts.report("repairing", STAGE_LABELS.repair, "القسم " + (i + 1) + " · محاولة " + a));
       if (!s.ok) return s;
       sections.push(s.body.section as BuilderSection);
