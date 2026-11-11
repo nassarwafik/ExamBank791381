@@ -4,7 +4,7 @@ import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { MessageComposer, MessageThread, NewerMessagesNote, OlderMessagesBar, type MessageActions } from "./MessageParts";
 import {
   MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, replaceMessage, formatUnread, readAckFromSnapshot, ackKey, sendKeyFor,
-  type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
+  type MessageView, type StudentConversation, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
 
@@ -40,12 +40,32 @@ import "./messages.css";
  * Messages M.5 — the student edits / deletes their OWN replies from the direct thread while the server allows it (15
  * minutes after sending). The stored version replaces the message on screen (snapshot, older pages, confirmed replies);
  * a read that started before the change is discarded (`gen`) and the view then reconciles with the server.
+ * Tadris+ P11-B — a student who is also in a class of ANOTHER teacher has one conversation per teacher. The server lists them
+ * (`conversations`, only when there is more than one); «معلموك» above the card switches between them. Each conversation is a
+ * separate instance of this view (its own client, snapshot, acknowledgements and draft — nothing of one conversation can reach
+ * another); the two tab counts are the shown conversation's, the portal's badge is the total the server reports.
  */
 export type StudentMessagesTab = "direct" | "announcements";
 type Tab = StudentMessagesTab;
 
-export default function StudentMessagesPage({ token, onBack, client: injected, onUnreadChange, initialTab = "direct" }: { token: string; onBack: () => void; client?: StudentMessagesClient; onUnreadChange?: (u: StudentUnread) => void; initialTab?: StudentMessagesTab }) {
-  const client = useMemo(() => injected || createStudentMessagesClient(token), [injected, token]);
+type PageProps = { token: string; onBack: () => void; client?: StudentMessagesClient; onUnreadChange?: (u: StudentUnread) => void; initialTab?: StudentMessagesTab };
+type ViewProps = PageProps & { conversation: string; conversations: StudentConversation[]; onConversations: (list: StudentConversation[]) => void; onSelectConversation: (id: string) => void };
+
+/** The names of the list last loaded with the conversation (the unread poll's list carries the counts only). */
+function mergeConversations(prev: StudentConversation[], next: StudentConversation[]): StudentConversation[] {
+  return next.map(c => { const old = prev.find(x => x.id === c.id); return old && !c.teacherName && old.teacherName ? { ...c, teacherName: old.teacherName } : c; });
+}
+
+export default function StudentMessagesPage(props: PageProps) {
+  const [conversation, setConversation] = useState("");
+  const [conversations, setConversations] = useState<StudentConversation[]>([]);
+  const client = useMemo(() => props.client || createStudentMessagesClient(props.token, conversation), [props.client, props.token, conversation]);
+  return <StudentMessagesView key={conversation} {...props} client={client} conversation={conversation} conversations={conversations}
+    onConversations={list => setConversations(prev => { const next = mergeConversations(prev, list); return JSON.stringify(next) === JSON.stringify(prev) ? prev : next; })} onSelectConversation={setConversation} />;
+}
+
+function StudentMessagesView({ token, onBack, client: injected, onUnreadChange, initialTab = "direct", conversation, conversations, onConversations, onSelectConversation }: ViewProps) {
+  const client = useMemo(() => injected || createStudentMessagesClient(token, conversation), [injected, token, conversation]);
   const [data, setData] = useState<StudentMessagesData | null>(null);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -77,6 +97,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     unreadRef.current = u;
     setUnread(u);
     onUnreadChange?.(u);
+    if (u.conversations) onConversations(u.conversations);              // P11-B: the switcher's counts
   }
   async function loadUnread() {
     const mine = unreadGen.current;
@@ -93,8 +114,10 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     if (!cur || latestMark.current[other] < seq) return u;
     const d = stream === "direct" ? u.directUnread : cur.directUnread;
     const a = stream === "announcements" ? u.announcementUnread : cur.announcementUnread;
-    const sum = d.unread + a.unread;
-    return { directUnread: d, announcementUnread: a, totalUnread: Math.min(99, sum), totalCapped: d.capped || a.capped || sum > 99 };
+    // P11-B — the total also covers the student's OTHER conversations: what the server's total holds beyond its own two counts.
+    const elsewhere = Math.max(0, u.totalUnread - u.directUnread.unread - u.announcementUnread.unread);
+    const sum = d.unread + a.unread + elsewhere;
+    return { directUnread: d, announcementUnread: a, totalUnread: Math.min(99, sum), totalCapped: d.capped || a.capped || u.totalCapped || sum > 99, ...(u.conversations ? { conversations: u.conversations } : {}) };
   }
   /** Mark ONE stream read through the latest id of the last applied snapshot — only while it is the visible tab. */
   async function markVisible(stream: Tab) {
@@ -134,6 +157,10 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       dataRef.current = next;                                         // the acknowledgement uses the GET snapshot only
       setData(applied);
       setError("");
+      // P11-B — the server's list of conversations; when it answered ANOTHER conversation than the one asked (the home teacher
+      // offers no messaging), the view follows it.
+      onConversations(next.conversations || []);
+      if (next.conversation !== undefined && next.conversation !== conversation) { onSelectConversation(next.conversation); return; }
       void markVisible(tabRef.current);                               // only the currently visible stream
     } catch (e) {
       if (mine !== gen.current) return;
@@ -236,6 +263,16 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
         </header>
         {error && <p className="platform-error" role="alert">{error}</p>}
         {!data && !error && <p className="eb-muted" role="status">جارٍ تحميل الرسائل...</p>}
+        {conversations.length > 1 && (
+          <div className="eb-msg-tabs eb-msg-conversations" role="group" aria-label="معلموك">
+            {conversations.map(c => (
+              <button key={c.id || "home"} type="button" className="eb-msg-tab" aria-pressed={c.id === conversation} onClick={() => { if (c.id !== conversation) onSelectConversation(c.id); }}>
+                {c.teacherName ? c.teacherName + " — " : ""}{c.name || "المعلم"}{c.archived ? " (مؤرشف)" : ""}
+                {c.unread > 0 && c.id !== conversation && <span className="eb-msg-tab-badge">{formatUnread(c.unread, c.capped)} غير مقروءة</span>}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Phase 8B — one light card: tabs on top, the conversation with inner gutters, the composer as its footer. */}
         <div className="eb-msg-student-card">

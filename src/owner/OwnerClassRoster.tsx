@@ -15,6 +15,7 @@ import {
  * Tadris+ P11-A — a student ADDED to this class from another class («مشترك»: the account and the first teacher stay as they are) is
  * listed too. Such a student is not moved from here (the move is made from the home class) — the owner may REMOVE the student from
  * this class; the server refuses while work in this class awaits its teacher.
+ * Tadris+ P11-B — «الاطلاع على المحادثة» on a shared student reads the conversation with THIS class's teacher (a separate one).
  */
 
 type Send = <T>(call: () => Promise<ApiResult<T>>, onOk: (data: T) => void) => Promise<void>;
@@ -56,8 +57,8 @@ export default function OwnerClassRoster({ token, classId, className, ownerAccou
                 </span>
               )}
               {st.shared || moving?.userId === st.userId ? null : <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setMoving(st)}>نقل إلى معلم آخر</button>}
-              {st.shared || reading?.userId === st.userId ? null : <>{" "}<button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setReading(st)}>الاطلاع على المحادثة</button></>}
-              {reading?.userId === st.userId && <OwnerConversation token={token} studentId={st.userId} studentName={st.displayName} busy={busy} send={send} onClose={() => setReading(null)} />}
+              {reading?.userId === st.userId ? null : <>{" "}<button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setReading(st)}>الاطلاع على المحادثة</button></>}
+              {reading?.userId === st.userId && <OwnerConversation token={token} studentId={st.userId} studentName={st.displayName} busy={busy} send={send} onClose={() => setReading(null)} conversation={st.shared ? classId : undefined} />}
               {moving?.userId === st.userId && (
                 <StudentTransfer token={token} student={st} fromClassId={classId} ownerAccountId={ownerAccountId} busy={busy} send={send}
                   onCancel={() => setMoving(null)} onDone={text => { setMoving(null); setNonce(n => n + 1); onChanged(text); }} />

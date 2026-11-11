@@ -83,9 +83,11 @@ describe("P11-A the student dialog of a shared student", () => {
 
 describe("P11-A surfaces that do not serve shared students yet do not offer them", () => {
   const stub = () => vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, students: [SHARED, OWN] }) }) as unknown as Response));
-  it("the teacher's messaging picker lists the teacher's own students only", async () => {
+  // Tadris+ P11-B — the messaging picker now offers the shared student too: they have a separate conversation with this teacher
+  // (src/messages/sharedConversations.p11b.test.tsx). Before P11-B the picker listed the teacher's own students only (["u2"]).
+  it("the teacher's messaging picker lists the shared student as well (P11-B)", async () => {
     stub();
-    expect((await createTeacherMessagesClient("tok").listStudents("cB")).map(s => s.userId)).toEqual(["u2"]);
+    expect((await createTeacherMessagesClient("tok").listStudents("cB")).map(s => s.userId)).toEqual(["u1", "u2"]);
   });
   it("the live-game lobby lists the teacher's own students only", async () => {
     stub();

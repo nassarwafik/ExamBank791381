@@ -106,7 +106,7 @@ describe("P11-A the owner's import: students who already have an account", () =>
 });
 
 describe("P11-A the owner's class roster: a shared student", () => {
-  it("is marked, is not moved or read from here, and is removed from THIS class after a confirmation", async () => {
+  it("is marked, is not moved from here, and is removed from THIS class after a confirmation", async () => {
     routes["GET /api/owner-classes/students?classId=cB"] = () => ({ status: 200, body: { ok: true, classId: "cB", students: [
       { userId: S1, displayName: "ليان سعيد", identityNumber: "300000001", active: true, archived: false, shared: true },
       { userId: S2, displayName: "كريم ناصر", identityNumber: "300000002", active: true, archived: false }
@@ -117,7 +117,9 @@ describe("P11-A the owner's class roster: a shared student", () => {
     const shared = await screen.findByRole("listitem", { name: "ليان سعيد" });
     expect(shared.textContent).toContain("مشترك");
     expect(within(shared).queryByRole("button", { name: "نقل إلى معلم آخر" })).toBeNull();
-    expect(within(shared).queryByRole("button", { name: "الاطلاع على المحادثة" })).toBeNull();
+    // Tadris+ P11-B — the shared student's conversation with THIS class's teacher can now be read (OwnerConversation, P11-B test).
+    // Before P11-B the button was not offered on a shared student.
+    expect(within(shared).getByRole("button", { name: "الاطلاع على المحادثة" })).toBeTruthy();
     const own = screen.getByRole("listitem", { name: "كريم ناصر" });
     expect(within(own).getByRole("button", { name: "نقل إلى معلم آخر" })).toBeTruthy();
     expect(within(own).queryByRole("button", { name: "إزالة من هذا الصف" })).toBeNull();

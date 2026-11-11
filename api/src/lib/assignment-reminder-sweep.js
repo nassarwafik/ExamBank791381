@@ -18,7 +18,7 @@
 const crypto = require("crypto");
 const { listJson, downloadJsonOrNull, uploadJsonConditional, isConcurrencyConflict, mapConcurrent, getReadConcurrency } = require("./platform-storage");
 const { normalizeAssignmentStatus } = require("./assignment-lifecycle");
-const { isStudentClassMember } = require("./class-membership");
+const { isStudentInClass } = require("./class-membership");   // Tadris+ P11-B: shared students are reminded too
 const { timerState } = require("./assignment-availability");
 const { recordEventSafely } = require("./notification-events");
 
@@ -61,7 +61,7 @@ async function runReminderSweep(container, { nowMs = Date.now(), deps = {}, obs 
   let reserved = 0;
   for (const a of assignments) {
     const id = String(a.assignmentId);
-    const members = users.filter(u => isStudentClassMember(u, a.classId));
+    const members = users.filter(u => isStudentInClass(u, a.classId));
     const subs = await mapConcurrent(members, getReadConcurrency(), u => dl(container, SP + id + "/" + u.userId + ".json").catch(() => undefined));
     for (let i = 0; i < members.length; i++) {
       if (subs[i] === undefined) { out.failed++; continue; }                       // unreadable submission → never guess; next run retries

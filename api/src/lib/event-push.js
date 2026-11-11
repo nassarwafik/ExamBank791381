@@ -13,14 +13,14 @@
 const { listJson, downloadJsonOrNull, mapConcurrent } = require("./platform-storage");
 const { pushConfig, notifyStudentOfAssignmentEvent, ASSIGNMENT_NOTIFICATIONS } = require("./push-notify");
 const { normalizeAssignmentStatus } = require("./assignment-lifecycle");
-const { isStudentClassMember } = require("./class-membership");
+const { isStudentInClass } = require("./class-membership");   // Tadris+ P11-B: a student the owner added to the class is a recipient too
 const { resultsReleased } = require("./results-release");
 
 const AP = "platform/assignments/", UP = "platform/users/", SP = "platform/submissions/";
 const SEND_CONCURRENCY = 8;
 const PUSH_EVENT_TYPES = Object.freeze(Object.keys(ASSIGNMENT_NOTIFICATIONS));
 
-const recipientOk = (u, classId) => isStudentClassMember(u, classId) && u.active !== false;
+const recipientOk = (u, classId) => isStudentInClass(u, classId) && u.active !== false;
 
 async function sendAll(container, studentIds, type, deps, log) {
   const summary = { status: "sent", recipients: studentIds.length, delivered: 0 };

@@ -1,3 +1,12 @@
+// Tadris+ P11-B — WHICH conversation `studentId` names (owner decision: «محادثة منفصلة لكل معلم»):
+//   • the teacher's OWN student → the student's HOME conversation (platform/messages/direct/<studentId>/), exactly as before;
+//   • a student the owner ADDED to a class of this teacher (a shared class) → the conversation of THAT class
+//     (platform/messages/shared/<classId>/<studentId>/). `conversation=<classId>` beside `studentId` (query on GET, body field on
+//     POST) names the class explicitly (needed when the student is in two classes of the same teacher); without it a student who is
+//     not the teacher's own resolves to the first class of this teacher's that the student shares. A body `classId` beside
+//     `studentId` is still ignored, as before (the browser never chooses the class of a direct message).
+// A teacher NEVER reaches a student's conversation with another teacher: the home conversation needs the home-owner check, a shared
+// conversation needs a class of the teacher's own that the student currently shares. Anything else answers like a missing student.
 // Phase 5C — TEACHER messaging surface (builder-authenticated):
 //   GET  /api/messages?studentId=<id>                     → that student's direct conversation (read-only allowed for
 //                                                           disabled/archived students and archived classes)
@@ -47,8 +56,11 @@ const { publishGuarded, noStore } = require("../lib/message-send");
 const { MessageChangeError, messageActions, editMessage, deleteMessage, isOwn } = require("../lib/message-edit");
 const { reserveMessageSend, rateLimitedResponse } = require("../lib/message-rate-limit");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, absorbIrrelevantSequenced, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread, combineCounts
 } = require("../lib/message-read-state");
+// Tadris+ P11-B — a separate conversation with the teacher of every class a student SHARES (lib/shared-conversations.js).
+const { teacherSharedStream, teacherSharedUnread } = require("../lib/shared-conversations");
+const { isStudentSharedIn, sharedClassIds } = require("../lib/class-membership");
 
 const USER_PREFIX = "platform/users/";
 const CLASS_PREFIX = "platform/classes/";
@@ -83,10 +95,12 @@ async function loadClass(container, classId, dl) {
 
 /** Whether a NEW direct message may be sent to this student right now (and why not). Authority: the persisted
  *  student document + its CURRENT class document. */
-async function directSendState(container, student, dl) {
-  if (student.archived === true) return { canSend: false, code: "studentArchived", error: MSG.studentArchived, classroom: null };
+async function directSendState(container, student, dl, sharedClassId = "") {
+  // P11-B — a shared class's conversation: `archived` is the HOME roster's lifecycle (it disables the login: read as inactive here),
+  // and the class that must be open is the SHARED class.
+  if (!sharedClassId && student.archived === true) return { canSend: false, code: "studentArchived", error: MSG.studentArchived, classroom: null };
   if (student.active === false) return { canSend: false, code: "studentInactive", error: MSG.studentInactive, classroom: null };
-  const classId = String(student.classId || "");
+  const classId = sharedClassId || String(student.classId || "");
   const classroom = classId ? await loadClass(container, classId, dl) : null;
   if (!classroom) return { canSend: false, code: "noClass", error: MSG.noClass, classroom: null };
   if (normalizeClassStatus(classroom) === "archived") return { canSend: false, code: "classArchived", error: MSG.classArchived, classroom };
@@ -121,6 +135,21 @@ async function handle(request, deps = {}, obs = null) {
     const ownStudent = async id => (await studentAccessible(load, await loadStudent(container, id, dl), tenant));
     const ownClass = id => classAccessible(load, id, tenant);
     const canSee = tenant ? user => studentAccessible(load, user, tenant) : null;
+    // Tadris+ P11-B — the conversation (student[, class]) names for THIS teacher, or null (see the header).
+    const conversationOf = async (studentId, wantedClassId = "") => {
+      const student = await loadStudent(container, studentId, dl);
+      if (!student) return null;
+      const home = () => ({ student, sharedClassId: "", streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.teacherDirect,
+        stateName: teacherDirectStateName(teacherId, studentId), meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } });
+      const shared = classId => ({ student, sharedClassId: classId, ...teacherSharedStream(teacherId, classId, studentId) });
+      const own = await studentAccessible(load, student, tenant);
+      const wanted = String(wantedClassId || "");
+      if (wanted && wanted !== String(student.classId || "")) return isStudentSharedIn(student, wanted) && (await ownClass(wanted)) ? shared(wanted) : null;
+      if (own) return home();
+      if (wanted) return null;
+      for (const id of sharedClassIds(student)) if (await ownClass(id)) return shared(id);
+      return null;
+    };
     // M.5 — THIS teacher's permissions on each message, as view hints (the actions decide again on their own).
     const actor = { role: "teacher", id: teacherId };
     const actionsFor = canSend => doc => messageActions(doc, actor, { canSend, now: deps.now ? deps.now() : Date.now() });
@@ -135,44 +164,55 @@ async function handle(request, deps = {}, obs = null) {
       // M.3 — older history: `before` is the oldest message id the client shows; anything else is refused.
       const before = url.searchParams.has("before") ? String(url.searchParams.get("before") || "") : "";
       if (url.searchParams.has("before") && !MESSAGE_ID_RE.test(before)) return bad("مؤشر الرسائل غير صالح.");
-      if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
+      // P11-B — a thread request resolves its conversation (home, or a shared class's); every other read keeps the home-owner check.
+      let conv = null;
+      if (studentId && kind !== "unread-summary") { conv = await conversationOf(studentId, String(url.searchParams.get("conversation") || "").trim()); if (!conv) return notFound(MSG.studentNotFound); }
+      else if (tenant && studentId && !(await ownStudent(studentId))) return notFound(MSG.studentNotFound);
       if (tenant && classId && !(await ownClass(classId))) return notFound(MSG.classNotFound);
+      // P11-B — the unread replies of shared classes' conversations are counted with the home ones (the teacher's own classes only).
+      const withShared = async (homeCount, scope) => {
+        const sharedCount = await teacherSharedUnread(container, teacherId, { ...scope, classOk: tenant ? ownClass : null }, deps);
+        const total = combineCounts({ unread: homeCount.totalUnread, capped: homeCount.capped }, { unread: sharedCount.totalUnread, capped: sharedCount.capped });
+        return { ...homeCount, totalUnread: total.unread, capped: total.capped, ...(homeCount.byStudent ? { byStudent: { ...homeCount.byStudent, ...sharedCount.byStudent } } : {}) };
+      };
       if (kind === "unread-summary") {
         // Best-effort and bounded; never affects the summary (a failure leaves the purge pending for a later poll).
         try { await (deps.drainStudentPurges || drainStudentPurges)(container, deps); } catch { /* stays pending */ }
         if (classId) {
           const classroom = await loadClass(container, classId, dl);
           if (!classroom) return notFound(MSG.classNotFound);
-          return { status: 200, jsonBody: { ok: true, classId, ...(await teacherDirectUnread(container, teacherId, { classId, canSee }, deps)) } };
+          return { status: 200, jsonBody: { ok: true, classId, ...(await withShared(await teacherDirectUnread(container, teacherId, { classId, canSee }, deps), { classId })) } };
         }
-        return { status: 200, jsonBody: { ok: true, ...(await teacherDirectUnread(container, teacherId, { canSee }, deps)) } };
+        return { status: 200, jsonBody: { ok: true, ...(await withShared(await teacherDirectUnread(container, teacherId, { canSee }, deps), {})) } };
       }
       if (studentId) {
-        const student = await loadStudent(container, studentId, dl);
-        if (!student) return notFound(MSG.studentNotFound);
-        const state = await directSendState(container, student, dl);
+        const student = conv.student;
+        const state = await directSendState(container, student, dl, conv.sharedClassId);
         // THIS teacher's legacy read state + relevance shape the page's unread legacy frontier (see listRecentMessages).
-        const stateName = teacherDirectStateName(teacherId, studentId);
+        const stateName = conv.stateName;
         const marker = await loadMarker(container, stateName, deps);
         // M.3 — `isRead` covers both domains: the student's unread replies ride along oldest-first (sequenced frontier).
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect, before });
+        const page = await listRecentMessages(container, conv.streamPrefix, conv.expected, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect, before });
         // A frontier window of only the teacher's own messages is folded into the boundary (never starves it).
-        const meta = { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId };
+        const meta = conv.meta;
         if (page.absorbable.length) {
           await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta }, deps).catch(() => {});
         }
         if (page.sequencedAbsorbable.length) {
-          await absorbIrrelevantSequenced(container, { stateName, streamPrefix: directPrefix(studentId), ids: page.sequencedAbsorbable, meta }, deps).catch(() => {});
+          await absorbIrrelevantSequenced(container, { stateName, streamPrefix: conv.streamPrefix, ids: page.sequencedAbsorbable, meta }, deps).catch(() => {});
         }
         // Tadris+ P5-B3b (owner decision §19.21) — a student moved from another teacher: the conversation BEFORE the transfer stays
         // between the student and that teacher; this teacher sees it from the transfer on (the list is newest-first, so nothing
         // older can follow a hidden message: «hasMore» ends there).
-        const since = typeof student.directSince === "string" ? student.directSince : "";
+        // (the transfer moment concerns the HOME conversation only; a shared class's conversation was always this class's)
+        const since = !conv.sharedClassId && typeof student.directSince === "string" ? student.directSince : "";
         const visible = since ? page.messages.filter(m => String(m.createdAt || "") >= since) : page.messages;
         const hasMore = since && visible.length < page.messages.length ? false : page.hasMore;
         return { status: 200, jsonBody: {
           ok: true,
-          student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
+          student: conv.sharedClassId
+            ? { userId: studentId, displayName: studentDisplayName(student), classId: conv.sharedClassId, active: student.active !== false, archived: false, shared: true }
+            : { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
           canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
           messages: visible.map(m => messageView(m, { includeStudentId: true, actions: actionsFor(state.canSend) })), hasMore, hasNewer: page.hasNewer
         } };
@@ -197,25 +237,31 @@ async function handle(request, deps = {}, obs = null) {
     const action = String(body && body.action || "").trim();
     const capabilityDenial = await requireCapability(auth, "messages.js", action, deps, obs);   // Tadris+ P3-B
     if (capabilityDenial) return capabilityDenial;
-    if (tenant && body && typeof body === "object") {
-      if (body.studentId !== undefined && !(await ownStudent(String(body.studentId || "").trim()))) return notFound(MSG.studentNotFound);
-      if (body.classId !== undefined && !(await ownClass(String(body.classId || "").trim()))) return notFound(MSG.classNotFound);
+    // P11-B — an action that names a student acts on the conversation that (studentId[, classId]) resolves to for THIS teacher.
+    let conv = null;
+    if (body && typeof body === "object") {
+      if (body.studentId !== undefined) {
+        conv = await conversationOf(String(body.studentId || "").trim(), String(body.conversation || "").trim());
+        if (!conv && tenant) return notFound(MSG.studentNotFound);   // single mode: each action answers after its own validation, as before
+      }
+      if (tenant && body.classId !== undefined && !(await ownClass(String(body.classId || "").trim()))) return notFound(MSG.classNotFound);
     }
 
     if (action === "sendDirect") {
       const studentId = String(body.studentId || "").trim();
       const text = normalizeMessageBody(body.body);
       if (!text.ok) return bad(text.error);
-      const student = await loadStudent(container, studentId, dl);
-      if (!student) return notFound(MSG.studentNotFound);
-      const state = await directSendState(container, student, dl);
+      if (!conv) return notFound(MSG.studentNotFound);
+      const student = conv.student;
+      const state = await directSendState(container, student, dl, conv.sharedClassId);
       if (!state.canSend) return readOnly(state.error, state.code);
       const senderDisplayName = await teacherName(container, teacherId);
-      const classIdAtSend = String(state.classroom.classId || student.classId || "");
+      const classIdAtSend = conv.sharedClassId || String(state.classroom.classId || student.classId || "");
       const sent = await publishGuarded(container, {
-        role: "teacher", senderId: teacherId, streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, clientMessageId: body.clientMessageId,
+        role: "teacher", senderId: teacherId, streamPrefix: conv.streamPrefix, expected: conv.expected, clientMessageId: body.clientMessageId,
         buildDoc: (messageId, createdAt) => ({
           schemaVersion: 1, messageId, kind: "direct", studentId,
+          ...(conv.sharedClassId ? { sharedClassId: conv.sharedClassId } : {}),
           senderRole: "teacher", senderId: teacherId, senderDisplayName,
           body: text.body, createdAt, classIdAtSend
         })
@@ -259,10 +305,10 @@ async function handle(request, deps = {}, obs = null) {
       const classId = String(body.classId || "").trim();
       let target = null;
       if (studentId) {
-        const student = await loadStudent(container, studentId, dl);
-        if (!student) return notFound(MSG.studentNotFound);
-        const state = await directSendState(container, student, dl);
-        target = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, canSend: state.canSend, view: { includeStudentId: true }, targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), directSince: typeof student.directSince === "string" ? student.directSince : "" };
+        if (!conv) return notFound(MSG.studentNotFound);
+        const student = conv.student;
+        const state = await directSendState(container, student, dl, conv.sharedClassId);
+        target = { streamPrefix: conv.streamPrefix, expected: conv.expected, canSend: state.canSend, view: { includeStudentId: true }, targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), directSince: !conv.sharedClassId && typeof student.directSince === "string" ? student.directSince : "" };
       } else if (classId) {
         const classroom = await loadClass(container, classId, dl);
         if (!classroom) return notFound(MSG.classNotFound);
@@ -294,20 +340,19 @@ async function handle(request, deps = {}, obs = null) {
     if (action === "markDirectRead") {
       // Historical (archived / disabled) students may still be READ; the student document is the authority.
       const studentId = String(body.studentId || "").trim();
-      const student = await loadStudent(container, studentId, dl);
-      if (!student) return notFound(MSG.studentNotFound);
+      if (!conv) return notFound(MSG.studentNotFound);
       try {
         // The teacher's unread-relevant messages are the STUDENT's; the acknowledgement must be built from those.
-        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.teacherDirect };
+        const stream = { streamPrefix: conv.streamPrefix, expected: conv.expected, include: READER_RELEVANCE.teacherDirect };
         const { marker } = await markStreamRead(container, {
-          stateName: teacherDirectStateName(teacherId, studentId), ...stream,
+          stateName: conv.stateName, ...stream,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
-          meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
+          meta: conv.meta
         }, deps);
         // FRESH listing (no `ids`): a student message that arrived after validation is still counted. The teacher's own
         // leading messages are absorbed (M.1) so later badge counts stop re-downloading them.
-        const remaining = await countUnread(container, { ...stream, marker, absorb: { stateName: teacherDirectStateName(teacherId, studentId), meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } } }, deps);
+        const remaining = await countUnread(container, { ...stream, marker, absorb: { stateName: conv.stateName, meta: conv.meta } }, deps);
         return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
       } catch (e) {
         if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");

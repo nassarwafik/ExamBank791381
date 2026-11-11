@@ -19,8 +19,8 @@ const {stampLateAttempt,lateInfo,lateMarks,latePolicyOf}=require("../lib/late-po
 const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
 const {syncAssessmentMedal}=require("../lib/achievement-feed");
 // Tadris+ P11-A — the gradebook population is the class's members INCLUDING the students the owner added to it (a shared class).
-// «remindStudents» keeps the home members only until the notification center serves shared classes (P11-B).
-const {isStudentClassMember,isStudentInClass}=require("../lib/class-membership");
+// Tadris+ P11-B — «remindStudents» reaches them too (the notification center now serves shared classes).
+const {isStudentInClass}=require("../lib/class-membership");
 // Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
 const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,codingGradingStatus,teacherCodingSummary}=require("../lib/coding/official-grading");
 // Phase 17D-A — a server-derived AGGREGATE coding grading status per attempt ({pending,retryable,stale} counts, only while something
@@ -139,7 +139,7 @@ async function handler(request,deps={},obs=null){
    if(normalizeAssignmentStatus(a)!=="published")return {status:409,jsonBody:{ok:false,error:"لا يمكن تذكير الطلاب إلا بواجب منشور."}};
    if(b.studentIds!==undefined&&(!Array.isArray(b.studentIds)||b.studentIds.some(x=>!SAFE_ID.test(String(x)))))return {status:400,jsonBody:{ok:false,error:"studentIds غير صالحة."}};
    const wanted=Array.isArray(b.studentIds)?new Set(b.studentIds.map(String)):null;
-   const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)&&(!wanted||wanted.has(String(x.userId))));
+   const users=(await ls(c,UP)).filter(x=>isStudentInClass(x,a.classId)&&(!wanted||wanted.has(String(x.userId))));
    const subs=await mapConcurrent(users,getReadConcurrency(),u=>dl(c,SP+id+"/"+u.userId+".json"));
    const nowMs=Date.now(),day=new Date(nowMs).toISOString().slice(0,10);
    let reminded=0,alreadyToday=0,notNeeded=0,failed=0;
