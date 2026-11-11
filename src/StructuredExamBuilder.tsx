@@ -65,6 +65,7 @@ import { printExam, type ExamPrintMode } from "./print/examPrint";   // D5 (item
 import "./structured-builder.css";
 import "./builder/builder-issues.css";
 import QualityNotes from "./builder/QualityNotes";
+import { fixNotesInstruction, type QualityNote } from "./builder/qualityNotes";
 import "./builder/builder-premium.css";                              // 21E.2 premium redesign, slice 1 (presentation only; loaded last)
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
@@ -1000,6 +1001,9 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
   const [composerOpenFor, setComposerOpenFor] = useState("");
   // Phase 21I — the composer form pre-fill a start tool carried (the builder prompt's composer route); used once, cleared on close.
   const [composerPrefill, setComposerPrefill] = useState<ComposerPrefill | null>(null);
+  // Phase 21Y — the modification request prepared from the quality notes («أصلح بالمؤلف الذكي»); used once, cleared on close.
+  const [composerModifyPrefill, setComposerModifyPrefill] = useState<{ instruction: string } | null>(null);
+  const fixNotesWithAi = aiAuthor?.composeExam ? (notes: readonly QualityNote[]) => { if (saving) return; setComposerPrefill(null); setComposerModifyPrefill({ instruction: fixNotesInstruction(notes) }); setComposerOpenFor(exam.examId); } : undefined;
   const composerOpen = !!aiAuthor?.composeExam && composerOpenFor === exam.examId;
   const applyComposer = (openedFor: string) => (updater: (prev: StructuredExam) => StructuredExam): "ok" | "stale" => {
     if (!alive.current || latestExamRef.current.examId !== openedFor) return "stale";
@@ -1334,7 +1338,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
 
       {composerOpen && aiAuthor?.composeExam && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المؤلف الذكي للامتحان…</p>}>
-          <AiExamComposerDialog key={exam.examId} open onClose={() => { setComposerOpenFor(""); setComposerPrefill(null); }} prefill={composerPrefill} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
+          <AiExamComposerDialog key={exam.examId} open onClose={() => { setComposerOpenFor(""); setComposerPrefill(null); setComposerModifyPrefill(null); }} prefill={composerPrefill} modifyPrefill={composerModifyPrefill} transport={aiAuthor.composeExam} exam={exam} getLatestExam={() => latestExamRef.current}
             onApply={applyComposer(exam.examId)} onPreview={setPreview} onUndo={onUndo} selectedQuestionId={selected.size === 1 ? [...selected][0] : null} disabled={saving}
             onRevealQuestion={revealComposerQuestion(exam.examId)} />
         </Suspense>
@@ -1433,7 +1437,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
       <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل المراجعة…</p>}>
         <StudioReview exam={exam} decision={decision} issuesOfQuestion={stableIssues.byQuestion} targets={summaryTargets} tools={toolMenuItems}
           onOpenIssue={openIssue} onPreview={() => setPreview(exam)} onStep={step => setStudioUi(prev => ({ ...prev, step }))} />
-        <QualityNotes exam={exam} onOpenQuestion={revealComposerQuestion(exam.examId)} />
+        <QualityNotes exam={exam} onOpenQuestion={revealComposerQuestion(exam.examId)} onFixWithAi={fixNotesWithAi} />
       </Suspense>
     )
   };
@@ -1566,7 +1570,7 @@ export default function StructuredExamBuilder({ exam, onChange, onTypingEnd, lay
       )}
 
       {/* Phase 21W — advisory quality notes (21Q checks) for any exam; separate from the issues above, never counted or blocking. */}
-      <QualityNotes exam={exam} onOpenQuestion={revealComposerQuestion(exam.examId)} />
+      <QualityNotes exam={exam} onOpenQuestion={revealComposerQuestion(exam.examId)} onFixWithAi={fixNotesWithAi} />
 
       <div className={"sb-workspace" + (navOpen && !isNarrow ? " has-navigator" : "")}>
       <div className="sb-workspace-main">

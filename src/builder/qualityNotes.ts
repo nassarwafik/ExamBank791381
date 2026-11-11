@@ -4,6 +4,7 @@
 // warning count, no save, no finalization and no announcement; they only point at a question. Pure (no React).
 import type { StructuredExam } from "../examTypes";
 import { qualityWarnings } from "../aiComposer/composerQuality";
+import { COMPOSER_LIMITS } from "../aiComposer/composerLimits";
 
 export type QualityNote = { key: string; code: string; message: string; questionId: string | null; number: number | null };
 
@@ -23,4 +24,18 @@ export function editorQualityNotes(exam: StructuredExam): QualityNote[] {
     notes.push({ key, code: w.code, message: w.message, questionId: qid, number: qid ? numberOf.get(qid)! : null });
   }
   return notes.sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+}
+
+// Phase 21Y — «أصلح بالمؤلف الذكي»: the modification request the composer is opened with — only the named questions, same type and
+// marks, the rest unchanged — listing each note with its question number. Code-built and bounded by the composer's instruction limit;
+// the teacher sees and can edit it, nothing is sent before «اقتراح التعديل», and nothing reaches the exam before «تطبيق».
+export const FIX_NOTES_LEAD = "عالج ملاحظات الجودة التالية بتعديل الأسئلة المذكورة فقط، وأبقِ نوع كل سؤال وعلامته، ولا تغيّر بقية الامتحان:";
+export function fixNotesInstruction(notes: readonly QualityNote[]): string {
+  let out = FIX_NOTES_LEAD;
+  for (const n of notes) {
+    const line = "\n- " + (n.number ? "السؤال " + n.number + ": " : "الامتحان: ") + n.message.replace(/\s+/g, " ").trim();
+    if (out.length + line.length > COMPOSER_LIMITS.instructionChars) break;
+    out += line;
+  }
+  return out;
 }
