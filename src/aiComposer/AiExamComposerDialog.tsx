@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useReducer, useRef, useState, type KeyboardE
 import Dialog from "../ui/Dialog";
 import type { StructuredExam } from "../examTypes";
 import { runGeneration, runModify, STAGE_LABELS, type ComposerTransport, type GenerationResult, type ModifyResult, type StageReporter } from "./composerRun";
+import { formatElapsed, sectionProgress, stepStates, stillWorkingText } from "./composerProgress";
 import { composerReducer, initialComposer, isComposerBusy, type ComposerFailure, type ComposerFailureKind } from "./composerState";
 import { COMPOSER_CAPABILITY_FLAGS, COMPOSER_DIFFICULTIES, COMPOSER_LANGUAGES, type ComposerCapabilityFlag } from "./composerIntent";
 import { groupComposerWarnings, regenerateInstruction, reviewPatchWarnings, type GroupedWarnings, type WarningGroup } from "./composerWarningGroups";
@@ -175,13 +176,31 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
     if (m.name === "ready" || m.name === "applied" || m.name === "failed" || m.name === "stale" || m.name === "cancelled") resultHeadRef.current?.focus();
   }, [m.name, m.run]);
 
-  const reporter = (run: number): StageReporter => (name, stage, detail) => dispatch({ type: "STAGE", run, name, stage, detail });
+  // 21Z — what the progress view needs beyond the machine's stage text: the MAIN step running (a repair keeps its step current), when the
+  // run started, when the last report arrived (the "quiet" clock of the reassurance line) and the sections finished.
+  const [work, setWork] = useState<{ main: string; started: number; since: number; sections: { done: number; total: number } | null }>({ main: "", started: 0, since: 0, sections: null });
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [busy]);
+  const reporter = (run: number): StageReporter => (name, stage, detail, progress) => {
+    if (run === runRef.current) {
+      const at = Date.now();
+      setNow(at);
+      setWork(prev => (stage === STAGE_LABELS.repair ? { ...prev, since: at } : { main: stage, started: prev.started, since: at, sections: progress ?? (stage === prev.main ? prev.sections : null) }));
+    }
+    dispatch({ type: "STAGE", run, name, stage, detail });
+  };
   const begin = () => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const run = ++runRef.current;
     setApplyIssues([]); setConfirmReplace(false); setShowPlan(false); setUnselectedGroups(new Set());
+    const at = Date.now();
+    setNow(at); setWork({ main: "", started: at, since: at, sections: null });
     dispatch({ type: "START", run });
     return { run, ctrl };
   };
@@ -351,17 +370,38 @@ export default function AiExamComposerDialog({ open, onClose, transport, exam, g
 
   // ── views ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   const stagesFor = lastAction === "generate" ? GENERATE_STAGES : MODIFY_STAGES;
+  // 21Z: every step shows its state (✓ done · a spinner on the running one · pending), an elapsed clock ticks each second, the sections
+  // step has a progress bar, and a reassurance line appears when a request has been quiet for a while — a long wait never looks frozen.
+  const steps = stepStates(stagesFor, work.main);
+  const repairing = m.stage === STAGE_LABELS.repair;
+  const sectionsDone = work.main === STAGE_LABELS.sections ? sectionProgress(work.sections) : null;
+  const still = stillWorkingText(now - work.since);
   const progress = (
-    <div className="ai-composer-progress">
+    <div className="ai-composer-progress" data-testid="ai-composer-progress">
       <ol className="ai-composer-stages" aria-label="مراحل العمل">
-        {stagesFor.map(label => {
-          const current = m.stage === label;
-          return <li key={label} className={current ? "is-current" : undefined} aria-current={current ? "step" : undefined}>{label}</li>;
+        {stagesFor.map((label, i) => {
+          const state = steps[i];
+          return (
+            <li key={label} className={"is-" + state} data-step-state={state} aria-current={state === "current" && !repairing ? "step" : undefined}>
+              {state === "done" && <span className="ai-composer-step-mark" aria-hidden="true">✓</span>}
+              {state === "current" && <span className="ai-composer-spinner" aria-hidden="true" />}
+              {label}
+              {state === "done" && <span className="eb-visually-hidden"> — اكتملت</span>}
+            </li>
+          );
         })}
-        {m.stage === STAGE_LABELS.repair && <li className="is-current" aria-current="step">{STAGE_LABELS.repair}</li>}
+        {repairing && <li className="is-current" data-step-state="current" aria-current="step"><span className="ai-composer-spinner" aria-hidden="true" />{STAGE_LABELS.repair}</li>}
       </ol>
       <p role="status" aria-live="polite" className="ai-composer-status">{m.stage || STAGE_LABELS.intent}</p>
       {m.detail && <p className="sb-hint ai-composer-detail">{m.detail}</p>}
+      {sectionsDone && (
+        <div className="ai-composer-bar" role="progressbar" aria-label="الأقسام المكتملة" aria-valuemin={0} aria-valuemax={sectionsDone.total} aria-valuenow={sectionsDone.done} aria-valuetext={"اكتمل " + sectionsDone.done + " من " + sectionsDone.total}>
+          <i style={{ inlineSize: sectionsDone.percent + "%" }} />
+        </div>
+      )}
+      {/* outside the live region: the clock ticks every second and must not be announced each time */}
+      <p className="sb-hint ai-composer-elapsed" data-testid="ai-composer-elapsed">الوقت المنقضي: <bdi>{formatElapsed(now - work.started)}</bdi></p>
+      {still && <p className="sb-hint ai-composer-still" data-testid="ai-composer-still">{still}</p>}
       <button type="button" className="sb-btn" onClick={cancel}>إلغاء</button>
     </div>
   );
