@@ -1340,6 +1340,21 @@
       "page": "login-error",
       "viewport": "all",
       "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» appears on the sign-in page under «الدخول بالباركود»; the card grows by that one row and nothing else changes."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-basis-r6.md §2.3) — the period field is described by «حسب تاريخ نشر التقييم، والمجدول من موعد فتحه.» beside it (on a phone it wraps to one more line); the assessments table's date column reads «تاريخ النشر». Nothing else moves."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-basis-r6.md §2.3) — the period field is described by «حسب تاريخ نشر التقييم، والمجدول من موعد فتحه.» beside it (on a phone it wraps to one more line). Nothing else moves."
+    },
+    {
+      "page": "report-student",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-basis-r6.md §2.3) — the period field is described by «حسب تاريخ نشر التقييم، والمجدول من موعد فتحه.» beside it (on a phone it wraps to one more line); the student's assessments table's date column reads «تاريخ النشر». Nothing else moves."
     }
   ]
 }
