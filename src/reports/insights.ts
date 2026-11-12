@@ -4,10 +4,12 @@
 // («بانتظار التصحيح») and a student who never handed in («لم يسلّم») have no percentage — here they stay `null`, so a chart shows
 // a gap and its table shows the state in words; nothing in this file turns a missing, pending or unknown outcome into a 0.
 
-export type AssessmentPoint = { assignmentId: string; title: string; date?: string; students: number; submitted: number; missing: number; pendingReview?: number; submissionRate: number; average: number | null };
+export type AssessmentPoint = { assignmentId: string; title: string; date?: string; students: number; submitted: number; missing: number; pendingReview?: number; submissionRate: number; average: number | null; highest?: number | null; lowest?: number | null; median?: number | null };
 export type StudentStanding = { studentId: string; displayName: string; average: number | null; graded: number; pending: number; missing: number };
 export type SubmissionSplit = { graded: number; pending: number; missing: number };
-export type ClassInsights = { assessments: AssessmentPoint[]; students: StudentStanding[]; submission: SubmissionSplit };
+/** Phase R-5b — the spread of the students' averages and who holds the highest / the lowest (final results only). */
+export type StandingsSummary = { highest: { studentId: string; displayName: string; average: number } | null; lowest: { studentId: string; displayName: string; average: number } | null; median: number | null; stdDev: number | null; withAverage: number };
+export type ClassInsights = { assessments: AssessmentPoint[]; students: StudentStanding[]; submission: SubmissionSplit; summary?: StandingsSummary | null };
 export type StudentAssessmentPoint = { assignmentId: string; title: string; date?: string; state: string; percentage: number | null; attempts: number; classAverage: number | null };
 export type StudentInsights = { assessments: StudentAssessmentPoint[]; submission: SubmissionSplit };
 export type OverviewClass = { classId: string; name: string; schoolYear: string; studentCount: number; assessments: number; average: number | null; submissionRate: number; pendingReview: number; graded: number; pending: number; missing: number };

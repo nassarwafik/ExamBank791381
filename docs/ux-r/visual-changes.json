@@ -860,6 +860,21 @@
       "page": "report-student",
       "viewport": "all",
       "reason": "Reports R-5a (docs/enterprise-reports-insight-charts-r5a.md §2.2) — a new capture scene (the student report). On the head it shows the state bar, the student's results beside the class average and the gap to the class; the base has only the figures."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-5b (docs/enterprise-reports-tables-r5b.md §2) — the class report gains four summary tiles (highest / median / lowest average, standard deviation) and the «طلاب الصف» table with a search box and headers that sort."
+    },
+    {
+      "page": "report-student",
+      "viewport": "all",
+      "reason": "Reports R-5b (docs/enterprise-reports-tables-r5b.md §2.2) — the student report gains the «تقييمات الطالب» table (state, result, class average, gap, attempts) with headers that sort."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "Reports R-5b (docs/enterprise-reports-tables-r5b.md §2.1) — the assessments report's tables get headers that sort (an arrow beside each label), a search box above the matrix and a capped height that keeps the header in view."
     }
   ]
 }
