@@ -37,4 +37,22 @@ async function loadStudentProjects(container, classroom, classId, studentId, now
   });
 }
 
-module.exports = { loadStudentProjects };
+/**
+ * Tadris+ P11-C — the student's projects across SEVERAL classes (`classes`: [{ classId, classroom }] in serving order — the home class
+ * first, then the shared ones; lib/student-classes.js). A project code is served by the FIRST class that runs it, so the home class's
+ * project is never replaced and a shared class adds only the projects the home class does not run. Each entry is loadStudentProjects'
+ * own, plus the class that serves it ({ classId, classroom }). One class: exactly loadStudentProjects.
+ */
+async function loadStudentProjectsAcross(container, classes, studentId, now, deps = {}) {
+  const out = [], served = new Set();
+  for (const c of Array.isArray(classes) ? classes : []) {
+    if (!c || !c.classroom) continue;
+    const codes = getSupportedClassProgramCodes(c.classroom).filter(code => !served.has(code));
+    if (!codes.length) continue;
+    codes.forEach(code => served.add(code));
+    for (const p of await loadStudentProjects(container, c.classroom, c.classId, studentId, now, deps)) if (codes.includes(p.projectCode)) out.push({ ...p, classId: c.classId, classroom: c.classroom });
+  }
+  return out;
+}
+
+module.exports = { loadStudentProjects, loadStudentProjectsAcross };

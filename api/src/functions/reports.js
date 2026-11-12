@@ -40,6 +40,7 @@ const SUB_PREFIX = "platform/submissions/";
 
 // Phase 21G.0 — teacher tenancy: reports cover only the teacher's own classes and students.
 const { tenantOf, canAccessDocument, classAccessible, studentAccessible } = require("../lib/teacher-tenancy");
+const { isStudentInClass, isStudentSharedIn } = require("../lib/class-membership");
 
 async function loadClass(container, classId) { return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json"); }
 function classMeta(c) {
@@ -149,7 +150,13 @@ async function handler(request, deps = {}, obs = null) {
       if (tenant) {
         const load = name => downloadJsonOrNull(container, name);
         if (classId && !(await classAccessible(load, classId, tenant))) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        if (studentId && !(await studentAccessible(load, await load(USER_PREFIX + studentId + ".json"), tenant))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+        if (studentId) {
+          const named = await load(USER_PREFIX + studentId + ".json");
+          // Tadris+ P11-C — a student the owner added to a class of THIS teacher (the class just passed the check above) is reportable
+          // IN THAT CLASS; every other student must be the teacher's own, as before.
+          const sharedHere = !!classId && !!named && named.role === "student" && isStudentSharedIn(named, classId);
+          if (!sharedHere && !(await studentAccessible(load, named, tenant))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+        }
       }
 
       // Filter options for the global filter bar (school years incl. archived, classes, projects).
@@ -265,7 +272,9 @@ async function handler(request, deps = {}, obs = null) {
         // Tadris+ P10-H (closes security review O13; owner decision §19.45) — the student passed the student check (possibly through
         // their own owner stamp), but their CURRENT class must be this teacher's too before anything of it is read: another
         // teacher's class is treated as no class at all — no id, name, school year, assignments, results or projects.
-        const rawClassId = String(u.classId || "");
+        // Tadris+ P11-C — the report is of ONE class: the requested class when the student is a member of it (home or shared, and
+        // the class passed the teacher's check above), otherwise the student's home class as before.
+        const rawClassId = classId && isStudentInClass(u, classId) ? classId : String(u.classId || "");
         const classOk = !tenant || !rawClassId || await classAccessible(name => downloadJsonOrNull(container, name), rawClassId, tenant);
         const sClassId = classOk ? rawClassId : "";
         const c = sClassId ? await loadClass(container, sClassId) : null;

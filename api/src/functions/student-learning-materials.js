@@ -5,6 +5,8 @@ const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { buildStudentLearningMaterials } = require("../lib/class-learning-materials");
 const { classAllowedCourses } = require("../lib/access/course-access");   // Tadris+ P5-A
+const { sharedClassEntries } = require("../lib/class-membership");
+const { studentClasses } = require("../lib/student-classes");   // Tadris+ P11-C
 
 const CLASS_PREFIX = "platform/classes/";
 
@@ -26,6 +28,21 @@ async function handler(request, deps = {}, obs = null) {
     const sess = await ras(request, deps);
     if (!sess.ok) return sess.response;
     const student = sess.student;
+    // Tadris+ P11-C — a student who is also in a class of another teacher: the materials of every OPEN class of theirs. A course is
+    // listed once, from the first class that offers it (home first — lib/student-classes.js, the rule every learning route uses), and
+    // only when THAT class's teacher may use it (P5-A). Refused, as before, only when no class of the student is open.
+    if (sharedClassEntries(student).length) {
+      const classes = await studentClasses(student, name => dl(sess.container, name));
+      if (!classes.open.length) return classes.home.archived ? { status: 403, jsonBody: { ok: false, error: "هذا الصف مؤرشف وانتهت السنة الدراسية." } } : { status: 200, jsonBody: { ok: true, materials: [] } };
+      const listed = [], served = new Set();
+      for (const c of classes.open) {
+        const offered = buildStudentLearningMaterials(c.classroom).filter(m => !served.has(m.courseId));
+        offered.forEach(m => served.add(m.courseId));
+        const allowed = new Set(await classAllowedCourses(sess.container, c.classroom, offered.map(m => m.courseId), deps));
+        listed.push(...offered.filter(m => allowed.has(m.courseId)));
+      }
+      return { status: 200, jsonBody: { ok: true, materials: listed } };
+    }
     const classId = String(student?.classId || "").trim();
     if (!classId) return { status: 200, jsonBody: { ok: true, materials: [] } };
     const classroom = await dl(sess.container, CLASS_PREFIX + classId + ".json");

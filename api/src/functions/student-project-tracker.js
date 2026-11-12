@@ -10,7 +10,12 @@ const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { getSupportedClassProgramCodes } = require("../lib/project-tracker/class-programs");
 // Shared with the student dashboard's Strength calculation: the ONE loader that turns class programCodes into
 // per-project authoritative summaries (core.buildStudentSummary). Project math is never duplicated here.
-const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
+const { loadStudentProjectsAcross } = require("../lib/project-tracker/student-projects");
+// Tadris+ P11-C — a student who is also in a class of another teacher follows the projects of every class of theirs: a project code is
+// served by the FIRST class that runs it (the home class first — lib/student-classes.js), so the home class's project is never
+// replaced. The class of a self-report is the class that serves its project, derived here; a body class id is still ignored.
+const { sharedClassEntries } = require("../lib/class-membership");
+const { studentClasses } = require("../lib/student-classes");
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
@@ -52,10 +57,23 @@ async function handler(request, deps = {}, obs = null) {
 
       const studentId = sess.user.sub;
       const student = sess.student;
-      const classId = student.classId;
-      const classroom = classId ? await downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json") : null;
-      const codes = classroom ? getSupportedClassProgramCodes(classroom) : [];
-      if (!classroom || !codes.length) {
+      // The student's classes in serving order (P11-C, lib/student-classes.js): the OPEN classes — the home class first, then the
+      // classes the owner added the student to — and LAST an archived home class, whose projects stay a readable record (as before)
+      // wherever no open class runs the same project.
+      const classList = [];
+      if (sharedClassEntries(student).length) {
+        const classes = await studentClasses(student, name => downloadJsonOrNull(container, name));
+        for (const c of classes.open) classList.push({ classId: c.classId, classroom: c.classroom });
+        if (classes.home.classroom && classes.home.archived) classList.push({ classId: classes.home.classId, classroom: classes.home.classroom });
+      } else {
+        const homeId = student.classId;
+        const homeClassroom = homeId ? await downloadJsonOrNull(container, CLASS_PREFIX + homeId + ".json") : null;
+        if (homeClassroom) classList.push({ classId: homeId, classroom: homeClassroom });
+      }
+      const servedBy = new Map();                                   // project code → the class that serves it
+      for (const c of classList) for (const code of getSupportedClassProgramCodes(c.classroom)) if (!servedBy.has(code)) servedBy.set(code, c);
+      const codes = [...servedBy.keys()];
+      if (!classList.length || !codes.length) {
         if (request.method === "POST") return { status: 400, jsonBody: { ok: false, error: "المشروع غير متاح لصفك." } };
         // Not enrolled in any tracked project — portal shows no project section.
         return { status: 200, jsonBody: { ok: true, enrolled: false, projects: [] } };
@@ -66,6 +84,7 @@ async function handler(request, deps = {}, obs = null) {
         try { body = await request.json(); } catch { body = {}; }
         const input = selfReportInput(body || {}, codes);
         if (input.error) return { status: input.status, jsonBody: { ok: false, error: input.error } };
+        const { classId, classroom } = servedBy.get(input.projectCode);
         if (normalizeClassStatus(classroom) !== "active") return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — لا يمكن تعديل المشروع." } };
         const rec = deps.recordAuditEvent || recordAuditEvent;
         try {
@@ -88,9 +107,12 @@ async function handler(request, deps = {}, obs = null) {
         }
       }
 
-      const loaded = await loadStudentProjects(container, classroom, classId, studentId, now, deps);
-      const projects = loaded.map(({ projectCode, definition, snapshot, workDef, progress, summary }) => ({
+      const loaded = await loadStudentProjectsAcross(container, classList, studentId, now, deps);
+      const several = classList.length > 1;
+      const projects = loaded.map(({ projectCode, definition, snapshot, workDef, progress, summary, classroom: served }) => ({
         projectCode,
+        // P11-C — with more than one class: the class that runs this project (and whether it is read-only there)
+        ...(several ? { className: String(served.name || ""), ...(normalizeClassStatus(served) !== "active" ? { readOnly: true } : {}) } : {}),
         title: definition.title,
         tracks: definition.tracks,
         summary,
@@ -107,7 +129,8 @@ async function handler(request, deps = {}, obs = null) {
 
       // QA-16 — an archived class's projects stay readable as the student's record (writes are refused above); the flag lets the
       // page show them read-only instead of offering controls the server refuses.
-      return { status: 200, jsonBody: { ok: true, enrolled: true, className: classroom.name, projects, ...(normalizeClassStatus(classroom) !== "active" ? { readOnly: true } : {}) } };
+      const primary = classList[0].classroom;                      // the home class while it is open
+      return { status: 200, jsonBody: { ok: true, enrolled: true, className: primary.name, projects, ...(normalizeClassStatus(primary) !== "active" ? { readOnly: true } : {}) } };
     } catch (e) {
       obs?.logError("student.projectTracker.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." } };

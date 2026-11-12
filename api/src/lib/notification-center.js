@@ -27,6 +27,7 @@ const { resultsReleased } = require("./results-release");
 const { downloadJsonOrNull } = require("./platform-storage");
 const { listStreamIds, combineCounts, UNREAD_DISPLAY_CAP } = require("./message-read-state");
 const { classCanSeeLearningModule } = require("./class-learning-materials");
+const { offersCourse } = require("./student-classes");
 const registry = require("./learning-materials-registry");
 const { normalizeClassStatus } = require("./class-lifecycle");
 const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } = require("./student-notifications");
@@ -62,7 +63,8 @@ function parsePublicEventId(value) {
 const NO_MESSAGES = Object.freeze({ directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: 0, totalCapped: false });
 // Tadris+ P11-B — `options.sharedClasses` [{ classId, classroom, archived, addedAt, messages }] (lib/shared-conversations.js
 // sharedClassesOf): the classes the student SHARES. Each open one adds its class-event stream (assignment events; a learning-module
-// event of a shared class stays hidden until shared classes serve learning materials — P11-C) with an unread floor at the moment the
+// event of a shared class only when THAT class is the one serving the course to the student — P11-C, lib/student-classes.js: the
+// first open class, home first, that offers the course) with an unread floor at the moment the
 // student was ADDED (the class's earlier history is never «new»), its assignments become valid targets of personal assignment events,
 // and — when that class's teacher offers messaging (`messages`) — its conversation and announcements join the message counts and
 // items. Without the option: the home class only, exactly as before.
@@ -77,16 +79,18 @@ async function notificationContext(container, student, classroom, deps = {}, opt
   if (classActive) streams.push({ key: classId, scope: "class", prefix: classEventPrefix(classId) });
   const shared = Array.isArray(options.sharedClasses) ? options.sharedClasses.filter(x => x && x.classId && x.classroom) : [];
   const classIds = new Set(classId ? [classId] : []);
+  const openClasses = classActive ? [{ classId, classroom }] : [];     // P11-C: in serving order — the home class first
   const messageStreamSets = options.messages !== false ? [studentStreams(studentId, classId)] : [];
   for (const x of shared) {
     classIds.add(x.classId);
     if (!x.archived) {
       const added = Date.parse(String(x.addedAt || ""));
       streams.push({ key: x.classId, scope: "class", prefix: classEventPrefix(x.classId), shared: true, floorMs: Math.max(classFloorMs, Number.isFinite(added) ? added : 0) });
+      openClasses.push({ classId: x.classId, classroom: x.classroom });
     }
     if (x.messages === true) messageStreamSets.push(studentSharedStreams(studentId, x.classId));
   }
-  return { studentId, classId, classIds, classroom, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), messageStreamSets, messagesOn: messageStreamSets.length > 0, assignmentCache: new Map(), docCache: new Map() };
+  return { studentId, classId, classIds, classroom, openClasses, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), messageStreamSets, messagesOn: messageStreamSets.length > 0, assignmentCache: new Map(), docCache: new Map() };
 }
 
 async function assignmentOf(container, ctx, assignmentId, deps) {
@@ -105,8 +109,15 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
   const base = { id: publicEventId(stream.scope, ev.eventId), type: ev.type, createdAt: ev.createdAt, unread };
   if (stream.scope === "class") {
     if (ev.type === "learning_module_published") {
-      if (stream.shared) return null;                                    // P11-B: a shared class's materials are not served yet (P11-C)
-      if (!classCanSeeLearningModule(ctx.classroom, ev.courseId, ev.moduleId)) return null;
+      let streamClassroom = ctx.classroom;
+      if (stream.shared) {
+        // P11-C — a shared class's module is announced only when that class is the one SERVING the course to this student (the
+        // home class, or an earlier shared one, that offers the same course keeps serving it — and the link would open theirs).
+        const serving = ctx.openClasses.find(c => offersCourse(ev.courseId)(c.classroom));
+        if (!serving || serving.classId !== stream.key) return null;
+        streamClassroom = serving.classroom;
+      }
+      if (!classCanSeeLearningModule(streamClassroom, ev.courseId, ev.moduleId)) return null;
       const course = registry.findLearningCourse(ev.courseId);
       const mod = course && course.modules.find(m => m.moduleId === ev.moduleId);
       if (!course || !mod) return null;

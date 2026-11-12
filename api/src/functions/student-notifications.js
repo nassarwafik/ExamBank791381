@@ -49,7 +49,12 @@ async function handler(request, deps = {}, obs = null) {
       delete subject.ownerId;
       if (typeof shared.classroom.ownerId === "string" && shared.classroom.ownerId) subject.ownerId = shared.classroom.ownerId;
       let offered = false;
-      try { offered = (await studentServices(container, subject, deps, process.env, { classroom: shared.classroom })).messages === true; }
+      try {
+        const offer = await studentServices(container, subject, deps, process.env, { classroom: shared.classroom });
+        offered = offer.messages === true;
+        // Tadris+ P11-C — the games entry: a game is offered when ANY of the student's teachers (of an open class) offers it.
+        if (!shared.archived) games = [...new Set([...games, ...offer.games])];
+      }
       catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
       sharedClasses.push({ ...shared, messages: offered });
     }

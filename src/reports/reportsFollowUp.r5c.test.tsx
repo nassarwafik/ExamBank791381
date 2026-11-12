@@ -80,7 +80,7 @@ describe("R-5c class report — «طلاب يحتاجون متابعة»", () =>
     fireEvent.click(within(sec).getByRole("button", { name: "تقرير الطالب — بلال عمر" }));
     await screen.findByRole("heading", { level: 2, name: "تقرير الطالب" });
     await screen.findByRole("heading", { level: 3, name: "بلال عمر" });
-    expect(gets("student")).toEqual(["/api/reports?type=student&studentId=s2"]);
+    expect(gets("student")).toEqual(["/api/reports?type=student&studentId=s2&classId=c1"]);   // P11-C: the request names the class it is opened from
     const f = screen.getByRole("region", { name: "مرشحات التقرير" });
     await waitFor(() => expect((within(f).getByLabelText("الطالب") as HTMLSelectElement).value).toBe("s2"));
     expect((within(f).getByLabelText("الصف") as HTMLSelectElement).value).toBe("c1");

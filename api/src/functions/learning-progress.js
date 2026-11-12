@@ -14,7 +14,7 @@ const { classCourseDecision, courseRefusal } = require("../lib/access/course-acc
 //                                                   module must be published to the student's class; records it as read and
 //                                                   as the last page (idempotent; a repeat of the current page writes nothing)
 // The persisted class is the authority (never a claim in the token or the body). Progress is never a grade.
-const CLASS_PREFIX = "platform/classes/";
+const { classroomServing, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C — the class that serves a shared student
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const ARCHIVED = { status: 403, jsonBody: { ok: false, error: "هذا الصف مؤرشف وانتهت السنة الدراسية." } };
 const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذه الصفحة غير متاحة لصفك بعد." } };
@@ -37,8 +37,8 @@ async function handler(request, deps = {}, obs = null) {
     if (!index) return NOT_FOUND;
 
     // Persisted class → lifecycle → course attached (ONE class read).
-    const classId = String(sess.student?.classId || "").trim();
-    const classroom = classId ? await dl(sess.container, CLASS_PREFIX + classId + ".json") : null;
+    // P11-C — the student's class that offers this course: the home class, else a class the owner added the student to.
+    const classroom = await classroomServing(sess.student, name => dl(sess.container, name), offersCourse(courseId));
     if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
     if (!classroom || !classHasLearningCourse(classroom, courseId)) return UNAVAILABLE;
     // Tadris+ P5-A — NEW writes need the course published and within the class's teacher's entitlement. Reading the student's OWN
