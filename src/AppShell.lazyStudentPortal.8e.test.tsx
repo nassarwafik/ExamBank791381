@@ -227,6 +227,6 @@ describe("H. prior Phase 8E guards stay intact", () => {
     expect(guard).toMatch(/platform\.length >= 2/); expect(guard).toMatch(/portal\.length >= 2/); expect(guard).toMatch(/chart\.length >= 3/);
     const budget = Number((guard.match(/INITIAL_JS_GZIP_BUDGET_KB = (\d+)/) || [])[1]);
     expect(budget).toBeLessThanOrEqual(125); expect(budget).toBeGreaterThanOrEqual(112);
-    expect(SRC("package.json")).toMatch(/"build": "tsc -b && vite build && npm run check:bundle && npm run check:csp && npm run check:protected-assets"/);   // D2 appended the CSP gate; Tadris+ P5-C the protected-assets gate
+    expect(SRC("package.json")).toMatch(/"build": "npm run typecheck && vite build && npm run check:bundle && npm run check:csp && npm run check:protected-assets"/);   // D2 appended the CSP gate; Tadris+ P5-C the protected-assets gate; the typecheck step is `tsc -b` with a named heap (validation-matrix §10)
   });
 });

@@ -6047,7 +6047,7 @@ function App() {
 
       {teacherView === "reports" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
-          <ReportsCenter token={token} onOpenProject={goToProjects} onSessionExpired={handleLogout} />
+          <ReportsCenter token={token} onOpenProject={goToProjects} onOpenAssignment={openAssignmentTarget} onSessionExpired={handleLogout} />
         </Suspense>
       )}
 

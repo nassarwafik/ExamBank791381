@@ -24,6 +24,7 @@ import ProgressBar from "../ui/ProgressBar";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { toneForTrack } from "../projects/teacherPresentation";
 import type { ProjectAnalytics as AnalyticsData, TrackMeta } from "../projects/types";
+import type { AssignmentDrillTarget } from "../assignments/drillTarget";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler);
 
@@ -82,7 +83,7 @@ function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; insights?: ClassInsights | null; projects: ClassProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
-  if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
+  if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." description="سيعرض التقرير أرقام الصف، تطوّر متوسطه ونسبة تسليمه من تقييم لآخر، ترتيب الطلاب، وتقدّمه في مشاريعه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const archived = data.class.status === "archived";
@@ -174,7 +175,7 @@ type StudentProjectSection = { projectCode: string; title: string; tracks: Track
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; insights?: StudentInsights | null; projects: StudentProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId, ...(filters.classId ? { classId: filters.classId } : {}) }, filters) : null);
-  if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
+  if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." description="اختر الصف ثم الطالب. سيعرض التقرير نتائجه في كل تقييم بجانب متوسط الصف، حالة كل تقييم، وتقدّمه في مشاريع صفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const csvKpis: csvRows.Kpi[] = [
@@ -267,7 +268,7 @@ function StudentAssessmentsTable({ points }: { points: StudentAssessmentPoint[] 
   );
 }
 
-function AssignmentsReport({ token, filters }: { token: string; filters: Filters }) {
+function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string; filters: Filters; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
   // Phase R-5b — the row's day and highest / lowest / median are optional: an API that does not send them shows the earlier columns.
   type Row = csvRows.AssignmentRow & { assignmentId: string; date?: string; highest?: number | null; lowest?: number | null; median?: number | null };
   type Cell = { studentId: string; state: string; percentage: number | null; zero?: boolean };
@@ -296,7 +297,7 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
   // Phase R-5a — the same look and entrance as the other report charts (one series: its title names it, so no legend box).
   const reduced = usePrefersReducedMotion();
   const barOptions = useMemo(() => kitBarOptions(palette, chartMotion(reduced, distLabels.length), distLabels.map(k => "النطاق " + k + "%"), { unit: "تسليم" }), [palette, reduced, distLabels]);
-  if (!filters.classId) return <EmptyState text="اختر صفًا." />;
+  if (!filters.classId) return <EmptyState text="اختر صفًا." description="سيعرض التقرير متوسط كل تقييم ونسبة تسليمه، توزيع النتائج، ومصفوفة الطالب × التقييم." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   return (
@@ -334,7 +335,15 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
             { key: "median", label: "الوسيط", render: (r: Row) => pct(r.median), numeric: true, sortValue: (r: Row) => finiteOrNull(r.median) },
             { key: "lowest", label: "الأدنى", render: (r: Row) => pct(r.lowest), numeric: true, sortValue: (r: Row) => finiteOrNull(r.lowest) }
           ] : []),
-          { key: "avgAttempts", label: "متوسط المحاولات", numeric: true, sortValue: r => r.avgAttempts }
+          { key: "avgAttempts", label: "متوسط المحاولات", numeric: true, sortValue: r => r.avgAttempts },
+          // Phase R-5d — from a row to that exact assignment's gradebook (the shell's own drill: identifiers and intent only).
+          ...(onOpenAssignment ? [{ key: "open", label: "فتح", render: (r: Row) => (
+            <span className="eb-report-row-actions eb-report-noprint">
+              <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenAssignment({ assignmentId: r.assignmentId, mode: "assignment" })}>دفتر الدرجات<VisuallyHidden> — {r.title}</VisuallyHidden></button>
+              {(r.pendingReview ?? 0) > 0 && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenAssignment({ assignmentId: r.assignmentId, mode: "pendingReview" })}>{PENDING_LABEL} ({r.pendingReview})<VisuallyHidden> — {r.title}</VisuallyHidden></button>}
+              {r.missing > 0 && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenAssignment({ assignmentId: r.assignmentId, mode: "notSubmitted" })}>{MISSING_LABEL} ({r.missing})<VisuallyHidden> — {r.title}</VisuallyHidden></button>}
+            </span>
+          ) }] : [])
         ]} rows={data.perAssignment} empty="لا توجد تقييمات ضمن الفترة المختارة." />
       </section>
       {data.matrix.length > 0 && (
@@ -377,7 +386,7 @@ function ProjectReport({ token, filters, onOpenProject }: { token: string; filte
   const params = filters.projectCode && filters.classId ? { type: "project", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   const [stageTrack, setStageTrack] = useState("");
-  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
+  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   // CSV parity: exact legacy KPI labels/values.
@@ -427,7 +436,7 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   useEffect(() => {
     if (data && track && !data.tracks.some(t => t.trackId === track)) setTrack(resolveTrack(track, data.tracks.map(t => t.trackId), data.track));
   }, [data, track]);
-  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
+  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const trackTitle = data.tracks.find(t => t.trackId === data.track)?.title || data.track;
@@ -456,7 +465,7 @@ function ReadyReport({ token, filters, onOpenProject }: { token: string; filters
   type Resp = { tracks: TrackMeta[]; class: { name: string; status: string }; students: { studentId: string; displayName: string; stages: { stageId: string; title: string; track: string }[] }[]; totalReady: number };
   const params = filters.projectCode && filters.classId ? { type: "ready", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
+  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   const trackTitle = (id: string) => data.tracks.find(t => t.trackId === id)?.title || id;
@@ -484,7 +493,7 @@ function DelayedReport({ token, filters }: { token: string; filters: Filters }) 
   type Resp = { tracks: TrackMeta[]; lateThreshold: number; class: { name: string }; students: Row[] };
   const params = filters.projectCode && filters.classId ? { type: "delayed", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
+  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   return (
@@ -511,7 +520,7 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
   const reduced = usePrefersReducedMotion();
   const weeks = data ? data.trend.length : 0;
   const lineOptions = useMemo(() => percentLineOptions(palette, chartMotion(reduced, weeks), (data ? data.trend : []).map(t => "أسبوع " + t.weekStart), false), [palette, reduced, weeks, data]);
-  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
+  if (!params) return <EmptyState text="اختر مشروعًا وصفًا." description="تقارير المشاريع تعرض الوضع الحالي لصف مسجَّل في المشروع؛ اختر المشروع أولًا لتظهر صفوفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
   return (
@@ -544,16 +553,16 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
 
 // Phase R-5a — the report's entrance motion (cards rise, progress bars grow) is CSS keyed on this wrapper, so it follows the same
 // preference as the charts: the viewer's explicit choice, else the OS hint. The wrapper has no box (display: contents).
-export default function ReportView(props: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
+export default function ReportView(props: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
   const reduced = usePrefersReducedMotion();
   return <div className="eb-report-motion" data-motion={reduced ? "off" : "on"}><ReportBody {...props} /></div>;
 }
 
-function ReportBody({ type, token, filters, onOpenProject }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
+function ReportBody({ type, token, filters, onOpenProject, onOpenAssignment }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void; onOpenAssignment?: (target: AssignmentDrillTarget) => void }) {
   switch (type) {
     case "class": return <ClassReport token={token} filters={filters} />;
     case "student": return <StudentReport token={token} filters={filters} />;
-    case "assignments": return <AssignmentsReport token={token} filters={filters} />;
+    case "assignments": return <AssignmentsReport token={token} filters={filters} onOpenAssignment={onOpenAssignment} />;
     case "project": return <ProjectReport token={token} filters={filters} onOpenProject={onOpenProject} />;
     case "track": return <TrackReport key={filters.projectCode + "|" + filters.classId} token={token} filters={filters} />;
     case "ready": return <ReadyReport token={token} filters={filters} onOpenProject={onOpenProject} />;
