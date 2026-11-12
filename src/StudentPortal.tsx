@@ -459,6 +459,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));
+  // Tadris+ P11-A — a student in more than one class (two teachers): every task card names its class.
+  const multiClass = (data?.classes?.length || 0) > 1;
   const now_ = data ? nowItems(data.assignments) : { actionable: [], upcoming: [] };
   const now = Date.now();
   // Phase 9A — the ONE continuation for the hero (pure, deterministic; see todayPriority.ts). The Reader marker is read
@@ -537,7 +539,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                         <div key={g.key} className={"eb-sp-task-group is-" + g.key} role="group" aria-labelledby={"eb-sp-task-group-" + g.key}>
                           <h3 id={"eb-sp-task-group-" + g.key} className="eb-sp-task-group-title">{g.label}<span className="eb-sp-task-group-count">{g.items.length}</span></h3>
                           <ul className="eb-sp-tasks">
-                            {g.items.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} /></li>)}
+                            {g.items.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} showClass={multiClass} /></li>)}
                           </ul>
                         </div>
                       ))}
@@ -545,7 +547,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                   )}
                   {visible.length > 0 && filter !== "all" && (
                     <ul className="eb-sp-tasks">
-                      {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} /></li>)}
+                      {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} now={now} showClass={multiClass} /></li>)}
                     </ul>
                   )}
                   {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}

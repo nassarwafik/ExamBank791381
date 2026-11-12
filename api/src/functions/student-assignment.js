@@ -3,7 +3,6 @@ const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
-const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {sanitizeExamForStudent,sanitizeCoverForStudent}=require("../lib/student-exam-sanitize");
 const {projectPresentationForStudent}=require("../lib/shared-finalization/presentation/presentationModel");
 const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
@@ -54,15 +53,17 @@ function preStartAssignment(a,timed,attemptPolicy){
 // hydration every exam read path applies) before the strict cover projection.
 function preStartCover(cover){return hydrateBankAssets({coverPage:cover}).coverPage||cover}
 function presentationForPreStart(raw){return raw===undefined||raw===null?undefined:projectPresentationForStudent(raw)}
+const {studentAssignmentAccess}=require("../lib/student-class-access");   // Tadris+ P11-A
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
 async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull;
  try{
   const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
   const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
-  const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
-  if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
-  const a=await dl(c,PREFIX+id+".json");if(!a||a.status!=="published"||!a.classId||!student.classId||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح لهذا الحساب."}};
+  // Tadris+ P11-A — the assignment must belong to a class of the student's (home or shared); ITS class decides «archived».
+  const access=await studentAssignmentAccess(student,n=>dl(c,n),()=>dl(c,PREFIX+id+".json"));
+  if(access.denied==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
+  const a=access.assignment;if(access.denied||!a||a.status!=="published")return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح لهذا الحساب."}};
   const s=await dl(c,SUB_PREFIX+id+"/"+student.userId+".json"),av=getAssignmentAvailability(a,s),ts=timerState(a,s);
   // Scheduled (before openAt) => 403 and NO exam payload. CLOSED is intentionally NOT blocked here: a
   // student must still be able to open a past-due assignment to view/review a submitted result (the

@@ -106,6 +106,16 @@ function studentAnnouncementStateName(studentId, classId) {
   if (!isSafeId(studentId) || !isSafeId(classId)) throw new Error("Unsafe id.");
   return READ_STATE_PREFIX + "student/" + studentId + "/announcements/" + classId + ".json";
 }
+// Tadris+ P11-B — the read markers of the conversation of a class the student SHARES (message-store sharedDirectPrefix): the
+// teacher's per (class, student), the student's per class. Separate documents from the home conversation's markers.
+function teacherSharedStateName(teacherId, classId, studentId) {
+  if (!isSafeId(studentId) || !isSafeId(classId)) throw new Error("Unsafe id.");
+  return READ_STATE_PREFIX + "teacher/" + teacherActorKey(teacherId) + "/shared/" + classId + "/" + studentId + ".json";
+}
+function studentSharedStateName(studentId, classId) {
+  if (!isSafeId(studentId) || !isSafeId(classId)) throw new Error("Unsafe id.");
+  return READ_STATE_PREFIX + "student/" + studentId + "/shared/" + classId + ".json";
+}
 
 /** The 13-digit ORDER KEY of a message id (legacy: its millisecond; sequenced: SEQUENCE_KEY_BASE + position); NaN when
  *  it is not a message id. */
@@ -554,6 +564,7 @@ module.exports = {
   READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, READER_RELEVANCE, MarkReadError, validateAcknowledgement,
   absorbIrrelevantLegacy, absorbIrrelevantSequenced, irrelevantSequencedRun,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
+  teacherSharedStateName, studentSharedStateName,
   messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
   combineCounts, groupDirectIds, groupDirectEntries, teacherDirectUnread, teacherDirectUnreadPlain
 };

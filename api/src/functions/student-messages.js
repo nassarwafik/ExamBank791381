@@ -1,3 +1,15 @@
+// Tadris+ P11-B — a student who is ALSO in a class of another teacher (student.sharedClasses) has one conversation PER TEACHER
+// (owner decision: «محادثة منفصلة لكل معلم»): the HOME conversation below, unchanged, and one conversation — a direct thread with that
+// class's teacher plus that class's announcements — for every shared class whose document exists.
+//   `conversation=<classId>` (query on GET, body field on POST) selects ONE shared class of the student's OWN (anything else: 404);
+//   without it the request is about the home conversation, exactly as before. Every read, send, edit, delete and acknowledgement then
+//   acts on the selected conversation's streams only — a message can never land in, or be read from, another conversation.
+//   The unread summary (?view=unread, and the one returned after markRead): `directUnread` / `announcementUnread` are the SELECTED
+//   conversation's own counts (its two tabs), `totalUnread` is the total across ALL the student's conversations (the portal's badge);
+//   with more than one conversation the answer carries `conversations` [{ id, name, home, archived, unread, … }] for the switcher.
+//   Each conversation follows the messaging service of ITS teacher (P7-B1); with the home teacher's messaging off, a request that
+//   names no conversation opens the first one that is on.
+// The legacy `classId` / `studentId` body fields are still ignored.
 // Phase 5C — STUDENT messaging surface (hardened student session):
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
 //   GET  /api/student-messages?stream=direct|announcements&before=<messageId>  → M.3: that stream's older page
@@ -27,7 +39,7 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const {
-  isSafeId, directPrefix, normalizeMessageBody, listRecentMessages, messageView,
+  isSafeId, normalizeMessageBody, listRecentMessages, messageView,
   studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT, MessageContentionError, MESSAGE_ID_RE
 } = require("../lib/message-store");
 // Messages hardening (M.1): idempotent (clientMessageId) + rate-limited replies, private no-store responses.
@@ -45,6 +57,10 @@ const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } 
 // without messages.inbox.read (while the owner enforces access) has no messaging for their students — every read and write here is
 // refused (403 SERVICE_NOT_AVAILABLE; 503 when it cannot be decided). Nothing stored is changed or deleted.
 const { requireStudentService } = require("../lib/access/student-services");
+// Tadris+ P11-B — one conversation per shared class (lib/shared-conversations.js).
+const { studentSharedStreams, sharedClassesOf } = require("../lib/shared-conversations");
+const { combineCounts } = require("../lib/message-read-state");
+const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 
 const CLASS_PREFIX = "platform/classes/";
 const CLASS_ARCHIVED = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -75,21 +91,62 @@ async function handle(request, deps = {}, obs = null) {
     const container = sess.container, student = sess.student;
     const studentId = String(student.userId || "");
     if (!isSafeId(studentId)) return { status: 401, jsonBody: { ok: false, error: "Unauthorized" } };
-    const serviceDenial = await requireStudentService(container, student, "messages", deps, obs);   // P7-B1
-    if (serviceDenial) return serviceDenial;
-    const classroom = await currentClassroom(container, student, dl);
+    const homeClassroom = await currentClassroom(container, student, dl);
+    const params = request.method === "GET" ? new URL(request.url).searchParams : null;
+    let body = {};
+    if (request.method === "POST") { try { body = await request.json(); } catch { body = {}; } if (!body || typeof body !== "object") body = {}; }
+    // P11-B — the student's conversations: the home one first, then one per shared class. Each follows ITS teacher's messaging
+    // service (P7-B1): `denial` is the refusal to answer with when that conversation is the one asked for.
+    const conversations = [{ id: "", home: true, classId: homeClassroom ? String(student.classId) : "", classroom: homeClassroom,
+      streams: studentStreams(studentId, homeClassroom ? String(student.classId) : ""), denial: await requireStudentService(container, student, "messages", deps, obs) }];
+    for (const sharedClass of await sharedClassesOf(container, student, { ...deps, downloadJsonOrNull: dl })) {
+      const subject = { ...student };                                   // the service of THIS class's teacher, not the home teacher's
+      delete subject.ownerId;
+      if (typeof sharedClass.classroom.ownerId === "string" && sharedClass.classroom.ownerId) subject.ownerId = sharedClass.classroom.ownerId;
+      conversations.push({ id: sharedClass.classId, home: false, classId: sharedClass.classId, classroom: sharedClass.classroom, streams: studentSharedStreams(studentId, sharedClass.classId),
+        denial: await requireStudentService(container, subject, "messages", deps, obs, { classroom: sharedClass.classroom }) });
+    }
+    const wanted = String((params ? params.get("conversation") : body.conversation) || "").trim();
+    const selected = wanted
+      ? conversations.find(c => !c.home && c.id === wanted) || null
+      : (conversations[0].denial && conversations.find(c => !c.denial)) || conversations[0];
+    if (!selected) return { status: 404, jsonBody: { ok: false, code: "CONVERSATION_NOT_FOUND", error: "المحادثة غير موجودة." } };
+    if (selected.denial) return selected.denial;
+    const classroom = selected.classroom;
     const state = sendState(classroom);
-    const streams = studentStreams(studentId, classroom ? String(student.classId) : "");
+    const streams = selected.streams;
+    const open = conversations.filter(c => !c.denial);
+    // The unread summary: the SELECTED conversation's two counts + the total across EVERY open conversation (one conversation:
+    // exactly the summary it always was).
+    const unreadAcross = async (options = {}) => {
+      const parts = [];
+      for (const c of open) parts.push(await unreadSummary(container, c.streams, deps, null, options));
+      const own = parts[open.indexOf(selected)];
+      const total = combineCounts(...parts.map(x => ({ unread: x.totalUnread, capped: x.totalCapped })));
+      return { summary: { directUnread: own.directUnread, announcementUnread: own.announcementUnread, totalUnread: total.unread, totalCapped: total.capped }, parts };
+    };
+    // The switcher's list — only when there is more than one conversation (a student of one class gets the answer it always got).
+    const conversationList = async (parts, withTeacher = false) => {
+      if (open.length < 2) return {};
+      const list = [];
+      for (let i = 0; i < open.length; i++) {
+        const c = open[i], sum = combineCounts(parts[i].directUnread, parts[i].announcementUnread);
+        const teacherId = c.home ? String(student.ownerId || (c.classroom && c.classroom.ownerId) || "") : String((c.classroom && c.classroom.ownerId) || "");
+        list.push({ id: c.id, home: c.home, selected: c === selected, name: String((c.classroom && c.classroom.name) || ""), archived: !!c.classroom && normalizeClassStatus(c.classroom) === "archived",
+          unread: sum.unread, capped: sum.capped, ...(withTeacher && teacherId ? { teacherName: await (deps.resolveTeacherDisplayName || resolveTeacherDisplayName)(container, teacherId, deps) } : {}) });
+      }
+      return { conversations: list };
+    };
     // M.5 — the student's permissions on each DIRECT message (display hints; announcements carry none).
     const actor = { role: "student", id: studentId };
     const directView = doc => messageView(doc, { actions: d => messageActions(d, actor, { canSend: state.canSend, now: deps.now ? deps.now() : Date.now() }) });
 
     if (request.method === "GET") {
-      const params = new URL(request.url).searchParams;
       const view = params.get("view");
       if (view === "unread") {
         // The badge poll also folds the student's own leading replies into their boundary (M.1, changes no count).
-        return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps, null, { absorb: true })) } };
+        const all = await unreadAcross({ absorb: true });
+        return { status: 200, jsonBody: { ok: true, ...all.summary, ...(await conversationList(all.parts)) } };
       }
       if (view === "notifications") {
         // Phase 6C — items and counts from ONE set of loaded markers, so the panel and the badge agree.
@@ -102,7 +159,7 @@ async function handle(request, deps = {}, obs = null) {
       const page = async (s, which, limit, before = "") => {
         const marker = await loadMarker(container, s.stateName, deps);
         const p = await listRecentMessages(container, s.streamPrefix, s.expected, limit, deps, { isRead: id => isReadBy(marker, id), include: s.include, before });
-        const meta = { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) };
+        const meta = { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(selected.classId), ...(selected.home ? {} : { sharedClassId: selected.id }) };
         if (p.absorbable.length) {
           await absorbIrrelevantLegacy(container, { stateName: s.stateName, legacyIds: p.legacyIds, ids: p.absorbable, meta }, deps).catch(() => {});
         }
@@ -111,7 +168,7 @@ async function handle(request, deps = {}, obs = null) {
         }
         return p;
       };
-      const classId = classroom ? String(student.classId) : "";
+      const classId = classroom ? String(selected.classId) : "";
       // M.3 — older history of ONE stream: ?stream=direct|announcements&before=<oldest shown id> → { messages, hasMore }.
       if (params.has("stream") || params.has("before")) {
         const which = params.get("stream") === "direct" ? "direct" : params.get("stream") === "announcements" && classId ? "announcements" : "";
@@ -129,13 +186,12 @@ async function handle(request, deps = {}, obs = null) {
         directHasMore: direct.hasMore, directHasNewer: direct.hasNewer,
         announcementsHasMore: announcements.hasMore, announcementsHasNewer: announcements.hasNewer,
         classroom: classroom ? { classId, name: String(classroom.name || ""), archived: normalizeClassStatus(classroom) === "archived" } : null,
-        canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error
+        canSend: state.canSend, readOnlyCode: state.code, readOnlyReason: state.error,
+        ...(open.length > 1 ? { conversation: selected.id, ...(await conversationList((await unreadAcross()).parts, true)) } : {})
       } };
     }
 
     if (request.method !== "POST") return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };
-    let body = {};
-    try { body = await request.json(); } catch { body = {}; }
     const action = String(body && body.action || "").trim();
     if (action === "markRead") {
       // Only the server-derived streams; a body studentId / classId / teacherId / recipient is never read.
@@ -147,11 +203,12 @@ async function handle(request, deps = {}, obs = null) {
           stateName: s.stateName, streamPrefix: s.streamPrefix, expected: s.expected, include: s.include,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
-          meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) }
+          meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(selected.classId), ...(selected.home ? {} : { sharedClassId: selected.id }) }
         }, deps);
         // FRESH listing (no `ids`): a message that arrived after validation is still counted.
         const own = await countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps);
-        return { status: 200, jsonBody: { ok: true, stream: which, ...own, ...(await unreadSummary(container, streams, deps)) } };
+        const all = await unreadAcross();
+        return { status: 200, jsonBody: { ok: true, stream: which, ...own, ...all.summary, ...(await conversationList(all.parts)) } };
       } catch (e) {
         if (e instanceof MarkReadError) return { status: 400, jsonBody: { ok: false, error: "الرسالة المحددة غير صالحة." } };
         throw e;
@@ -177,11 +234,12 @@ async function handle(request, deps = {}, obs = null) {
     if (!text.ok) return { status: 400, jsonBody: { ok: false, error: text.error } };
     if (!state.canSend) return { status: 403, jsonBody: { ok: false, error: state.error, code: state.code } };
     const sent = await publishGuarded(container, {
-      role: "student", senderId: studentId, streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, clientMessageId: body.clientMessageId,
+      role: "student", senderId: studentId, streamPrefix: streams.direct.streamPrefix, expected: streams.direct.expected, clientMessageId: body.clientMessageId,
       buildDoc: (messageId, createdAt) => ({
         schemaVersion: 1, messageId, kind: "direct", studentId,
+        ...(selected.home ? {} : { sharedClassId: selected.id }),
         senderRole: "student", senderId: studentId, senderDisplayName: studentDisplayName(student),
-        body: text.body, createdAt, classIdAtSend: String(student.classId || "")
+        body: text.body, createdAt, classIdAtSend: String(selected.home ? student.classId || "" : selected.id)
       })
     }, deps);
     if (sent.response) return sent.response;
