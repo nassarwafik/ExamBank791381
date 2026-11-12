@@ -268,3 +268,19 @@
 @media print{
   .eb-report-active-filters .eb-button,.eb-report-skeleton{ display:none !important; }
 }
+
+/* ============================================================
+   Phase R-5c — students who need follow-up (docs/enterprise-reports-follow-up-r5c.md)
+   ============================================================ */
+.eb-report-follow-up{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-report-follow-up .eb-subheading{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-report-follow-up .eb-report-reasons{ max-inline-size:32rem; }
+.eb-report-follow-up .eb-report-reasons .eb-badge{ white-space:normal; }
+.eb-overview-attention{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-overview-attention-list{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-overview-attention-list .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-2); min-height:36px; border-inline-start:3px solid var(--eb-warn); }
+.eb-overview-attention-class{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+@media (max-width:767px){
+  .eb-overview-attention-list{ flex-direction:column; }
+  .eb-overview-attention-list .eb-button{ min-height:44px; justify-content:flex-start; }
+}

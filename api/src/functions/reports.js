@@ -27,6 +27,8 @@ const analytics = require("../lib/project-tracker/analytics");
 const agg = require("../lib/reports/aggregate");
 // Phase R-5a — the chart series of the class / student reports (`insights`): pure shaping over the SAME outcomes as the KPIs.
 const ins = require("../lib/reports/insights");
+// Phase R-5c — «طلاب يحتاجون متابعة» (the owner's criteria) and the one «المتأخرون» rule both reports share.
+const followUp = require("../lib/reports/follow-up");
 const { parseDateRange, inRange } = require("../lib/reports/date-range");
 const { buildHistoryTimeline } = require("../lib/reports/timeline");
 const { getClassProgramCodes, getSupportedClassProgramCodes, classHasProject } = require("../lib/project-tracker/class-programs");
@@ -186,7 +188,17 @@ async function handler(request, deps = {}, obs = null) {
           // the roster comes from the request's single users read (a class with no assessment in the range still shows its students)
           inputs.push({ meta, students: await classStudents(container, meta.classId, reads), assignments, subsByAssignment: await submissionsForAll(container, assignments) });
         }
-        return { status: 200, jsonBody: { ok: true, type, overview: ins.overviewRollup(inputs), withheld } };
+        // Phase R-5c — how many students of each class need follow-up IN THE ASSESSMENTS (missing / below the class; the overview
+        // reads no project), by the same criteria and the same class average as the class report.
+        const overview = ins.overviewRollup(inputs);
+        let total = 0;
+        overview.classes = overview.classes.map((row, i) => {
+          const needsFollowUp = followUp.academicFollowUpCount(ins.studentStandings(inputs[i].students, inputs[i].subsByAssignment), row.average);
+          total += needsFollowUp;
+          return { ...row, needsFollowUp };
+        });
+        overview.followUp = { criteria: { ...followUp.FOLLOW_UP_CRITERIA }, total };
+        return { status: 200, jsonBody: { ok: true, type, overview, withheld } };
       }
 
       // Students of one class, for the student/timeline filter dropdowns.
@@ -218,9 +230,16 @@ async function handler(request, deps = {}, obs = null) {
         const meta = classMeta(c);
         // A class may be in several projects — report each independently (never combine their %).
         const projects = [];
+        const projectDelays = [];   // Phase R-5c — who is late in each project, by the «المتأخرون» rule (from the same entries)
         if (projectsAllowed) for (const pCode of getSupportedClassProgramCodes(c)) {
           const ctx = await projectContext(container, pCode, c, reads);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
+          const byStudent = new Map();
+          for (const e of ctx.entries) {
+            const late = followUp.projectDelayReasons(core.buildStudentSummary(ctx.workDef, e.progress, now), ctx.config.config || {}).reasons;
+            if (late.length) byStudent.set(String(e.studentId), late);
+          }
+          projectDelays.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, byStudent });
           // Phase P-5d — «لم يبدأوا» (P-5c count) only when some students have not started; every other section is unchanged.
           projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}),
             studentCount: sum.studentCount });   // Phase R-5a — the population the two counts are out of (the students-by-state bar)
@@ -233,7 +252,10 @@ async function handler(request, deps = {}, obs = null) {
           // Phase R-5b — `summary`: the spread of the students' averages and who holds the highest / the lowest.
           // Each assessment point also carries the highest / lowest / median of its final results.
           const points = ins.assessmentSeries(assignments, students, subsByAssignment).map((p, i) => ({ ...p, ...ins.assessmentSpread(students, subsByAssignment[i]) }));
-          insights = { assessments: points, students: standings, submission: ins.submissionSplit(standings), summary: ins.standingsSummary(standings) };
+          insights = { assessments: points, students: standings, submission: ins.submissionSplit(standings), summary: ins.standingsSummary(standings),
+            // Phase R-5c — «طلاب يحتاجون متابعة»: against the report's own «متوسط النتائج»; project lateness only for the projects
+            // this session may see (projectDelays is empty otherwise).
+            followUp: followUp.followUpList(standings, agg.average(allPcts), projectDelays) };
         }
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: academic ? {
           assignments: assignments.length,
@@ -369,16 +391,12 @@ async function handler(request, deps = {}, obs = null) {
         }
         if (type === "delayed") {
           const cfg = config.config || {};
-          const lateThreshold = Number.isFinite(Number(cfg.lateThreshold)) ? Number(cfg.lateThreshold) : 40;
+          // Phase P-5b — a never-started student has one reason, «لم يبدأ بعد» (never «بلا تحديث», and its 0 % is implied).
+          // Phase R-5c — the rule now lives in follow-up.projectDelayReasons (same wording, same order), shared with the class report.
+          const lateThreshold = followUp.projectDelayReasons({}, cfg).lateThreshold;
           const rows = entries.map(e => {
             const summary = core.buildStudentSummary(workDef, e.progress, now);
-            const reasons = [];
-            // Phase P-5b — a never-started student has one reason, «لم يبدأ بعد» (never «بلا تحديث», and its 0 % is implied).
-            if (summary.notStarted) reasons.push("لم يبدأ بعد");
-            else {
-              if (summary.stale) reasons.push("بلا تحديث " + (cfg.staleDays || 7) + "+ أيام");
-              if (!summary.complete && summary.overallProgress < lateThreshold) reasons.push("تقدّم أقل من " + lateThreshold + "%");
-            }
+            const reasons = followUp.projectDelayReasons(summary, cfg).reasons;
             return { studentId: e.studentId, displayName: e.displayName, overall: summary.overallProgress, trackProgress: summary.trackProgress, updatedAt: summary.updatedAt, complete: summary.complete, reasons };
           }).filter(r => r.reasons.length);
           return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, lateThreshold, class: classMeta(c), students: rows } };
