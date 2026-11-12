@@ -33,7 +33,9 @@ describe("CI quality gate (Phase 11A)", () => {
   });
   it("the build script keeps typecheck + bundle guard; lint is oxlint with rules-of-hooks at error", () => {
     const pkg = JSON.parse(read("../package.json")) as { scripts: Record<string, string> };
-    expect(pkg.scripts.build).toBe("tsc -b && vite build && npm run check:bundle && npm run check:csp && npm run check:protected-assets");   // D2 appended the CSP gate (C17); Tadris+ P5-C the protected-assets gate
+    expect(pkg.scripts.build).toBe("npm run typecheck && vite build && npm run check:bundle && npm run check:csp && npm run check:protected-assets");   // D2 appended the CSP gate (C17); Tadris+ P5-C the protected-assets gate
+    // The typecheck is still `tsc -b` over the project references, the first build step; it only names Node's heap (validation-matrix §10).
+    expect(pkg.scripts.typecheck).toMatch(/^node --max-old-space-size=\d+ node_modules\/typescript\/bin\/tsc -b$/);
     expect(pkg.scripts.lint).toBe("oxlint");
     const oxlint = JSON.parse(read("../.oxlintrc.json")) as { rules: Record<string, unknown> };
     expect(oxlint.rules["react/rules-of-hooks"]).toBe("error");

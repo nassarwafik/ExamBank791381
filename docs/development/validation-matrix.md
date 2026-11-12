@@ -10,8 +10,8 @@ proves readiness before pushing and how the reviewer re-verifies.
 |---|---|---|---|---|
 | C1 | Root unit / API / UI tests | `npm test` (Vitest: `src/**`, `api/tests/**`, `scripts/**`) | Quality Gate, every push / PR | app, API handlers in-process against an in-memory blob container, script guards, the repository governance contract |
 | C2 | Lint | `npm run lint` (oxlint; fails on error-level findings only) | Quality Gate | no rules-of-hooks or other error-level findings; warning baseline reported, not fatal |
-| C3 | TypeScript build / typecheck | `npx tsc -b` | Quality Gate (inside `npm run build`) | the app and tooling type-check with the project references |
-| C4 | Application build | `npm run build` (= `tsc -b` + `vite build` + bundle guard + CSP check) | Quality Gate | the production bundle builds |
+| C3 | TypeScript build / typecheck | `npm run typecheck` (= `tsc -b` with a 4 GB Node heap, §10) | Quality Gate (inside `npm run build`) | the app and tooling type-check with the project references |
+| C4 | Application build | `npm run build` (= `npm run typecheck` + `vite build` + bundle guard + CSP check) | Quality Gate | the production bundle builds |
 | C5 | Bundle guard | `npm run check:bundle` (after a build) | Quality Gate (inside `npm run build`) | initial JavaScript graph within its gzip budget; heavy modules and learning visuals stay lazy |
 | C6 | Runner unit suite | `npm --prefix runner test` | Runner security & smoke, every push / PR | gateway, auth, registry, queue, journal, target authority, admission; no Docker |
 | C7 | Docker security / smoke tests | `npm --prefix runner run test:docker:security` | Runner security & smoke (after building the images) | real sandboxes: isolation, limits, cleanup, practice end-to-end |
@@ -75,7 +75,7 @@ Notes:
 ## 3. Order of operations before the handoff
 
 1. Focused tests for the change (fail-first first, when fixing a defect).
-2. `npm test` (full root suite), `npm run lint`, `npx tsc -b`, `npm run build`.
+2. `npm test` (full root suite), `npm run lint`, `npm run typecheck`, `npm run build`.
 3. Runner suites per the matrix.
 4. Mutation campaign per the matrix, in isolation, then `git status` must be clean.
 5. `git diff --check`, review the diff adversarially: what would make CI reject it?
@@ -229,3 +229,51 @@ The slow start did **not** reproduce. Its cause is not proven, so no browser fla
   defect in the fixture.
 - If they show `absent` with the process running, the browser itself did not get ready. Then compare the load figures before
   changing anything.
+
+## 10. The typecheck names its Node heap (`npm run typecheck`)
+
+**The defect.** `tsc -b` over the project references needs about as much memory as Node's default old-space limit, so it
+aborted now and then with exit 134 («JavaScript heap out of memory») and **no type error**. A build that dies this way fails the
+Quality Gate, and the visual and access gates that build the app, for a reason no change caused.
+
+**Measured on `main` `84574ff4`** (Node 22.23.4, TypeScript 6.0.3, `tsc -b --force`; default limit 2096 MB by
+`v8.getHeapStatistics().heap_size_limit`):
+
+| Heap limit | Result |
+|---|---|
+| 1800 MB | exit 134, «Ineffective mark-compacts near heap limit» |
+| 1950 MB | exit 134, «Reached heap limit» |
+| 2048 MB | exit 0 |
+| 2096 MB (default) | exit 0 in 4 of 4 runs |
+| 6144 MB, `--extendedDiagnostics` | exit 0; 793,558 types, «Memory used» 2,567,470 K |
+
+- The default limit is less than 146 MB (7 %) above a limit that always aborts. Every phase that adds types narrows it.
+- Seen in practice before this fix: on two later branches of the reports series (about 5,000 and 6,000 more types than
+  `main` then) the default-heap typecheck aborted in 1 of 4 forced runs each, and passed every time with a 4 GB heap.
+
+**The fix.** `package.json` only:
+- `typecheck` = `node --max-old-space-size=4096 node_modules/typescript/bin/tsc -b`: the same compiler, the same project
+  references, the same errors; only Node's limit is named. 4096 MB is about twice the default and 1.6 times the memory
+  measured with a relaxed heap; a GitHub-hosted runner has more than that.
+- `build` starts with `npm run typecheck` in place of the bare `tsc -b`. Every workflow that builds the app calls
+  `npm run build`, so no workflow changed.
+
+No step, job, trigger, threshold or rule changed, and nothing is skipped: a type error still fails the build.
+
+**The guard.** `scripts/typecheck-heap.test.mjs` (part of C1) reads `package.json` and fails when the typecheck loses its heap
+setting or drops below 4096 MB, when the build goes back to a bare `tsc`, or when another script calls the compiler directly.
+- **Fail-first:** on `84574ff4` its five tests fail (the first: «package.json has no `typecheck` script»).
+- **Mutation:** seven mutants of `package.json`, one at a time, each killed: the heap setting dropped, lowered to 2048 MB, the
+  build back to a bare `tsc -b`, the typecheck a bare `tsc -b`, the typecheck step dropped from the build, another script
+  calling the compiler directly, `-b` dropped. `package.json` restored by SHA-256.
+
+**Three existing pins were updated**, because they quote the build script word for word (as D2 and P5-C did when they appended
+their gates): `src/ciQualityGate.11a.test.ts`, `src/AppShell.lazyStudentPortal.8e.test.tsx`,
+`src/AppShell.lazyTeacherPlatform.8e.test.tsx`. Each still requires the typecheck as the first build step and every guard after
+it; `ciQualityGate` now also pins what the typecheck step is.
+
+**Not done.**
+- `AGENTS.md` §12 and §14 still name `npx tsc -b`: the contract is the owner's to edit. That command still type-checks, at the
+  default heap; `npm run typecheck` is the form that does not abort.
+- The amount of types was not reduced (no `skipLibCheck` change, no project split): that would be a different, larger change.
+- If the typecheck ever aborts at 4096 MB, that is a new finding (measure as above), not a reason to raise the number silently.
