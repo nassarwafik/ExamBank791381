@@ -73,6 +73,21 @@ async function teacherLibraryFilter(container, user, deps = {}) {
   return itemId => inBank(doc, String(itemId), accountId);
 }
 
+/**
+ * Tadris+ P6-E — an exam the OWNER imported (IMP-nnn) always follows its audience, for EVERY teacher session: also before enforcement
+ * and for identities that predate the console (whose bundled library is not narrowed). Nobody had it before, so nobody loses
+ * anything, and «لم يُحدَّد بعد» really means nobody sees it. An identity without an account sees only the «all» ones.
+ * Returns a predicate itemId → boolean for imported ids; throws LibraryAccessError when the audience cannot be read (fail closed).
+ */
+async function importedLibraryFilter(container, user, deps = {}) {
+  const doc = await readAudienceDoc(container, deps);
+  const accountId = user && user.am === "managed" && typeof user.sub === "string" ? user.sub : "";
+  return itemId => {
+    const a = audienceOf(doc, String(itemId));
+    return a.audience === "all" || (!!accountId && a.teachers.includes(accountId));
+  };
+}
+
 /** The refusal of a route that could not read the audience. */
 const libraryAccessUnavailable = () => ({ status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "5" }, jsonBody: { ok: false, code: "ACCESS_UNAVAILABLE", error: "تعذر التحقق من الصلاحيات حاليًا. حاول مرة أخرى." } });
 
@@ -93,5 +108,5 @@ async function mutateAudience(container, change, deps = {}) {
 
 module.exports = {
   AUDIENCE_DOC, AUDIENCES, MAX_TEACHERS, LAUNCH_ITEMS, LibraryAccessError, parseAudienceDoc, readAudienceDoc, audienceOf, inBank,
-  teacherLibraryFilter, libraryAccessUnavailable, mutateAudience
+  teacherLibraryFilter, importedLibraryFilter, libraryAccessUnavailable, mutateAudience
 };

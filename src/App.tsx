@@ -1726,6 +1726,14 @@ function App() {
   // (which fills plan/metadata/summary/revisionHistory) rather than spreading the library snapshot,
   // whose slimmer shape lacks those fields and crashed the builder's render.
   function handleCopyLibraryExamToBuilder(examSnapshot: { questions?: ExamQuestion[]; title?: string } | null, title: string) {
+    // Tadris+ P6-E — an exam the owner imported into the library is a STRUCTURED exam (sections): its editable copy opens in the
+    // structured builder as a NEW exam (fresh id, draft, saved create-only); the library item itself never changes.
+    if (isStructuredExam(examSnapshot)) {
+      const copy = JSON.parse(JSON.stringify(examSnapshot)) as StructuredExam;
+      studio.openExam({ ...copy, examId: newExamId(), title: (title || copy.title || "امتحان") + " (نسخة قابلة للتعديل)", status: "draft" }, "unsaved", null, "✓ نُسخ امتحان المكتبة — عدّل النسخة ثم احفظها.");
+      setStructuredBuilderOpen(true);
+      return;
+    }
     const questions = Array.isArray(examSnapshot?.questions) ? examSnapshot.questions : [];
     if (!questions.length) {
       return;
