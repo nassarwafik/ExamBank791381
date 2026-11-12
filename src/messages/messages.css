@@ -6,6 +6,10 @@
 .eb-msg-tab{ font:inherit; background:transparent; border:0; border-block-end:3px solid transparent; padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); cursor:pointer; }
 .eb-msg-tab[aria-selected="true"]{ border-block-end-color:var(--eb-primary); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
 .eb-msg-tab:focus-visible,.eb-msg-roster-item:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+/* Tadris+ P11-B — «معلموك»: one button per teacher's conversation, above the card (aria-pressed carries the state, never colour alone). */
+.eb-msg-conversations{ flex-wrap:wrap; margin-block-end:var(--eb-space-3); }
+.eb-msg-conversations .eb-msg-tab{ min-height:44px; }
+.eb-msg-conversations .eb-msg-tab[aria-pressed="true"]{ border-block-end-color:var(--eb-primary); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
 
 .eb-msg-panel{ min-width:0; }
 .eb-msg-subtitle{ margin:0 0 var(--eb-space-2); font-size:15px; color:var(--eb-text-heading); }

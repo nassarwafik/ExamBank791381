@@ -170,7 +170,7 @@ describe("12E-B student dashboard — count-only observability + response parity
   it("the public response carries no read-cost / index / debug / metrics field", async () => {
     const s = scenario({ mine: 1, withSubmission: 1 });
     const { r } = await run(s);
-    expect(Object.keys(r.jsonBody).sort()).toEqual(["assignments", "classroom", "ok", "phase", "recognition", "stats", "strength", "student", "study"]);
+    expect(Object.keys(r.jsonBody).sort()).toEqual(["assignments", "classes", "classroom", "ok", "phase", "recognition", "stats", "strength", "student", "study"]);   // P11-A: + classes (the student's open classes)
     const text = JSON.stringify(r.jsonBody);
     for (const k of ["readCost", "read_cost", "debug", "metrics", "assignmentDocsScanned", "assignment-index", "publishedAssignmentIds", "ready"]) expect(text).not.toContain(k);
   });

@@ -6,7 +6,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
-const {isStudentClassMember}=require("../lib/class-membership");
+const {isStudentInClass}=require("../lib/class-membership");   // Tadris+ P11-A: shared students are in the population
 const {questionAutoGradingPending}=require("../lib/coding/official-grading");
 // QA2-5 — the QA-9 rule per question: a grade still open for a TECHNICAL reason (coding execution open, a render-failure hold the teacher has
 // not marked) is not a provisional 0 in the question's average, correct rate or difficulty; the per-student grid already shows it as pending.
@@ -30,7 +30,7 @@ async function handler(request,deps={},obs=null){
   const questions=Array.isArray(a.examSnapshot?.questions)?a.examSnapshot.questions:[];
   // Roadmap #24: analyzed population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled student's
   // historical submission stays part of the teacher's item analysis; archived students stay excluded.
-  const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId));
+  const users=(await ls(c,UP)).filter(x=>isStudentInClass(x,a.classId));
   // Only the latest submitted attempt per student is analyzed — a student with several attempts
   // must not outweigh a student with a single attempt (see Phase 13 spec).
   const latestAttempts=[],latestByStudent=[];

@@ -41,7 +41,9 @@ const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-
 // Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
 // index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
 const { addToRosterIndex, removeFromRosterIndex, reconcileRosterIndex } = require("../lib/class-roster-index");
-const { isStudentClassMember } = require("../lib/class-membership");
+const { isStudentInClass, isStudentSharedIn, sharedClassIds, sharedClassEntries } = require("../lib/class-membership");
+// Tadris+ P11-A — one student account in more than one class (docs/enterprise-shared-enrollment-p11a.md).
+const { unenrollStudent, EnrollmentRefusal, pendingInSharedClasses, sharedPendingMessage } = require("../lib/shared-enrollment");
 // Classes & Students hardening — safe ids, Arabic-Indic identity digits, cleaned names, bounded lengths; and the
 // grading-safety guard that refuses a move/archive that would hide work still awaiting the teacher.
 const { isSafeId, normalizeIdentityNumber, cleanText, LIMITS } = require("../lib/roster-input");
@@ -157,7 +159,14 @@ async function getClassroom(container, classId) {
   return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
 }
 
-async function listStudents(container, classId, includeArchived = false, obs = null, canSee = null, withSubmissions = true) {
+// Tadris+ P11-A — a student the owner ADDED to this class (a shared class) is listed too, as a SHARED row: `shared: true`, the row's
+// `classId` is the listed class, and `archived` is false (the archive is the lifecycle of the student's HOME roster; a login the home
+// teacher disabled shows as `active: false`). The caller has already checked that the viewer may see `classId`; without a class,
+// `sharedVisible(classId)` says which shared classes are the viewer's. The account itself stays with the home teacher and the owner:
+// every mutation below still asks studentOk, which a shared class never satisfies. The profile photo is not offered (its route serves
+// the home teacher only), and «الواجبات (N)» counts the submissions of the LISTED class only — never the other teacher's.
+const sharedRow = (student, classId) => ({ ...publicStudent(student), classId, archived: false, shared: true, profilePhoto: null });
+async function listStudents(container, classId, includeArchived = false, obs = null, canSee = null, withSubmissions = true, sharedVisible = null) {
   const result = [];
   // Roadmap #25: this scan already yields the AUTHORITATIVE member set of the class, so the roster index is
   // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
@@ -168,10 +177,16 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   const userDocs = await loadDocs(container, USER_PREFIX);
   for (const student of userDocs) {
     if (!student || student.role !== "student") continue;
-    if (classId && isStudentClassMember(student, classId)) memberIds.push(String(student.userId || ""));
+    if (classId && isStudentInClass(student, classId)) memberIds.push(String(student.userId || ""));
+    if (classId && isStudentSharedIn(student, classId)) { result.push(sharedRow(student, classId)); continue; }
     if (classId && String(student.classId || "") !== classId) continue;
+    if (canSee && !canSee(student)) {
+      // every class of the viewer: a student who is theirs only through a shared class is listed once, in the first such class
+      const sharedId = !classId && sharedVisible ? sharedClassIds(student).find(id => sharedVisible(id)) : "";
+      if (sharedId) result.push(sharedRow(student, sharedId));
+      continue;
+    }
     if (!includeArchived && student.archived === true) continue;
-    if (canSee && !canSee(student)) continue;
     result.push(publicStudent(student));
   }
   result.sort((a, b) => {
@@ -191,6 +206,7 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   // never downloaded here, and submission content is only fetched for students already in the
   // current roster (no per-student N+1 request).
   const idSet = new Set(result.map(s => s.userId));
+  const sharedClassOf = new Map(result.filter(s => s.shared === true).map(s => [s.userId, s.classId]));   // P11-A
   const submittedSets = new Map(); // studentId -> Set<assignmentId>
   if (idSet.size && withSubmissions) {   // Tadris+ P7-A1: without assignments.assignment.view no submission is read (count 0)
     // Roadmap #27: select the roster students' submission blobs by NAME, then download them concurrently (S.2: through the
@@ -210,6 +226,8 @@ async function listStudents(container, classId, includeArchived = false, obs = n
     candidates.forEach((cand, i) => {
       const attempts = Array.isArray(submissions[i]?.attempts) ? submissions[i].attempts : [];
       if (!attempts.length) return;
+      // P11-A — a shared row counts the work handed in to the listed class only (the submission carries its assignment's class)
+      if (sharedClassOf.has(cand.studentId) && String(submissions[i]?.classId || "") !== sharedClassOf.get(cand.studentId)) return;
       if (!submittedSets.has(cand.studentId)) submittedSets.set(cand.studentId, new Set());
       submittedSets.get(cand.studentId).add(cand.assignmentId);
     });
@@ -560,6 +578,12 @@ async function unarchiveStudent(container, student, obs = null) {
   return addToRosterIndex(container, classId, [student.userId], { obs, operation: "unarchive" });
 }
 
+// Tadris+ P11-A — a class that becomes the student's HOME class is no longer a shared class of theirs (no double membership).
+function dropSharedClass(document, classId) {
+  if (!sharedClassIds(document).includes(classId)) return;
+  document.sharedClasses = sharedClassEntries(document).filter(entry => entry.classId !== classId);
+}
+
 async function moveStudent(container, student, targetClassId, obs = null) {
   const target = await getClassroom(container, targetClassId);
   if (!target || normalizeClassStatus(target) === "archived") throw new StudentActionError(400, "الصف الهدف غير موجود أو مؤرشف.");
@@ -576,6 +600,7 @@ async function moveStudent(container, student, targetClassId, obs = null) {
       // Phase S.1 — a concurrent move (checked or not) is never written over: the pending-grading check and the
       // old-class index removal below are only valid for the class this request read.
       if (String(current.classId || "") !== oldClassId) throw new StudentActionError(409, CONCURRENT_MOVE);
+      dropSharedClass(current, targetClassId);
       current.classId = targetClassId;
       current.profileRevision = profileRevisionOf(current) + 1;   // QA2-10: an edit form opened before the move is stale (409), never moves the student back
       current.updatedAt = new Date().toISOString();
@@ -615,10 +640,19 @@ async function deleteStudent(container, student, obs = null, { purgeBudget = PUR
   // M.4 — one bounded messaging purge step (never fails the delete; the rest is finished from the purge record).
   const messagingPurged = await purgeAfterDelete(container, student.userId, {}, obs, purgeBudget);
   const roster = await removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
-  return { ...roster, messagingPurged };
+  // Tadris+ P11-A — the classes the student shared lose the id too (best effort: the index is a repairable count cache).
+  let sharedSynced = true;
+  for (const sharedId of sharedClassIds(fresh || student)) {
+    try { if (!(await removeFromRosterIndex(container, sharedId, [student.userId], { obs, operation: "delete" })).synced) sharedSynced = false; }
+    catch { sharedSynced = false; }
+  }
+  return { ...roster, synced: roster.synced && sharedSynced, messagingPurged };
 }
 
-async function buildImportPreview(container, items, visible = null) {
+// Tadris+ P11-A — `enrollInto` (the OWNER's preview only): an account that exists in ANOTHER class is reported as "existing" (who,
+// where) — the owner may add that same account to this class too — and one already in this class as a duplicate. The teacher's
+// preview passes nothing and is unchanged: another teacher's student is never named and never offered.
+async function buildImportPreview(container, items, visible = null, { enrollInto = "" } = {}) {
   const classCache = new Map();
   const seenInBatch = new Set();     // identity numbers already seen earlier in THIS upload
   const rows = [];
@@ -626,6 +660,7 @@ async function buildImportPreview(container, items, visible = null) {
   for (const item of items) {
     let status = "valid";
     let error = "";
+    let message = "";
     let existingStudent = null;
 
     if (!item.firstName || !item.familyName) {
@@ -668,6 +703,15 @@ async function buildImportPreview(container, items, visible = null) {
         error = "رقم الهوية موجود مسبقًا" +
           (existing.displayName ? " للطالب " + existing.displayName : "") +
           (classroom?.name ? " في الصف " + classroom.name : "") + ".";
+        if (enrollInto) {
+          if (classId === enrollInto || sharedClassIds(existing).includes(enrollInto)) error = "الطالب موجود في هذا الصف مسبقًا.";
+          else if (existing.archived === true) error = "الطالب مؤرشف عند معلمه" + (classroom?.name ? " في الصف " + classroom.name : "") + ". يُستعاد من الأرشيف قبل إضافته إلى صف آخر.";
+          else {
+            status = "existing";
+            message = "له حساب مسبقًا" + (existing.displayName ? " باسم " + existing.displayName : "") + (classroom?.name ? " في الصف " + classroom.name : "") + ". يمكن إضافة الحساب نفسه إلى هذا الصف أيضًا.";
+            error = "";
+          }
+        }
       }
     }
 
@@ -678,6 +722,7 @@ async function buildImportPreview(container, items, visible = null) {
       identityNumber: item.identityNumber,
       status,
       error,
+      ...(message ? { message } : {}),
       existingStudent
     });
   }
@@ -685,12 +730,15 @@ async function buildImportPreview(container, items, visible = null) {
   return rows;
 }
 
-async function buildStudentProfile(container, userId, { visibleClass = null, assignments: withAssignments = true } = {}) {   // Tadris+ P5-B3b: visibleClass(classId) — the viewer's classes
+// Tadris+ P11-A — `viewClassId`: the profile as the teacher of a class the student SHARES sees it — that class is the profile's class
+// (its assignments, results and average), never the home class's; the student is marked `shared`. Without it: the home class, as before.
+async function buildStudentProfile(container, userId, { visibleClass = null, assignments: withAssignments = true, viewClassId = "" } = {}) {   // Tadris+ P5-B3b: visibleClass(classId) — the viewer's classes
   const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
   if (!student || student.role !== "student") return null;
 
-  const classroom = await getClassroom(container, String(student.classId || ""));
-  const currentClassId = String(student.classId || "");
+  const sharedView = !!viewClassId && isStudentSharedIn(student, viewClassId);
+  const currentClassId = sharedView ? viewClassId : String(student.classId || "");
+  const classroom = await getClassroom(container, currentClassId);
 
   // Sorted once, newest first; the current-class "assignments" list below is a filtered view of
   // this same sorted array, so it preserves the exact ordering already relied on elsewhere.
@@ -786,7 +834,7 @@ async function buildStudentProfile(container, userId, { visibleClass = null, ass
   submittedAssignments.sort((a, b) => String(b.submittedAt || "").localeCompare(String(a.submittedAt || "")));
 
   return {
-    student: publicStudent(student),
+    student: sharedView ? sharedRow(student, currentClassId) : publicStudent(student),
     classroom: classroom ? {
       classId: String(classroom.classId || ""),
       name: String(classroom.name || ""),
@@ -990,10 +1038,18 @@ function rowErrorMessage(error, fallback, obs) {
 
 // Refuses (409 PENDING_GRADING) a move/archive/delete of a class member whose current class still has work awaiting the
 // teacher — see lib/pending-grading.js. Archived students are already outside the read population.
+// Tadris+ P11-A — a DELETE removes the account from every class: it is refused as well while work awaits the teacher of a class the
+// student SHARES (that work could never be graded). An archive or a move leaves the shared classes' gradebooks as they are.
 async function assertNoPendingGrading(reader, student, operation) {
-  if (!reader || student.archived === true) return;
-  const pending = await reader.count(String(student.userId || ""), String(student.classId || ""));
-  if (pending > 0) throw new StudentActionError(409, pendingGradingMessage(operation, pending), "PENDING_GRADING");
+  if (!reader) return;
+  if (student.archived !== true) {
+    const pending = await reader.count(String(student.userId || ""), String(student.classId || ""));
+    if (pending > 0) throw new StudentActionError(409, pendingGradingMessage(operation, pending), "PENDING_GRADING");
+  }
+  if (operation === "delete") {
+    const shared = await pendingInSharedClasses(reader, student);
+    if (shared > 0) throw new StudentActionError(409, sharedPendingMessage(operation, shared), "PENDING_GRADING");
+  }
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
@@ -1032,14 +1088,21 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
         if (profileUserId) {
           if (!isSafeId(profileUserId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+          let viewClassId = "";
           if (tenant) {
             const subject = await downloadJsonOrNull(container, USER_PREFIX + profileUserId + ".json");
-            if (!subject || subject.role !== "student" || !(await studentOk(subject))) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+            if (!subject || subject.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+            if (!(await studentOk(subject))) {
+              // Tadris+ P11-A — not the viewer's own student: visible only through a class of the viewer's that the student shares
+              await classOk("");
+              viewClassId = sharedClassIds(subject).find(id => classIdAllowed(allowedClasses, id)) || "";
+              if (!viewClassId) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+            }
           }
           if (tenant) await classOk("");                // the viewer's classes, loaded once
           const grants = await sessionGrants(auth.user, deps, obs);   // Tadris+ P7-A1
           if (!grants.ok) return grants.response;
-          const profile = await buildStudentProfile(container, profileUserId, { visibleClass: tenant ? id => classIdAllowed(allowedClasses, id) : null, assignments: grants.has(ASSIGNMENTS_CAPABILITY) });
+          const profile = await buildStudentProfile(container, profileUserId, { visibleClass: tenant ? id => classIdAllowed(allowedClasses, id) : null, assignments: grants.has(ASSIGNMENTS_CAPABILITY), viewClassId });
           if (!profile) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           return { status: 200, headers: NO_STORE, jsonBody: { ok: true, profile } };
         }
@@ -1054,7 +1117,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         return {
           status: 200,
           headers: NO_STORE,
-          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee, grants.has(ASSIGNMENTS_CAPABILITY)) }
+          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs, canSee, grants.has(ASSIGNMENTS_CAPABILITY), tenant ? id => classIdAllowed(allowedClasses, id) : null) }
         };
       }
 
@@ -1111,6 +1174,25 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
 
         return await importStudentsToClass(container, classroom, students, { importId: body?.importId, visible: tenant ? studentOk : null, record: ev => rec(container, { actor: auth.user?.sub, ...ev }), obs });
+      }
+
+      // Tadris+ P11-A — the teacher of a SHARED class removes the student from THAT class (the only thing that teacher may change about
+      // the student). The class must be the teacher's and the student must have been added to it; anything else is answered like a
+      // missing student. The account, the home class and every stored result stay as they are.
+      if (action === "unenroll") {
+        const userId = String(body?.userId || "").trim(), classId = String(body?.classId || "").trim();
+        const missing = { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+        if (!isSafeId(userId) || !isSafeId(classId) || !(await classOk(classId))) return missing;
+        const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
+        if (!student || student.role !== "student" || !isStudentSharedIn(student, classId)) return missing;
+        let removed;
+        try { removed = await unenrollStudent(container, classId, userId, { actor: String(auth.user?.sub || "teacher"), obs }); }
+        catch (e) {
+          if (e instanceof EnrollmentRefusal) return { status: e.code === "PENDING_GRADING" ? 409 : 404, headers: NO_STORE, jsonBody: e.code === "PENDING_GRADING" ? { ok: false, code: e.code, ...e.extra, error: e.message } : missing.jsonBody };
+          throw e;
+        }
+        await rec(container, { actor: auth.user?.sub, action: "student.unenroll", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { classId } });
+        return { status: 200, headers: NO_STORE, jsonBody: { ok: true, removed: true, rosterSynced: removed.rosterSynced } };
       }
 
       if (action === "update") {
@@ -1256,6 +1338,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               c.displayName = firstName + " " + familyName;
               c.identityNumber = identityNumber;
               c.code = newCode;
+              dropSharedClass(c, newClassId);
               c.classId = newClassId;
               if (newPassword) c.authVersion = normalizeAuthVersion(c.authVersion) + 1;
               updatedStudentVersion = normalizeAuthVersion(c.authVersion);

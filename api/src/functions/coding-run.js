@@ -18,7 +18,6 @@ const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
-const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { timerState, writeRejection } = require("../lib/assignment-availability");
 const { flattenQuestions } = require("../lib/exam-structure");
 const { bindCodeAnswerToQuestion, bindCodingTemplateAnswerToQuestion, projectCodingConfigForStudent, DEFAULT_CODING_LIMITS, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, utf8ByteLength } = require("../lib/shared-finalization/codingQuestion");
@@ -88,6 +87,7 @@ function findQuestion(exam, questionId) {
   return top ? top.question : child;
 }
 
+const { studentAssignmentAccess } = require("../lib/student-class-access");   // Tadris+ P11-A
 async function runHandler(request, deps = {}, obs = null) {
   const ras = deps.requireActiveStudentSession || requireActiveStudentSession, dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const sess = await ras(request, deps);
@@ -99,10 +99,11 @@ async function runHandler(request, deps = {}, obs = null) {
   if (!body) return refused(400, "REQUEST_INVALID");
   if (!ASSIGNMENT_ID.test(body.assignmentId) || body.assignmentId.includes("..")) return refused(404, "ASSIGNMENT_UNAVAILABLE");
 
-  const classroom = student.classId ? await dl(c, "platform/classes/" + student.classId + ".json") : null;
-  if (classroom && normalizeClassStatus(classroom) === "archived") return refused(403, "CLASS_ARCHIVED");
-  const a = await dl(c, AP + body.assignmentId + ".json");
-  if (!a || !a.classId || !student.classId || String(a.classId) !== String(student.classId)) return refused(404, "ASSIGNMENT_UNAVAILABLE");   // QA-18: a real class on both sides
+  // Tadris+ P11-A — the same class check as the student's assignment routes: a class of the student's (home or shared), not archived.
+  const access = await studentAssignmentAccess(student, n => dl(c, n), () => dl(c, AP + body.assignmentId + ".json"));
+  if (access.denied === "archived") return refused(403, "CLASS_ARCHIVED");
+  if (access.denied) return refused(404, "ASSIGNMENT_UNAVAILABLE");   // QA-18: a real class on both sides
+  const a = access.assignment;
   const s = await dl(c, SP + body.assignmentId + "/" + student.userId + ".json");
   // QA2-22 — the same existence rule as the student routes (QA-17): a never-published assignment is 404 like a missing id, and an
   // archived one is 404 unless the student already has a submission there (they know it exists; it is still not writable).

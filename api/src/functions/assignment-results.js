@@ -18,7 +18,9 @@ const {normalizeRenderFailures,applyRenderFailureHolds,technicalHoldsField}=requ
 const {stampLateAttempt,lateInfo,lateMarks,latePolicyOf}=require("../lib/late-policy");   // D5 (item 10)
 const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
 const {syncAssessmentMedal}=require("../lib/achievement-feed");
-const {isStudentClassMember}=require("../lib/class-membership");
+// Tadris+ P11-A — the gradebook population is the class's members INCLUDING the students the owner added to it (a shared class).
+// Tadris+ P11-B — «remindStudents» reaches them too (the notification center now serves shared classes).
+const {isStudentInClass}=require("../lib/class-membership");
 // Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
 const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,codingGradingStatus,teacherCodingSummary}=require("../lib/coding/official-grading");
 // Phase 17D-A — a server-derived AGGREGATE coding grading status per attempt ({pending,retryable,stale} counts, only while something
@@ -68,7 +70,7 @@ async function loadTarget(dl,c,id,studentId){
  if(!id||!studentId)return {error:{status:400,error:"assignmentId and studentId are required."}};
  const a=await dl(c,AP+id+".json");if(!a)return {error:{status:404,error:"الواجب غير موجود."}};
  const student=await dl(c,UP+studentId+".json");if(!student)return {error:{status:404,error:"الطالب غير موجود."}};
- if(String(student.classId||"")!==String(a.classId||""))return {error:{status:403,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
+ if(String(student.classId||"")!==String(a.classId||"")&&!isStudentInClass(student,a.classId))return {error:{status:403,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
  // Roadmap #7: an archived assignment's attempt controls (allowRetry/setDueAtOverride/reopenStudent/
  // extendActiveAttempt) are blocked — restore it first. Read paths (GET results/review) stay available.
  if(normalizeAssignmentStatus(a)==="archived")return {error:{status:409,error:"الواجب مؤرشف. استعد الواجب أولًا قبل تعديل محاولات الطلاب."}};
@@ -90,12 +92,12 @@ async function handler(request,deps={},obs=null){
     if(!SAFE_ID.test(scopedStudentId))return {status:400,jsonBody:{ok:false,error:"studentId غير صالح."}};
     scopedStudent=await dl(c,UP+scopedStudentId+".json");
     if(!scopedStudent||scopedStudent.role!=="student"||String(scopedStudent.userId||"")!==scopedStudentId)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
-    if(!isStudentClassMember(scopedStudent,a.classId))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
+    if(!isStudentInClass(scopedStudent,a.classId))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
    }
    // Roadmap #24: the gradebook population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled
    // (active:false, non-archived) student keeps their row, results and pending-review visibility.
    const allUsers=scopedStudent?null:await ls(c,UP);
-   const users=scopedStudent?[scopedStudent]:allUsers.filter(x=>isStudentClassMember(x,a.classId)),out=[];
+   const users=scopedStudent?[scopedStudent]:allUsers.filter(x=>isStudentInClass(x,a.classId)),out=[];
    let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;const codingSummary={pending:0,retryable:0,stale:0},codingEvidenceTotals={open:0,delayed:0,superseded:0},nowMs=Date.now();
    // Roadmap #27: fetch every member's submission with bounded concurrency (aligned with `users`), then aggregate in order.
    const submissionsByIndex=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
@@ -114,9 +116,12 @@ async function handler(request,deps={},obs=null){
    // student whose transfer history names THIS class and who has a submission to it is listed; nothing about the new class is shown.
    const movedStudents=[];
    if(!scopedStudent){
-    const movedOut=allUsers.filter(x=>x&&x.role==="student"&&!isStudentClassMember(x,a.classId)&&Array.isArray(x.transferHistory)&&x.transferHistory.some(t=>t&&t.fromClassId===String(a.classId)));
+    // Tadris+ P11-A — the same archive for a student who LEFT this class as a shared class (sharedHistory: removed): `leftClass`.
+    const leftAt=x=>{const h=(Array.isArray(x.sharedHistory)?x.sharedHistory:[]).filter(e=>e&&e.action==="removed"&&e.classId===String(a.classId)).pop();return h?String(h.at||""):null};
+    const movedAt=x=>{const t=(Array.isArray(x.transferHistory)?x.transferHistory:[]).filter(e=>e&&e.fromClassId===String(a.classId)).pop();return t?String(t.at||""):null};
+    const movedOut=allUsers.filter(x=>x&&x.role==="student"&&!isStudentInClass(x,a.classId)&&(movedAt(x)!==null||leftAt(x)!==null));
     const movedSubs=await mapConcurrent(movedOut,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
-    for(let i=0;i<movedOut.length;i++){const sub=movedSubs[i];if(!sub||!Array.isArray(sub.attempts)||!sub.attempts.length)continue;const t=movedOut[i].transferHistory.filter(x=>x&&x.fromClassId===String(a.classId)).pop();const rf=resultFields(sub,nowMs);movedStudents.push({studentId:movedOut[i].userId,studentName:movedOut[i].displayName,studentCode:movedOut[i].code,movedOut:true,movedAt:String(t.at||""),gradingStatus:rf.gradingStatus,latestResult:rf.latestResult,attemptsUsed:rf.attempts.length})}
+    for(let i=0;i<movedOut.length;i++){const sub=movedSubs[i];if(!sub||!Array.isArray(sub.attempts)||!sub.attempts.length)continue;const left=leftAt(movedOut[i]),moved=movedAt(movedOut[i]),leftClass=left!==null&&(moved===null||left>moved);const rf=resultFields(sub,nowMs);movedStudents.push({studentId:movedOut[i].userId,studentName:movedOut[i].displayName,studentCode:movedOut[i].code,movedOut:true,...(leftClass?{leftClass:true}:{}),movedAt:leftClass?left:moved,gradingStatus:rf.gradingStatus,latestResult:rf.latestResult,attemptsUsed:rf.attempts.length})}
     movedStudents.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));
    }
    return {status:200,jsonBody:{ok:true,movedStudents,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a),latePolicy:latePolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:finalizedCount?Number((sum/finalizedCount).toFixed(1)):null,highest,lowest},codingSummary,codingEvidenceTotals,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
@@ -134,7 +139,7 @@ async function handler(request,deps={},obs=null){
    if(normalizeAssignmentStatus(a)!=="published")return {status:409,jsonBody:{ok:false,error:"لا يمكن تذكير الطلاب إلا بواجب منشور."}};
    if(b.studentIds!==undefined&&(!Array.isArray(b.studentIds)||b.studentIds.some(x=>!SAFE_ID.test(String(x)))))return {status:400,jsonBody:{ok:false,error:"studentIds غير صالحة."}};
    const wanted=Array.isArray(b.studentIds)?new Set(b.studentIds.map(String)):null;
-   const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)&&(!wanted||wanted.has(String(x.userId))));
+   const users=(await ls(c,UP)).filter(x=>isStudentInClass(x,a.classId)&&(!wanted||wanted.has(String(x.userId))));
    const subs=await mapConcurrent(users,getReadConcurrency(),u=>dl(c,SP+id+"/"+u.userId+".json"));
    const nowMs=Date.now(),day=new Date(nowMs).toISOString().slice(0,10);
    let reminded=0,alreadyToday=0,notNeeded=0,failed=0;

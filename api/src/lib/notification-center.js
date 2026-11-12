@@ -30,6 +30,7 @@ const { classCanSeeLearningModule } = require("./class-learning-materials");
 const registry = require("./learning-materials-registry");
 const { normalizeClassStatus } = require("./class-lifecycle");
 const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } = require("./student-notifications");
+const { studentSharedStreams } = require("./shared-conversations");   // Tadris+ P11-B
 const { classEventPrefix, studentEventPrefix, normalizeStoredEvent, loadEventReadState, isPositionRead, eventPosition, loadEventDocs } = require("./notification-events");
 
 // The bell preview: the newest CENTER_LIMIT VISIBLE unified notifications (product decision: 10).
@@ -59,6 +60,12 @@ function parsePublicEventId(value) {
 // Tadris+ P7-B1 — `options.messages === false`: the student's teacher offers no messaging (lib/access/student-services.js) — no
 // message stream is read, the message counts are 0 and no message item is listed; the events stay.
 const NO_MESSAGES = Object.freeze({ directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: 0, totalCapped: false });
+// Tadris+ P11-B — `options.sharedClasses` [{ classId, classroom, archived, addedAt, messages }] (lib/shared-conversations.js
+// sharedClassesOf): the classes the student SHARES. Each open one adds its class-event stream (assignment events; a learning-module
+// event of a shared class stays hidden until shared classes serve learning materials — P11-C) with an unread floor at the moment the
+// student was ADDED (the class's earlier history is never «new»), its assignments become valid targets of personal assignment events,
+// and — when that class's teacher offers messaging (`messages`) — its conversation and announcements join the message counts and
+// items. Without the option: the home class only, exactly as before.
 async function notificationContext(container, student, classroom, deps = {}, options = {}) {
   const studentId = String(student.userId || "");
   const classId = classroom ? String(student.classId || "") : "";
@@ -68,7 +75,18 @@ async function notificationContext(container, student, classroom, deps = {}, opt
   const classFloorMs = Math.max(Number.isFinite(created) ? created : 0, nowMs - CLASS_UNREAD_WINDOW_DAYS * 86400000);
   const streams = [{ key: "personal", scope: "student", prefix: studentEventPrefix(studentId) }];
   if (classActive) streams.push({ key: classId, scope: "class", prefix: classEventPrefix(classId) });
-  return { studentId, classId, classroom, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), messagesOn: options.messages !== false, assignmentCache: new Map(), docCache: new Map() };
+  const shared = Array.isArray(options.sharedClasses) ? options.sharedClasses.filter(x => x && x.classId && x.classroom) : [];
+  const classIds = new Set(classId ? [classId] : []);
+  const messageStreamSets = options.messages !== false ? [studentStreams(studentId, classId)] : [];
+  for (const x of shared) {
+    classIds.add(x.classId);
+    if (!x.archived) {
+      const added = Date.parse(String(x.addedAt || ""));
+      streams.push({ key: x.classId, scope: "class", prefix: classEventPrefix(x.classId), shared: true, floorMs: Math.max(classFloorMs, Number.isFinite(added) ? added : 0) });
+    }
+    if (x.messages === true) messageStreamSets.push(studentSharedStreams(studentId, x.classId));
+  }
+  return { studentId, classId, classIds, classroom, classActive, classFloorMs, streams, messageStreams: studentStreams(studentId, classId), messageStreamSets, messagesOn: messageStreamSets.length > 0, assignmentCache: new Map(), docCache: new Map() };
 }
 
 async function assignmentOf(container, ctx, assignmentId, deps) {
@@ -87,6 +105,7 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
   const base = { id: publicEventId(stream.scope, ev.eventId), type: ev.type, createdAt: ev.createdAt, unread };
   if (stream.scope === "class") {
     if (ev.type === "learning_module_published") {
+      if (stream.shared) return null;                                    // P11-B: a shared class's materials are not served yet (P11-C)
       if (!classCanSeeLearningModule(ctx.classroom, ev.courseId, ev.moduleId)) return null;
       const course = registry.findLearningCourse(ev.courseId);
       const mod = course && course.modules.find(m => m.moduleId === ev.moduleId);
@@ -101,7 +120,10 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
   // published, and belong to the student's CURRENT class (a student who moved class no longer sees the old class's
   // assignment notifications). The title shown is the current authoritative title, never the stored one.
   const a = await assignmentOf(container, ctx, ev.assignmentId, deps);
-  if (!a || a.status !== "published" || !ctx.classId || String(a.classId || "") !== ctx.classId) return null;
+  // P11-B — «the student's class» is any class of theirs: the home class or one they share.
+  if (!a || a.status !== "published" || !a.classId || !ctx.classIds.has(String(a.classId))) return null;
+  // a class-wide event is shown only in the stream of the assignment's OWN class
+  if (stream.scope === "class" && String(a.classId) !== stream.key) return null;
   const assignment = { assignmentId: ev.assignmentId, assignmentTitle: String(a.title || "") };
   switch (ev.type) {
     // Phase 21G.5 (D2) — a review notification names the mark: shown only once the assignment's results are released (it then
@@ -131,7 +153,7 @@ function countsUnread(ctx, stream, state, id, ev) {
   if (isPositionRead(state, eventPosition(id, stream.prefix))) return false;
   if (stream.scope !== "class") return true;
   const t = Date.parse(ev.createdAt);
-  return Number.isFinite(t) && t >= ctx.classFloorMs;
+  return Number.isFinite(t) && t >= (stream.floorMs || ctx.classFloorMs);
 }
 function streamState(readState, stream) { return stream.scope === "student" ? readState.personal : (readState.classes[stream.key] || { through: 0, read: [] }); }
 
@@ -181,7 +203,7 @@ async function listEventIds(container, ctx, deps) {
 
 /** The unified count snapshot: { messages, events, bell } (messages = EXACTLY the Phase 5D summary). */
 async function unifiedSummary(container, ctx, deps = {}, loaded = {}) {
-  const messages = ctx.messagesOn === false ? NO_MESSAGES : await unreadSummary(container, ctx.messageStreams, deps, loaded.markers || null);
+  const messages = ctx.messagesOn === false ? NO_MESSAGES : await messageSummary(container, ctx, deps, loaded.markers || null);
   const readState = loaded.readState || await loadEventReadState(container, ctx.studentId, deps);
   const idsByStream = loaded.idsByStream || await listEventIds(container, ctx, deps);
   const perStream = [];
@@ -191,15 +213,31 @@ async function unifiedSummary(container, ctx, deps = {}, loaded = {}) {
   return { messages, events, bell };
 }
 
+// P11-B — the message unread summary and markers over EVERY conversation of the student (one set: exactly Phase 5D's summary).
+async function loadMessageMarkers(container, ctx, deps) {
+  const out = [];
+  for (const set of ctx.messageStreamSets) out.push(await loadStreamMarkers(container, set, deps));
+  return out;
+}
+async function messageSummary(container, ctx, deps, markers) {
+  const parts = [];
+  for (let i = 0; i < ctx.messageStreamSets.length; i++) parts.push(await unreadSummary(container, ctx.messageStreamSets[i], deps, markers ? markers[i] : null));
+  if (parts.length === 1) return parts[0];
+  const directUnread = combineCounts(...parts.map(p => p.directUnread)), announcementUnread = combineCounts(...parts.map(p => p.announcementUnread));
+  const total = combineCounts(directUnread, announcementUnread);
+  return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
+}
+
 const timeOf = item => { const t = Date.parse(item.createdAt); return Number.isFinite(t) ? t : 0; };
 const KIND_RANK = { direct: 0, announcement: 1 };
 
 /** Recent unified items, newest first (stable: messages before events at the same instant, then by id), capped. */
 async function unifiedItems(container, ctx, deps = {}, loaded = {}, limit = CENTER_LIMIT) {
-  const markers = ctx.messagesOn === false ? null : loaded.markers || await loadStreamMarkers(container, ctx.messageStreams, deps);
+  const markers = ctx.messagesOn === false ? null : loaded.markers || await loadMessageMarkers(container, ctx, deps);
   const readState = loaded.readState || await loadEventReadState(container, ctx.studentId, deps);
   const idsByStream = loaded.idsByStream || await listEventIds(container, ctx, deps);
-  const messages = ctx.messagesOn === false ? [] : (await recentNotifications(container, ctx.messageStreams, markers, deps, limit)).map(m => ({ ...m, kind: "message" }));
+  const messages = [];
+  if (ctx.messagesOn !== false) for (let i = 0; i < ctx.messageStreamSets.length; i++) messages.push(...(await recentNotifications(container, ctx.messageStreamSets[i], markers[i], deps, limit)).map(m => ({ ...m, kind: "message" })));
   const events = [];
   for (const stream of ctx.streams) events.push(...(await recentStream(container, ctx, stream, readState, idsByStream.get(stream.key), limit, deps)).map(e => ({ ...e.item, kind: "event" })));
   return [...messages, ...events]
@@ -214,7 +252,7 @@ async function unifiedItems(container, ctx, deps = {}, loaded = {}, limit = CENT
 /** Items + counts from ONE set of loaded read states (the panel and the badges agree). */
 async function unifiedView(container, ctx, deps = {}) {
   const loaded = {
-    markers: ctx.messagesOn === false ? null : await loadStreamMarkers(container, ctx.messageStreams, deps),
+    markers: ctx.messagesOn === false ? null : await loadMessageMarkers(container, ctx, deps),
     readState: await loadEventReadState(container, ctx.studentId, deps),
     idsByStream: await listEventIds(container, ctx, deps)
   };
@@ -230,9 +268,10 @@ async function unifiedView(container, ctx, deps = {}) {
 async function resolveOwnEvent(container, ctx, publicId, deps = {}) {
   const parsed = parsePublicEventId(publicId);
   if (!parsed) return null;
-  const stream = ctx.streams.find(s => s.scope === parsed.scope);
+  // The id's digest must match the stream's prefix: with several class streams (P11-B) exactly one of them can own it.
+  const stream = ctx.streams.find(s => s.scope === parsed.scope && eventPosition(parsed.eventId, s.prefix) > 0);
   if (!stream) return null;
-  const position = eventPosition(parsed.eventId, stream.prefix);        // the id's digest must match THIS stream's prefix
+  const position = eventPosition(parsed.eventId, stream.prefix);
   if (!position) return null;
   const [{ ev }] = await eventsOf(container, ctx, stream, [parsed.eventId], deps);
   if (!ev) return null;
