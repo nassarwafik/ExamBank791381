@@ -890,6 +890,16 @@
       "page": "report-student",
       "viewport": "all",
       "reason": "Reports R-5d (docs/enterprise-reports-filters-r5d.md §2) — once a class is picked, a line under the filters names the active filters («الصف: …») with an «إعادة تعيين» button; nothing else on the page moves."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-5c (docs/enterprise-reports-follow-up-r5c.md §2.1) — the class report gains «طلاب يحتاجون متابعة» above «طلاب الصف»: the criteria sentence and a table of the listed students with their reasons and a button to each student's report."
+    },
+    {
+      "page": "reports",
+      "viewport": "all",
+      "reason": "Reports R-5c (docs/enterprise-reports-follow-up-r5c.md §2.2) — the hub overview gains «يحتاج انتباهك» above the class buttons: one item per class with students who need follow-up or results awaiting correction; the report cards are unchanged."
     }
   ]
 }

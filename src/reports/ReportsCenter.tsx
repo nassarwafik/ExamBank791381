@@ -188,9 +188,15 @@ export default function ReportsCenter({ token, onOpenProject, onOpenAssignment, 
     setFilters(f => { const only = f.classId ? "" : onlyClassFor(opts, type, f.projectCode, f.schoolYear); return only ? { ...f, classId: only, studentId: "" } : f; });
   }
   // Phase R-5a — a class picked in the hub overview opens its class report with that class (and its school year) selected.
-  function openClassReport(classId: string, schoolYear: string) {
+  // Phase R-5c — …and its assessments report the same way (the overview's «بانتظار التصحيح» items).
+  function openReportForClass(type: "class" | "assignments", classId: string, schoolYear: string) {
     setFilters(f => ({ ...f, schoolYear, classId, studentId: "" }));
-    setActive("class");
+    setActive(type);
+  }
+  // Phase R-5c — a follow-up row of the class report opens that student's report (the class stays chosen).
+  function openStudentReport(studentId: string) {
+    setFilters(f => ({ ...f, studentId }));
+    setActive("student");
   }
   function closeReport() {
     focusBackPending.current = active;
@@ -230,7 +236,7 @@ export default function ReportsCenter({ token, onOpenProject, onOpenAssignment, 
           <div className="eb-reports-overview-slot" hidden={category === "projects"}>
             <ReportSessionContext.Provider value={onSessionExpired}>
               <Suspense fallback={<LoadingState text="جارٍ تجهيز النظرة العامة..." />}>
-                <ReportsOverview key={token} token={token} onOpenClass={openClassReport} kept={overviewKept && overviewKept.token === token ? overviewKept.data : null}
+                <ReportsOverview key={token} token={token} onOpenClass={(classId, schoolYear) => openReportForClass("class", classId, schoolYear)} onOpenAssessments={(classId, schoolYear) => openReportForClass("assignments", classId, schoolYear)} kept={overviewKept && overviewKept.token === token ? overviewKept.data : null}
                   onLoaded={data => setOverviewKept({ token, data })} onDrop={() => setOverviewKept(null)} />
               </Suspense>
             </ReportSessionContext.Provider>
@@ -347,7 +353,7 @@ export default function ReportsCenter({ token, onOpenProject, onOpenAssignment, 
       </div>
       <ReportSessionContext.Provider value={onSessionExpired}>
         <Suspense fallback={<LoadingState />}>
-          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} onOpenAssignment={onOpenAssignment} />
+          <ReportView type={card.type} token={token} filters={filters} onOpenProject={onOpenProject} onOpenAssignment={onOpenAssignment} onOpenStudent={openStudentReport} />
         </Suspense>
       </ReportSessionContext.Provider>
     </section>
