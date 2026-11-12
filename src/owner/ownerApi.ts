@@ -308,8 +308,10 @@ export const ownerStudentTransferApi = {
 // recent second-factor check, and is recorded in the owner's audit log and in the teacher's activity log).
 export type OwnerConversationMessage = { messageId: string; kind: string; senderRole: string; senderDisplayName: string; body: string; createdAt: string; deleted?: boolean; editedAt?: string };
 export const ownerConversationsApi = {
-  open: (token: string, studentId: string, reason: string, before?: string) =>
-    call<{ ok: true; student: { userId: string; displayName: string }; messages: OwnerConversationMessage[]; hasMore: boolean }>("/api/owner-conversations/open", { method: "POST", token, body: { studentId, reason, ...(before ? { before } : {}) } })
+  // Tadris+ P11-B — `conversation`: the shared class whose conversation is opened (a student added to another teacher's class has a
+  // separate conversation with that teacher); omitted = the student's conversation with the home teacher.
+  open: (token: string, studentId: string, reason: string, before?: string, conversation?: string) =>
+    call<{ ok: true; student: { userId: string; displayName: string }; messages: OwnerConversationMessage[]; hasMore: boolean }>("/api/owner-conversations/open", { method: "POST", token, body: { studentId, reason, ...(before ? { before } : {}), ...(conversation ? { conversation } : {}) } })
 };
 
 // Tadris+ P9-A2 — «البيانات القديمة» (/api/owner-legacy-classes, P9-A1): the owner's decision for every class without an owner —

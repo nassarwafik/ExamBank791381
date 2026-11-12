@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
-const TESTS = ["api/tests/shared-enrollment-p11a.test.js", "src/owner/OwnerSharedStudents.p11a.test.tsx", "src/students/sharedStudents.p11a.test.tsx"];
+const TESTS = ["api/tests/shared-enrollment-p11a.test.js", "api/tests/shared-training-review-p11a1.test.js", "src/owner/OwnerSharedStudents.p11a.test.tsx", "src/students/sharedStudents.p11a.test.tsx"];
 const ACCESS = "api/src/lib/student-class-access.js";
 const ENROLL = "api/src/lib/shared-enrollment.js";
 const ROSTER = "api/src/lib/class-roster-index.js";
@@ -25,7 +25,8 @@ const SUB = "api/src/functions/student-submission.js";
 const DASH = "api/src/functions/student-dashboard.js";
 const UI_OWNER = "src/owner/OwnerClassRoster.tsx";
 const UI_ROSTER = "src/students/RosterPane.tsx";
-const UI_MSG = "src/messages/messagesClient.ts";
+const UI_LIVE = "src/games/liveChallenge/liveSessionClient.ts";
+const TRAINING = "api/src/functions/learning-training.js";
 
 export const MUTANTS = [
   // ── the student's reach ──
@@ -39,7 +40,7 @@ export const MUTANTS = [
   { id: "P11A-M7", what: "a student shared ANYWHERE is listed in any class asked for", edits: [{ file: MS, find: "    if (classId && isStudentSharedIn(student, classId)) { result.push(sharedRow(student, classId)); continue; }", replace: "    if (classId && sharedClassIds(student).length) { result.push(sharedRow(student, classId)); continue; }" }] },
   { id: "P11A-M8", what: "any teacher opens the profile of a student who shares a class with SOMEONE", edits: [{ file: MS, find: "              viewClassId = sharedClassIds(subject).find(id => classIdAllowed(allowedClasses, id)) || \"\";", replace: "              viewClassId = sharedClassIds(subject)[0] || \"\";" }] },
   { id: "P11A-M9", what: "the shared row counts the other teacher's submissions", edits: [{ file: MS, find: "      if (sharedClassOf.has(cand.studentId) && String(submissions[i]?.classId || \"\") !== sharedClassOf.get(cand.studentId)) return;", replace: "      if (false) return;" }] },
-  { id: "P11A-M10", what: "the gradebook leaves the shared student out", edits: [{ file: AR, find: "allUsers.filter(x=>isStudentInClass(x,a.classId)),out=[];", replace: "allUsers.filter(x=>isStudentClassMember(x,a.classId)),out=[];" }] },
+  { id: "P11A-M10", what: "the gradebook leaves the shared student out", edits: [{ file: AR, find: "allUsers.filter(x=>isStudentInClass(x,a.classId)),out=[];", replace: "allUsers.filter(x=>isStudentInClass(x,a.classId)&&String(x.classId||\"\")===String(a.classId)),out=[];" }] },
   { id: "P11A-M11", what: "the teacher cannot act on the shared student's row (retry, extension)", edits: [{ file: AR, find: "&&!isStudentInClass(student,a.classId))return {error:{status:403,", replace: ")return {error:{status:403," }] },
   { id: "P11A-M12", what: "a student who left the class has no result archive", edits: [{ file: AR, find: "&&(movedAt(x)!==null||leftAt(x)!==null));", replace: "&&(movedAt(x)!==null));" }] },
   // ── who may change what ──
@@ -56,10 +57,13 @@ export const MUTANTS = [
   { id: "P11A-M22", what: "the account is deleted while work awaits the teacher of a shared class", edits: [{ file: MS, find: "  if (operation === \"delete\") {\n    const shared = await pendingInSharedClasses(reader, student);", replace: "  if (false) {\n    const shared = await pendingInSharedClasses(reader, student);" }] },
   { id: "P11A-M23", what: "the roster index (count, class-archive guard, repair) ignores shared students", edits: [{ file: ROSTER, find: "    .filter(user => isStudentInClass(user, classId))", replace: "    .filter(user => isStudentInClass(user, classId) && String(user.classId || \"\") === String(classId))" }] },
   { id: "P11A-M24", what: "a delete leaves the id in the shared class's roster index", edits: [{ file: MS, find: "  for (const sharedId of sharedClassIds(fresh || student)) {", replace: "  for (const sharedId of []) {" }] },
+  // ── answer keys (the fix after the merge: docs/enterprise-shared-enrollment-p11a.md §7) ──
+  { id: "P11A-M28", what: "a training's review is withheld for the HOME class's homework only (the keys of a shared class's open homework are shown)", edits: [{ file: TRAINING, find: "  const classIds = studentClassIds(actor.student);", replace: "  const classIds = [String(actor.student?.classId || \"\")].filter(Boolean);" }] },
   // ── the screens ──
   { id: "P11A-M25", what: "the owner's roster offers to MOVE a shared student from here", edits: [{ file: UI_OWNER, find: "{st.shared || moving?.userId === st.userId ? null :", replace: "{moving?.userId === st.userId ? null :" }] },
   { id: "P11A-M26", what: "the teacher's roster offers the account actions on a shared student", edits: [{ file: UI_ROSTER, find: "{student.shared ? <ActionMenu label=", replace: "{false ? <ActionMenu label=" }] },
-  { id: "P11A-M27", what: "the teacher's messaging picker offers a shared student", edits: [{ file: UI_MSG, find: ".filter(s => !s.shared) : []; },", replace: " : []; }," }] }
+  // (until P11-B this mutant was the messaging picker; since P11-B that picker offers shared students on purpose)
+  { id: "P11A-M27", what: "the live-game lobby offers a shared student", edits: [{ file: UI_LIVE, find: "j.students.filter((s: { shared?: boolean }) => !s.shared) : [];", replace: "j.students : [];" }] }
 ];
 
 const originals = new Map();

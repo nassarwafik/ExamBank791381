@@ -29,7 +29,10 @@ export const UNREAD_POLL_MS = 15000;
 /** A server-derived unread count; `capped` means "more than 99" (display "99+"). */
 export type UnreadCount = { unread: number; capped: boolean };
 export type TeacherUnreadSummary = { totalUnread: number; capped: boolean; byStudent: Record<string, UnreadCount> };
-export type StudentUnread = { directUnread: UnreadCount; announcementUnread: UnreadCount; totalUnread: number; totalCapped: boolean };
+/** Tadris+ P11-B — one of the student's conversations (one per teacher): `id` "" is the home conversation, otherwise the shared class. */
+export type StudentConversation = { id: string; home: boolean; name: string; archived: boolean; unread: number; capped: boolean; teacherName?: string };
+/** `directUnread` / `announcementUnread`: the SELECTED conversation's own counts; `totalUnread`: every conversation (the portal badge). */
+export type StudentUnread = { directUnread: UnreadCount; announcementUnread: UnreadCount; totalUnread: number; totalCapped: boolean; conversations?: StudentConversation[] };
 export const NO_UNREAD: UnreadCount = { unread: 0, capped: false };
 
 /** A mark-read request built from the EXACT applied snapshot (Phase 5D review follow-up). The optional LEGACY part
@@ -85,10 +88,20 @@ const unreadOf = (v: unknown): UnreadCount => {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   return { unread: Math.max(0, Number(o.unread) || 0), capped: o.capped === true };
 };
-const studentUnreadOf = (j: Record<string, unknown>): StudentUnread => ({
-  directUnread: unreadOf(j.directUnread), announcementUnread: unreadOf(j.announcementUnread),
-  totalUnread: Math.max(0, Number(j.totalUnread) || 0), totalCapped: j.totalCapped === true
-});
+const conversationsOf = (v: unknown): StudentConversation[] | undefined => {
+  if (!Array.isArray(v)) return undefined;
+  return v.filter((x): x is Record<string, unknown> => !!x && typeof x === "object" && typeof (x as Record<string, unknown>).id === "string").map(x => ({
+    id: String(x.id), home: x.home === true, name: String(x.name || ""), archived: x.archived === true, unread: Math.max(0, Number(x.unread) || 0), capped: x.capped === true,
+    ...(typeof x.teacherName === "string" && x.teacherName ? { teacherName: x.teacherName } : {})
+  }));
+};
+const studentUnreadOf = (j: Record<string, unknown>): StudentUnread => {
+  const conversations = conversationsOf(j.conversations);
+  return {
+    directUnread: unreadOf(j.directUnread), announcementUnread: unreadOf(j.announcementUnread),
+    totalUnread: Math.max(0, Number(j.totalUnread) || 0), totalCapped: j.totalCapped === true, ...(conversations ? { conversations } : {})
+  };
+};
 
 export type MessageView = {
   messageId: string;
@@ -135,6 +148,9 @@ export type StudentMessagesData = {
   directHasNewer?: boolean;
   announcementsHasMore?: boolean;
   announcementsHasNewer?: boolean;
+  /** Tadris+ P11-B — present only when the student has more than one conversation: the conversation this answer is about, and the list. */
+  conversation?: string;
+  conversations?: StudentConversation[];
 };
 
 /** An HTTP failure carrying the status (so callers can tell a 401 from a transient error). */
@@ -175,6 +191,13 @@ export type MessageTarget = { studentId: string } | { classId: string };
 
 export function createTeacherMessagesClient(token: string): TeacherMessagesClient {
   const headers = { "x-builder-token": token, Authorization: "Bearer " + token, "content-type": "application/json" };
+  // Tadris+ P11-B — a student the owner added to this class from another teacher's class has a SEPARATE conversation with this
+  // teacher, the conversation of THAT class. The roster read says which students those are (`shared`, with the listed class); every
+  // call about such a student then names the conversation. The server decides again on every request; this only routes.
+  const sharedClassOf = new Map<string, string>();
+  const conv = (studentId: string) => (sharedClassOf.has(studentId) ? { conversation: sharedClassOf.get(studentId) as string } : {});
+  const convParam = (studentId: string) => (sharedClassOf.has(studentId) ? "&conversation=" + encodeURIComponent(sharedClassOf.get(studentId) as string) : "");
+  const targetOf = (target: MessageTarget) => ("studentId" in target ? { ...target, ...conv(target.studentId) } : target);
   const get = async (url: string, fallback: string) => {
     const r = await fetch(url, { headers });
     const j = await readJson(r);
@@ -190,13 +213,15 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
   return {
     // The EXISTING roster authorities — no second class/membership model.
     async listClasses() { const j = await get("/api/classrooms", "تعذر تحميل الصفوف."); return Array.isArray(j.classes) ? (j.classes as Classroom[]) : []; },
-    async listStudents(classId) { const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب.");
-      // Tadris+ P11-A — a student added to this class from another teacher's class has no conversation with this teacher yet (a
-      // separate conversation per teacher is P11-B); the server refuses it, so that student is not offered here.
-      return Array.isArray(j.students) ? (j.students as Array<Student & { shared?: boolean }>).filter(s => !s.shared) : []; },
-    async getDirect(studentId, before) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId) + beforeParam(before), "تعذر تحميل المحادثة.")); },
+    async listStudents(classId) {
+      const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب.");
+      const list = Array.isArray(j.students) ? (j.students as Array<Student & { shared?: boolean }>) : [];
+      for (const s of list) { if (s.shared) sharedClassOf.set(s.userId, classId); else sharedClassOf.delete(s.userId); }
+      return list;
+    },
+    async getDirect(studentId, before) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId) + convParam(studentId) + beforeParam(before), "تعذر تحميل المحادثة.")); },
     async getAnnouncements(classId, before) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements" + beforeParam(before), "تعذر تحميل الإعلانات.")); },
-    sendDirect: (studentId, body, clientMessageId) => post({ action: "sendDirect", studentId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الرسالة."),
+    sendDirect: (studentId, body, clientMessageId) => post({ action: "sendDirect", studentId, ...conv(studentId), body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الرسالة."),
     sendAnnouncement: (classId, body, clientMessageId) => post({ action: "sendAnnouncement", classId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الإعلان."),
     async getClassUnread(classId) {
       const j = await get("/api/messages?kind=unread-summary&classId=" + encodeURIComponent(classId), "تعذر تحميل الرسائل الجديدة.");
@@ -206,13 +231,13 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
       return { totalUnread: Math.max(0, Number(j.totalUnread) || 0), capped: j.capped === true, byStudent: by };
     },
     async markDirectRead(studentId, ack) {
-      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, ...ackBody(ack) }) });
+      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, ...conv(studentId), ...ackBody(ack) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return unreadOf(j);
     },
-    editMessage: (target, messageId, body) => post({ action: "editMessage", ...target, messageId, body }, "تعذر تعديل الرسالة."),
-    deleteMessage: (target, messageId) => post({ action: "deleteMessage", ...target, messageId }, "تعذر حذف الرسالة.")
+    editMessage: (target, messageId, body) => post({ action: "editMessage", ...targetOf(target), messageId, body }, "تعذر تعديل الرسالة."),
+    deleteMessage: (target, messageId) => post({ action: "deleteMessage", ...targetOf(target), messageId }, "تعذر حذف الرسالة.")
   };
 }
 
@@ -230,8 +255,12 @@ export interface StudentMessagesClient {
   deleteMessage?(messageId: string): Promise<MessageView>;
 }
 
-export function createStudentMessagesClient(token: string): StudentMessagesClient {
+/** Tadris+ P11-B — `conversation`: "" (default) is the student's home conversation; a shared class id is the conversation with THAT
+ *  class's teacher. Every call of the client is then about that one conversation (the server checks it is the student's own). */
+export function createStudentMessagesClient(token: string, conversation = ""): StudentMessagesClient {
   const headers = { "x-student-token": token, Authorization: "Bearer " + token, "content-type": "application/json" };
+  const inBody = conversation ? { conversation } : {};
+  const inQuery = (first: boolean) => (conversation ? (first ? "?" : "&") + "conversation=" + encodeURIComponent(conversation) : "");
   const change = async (body: unknown, fallback: string) => {
     const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify(body) });
     const j = await readJson(r);
@@ -239,20 +268,21 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
     return j.message as MessageView;
   };
   return {
-    editMessage: (messageId, body) => change({ action: "editMessage", messageId, body }, "تعذر تعديل الرسالة."),
-    deleteMessage: messageId => change({ action: "deleteMessage", messageId }, "تعذر حذف الرسالة."),
+    editMessage: (messageId, body) => change({ action: "editMessage", ...inBody, messageId, body }, "تعذر تعديل الرسالة."),
+    deleteMessage: messageId => change({ action: "deleteMessage", ...inBody, messageId }, "تعذر حذف الرسالة."),
     async load() {
-      const r = await fetch("/api/student-messages", { headers });
+      const r = await fetch("/api/student-messages" + inQuery(true), { headers });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل.");
       const c = j.classroom as StudentMessagesData["classroom"];
       return {
         direct: asMessages(j.direct), announcements: asMessages(j.announcements), classroom: c && typeof c === "object" ? c : null, canSend: j.canSend === true, readOnlyReason: String(j.readOnlyReason || ""),
-        directHasMore: j.directHasMore === true, directHasNewer: j.directHasNewer === true, announcementsHasMore: j.announcementsHasMore === true, announcementsHasNewer: j.announcementsHasNewer === true
+        directHasMore: j.directHasMore === true, directHasNewer: j.directHasNewer === true, announcementsHasMore: j.announcementsHasMore === true, announcementsHasNewer: j.announcementsHasNewer === true,
+        ...(typeof j.conversation === "string" ? { conversation: j.conversation } : {}), ...(conversationsOf(j.conversations) ? { conversations: conversationsOf(j.conversations) } : {})
       };
     },
     async loadOlder(stream, before) {
-      const r = await fetch("/api/student-messages?stream=" + stream + "&before=" + encodeURIComponent(before), { headers });
+      const r = await fetch("/api/student-messages?stream=" + stream + "&before=" + encodeURIComponent(before) + inQuery(false), { headers });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل الأقدم.");
       return { messages: asMessages(j.messages), hasMore: j.hasMore === true };
@@ -260,19 +290,19 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
     async sendDirect(body, clientMessageId) {
       // The ONLY student action; no recipient / class / sender field exists in this request (the optional key is an
       // idempotency token for this one message, never an identity).
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", body, ...(clientMessageId ? { clientMessageId } : {}) }) });
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "sendDirect", ...inBody, body, ...(clientMessageId ? { clientMessageId } : {}) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok || !j.message) fail(j, r.status, "تعذر إرسال الرسالة.");
       return j.message as MessageView;
     },
     async getUnread() {
-      const r = await fetch("/api/student-messages?view=unread", { headers });
+      const r = await fetch("/api/student-messages?view=unread" + inQuery(false), { headers });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل الجديدة.");
       return studentUnreadOf(j);
     },
     async markRead(stream, ack) {
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, ...ackBody(ack) }) });
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", ...inBody, stream, ...ackBody(ack) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return studentUnreadOf(j);

@@ -203,11 +203,14 @@ describe("P11-A isolation — what a shared class does NOT give", () => {
   });
   it("teacher B never reaches the student's conversation with teacher A", async () => {
     const ctx = setup({ shared: true });
+    // Tadris+ P11-B — teacher B now HAS a conversation with the shared student, a SEPARATE one (api/tests/shared-messaging-p11b.test.js).
+    // What this test pins is unchanged: B never sees teacher A's conversation, and nothing B does lands in it. (Before P11-B, B's
+    // request for this student was refused altogether: `ok` not true, the send ≥ 400.)
     const thread = await teacherGet(messages, ctx, B, "messages?studentId=" + S);
-    expect(thread.jsonBody.ok).not.toBe(true);
     expect(JSON.stringify(thread.jsonBody)).not.toContain("سؤال خاص");
-    const send = await teacherPost(messages, ctx, B, { action: "sendDirect", studentId: S, body: "مرحبا" });
-    expect(send.status).toBeGreaterThanOrEqual(400);
+    expect(thread.jsonBody.messages || []).toEqual([]);
+    await teacherPost(messages, ctx, B, { action: "sendDirect", studentId: S, body: "مرحبا" });
+    expect(ctx.mem.names(directPrefix(S))).toHaveLength(1);                                      // A's conversation got nothing from B
     expect((await teacherGet(messages, ctx, A, "messages?studentId=" + S)).jsonBody.messages.map(m => m.messageId)).toEqual([ctx.messageId]);
   });
   it("a teacher who shares nothing with the student sees nothing: roster, profile, gradebook", async () => {

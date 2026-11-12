@@ -10,13 +10,19 @@
 // platform's administration read the conversation and why). The conversation is the student's direct thread (the student's whole
 // thread, as the student sees it). Nothing is written to it: no reply, no edit, no delete, and no read marker of the student or
 // the teacher moves. There is no list or search of conversations — the owner names one student (from that teacher's class roster).
+// Tadris+ P11-B — a student who shares a class of another teacher has a SEPARATE conversation with that teacher. `conversation`
+// (optional, the same name the teacher's and the student's routes use) is the shared class whose conversation is opened; the student
+// must currently share it. The opening is then recorded in the activity log of THAT class's teacher. Without it: the student's home
+// conversation, as before.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { recordOwnerAuditEventStrict, recordAuditEventStrict } = require("../lib/audit-log");
 const { requireOwnerSession, stepUpDenial, NO_STORE } = require("../lib/identity/owner-session");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
-const { isSafeId, directPrefix, listRecentMessages, messageView, studentDisplayName, MESSAGE_ID_RE, DIRECT_HISTORY_LIMIT } = require("../lib/message-store");
+const { isSafeId, directPrefix, sharedDirectPrefix, listRecentMessages, messageView, studentDisplayName, MESSAGE_ID_RE, DIRECT_HISTORY_LIMIT } = require("../lib/message-store");
 const { ownerAccountIdOfStudent } = require("../lib/schools");
+const { isStudentSharedIn } = require("../lib/class-membership");
+const { isTeacherAccountId } = require("../lib/identity/teacher-token");
 
 const MIN_REASON = 10, MAX_REASON = 500;
 const reply = (status, body) => ({ status, headers: NO_STORE, jsonBody: body });
@@ -47,13 +53,23 @@ async function handler(request, deps = {}, obs = null) {
     if (before && !MESSAGE_ID_RE.test(before)) return reply(400, { ok: false, code: "BEFORE_INVALID", error: "الصفحة المطلوبة غير صالحة." });
     const student = await dl(container, "platform/users/" + studentId + ".json");
     if (!student || student.role !== "student") return reply(404, { ok: false, code: "STUDENT_NOT_FOUND", error: "الطالب غير موجود." });
+    // P11-B — which conversation: the home one, or the one of a class the student shares
+    const sharedClassId = body?.conversation === undefined || body?.conversation === null || body?.conversation === "" ? "" : String(body.conversation).trim();
+    let sharedClass = null;
+    if (sharedClassId) {
+      sharedClass = isSafeId(sharedClassId) && isStudentSharedIn(student, sharedClassId) ? await dl(container, "platform/classes/" + sharedClassId + ".json") : null;
+      if (!sharedClass) return reply(404, { ok: false, code: "CONVERSATION_NOT_FOUND", error: "لا محادثة للطالب في هذا الصف." });
+    }
 
     // Read only: no `isRead` (no unread frontier is applied or moved) — the visible messages of the thread, newest page.
-    const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, DIRECT_HISTORY_LIMIT, deps, before ? { before } : {});
+    const page = sharedClass
+      ? await listRecentMessages(container, sharedDirectPrefix(sharedClassId, studentId), { kind: "direct", studentId, sharedClassId }, DIRECT_HISTORY_LIMIT, deps, before ? { before } : {})
+      : await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, DIRECT_HISTORY_LIMIT, deps, before ? { before } : {});
     const messages = page.messages.map(doc => messageView(doc));
-    const teacher = await ownerAccountIdOfStudent(container, student, deps);
+    const sharedOwner = sharedClass && typeof sharedClass.ownerId === "string" ? sharedClass.ownerId : "";
+    const teacher = sharedClass ? (isTeacherAccountId(sharedOwner) ? sharedOwner : null) : await ownerAccountIdOfStudent(container, student, deps);
     const label = studentDisplayName(student);
-    const details = { reason, messages: messages.length, olderPage: Boolean(before), teacherAccountId: teacher || "" };
+    const details = { reason, messages: messages.length, olderPage: Boolean(before), teacherAccountId: teacher || "", ...(sharedClass ? { classId: sharedClassId } : {}) };
     // Recorded BEFORE the conversation is returned: an opening that cannot be recorded is not served (fail closed).
     await audit(container, { actor, action: "owner.conversation.opened", targetType: "student", targetId: studentId, targetLabel: label, details });
     if (teacher) await teacherAudit(container, { actor: "owner", forTeacher: teacher, action: "owner.conversation.opened", targetType: "student", targetId: studentId, targetLabel: label, details: { reason } });
