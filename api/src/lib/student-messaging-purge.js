@@ -18,7 +18,7 @@
 // whose student still exists is an aborted delete — kept while recent (the delete may still be running), dropped
 // once stale — and never removes anything.
 const { listBlobNames, uploadJson, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = require("./platform-storage");
-const { isSafeId, directPrefix } = require("./message-store");
+const { isSafeId, directPrefix, SHARED_PREFIX } = require("./message-store");
 const { READ_STATE_PREFIX } = require("./message-read-state");
 const { bucketName } = require("./message-rate-limit");
 const { studentEventPrefix, eventReadStateName } = require("./notification-events");
@@ -58,7 +58,10 @@ async function purgeStudentStep(container, studentId, deps = {}, budget = PURGE_
   const groups = [
     () => list(container, directPrefix(studentId)),
     () => list(container, READ_STATE_PREFIX + "student/" + studentId + "/"),
-    async () => (await list(container, READ_STATE_PREFIX + "teacher/")).filter(n => n.endsWith("/direct/" + studentId + ".json")),
+    // Tadris+ P11-B — the student's conversations of shared classes (platform/messages/shared/<classId>/<studentId>/…) …
+    async () => (await list(container, SHARED_PREFIX)).filter(n => n.slice(SHARED_PREFIX.length).split("/")[1] === studentId),
+    // … and every teacher's marker: of the home conversation (…/direct/<id>.json) and of a shared one (…/shared/<classId>/<id>.json)
+    async () => (await list(container, READ_STATE_PREFIX + "teacher/")).filter(n => n.endsWith("/direct/" + studentId + ".json") || (n.includes("/shared/") && n.endsWith("/" + studentId + ".json"))),
     async () => [bucketName("student", studentId)],
     () => list(container, studentEventPrefix(studentId)),
     async () => [eventReadStateName(studentId)]
