@@ -6,6 +6,7 @@ const { createPendingGradingReader, pendingForClassMembers, pendingGradingMessag
 const { addToRosterIndex, removeFromRosterIndex } = require("./class-roster-index");
 const { directPrefix } = require("./message-store");
 const { listStreamIds, messageIdMs, keyDomain, normalizeMarker, advanceMarker, teacherDirectStateName } = require("./message-read-state");
+const { sharedClassIds, sharedClassEntries } = require("./class-membership");
 
 // Tadris+ P5-B3a — moving a WHOLE class to another teacher (owner only; blueprint §11.6, owner decisions §19.21: «كل تاريخ الصف»).
 //
@@ -176,9 +177,11 @@ async function transferStudent(container, { userId, fromClassId, toClassId, from
     if (String(cur.classId || "") !== fromClassId) throw new TransferRefusal(409, "TRANSFER_STALE", "نُقل الطالب أو تغيّر صفه منذ المعاينة. أعد فتح النقل.");
     const owner = typeof cur.ownerId === "string" && cur.ownerId ? cur.ownerId : null;
     if (owner && owner !== from) throw new TransferRefusal(409, "TRANSFER_STALE", "تغيّر معلم الطالب منذ المعاينة. أعد فتح النقل.");
-    previous = { ownerId: owner, directSince: cur.directSince, profileRevision: Number(cur.profileRevision || 0) };
+    previous = { ownerId: owner, directSince: cur.directSince, profileRevision: Number(cur.profileRevision || 0), sharedClasses: cur.sharedClasses };
     const history = Array.isArray(cur.transferHistory) ? cur.transferHistory : [];
-    return { ...cur, classId: toClassId, ownerId: to, directSince: at, transferHistory: [...history, { fromClassId, toClassId, from, to, at, by: actor, ...(note ? { reason: note } : {}) }], profileRevision: previous.profileRevision + 1, updatedAt: at };
+    // Tadris+ P11-A — a class the student already SHARES becomes the home class: its shared entry goes (no double membership)
+    const shared = sharedClassIds(cur).includes(toClassId) ? { sharedClasses: sharedClassEntries(cur).filter(e => e.classId !== toClassId) } : {};
+    return { ...cur, ...shared, classId: toClassId, ownerId: to, directSince: at, transferHistory: [...history, { fromClassId, toClassId, from, to, at, by: actor, ...(note ? { reason: note } : {}) }], profileRevision: previous.profileRevision + 1, updatedAt: at };
   });
 
   // QA2-8 pattern: an attempt started in the old class between the check and the write is seen now → the move is withdrawn
@@ -191,6 +194,7 @@ async function transferStudent(container, { userId, fromClassId, toClassId, from
       const next = { ...cur, classId: fromClassId, transferHistory: history.slice(0, -1), profileRevision: Number(cur.profileRevision || 0) + 1, updatedAt: new Date().toISOString() };
       if (previous.ownerId) next.ownerId = previous.ownerId; else delete next.ownerId;
       if (previous.directSince !== undefined) next.directSince = previous.directSince; else delete next.directSince;
+      if (previous.sharedClasses !== undefined) next.sharedClasses = previous.sharedClasses; else delete next.sharedClasses;
       return next;
     });
     throw new TransferRefusal(409, "PENDING_GRADING", pendingGradingMessage ? pendingGradingMessage("move", after) : "لدى الطالب عمل بانتظار التصحيح.");

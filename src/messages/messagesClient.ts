@@ -190,7 +190,10 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
   return {
     // The EXISTING roster authorities — no second class/membership model.
     async listClasses() { const j = await get("/api/classrooms", "تعذر تحميل الصفوف."); return Array.isArray(j.classes) ? (j.classes as Classroom[]) : []; },
-    async listStudents(classId) { const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب."); return Array.isArray(j.students) ? (j.students as Student[]) : []; },
+    async listStudents(classId) { const j = await get("/api/students?classId=" + encodeURIComponent(classId) + "&includeArchived=1", "تعذر تحميل الطلاب.");
+      // Tadris+ P11-A — a student added to this class from another teacher's class has no conversation with this teacher yet (a
+      // separate conversation per teacher is P11-B); the server refuses it, so that student is not offered here.
+      return Array.isArray(j.students) ? (j.students as Array<Student & { shared?: boolean }>).filter(s => !s.shared) : []; },
     async getDirect(studentId, before) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId) + beforeParam(before), "تعذر تحميل المحادثة.")); },
     async getAnnouncements(classId, before) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements" + beforeParam(before), "تعذر تحميل الإعلانات.")); },
     sendDirect: (studentId, body, clientMessageId) => post({ action: "sendDirect", studentId, body, ...(clientMessageId ? { clientMessageId } : {}) }, "تعذر إرسال الرسالة."),

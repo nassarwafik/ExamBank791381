@@ -635,6 +635,25 @@ function TeacherPlatform(props:TeacherPlatformProps){
   finally{setActionBusy(false);keepRosterFocus()}
  }
 
+ // Tadris+ P11-A — «إزالة من صفي»: a student the owner added to this class from another teacher's class leaves THIS class only.
+ // The account, the first teacher's class and every stored result stay; the server refuses while work here awaits marking.
+ async function unenrollStudent(student:Student){
+  if(actionBusy)return;
+  const confirmed=await confirm({tone:"danger",title:"إزالة من صفي",confirmLabel:"إزالة من الصف",message:
+   "إزالة الطالب "+student.displayName+" من هذا الصف؟\n\n"+
+   "يبقى حسابه عند معلمه الأول كما هو، وتبقى نتائجه المحفوظة في واجبات صفك للقراءة. لن يرى واجبات صفك بعد الآن."});
+  if(!confirmed)return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const sourceClassId=selectedClassId;
+   await teacherApi<{ok:true;removed?:unknown}>("/api/students",{method:"POST",body:JSON.stringify({action:"unenroll",userId:student.userId,classId:sourceClassId})});
+   if(profile?.student.userId===student.userId)setProfile(null);
+   await reloadAuthoritative(sourceClassId);
+   setNotice("✓ أُزيل الطالب من صفك. حسابه عند معلمه الأول كما هو.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذرت إزالة الطالب من الصف.")}
+  finally{setActionBusy(false);keepRosterFocus()}
+ }
+
  async function deleteStudent(student:Student){
   const identity=student.identityNumber||student.code;
   const confirmed=await confirm({tone:"danger",title:"حذف نهائي",confirmLabel:"حذف نهائي",message:
@@ -894,7 +913,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  }
 
  function toggleSelectVisible(){
-  const visibleIds=visibleStudents.map(s=>s.userId);
+  const visibleIds=visibleStudents.filter(s=>!s.shared).map(s=>s.userId);   // Tadris+ P11-A: a shared student's account is not this teacher's to change
   const allSelected=visibleIds.length>0&&visibleIds.every(id=>selectedIds.includes(id));
   if(allSelected)setSelectedIds(prev=>prev.filter(id=>!visibleIds.includes(id)));
   else setSelectedIds(prev=>Array.from(new Set([...prev,...visibleIds])));
@@ -1003,6 +1022,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onOpenProfile={student=>void openProfile(student)} onOpenHistory={student=>void openHistory(student.userId)} onEdit={startEdit}
     onCopyIdentity={student=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}
     onToggleActive={student=>void toggleStudent(student)} onArchive={student=>void archiveStudent(student)} onDelete={student=>void deleteStudent(student)}
+    onUnenroll={student=>void unenrollStudent(student)}
     bulk={{targetClasses:classes.filter(c=>isActiveClass(c)&&c.classId!==selectedClassId),targetClassId:bulkTargetClassId,onTargetChange:setBulkTargetClassId,onAction:operation=>void runBulkAction(operation)}}
     credentialBox={credentialBox}
     onCopyCredentialBox={()=>{if(credentialBox)void copyText(credentialText(credentialBox.name,credentialBox.identityNumber,credentialBox.password),"✓ تم نسخ بيانات الدخول.")}}

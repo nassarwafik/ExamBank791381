@@ -17,6 +17,8 @@ const {
 } = require("./manage-students");   // Tadris+ P5-B4
 const { recordAuditEvent } = require("../lib/audit-log");
 const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON, classStudents, previewStudentTransfer, transferStudent, ownerOfStudent } = require("../lib/teacher-transfer");   // Tadris+ P5-B3a / P5-B3b
+const { isStudentSharedIn } = require("../lib/class-membership");
+const { enrollStudents, unenrollStudent, EnrollmentRefusal } = require("../lib/shared-enrollment");   // Tadris+ P11-A
 
 // Tadris+ P5-B2 — owner decision D18 (revised): «انا المالك انشيء الصفوف». The owner creates and manages a teacher's classes.
 // Route: /api/owner-classes/{action?}   (owner session only)
@@ -28,6 +30,10 @@ const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON, classS
 //   POST add-student      { classId, firstName, familyName, identityNumber, password? }   (P5-B4)
 //   POST preview-import   { classId, students: [...] }      → the SAME server preview as the teacher's (validation only)
 //   POST import-students  { classId, students: [...], importId? } → the SAME import as the teacher's (credentials shown ONCE)
+//   POST enroll-students  { classId, userIds: [...] }       (P11-A) EXISTING accounts join this class too (a shared class): the same
+//                          account, no password, no session revoked; the home class and its teacher stay as they are
+//   POST unenroll-student { classId, userId }               (P11-A) the student leaves that shared class (refused while work there
+//                          awaits its teacher — PENDING_GRADING)
 //   GET  transfer-preview?classId=&toAccountId=          (P5-B3a) what moving the WHOLE class to that teacher would move
 //   POST transfer        { classId, toAccountId, expectedFromAccountId, reason? }  → the class and every one of its students move
 //                          to that teacher, with the class's whole history (owner decision §19.21); resumable; one ledger record
@@ -47,6 +53,11 @@ const { previewClassTransfer, transferClass, TransferRefusal, MAX_REASON, classS
 // uniqueness, create-only login write, import retry key, in-file duplicate rule, roster index; each student is the teacher's (it
 // inherits the class's owner). The teacher keeps adding, editing and archiving their students. Temporary passwords are in the
 // answer only (never stored in plain text, never in any audit).
+// Tadris+ P11-A — owner decision «الطالب يستطيع ان يتعلم عند اكثر من معلم»: an identity number that already has an account (it is
+// the platform-wide login) is no longer a dead end for the owner. The preview names that account and its class («existing»), and
+// enroll-students adds the SAME account to this class as a shared class (lib/shared-enrollment.js). Only the owner can do this: a
+// teacher's own import still reports another teacher's student as taken, unnamed. Never by identity number in the request — by the
+// user ids the preview returned.
 
 const reply = (status, body, extra = {}) => ({ status, headers: { ...NO_STORE, ...extra }, jsonBody: body });
 const bad = (code, error) => reply(400, { ok: false, code, error });
@@ -132,9 +143,13 @@ async function handler(request, deps = {}, obs = null) {
       const classId = queryParam(request, "classId");
       const current = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
       if (!current || String(current.classId || classId) !== classId || !(await teacherOf(container, String(current.ownerId || ""), deps))) return CLASS_NOT_FOUND();
-      const roster = classStudents(await ls(container, "platform/users/"), classId)
+      const allUsers = await ls(container, "platform/users/");
+      const roster = classStudents(allUsers, classId)
         .filter(st => ownerOfStudent(st, current) === current.ownerId)
         .map(st => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: st.archived === true }))
+        // P11-A — the students ADDED to this class from another class (their account belongs to their home teacher)
+        .concat(allUsers.filter(st => st && typeof st.userId === "string" && st.userId && isStudentSharedIn(st, classId))
+          .map(st => ({ userId: st.userId, displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || ""), active: st.active !== false, archived: false, shared: true })))
         .sort((x, y) => x.displayName.localeCompare(y.displayName, "ar"));
       return reply(200, { ok: true, classId, students: roster });
     }
@@ -238,18 +253,61 @@ async function handler(request, deps = {}, obs = null) {
       return reply(200, { ok: true, ledger });
     }
 
+    // The RESULT of a change a shared library made (adding / importing / enrolling students): it goes to the owner audit AND to the
+    // platform audit the teacher's own actions use (actor: the owner). The change itself was recorded strictly before its first write.
+    const studentAudit = deps.recordAuditEvent || recordAuditEvent;
+    const resultRecorder = accountId => async ev => {
+      await auditBestEffort(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });   // P10-L completion detail
+      try { await studentAudit(container, { actor, ...ev }); } catch { /* audit is secondary */ }
+    };
+
+    if (action === "enroll-students" || action === "unenroll-student") {
+      const classId = String(body.classId || "").trim();
+      const classroom = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
+      if (!classroom || String(classroom.classId || classId) !== classId || !(await teacherOf(container, String(classroom.ownerId || ""), deps))) return CLASS_NOT_FOUND();
+      const accountId = String(classroom.ownerId);
+      const record = resultRecorder(accountId);
+      const target = { targetType: "class", targetId: classId, targetLabel: String(classroom.name || classId) };
+      if (action === "unenroll-student") {
+        const userId = String(body.userId || "").trim();
+        if (!isSafeId(userId)) return reply(404, { ok: false, code: "STUDENT_NOT_FOUND", error: "الطالب غير موجود." });
+        return await atWrite({ actor, action: "owner.student.unenroll.requested", ...target, details: { accountId, userId } }, async guarded => {
+          let removed;
+          try { removed = await unenrollStudent(guarded, classId, userId, { actor, nowMs, obs }, { mutateJsonWithRetry: deps.mutateJsonWithRetry }); }
+          catch (e) {
+            if (e instanceof EnrollmentRefusal) return reply(e.status, { ok: false, code: e.code, ...e.extra, error: e.message });
+            throw e;
+          }
+          await record({ action: "student.unenroll", targetType: "student", targetId: userId, targetLabel: userId, details: { classId } });
+          return reply(200, { ok: true, removed: true, rosterSynced: removed.rosterSynced });
+        });
+      }
+      if (normalizeClassStatus(classroom) === "archived") return reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف مؤرشف. استعده أولًا لإضافة طلاب." });
+      const userIds = Array.from(new Set((Array.isArray(body.userIds) ? body.userIds : []).map(x => String(x || "").trim()).filter(Boolean)));
+      if (!userIds.length) return bad("STUDENTS_EMPTY", "اختر طالبًا واحدًا على الأقل.");
+      if (userIds.length > MAX_IMPORT_ROWS) return bad("STUDENTS_TOO_MANY", "يمكن إضافة " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة.");
+      return await atWrite({ actor, action: "owner.students.enroll.requested", ...target, details: { accountId, rows: userIds.length } }, async guarded => {
+        const r = await enrollStudents(guarded, { ...classroom, classId }, userIds, { actor, nowMs, obs }, { mutateJsonWithRetry: deps.mutateJsonWithRetry });
+        // the completion detail: counts only — never a name or an identity number
+        if (r.enrolled.length) await record({ action: "student.enroll", ...target, details: { classId, enrolledCount: r.enrolled.length, alreadyCount: r.already.length, failedCount: r.errors.length } });
+        return {
+          ...reply(200, {
+            ok: true, enrolled: r.enrolled.length, already: r.already.length, failed: r.errors.length, rosterSynced: r.rosterSynced,
+            students: r.enrolled.map(st => ({ userId: String(st.userId), displayName: String(st.displayName || ""), identityNumber: String(st.identityNumber || st.code || "") })),
+            errors: r.errors
+          }),
+          ...(r.enrolled.length ? {} : { notApplied: "nothing-enrolled" })
+        };
+      });
+    }
+
     if (action === "add-student" || action === "preview-import" || action === "import-students") {
       const classId = String(body.classId || "").trim();
       const classroom = isSafeId(classId) ? await dl(container, CLASS_PREFIX + classId + ".json") : null;
       if (!classroom || String(classroom.classId || classId) !== classId || !(await teacherOf(container, String(classroom.ownerId || ""), deps))) return CLASS_NOT_FOUND();
       if (normalizeClassStatus(classroom) === "archived") return reply(400, { ok: false, code: "CLASS_ARCHIVED", error: "الصف مؤرشف. استعده أولًا لإضافة طلاب." });
       const accountId = String(classroom.ownerId);
-      const studentAudit = deps.recordAuditEvent || recordAuditEvent;
-      // the event goes to the owner audit AND to the platform audit the teacher's own actions use (actor: the owner)
-      const record = async ev => {
-        await auditBestEffort(container, { actor, ...ev, action: "owner." + ev.action, details: { ...(ev.details || {}), accountId } });   // P10-L completion detail
-        try { await studentAudit(container, { actor, ...ev }); } catch { /* audit is secondary */ }
-      };
+      const record = resultRecorder(accountId);
       const requested = (what, details) => ({ actor, action: "owner." + what + ".requested", targetType: "class", targetId: classId, targetLabel: String(classroom.name || classId), details: { accountId, ...details } });
       try {
         if (action === "add-student") {
@@ -262,8 +320,8 @@ async function handler(request, deps = {}, obs = null) {
         if (!students.length) return bad("STUDENTS_EMPTY", "القائمة لا تحتوي بيانات طلاب صالحة.");
         if (students.length > MAX_IMPORT_ROWS) return bad("STUDENTS_TOO_MANY", "يمكن استيراد " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة.");
         if (action === "preview-import") {
-          const preview = await buildImportPreview(container, students, null);
-          return reply(200, { ok: true, preview, valid: preview.filter(x => x.status === "valid").length, duplicates: preview.filter(x => x.status === "duplicate").length, invalid: preview.filter(x => x.status === "invalid").length });
+          const preview = await buildImportPreview(container, students, null, { enrollInto: classId });   // P11-A: existing accounts are named
+          return reply(200, { ok: true, preview, valid: preview.filter(x => x.status === "valid").length, existing: preview.filter(x => x.status === "existing").length, duplicates: preview.filter(x => x.status === "duplicate").length, invalid: preview.filter(x => x.status === "invalid").length });
         }
         return await atWrite(requested("students.import", { rows: students.length }), async guarded => {
           const r = await importStudentsToClass(guarded, { ...classroom, classId }, students, { importId: body.importId, visible: null, record, obs });

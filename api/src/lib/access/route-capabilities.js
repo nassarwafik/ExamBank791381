@@ -24,6 +24,7 @@ const ROUTE_CAPABILITIES = Object.freeze({
     GET: "students.student.view", create: "students.student.create", previewimport: "students.student.import", bulkimport: "students.student.import",
     update: "students.student.edit", resetpassword: "students.credential.reset", toggleactive: "students.student.edit",
     archive: "students.student.archive", unarchive: "students.student.restore", delete: "students.student.delete",
+    unenroll: "students.student.archive",   // Tadris+ P11-A: removing a shared student from the teacher's class
     "bulk:activate": "students.student.edit", "bulk:deactivate": "students.student.edit", "bulk:archive": "students.student.archive",
     "bulk:unarchive": "students.student.restore", "bulk:move": "students.student.move", "bulk:resetpasswords": "students.credential.reset",
     "bulk:delete": "students.student.delete", "*": "students.student.edit"

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { IconWarning } from "../icons";
 import OwnerConversation from "./OwnerConversation";   // Tadris+ P7-B1 (D14)
 import {
-  ownerClassesApi, ownerStudentTransferApi, ownerTeachersApi, type ApiResult, type ManagedTeacher, type OwnerClass, type OwnerRosterStudent, type StudentTransferPreview
+  ownerClassesApi, ownerStudentsApi, ownerStudentTransferApi, ownerTeachersApi, type ApiResult, type ManagedTeacher, type OwnerClass, type OwnerRosterStudent, type StudentTransferPreview
 } from "./ownerApi";
 
 /**
@@ -11,6 +11,10 @@ import {
  * confirm. After the move the new teacher sees the student's learning progress, but neither the old class's grades nor the
  * conversation before the move; the former teacher keeps the old results as «منقول». A student with work awaiting the former teacher
  * cannot move yet (the server says so). Moving between classes of the SAME teacher stays on the teacher's own page.
+ *
+ * Tadris+ P11-A — a student ADDED to this class from another class («مشترك»: the account and the first teacher stay as they are) is
+ * listed too. Such a student is not moved from here (the move is made from the home class) — the owner may REMOVE the student from
+ * this class; the server refuses while work in this class awaits its teacher.
  */
 
 type Send = <T>(call: () => Promise<ApiResult<T>>, onOk: (data: T) => void) => Promise<void>;
@@ -23,6 +27,9 @@ export default function OwnerClassRoster({ token, classId, className, ownerAccou
   const [nonce, setNonce] = useState(0);
   const [moving, setMoving] = useState<OwnerRosterStudent | null>(null);
   const [reading, setReading] = useState<OwnerRosterStudent | null>(null);   // P7-B1 — D14
+  const [removing, setRemoving] = useState<OwnerRosterStudent | null>(null);   // P11-A
+  const remove = (st: OwnerRosterStudent) => void send(() => ownerStudentsApi.unenroll(token, classId, st.userId),
+    () => { setRemoving(null); setNonce(n => n + 1); onChanged("أُزيل الطالب " + st.displayName + " من «" + className + "». حسابه وصفه الأول كما هما."); });
 
   useEffect(() => {
     let live = true;
@@ -39,9 +46,17 @@ export default function OwnerClassRoster({ token, classId, className, ownerAccou
         <ul className="eb-owner-hint" aria-label={"قائمة طلاب " + className}>
           {roster.map(st => (
             <li key={st.userId} aria-label={st.displayName}>
-              <bdi>{st.displayName}</bdi> · <span dir="ltr">{st.identityNumber}</span>{st.archived ? " · مؤرشف" : ""}{" "}
-              {moving?.userId === st.userId ? null : <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setMoving(st)}>نقل إلى معلم آخر</button>}
-              {reading?.userId === st.userId ? null : <>{" "}<button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setReading(st)}>الاطلاع على المحادثة</button></>}
+              <bdi>{st.displayName}</bdi> · <span dir="ltr">{st.identityNumber}</span>{st.archived ? " · مؤرشف" : ""}{st.shared ? " · مشترك (حسابه عند معلم آخر)" : ""}{" "}
+              {st.shared && removing?.userId !== st.userId && <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setRemoving(st)}>إزالة من هذا الصف</button>}
+              {st.shared && removing?.userId === st.userId && (
+                <span className="eb-owner-confirm" role="group" aria-label={"إزالة " + st.displayName}>
+                  يخرج <bdi>{st.displayName}</bdi> من هذا الصف فقط. حسابه وصفه الأول ونتائجه المحفوظة تبقى.{" "}
+                  <button type="button" className="eb-owner-secondary eb-owner-danger" disabled={busy} onClick={() => remove(st)}>تأكيد الإزالة</button>{" "}
+                  <button type="button" className="eb-owner-secondary" onClick={() => setRemoving(null)}>إلغاء</button>
+                </span>
+              )}
+              {st.shared || moving?.userId === st.userId ? null : <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setMoving(st)}>نقل إلى معلم آخر</button>}
+              {st.shared || reading?.userId === st.userId ? null : <>{" "}<button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => setReading(st)}>الاطلاع على المحادثة</button></>}
               {reading?.userId === st.userId && <OwnerConversation token={token} studentId={st.userId} studentName={st.displayName} busy={busy} send={send} onClose={() => setReading(null)} />}
               {moving?.userId === st.userId && (
                 <StudentTransfer token={token} student={st} fromClassId={classId} ownerAccountId={ownerAccountId} busy={busy} send={send}

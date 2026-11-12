@@ -7,6 +7,7 @@ const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}
 // Phase 21G.0 — teacher tenancy: an assignment's attempts belong to the teacher of its class.
 const {tenantOf,classAccessible}=require("../lib/teacher-tenancy");
 const {recordAuditEvent}=require("../lib/audit-log");
+const {isStudentInClass}=require("../lib/class-membership");   // Tadris+ P11-A
 const {syncAssessmentMedal}=require("../lib/achievement-feed");
 const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
 // Phase 19D — a visual question's review needs its canonical image (bank assets get a fresh signed delivery URL, never persisted) and
@@ -136,7 +137,7 @@ async function handler(request,deps={},obs=null){
    if(!assignment||!student||!(await classAccessible(n=>dl(c,n),assignment.classId,tenantOf(auth.user))))return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
    const submission=await dl(c,SP+assignmentId+"/"+studentId+".json");
    if(!submission)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
-   const sameClass=String(student.classId||"")===String(assignment.classId||"");
+   const sameClass=String(student.classId||"")===String(assignment.classId||"")||isStudentInClass(student,assignment.classId);   // Tadris+ P11-A: a shared class
    if(!sameClass&&!historicalSubmissionProvesOwnership(submission,assignmentId,studentId,String(assignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
    const attempts=Array.isArray(submission.attempts)?submission.attempts:[],attempt=attempts.find(x=>Number(x.attemptNumber)===attemptNumber);if(!attempt)return {status:404,jsonBody:{ok:false,error:"المحاولة غير موجودة."}};
    const flat=flattenQuestions(assignment.examSnapshot),gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
@@ -152,7 +153,7 @@ async function handler(request,deps={},obs=null){
   const name=SP+assignmentId+"/"+studentId+".json";
   const existingSubmission=await dl(c,name);
   if(!existingSubmission)return {status:404,jsonBody:{ok:false,error:"التسليم غير موجود."}};
-  const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"");
+  const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"")||isStudentInClass(reviewStudent,reviewAssignment.classId);   // Tadris+ P11-A
   if(!reviewSameClass&&!historicalSubmissionProvesOwnership(existingSubmission,assignmentId,studentId,String(reviewAssignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
   const rubric=rubricGrades(reviewAssignment.examSnapshot,incoming);
