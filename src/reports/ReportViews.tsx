@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { useReport } from "./useReport";
-import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState } from "./ui";
+import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState, SortHeader, TableSearch } from "./ui";
+import { useTableSort } from "./useTableSort";
+import { sortRows, matchesQuery } from "./tableTools";
 import { pct, isoDay } from "./format";
 import { downloadCsv } from "./csv";
 import { resolveTrack } from "./trackState";
@@ -11,7 +13,7 @@ import * as csvRows from "./reportCsv";
 import { PerformanceTrendChart, SubmissionStatusChart, StudentStandingChart, StudentTrendChart, GapToClassChart, StageStatusChart, WeeklyChangeChart } from "./ReportCharts";
 import SegmentedBar from "./SegmentedBar";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
-import { GRADED_LABEL, latestChange, signed, projectStudentSplit, type ClassInsights, type StudentInsights } from "./insights";
+import { GRADED_LABEL, latestChange, signed, projectStudentSplit, gradedValue, gapToClass, finiteOrNull, type ClassInsights, type StudentInsights, type StudentStanding, type StudentAssessmentPoint } from "./insights";
 import { stageStatusLabel } from "../projects/teacherPresentation";
 import ProjectAnalyticsCharts from "../projects/ProjectAnalyticsCharts";
 import { reportPalette, chartMotion, percentLineOptions, barOptions as kitBarOptions, barSeries, lineSeries } from "./chartKit";
@@ -121,6 +123,25 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
             <SubmissionStatusChart rows={insights.assessments} />
           </div>
           <StudentStandingChart standings={insights.students} />
+          {/* Phase R-5b — the spread of the students' averages, and the students as a table that sorts and searches. */}
+          {insights.summary && insights.summary.withAverage > 0 && (
+            <div className="eb-stat-grid is-primary eb-report-stats">
+              <StatCard primary label="أعلى متوسط" value={pct(insights.summary.highest?.average)} hint={insights.summary.highest?.displayName} tone="success" />
+              <StatCard primary label="الوسيط" value={pct(insights.summary.median)} hint={"من " + insights.summary.withAverage + " بنتيجة مصحَّحة"} />
+              <StatCard primary label="أدنى متوسط" value={pct(insights.summary.lowest?.average)} hint={insights.summary.lowest?.displayName} tone="attention" />
+              <StatCard primary label="الانحراف المعياري" value={insights.summary.stdDev === null ? "—" : String(insights.summary.stdDev)} hint="تباعد متوسطات الطلاب (نقاط مئوية)" />
+            </div>
+          )}
+          <section aria-labelledby="eb-report-class-students">
+            <h3 id="eb-report-class-students" className="eb-subheading">طلاب الصف</h3>
+            <ReportTable<StudentStanding> capped caption="طلاب الصف: متوسط النتائج المصحَّحة وعدد التقييمات في كل حالة" search={{ label: "بحث عن طالب", text: r => r.displayName }} columns={[
+              { key: "displayName", label: "الطالب", sortValue: r => r.displayName },
+              { key: "average", label: "المتوسط", render: r => pct(r.average), numeric: true, sortValue: r => finiteOrNull(r.average) },
+              { key: "graded", label: GRADED_LABEL, numeric: true, sortValue: r => r.graded },
+              { key: "pending", label: PENDING_LABEL, numeric: true, sortValue: r => r.pending },
+              { key: "missing", label: MISSING_LABEL, numeric: true, sortValue: r => r.missing }
+            ]} rows={insights.students} empty="لا يوجد طلاب في هذا الصف." />
+          </section>
         </section>
       )}
       {data.projects.length > 0 && (
@@ -189,6 +210,11 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
             <StudentTrendChart points={insights.assessments} />
             <GapToClassChart points={insights.assessments} />
           </div>
+          {/* Phase R-5b — every assessment of the student as a row: state, result, class average, gap, attempts. */}
+          <section aria-labelledby="eb-report-student-assessments">
+            <h3 id="eb-report-student-assessments" className="eb-subheading">تقييمات الطالب</h3>
+            <StudentAssessmentsTable points={insights.assessments} />
+          </section>
         </section>
       )}
       {data.projects.length > 0 && (
@@ -221,8 +247,29 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
   );
 }
 
+// Phase R-5b — one row per assessment of the student. A number appears ONLY for a final result (gradedValue); awaiting the
+// teacher and not handed in are a badge in words with «—» for the result, and they sort last in both directions.
+function StudentAssessmentsTable({ points }: { points: StudentAssessmentPoint[] }) {
+  const gaps = useMemo(() => gapToClass(points), [points]);
+  const rows = useMemo(() => points.map((p, i) => ({ ...p, result: gradedValue(p), gap: gaps[i] })), [points, gaps]);
+  type R = (typeof rows)[number];
+  const state = (r: R) => (r.state === "missing" ? <StatusBadge tone="neutral">{MISSING_LABEL}</StatusBadge> : r.result === null ? <StatusBadge tone="info">{PENDING_LABEL}</StatusBadge> : <StatusBadge tone="success">{GRADED_LABEL}</StatusBadge>);
+  return (
+    <ReportTable<R> capped caption={"تقييمات الطالب: الحالة و" + LATEST_ATTEMPT_LABEL + " ومتوسط الصف والفرق وعدد المحاولات"} columns={[
+      { key: "title", label: "التقييم", sortValue: r => r.title },
+      { key: "date", label: "التاريخ", render: r => r.date || "—", sortValue: r => r.date || null },
+      { key: "state", label: "الحالة", render: state, sortValue: r => (r.state === "missing" ? 2 : r.result === null ? 1 : 0) },
+      { key: "result", label: "النتيجة", render: r => pct(r.result), numeric: true, sortValue: r => r.result },
+      { key: "classAverage", label: "متوسط الصف", render: r => pct(r.classAverage), numeric: true, sortValue: r => finiteOrNull(r.classAverage) },
+      { key: "gap", label: "الفرق عن الصف", render: r => (r.gap === null ? "—" : signed(r.gap)), numeric: true, sortValue: r => r.gap },
+      { key: "attempts", label: "المحاولات", numeric: true, sortValue: r => r.attempts }
+    ]} rows={rows} empty="لا توجد تقييمات ضمن الفترة المختارة." />
+  );
+}
+
 function AssignmentsReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = csvRows.AssignmentRow & { assignmentId: string };
+  // Phase R-5b — the row's day and highest / lowest / median are optional: an API that does not send them shows the earlier columns.
+  type Row = csvRows.AssignmentRow & { assignmentId: string; date?: string; highest?: number | null; lowest?: number | null; median?: number | null };
   type Cell = { studentId: string; state: string; percentage: number | null; zero?: boolean };
   type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
@@ -231,6 +278,21 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
   const dist = useMemo(() => data && ({ labels: distLabels, datasets: [barSeries("عدد التسليمات", distLabels.map(k => data.overall.distribution[k]), palette.series[0], palette)] }), [data, distLabels, palette]);
   // One lookup per matrix column (studentId → cell) instead of a linear search per rendered cell.
   const cellsByAssignment = useMemo(() => new Map((data?.matrix || []).map(m => [m.assignmentId, new Map(m.cells.map(c => [c.studentId, c]))])), [data]);
+  // Phase R-5b — the matrix sorts by the student or by any assessment, and finds a student. Only a FINAL result is a sort value:
+  // pending, missing or unknown cells are empty, so they stay last in both directions (never ordered as a 0).
+  const matrixSort = useTableSort();
+  const [matrixQuery, setMatrixQuery] = useState("");
+  const matrixStudents = useMemo(() => {
+    const all = data?.students || [];
+    const found = matrixQuery.trim() ? all.filter(s => matchesQuery(s.displayName, matrixQuery)) : all;
+    const sort = matrixSort.sort;
+    if (!sort) return found;
+    if (sort.key === "student") return sortRows(found, s => s.displayName, sort.dir);
+    const cells = cellsByAssignment.get(sort.key);
+    return sortRows(found, s => { const c = cells?.get(s.studentId); return c && c.state === "submitted" ? finiteOrNull(c.percentage) : null; }, sort.dir);
+  }, [data, matrixQuery, matrixSort.sort, cellsByAssignment]);
+  const withSpread = !!data && data.perAssignment.some(r => r.highest !== undefined);
+  const withDate = !!data && data.perAssignment.some(r => !!r.date);
   // Phase R-5a — the same look and entrance as the other report charts (one series: its title names it, so no legend box).
   const reduced = usePrefersReducedMotion();
   const barOptions = useMemo(() => kitBarOptions(palette, chartMotion(reduced, distLabels.length), distLabels.map(k => "النطاق " + k + "%"), { unit: "تسليم" }), [palette, reduced, distLabels]);
@@ -260,24 +322,33 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
       </ChartCard>
       <section aria-labelledby="eb-report-per-assignment">
         <h3 id="eb-report-per-assignment" className="eb-subheading">ملخص كل تقييم</h3>
-        <ReportTable caption="ملخص كل تقييم: نسبة التسليم والمتوسط وعدد المسلِّمين" columns={[
-          { key: "title", label: "التقييم" },
-          { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate), numeric: true },
-          { key: "submitted", label: "مُسلَّم", numeric: true }, { key: "missing", label: MISSING_LABEL, numeric: true },
-          { key: "pendingReview", label: PENDING_LABEL, render: r => String(r.pendingReview ?? 0), numeric: true }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true },
-          { key: "average", label: "المتوسط (" + LATEST_ATTEMPT_LABEL + ")", render: r => pct(r.average), numeric: true }, { key: "avgAttempts", label: "متوسط المحاولات", numeric: true }
+        <ReportTable<Row> capped caption="ملخص كل تقييم: نسبة التسليم والمتوسط وعدد المسلِّمين" columns={[
+          { key: "title", label: "التقييم", sortValue: r => r.title },
+          ...(withDate ? [{ key: "date", label: "التاريخ", render: (r: Row) => r.date || "—", sortValue: (r: Row) => r.date || null }] : []),
+          { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate), numeric: true, sortValue: r => r.submissionRate },
+          { key: "submitted", label: "مُسلَّم", numeric: true, sortValue: r => r.submitted }, { key: "missing", label: MISSING_LABEL, numeric: true, sortValue: r => r.missing },
+          { key: "pendingReview", label: PENDING_LABEL, render: r => String(r.pendingReview ?? 0), numeric: true, sortValue: r => r.pendingReview ?? 0 }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true, sortValue: r => r.zeroScores },
+          { key: "average", label: "المتوسط (" + LATEST_ATTEMPT_LABEL + ")", render: r => pct(r.average), numeric: true, sortValue: r => finiteOrNull(r.average) },
+          ...(withSpread ? [
+            { key: "highest", label: "الأعلى", render: (r: Row) => pct(r.highest), numeric: true, sortValue: (r: Row) => finiteOrNull(r.highest) },
+            { key: "median", label: "الوسيط", render: (r: Row) => pct(r.median), numeric: true, sortValue: (r: Row) => finiteOrNull(r.median) },
+            { key: "lowest", label: "الأدنى", render: (r: Row) => pct(r.lowest), numeric: true, sortValue: (r: Row) => finiteOrNull(r.lowest) }
+          ] : []),
+          { key: "avgAttempts", label: "متوسط المحاولات", numeric: true, sortValue: r => r.avgAttempts }
         ]} rows={data.perAssignment} empty="لا توجد تقييمات ضمن الفترة المختارة." />
       </section>
       {data.matrix.length > 0 && (
-        <section aria-labelledby="eb-report-matrix-title">
+        <section className="eb-report-matrix-section" aria-labelledby="eb-report-matrix-title">
           <h3 id="eb-report-matrix-title" className="eb-subheading">مصفوفة الطالب × التقييم</h3>
+          <TableSearch label="بحث عن طالب" value={matrixQuery} onChange={setMatrixQuery} shown={matrixStudents.length} total={data.students.length} />
           <p className="eb-muted eb-report-legend">القيمة = {LATEST_ATTEMPT_LABEL} (%) · 0 = سلّم بعلامة صفر · «{PENDING_LABEL}» = سلّم والنتيجة لم تُصحَّح بعد · «{MISSING_LABEL}» = لا توجد محاولة مسلّمة</p>
           <div className="eb-report-table-scroll" role="region" aria-labelledby="eb-report-matrix-title" tabIndex={0}>
             <table className="eb-report-table eb-report-matrix">
               <caption className="eb-visually-hidden">مصفوفة الطالب × التقييم — {LATEST_ATTEMPT_LABEL} بالنسبة المئوية لكل طالب في كل تقييم؛ «{MISSING_LABEL}» تعني عدم وجود محاولة مسلّمة</caption>
-              <thead><tr><th scope="col">الطالب</th>{data.matrix.map(m => <th key={m.assignmentId} scope="col" title={m.title}>{m.title}</th>)}</tr></thead>
+              <thead><tr><SortHeader label="الطالب" sortKey="student" sort={matrixSort.sort} onToggle={matrixSort.toggle} />{data.matrix.map(m => <SortHeader key={m.assignmentId} label={m.title} title={m.title} sortKey={m.assignmentId} numeric sort={matrixSort.sort} onToggle={matrixSort.toggle} />)}</tr></thead>
               <tbody>
-                {data.students.map(stu => (
+                {!matrixStudents.length && <tr><td colSpan={data.matrix.length + 1} className="eb-report-table-none">لا نتائج مطابقة للبحث.</td></tr>}
+                {matrixStudents.map(stu => (
                   <tr key={stu.studentId}><th scope="row">{stu.displayName}</th>
                     {data.matrix.map(m => {
                       const cell = cellsByAssignment.get(m.assignmentId)?.get(stu.studentId);
@@ -372,10 +443,10 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
       </div>
       {data.rows.length > 0 && <StageStatusChart rows={data.rows} trackTitle={trackTitle} />}
       <ReportTable caption={"حالة مراحل مسار " + trackTitle + ": عدد الطلاب في كل حالة ونسبة الاعتماد"} columns={[
-        { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" },
-        { key: "approved", label: "معتمد", numeric: true }, { key: "ready_for_review", label: "جاهز للفحص", numeric: true },
-        { key: "in_progress", label: "قيد التنفيذ", numeric: true }, { key: "not_started", label: "لم يبدأ", numeric: true },
-        { key: "approvedPct", label: "نسبة الاعتماد", render: r => <ProgressBar ariaLabel={"نسبة اعتماد " + r.stageId} value={r.approvedPct} size="sm" tone="success" />, numeric: true }
+        { key: "stageId", label: "المرحلة", sortValue: r => r.stageId }, { key: "title", label: "العنوان", sortValue: r => r.title },
+        { key: "approved", label: "معتمد", numeric: true, sortValue: r => r.approved }, { key: "ready_for_review", label: "جاهز للفحص", numeric: true, sortValue: r => r.ready_for_review },
+        { key: "in_progress", label: "قيد التنفيذ", numeric: true, sortValue: r => r.in_progress }, { key: "not_started", label: "لم يبدأ", numeric: true, sortValue: r => r.not_started },
+        { key: "approvedPct", label: "نسبة الاعتماد", render: r => <ProgressBar ariaLabel={"نسبة اعتماد " + r.stageId} value={r.approvedPct} size="sm" tone="success" />, numeric: true, sortValue: r => r.approvedPct }
       ]} rows={data.rows} empty="لا توجد مراحل." />
     </div>
   );
@@ -420,11 +491,11 @@ function DelayedReport({ token, filters }: { token: string; filters: Filters }) 
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={data.students.length ? "warn" : "neutral"}>{data.students.length} متأخرون</StatusBadge></>} description={"عتبة التأخّر حسب إعداد الصف: " + data.lateThreshold + "%"}
         onExportCsv={() => downloadCsv(csvRows.delayedReportFilename(filters.projectCode, data.class.name), csvRows.delayedReportRows(data.tracks, data.students))} />
-      <ReportTable caption="الطلاب المتأخرون: التقدم العام وتقدم كل مسار وآخر تحديث وسبب التأخر" columns={[
-        { key: "displayName", label: "الطالب" },
-        { key: "overall", label: "التقدم العام", render: (r: Row) => <ProgressBar ariaLabel={"التقدم العام " + r.displayName} value={r.overall} size="sm" />, numeric: true },
-        ...data.tracks.map(t => ({ key: t.trackId, label: t.title, render: (r: Row) => pct(r.trackProgress[t.trackId] || 0), numeric: true })),
-        { key: "updatedAt", label: "آخر تحديث", render: (r: Row) => isoDay(r.updatedAt) },
+      <ReportTable capped search={{ label: "بحث عن طالب", text: (r: Row) => r.displayName }} caption="الطلاب المتأخرون: التقدم العام وتقدم كل مسار وآخر تحديث وسبب التأخر" columns={[
+        { key: "displayName", label: "الطالب", sortValue: (r: Row) => r.displayName },
+        { key: "overall", label: "التقدم العام", render: (r: Row) => <ProgressBar ariaLabel={"التقدم العام " + r.displayName} value={r.overall} size="sm" />, numeric: true, sortValue: (r: Row) => r.overall },
+        ...data.tracks.map(t => ({ key: t.trackId, label: t.title, render: (r: Row) => pct(r.trackProgress[t.trackId] || 0), numeric: true, sortValue: (r: Row) => r.trackProgress[t.trackId] || 0 })),
+        { key: "updatedAt", label: "آخر تحديث", render: (r: Row) => isoDay(r.updatedAt), sortValue: (r: Row) => r.updatedAt || null },
         { key: "reasons", label: "السبب", render: (r: Row) => <span className="eb-report-reasons">{r.reasons.map((x, i) => <StatusBadge key={i} tone="warn">{x}</StatusBadge>)}</span> }
       ]} rows={data.students} empty="لا يوجد طلاب متأخرون." />
     </div>

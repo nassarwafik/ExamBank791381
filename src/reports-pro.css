@@ -204,3 +204,36 @@
   .eb-seg-bar,.eb-progress-fill,.eb-stat-value{ animation:none !important; }
   .eb-seg-part{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }
 }
+
+/* ============================================================
+   Phase R-5b — interactive tables (docs/enterprise-reports-tables-r5b.md)
+   A header that sorts is a real button filling its cell; a capped table keeps its header in view while the rows scroll.
+   ============================================================ */
+.eb-report-table-block{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-report-table-tools{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-report-table-tools input[type="search"]{ min-width:220px; max-width:100%; }
+.eb-report-table-scroll.is-capped,.eb-report-matrix-section .eb-report-table-scroll{ max-height:30rem; overflow:auto; }
+.eb-report-matrix-section{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-report-table th.is-sortable{ padding:0; }
+.eb-report-sort{
+  display:inline-flex; align-items:center; gap:var(--eb-space-1); width:100%; min-height:36px;
+  padding:var(--eb-space-2) var(--eb-space-3); background:transparent; border:0; border-radius:0;
+  color:inherit; font:inherit; text-align:start; white-space:nowrap; cursor:pointer;
+}
+.eb-report-sort:hover{ background:var(--eb-surface-2); color:var(--eb-text-heading); }
+.eb-report-sort:focus-visible{ outline:var(--eb-focus-ring); outline-offset:-2px; }
+.eb-report-sort-icon{ display:inline-flex; color:var(--eb-faint); }
+.eb-report-table th.is-sorted .eb-report-sort{ color:var(--eb-text-heading); }
+.eb-report-table th.is-sorted .eb-report-sort-icon{ color:var(--eb-text-heading); }
+.eb-report-table td.eb-report-table-none{ color:var(--eb-muted); text-align:center; white-space:normal; }
+/* the sticky first column of the matrix stays above its cells and below the sticky header */
+.eb-report-matrix thead th{ z-index:2; }
+@media (max-width:767px){
+  .eb-report-table-tools{ flex-direction:column; align-items:stretch; }
+  .eb-report-table-tools input[type="search"]{ width:100%; min-width:0; }
+  .eb-report-sort{ min-height:44px; }
+}
+@media print{
+  .eb-report-table-scroll.is-capped,.eb-report-matrix-section .eb-report-table-scroll{ max-height:none; overflow:visible; }
+  .eb-report-sort-icon{ display:none; }
+}
