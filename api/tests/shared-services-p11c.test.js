@@ -456,3 +456,30 @@ describe("P11-C whose games: the teacher of the class, under enforce", () => {
     expect((await bell(ctx)).jsonBody.services.games).toEqual([]);
   });
 });
+
+// Reconciliation with main (Phase R-5a, merged while this phase was in review): the reports gained chart series (`insights`) and a
+// hub overview. They read the roster through the same membership predicate, so they follow the class this phase resolves.
+describe("P11-C with the report charts of R-5a", () => {
+  const graded = () => ({ extra: {
+    "platform/assignments/a1.json": assignment("a1", "cA"), "platform/assignments/b1.json": assignment("b1", "cB"),
+    ["platform/submissions/a1/" + S + ".json"]: submission("a1", S, 40),
+    ["platform/submissions/b1/" + S + ".json"]: submission("b1", S, 90), ["platform/submissions/b1/" + S2 + ".json"]: submission("b1", S2, 70)
+  } });
+  it("the shared student's report charts are of the shared class only: its assessment, beside that class's average", async () => {
+    const ctx = setup(graded());
+    const r = await report(ctx, B, "type=student&classId=cB&studentId=" + S);
+    expect(r.jsonBody.insights.assessments.map(x => [x.assignmentId, x.percentage, x.classAverage])).toEqual([["b1", 90, 80]]);
+    expect(JSON.stringify(r.jsonBody)).not.toContain("a1");
+    const home = await report(ctx, A, "type=student&studentId=" + S);
+    expect(home.jsonBody.insights.assessments.map(x => [x.assignmentId, x.percentage, x.classAverage])).toEqual([["a1", 40, 40]]);
+  });
+  it("the hub overview counts the shared student in the shared class for its teacher, and never for a third teacher", async () => {
+    const ctx = setup(graded());
+    const b = (await report(ctx, B, "type=overview")).jsonBody.overview;
+    expect(b.classes.map(c => [c.classId, c.studentCount, c.average])).toEqual([["cB", 2, 80]]);
+    const a = (await report(ctx, A, "type=overview")).jsonBody.overview;
+    expect(a.classes.map(c => [c.classId, c.studentCount, c.average])).toEqual([["cA", 1, 40]]);
+    const c = (await report(ctx, C, "type=overview")).jsonBody.overview;
+    expect(c.classes.map(x => [x.classId, x.studentCount])).toEqual([["cC", 1]]);
+  });
+});
