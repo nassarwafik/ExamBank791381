@@ -58,4 +58,23 @@ function isReportableAssessment(assignment) {
   return false;
 }
 
-module.exports = { normalizeAssignmentStatus, applyAssignmentArchive, applyAssignmentRestore, isReportableAssessment };
+// Reports R-6 (owner decision D-2) — WHEN an assessment was first published to its students. The server writes it once, at the
+// first publication, as an ISO instant (Date#toISOString); it is additive, so a document written before this phase simply has
+// none. Anything that is not such an instant — absent, empty, a number, an unparseable or date-only string — is NO stamp: ""
+// (it is never read as a date of its own, and never makes an assessment disappear).
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+function publishedAtOf(assignment) {
+  const v = assignment && assignment.publishedAt;
+  return typeof v === "string" && ISO_INSTANT.test(v) && Number.isFinite(Date.parse(v)) ? v : "";
+}
+
+// Stamp the FIRST publication on a document that is being published: `now` when it carries no readable stamp, otherwise the
+// stamp it has (unpublishing and publishing again never moves it). The caller applies it ONLY on a real transition to
+// "published" — never to a document that already is published (an older published assessment keeps having no stamp: the server
+// does not know when it was published and writes no guess). Mutates and returns `current`, like the handler's other edits.
+function stampFirstPublication(current, now) {
+  if (current && !publishedAtOf(current)) current.publishedAt = now;
+  return current;
+}
+
+module.exports = { normalizeAssignmentStatus, applyAssignmentArchive, applyAssignmentRestore, isReportableAssessment, publishedAtOf, stampFirstPublication };

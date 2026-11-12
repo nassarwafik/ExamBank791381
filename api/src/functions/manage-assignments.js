@@ -6,7 +6,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
-const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=require("../lib/assignment-lifecycle");
+const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore,stampFirstPublication}=require("../lib/assignment-lifecycle");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
@@ -161,7 +161,7 @@ async function handler(request,deps={},obs=null){
    // Phase 7A: strict / pausable attempts need the per-attempt epoch → attemptModelVersion 3. A continuous assignment
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
-   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,resultsRelease,...(late.value?{latePolicy:late.value}:{}),assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,resultsRelease,...(late.value?{latePolicy:late.value}:{}),assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",...(b.publish===true?{publishedAt:now}:{}),openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
    // Phase 12E-B — STRICT: the published pointer exists BEFORE the published document does. If the index cannot be
    // updated the assignment is NOT created (retryable); a later failure of the upload below only leaves a harmless
    // stale pointer (readers ignore a missing document). A draft is never indexed.
@@ -205,8 +205,13 @@ async function handler(request,deps={},obs=null){
       // aborts this mutation, so the assignment stays as it was. published→published also ensures it (repair).
       await ensureIdx(c,String(current.classId||""),id,deps);
      }
+     // Reports R-6 (D-2) — the FIRST publication is stamped once, in the same commit that publishes: only on a real transition
+     // to "published" (a repeated «published» is the index-repair path, not a publication) and only when the document carries
+     // no stamp yet, so unpublishing and publishing again keeps the first one.
+     const at=new Date().toISOString();
+     if(action==="setstatus"&&nextStatus==="published"&&normalizeAssignmentStatus(current)!=="published")stampFirstPublication(current,at);
      if(action==="setstatus")current.status=nextStatus;else current.maxAttempts=nextMaxAttempts;
-     current.updatedAt=new Date().toISOString();
+     current.updatedAt=at;
      return current;
     });
     // Phase 12E-B — AFTER published→draft committed: drop the pointer (best-effort; a stale one is filtered by readers).

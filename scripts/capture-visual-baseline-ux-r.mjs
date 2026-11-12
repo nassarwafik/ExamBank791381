@@ -119,7 +119,8 @@ const REPORTS = {
     matrix: [
       { assignmentId: "a1", title: ASSIGNMENTS[0].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 2 ? "missing" : "submitted", percentage: i === 2 ? null : 80 - i * 15 })) },
       { assignmentId: "a4", title: ASSIGNMENTS[3].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 1 ? "pending" : "submitted", percentage: i === 1 ? null : 70 })) },
-    ] },
+    ],
+    periodBasis: { criterion: "publishedAt", byCreation: 0 } },   // Reports R-6 — what the report's dates are (the note under the figures)
   // Phase R-5a — the hub overview («نظرة عامة») and the class / student reports with their chart series (`insights`), in the shapes
   // of the reportsInsights.r5a fixtures: the hub and two more opened reports render their charts, state bars and tables.
   overview: { ok: true, type: "overview", withheld: [], overview: {
@@ -132,6 +133,7 @@ const REPORTS = {
     followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, total: 2 } } },   // Phase R-5c — «يحتاج انتباهك» on the hub
   class: { ok: true, type: "class", withheld: [], class: { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", status: "active", studentCount: 6 },
     kpis: { assignments: 3, averageScore: 68.5, submissionRate: 78, pendingReview: 2 }, projects: [],
+    periodBasis: { criterion: "publishedAt", byCreation: 1 },     // Reports R-6 — one older assessment, dated by its creation (the longer note)
     insights: {
       assessments: [
         { assignmentId: "a1", title: ASSIGNMENTS[0].title, date: "2026-08-18", students: 6, submitted: 4, missing: 2, pendingReview: 0, submissionRate: 67, average: 62 },
@@ -147,6 +149,7 @@ const REPORTS = {
         { studentId: "u5", displayName: STUDENTS[4].displayName, average: null, missing: 2, pending: 1, reasons: [{ code: "missing", count: 2 }] }] } } },
   student: { ok: true, type: "student", withheld: [], student: { studentId: STUDENTS[0].userId, displayName: STUDENTS[0].displayName, classId: "c1", className: CLASSES[0].name, schoolYear: "2026" },
     academic: { average: 73, submittedCount: 3, assessmentCount: 4, submissionRate: 75, pendingCount: 1 }, projects: [],
+    periodBasis: { criterion: "publishedAt", byCreation: 0 },     // Reports R-6
     insights: { assessments: [
       { assignmentId: "a1", title: ASSIGNMENTS[0].title, date: "2026-08-18", state: "submitted", percentage: 58, attempts: 1, classAverage: 62 },
       { assignmentId: "a4", title: ASSIGNMENTS[3].title, date: "2026-09-15", state: "submitted", percentage: 88, attempts: 2, classAverage: 69 },

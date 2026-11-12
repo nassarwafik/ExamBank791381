@@ -7,7 +7,7 @@ import { sortRows, ariaSort, matchesQuery, type SortState, type SortValue } from
 import { downloadCsv } from "./csv";
 import { downloadXlsx } from "./xlsx";
 import { printReport } from "./printReport";
-import { formatLocalDate } from "./period";
+import { formatLocalDate, periodBasisOf, periodBasisText } from "./period";
 import { exportRows, exportPrint, exportFilename, type ReportExport, type ExportContext } from "./reportExport";
 import { isDarkScheme } from "../ui/themeColor";
 import { useTableSort } from "./useTableSort";
@@ -78,6 +78,14 @@ export function ReportHeader({ title, description, report, children }: { title: 
 
 /** ReportNote — a short truthful explanation of what a value means (e.g. latest submitted attempt, not a final grade). */
 export function ReportNote({ children }: { children: ReactNode }) { return <p className="eb-report-note">{children}</p>; }
+
+/** Reports R-6 — what the period and the dates of an assessment report are, as the server said in `periodBasis` (publication
+ *  date; how many assessments fell back to their creation date). Nothing is shown when the reply says nothing, or names a
+ *  criterion this client does not know. */
+export function PeriodBasisNote({ value }: { value: unknown }) {
+  const basis = periodBasisOf(value);
+  return basis ? <p className="eb-report-note" data-period-basis={basis.criterion}>{periodBasisText(basis)}</p> : null;
+}
 
 /* ---------------- Phase R-5b — interactive tables: sort by a column, find a row, keep the header in view ---------------- */
 

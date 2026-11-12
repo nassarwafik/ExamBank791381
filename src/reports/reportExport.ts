@@ -13,6 +13,7 @@ import type { PrintReport } from "./printReport";
 import type { XlsxCell } from "./xlsx";
 import { GRADED_LABEL, PENDING_LABEL, MISSING_LABEL, finiteOrNull, gradedValue, gapToClass, type ClassInsights, type StudentInsights } from "./insights";
 import { reasonText } from "./followUp";
+import { periodBasisOf, periodBasisMeta } from "./period";
 import { STAGE_STATUS_ORDER, stageStatusLabel } from "../projects/teacherPresentation";
 
 export type ExportCell = string | number;
@@ -30,6 +31,8 @@ export function periodText(ctx: ExportContext): string {
   return [ctx.from ? "من " + ctx.from : "", ctx.to ? "إلى " + ctx.to : ""].filter(Boolean).join(" ");
 }
 const identity = (pairs: [string, string | undefined | null][]): [string, string][] => pairs.filter((p): p is [string, string] => !!p[1]);
+/** Reports R-6 — «معيار الفترة» of an assessment report's identity: what the server said its dates are; nothing when it said nothing. */
+const basisCell = (value: unknown, shown: boolean): string => { const b = shown ? periodBasisOf(value) : null; return b ? periodBasisMeta(b) : ""; };
 
 /* ---------------- class ---------------- */
 
@@ -37,6 +40,7 @@ export type ClassExportData = {
   class: { name: string; schoolYear: string; status: string; studentCount: number };
   kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null;
   insights?: ClassInsights | null;
+  periodBasis?: unknown;
   projects: { title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; notStartedCount?: number; studentCount?: number }[];
 };
 export function classExport(data: ClassExportData, ctx: ExportContext): ReportExport {
@@ -71,7 +75,7 @@ export function classExport(data: ClassExportData, ctx: ExportContext): ReportEx
     ])
   });
   return { kind: "تقرير-الصف", title: "تقرير الصف — " + data.class.name, subject: data.class.name,
-    meta: identity([["الصف", data.class.name], ["السنة الدراسية", data.class.schoolYear], ["الفترة", periodText(ctx)]]), sections };
+    meta: identity([["الصف", data.class.name], ["السنة الدراسية", data.class.schoolYear], ["الفترة", periodText(ctx)], ["معيار الفترة", basisCell(data.periodBasis, !!data.kpis)]]), sections };
 }
 
 /* ---------------- student ---------------- */
@@ -80,6 +84,7 @@ export type StudentExportData = {
   student: { displayName: string; className: string; schoolYear: string };
   academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null;
   insights?: StudentInsights | null;
+  periodBasis?: unknown;
   projects: { title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean } }[];
 };
 /** The state of a student's assessment in words: graded, awaiting the teacher (also for an unknown state) or not handed in. */
@@ -109,7 +114,7 @@ export function studentExport(data: StudentExportData, ctx: ExportContext): Repo
     ])
   });
   return { kind: "تقرير-الطالب", title: "تقرير الطالب — " + data.student.displayName, subject: data.student.displayName,
-    meta: identity([["الطالب", data.student.displayName], ["الصف", data.student.className], ["السنة الدراسية", data.student.schoolYear], ["الفترة", periodText(ctx)]]), sections };
+    meta: identity([["الطالب", data.student.displayName], ["الصف", data.student.className], ["السنة الدراسية", data.student.schoolYear], ["الفترة", periodText(ctx)], ["معيار الفترة", basisCell(data.periodBasis, !!data.academic)]]), sections };
 }
 
 /* ---------------- assessments (with the student × assessment matrix) ---------------- */
@@ -122,6 +127,7 @@ export type AssignmentsExportData = {
   overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> };
   perAssignment: AssignmentRow[];
   matrix: { assignmentId: string; title: string; cells: MatrixCell[] }[];
+  periodBasis?: unknown;
 };
 /** One matrix cell: the final percentage as a number (a real 0 is 0), or the state in words — never a number for a non-final result. */
 export function matrixCellValue(cell: MatrixCell | undefined): ExportCell {
@@ -149,7 +155,7 @@ export function assignmentsExport(data: AssignmentsExportData, ctx: ExportContex
     });
   }
   return { kind: "تقرير-التقييمات", title: "التقييمات والواجبات — " + data.class.name, subject: data.class.name,
-    meta: identity([["الصف", data.class.name], ["السنة الدراسية", data.class.schoolYear || ctx.schoolYear], ["الفترة", periodText(ctx)], ["معنى الأرقام", "نتيجة آخر محاولة مسلّمة؛ ليست درجات نهائية معتمدة"]]), sections };
+    meta: identity([["الصف", data.class.name], ["السنة الدراسية", data.class.schoolYear || ctx.schoolYear], ["الفترة", periodText(ctx)], ["معيار الفترة", basisCell(data.periodBasis, true)], ["معنى الأرقام", "نتيجة آخر محاولة مسلّمة؛ ليست درجات نهائية معتمدة"]]), sections };
 }
 
 /* ---------------- project reports ---------------- */

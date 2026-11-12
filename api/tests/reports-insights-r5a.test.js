@@ -126,7 +126,7 @@ describe("R-5a B — the REAL reports handler: class and student `insights`", ()
   });
   it("class report: the fields that existed before R-5a are unchanged (additive response)", async () => {
     const cls = await report(seed(), "type=class&classId=c1");
-    expect(Object.keys(cls).sort()).toEqual(["class", "insights", "kpis", "ok", "projects", "type", "withheld"]);
+    expect(Object.keys(cls).sort()).toEqual(["class", "insights", "kpis", "ok", "periodBasis", "projects", "type", "withheld"]);   // Reports R-6 added `periodBasis` (additive)
     expect(cls.kpis).toEqual({ assignments: 2, averageScore: 46.7, submissionRate: 67, pendingReview: 1 });
   });
   it("student report: result per assessment beside the class average; pending / missing carry no percentage", async () => {
@@ -337,7 +337,8 @@ describe("R-5a D — the hub overview (type=overview)", () => {
     expect(recent.totals.assessments).toBeLessThan(all.totals.assessments);    // P_old (a year earlier) is out
     expect(recent.trend.every(m => m.month.startsWith("2026-"))).toBe(true);
     expect((await as(ctx, SARA, "/api/reports?type=overview&schoolYear=1999-2000")).jsonBody.overview).toEqual({ classes: [], totals: { classes: 0, students: 0, assessments: 0, average: null, submissionRate: 0, pendingReview: 0 }, trend: [],
-      followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, total: 0 } });   // Reports R-5c added `followUp` (additive)
+      followUp: { criteria: { missingAtLeast: 2, belowClassBy: 15 }, total: 0 },      // Reports R-5c added `followUp` (additive)
+      periodBasis: { criterion: "publishedAt", byCreation: 0 } });                    // Reports R-6 added `periodBasis` (additive)
     expect((await as(ctx, SARA, "/api/reports?type=overview&from=2026-05-01&to=2026-01-01")).status).toBe(400);
   });
   it("the academic part withheld → overview: null, and no class, assignment or submission is read for it", async () => {

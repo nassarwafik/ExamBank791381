@@ -1340,6 +1340,21 @@
       "page": "login-error",
       "viewport": "all",
       "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» appears on the sign-in page under «الدخول بالباركود»; the card grows by that one row and nothing else changes."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-r6.md §4) — one more quiet note under the report's figures says what its period and dates are («الفترة وتواريخ التقييمات وترتيبها بحسب تاريخ نشر التقييم.»); everything below it moves down by that one line."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-r6.md §4) — one more quiet note under the report's figures says what its period and dates are («الفترة وتواريخ التقييمات وترتيبها بحسب تاريخ نشر التقييم.»), here with the sentence for one older assessment dated by its creation; everything below it moves down by those lines."
+    },
+    {
+      "page": "report-student",
+      "viewport": "all",
+      "reason": "Reports R-6 (docs/enterprise-reports-period-r6.md §4) — one more quiet note under the report's figures says what its period and dates are («الفترة وتواريخ التقييمات وترتيبها بحسب تاريخ نشر التقييم.»); everything below it moves down by that one line."
     }
   ]
 }

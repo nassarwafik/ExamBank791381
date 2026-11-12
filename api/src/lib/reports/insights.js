@@ -6,6 +6,7 @@
 //   - a student who never handed in is "missing": no percentage either — never a zero;
 //   - an outcome this code cannot classify is counted as pending (handed in, no number) — it never becomes a number.
 const { studentOutcome, assignmentStats, average, round1 } = require("./aggregate");
+const { assessmentDate } = require("./period");   // Reports R-6 — the date of an assessment is its publication (creation for older documents)
 
 // Calendar day (YYYY-MM-DD) of an ISO timestamp, or "" when it is absent or not a date.
 function isoDay(iso) {
@@ -53,14 +54,14 @@ function standingsSummary(standings) {
   return { highest: who(pick((a, b) => a > b)), lowest: who(pick((a, b) => a < b)), median, stdDev, withAverage: ranked.length };
 }
 
-// One point per assessment, in the order given (the caller passes them by createdAt, oldest first): the SAME figures as the
+// One point per assessment, in the order given (the caller passes them oldest first, by the assessment date): the SAME figures as the
 // assessments report's per-assessment row. subsByAssignment[i] is the Map studentId -> submission of assignments[i].
 function assessmentSeries(assignments, students, subsByAssignment) {
   return assignments.map((a, i) => {
     const subs = subsByAssignment[i];
     const st = assignmentStats(students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) })));
     return {
-      assignmentId: a.assignmentId, title: a.title, date: isoDay(a.createdAt),
+      assignmentId: a.assignmentId, title: a.title, date: isoDay(assessmentDate(a)),
       students: st.students, submitted: st.submitted, missing: st.missing, pendingReview: st.pendingReview,
       submissionRate: st.submissionRate, average: st.average
     };
@@ -103,7 +104,7 @@ function studentSeries(assignments, mySubs, averages) {
     const known = o.state === "submitted" || o.state === "missing";
     const avg = averages && averages[i] !== undefined ? averages[i] : null;
     return {
-      assignmentId: a.assignmentId, title: a.title, date: isoDay(a.createdAt),
+      assignmentId: a.assignmentId, title: a.title, date: isoDay(assessmentDate(a)),
       state: known ? o.state : "pending",
       percentage: o.state === "submitted" ? o.percentage : null,
       attempts: o.attempts,
@@ -137,7 +138,7 @@ function overviewRollup(classInputs) {
     let graded = 0, pending = 0, missing = 0;
     assignments.forEach((a, i) => {
       const subs = subsByAssignment[i];
-      const month = isoDay(a.createdAt).slice(0, 7);
+      const month = isoDay(assessmentDate(a)).slice(0, 7);
       const bucket = month ? (months.get(month) || months.set(month, { assessments: 0, pcts: [], handedIn: 0, cells: 0 }).get(month)) : null;
       if (bucket) bucket.assessments += 1;
       for (const s of roster) {
