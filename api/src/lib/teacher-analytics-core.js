@@ -11,7 +11,7 @@ const { deriveGradingStatus } = require("./grading-status");
 const { technicalGradingPending } = require("./technical-grading-hold");
 // Roadmap #24 — the student POPULATION is class MEMBERSHIP (role student, not archived, in class) through the ONE
 // canonical helper; `active:false` is login eligibility only and must not drop a student from analytics.
-const { isStudentClassMember } = require("./class-membership");
+const { isStudentClassMember, sharedClassIds } = require("./class-membership");
 // Roadmap #34 — lifecycle AUTHORITY: a class is current only through the canonical class-lifecycle helper (status
 // "archived" OR active:false ⇒ archived; never the raw `active` flag), and an assignment is "takeable now" only
 // through the canonical assignment-lifecycle helper. Teacher analytics is CURRENT/operational analytics: with no
@@ -157,7 +157,8 @@ function qid(question, index) {
 }
 
 function classAggregate(classId, assignments, students, submissionMap) {
-  const classStudents = students.filter(student => isStudentClassMember(student, classId));
+  // `students` are MEMBERSHIPS (one row per class of a student — see buildAnalytics): the row's classId is the class it counts in.
+  const classStudents = students.filter(student => String(student.classId || "") === String(classId));
   const classAssignments = assignments.filter(assignment => String(assignment.classId || "") === classId);
   let submitted = 0;
   let pendingReview = 0;
@@ -350,7 +351,14 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   const classMap = new Map(classes.map(item => [item.classId, item]));
   const students = usersRaw.filter(item => item?.role === "student");
   // Members of their own class (canonical predicate: role student, not archived). Login-disabled students stay in.
-  const activeStudents = students.filter(item => isStudentClassMember(item, item.classId));
+  // Tadris+ P11-C — one row per MEMBERSHIP: the student in their home class and, for every class the owner added them to (P11-A),
+  // a view of the same student whose classId is THAT class. Every figure below reads `student.classId`, so a shared student counts
+  // in the shared class's analytics exactly like its own students — and only there: the scope keeps the teacher's own classes.
+  // (A home student archived by their teacher stays out of the home class, as before; their shared classes keep them.)
+  const activeStudents = students.flatMap(item => [
+    ...(isStudentClassMember(item, item.classId) ? [item] : []),
+    ...sharedClassIds(item).map(classId => ({ ...item, classId, archived: false, shared: true }))
+  ]);
   // Roadmap #34 (C1): the GLOBAL scope is current/operational — only canonical-active classes populate it. An explicit
   // classId keeps the historical class-scoped behavior (an archived class requested on purpose is still served).
   const activeClassIds = new Set(classes.filter(item => item.active).map(item => item.classId));
@@ -360,9 +368,10 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   let targetStudent = null;
   if (mode === "student") {
     if (!requestedClassId) throw new AnalyticsScopeError(400, "اختر الصف قبل اختيار الطالب.");
-    targetStudent = students.find(item => String(item.userId || "") === requestedStudentId) || null;
-    if (!targetStudent) throw new AnalyticsScopeError(404, "الطالب غير موجود.");
-    if (!isStudentClassMember(targetStudent, requestedClassId)) throw new AnalyticsScopeError(400, "الطالب المحدد لا ينتمي إلى الصف المحدد.");
+    if (!students.some(item => String(item.userId || "") === requestedStudentId)) throw new AnalyticsScopeError(404, "الطالب غير موجود.");
+    // the student's MEMBERSHIP of the requested class (home or shared, P11-C): every figure is then that class's
+    targetStudent = activeStudents.find(item => String(item.userId || "") === requestedStudentId && String(item.classId || "") === requestedClassId) || null;
+    if (!targetStudent) throw new AnalyticsScopeError(400, "الطالب المحدد لا ينتمي إلى الصف المحدد.");
   }
   const inScope = classId => requestedClassId ? classId === requestedClassId : activeClassIds.has(classId);
   const scopedAssignments = scopedByDate.filter(item => inScope(String(item.classId || "")));
@@ -375,6 +384,9 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   // class's roster for the picker only and never feeds a single analytics figure.
   const rosterStudents = activeStudents.filter(item => inScope(String(item.classId || "")));
   const scopedStudents = mode === "student" ? [targetStudent] : rosterStudents;
+  // The PEOPLE of the scope: a student of two classes of the same scope (a teacher who has both, P11-C) is one person — counted and
+  // offered once, under their first membership (the home class).
+  const scopedPeople = [...new Map([...scopedStudents].reverse().map(student => [String(student.userId), student])).values()].reverse();
 
   const submissionMap = new Map();
   for (const submission of submissionsRaw) {
@@ -406,7 +418,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   }).length;
 
   const studentMap = new Map();
-  for (const student of scopedStudents) {
+  for (const student of scopedPeople) {
     studentMap.set(String(student.userId), {
       userId: String(student.userId),
       displayName: studentName(student),
@@ -545,7 +557,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
 
   const topicAnalytics = topicBreakdown(submittedRecords).slice(0, 14);
 
-  const neverLogged = scopedStudents.filter(student => !student.lastLoginAt).length;
+  const neverLogged = scopedPeople.filter(student => !student.lastLoginAt).length;
   const scopeClassName = classMap.get(requestedClassId)?.name || "";
   const overviewShown = shows("scores.overview"), trendShown = shows("scores.trend"), topicsShown = shows("topics.performance"), followUpShown = shows("students.followUp");
   const insights = !shows("insights") ? [] : buildInsights({
@@ -597,7 +609,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     })),
     kpis: {
       activeClasses: classes.filter(item => item.active).length,
-      activeStudents: scopedStudents.length,
+      activeStudents: scopedPeople.length,
       publishedAssignments: scopedAssignments.length,
       submissions: submitted,
       expectedSubmissions: expected,
@@ -626,7 +638,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     topImprovers,
     insights: insights.slice(0, 7),
     // The student PICKER's roster (the scope's class members) — selector metadata, not analytics.
-    students: rosterStudents
+    students: (mode === "student" ? rosterStudents : scopedPeople)
       .map(item => ({ userId: String(item.userId), displayName: studentName(item) }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "ar")),
     studentDetail

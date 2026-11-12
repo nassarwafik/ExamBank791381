@@ -89,9 +89,10 @@ describe("P11-A surfaces that do not serve shared students yet do not offer them
     stub();
     expect((await createTeacherMessagesClient("tok").listStudents("cB")).map(s => s.userId)).toEqual(["u1", "u2"]);
   });
-  it("the live-game lobby lists the teacher's own students only", async () => {
+  // Since P11-C a shared student plays in the class's live room, so the lobby offers them (until then they were left out).
+  it("the live-game lobby lists the shared student too (P11-C)", async () => {
     stub();
-    expect((await createTeacherLiveSessionClient("tok").listStudents("cB")).map((s: { userId: string }) => s.userId)).toEqual(["u2"]);
+    expect((await createTeacherLiveSessionClient("tok").listStudents("cB")).map((s: { userId: string }) => s.userId)).toEqual(["u1", "u2"]);
   });
 });
 

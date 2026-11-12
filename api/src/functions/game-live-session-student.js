@@ -2,6 +2,8 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { requireStudentService } = require("../lib/access/student-services");   // Tadris+ P7-B2
+const { studentClassIds, sharedClassEntries, isStudentSharedIn } = require("../lib/class-membership");
+const { studentOfClass } = require("../lib/student-classes");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { gradeQuestion } = require("../lib/assignment-grading");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -125,8 +127,12 @@ async function handler(request, deps = {}, obs = null) {
     const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
     const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
     // Tadris+ P7-B2 — the live challenge must be open to the student's teacher (capability and the owner's game choice, enforce only).
-    const serviceDenial = await requireStudentService(container, auth.student, "game:live-challenge", deps, obs);
-    if (serviceDenial) return serviceDenial;
+    // Tadris+ P11-C — for a student of several classes the ROOM's class decides whose service applies (below, once the room is named).
+    const severalClasses = sharedClassEntries(auth.student).length > 0;
+    if (!severalClasses) {
+      const serviceDenial = await requireStudentService(container, auth.student, "game:live-challenge", deps, obs);
+      if (serviceDenial) return serviceDenial;
+    }
     const action = String(request.params?.action || "").trim().toLowerCase();
     const method = String(request.method || "POST").toUpperCase();
     const now = new Date().toISOString();
@@ -136,13 +142,26 @@ async function handler(request, deps = {}, obs = null) {
     const joinCode = normalizeJoinCode(body && body.joinCode);
     if (!joinCode) return BAD_REQUEST;
     const name = sessionDocName(joinCode);
+    if (severalClasses) {
+      // The room of a class the owner added the student to follows THAT class's teacher; any other room (the home class's, an unknown
+      // code, a room without a class) follows the home teacher exactly as before. Nothing of the room is disclosed by this check.
+      const room = await dl(container, name);
+      const roomClassId = String(room && room.classId || "");
+      let subject = auth.student, options = {};
+      if (roomClassId && isStudentSharedIn(auth.student, roomClassId)) {
+        const classroom = await dl(container, "platform/classes/" + roomClassId + ".json");
+        subject = studentOfClass(auth.student, classroom); options = { classroom };
+      }
+      const serviceDenial = await requireStudentService(container, subject, "game:live-challenge", deps, obs, options);
+      if (serviceDenial) return serviceDenial;
+    }
     // QA2-23 — the participant list is frozen when the teacher opens the room; membership is CURRENT. A student moved to another
     // class since, or a class archived during the game, no longer reads or answers in the room (no academic mark is involved).
     // A room from before classId was recorded keeps the participant-list rule alone. The poll (get) checks membership only — the
     // student document is already loaded — so polling costs no extra read; every write also reads the class (archived → refused).
     const memberNow = session => {
       const roomClassId = String(session && session.classId || "");
-      return !roomClassId || String(auth.student && auth.student.classId || "") === roomClassId;
+      return !roomClassId || studentClassIds(auth.student).includes(roomClassId);   // Tadris+ P11-C: the home class or a shared one
     };
     const inClassNow = async session => {
       const roomClassId = String(session && session.classId || "");

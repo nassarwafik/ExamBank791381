@@ -4,7 +4,7 @@ const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 const { tenantOf, canAccessDocument } = require("../lib/teacher-tenancy");
-const { isStudentClassMember } = require("../lib/class-membership");
+const { isStudentInClass } = require("../lib/class-membership");   // Tadris+ P11-C: a shared student reads this class's course too
 const { classHasLearningCourse, getVisibleLearningModuleIds } = require("../lib/class-learning-materials");
 const { listLearningModules } = require("../lib/learning-materials-registry");
 const { progressDocName, loadPageIndex, classProgressSummary } = require("../lib/learning-progress");
@@ -46,7 +46,7 @@ async function handler(request, deps = {}, obs = null) {
     } else {
       users = await (deps.listJson || listJson)(container, UP);
     }
-    const members = users.filter(u => isStudentClassMember(u, classId) && u.active !== false);
+    const members = users.filter(u => isStudentInClass(u, classId) && u.active !== false);
     const docs = await (deps.mapConcurrent || mapConcurrent)(members, getReadConcurrency(), u => dl(container, progressDocName(u.userId)));
     const visibleIds = new Set(getVisibleLearningModuleIds(classroom, courseId));
     const modules = listLearningModules(courseId).filter(m => visibleIds.has(m.moduleId));

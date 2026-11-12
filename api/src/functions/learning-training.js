@@ -17,7 +17,8 @@ const { listLearningCourses } = require("../lib/learning-materials-registry");
 const { trainingReleases } = require("../lib/learning-training-registry");
 const { classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { loadPublishedAssignmentsForClasses } = require("../lib/class-assignment-index");   // Tadris+ O5
-const { studentClassIds } = require("../lib/class-membership");   // Tadris+ P11-A fix
+const { studentClassIds, sharedClassEntries } = require("../lib/class-membership");   // Tadris+ P11-A fix
+const { studentClasses, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C
 const { authorize } = require("../lib/access/authorize");                                  // Tadris+ O5
 
 // Learning Practice API — the SAFE delivery of the book's 36 Learning-Practice items (the T-series trainings T01–T30
@@ -134,19 +135,34 @@ async function handler(request, deps = {}, obs = null) {
     const method = String(request.method || "GET").toUpperCase();
 
     // Student context: persisted class → lifecycle → the gate + the practice summary (ONE read each).
-    let classroom = null, practiceDoc = null;
+    // Tadris+ P11-C — `gateClasses`: the student's OPEN classes, home first (one class for a student who shares none — exactly the
+    // class the route always used). A training is released through a COURSE, and a course is served by the first class that offers it
+    // (lib/student-classes.js, the rule of every learning route).
+    let practiceDoc = null, gateClasses = [];
     if (actor.kind === "student") {
-      const classId = String(actor.student?.classId || "").trim();
-      classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
-      if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
+      if (sharedClassEntries(actor.student).length) {
+        const classes = await studentClasses(actor.student, name => dl(actor.container, name));
+        if (!classes.open.length && classes.home.archived) return ARCHIVED;
+        gateClasses = classes.open.map(c => c.classroom);
+      } else {
+        const classId = String(actor.student?.classId || "").trim();
+        const classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
+        if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
+        gateClasses = [classroom];
+      }
       practiceDoc = normalizePracticeDoc(await dl(actor.container, practiceDocName(actor.student.userId)));
     }
     // Tadris+ P5-A — a training is available only through a release point whose COURSE may be used now (published, within the
     // teacher's entitlement — for a student, their class's teacher's); for a student that point must also be released to the class.
     const courseIds = listLearningCourses().map(c => c.courseId);
-    const okCourses = actor.kind === "teacher" ? await teacherAllowedCourses(actor.container, actor.user, courseIds, deps) : await classAllowedCourses(actor.container, classroom, courseIds, deps);
-    const allowed = t => (actor.kind === "teacher" || trainingAllowedForClass(classroom, t))
-      && trainingReleases(t).some(r => okCourses.includes(r.courseId) && (actor.kind === "teacher" || classCanSeeLearningModule(classroom, r.courseId, r.requiredModuleId)));
+    const okCourses = actor.kind === "teacher" ? await teacherAllowedCourses(actor.container, actor.user, courseIds, deps) : [];
+    const gates = [];
+    for (const classroom of gateClasses) gates.push({ classroom, ok: await classAllowedCourses(actor.container, classroom, courseIds, deps) });
+    const servingGate = courseId => (gates.length === 1 ? gates[0] : gates.find(g => offersCourse(courseId)(g.classroom)));
+    const releasedTo = (g, t, r) => !!g && trainingAllowedForClass(g.classroom, t) && g.ok.includes(r.courseId) && classCanSeeLearningModule(g.classroom, r.courseId, r.requiredModuleId);
+    const allowed = t => (actor.kind === "teacher"
+      ? trainingReleases(t).some(r => okCourses.includes(r.courseId))
+      : trainingReleases(t).some(r => releasedTo(servingGate(r.courseId), t, r)));
 
     // ── list ──
     if (!trainingId) {

@@ -19,7 +19,7 @@ const { applyProgressUpdate } = require("../project-794589-progress");
 const { applySelfReport } = require("./self-report");
 const { normalizeScore } = require("./score");
 const { recordAuditEvent } = require("../audit-log");
-const { isStudentClassMember } = require("../class-membership");
+const { isStudentInClass } = require("../class-membership");
 const { listUsersForReadViews } = require("./user-directory-cache");
 const condense = require("./condense");
 
@@ -360,8 +360,10 @@ async function loadStudentUser(container, studentId) {
 // of student LOGIN eligibility (which the student-auth path enforces separately with active===false).
 // Roadmap #24: delegates to the ONE canonical read-side membership predicate (lib/class-membership) so the
 // project tracker, reports, the gradebook, item analysis and teacher analytics all share exactly one rule.
+// Tadris+ P11-C — a student the owner ADDED to the class (a shared class, P11-A) is a member of its project too: the teacher's
+// tracker, the reports centre and the evaluation follow-up list them, and their progress is stored per (class, student) as always.
 function studentBelongsToClass(user, classId) {
-  return isStudentClassMember(user, classId);
+  return isStudentInClass(user, classId);
 }
 
 // Verifies a studentId is a real student MEMBER of the given class BEFORE any read/write of that

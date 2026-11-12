@@ -199,7 +199,7 @@ type StudentProjectSection = { projectCode: string; title: string; tracks: Track
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; insights?: StudentInsights | null; projects: StudentProjectSection[]; withheld?: string[] };
-  const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
+  const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId, ...(filters.classId ? { classId: filters.classId } : {}) }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." description="اختر الصف ثم الطالب. سيعرض التقرير نتائجه في كل تقييم بجانب متوسط الصف، حالة كل تقييم، وتقدّمه في مشاريع صفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;

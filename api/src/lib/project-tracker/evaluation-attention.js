@@ -28,7 +28,7 @@ const { getSupportedClassProgramCodes } = require("./class-programs");
 const { buildClassSnapshot, workingDefinition } = require("./service");
 const { buildProjectEvaluation } = require("./evaluation");
 const { normalizeClassStatus } = require("../class-lifecycle");
-const { isStudentClassMember } = require("../class-membership");
+const { isStudentInClass } = require("../class-membership");   // Tadris+ P11-C: shared students are members of the class's project
 
 const ATTENTION_CAP = 20;
 // Phase 21H.1 (decision D2) — the teacher's actual work: stages a student SUBMITTED for review (status ready_for_review on an
@@ -102,7 +102,7 @@ function deriveProjectEvaluationAttention({ users, sources, cap = ATTENTION_CAP 
     const workDef = workingDefinition(src.projectCode, src.snapshot);
     const byStudent = new Map();
     for (const doc of src.progressDocs || []) if (doc && typeof doc === "object" && doc.studentId) byStudent.set(String(doc.studentId), doc);
-    const members = (Array.isArray(users) ? users : []).filter(u => u && u.role === "student" && isStudentClassMember(u, src.classId));
+    const members = (Array.isArray(users) ? users : []).filter(u => u && u.role === "student" && isStudentInClass(u, src.classId));
     let projectStudents = 0, projectStages = 0;
     for (const u of members) {
       const studentId = String(u.userId);

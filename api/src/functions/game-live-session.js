@@ -6,7 +6,7 @@ const { requireTeacherGame } = require("../lib/access/game-access");          //
 const { getContainer, downloadJsonOrNull, uploadJsonConditional, mutateJsonWithRetry, isConcurrencyConflict } = require("../lib/platform-storage");
 const { challengeDocName, challengeFromDoc } = require("../lib/live-challenge-store");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
-const { isStudentClassMember } = require("../lib/class-membership");
+const { isStudentInClass } = require("../lib/class-membership");   // Tadris+ P11-C: a student the owner added to the class may play in its rooms
 const {
   sessionDocName, generateJoinCode, newSessionDoc, teacherView,
   applyClose, applyStart, applyNext, applyFinish, SessionError,
@@ -124,7 +124,7 @@ async function handleCreate(request, teacherId, container, deps, now, tenant = n
   const participants = [];
   for (const studentId of studentIds) {
     const user = await dl(container, "platform/users/" + studentId + ".json");
-    if (!isStudentClassMember(user, classId) || user.active === false) {
+    if (!isStudentInClass(user, classId) || user.active === false) {
       return { status: 400, jsonBody: { ok: false, error: "أحد الطلاب المختارين غير صالح لهذه الغرفة." } };
     }
     participants.push({ studentId: String(user.userId || studentId), displayName: String(user.displayName || "") });

@@ -20,7 +20,7 @@ const { teacherCourseDecision, classCourseDecision, courseRefusal } = require(".
 //   • anyone else is refused.
 // The answer carries a strong ETag and `private, no-cache`: a browser may keep the body, but must ask again on every open, so the
 // gate runs every time (a 304 is sent only after the gate passed) and a module hidden later is refused at the next open.
-const CLASS_PREFIX = "platform/classes/";
+const { classroomServing, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C — the class that serves a shared student
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "هذه الوحدة غير موجودة." } };
 const ARCHIVED = { status: 403, jsonBody: { ok: false, error: "هذا الصف مؤرشف وانتهت السنة الدراسية." } };
@@ -48,10 +48,10 @@ async function handler(request, deps = {}, obs = null) {
       const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
       if (!sess.ok) return sess.response;
       if (!ID.test(courseId) || !ID.test(moduleId)) return NOT_FOUND;
-      const classId = String(sess.student?.classId || "").trim();
       const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
-      const classroom = classId ? await dl(sess.container, CLASS_PREFIX + classId + ".json") : null;
-      classDocs = classId ? 1 : 0;
+      // P11-C — the student's class that offers this COURSE (the same class every other learning route uses for it): the home class,
+      // else a class the owner added the student to.
+      const classroom = await classroomServing(sess.student, name => { classDocs += 1; return dl(sess.container, name); }, offersCourse(courseId));
       if (classroom && normalizeClassStatus(classroom) === "archived") return ARCHIVED;
       // (a module is visible only within an attached course, so this one check also refuses a course that is not attached)
       if (!classroom || !classCanSeeLearningModule(classroom, courseId, moduleId)) return UNAVAILABLE;

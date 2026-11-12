@@ -207,7 +207,7 @@ describe("UX-6b filters — only relevant controls, canonical project/class filt
     await waitFor(() => expect(within(filters()).getByLabelText("الطالب").querySelectorAll("option").length).toBe(3));
     pick("الطالب", "s1");
     await waitFor(() => expect(reportGets("student")).toHaveLength(1));
-    expect(reportGets("student")[0].url).toBe("/api/reports?type=student&studentId=s1");
+    expect(reportGets("student")[0].url).toBe("/api/reports?type=student&studentId=s1&classId=c1");   // P11-C: the report names the class it is opened from
     fireEvent.click(screen.getByRole("button", { name: "عودة إلى كل التقارير" }));
     await open("التقدم الزمني");
     pick("المشروع", "794589");                                                                      // choosing a project resets the class (unchanged semantics)

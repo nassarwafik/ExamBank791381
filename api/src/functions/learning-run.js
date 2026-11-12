@@ -24,7 +24,7 @@ const { resolveCodingExecutionProvider, loadCodingCapabilities, runCodingExecuti
 const { reserveCodingRun } = require("../lib/coding/run-rate-limit");
 const { RUN_LANGUAGE, RUN_LIMITS, loadRunIndex, findRunBlock, runnableBlocks, wrapProgram, parseRunBody } = require("../lib/learning-run");
 
-const CLASS_PREFIX = "platform/classes/";
+const { classroomServing, offersCourse } = require("../lib/student-classes");   // Tadris+ P11-C — the class that serves a shared student
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const NO_STORE = { "Cache-Control": "no-store" };
 const reply = (status, jsonBody, headers = {}) => ({ status, headers: { ...NO_STORE, ...headers }, jsonBody });
@@ -79,8 +79,8 @@ async function handler(request, deps = {}, obs = null) {
       const course = await teacherCourseDecision(actor.container, actor.user, courseId, deps);
       if (!course.ok) return course.code === "COURSE_UNKNOWN" ? refuse(404, "NOT_FOUND") : courseRefusal(course, { teacher: true });
     } else {
-      const classId = String(actor.student.classId || "").trim();
-      classroom = classId ? await dl(actor.container, CLASS_PREFIX + classId + ".json") : null;
+      // P11-C — the student's class that offers this course: the home class, else a class the owner added the student to.
+      classroom = await classroomServing(actor.student, name => dl(actor.container, name), offersCourse(courseId));
       if (classroom && normalizeClassStatus(classroom) === "archived") return refuse(403, "ARCHIVED");
       if (!classroom || !classHasLearningCourse(classroom, courseId)) return refuse(403, "UNAVAILABLE");
       const course = await classCourseDecision(actor.container, classroom, courseId, deps);
