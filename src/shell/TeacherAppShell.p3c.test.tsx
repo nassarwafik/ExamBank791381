@@ -27,7 +27,8 @@ function mount(access: TeacherAccessView | null, over: Partial<TeacherNavState> 
   return { onNavigate, onRetryAccess };
 }
 const navLabels = () => Array.from(screen.getByRole("complementary", { name: "التنقل الرئيسي" }).querySelectorAll<HTMLButtonElement>("button.eb-nav-link"))
-  .map(b => b.textContent || "").filter(t => t !== "تسجيل الخروج");
+  // the account group's own controls are not destinations: logout, and (PWA-INSTALL-ALL) «تثبيت التطبيق», which needs no access
+  .map(b => b.textContent || "").filter(t => t !== "تسجيل الخروج" && t !== "تثبيت التطبيق");
 
 beforeEach(() => {
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => true })) as unknown as typeof window.matchMedia;

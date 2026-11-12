@@ -118,7 +118,7 @@ describe("UX-O3 the header account menu", () => {
     expect(menu.textContent).toContain("tadris.owner");
     expect(menu.textContent).toContain("الجلسة حتى");
     // Tadris+ QR-2 — «ربط جهاز آخر بالباركود» opens the owner's QR scanner (#/owner-qr-scan); «تسجيل الخروج» stays last.
-    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["حسابك وأمانه", "ربط جهاز آخر بالباركود", "تسجيل الخروج"]);
+    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["حسابك وأمانه", "ربط جهاز آخر بالباركود", "تثبيت التطبيق", "تسجيل الخروج"]);   // PWA-INSTALL-ALL: install, then logout
     fireEvent.click(within(menu).getByRole("button", { name: "حسابك وأمانه" }));
     expect(await screen.findByRole("heading", { name: "أهلًا، مالك المنصة" })).toBeTruthy();
     expect(window.location.hash).toBe(ownerSectionHash("home"));

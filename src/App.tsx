@@ -108,6 +108,7 @@ import "./login-pro.css";
 import { isLearningLocation } from "./learning/learningRoute";
 import { endTeacherServerSession } from "./teacher/teacherServerLogout";
 import QrSignInEntry from "./qrLogin/QrSignInEntry";   // Tadris+ QR-2
+import InstallSignInEntry from "./pwa/InstallSignInEntry";   // PWA-INSTALL-ALL — «تثبيت التطبيق» on the sign-in page
 import AccountTypeSwitch from "./signin/AccountTypeSwitch";   // Tadris+ SIGN-IN-1
 import { signInPlatformAndReload } from "./qrLogin/qrSession";
 // FINAL_BUILDER_PHASE_6
@@ -5924,6 +5925,8 @@ function App() {
             </form>
 
             <QrSignInEntry ns="platform" onSignedIn={signInPlatformAndReload} />
+            {/* PWA-INSTALL-ALL — every account type can install from here (teachers and the owner had no install control). */}
+            <InstallSignInEntry />
 
             <p className="auth-note login-note">
               نفس شاشة الدخول للمعلم والطالب
