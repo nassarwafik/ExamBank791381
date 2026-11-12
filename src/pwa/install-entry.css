@@ -1,0 +1,10 @@
+/* PWA-INSTALL-ALL — «تثبيت التطبيق» under the sign-in form (teacher / student page and the owner page): a quiet full-width text
+   button below «الدخول بالباركود», so it never competes with «دخول». Ships with the page; the guidance dialog's styles load with it. */
+.eb-install-signin {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2);
+  width: 100%; min-height: 44px; margin-top: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3);
+  background: transparent; color: var(--eb-primary-strong); border: 1px solid transparent; border-radius: var(--eb-r);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-install-signin:hover { background: var(--eb-surface); border-color: var(--eb-line); }
+.eb-install-signin:focus-visible { outline: var(--eb-focus-ring); outline-offset: var(--eb-focus-offset); }

@@ -7,7 +7,7 @@ import BrandMark from "../ui/BrandMark";
 import useFocusTrap from "../ui/useFocusTrap";
 import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
-  IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck } from "../icons";
+  IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck, IconDownload } from "../icons";
 import {
   NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, PRIMARY_NAV, PRIMARY_SECTIONS, EXAM_SECTION_LABEL, ACCOUNT_SECTION_LABEL,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
@@ -24,6 +24,7 @@ import type { TeacherProfile } from "../teacher/teacherProfile";
 import { startTeacherAppearance } from "../teacher/teacherAppearance";   // Tadris+ P8-A1
 import { arrangeSections, bottomBarItems, useTeacherNavLayout } from "./navLayout";   // Tadris+ P8-B2a
 import { TeacherAccessContext } from "./teacherAccessContext";
+import { useDeferredInstallEntry } from "../pwa/useDeferredInstallEntry";   // PWA-INSTALL-ALL
 import "../ui/ui.css";
 import "../ui/kit.css";
 import "../shell.css";
@@ -96,6 +97,9 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
     returnFocusToMenu.current = false;
     (openedFrom.current === "more" ? moreButtonRef.current : menuButtonRef.current)?.focus();
   }, [drawerOpen]);
+  // PWA-INSTALL-ALL — «تثبيت التطبيق» in the account group (the sidebar on a computer, the «المزيد» menu on a phone) while the app is
+  // not installed: the student bar's own behaviour. The guidance dialog (its own lazy chunk: this shell loads at startup) lives at the shell's root, so it stays when the phone menu closes.
+  const install = useDeferredInstallEntry();
   // Tadris+ P8-B2a — the teacher's own order of the sidebar (their account; owner decision §19.31). Presentation only.
   const { layout: navLayout } = useTeacherNavLayout();
 
@@ -264,9 +268,16 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           {FOOTER_NAV.map(id => navButton(id))}
           {/* Phase 21E — the account controls at the bottom. UX-R2: who is signed in moved to the top bar; «تسجيل الخروج» stays here. */}
           {section("account", ACCOUNT_SECTION_LABEL, (
-            <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
-              <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
-            </button>
+            <>
+              {install.visible && (
+                <button type="button" className="eb-nav-link eb-install-nav" title="تثبيت التطبيق" disabled={install.busy} onClick={() => { setDrawerOpen(false); install.start(); }}>
+                  <IconDownload size={18} /><span className="eb-nav-label">تثبيت التطبيق</span>
+                </button>
+              )}
+              <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
+                <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
+              </button>
+            </>
           ), " eb-nav-account")}
         </nav>
       </aside>
@@ -294,6 +305,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, projectSelfRep
           </button>
         </nav>
       )}
+      {install.dialog}
     </div>
     </TeacherAccessContext.Provider>
   );

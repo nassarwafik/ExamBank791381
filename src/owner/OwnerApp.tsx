@@ -25,6 +25,7 @@ import OwnerCredentials from "./OwnerCredentials";   // Tadris+ P10-C
 import OwnerOverview from "./OwnerOverview";         // UX-O1
 import OwnerAccountMenu from "./OwnerAccountMenu";   // UX-O3
 import QrSignInEntry from "../qrLogin/QrSignInEntry";   // Tadris+ QR-2 — the owner's own QR sign-in (owner namespace)
+import InstallSignInEntry from "../pwa/InstallSignInEntry";   // PWA-INSTALL-ALL — «تثبيت التطبيق» on the owner sign-in page
 import AccountTypeSwitch from "../signin/AccountTypeSwitch";   // Tadris+ SIGN-IN-1
 
 /**
@@ -190,6 +191,7 @@ function OwnerLogin({ bootstrap, onSignedIn }: { bootstrap: BootstrapState; onSi
         <button type="submit" className="auth-submit" disabled={busy}>{busy ? "جارٍ الدخول…" : "دخول"}</button>
       </form>
       <QrSignInEntry ns="owner" onSignedIn={s => onSignedIn(s.token)} />
+      <InstallSignInEntry />
       {bootstrap === "open" && <p className="auth-note"><a className="eb-owner-link" href={OWNER_SETUP_HASH}>تأسيس حساب المالك لأول مرة</a></p>}
     </section>
   );
