@@ -1,16 +1,20 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler, type ChartOptions } from "chart.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
-import { reportGet, isAbortError, isSessionExpired } from "./api";
-import { ReportSessionContext } from "./session";
+import { useReport } from "./useReport";
 import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState } from "./ui";
 import { pct, isoDay } from "./format";
 import { downloadCsv } from "./csv";
 import { resolveTrack } from "./trackState";
 import * as csvRows from "./reportCsv";
+import { PerformanceTrendChart, SubmissionStatusChart, StudentStandingChart, StudentTrendChart, GapToClassChart, StageStatusChart, WeeklyChangeChart } from "./ReportCharts";
+import SegmentedBar from "./SegmentedBar";
+import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
+import { GRADED_LABEL, latestChange, signed, projectStudentSplit, type ClassInsights, type StudentInsights } from "./insights";
+import { stageStatusLabel } from "../projects/teacherPresentation";
 import ProjectAnalyticsCharts from "../projects/ProjectAnalyticsCharts";
-import { chartPalette } from "../projects/chartPalette";
+import { reportPalette, chartMotion, percentLineOptions, barOptions as kitBarOptions, barSeries, lineSeries } from "./chartKit";
 import ChartCard from "../ui/ChartCard";
 import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
@@ -43,45 +47,22 @@ function withRange(params: Record<string, string>, f: Filters): Record<string, s
   return out;
 }
 
-/**
- * Report fetch hook with stale-response protection: data is stored WITH the params key it was fetched for, so
- * the moment the params change the exposed `data` is null (old rows never show against new filters), and a
- * late response for an older key is discarded (cancelled on cleanup and key-checked on arrival). Phase R-2: the
- * superseded request is also ABORTED on the wire, and a 401 ends the teacher session (ReportSessionContext).
- */
-function useReport<T>(token: string, params: Record<string, string> | null) {
-  const key = params ? JSON.stringify(params) : "";
-  const [stored, setStored] = useState<{ key: string; data: T | null; error: string }>({ key: "", data: null, error: "" });
-  const [loading, setLoading] = useState(false);
-  const [nonce, setNonce] = useState(0);
-  const onSessionExpired = useContext(ReportSessionContext);
-  useEffect(() => {
-    if (!params) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    setLoading(true);
-    reportGet<T>(token, params, controller.signal)
-      .then(r => { if (!cancelled) setStored({ key, data: r, error: "" }); })
-      .catch(e => {
-        if (cancelled || isAbortError(e)) return;
-        if (isSessionExpired(e)) onSessionExpired?.();
-        setStored({ key, data: null, error: e instanceof Error ? e.message : "تعذر تجهيز التقرير." });
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; controller.abort(); };
-  }, [token, key, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
-  const current = stored.key === key && key !== "";
-  return { data: current ? stored.data : null, error: current ? stored.error : "", loading: !!params && (loading || !current), reload: () => setNonce(n => n + 1) };
-}
-
-function usePalette() { return useMemo(() => chartPalette(), []); }
-const motion = (reduced: boolean) => (reduced ? { animation: false as const } : {});
+function usePalette() { return useMemo(() => reportPalette(), []); }
 
 /* ---------------- Academic ---------------- */
 
-type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; notStartedCount?: number };
+type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; notStartedCount?: number; studentCount?: number };
 
-function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level = 4 }: { title: string; tracks: TrackMeta[]; overall: number; trackValues: Record<string, number>; footer?: ReactNode; level?: 3 | 4 }) {
+// Phase R-5a — the three states of a student × assessment cell, as one bar (the same wording as the assessments matrix).
+function submissionSegments(split: { graded: number; pending: number; missing: number }) {
+  return [
+    { key: "graded", label: GRADED_LABEL, value: split.graded, tone: "success" as const },
+    { key: "pending", label: PENDING_LABEL, value: split.pending, tone: "info" as const },
+    { key: "missing", label: MISSING_LABEL, value: split.missing, tone: "neutral" as const }
+  ];
+}
+
+function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level = 4, children }: { title: string; tracks: TrackMeta[]; overall: number; trackValues: Record<string, number>; footer?: ReactNode; level?: 3 | 4; children?: ReactNode }) {
   const H = level === 3 ? "h3" : "h4";
   return (
     <section className="eb-report-project" aria-label={title}>
@@ -90,13 +71,14 @@ function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level
       <div className="eb-report-track-bars">
         {tracks.map((t, i) => <ProgressBar key={t.trackId} label={t.title} value={trackValues[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}
       </div>
+      {children}
       {footer && <p className="eb-report-project-foot">{footer}</p>}
     </section>
   );
 }
 
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; projects: ClassProjectSection[]; withheld?: string[] };
+  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; insights?: ClassInsights | null; projects: ClassProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -114,6 +96,8 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
     ] : [])
   ];
   const kpis = data.kpis;
+  // Phase R-5a — the chart series (academic part; absent on an older API or when withheld → the report is the figures alone).
+  const insights = kpis ? data.insights || null : null;
   return (
     <div className="eb-report-result">
       <ReportHeader title={<>{data.class.name} <StatusBadge tone={archived ? "neutral" : "success"}>{archived ? "مؤرشف" : "نشط"}</StatusBadge></>} description={data.class.schoolYear}
@@ -127,12 +111,35 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
         </>}
       </div>
       {kpis && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
+      {insights && insights.assessments.length > 0 && (
+        <section className="eb-report-insights" aria-labelledby="eb-report-class-insights">
+          <h3 id="eb-report-class-insights" className="eb-subheading">تطوّر الصف في التقييمات</h3>
+          <SegmentedBar label="حالة التسليمات" unit="تسليمًا متوقَّعًا" segments={submissionSegments(insights.submission)} />
+          <div className="eb-report-chart-grid">
+            <PerformanceTrendChart title="تطوّر الأداء عبر التقييمات" firstColumn="التقييم" description="متوسط النتائج ونسبة التسليم في كل تقييم، من الأقدم إلى الأحدث."
+              points={insights.assessments.map(a => ({ label: a.title, detail: a.date, average: a.average, submissionRate: a.submissionRate }))} />
+            <SubmissionStatusChart rows={insights.assessments} />
+          </div>
+          <StudentStandingChart standings={insights.students} />
+        </section>
+      )}
       {data.projects.length > 0 && (
         <section className="eb-report-projects" aria-labelledby="eb-report-class-projects">
           <h3 id="eb-report-class-projects" className="eb-subheading">مشاريع الصف</h3>
           {/* Each project reported independently — never combine two projects into one % */}
           <div className="eb-report-project-grid">
-            {data.projects.map(p => <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.avgOverall} trackValues={p.trackAverages} footer={<><StatusBadge tone="success">مكتملون {p.completedCount}</StatusBadge>{p.notStartedCount ? <>{" "}<StatusBadge tone="warn">لم يبدأوا {p.notStartedCount}</StatusBadge></> : null}</>} />)}
+            {data.projects.map(p => {
+              const split = projectStudentSplit(p);
+              return (
+                <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.avgOverall} trackValues={p.trackAverages} footer={<><StatusBadge tone="success">مكتملون {p.completedCount}</StatusBadge>{p.notStartedCount ? <>{" "}<StatusBadge tone="warn">لم يبدأوا {p.notStartedCount}</StatusBadge></> : null}</>}>
+                  {split && <SegmentedBar label="الطلاب حسب الحالة" unit="طالبًا" segments={[
+                    { key: "completed", label: "أكملوا المشروع", value: split.completed, tone: "success" },
+                    { key: "inProgress", label: "قيد التنفيذ", value: split.inProgress, tone: "info" },
+                    { key: "notStarted", label: "لم يبدأوا بعد", value: split.notStarted, tone: "neutral" }
+                  ]} />}
+                </ProjectSummaryCard>
+              );
+            })}
           </div>
           <ReportNote>بيانات التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</ReportNote>
         </section>
@@ -144,7 +151,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
 type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; nextStages?: Record<string, { stageId: string; title: string } | null>; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; projects: StudentProjectSection[]; withheld?: string[] };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; insights?: StudentInsights | null; projects: StudentProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId, ...(filters.classId ? { classId: filters.classId } : {}) }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -159,6 +166,8 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
     ] : [])
   ];
   const academic = data.academic, projectsWithheld = (data.withheld || []).includes("projects");
+  // Phase R-5a — the chart series (academic part; absent on an older API or when withheld → the report is the figures alone).
+  const insights = academic ? data.insights || null : null;
   return (
     <div className="eb-report-result">
       <ReportHeader title={data.student.displayName} description={(data.student.className || "—") + " · " + data.student.schoolYear}
@@ -172,6 +181,16 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
         {!projectsWithheld && <StatCard primary label="مشاريع الصف" value={data.projects.length} />}
       </div>
       {academic && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
+      {insights && insights.assessments.length > 0 && (
+        <section className="eb-report-insights" aria-labelledby="eb-report-student-insights">
+          <h3 id="eb-report-student-insights" className="eb-subheading">تطوّر الطالب في التقييمات</h3>
+          <SegmentedBar label="حالة تقييمات الطالب" unit="تقييمًا" segments={submissionSegments(insights.submission)} />
+          <div className="eb-report-chart-grid">
+            <StudentTrendChart points={insights.assessments} />
+            <GapToClassChart points={insights.assessments} />
+          </div>
+        </section>
+      )}
       {data.projects.length > 0 && (
         <section className="eb-report-projects" aria-labelledby="eb-report-student-projects">
           <h3 id="eb-report-student-projects" className="eb-subheading">المشاريع</h3>
@@ -185,7 +204,14 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
                   {p.lastActivity ? <span className="eb-muted"> · آخر نشاط {isoDay(p.lastActivity)}</span> : null}
                   {p.nextStages && p.tracks.map(t => { const n = p.nextStages?.[t.trackId]; return n ? <span key={t.trackId} className="eb-muted"> · التالي في {t.title}: {n.stageId} — {n.title}</span> : null; })}
                   {p.balance && <span className="eb-report-balance" role="status"> · {p.balance.leadingTrackTitle} متقدّم على {p.balance.laggingTrackTitle} بـ {p.balance.diff}%</span>}
-                </>} />
+                </>}>
+                <SegmentedBar label="المراحل حسب الحالة" unit="مرحلة" segments={[
+                  { key: "approved", label: stageStatusLabel("approved"), value: p.summary.counts.approved || 0, tone: "success" },
+                  { key: "ready_for_review", label: stageStatusLabel("ready_for_review"), value: p.summary.counts.ready_for_review || 0, tone: "info" },
+                  { key: "in_progress", label: stageStatusLabel("in_progress"), value: p.summary.counts.in_progress || 0, tone: "warn" },
+                  { key: "not_started", label: stageStatusLabel("not_started"), value: p.summary.counts.not_started || 0, tone: "neutral" }
+                ]} />
+              </ProjectSummaryCard>
             ))}
           </div>
           <ReportNote>متوسط التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</ReportNote>
@@ -202,10 +228,12 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
   const palette = usePalette();
   const distLabels = useMemo(() => data ? Object.keys(data.overall.distribution) : [], [data]);
-  const dist = useMemo(() => data && ({ labels: distLabels, datasets: [{ label: "عدد التسليمات", data: distLabels.map(k => data.overall.distribution[k]), backgroundColor: palette.series[0], borderRadius: 6 }] }), [data, distLabels, palette]);
+  const dist = useMemo(() => data && ({ labels: distLabels, datasets: [barSeries("عدد التسليمات", distLabels.map(k => data.overall.distribution[k]), palette.series[0], palette)] }), [data, distLabels, palette]);
   // One lookup per matrix column (studentId → cell) instead of a linear search per rendered cell.
   const cellsByAssignment = useMemo(() => new Map((data?.matrix || []).map(m => [m.assignmentId, new Map(m.cells.map(c => [c.studentId, c]))])), [data]);
-  const barOptions = useMemo<ChartOptions<"bar">>(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: palette.grid } }, x: { grid: { display: false } } } }), [palette]);
+  // Phase R-5a — the same look and entrance as the other report charts (one series: its title names it, so no legend box).
+  const reduced = usePrefersReducedMotion();
+  const barOptions = useMemo(() => kitBarOptions(palette, chartMotion(reduced, distLabels.length), distLabels.map(k => "النطاق " + k + "%"), { unit: "تسليم" }), [palette, reduced, distLabels]);
   if (!filters.classId) return <EmptyState text="اختر صفًا." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
@@ -220,8 +248,15 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
         <StatCard primary label="نسبة التسليم" value={pct(data.overall.submissionRate)} tone="info" />
       </div>
       <ReportNote>{LATEST_ATTEMPT_NOTE}</ReportNote>
+      {data.perAssignment.length > 0 && (
+        <div className="eb-report-chart-grid">
+          <PerformanceTrendChart title="تطوّر الأداء عبر التقييمات" firstColumn="التقييم" description="متوسط النتائج ونسبة التسليم في كل تقييم، من الأقدم إلى الأحدث."
+            points={data.perAssignment.map(a => ({ label: a.title, average: a.average, submissionRate: a.submissionRate }))} />
+          <SubmissionStatusChart rows={data.perAssignment} />
+        </div>
+      )}
       <ChartCard level={3} title="توزيع النتائج" description={"عدد التسليمات في كل نطاق (%) — " + LATEST_ATTEMPT_LABEL} table={{ columns: ["النطاق %", "عدد التسليمات"], rows: distLabels.map(k => [k, data.overall.distribution[k]]) }}>
-        {({ reducedMotion }) => dist && <div className="eb-chart-canvas"><Bar data={dist} options={{ ...barOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
+        {dist && <div className="eb-chart-canvas"><Bar data={dist} options={barOptions} aria-hidden="true" /></div>}
       </ChartCard>
       <section aria-labelledby="eb-report-per-assignment">
         <h3 id="eb-report-per-assignment" className="eb-subheading">ملخص كل تقييم</h3>
@@ -335,6 +370,7 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
         </div>
         <label className="eb-field-inline">المجموعة<select value={groupId} onChange={e => setGroupId(e.target.value)}><option value="">الكل</option>{data.groups.map(g => <option key={g.groupId} value={g.groupId}>{g.title}</option>)}</select></label>
       </div>
+      {data.rows.length > 0 && <StageStatusChart rows={data.rows} trackTitle={trackTitle} />}
       <ReportTable caption={"حالة مراحل مسار " + trackTitle + ": عدد الطلاب في كل حالة ونسبة الاعتماد"} columns={[
         { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" },
         { key: "approved", label: "معتمد", numeric: true }, { key: "ready_for_review", label: "جاهز للفحص", numeric: true },
@@ -400,8 +436,10 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
   const params = filters.projectCode && filters.classId ? withRange({ type: "timeline", projectCode: filters.projectCode, classId: filters.classId, ...(filters.studentId ? { studentId: filters.studentId } : {}) }, filters) : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   const palette = usePalette();
-  const chart = useMemo(() => data && ({ labels: data.trend.map(t => t.weekStart), datasets: [{ label: "متوسط التقدّم", data: data.trend.map(t => t.avgOverall), borderColor: palette.primary, backgroundColor: palette.primarySoft, fill: true, tension: .3 }] }), [data, palette]);
-  const lineOptions = useMemo<ChartOptions<"line">>(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: palette.grid } }, x: { grid: { display: false } } } }), [palette]);
+  const chart = useMemo(() => data && ({ labels: data.trend.map(t => t.weekStart), datasets: [lineSeries("متوسط التقدّم", data.trend.map(t => t.avgOverall), palette.primary, palette, palette.primarySoft)] }), [data, palette]);
+  const reduced = usePrefersReducedMotion();
+  const weeks = data ? data.trend.length : 0;
+  const lineOptions = useMemo(() => percentLineOptions(palette, chartMotion(reduced, weeks), (data ? data.trend : []).map(t => "أسبوع " + t.weekStart), false), [palette, reduced, weeks, data]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (loading || !data) return <LoadingState />;
@@ -409,17 +447,38 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
     <div className="eb-report-result">
       <ReportHeader title={data.class.name} description={data.scope === "student" ? "طالب محدد — متوسط التقدّم الأسبوعي" : "الصف كامل — متوسط التقدّم الأسبوعي"}
         onExportCsv={() => downloadCsv(csvRows.timelineReportFilename(filters.projectCode, data.class.name), csvRows.timelineReportRows(data.trend))} />
+      {data.trend.length > 1 && (() => {
+        // Phase R-5a — where the period started, where it ended and the net change between the two (the chart's own points).
+        const first = data.trend[0].avgOverall, last = data.trend[data.trend.length - 1].avgOverall, net = Math.round((last - first) * 10) / 10;
+        const week = latestChange(data.trend.map(t => t.avgOverall));
+        return (
+          <div className="eb-stat-grid is-primary eb-report-stats">
+            <StatCard primary label="بداية الفترة" value={pct(first)} hint={"أسبوع " + data.trend[0].weekStart} />
+            <StatCard primary label="آخر أسبوع" value={pct(last)} hint={"أسبوع " + data.trend[data.trend.length - 1].weekStart} />
+            <StatCard primary label="صافي التغيّر" value={signed(net) + " نقطة"} tone={net > 0 ? "success" : net < 0 ? "attention" : "neutral"} hint={data.trend.length + " أسابيع"} />
+            {week && <StatCard primary label="عن الأسبوع السابق" value={signed(week.delta) + " نقطة"} tone={week.delta > 0 ? "success" : week.delta < 0 ? "attention" : "neutral"} />}
+          </div>
+        );
+      })()}
       {data.trend.length === 1 && <ReportNote>الفترة المختارة تغطي أسبوعًا واحدًا فقط، فيظهر نقطة واحدة دون اتجاه؛ اختر فترة أطول لرؤية تطوّر التقدّم.</ReportNote>}
       {data.trend.length
         ? <ChartCard level={3} title="متوسط التقدّم الأسبوعي" description="متوسط التقدّم (%) في نهاية كل أسبوع" table={{ columns: ["الأسبوع", "متوسط التقدّم %"], rows: data.trend.map(t => [t.weekStart, t.avgOverall]) }}>
-            {({ reducedMotion }) => chart && <div className="eb-chart-canvas"><Line data={chart} options={{ ...lineOptions, ...motion(reducedMotion) }} aria-hidden="true" /></div>}
+            {chart && <div className="eb-chart-canvas"><Line data={chart} options={lineOptions} aria-hidden="true" /></div>}
           </ChartCard>
         : <EmptyState text="لا توجد بيانات زمنية كافية بعد." />}
+      {data.trend.length > 1 && <WeeklyChangeChart trend={data.trend} />}
     </div>
   );
 }
 
-export default function ReportView({ type, token, filters, onOpenProject }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
+// Phase R-5a — the report's entrance motion (cards rise, progress bars grow) is CSS keyed on this wrapper, so it follows the same
+// preference as the charts: the viewer's explicit choice, else the OS hint. The wrapper has no box (display: contents).
+export default function ReportView(props: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
+  const reduced = usePrefersReducedMotion();
+  return <div className="eb-report-motion" data-motion={reduced ? "off" : "on"}><ReportBody {...props} /></div>;
+}
+
+function ReportBody({ type, token, filters, onOpenProject }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
   switch (type) {
     case "class": return <ClassReport token={token} filters={filters} />;
     case "student": return <StudentReport token={token} filters={filters} />;

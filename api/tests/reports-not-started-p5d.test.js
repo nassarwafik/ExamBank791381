@@ -39,7 +39,8 @@ describe("P-5d — reports carry «لم يبدأوا»", () => {
     const get = school({ s1: { [S1]: { status: "approved" } }, s2: { [S1]: { status: "ready_for_review" } } });
     const p = (await get("type=class&classId=c1")).jsonBody.projects.find(x => x.projectCode === CODE);
     expect("notStartedCount" in p).toBe(false);
-    expect(Object.keys(p).sort()).toEqual(["avgOverall", "completedCount", "projectCode", "title", "trackAverages", "tracks"]);
+    // Reports R-5a added `studentCount` (the population «مكتملون» / «لم يبدأوا» are out of) — additive; the count stays absent.
+    expect(Object.keys(p).sort()).toEqual(["avgOverall", "completedCount", "projectCode", "studentCount", "title", "trackAverages", "tracks"]);
   });
   it("type=project: the summary carries the same count (pin: the shared class summary)", async () => {
     const get = school({ s1: null, s2: { [S1]: { status: "in_progress" } } });

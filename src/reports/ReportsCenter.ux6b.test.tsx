@@ -3,7 +3,7 @@
 // UX-6b — Reports Center. Drives the REAL ReportsCenter → ReportViews tree with a routed fetch mock and pins:
 // the hub (no hero, aria-pressed categories, grouped cards, opener → workspace heading focus, back → card focus),
 // the filter architecture (only the relevant controls, labelled, canonical programCodes class filtering, period
-// + custom range), the request model (hub = filters only, one report GET per resolved filter change, classStudents
+// + custom range), the request model (hub = filters + — since Phase R-5a — its overview, one report GET per resolved filter change, classStudents
 // only for reports that consume it, ProjectReport never fetches analytics separately, zero requests for category /
 // chart-table / CSV / print), stale-response protection with delayed responses, every report type's rendering
 // (latest-submitted-result wording, missing vs zero, exact distribution labels, semantic matrix, ChartCard
@@ -53,6 +53,15 @@ const PROJECT_REPORT = { ok: true, type: "project", projectCode: "794589", track
 const TRACK_REPORT = (track = "book") => ({ ok: true, type: "track", projectCode: "794589", tracks: TRACKS, track, groups: [{ groupId: "g1", title: "الوحدة الأولى" }], class: { name: "الحادي عشر" }, rows: [{ stageId: track === "book" ? "B01" : "P01", title: "مقدمة", groupId: "g1", approved: 10, ready_for_review: 2, in_progress: 5, not_started: 7, approvedPct: 42 }] });
 const READY_REPORT = { ok: true, type: "ready", projectCode: "794589", tracks: TRACKS, class: { name: "الحادي عشر", status: "active" }, students: [{ studentId: "s1", displayName: "زيد صالح", stages: [{ stageId: "B01", title: "مقدمة", track: "book" }] }], totalReady: 1 };
 const DELAYED_REPORT = { ok: true, type: "delayed", projectCode: "794589", tracks: TRACKS, lateThreshold: 40, class: { name: "الحادي عشر" }, students: [{ studentId: "s3", displayName: "سعد", overall: 12, trackProgress: { book: 20, packetTracer: 4 }, updatedAt: "2026-02-01T10:00:00.000Z", complete: false, reasons: ["بلا تحديث 7+ أيام", "تقدّم أقل من 40%"] }] };
+// Phase R-5a — the hub overview («نظرة عامة»): the teacher's active classes side by side.
+const OVERVIEW = { ok: true, type: "overview", overview: {
+  classes: [
+    { classId: "c1", name: "الحادي عشر", schoolYear: "2025-2026", studentCount: 24, assessments: 3, average: 71.3, submissionRate: 83, pendingReview: 2, graded: 58, pending: 2, missing: 12 },
+    { classId: "c2", name: "العاشر", schoolYear: "2025-2026", studentCount: 20, assessments: 0, average: null, submissionRate: 0, pendingReview: 0, graded: 0, pending: 0, missing: 0 }
+  ],
+  totals: { classes: 2, students: 44, assessments: 3, average: 71.3, submissionRate: 83, pendingReview: 2 },
+  trend: [{ month: "2026-02", assessments: 2, average: 68, submissionRate: 80 }, { month: "2026-03", assessments: 1, average: 78, submissionRate: 90 }]
+} };
 const TIMELINE_REPORT = { ok: true, type: "timeline", projectCode: "794589", tracks: TRACKS, class: { name: "الحادي عشر" }, scope: "class", trend: [{ weekStart: "2026-02-22", avgOverall: 40 }, { weekStart: "2026-03-01", avgOverall: 72 }] };
 
 type Call = { method: string; url: string };
@@ -67,6 +76,7 @@ function respond(url: string): Response {
   const classId = u.searchParams.get("classId");
   if (type === "filters") return json(FILTERS);
   if (type === "classStudents") return json(STUDENTS);
+  if (type === "overview") return json(OVERVIEW);
   if (type === "class") return json(CLASS_REPORT(classId === "c2" ? "العاشر" : "الحادي عشر"));
   if (type === "student") return json(STUDENT_REPORT);
   if (type === "assignments") return json(ASSIGN_REPORT);
@@ -97,6 +107,8 @@ async function mount(onOpenProject?: (code: string) => void) {
   render(<ReportsCenter token="t" onOpenProject={onOpenProject} />);
   await screen.findByRole("group", { name: "تصنيف التقارير" });
   await waitFor(() => expect(reportGets("filters")).toHaveLength(1));
+  // Phase R-5a — the hub also loads its overview (its own lazy chunk and ONE request); wait for it so every count below is settled.
+  await within(await screen.findByRole("region", { name: "نظرة عامة" })).findByRole("list", { name: "فتح تقرير صف" });
 }
 const cardButton = (title: string) => screen.getByRole("button", { name: "فتح التقرير " + title });
 async function open(title: string) {
@@ -112,13 +124,13 @@ const comboLabels = () => within(filters()).getAllByRole("combobox").map(labelOf
 const FINAL_WORDING = /(درجة|علامة|نتيجة) نهائية|الدرجة النهائية|النتيجة النهائية/;
 
 describe("UX-6b hub", () => {
-  it("starts with content (no hero, no h1), one filters GET, aria-pressed categories that filter groups with zero requests, SVG cards with a primary open action", async () => {
+  it("starts with content (no hero, no h1), one filters GET and one overview GET, aria-pressed categories that filter groups with zero requests, SVG cards with a primary open action", async () => {
     await mount();
     expect(document.querySelector(".teacher-assignment-heading")).toBeNull();
     expect(document.querySelector("h1")).toBeNull();
     expect(screen.queryByText(/مركز التقارير/)).toBeNull();
     expect(document.querySelector('[role="tablist"]')).toBeNull();
-    expect(screen.getAllByRole("heading", { level: 2 }).map(h => h.textContent)).toEqual(["الطلاب والصفوف", "التقييمات والواجبات", "المشاريع"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map(h => h.textContent)).toEqual(["نظرة عامة", "الطلاب والصفوف", "التقييمات والواجبات", "المشاريع"]);   // R-5a: the overview leads the hub
     expect(screen.getAllByRole("button", { name: /^فتح التقرير / })).toHaveLength(8);
     expect(document.querySelectorAll(".eb-report-card-icon svg")).toHaveLength(8);
     const cats = screen.getByRole("group", { name: "تصنيف التقارير" });
@@ -129,7 +141,7 @@ describe("UX-6b hub", () => {
     expect(screen.getAllByRole("button", { name: /^فتح التقرير / }).map(b => b.textContent)).toEqual(["فتح التقريرتقرير المشروع", "فتح التقريرتقرير المسار", "فتح التقريرجاهز للفحص", "فتح التقريرالمتأخرون", "فتح التقريرالتقدم الزمني"]);
     fireEvent.click(within(cats).getByRole("button", { name: "الكل" }));
     expect(calls.length).toBe(n);
-    expect(reportGets()).toHaveLength(1);                                                            // hub fetches no report data
+    expect(reportGets().map(c => c.url)).toEqual(["/api/reports?type=filters", "/api/reports?type=overview"]);   // the hub's two requests (R-5a: + the overview); no report data
     expect(EMOJI.test(document.body.textContent || "")).toBe(false);
   });
   it("opening a card focuses the workspace heading; back restores focus to that card's button; no report GET without required filters", async () => {
@@ -138,12 +150,13 @@ describe("UX-6b hub", () => {
     expect(document.activeElement).toBe(heading);
     expect(document.querySelector("h1")).toBeNull();
     expect(await within(workspace).findByText("اختر صفًا لعرض تقريره.")).toBeTruthy();
-    expect(reportGets()).toHaveLength(1);
+    expect(reportGets()).toHaveLength(2);                                                          // filters + the hub overview (R-5a); no report GET
     fireEvent.click(within(workspace).getByRole("button", { name: "عودة إلى كل التقارير" }));
     await screen.findByRole("group", { name: "تصنيف التقارير" });
     expect(document.activeElement).toBe(cardButton("تقرير الصف"));                                  // the re-rendered card button
     expect(btn.isConnected).toBe(false);                                                           // hub re-mounted: the old node is gone
-    expect(reportGets()).toHaveLength(1);
+    await screen.findByRole("region", { name: "نظرة عامة" });
+    expect(reportGets()).toHaveLength(2);                                                          // back shows the overview already loaded: no new request
   });
 });
 
@@ -369,7 +382,7 @@ describe("UX-6b report types", () => {
     fireEvent.click(within(within(sub).getByRole("group", { name: "المسار" })).getByRole("button", { name: "Packet Tracer" }));
     await waitFor(() => expect(reportGets("track")).toHaveLength(2));
     expect(reportGets("track")[1].url).toBe("/api/reports?type=track&projectCode=794589&classId=c1&track=packetTracer");
-    await screen.findByText("P01");
+    await screen.findByRole("progressbar", { name: "نسبة اعتماد P01" });                              // R-5a: «P01» is also in the stage chart's table, so wait for the row itself
     fireEvent.change(within(screen.getByRole("region", { name: "خيارات تقرير المسار" })).getByLabelText("المجموعة"), { target: { value: "g1" } });   // re-query: the result re-mounted after the track fetch
     await waitFor(() => expect(reportGets("track")).toHaveLength(3));
     expect(reportGets("track")[2].url).toBe("/api/reports?type=track&projectCode=794589&classId=c1&track=packetTracer&groupId=g1");
@@ -420,7 +433,10 @@ describe("UX-6b report types", () => {
     await open("التقييمات والواجبات");
     pick("الصف", "c1");
     await screen.findByRole("region", { name: "توزيع النتائج" });
-    expect(document.querySelectorAll("canvas[data-animation='false']").length).toBe(1);
+    // R-5a: the report draws three charts (trend, submission states, distribution) — EVERY one of them without animation.
+    const canvases = Array.from(document.querySelectorAll(".eb-report-result canvas"));
+    expect(canvases.map(c => c.getAttribute("data-animation"))).toEqual(["false", "false", "false"]);
+    expect(document.querySelector(".eb-report-motion")?.getAttribute("data-motion")).toBe("off");
     expect(document.querySelector(".eb-chart-card")?.getAttribute("data-reduced-motion")).toBe("true");
   });
   it("error and empty states: report failure → alert with retry (one more GET); empty timeline → EmptyState", async () => {

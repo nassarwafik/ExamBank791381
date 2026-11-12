@@ -120,6 +120,32 @@ const REPORTS = {
       { assignmentId: "a1", title: ASSIGNMENTS[0].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 2 ? "missing" : "submitted", percentage: i === 2 ? null : 80 - i * 15 })) },
       { assignmentId: "a4", title: ASSIGNMENTS[3].title, cells: STUDENTS.slice(0, 3).map((s, i) => ({ studentId: s.userId, state: i === 1 ? "pending" : "submitted", percentage: i === 1 ? null : 70 })) },
     ] },
+  // Phase R-5a — the hub overview («نظرة عامة») and the class / student reports with their chart series (`insights`), in the shapes
+  // of the reportsInsights.r5a fixtures: the hub and two more opened reports render their charts, state bars and tables.
+  overview: { ok: true, type: "overview", withheld: [], overview: {
+    classes: [
+      { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", studentCount: 6, assessments: 3, average: 68.5, submissionRate: 78, pendingReview: 2, graded: 12, pending: 2, missing: 4 },
+      { classId: "c2", name: CLASSES[1].name, schoolYear: "2026", studentCount: 4, assessments: 2, average: 74, submissionRate: 88, pendingReview: 1, graded: 6, pending: 1, missing: 1 },
+      { classId: "c3", name: CLASSES[2].name, schoolYear: "2026", studentCount: 0, assessments: 0, average: null, submissionRate: 0, pendingReview: 0, graded: 0, pending: 0, missing: 0 }],
+    totals: { classes: 3, students: 10, assessments: 5, average: 70.3, submissionRate: 81, pendingReview: 3 },
+    trend: [{ month: "2026-08", assessments: 1, average: 62, submissionRate: 70 }, { month: "2026-09", assessments: 2, average: 69, submissionRate: 80 }, { month: "2026-10", assessments: 2, average: 76, submissionRate: 88 }] } },
+  class: { ok: true, type: "class", withheld: [], class: { classId: "c1", name: CLASSES[0].name, schoolYear: "2026", status: "active", studentCount: 6 },
+    kpis: { assignments: 3, averageScore: 68.5, submissionRate: 78, pendingReview: 2 }, projects: [],
+    insights: {
+      assessments: [
+        { assignmentId: "a1", title: ASSIGNMENTS[0].title, date: "2026-08-18", students: 6, submitted: 4, missing: 2, pendingReview: 0, submissionRate: 67, average: 62 },
+        { assignmentId: "a4", title: ASSIGNMENTS[3].title, date: "2026-09-15", students: 6, submitted: 5, missing: 1, pendingReview: 1, submissionRate: 83, average: 69 },
+        { assignmentId: "a5", title: "اختبار قصير: المتباينات", date: "2026-10-12", students: 6, submitted: 5, missing: 1, pendingReview: 1, submissionRate: 83, average: 76 }],
+      students: STUDENTS.slice(0, 6).map((s, i) => ({ studentId: s.userId, displayName: s.displayName, average: [91, 78, 74, 63, null, 52][i], graded: [3, 3, 2, 3, 0, 1][i], pending: [0, 0, 1, 0, 1, 0][i], missing: [0, 0, 0, 0, 2, 2][i] })),
+      submission: { graded: 12, pending: 2, missing: 4 } } },
+  student: { ok: true, type: "student", withheld: [], student: { studentId: STUDENTS[0].userId, displayName: STUDENTS[0].displayName, classId: "c1", className: CLASSES[0].name, schoolYear: "2026" },
+    academic: { average: 73, submittedCount: 3, assessmentCount: 4, submissionRate: 75, pendingCount: 1 }, projects: [],
+    insights: { assessments: [
+      { assignmentId: "a1", title: ASSIGNMENTS[0].title, date: "2026-08-18", state: "submitted", percentage: 58, attempts: 1, classAverage: 62 },
+      { assignmentId: "a4", title: ASSIGNMENTS[3].title, date: "2026-09-15", state: "submitted", percentage: 88, attempts: 2, classAverage: 69 },
+      { assignmentId: "a5", title: "اختبار قصير: المتباينات", date: "2026-10-12", state: "pending", percentage: null, attempts: 1, classAverage: 76 },
+      { assignmentId: "a6", title: "واجب المراجعة", date: "2026-10-19", state: "missing", percentage: null, attempts: 0, classAverage: null }],
+      submission: { graded: 2, pending: 1, missing: 1 } } },
 };
 // UX-R9a — the learning book page's «قراءة صفوفي» (the shapes of the ClassReadingPanel.l4 fixtures): class c1 carries the book
 // with two published units, so the panel shows its KPI strip and tables. Served only while a learning scene is captured, so the
@@ -586,6 +612,9 @@ const SCRIPTED = [
       await page.evaluate(() => window.scrollTo(0, 0));
     } })),
   { id: "report-assignments", role: "teacher", nav: "التقارير", open: "فتح التقرير التقييمات والواجبات", pickClass: "c1", chart: true },
+  // Phase R-5a — the class and the student report with their charts (trend, submission states, standing; the student beside the class).
+  { id: "report-class", role: "teacher", nav: "التقارير", open: "فتح التقرير تقرير الصف", pickClass: "c1", chart: true },
+  { id: "report-student", role: "teacher", nav: "التقارير", open: "فتح التقرير تقرير الطالب", pickClass: "c1", pickStudent: "u1", chart: true },
   { id: "learning-book", role: "teacher", nav: "المواد التعليمية", scene: "learning", run: async page => {
     await page.getByRole("button", { name: "فتح الكتاب" }).first().click({ timeout: 15000 });
     await page.locator(".eb-lm-batch-details").first().waitFor({ timeout: 15000 });
@@ -721,6 +750,7 @@ for (const [vpName, viewport, touch] of VIEWPORTS) {
       if (pg.open) {
         await page.getByRole("button", { name: pg.open, exact: true }).click({ timeout: 15000 });
         await page.getByRole("combobox", { name: "الصف" }).selectOption(pg.pickClass, { timeout: 15000 });
+        if (pg.pickStudent) await page.getByRole("combobox", { name: "الطالب" }).selectOption(pg.pickStudent, { timeout: 15000 });
         await page.locator(".eb-report-result").waitFor({ timeout: 15000 });
         await page.waitForLoadState("networkidle");
       }
