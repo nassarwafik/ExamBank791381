@@ -5,6 +5,11 @@ the **Structured Exam Builder** (teacher UI → **📥 استيراد امتحا
 `StructuredExam` object the rest of the app uses (builder, saved exams, assignments, student rendering,
 grading, validation, sanitizer) — no separate model, no post‑import transform.
 
+**Owner Console (Tadris+ P6-E).** The platform owner can also add a `.json` structured exam straight to the exam library from
+«بنك الامتحانات» → «استيراد امتحان» — same parser, checks and safe repair, no builder; it is published only when the server's
+finalization authority finds no blocker, and nobody sees it until the owner chooses its audience
+(`docs/enterprise-owner-library-import-p6e.md`).
+
 This document is the **stable conversion target**: convert a Word/PDF exam externally into one of the
 formats below, then upload it and keep editing in the builder. Word/PDF/OCR/AI extraction are **not**
 part of import — you produce JSON or annotated HTML first.

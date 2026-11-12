@@ -19,7 +19,8 @@ const { handler, observed } = require("../src/functions/exam-library.js");
 
 // the 36 Book 791381 exams, then the 11 items of the 899371 coding lab «مختبر البرمجة» (P7)
 const WHOLE_LIBRARY = [...["F01", "F02", "F03", "F04", "F05", "F06"], ...Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0")), ...Array.from({ length: 11 }, (_, i) => "CL899371-" + String(i + 1).padStart(2, "0"))];
-const BUILDER_OK = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }) };
+// Tadris+ P6-E — the catalog also lists the exams the owner imported, so it reads their index: an empty store here (nothing imported).
+const BUILDER_OK = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: createMemoryContainer().container };
 const BUILDER_NO = { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) };
 const get = (deps, id, headers = {}) => handler({ method: "GET", headers: { get: k => headers[k.toLowerCase()] ?? null }, params: id ? { id } : {} }, deps);
 const reads = () => {

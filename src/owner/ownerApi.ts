@@ -247,14 +247,21 @@ export type LibraryAudience = "all" | "selected";
 export type OwnerLibraryItem = {
   libraryItemId: string; title: string; category: string; questionCount: number; totalMarks: number;
   audience: LibraryAudience; teachers: string[]; decided: boolean;
+  /** Tadris+ P6-E — an exam the owner imported (IMP-nnn), and whether it is an exam or a training. */
+  imported?: boolean; activityType?: LibraryActivityType;
 };
+export type LibraryActivityType = "exam" | "training";
+/** Tadris+ P6-E — what the owner publishes: one prepared structured exam (the server decides it is ready). */
+export type LibraryImportInput = { exam: unknown; title: string; category: string; activityType: LibraryActivityType; description: string; sourceFileName: string };
 export type OwnerLibraryTeacher = { accountId: string; displayName: string; username: string; status: string };
 export const ownerLibraryApi = {
   list: (token: string) => call<{ ok: true; items: OwnerLibraryItem[]; teachers: OwnerLibraryTeacher[] }>("/api/owner-library", { token }),
   setAudience: (token: string, itemId: string, audience: LibraryAudience, teachers: string[]) =>
     call<{ ok: true; item: Pick<OwnerLibraryItem, "libraryItemId" | "audience" | "teachers" | "decided"> }>("/api/owner-library/set-audience", { method: "POST", token, body: { itemId, audience, teachers } }),
   setTeacher: (token: string, accountId: string, include: string[], exclude: string[]) =>
-    call<{ ok: true; accountId: string; added: string[]; removed: string[] }>("/api/owner-library/set-teacher", { method: "POST", token, body: { accountId, include, exclude } })
+    call<{ ok: true; accountId: string; added: string[]; removed: string[] }>("/api/owner-library/set-teacher", { method: "POST", token, body: { accountId, include, exclude } }),
+  importExam: (token: string, input: LibraryImportInput) =>
+    call<{ ok: true; item: OwnerLibraryItem }>("/api/owner-library/import", { method: "POST", token, body: input })
 };
 
 // Tadris+ P5-B4 — the owner adds students to a teacher's class (/api/owner-classes): one, or a list after the server preview. The
