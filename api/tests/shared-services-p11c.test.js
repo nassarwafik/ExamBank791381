@@ -483,3 +483,26 @@ describe("P11-C with the report charts of R-5a", () => {
     expect(c.classes.map(x => [x.classId, x.studentCount])).toEqual([["cC", 1]]);
   });
 });
+
+// Reconciliation with main (Phase R-5c, #616): «طلاب يحتاجون متابعة». Its roster is the class roster of the reports, so since this
+// phase a student ADDED to the class is judged in it like its own students — by that class's assessments only.
+describe("P11-C with the follow-up list of R-5c", () => {
+  const twoAssessments = () => ({ extra: {
+    "platform/assignments/a1.json": assignment("a1", "cA"), "platform/assignments/b1.json": assignment("b1", "cB"), "platform/assignments/b2.json": assignment("b2", "cB"),
+    ["platform/submissions/a1/" + S + ".json"]: submission("a1", S, 95),
+    ["platform/submissions/b1/" + S2 + ".json"]: submission("b1", S2, 70), ["platform/submissions/b2/" + S2 + ".json"]: submission("b2", S2, 80)
+  } });
+  it("the shared student who handed in nothing in the shared class is listed there, for that class's two assessments", async () => {
+    const ctx = setup(twoAssessments());
+    const list = (await report(ctx, B, "type=class&classId=cB")).jsonBody.insights.followUp.students;
+    expect(list.map(s => s.studentId)).toEqual([S]);
+    expect(list[0].reasons.map(r => r.code)).toEqual(["missing"]);
+    const hub = (await report(ctx, B, "type=overview")).jsonBody.overview;
+    expect(hub.classes.map(c => [c.classId, c.needsFollowUp])).toEqual([["cB", 1]]);
+  });
+  it("the home teacher's list is the home class's alone: the same student, fine there, is not listed", async () => {
+    const ctx = setup(twoAssessments());
+    expect((await report(ctx, A, "type=class&classId=cA")).jsonBody.insights.followUp.students).toEqual([]);
+    expect((await report(ctx, A, "type=overview")).jsonBody.overview.classes.map(c => [c.classId, c.needsFollowUp])).toEqual([["cA", 0]]);
+  });
+});
