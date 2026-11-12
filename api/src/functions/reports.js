@@ -17,7 +17,7 @@ const { getContainer, downloadJsonOrNull, mapConcurrent, getReadConcurrency } = 
 // Phase R-3 — every listing a report reads (users, classes, assignments, submissions) goes through the shared ETag-verified
 // document cache: the listing is still made on every request (so nothing can be stale) and a document is downloaded again only
 // when its ETag changed. The authoritative documents still decide everything; the cache only saves unchanged downloads.
-const { loadDocs } = require("../lib/classes-students-read-cache");
+const { loadDocs, loadEntries, listEntries } = require("../lib/classes-students-read-cache");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
@@ -25,6 +25,8 @@ const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const analytics = require("../lib/project-tracker/analytics");
 const agg = require("../lib/reports/aggregate");
+// Phase R-5a — the chart series of the class / student reports (`insights`): pure shaping over the SAME outcomes as the KPIs.
+const ins = require("../lib/reports/insights");
 const { parseDateRange, inRange } = require("../lib/reports/date-range");
 const { buildHistoryTimeline } = require("../lib/reports/timeline");
 const { getClassProgramCodes, getSupportedClassProgramCodes, classHasProject } = require("../lib/project-tracker/class-programs");
@@ -47,26 +49,47 @@ function requestReads(container) {
   let users = null;
   return { users: () => (users = users || loadDocs(container, USER_PREFIX)) };
 }
-async function classStudents(container, classId, reads = requestReads(container)) {
-  const all = await reads.users();
-  // Same population predicate as the project tracker (single source), so class reports and project
-  // analytics always count the exact same students: exclude only archived; keep login-disabled.
+// Same population predicate as the project tracker (single source), so class reports and project
+// analytics always count the exact same students: exclude only archived; keep login-disabled.
+function rosterFrom(all, classId) {
   return all.filter(u => svc.studentBelongsToClass(u, classId))
     .map(u => ({ studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }))
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
 }
+async function classStudents(container, classId, reads = requestReads(container)) {
+  return rosterFrom(await reads.users(), classId);
+}
+// Phase R-5a — the roster of a class for a request that ALREADY read one of its user documents by name (the student report read
+// its student): the listing is made as always, every other document comes through the cache, and the one in hand is used as
+// read — so no user document is downloaded twice in one request.
+async function classStudentsWith(container, classId, knownUser, knownId) {
+  const entries = (await listEntries(container, USER_PREFIX)).filter(e => e.name !== USER_PREFIX + knownId + ".json");
+  return rosterFrom([...(await loadEntries(container, entries)).filter(Boolean), knownUser], classId);
+}
 // Roadmap #26: the class's REPORTABLE assessments — published, or archived after being published — through the
 // ONE canonical predicate. Drafts and archived-from-draft ("deleted") drafts were never takeable and must not
 // count as unsubmitted assessments (they inflated the assessment count and deflated the submission rate).
-async function classAssignments(container, classId) {
-  return (await loadDocs(container, ASSIGN_PREFIX))
+function reportableOf(allAssignments, classId) {
+  return allAssignments
     .filter(a => a && String(a.classId || "") === String(classId) && isReportableAssessment(a))
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+async function classAssignments(container, classId) {
+  return reportableOf(await loadDocs(container, ASSIGN_PREFIX), classId);
 }
 // One prefix scan per assignment -> Map studentId -> submission.
 async function submissionsFor(container, assignmentId) {
   const blobs = await loadDocs(container, SUB_PREFIX + assignmentId + "/");
   return new Map(blobs.filter(Boolean).map(s => [String(s.studentId), s]));
+}
+// Phase R-5a — the student report's scan of ONE assignment: the class's submissions (keyed by the document's studentId, exactly
+// like submissionsFor) AND the named student's own document, picked BY BLOB NAME — the document this report has always read —
+// from the same listing, so it is never downloaded twice.
+async function submissionsWithOwn(container, assignmentId, studentId) {
+  const entries = await listEntries(container, SUB_PREFIX + assignmentId + "/");
+  const docs = await loadEntries(container, entries);
+  const own = entries.findIndex(e => e.name === SUB_PREFIX + assignmentId + "/" + studentId + ".json");
+  return { all: new Map(docs.filter(Boolean).map(s => [String(s.studentId), s])), own: own >= 0 ? docs[own] : null };
 }
 // Roadmap #27: the per-assignment submission scans are independent, so run a few at a time (each scan already
 // downloads its blobs concurrently). Results stay aligned with `assignments` so every aggregation is unchanged.
@@ -138,6 +161,27 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, schoolYears, classes, projects, available: { academic, projects: projectsAllowed } } };
       }
 
+      // Phase R-5a — the hub overview: every ACTIVE class of this teacher side by side (average, submission rate, awaiting
+      // correction), the totals and a month-by-month trend. It is the academic part and nothing else: withheld → `overview: null`
+      // and nothing read. Archived classes stay out (their reports still open from the cards); the classes are filtered by the
+      // SAME tenancy predicate as the filter options, so another teacher's class is never read. Each class reads what its own
+      // class report reads, through the same ETag-verified cache; the assignments are listed once for all of them.
+      if (type === "overview") {
+        if (!academic) return { status: 200, jsonBody: { ok: true, type, overview: null, withheld } };
+        const schoolYear = String(url.searchParams.get("schoolYear") || "").trim();
+        const metas = (await loadDocs(container, CLASS_PREFIX)).filter(c => c && canAccessDocument(c, tenant)).map(classMeta)
+          .filter(c => c.status !== "archived" && (!schoolYear || c.schoolYear === schoolYear))
+          .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
+        const allAssignments = metas.length ? await loadDocs(container, ASSIGN_PREFIX) : [];
+        const inputs = [];
+        for (const meta of metas) {
+          const assignments = reportableOf(allAssignments, meta.classId).filter(a => inRange(a.createdAt, range));
+          // the roster comes from the request's single users read (a class with no assessment in the range still shows its students)
+          inputs.push({ meta, students: await classStudents(container, meta.classId, reads), assignments, subsByAssignment: await submissionsForAll(container, assignments) });
+        }
+        return { status: 200, jsonBody: { ok: true, type, overview: ins.overviewRollup(inputs), withheld } };
+      }
+
       // Students of one class, for the student/timeline filter dropdowns.
       if (type === "classStudents") {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
@@ -171,14 +215,22 @@ async function handler(request, deps = {}, obs = null) {
           const ctx = await projectContext(container, pCode, c, reads);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
           // Phase P-5d — «لم يبدأوا» (P-5c count) only when some students have not started; every other section is unchanged.
-          projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}) });
+          projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount, ...(sum.notStartedCount ? { notStartedCount: sum.notStartedCount } : {}),
+            studentCount: sum.studentCount });   // Phase R-5a — the population the two counts are out of (the students-by-state bar)
+        }
+        // Phase R-5a — `insights`: the series the class report charts (per-assessment trend, each student's standing, the cells by
+        // state). Part of the ACADEMIC part: null when it is withheld (nothing of it was read), exactly like `kpis`.
+        let insights = null;
+        if (academic) {
+          const standings = ins.studentStandings(students, subsByAssignment);
+          insights = { assessments: ins.assessmentSeries(assignments, students, subsByAssignment), students: standings, submission: ins.submissionSplit(standings) };
         }
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: academic ? {
           assignments: assignments.length,
           averageScore: agg.average(allPcts),
           submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0,
           pendingReview: pendingCells
-        } : null, projects, withheld } };
+        } : null, insights, projects, withheld } };
       }
 
       if (type === "student") {
@@ -193,10 +245,22 @@ async function handler(request, deps = {}, obs = null) {
         const sClassId = classOk ? rawClassId : "";
         const c = sClassId ? await loadClass(container, sClassId) : null;
         const assignments = c && academic ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
-        // Roadmap #27: the student's per-assignment submissions are independent reads → bounded concurrency, aligned.
-        const mySubs = await mapConcurrent(assignments, getReadConcurrency(), a => downloadJsonOrNull(container, SUB_PREFIX + a.assignmentId + "/" + studentId + ".json"));
+        // Roadmap #27: the per-assignment scans are independent reads → bounded concurrency, aligned with `assignments`.
+        // Phase R-5a — each scan also yields the class's submissions (for the class average beside the student's result); the
+        // student's own document is still the one named after them. `assignments` is empty without the academic part.
+        const scans = await mapConcurrent(assignments, Math.min(ASSIGNMENT_SCAN_CONCURRENCY, getReadConcurrency()), a => submissionsWithOwn(container, a.assignmentId, studentId));
+        const mySubs = scans.map(s => s.own);
         const acad = agg.studentAcademicAverage(mySubs);
         const submittedCount = acad.submittedCount;                    // handed in — a pending result included (R-1 / D-1)
+        // Phase R-5a — `insights`: the student's result in each assessment beside that assessment's class average (the roster's
+        // FINAL results — the assessments report's «المتوسط»). Academic part only, and only of the class that passed the P10-H
+        // check above (`assignments` is empty otherwise, so nothing of another teacher's class is read here either).
+        let insights = null;
+        if (academic) {
+          const roster = assignments.length ? await classStudentsWith(container, sClassId, u, studentId) : [];
+          const series = ins.studentSeries(assignments, mySubs, ins.classAverages(roster, scans.map(s => s.all)));
+          insights = { assessments: series, submission: ins.studentSplit(series) };
+        }
         // One entry per project of the student's class — each independent.
         const projects = [];
         if (c && projectsAllowed) for (const pCode of getSupportedClassProgramCodes(c)) {
@@ -217,7 +281,7 @@ async function handler(request, deps = {}, obs = null) {
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
           // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
           academic: academic ? { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0, pendingCount: acad.pendingCount } : null,
-          projects, withheld } };
+          insights, projects, withheld } };
       }
 
       // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a

@@ -4,6 +4,7 @@ import { reportGet, isAbortError, isSessionExpired } from "./api";
 import { ReportSessionContext } from "./session";
 import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
+import type { OverviewResponse } from "./ReportsOverview";
 import { rangeForPeriod, type Period } from "./period";
 import { getClassProgramCodes } from "../projects/classPrograms";
 import EmptyState from "../ui/EmptyState";
@@ -15,6 +16,8 @@ import "../reports-pro.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
 const ReportView = lazy(lazyWithRetry(() => import("./ReportViews"), "teacher-report-views"));   // Phase 11D — one-shot deploy recovery
+// Phase R-5a — the hub overview draws charts too, so it is its own lazy chunk: the report cards paint without waiting for it.
+const ReportsOverview = lazy(lazyWithRetry(() => import("./ReportsOverview"), "teacher-reports-overview"));
 
 type ClassOpt = { classId: string; name: string; schoolYear: string; status: string; programCodes: string[] };
 type ProjectOpt = { projectCode: string; title: string };
@@ -50,6 +53,9 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
   const cardButtons = useRef<Partial<Record<ReportType, HTMLButtonElement | null>>>({});
   const focusBackPending = useRef<ReportType | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  // Phase R-5a — the hub unmounts while a report is open: the loaded overview is kept here (for the session that loaded it), so
+  // «back» shows it with no request.
+  const [overviewKept, setOverviewKept] = useState<{ token: string; data: OverviewResponse } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +127,11 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
   const classChoices = classesForYear.filter(c => !needs("project") || !filters.projectCode || getClassProgramCodes(c).includes(filters.projectCode));
 
   function openReport(type: ReportType) { setActive(type); }
+  // Phase R-5a — a class picked in the hub overview opens its class report with that class (and its school year) selected.
+  function openClassReport(classId: string, schoolYear: string) {
+    setFilters(f => ({ ...f, schoolYear, classId, studentId: "" }));
+    setActive("class");
+  }
   function closeReport() {
     focusBackPending.current = active;
     setActive(null);
@@ -153,6 +164,18 @@ export default function ReportsCenter({ token, onOpenProject, onSessionExpired }
         </div>
         {optsError && <ErrorState text={optsError} onRetry={() => setOptsNonce(n => n + 1)} />}
         {optsLoading && !opts && <LoadingState text="جارٍ تحميل بيانات التقارير..." />}
+        {/* Phase R-5a — «نظرة عامة»: asked for only once the filter options say the academic part is this teacher's (an older API
+            without `available` is asked too); kept mounted while another category is shown, so coming back costs no request. */}
+        {opts && opts.available?.academic !== false && (
+          <div className="eb-reports-overview-slot" hidden={category === "projects"}>
+            <ReportSessionContext.Provider value={onSessionExpired}>
+              <Suspense fallback={<LoadingState text="جارٍ تجهيز النظرة العامة..." />}>
+                <ReportsOverview key={token} token={token} onOpenClass={openClassReport} kept={overviewKept && overviewKept.token === token ? overviewKept.data : null}
+                  onLoaded={data => setOverviewKept({ token, data })} onDrop={() => setOverviewKept(null)} />
+              </Suspense>
+            </ReportSessionContext.Provider>
+          </div>
+        )}
         {visibleGroups.map(g => {
           const cards = REPORT_CARDS.filter(c => c.category === g.key && offered(c.type));
           const titleId = "eb-reports-group-" + g.key;
