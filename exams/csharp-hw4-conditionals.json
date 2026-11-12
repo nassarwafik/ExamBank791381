@@ -1,0 +1,693 @@
+{
+  "examId": "csharp-hw4-conditionals",
+  "title": "الوظيفة الرابعة – جمل شرطية (C#)",
+  "status": "draft",
+  "presentationTheme": "default",
+  "sections": [
+    {
+      "id": "hw4",
+      "title": "الوظيفة الرابعة – جمل شرطية",
+      "instructions": "أجب عن جميع الأسئلة. الأسئلة البرمجية تُكتب بلغة C#.",
+      "gradingPolicy": "all",
+      "maxMarks": null,
+      "requiredAnswers": null,
+      "answerUnit": "question",
+      "stimuli": {},
+      "questions": [
+        {
+          "examQuestionId": "hw4-q1",
+          "displayNumber": "1",
+          "presentationType": "tableFill",
+          "marks": 4,
+          "text": "أمامك البرنامج التالي بلغة C#. تتبّع البرنامج بواسطة جدول متابعة، واكتب قيمة c النهائية والمخرج في كل حالة (إذا لم يُطبع شيء اكتب: لا يوجد).",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "static void Main()\n{\n    int a, b, c;\n    a = int.Parse(Console.ReadLine());\n    b = int.Parse(Console.ReadLine());\n    c = int.Parse(Console.ReadLine());\n    if (a > b)\n        c = a + b;\n    if ((a - b) < a)\n        Console.WriteLine(c);\n}\n",
+            "label": "البرنامج بلغة C#"
+          },
+          "tableHeaders": [
+            "البند",
+            "a",
+            "b",
+            "c (المُدخلة)",
+            "قيمة c النهائية",
+            "المخرج"
+          ],
+          "tableRows": [
+            [
+              "1.1",
+              "5",
+              "2",
+              "7",
+              "",
+              ""
+            ],
+            [
+              "1.2",
+              "-3",
+              "4",
+              "5",
+              "",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "q1-r1-c",
+              "row": 0,
+              "column": 4,
+              "kind": "text",
+              "correct": "7"
+            },
+            {
+              "id": "q1-r1-out",
+              "row": 0,
+              "column": 5,
+              "kind": "text",
+              "correct": "7"
+            },
+            {
+              "id": "q1-r2-c",
+              "row": 1,
+              "column": 4,
+              "kind": "text",
+              "correct": "5"
+            },
+            {
+              "id": "q1-r2-out",
+              "row": 1,
+              "column": 5,
+              "kind": "text",
+              "correct": "5"
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q2",
+          "displayNumber": "2",
+          "presentationType": "shortAnswer",
+          "marks": 3,
+          "text": "معطى المقطع التالي من الكود. اكتب مقطعًا مكافئًا يعطي نفس النتيجة (مستعملًا else).",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "static void Main()\n{\n    int b;\n    if (b == 8)\n        Console.WriteLine(\"b = 8\");\n    if (!(b == 8))\n        Console.WriteLine(\"b != 8\");\n}\n",
+            "label": "المقطع المعطى"
+          },
+          "answer": {
+            "text": "if (b == 8)\n    Console.WriteLine(\"b = 8\");\nelse\n    Console.WriteLine(\"b != 8\");"
+          }
+        },
+        {
+          "examQuestionId": "hw4-q3",
+          "displayNumber": "3",
+          "presentationType": "compound",
+          "marks": 3,
+          "text": "معطى البرنامج التالي. ماذا يطبع البرنامج عند إدخال القيمة i التالية؟ (الشرطة / تفصل بين الأسطر)",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "static void Main()\n{\n    Console.WriteLine(\"please enter 0 or 1\");\n    int i = int.Parse(Console.ReadLine());\n    if (i == 0)\n    {\n        Console.WriteLine(\"000\");\n        Console.WriteLine(\"0 0\");\n        Console.WriteLine(\"000\");\n    }\n    if (i == 1)\n    {\n        Console.WriteLine(\"1\");\n        Console.WriteLine(\"1\");\n        Console.WriteLine(\"1\");\n    }\n}\n",
+            "label": "البرنامج بلغة C#"
+          },
+          "parts": [
+            {
+              "id": "hw4-q3-1",
+              "label": "3.1",
+              "type": "multipleChoice",
+              "text": "i = 1",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 1 / 1 / 1"
+                },
+                {
+                  "text": "ثلاثة أسطر فقط: 1 / 1 / 1"
+                },
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 000 / 0 0 / 000"
+                },
+                {
+                  "text": "please enter 0 or 1 فقط"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 0
+              }
+            },
+            {
+              "id": "hw4-q3-2",
+              "label": "3.2",
+              "type": "multipleChoice",
+              "text": "i = 0",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 1 / 1 / 1"
+                },
+                {
+                  "text": "ثلاثة أسطر فقط: 1 / 1 / 1"
+                },
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 000 / 0 0 / 000"
+                },
+                {
+                  "text": "please enter 0 or 1 فقط"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 2
+              }
+            },
+            {
+              "id": "hw4-q3-3",
+              "label": "3.3",
+              "type": "multipleChoice",
+              "text": "i = 2",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 1 / 1 / 1"
+                },
+                {
+                  "text": "ثلاثة أسطر فقط: 1 / 1 / 1"
+                },
+                {
+                  "text": "please enter 0 or 1 ثم ثلاثة أسطر: 000 / 0 0 / 000"
+                },
+                {
+                  "text": "please enter 0 or 1 فقط"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 3
+              }
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q4",
+          "displayNumber": "4",
+          "presentationType": "compound",
+          "marks": 3,
+          "text": "أمامك المقطع التالي من العملية الرئيسية:",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "static void Main()\n{\n    int x, y;\n    x = int.Parse(Console.ReadLine());\n    y = int.Parse(Console.ReadLine());\n    if (x > 0)\n        if (y > 0)\n            Console.WriteLine(\"one\");\n        else\n            Console.WriteLine(\"two\");\n    else\n        Console.WriteLine(\"three\");\n}\n",
+            "label": "البرنامج بلغة C#"
+          },
+          "parts": [
+            {
+              "id": "hw4-q4-1",
+              "label": "4.1",
+              "type": "multipleChoice",
+              "text": "أي من المدخلات التالية يجعل المخرج \"two\"؟",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "x = 5, y = -2"
+                },
+                {
+                  "text": "x = 5, y = 3"
+                },
+                {
+                  "text": "x = -1, y = 4"
+                },
+                {
+                  "text": "x = 0, y = -3"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 0
+              }
+            },
+            {
+              "id": "hw4-q4-2",
+              "label": "4.2",
+              "type": "multipleChoice",
+              "text": "أي من المدخلات التالية يجعل المخرج \"three\"؟",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "x = 2, y = 7"
+                },
+                {
+                  "text": "x = 0, y = 5"
+                },
+                {
+                  "text": "x = 4, y = 0"
+                },
+                {
+                  "text": "x = 1, y = -1"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 1
+              }
+            },
+            {
+              "id": "hw4-q4-3",
+              "label": "4.3",
+              "type": "multipleChoice",
+              "text": "ما هي ميزات المدخلات بحيث يكون المخرج \"one\"؟",
+              "marks": 1,
+              "options": [
+                {
+                  "text": "x > 0 و y > 0"
+                },
+                {
+                  "text": "x > 0 و y ≤ 0"
+                },
+                {
+                  "text": "x ≤ 0 (أيًّا كانت y)"
+                },
+                {
+                  "text": "x > 0 أو y > 0"
+                }
+              ],
+              "answer": {
+                "correctOptionIndex": 0
+              }
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q5",
+          "displayNumber": "5",
+          "presentationType": "compound",
+          "marks": 12,
+          "text": "معطى المتغير الأول number1 والثاني number2 من نمط int. اكتب أمر if مناسبًا لكل جملة:",
+          "parts": [
+            {
+              "id": "hw4-q5-1",
+              "label": "5.1",
+              "type": "shortAnswer",
+              "text": "إذا كانت قيمة المتغير الأول أكبر من الثاني، يطبع مجموعهما.",
+              "marks": 2,
+              "answer": {
+                "text": "if (number1 > number2)\n    Console.WriteLine(number1 + number2);"
+              }
+            },
+            {
+              "id": "hw4-q5-2",
+              "label": "5.2",
+              "type": "shortAnswer",
+              "text": "إذا كانت قيمة المتغير الأول فردية، يطبع مربعه، خلاف ذلك يطبع مربع الثاني.",
+              "marks": 2,
+              "answer": {
+                "text": "if (number1 % 2 != 0)\n    Console.WriteLine(number1 * number1);\nelse\n    Console.WriteLine(number2 * number2);"
+              }
+            },
+            {
+              "id": "hw4-q5-3",
+              "label": "5.3",
+              "type": "shortAnswer",
+              "text": "إذا كان مجموع المتغيرين زوجيًا، يطبع الجذر التربيعي لمجموعهما، خلاف ذلك يطبع القيمة المطلقة للأول.",
+              "marks": 2,
+              "answer": {
+                "text": "if ((number1 + number2) % 2 == 0)\n    Console.WriteLine(Math.Sqrt(number1 + number2));\nelse\n    Console.WriteLine(Math.Abs(number1));"
+              }
+            },
+            {
+              "id": "hw4-q5-4",
+              "label": "5.4",
+              "type": "shortAnswer",
+              "text": "إذا كانت قيمة الأول موجبة والثاني زوجية، يطبع حاصل ضربهما، خلاف ذلك يحسب ويطبع معدلهما.",
+              "marks": 2,
+              "answer": {
+                "text": "if (number1 > 0 && number2 % 2 == 0)\n    Console.WriteLine(number1 * number2);\nelse\n    Console.WriteLine((number1 + number2) / 2.0);"
+              }
+            },
+            {
+              "id": "hw4-q5-5",
+              "label": "5.5",
+              "type": "shortAnswer",
+              "text": "إذا كان الأول يقبل القسمة على 5 بدون باقٍ أو الثاني يساوي ضعف الأول، يطبع \"good\"، خلاف ذلك \"bad\".",
+              "marks": 2,
+              "answer": {
+                "text": "if (number1 % 5 == 0 || number2 == 2 * number1)\n    Console.WriteLine(\"good\");\nelse\n    Console.WriteLine(\"bad\");"
+              }
+            },
+            {
+              "id": "hw4-q5-6",
+              "label": "5.6",
+              "type": "shortAnswer",
+              "text": "إذا كان الأول موجبًا والثاني سالبًا وفرديًا، يطبع مجموع مربعيهما، خلاف ذلك يطبع مربع مجموعهما.",
+              "marks": 2,
+              "answer": {
+                "text": "if (number1 > 0 && number2 < 0 && number2 % 2 != 0)\n    Console.WriteLine(number1 * number1 + number2 * number2);\nelse\n    Console.WriteLine((number1 + number2) * (number1 + number2));"
+              }
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q6",
+          "displayNumber": "6",
+          "presentationType": "multiTrueFalse",
+          "marks": 3,
+          "text": "معطى أن: a=2, b=3, c=10, d=18. سجّل قيمة كل قضية منطقية (صح أو خطأ):",
+          "fields": [
+            {
+              "id": "hw4-q6-1",
+              "statement": "6.1   (a + b == d) || (d > c)",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "hw4-q6-2",
+              "statement": "6.2   (a < b) && ((a > d) || (d > c))",
+              "kind": "boolean",
+              "correct": true
+            },
+            {
+              "id": "hw4-q6-3",
+              "statement": "6.3   (a <= b && c > 5) || !(a > b)",
+              "kind": "boolean",
+              "correct": true
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q7",
+          "displayNumber": "7",
+          "presentationType": "coding",
+          "questionTypeVersion": 2,
+          "marks": 10,
+          "text": "اكتب برنامجًا بلغة C# يستقبل ثلاثة أعداد صحيحة تمثل تاريخًا، كل عدد في سطر وبالترتيب: d (اليوم)، m (الشهر)، y (السنة).\nيتحقق البرنامج مما إذا كان التاريخ قانونيًا (اليوم بين 1 و30، الشهر بين 1 و12، والسنة بين 2001 و2100).\n• إذا كان التاريخ قانونيًا يطبع في السطر الأول: التاريخ قانوني، ثم يطبع في السطر الثاني عدد الأيام التي مرت منذ بداية السنة بما فيها اليوم نفسه (بافتراض أن كل شهر 30 يومًا)، أي: ‎(m − 1) × 30 + d.\n• خلاف ذلك يطبع: التاريخ غير قانوني\nاطبع النصوص كما هي تمامًا دون أي نص إضافي.",
+          "coding": {
+            "allowedLanguages": [
+              "csharp"
+            ],
+            "defaultLanguage": "csharp",
+            "starterCode": {
+              "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n    }\n}\n"
+            },
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 256
+            },
+            "publicTests": [
+              {
+                "id": "pub-legal",
+                "title": "تاريخ قانوني",
+                "input": "15\n3\n2024\n",
+                "sampleOutput": "التاريخ قانوني\n75\n"
+              },
+              {
+                "id": "pub-illegal",
+                "title": "تاريخ غير قانوني",
+                "input": "31\n5\n2020\n",
+                "sampleOutput": "التاريخ غير قانوني\n"
+              }
+            ]
+          },
+          "answer": {
+            "hiddenTests": [
+              {
+                "id": "h-mid",
+                "title": "تاريخ قانوني في منتصف السنة",
+                "input": "15\n3\n2024\n",
+                "expectedOutput": "التاريخ قانوني\n75\n",
+                "weight": 1
+              },
+              {
+                "id": "h-max",
+                "title": "الحد الأعلى لكل القيم",
+                "input": "30\n12\n2100\n",
+                "expectedOutput": "التاريخ قانوني\n360\n",
+                "weight": 1
+              },
+              {
+                "id": "h-min",
+                "title": "الحد الأدنى لكل القيم",
+                "input": "1\n1\n2001\n",
+                "expectedOutput": "التاريخ قانوني\n1\n",
+                "weight": 1
+              },
+              {
+                "id": "h-day31",
+                "title": "يوم أكبر من 30",
+                "input": "31\n5\n2020\n",
+                "expectedOutput": "التاريخ غير قانوني\n",
+                "weight": 1
+              },
+              {
+                "id": "h-day0",
+                "title": "يوم صفر",
+                "input": "0\n4\n2020\n",
+                "expectedOutput": "التاريخ غير قانوني\n",
+                "weight": 1
+              },
+              {
+                "id": "h-month13",
+                "title": "شهر أكبر من 12",
+                "input": "10\n13\n2020\n",
+                "expectedOutput": "التاريخ غير قانوني\n",
+                "weight": 1
+              },
+              {
+                "id": "h-year2000",
+                "title": "سنة أقل من 2001",
+                "input": "5\n6\n2000\n",
+                "expectedOutput": "التاريخ غير قانوني\n",
+                "weight": 1
+              },
+              {
+                "id": "h-year2101",
+                "title": "سنة أكبر من 2100",
+                "input": "5\n6\n2101\n",
+                "expectedOutput": "التاريخ غير قانوني\n",
+                "weight": 1
+              }
+            ],
+            "comparator": "normalizeWhitespace",
+            "referenceSolutions": {
+              "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        int d = int.Parse(Console.ReadLine());\n        int m = int.Parse(Console.ReadLine());\n        int y = int.Parse(Console.ReadLine());\n        if (d >= 1 && d <= 30 && m >= 1 && m <= 12 && y >= 2001 && y <= 2100)\n        {\n            Console.WriteLine(\"التاريخ قانوني\");\n            int days = (m - 1) * 30 + d;\n            Console.WriteLine(days);\n        }\n        else\n        {\n            Console.WriteLine(\"التاريخ غير قانوني\");\n        }\n    }\n}\n"
+            },
+            "gradingMode": "hiddenTests",
+            "scoringPolicy": "proportional",
+            "compileErrorPolicy": "manualReview"
+          }
+        },
+        {
+          "examQuestionId": "hw4-q8",
+          "displayNumber": "8",
+          "presentationType": "tableFill",
+          "marks": 4,
+          "text": "معطى المقطع التالي من العملية الرئيسية. تتبّع بواسطة جدول متابعة، واكتب المخرج في كل حالة:",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "static void Main()\n{\n    int x, y;\n    if (x == y)\n        if (x < 5)\n            Console.WriteLine(x);\n        else if (y > 7)\n            Console.WriteLine(x + y);\n        else\n            Console.WriteLine(x * y);\n    else\n        Console.WriteLine(\"bad selection\");\n}\n",
+            "label": "البرنامج بلغة C#"
+          },
+          "tableHeaders": [
+            "البند",
+            "x",
+            "y",
+            "المخرج"
+          ],
+          "tableRows": [
+            [
+              "8.1",
+              "6",
+              "6",
+              ""
+            ],
+            [
+              "8.2",
+              "7",
+              "12",
+              ""
+            ],
+            [
+              "8.3",
+              "7",
+              "4",
+              ""
+            ],
+            [
+              "8.4",
+              "3",
+              "20",
+              ""
+            ]
+          ],
+          "fields": [
+            {
+              "id": "q8-r1",
+              "row": 0,
+              "column": 3,
+              "kind": "text",
+              "correct": "36"
+            },
+            {
+              "id": "q8-r2",
+              "row": 1,
+              "column": 3,
+              "kind": "text",
+              "correct": "bad selection"
+            },
+            {
+              "id": "q8-r3",
+              "row": 2,
+              "column": 3,
+              "kind": "text",
+              "correct": "bad selection"
+            },
+            {
+              "id": "q8-r4",
+              "row": 3,
+              "column": 3,
+              "kind": "text",
+              "correct": "bad selection"
+            }
+          ]
+        },
+        {
+          "examQuestionId": "hw4-q9",
+          "displayNumber": "9",
+          "presentationType": "coding",
+          "questionTypeVersion": 2,
+          "marks": 10,
+          "text": "اكتب برنامجًا يحسب ويطبع الراتب الصافي لأحد عمال المصنع.\nيستقبل البرنامج (كل قيمة في سطر) عدد ساعات العمل خلال الشهر ثم أجرة الساعة، ويحسب الراتب الإجمالي = عدد الساعات × أجرة الساعة، ثم يخصم ضريبة الدخل:\n• إذا كان الراتب أقل من 4500 شاقل لا تُخصم ضريبة.\n• إذا كان بين 4500 و7000 (شاملًا) تُخصم 20% من الزائد عن 4500.\n• إذا كان أكبر من 7000 تُخصم 400 شاقل + 35% من الزائد عن 7000.\nاطبع الراتب الصافي فقط بمنزلتين عشريتين، مثل: Console.WriteLine(net.ToString(\"F2\"));",
+          "coding": {
+            "allowedLanguages": [
+              "csharp"
+            ],
+            "defaultLanguage": "csharp",
+            "starterCode": {
+              "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n    }\n}\n"
+            },
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 256
+            },
+            "publicTests": [
+              {
+                "id": "pub-mid",
+                "title": "راتب بين 4500 و7000",
+                "input": "150\n40\n",
+                "sampleOutput": "5700.00\n"
+              }
+            ]
+          },
+          "answer": {
+            "hiddenTests": [
+              {
+                "id": "h-low",
+                "title": "بلا ضريبة",
+                "input": "100\n40\n",
+                "expectedOutput": "4000.00\n",
+                "weight": 1
+              },
+              {
+                "id": "h-mid",
+                "title": "شريحة 20%",
+                "input": "150\n40\n",
+                "expectedOutput": "5700.00\n",
+                "weight": 1
+              },
+              {
+                "id": "h-high",
+                "title": "شريحة 400 + 35%",
+                "input": "200\n40\n",
+                "expectedOutput": "7250.00\n",
+                "weight": 1
+              },
+              {
+                "id": "h-b4500",
+                "title": "الحد 4500 بالضبط",
+                "input": "90\n50\n",
+                "expectedOutput": "4500.00\n",
+                "weight": 1
+              },
+              {
+                "id": "h-b7000",
+                "title": "الحد 7000 بالضبط",
+                "input": "140\n50\n",
+                "expectedOutput": "6500.00\n",
+                "weight": 1
+              },
+              {
+                "id": "h-frac",
+                "title": "ضريبة بكسور عشرية",
+                "input": "151\n31\n",
+                "expectedOutput": "4644.80\n",
+                "weight": 1
+              },
+              {
+                "id": "h-high2",
+                "title": "راتب مرتفع آخر",
+                "input": "180\n45\n",
+                "expectedOutput": "7315.00\n",
+                "weight": 1
+              }
+            ],
+            "comparator": "normalizeWhitespace",
+            "referenceSolutions": {
+              "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n        double hours = double.Parse(Console.ReadLine());\n        double rate = double.Parse(Console.ReadLine());\n        double gross = hours * rate;\n        double tax;\n        if (gross < 4500)\n            tax = 0;\n        else if (gross <= 7000)\n            tax = (gross - 4500) * 0.20;\n        else\n            tax = 400 + (gross - 7000) * 0.35;\n        double net = gross - tax;\n        Console.WriteLine(net.ToString(\"F2\"));\n    }\n}\n"
+            },
+            "gradingMode": "hiddenTests",
+            "scoringPolicy": "proportional",
+            "compileErrorPolicy": "manualReview"
+          }
+        },
+        {
+          "examQuestionId": "hw4-q10",
+          "displayNumber": "10",
+          "presentationType": "shortAnswer",
+          "marks": 3,
+          "text": "تُحسب قيمة المتغير c وفقًا لقيم a و b المسجلة في جدول معطى. أكمل أمر if التالي:",
+          "codeStimulus": {
+            "language": "csharp",
+            "source": "if ((a && 3>b) || (77)) c=5; else...\n",
+            "label": "أمر if غير المكتمل"
+          },
+          "answer": {}
+        },
+        {
+          "examQuestionId": "hw4-q11",
+          "displayNumber": "11",
+          "presentationType": "coding",
+          "questionTypeVersion": 2,
+          "marks": 10,
+          "text": "في أحد المصانع تُعطى أجرة العامل وفق اليوم وعدد الساعات (جدول أجرة الساعة لكل يوم مرفق).\nاكتب برنامجًا يستقبل رقم اليوم وعدد الساعات ويطبع أجرة العامل في ذلك اليوم.",
+          "coding": {
+            "allowedLanguages": [
+              "csharp"
+            ],
+            "defaultLanguage": "csharp",
+            "starterCode": {
+              "csharp": "using System;\n\npublic class Program\n{\n    public static void Main()\n    {\n    }\n}\n"
+            },
+            "taskMode": "program",
+            "inputMode": "stdin",
+            "outputMode": "stdout",
+            "limits": {
+              "sourceBytes": 65536,
+              "outputBytes": 65536,
+              "timeMs": 2000,
+              "memoryMb": 256
+            },
+            "publicTests": []
+          },
+          "answer": {
+            "hiddenTests": [],
+            "comparator": "normalizeWhitespace",
+            "referenceSolutions": {},
+            "gradingMode": "manual",
+            "compileErrorPolicy": "manualReview"
+          }
+        }
+      ]
+    }
+  ]
+}
