@@ -8,7 +8,11 @@ import { useTableSort } from "./useTableSort";
 
 /* Reports Center presentation helpers (UX-6b). State/data stay in ReportsCenter / ReportViews. */
 
-export function LoadingState({ text = "جارٍ تجهيز التقرير..." }: { text?: string }) { return <p className="eb-muted" role="status">{text}</p>; }
+/** The loading line (its text is the status announced), with — Phase R-5d — decorative placeholder bars under it so the page keeps
+ *  its shape while the report is prepared. */
+export function LoadingState({ text = "جارٍ تجهيز التقرير..." }: { text?: string }) {
+  return <><p className="eb-muted" role="status">{text}</p><div className="eb-report-skeleton" aria-hidden="true"><span /><span /><span /></div></>;
+}
 export function EmptyState({ text, description }: { text?: string; description?: string }) { return <SharedEmptyState compact title={text || "لا توجد بيانات لعرضها."} description={description} />; }
 export function ErrorState({ text, onRetry }: { text: string; onRetry?: () => void }) {
   return <div className="platform-error assignment-inline-message" role="alert">{text} {onRetry && <button type="button" className="eb-button is-small" onClick={onRetry}>إعادة المحاولة</button>}</div>;
