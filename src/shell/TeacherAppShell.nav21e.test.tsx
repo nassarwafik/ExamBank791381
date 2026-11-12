@@ -68,7 +68,8 @@ describe("21E nav — labelled sections, same destinations in the same order", (
 
   it("all 13 destinations + logout remain, once each, in the unchanged DOM order", () => {
     mount();
-    expect(names(sidebar())).toEqual([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]).concat("تسجيل الخروج"));
+    // PWA-INSTALL-ALL — «تثبيت التطبيق» joins the account group, above logout (which stays last); no destination moved.
+    expect(names(sidebar())).toEqual([...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]).concat("تثبيت التطبيق", "تسجيل الخروج"));
   });
 
   it("the account section closes the sidebar: the activity log after the last destination, logout last (UX-R2: the identity is in the top bar)", () => {
@@ -89,7 +90,7 @@ describe("21E nav — labelled sections, same destinations in the same order", (
     const focusables = chrome.flatMap(root => Array.from(root.querySelectorAll<HTMLElement>("button, input"))).filter(b => !b.hasAttribute("disabled") && b.tabIndex >= 0);
     expect(focusables.map(name)).toEqual([
       "طيّ القائمة", "القائمة", "الرئيسية", "انتقل إلى صفحة", "الوضع الداكن", "تعديل صورة وملف المعلم",   // UX-R18c2: the toggle, released
-      ...[...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]), "تسجيل الخروج",
+      ...[...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV].map(id => NAV_LABELS[id]), "تثبيت التطبيق", "تسجيل الخروج",   // PWA-INSTALL-ALL: install, then logout
     ]);
   });
 

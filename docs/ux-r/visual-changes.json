@@ -915,6 +915,431 @@
       "page": "report-student",
       "viewport": "all",
       "reason": "Reports R-4 (docs/enterprise-reports-export-r4.md §2.1) — the report header's two buttons («تصدير CSV», «طباعة») become one export group of three: «تصدير CSV», «تصدير Excel», «طباعة / PDF»; nothing else on the page moves."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-compact",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-forest",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-ocean",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "appearance-sand",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "assignments",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "assignments",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "audit",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "audit",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank-exams",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "bank-questions",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "dashboard",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games-conversion",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games-live",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "games-live",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "import",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "import",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-book",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-reader",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "messages",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "messages",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "messages-thread",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-analytics",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-dashboard",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-matrix",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-profile",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-settings",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-students",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "project-students",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "projects",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "projects",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-class",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-class",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-student",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "report-student",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "reports",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "reports",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "review-pending",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "review-workspace",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "reviews",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "reviews",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-field",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-nav",
+      "viewport": "all",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves. On a phone this scene shows the open menu, which holds the same new row."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-primary",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-focus-row-action",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-hover-row",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "state-menu-open",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "students",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "students",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "desktop",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "studio-home",
+      "viewport": "tablet",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» joins the teacher sidebar's account group, above «تسجيل الخروج»; the row above it («سجل النشاط») moves up by one row and nothing else on the page moves."
+    },
+    {
+      "page": "login",
+      "viewport": "all",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» appears on the sign-in page under «الدخول بالباركود»; the card grows by that one row and nothing else changes."
+    },
+    {
+      "page": "login-error",
+      "viewport": "all",
+      "reason": "PWA-INSTALL-ALL (docs/enterprise-pwa-install-all.md §2) — «تثبيت التطبيق» appears on the sign-in page under «الدخول بالباركود»; the card grows by that one row and nothing else changes."
     }
   ]
 }
