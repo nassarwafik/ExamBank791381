@@ -216,8 +216,13 @@ describe("P6-E the index is the authority, and what cannot be understood fails c
   });
   it("a listed item whose document is missing or not the one listed fails closed; an unlisted document does not exist", async () => {
     ctx.mem.setJson(IMP.itemName("IMP-009"), { ...ctx.mem.getJson(IMP.itemName("IMP-001")), libraryItemId: "IMP-009" });
+    // even with an audience «for all teachers» (written directly: the owner's route refuses an unknown exam), it does not exist
+    expect((await owner(ctx, "set-audience", { itemId: "IMP-009", audience: "all" })).jsonBody.code).toBe("LIBRARY_ITEM_NOT_FOUND");
+    await LA.mutateAudience(ctx.mem.container, doc => { doc.items["IMP-009"] = { audience: "all", teachers: [], updatedAt: "x", updatedBy: "owner:x" }; });
     expect((await item(ctx, ctx.sara, "IMP-009")).status).toBe(404);
+    expect((await assign(ctx, ctx.sara, "cA", "IMP-009")).jsonBody.code).toBe("LIBRARY_ITEM_NOT_FOUND");
     expect(await bankOf(ctx, ctx.sara)).not.toContain("IMP-009");
+    expect((await ownerGet(ctx)).jsonBody.items.map(i => i.libraryItemId)).not.toContain("IMP-009");
     IMP.resetImportedLibraryCacheForTests();
     ctx.mem.setJson(IMP.itemName("IMP-001"), { ...ctx.mem.getJson(IMP.itemName("IMP-001")), contentHash: "0".repeat(64) });
     expect((await item(ctx, ctx.sara, "IMP-001")).status).toBe(503);
