@@ -29,7 +29,7 @@ const agg = require("../lib/reports/aggregate");
 const ins = require("../lib/reports/insights");
 // Phase R-5c — «طلاب يحتاجون متابعة» (the owner's criteria) and the one «المتأخرون» rule both reports share.
 const followUp = require("../lib/reports/follow-up");
-const { parseDateRange, inRange } = require("../lib/reports/date-range");
+const { parseDateRange, datedForReport, reportDateOf } = require("../lib/reports/date-range");
 const { buildHistoryTimeline } = require("../lib/reports/timeline");
 const { getClassProgramCodes, getSupportedClassProgramCodes, classHasProject } = require("../lib/project-tracker/class-programs");
 
@@ -43,6 +43,9 @@ const { tenantOf, canAccessDocument, classAccessible, studentAccessible } = requ
 const { isStudentInClass, isStudentSharedIn } = require("../lib/class-membership");
 
 async function loadClass(container, classId) { return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json"); }
+// Reports R-6 — what the period and the dates of a report's assessments are based on: their publication (or later opening), and how
+// many were published before R-6 and so are dated by their creation (the documented fallback, shown on the page).
+const periodBasis = fallback => ({ basis: "published", fallback });
 function classMeta(c) {
   return { classId: c.classId, name: c.name, grade: c.grade || "", schoolYear: c.schoolYear || "", status: normalizeClassStatus(c), programCodes: getClassProgramCodes(c), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0 };
 }
@@ -75,7 +78,7 @@ async function classStudentsWith(container, classId, knownUser, knownId) {
 function reportableOf(allAssignments, classId) {
   return allAssignments
     .filter(a => a && String(a.classId || "") === String(classId) && isReportableAssessment(a))
-    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    .sort((a, b) => (Date.parse(reportDateOf(a).iso) || 0) - (Date.parse(reportDateOf(b).iso) || 0));   // R-6: by the report date
 }
 async function classAssignments(container, classId) {
   return reportableOf(await loadDocs(container, ASSIGN_PREFIX), classId);
@@ -139,7 +142,7 @@ async function handler(request, deps = {}, obs = null) {
       const projectCode = String(url.searchParams.get("projectCode") || "").trim();
       const track = String(url.searchParams.get("track") || "").trim();
       const groupId = String(url.searchParams.get("groupId") || "").trim();
-      // Date range applies ONLY to time-meaningful data (assessments by createdAt, timeline by week).
+      // Date range applies ONLY to time-meaningful data (assessments by their report date — R-6, timeline by week).
       // It never touches current project progress snapshots.
       let range;
       try { range = parseDateRange(url.searchParams.get("from"), url.searchParams.get("to")); }
@@ -183,8 +186,11 @@ async function handler(request, deps = {}, obs = null) {
           .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || String(a.name).localeCompare(String(b.name), "ar"));
         const allAssignments = metas.length ? await loadDocs(container, ASSIGN_PREFIX) : [];
         const inputs = [];
+        let fallback = 0;
         for (const meta of metas) {
-          const assignments = reportableOf(allAssignments, meta.classId).filter(a => inRange(a.createdAt, range));
+          const dated = datedForReport(reportableOf(allAssignments, meta.classId), range);
+          const assignments = dated.assignments;
+          fallback += dated.fallback;
           // the roster comes from the request's single users read (a class with no assessment in the range still shows its students)
           inputs.push({ meta, students: await classStudents(container, meta.classId, reads), assignments, subsByAssignment: await submissionsForAll(container, assignments) });
         }
@@ -198,7 +204,7 @@ async function handler(request, deps = {}, obs = null) {
           return { ...row, needsFollowUp };
         });
         overview.followUp = { criteria: { ...followUp.FOLLOW_UP_CRITERIA }, total };
-        return { status: 200, jsonBody: { ok: true, type, overview, withheld } };
+        return { status: 200, jsonBody: { ok: true, type, overview, periodBasis: periodBasis(fallback), withheld } };
       }
 
       // Students of one class, for the student/timeline filter dropdowns.
@@ -213,7 +219,8 @@ async function handler(request, deps = {}, obs = null) {
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         const students = academic ? await classStudents(container, classId, reads) : [];
-        const assignments = academic ? (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range)) : [];
+        const dated = datedForReport(academic ? await classAssignments(container, classId) : [], range);
+        const assignments = dated.assignments;
         const allPcts = [];
         let submittedCells = 0, pendingCells = 0;
         const subsByAssignment = await submissionsForAll(container, assignments);
@@ -262,7 +269,7 @@ async function handler(request, deps = {}, obs = null) {
           averageScore: agg.average(allPcts),
           submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0,
           pendingReview: pendingCells
-        } : null, insights, projects, withheld } };
+        } : null, insights, ...(academic ? { periodBasis: periodBasis(dated.fallback) } : {}), projects, withheld } };
       }
 
       if (type === "student") {
@@ -278,7 +285,8 @@ async function handler(request, deps = {}, obs = null) {
         const classOk = !tenant || !rawClassId || await classAccessible(name => downloadJsonOrNull(container, name), rawClassId, tenant);
         const sClassId = classOk ? rawClassId : "";
         const c = sClassId ? await loadClass(container, sClassId) : null;
-        const assignments = c && academic ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
+        const dated = datedForReport(c && academic ? await classAssignments(container, sClassId) : [], range);
+        const assignments = dated.assignments;
         // Roadmap #27: the per-assignment scans are independent reads → bounded concurrency, aligned with `assignments`.
         // Phase R-5a — each scan also yields the class's submissions (for the class average beside the student's result); the
         // student's own document is still the one named after them. `assignments` is empty without the academic part.
@@ -315,7 +323,7 @@ async function handler(request, deps = {}, obs = null) {
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
           // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
           academic: academic ? { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0, pendingCount: acad.pendingCount } : null,
-          insights, projects, withheld } };
+          insights, ...(academic ? { periodBasis: periodBasis(dated.fallback) } : {}), projects, withheld } };
       }
 
       // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a
@@ -326,7 +334,8 @@ async function handler(request, deps = {}, obs = null) {
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         const students = await classStudents(container, classId, reads);
-        const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
+        const dated = datedForReport(await classAssignments(container, classId), range);
+        const assignments = dated.assignments;
         const perAssignment = [];
         const pooledPcts = [];
         const matrix = [];
@@ -337,8 +346,9 @@ async function handler(request, deps = {}, obs = null) {
           const subs = subsByAssignment[i];
           const entries = students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) }));
           const st = agg.assignmentStats(entries);
-          // Phase R-5b — the row also carries the creation day and the highest / lowest / median of its final results (additive).
-          perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st, date: ins.isoDay(a.createdAt), ...ins.assessmentSpread(students, subs) });
+          // Phase R-5b — the row also carries its day and the highest / lowest / median of its final results (additive).
+          // R-6 — the day is the report date: publication, or the later opening (creation for a document published before R-6).
+          perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st, date: ins.isoDay(reportDateOf(a).iso), ...ins.assessmentSpread(students, subs) });
           const outcomes = entries.map(e => ({ studentId: e.studentId, o: agg.studentOutcome(e.submission) }));
           // `zero` is the same rule as assignmentStats.zeroScores (a FINAL score of 0), so the cell and the count never disagree.
           matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: outcomes.map(({ studentId, o }) => ({ studentId, state: o.state, percentage: o.percentage, zero: o.state === "submitted" && o.score === 0 })) });
@@ -352,7 +362,7 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, type, class: classMeta(c),
           students: students.map(s => ({ studentId: s.studentId, displayName: s.displayName })),
           overall: { assessmentCount: assignments.length, participants: submittedCells, pendingReview: pendingCells, average: agg.average(pooledPcts), submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0, distribution: agg.gradeDistribution(pooledPcts) },
-          perAssignment, matrix } };
+          perAssignment, matrix, periodBasis: periodBasis(dated.fallback) } };
       }
 
       // ---------- Project reports (generic) ----------

@@ -34,4 +34,22 @@ function inRange(iso, range) {
   return true;
 }
 
-module.exports = { parseDateRange, inRange };
+// Reports R-6 (docs/enterprise-reports-period-basis-r6.md; owner decision D-2 with option (ب)) — the date an assessment belongs to
+// in every report: the moment students could take it, i.e. the LATER of its first publication (`publishedAt`, stamped by the
+// server) and its opening (`openAt`, a scheduled assessment). A document published before R-6 has no `publishedAt`: it keeps its
+// creation date, and `fallback: true` says so (the documented fallback; nothing is migrated).
+const validIso = v => typeof v === "string" && v !== "" && Number.isFinite(Date.parse(v));
+function reportDateOf(a) {
+  const published = a && validIso(a.publishedAt) ? a.publishedAt : null;
+  if (!published) return { iso: a && typeof a.createdAt === "string" ? a.createdAt : "", fallback: true };
+  const open = validIso(a.openAt) ? a.openAt : null;
+  return { iso: open && Date.parse(open) > Date.parse(published) ? open : published, fallback: false };
+}
+/** The assessments of a report: those dated within the range, oldest first, and how many were dated by the fallback. */
+function datedForReport(assignments, range) {
+  const kept = (Array.isArray(assignments) ? assignments : []).map(a => ({ a, d: reportDateOf(a) })).filter(x => inRange(x.d.iso, range));
+  kept.sort((x, y) => (Date.parse(x.d.iso) || 0) - (Date.parse(y.d.iso) || 0) || String(x.a.assignmentId || "").localeCompare(String(y.a.assignmentId || "")));
+  return { assignments: kept.map(x => x.a), fallback: kept.filter(x => x.d.fallback).length };
+}
+
+module.exports = { parseDateRange, inRange, reportDateOf, datedForReport };

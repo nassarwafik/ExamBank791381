@@ -13,6 +13,7 @@ import type { PrintReport } from "./printReport";
 import type { XlsxCell } from "./xlsx";
 import { GRADED_LABEL, PENDING_LABEL, MISSING_LABEL, finiteOrNull, gradedValue, gapToClass, type ClassInsights, type StudentInsights } from "./insights";
 import { reasonText } from "./followUp";
+import { PUBLISHED_DATE_LABEL } from "./format";   // R-6 — the date column is the publication
 import { STAGE_STATUS_ORDER, stageStatusLabel } from "../projects/teacherPresentation";
 
 export type ExportCell = string | number;
@@ -50,7 +51,7 @@ export function classExport(data: ClassExportData, ctx: ExportContext): ReportEx
   if (insights && insights.assessments.length) {
     const spread = insights.assessments.some(a => a.highest !== undefined);
     sections.push({
-      title: "التقييمات", columns: ["التقييم", "التاريخ", "الطلاب", "مُسلَّم", PENDING_LABEL, MISSING_LABEL, "نسبة التسليم %", "المتوسط %", ...(spread ? ["الأعلى %", "الوسيط %", "الأدنى %"] : [])],
+      title: "التقييمات", columns: ["التقييم", PUBLISHED_DATE_LABEL, "الطلاب", "مُسلَّم", PENDING_LABEL, MISSING_LABEL, "نسبة التسليم %", "المتوسط %", ...(spread ? ["الأعلى %", "الوسيط %", "الأدنى %"] : [])],
       rows: insights.assessments.map(a => [a.title, text(a.date), a.students, a.submitted, a.pendingReview ?? 0, a.missing, a.submissionRate, num(a.average), ...(spread ? [num(a.highest), num(a.median), num(a.lowest)] : [])])
     });
   }
@@ -96,7 +97,7 @@ export function studentExport(data: StudentExportData, ctx: ExportContext): Repo
   if (insights && insights.assessments.length) {
     const gaps = gapToClass(insights.assessments);
     sections.push({
-      title: "تقييمات الطالب", columns: ["التقييم", "التاريخ", "الحالة", "النتيجة %", "متوسط الصف %", "الفرق عن الصف (نقطة)", "المحاولات"],
+      title: "تقييمات الطالب", columns: ["التقييم", PUBLISHED_DATE_LABEL, "الحالة", "النتيجة %", "متوسط الصف %", "الفرق عن الصف (نقطة)", "المحاولات"],
       rows: insights.assessments.map((p, i) => [p.title, text(p.date), stateWord(p), num(gradedValue(p)), num(p.classAverage), num(gaps[i]), p.attempts])
     });
   }
@@ -137,7 +138,7 @@ export function assignmentsExport(data: AssignmentsExportData, ctx: ExportContex
       ["عدد التقييمات", data.overall.assessmentCount], ["التسليمات (طالب × تقييم)", data.overall.participants], ["متوسط النتائج %", num(data.overall.average)],
       ["نسبة التسليم %", data.overall.submissionRate], [PENDING_LABEL, data.overall.pendingReview ?? 0]] },
     { title: "ملخص كل تقييم",
-      columns: ["التقييم", ...(withDate ? ["التاريخ"] : []), "الطلاب", "مُسلَّم", MISSING_LABEL, PENDING_LABEL, "سلّم بعلامة صفر", "نسبة التسليم %", "المتوسط %", ...(spread ? ["الأعلى %", "الوسيط %", "الأدنى %"] : []), "متوسط المحاولات"],
+      columns: ["التقييم", ...(withDate ? [PUBLISHED_DATE_LABEL] : []), "الطلاب", "مُسلَّم", MISSING_LABEL, PENDING_LABEL, "سلّم بعلامة صفر", "نسبة التسليم %", "المتوسط %", ...(spread ? ["الأعلى %", "الوسيط %", "الأدنى %"] : []), "متوسط المحاولات"],
       rows: data.perAssignment.map(r => [r.title, ...(withDate ? [text(r.date)] : []), r.students, r.submitted, r.missing, r.pendingReview ?? 0, r.zeroScores, r.submissionRate, num(r.average), ...(spread ? [num(r.highest), num(r.median), num(r.lowest)] : []), r.avgAttempts]) },
     { title: "توزيع النتائج", columns: ["النطاق %", "عدد التسليمات"], rows: Object.keys(data.overall.distribution).map(k => [k, data.overall.distribution[k]]) }
   ];

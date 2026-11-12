@@ -104,7 +104,7 @@ describe("R-5a class report — the API's series as charts", () => {
     expect(series(trend)).toEqual([{ label: "متوسط النتائج", data: [72, 61, null] }, { label: "نسبة التسليم", data: [100, 33, 33] }]);
     expect(plain(trend.textContent)).toContain("آخر متوسط 61% — -11 نقطة عن الذي قبله.");
     expect(trend.textContent).toContain(LRM + "-11");
-    expect(tableRows(trend)).toEqual([["التقييم", "التاريخ", "متوسط النتائج %", "نسبة التسليم %"], ["اختبار الكسور", "2026-02-05", "72", "100"], ["واجب الجبر", "2026-03-05", "61", "33"], ["مشروع قصير", "2026-03-20", "—", "33"]]);
+    expect(tableRows(trend)).toEqual([["التقييم", "تاريخ النشر", "متوسط النتائج %", "نسبة التسليم %"], ["اختبار الكسور", "2026-02-05", "72", "100"], ["واجب الجبر", "2026-03-05", "61", "33"], ["مشروع قصير", "2026-03-20", "—", "33"]]);
     const status = within(section).getByRole("region", { name: "حالة التسليم في كل تقييم" });
     expect(series(status)).toEqual([{ label: "مصحَّح", data: [2, 1, 0] }, { label: "بانتظار التصحيح", data: [1, 0, 1] }, { label: "لم يسلّم", data: [0, 2, 2] }]);
     const standing = within(section).getByRole("region", { name: "متوسط كل طالب" });
@@ -151,7 +151,7 @@ describe("R-5a student report — the student beside the class; pending and miss
     expect(plain(trend.textContent)).toContain("آخر نتيجة 40% — -40 نقطة عن التي قبلها.");
     expect(trend.textContent).toContain("عند متوسط الصف أو أعلى في 1 من 2.");
     expect(tableRows(trend)).toEqual([
-      ["التقييم", "التاريخ", "نتيجة الطالب", "متوسط الصف", "المحاولات"],
+      ["التقييم", "تاريخ النشر", "نتيجة الطالب", "متوسط الصف", "المحاولات"],
       ["اختبار الكسور", "2026-02-05", "80%", "72%", "1"], ["واجب الجبر", "2026-03-05", "بانتظار التصحيح", "61%", "2"],
       ["مشروع قصير", "2026-03-20", "لم يسلّم", "—", "0"], ["اختبار نهائي", "2026-04-02", "40%", "65%", "1"]
     ]);

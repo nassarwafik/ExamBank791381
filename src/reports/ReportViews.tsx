@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { useReport } from "./useReport";
-import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState, SortHeader, TableSearch } from "./ui";
+import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState, SortHeader, TableSearch, PeriodBasisNote } from "./ui";
 import { useTableSort } from "./useTableSort";
 import { sortRows, matchesQuery } from "./tableTools";
-import { pct, isoDay } from "./format";
+import { pct, isoDay, PUBLISHED_DATE_LABEL, type PeriodBasis } from "./format";
 import { resolveTrack } from "./trackState";
 import * as ex from "./reportExport";
 import { PerformanceTrendChart, SubmissionStatusChart, StudentStandingChart, StudentTrendChart, GapToClassChart, StageStatusChart, WeeklyChangeChart } from "./ReportCharts";
@@ -106,7 +106,7 @@ function FollowUpSection({ followUp, onOpenStudent }: { followUp: FollowUp; onOp
 }
 
 function ClassReport({ token, filters, onOpenStudent }: { token: string; filters: Filters; onOpenStudent?: (studentId: string) => void }) {
-  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; insights?: ClassInsights | null; projects: ClassProjectSection[]; withheld?: string[] };
+  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number; pendingReview?: number } | null; insights?: ClassInsights | null; periodBasis?: PeriodBasis; projects: ClassProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." description="سيعرض التقرير أرقام الصف، تطوّر متوسطه ونسبة تسليمه من تقييم لآخر، ترتيب الطلاب، وتقدّمه في مشاريعه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -128,6 +128,7 @@ function ClassReport({ token, filters, onOpenStudent }: { token: string; filters
         </>}
       </div>
       {kpis && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
+      {kpis && <PeriodBasisNote basis={data.periodBasis} />}
       {insights && insights.assessments.length > 0 && (
         <section className="eb-report-insights" aria-labelledby="eb-report-class-insights">
           <h3 id="eb-report-class-insights" className="eb-subheading">تطوّر الصف في التقييمات</h3>
@@ -188,7 +189,7 @@ function ClassReport({ token, filters, onOpenStudent }: { token: string; filters
 type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; nextStages?: Record<string, { stageId: string; title: string } | null>; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; insights?: StudentInsights | null; projects: StudentProjectSection[]; withheld?: string[] };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number; pendingCount?: number } | null; insights?: StudentInsights | null; periodBasis?: PeriodBasis; projects: StudentProjectSection[]; withheld?: string[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId, ...(filters.classId ? { classId: filters.classId } : {}) }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." description="اختر الصف ثم الطالب. سيعرض التقرير نتائجه في كل تقييم بجانب متوسط الصف، حالة كل تقييم، وتقدّمه في مشاريع صفه." />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -209,6 +210,7 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
         {!projectsWithheld && <StatCard primary label="مشاريع الصف" value={data.projects.length} />}
       </div>
       {academic && <ReportNote>{AVERAGE_NOTE}</ReportNote>}
+      {academic && <PeriodBasisNote basis={data.periodBasis} />}
       {insights && insights.assessments.length > 0 && (
         <section className="eb-report-insights" aria-labelledby="eb-report-student-insights">
           <h3 id="eb-report-student-insights" className="eb-subheading">تطوّر الطالب في التقييمات</h3>
@@ -264,7 +266,7 @@ function StudentAssessmentsTable({ points }: { points: StudentAssessmentPoint[] 
   return (
     <ReportTable<R> capped caption={"تقييمات الطالب: الحالة و" + LATEST_ATTEMPT_LABEL + " ومتوسط الصف والفرق وعدد المحاولات"} columns={[
       { key: "title", label: "التقييم", sortValue: r => r.title },
-      { key: "date", label: "التاريخ", render: r => r.date || "—", sortValue: r => r.date || null },
+      { key: "date", label: PUBLISHED_DATE_LABEL, render: r => r.date || "—", sortValue: r => r.date || null },
       { key: "state", label: "الحالة", render: state, sortValue: r => (r.state === "missing" ? 2 : r.result === null ? 1 : 0) },
       { key: "result", label: "النتيجة", render: r => pct(r.result), numeric: true, sortValue: r => r.result },
       { key: "classAverage", label: "متوسط الصف", render: r => pct(r.classAverage), numeric: true, sortValue: r => finiteOrNull(r.classAverage) },
@@ -278,7 +280,7 @@ function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string
   // Phase R-5b — the row's day and highest / lowest / median are optional: an API that does not send them shows the earlier columns.
   type Row = ex.AssignmentRow & { assignmentId: string };
   type Cell = { studentId: string; state: string; percentage: number | null; zero?: boolean };
-  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
+  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; pendingReview?: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[]; periodBasis?: PeriodBasis };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
   const palette = usePalette();
   const distLabels = useMemo(() => data ? Object.keys(data.overall.distribution) : [], [data]);
@@ -317,6 +319,7 @@ function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string
         <StatCard primary label="نسبة التسليم" value={pct(data.overall.submissionRate)} tone="info" />
       </div>
       <ReportNote>{LATEST_ATTEMPT_NOTE}</ReportNote>
+      <PeriodBasisNote basis={data.periodBasis} />
       {data.perAssignment.length > 0 && (
         <div className="eb-report-chart-grid">
           <PerformanceTrendChart title="تطوّر الأداء عبر التقييمات" firstColumn="التقييم" description="متوسط النتائج ونسبة التسليم في كل تقييم، من الأقدم إلى الأحدث."
@@ -331,7 +334,7 @@ function AssignmentsReport({ token, filters, onOpenAssignment }: { token: string
         <h3 id="eb-report-per-assignment" className="eb-subheading">ملخص كل تقييم</h3>
         <ReportTable<Row> capped caption="ملخص كل تقييم: نسبة التسليم والمتوسط وعدد المسلِّمين" columns={[
           { key: "title", label: "التقييم", sortValue: r => r.title },
-          ...(withDate ? [{ key: "date", label: "التاريخ", render: (r: Row) => r.date || "—", sortValue: (r: Row) => r.date || null }] : []),
+          ...(withDate ? [{ key: "date", label: PUBLISHED_DATE_LABEL, render: (r: Row) => r.date || "—", sortValue: (r: Row) => r.date || null }] : []),
           { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate), numeric: true, sortValue: r => r.submissionRate },
           { key: "submitted", label: "مُسلَّم", numeric: true, sortValue: r => r.submitted }, { key: "missing", label: MISSING_LABEL, numeric: true, sortValue: r => r.missing },
           { key: "pendingReview", label: PENDING_LABEL, render: r => String(r.pendingReview ?? 0), numeric: true, sortValue: r => r.pendingReview ?? 0 }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true, sortValue: r => r.zeroScores },

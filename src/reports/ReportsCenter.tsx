@@ -6,6 +6,7 @@ import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
 import type { OverviewResponse } from "./ReportsOverview";
 import { rangeForPeriod, type Period } from "./period";
+import { PERIOD_HINT } from "./format";   // R-6 — the period follows the publication
 import { getClassProgramCodes } from "../projects/classPrograms";
 import EmptyState from "../ui/EmptyState";
 import IconButton from "../ui/IconButton";
@@ -330,10 +331,11 @@ export default function ReportsCenter({ token, onOpenProject, onOpenAssignment, 
         {timeAware && (
           <div className="eb-report-filter-row" role="group" aria-label="خيارات الفترة الزمنية">
             <label className="eb-field-inline">الفترة الزمنية
-              <select value={period} onChange={e => applyPeriod(e.target.value as Period)}>
+              <select value={period} aria-describedby="eb-report-period-hint" onChange={e => applyPeriod(e.target.value as Period)}>
                 {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
               </select>
             </label>
+            <span id="eb-report-period-hint" className="eb-muted">{PERIOD_HINT}</span>
             {period === "custom" && (
               <>
                 <label className="eb-field-inline">من<input type="date" value={customRange.from} max={customRange.to || undefined} aria-invalid={rangeInverted || undefined} aria-describedby={rangeInverted ? "eb-report-range-error" : undefined} onChange={e => { const from = e.target.value; setCustomRange(r => ({ ...r, from })); }} /></label>

@@ -164,7 +164,7 @@ describe("R-5b assessments report — statistics columns and the matrix", () => 
   it("date and highest / median / lowest columns when the API sends them; an assessment with no final result shows «—», never 0%", async () => {
     await openAssessments();
     const per = tableByCaption("ملخص كل تقييم");
-    expect(within(per).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["التقييم", "التاريخ", "نسبة التسليم", "مُسلَّم", "لم يسلّم", "بانتظار التصحيح", "سلّم بعلامة صفر", "المتوسط (نتيجة آخر محاولة مسلّمة)", "الأعلى", "الوسيط", "الأدنى", "متوسط المحاولات"]);
+    expect(within(per).getAllByRole("columnheader").map(h => h.textContent)).toEqual(["التقييم", "تاريخ النشر", "نسبة التسليم", "مُسلَّم", "لم يسلّم", "بانتظار التصحيح", "سلّم بعلامة صفر", "المتوسط (نتيجة آخر محاولة مسلّمة)", "الأعلى", "الوسيط", "الأدنى", "متوسط المحاولات"]);
     const row = (title: string) => Array.from((within(per).getByRole("rowheader", { name: title }).closest("tr") as HTMLElement).children).map(c => c.textContent);
     expect(row("اختبار الكسور").slice(7, 11)).toEqual(["60%", "90%", "90%", "0%"]);          // a REAL zero is the lowest
     expect(row("مشروع قصير").slice(7, 11)).toEqual(["—", "—", "—", "—"]);

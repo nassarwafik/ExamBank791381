@@ -5,6 +5,7 @@ import SharedEmptyState from "../ui/EmptyState";
 import { IconDownload, IconPrint, IconArrowUp, IconArrowDown, IconSort } from "../icons";
 import { sortRows, ariaSort, matchesQuery, type SortState, type SortValue } from "./tableTools";
 import { downloadCsv } from "./csv";
+import { periodFallbackText, type PeriodBasis } from "./format";
 import { downloadXlsx } from "./xlsx";
 import { printReport } from "./printReport";
 import { formatLocalDate } from "./period";
@@ -78,6 +79,11 @@ export function ReportHeader({ title, description, report, children }: { title: 
 
 /** ReportNote — a short truthful explanation of what a value means (e.g. latest submitted attempt, not a final grade). */
 export function ReportNote({ children }: { children: ReactNode }) { return <p className="eb-report-note">{children}</p>; }
+/** Reports R-6 — says which assessments are dated by their creation (published before R-6); nothing when none. */
+export function PeriodBasisNote({ basis }: { basis: PeriodBasis | null | undefined }) {
+  const text = periodFallbackText(basis);
+  return text ? <ReportNote>{text}</ReportNote> : null;
+}
 
 /* ---------------- Phase R-5b — interactive tables: sort by a column, find a row, keep the header in view ---------------- */
 
