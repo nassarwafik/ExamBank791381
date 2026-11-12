@@ -8,7 +8,7 @@ import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-li
 vi.mock("react-chartjs-2", () => ({ Bar: () => <canvas />, Line: () => <canvas />, Doughnut: () => <canvas /> }));
 
 import ReportsCenter from "./ReportsCenter";
-import * as csvRows from "./reportCsv";
+import { classExport } from "./reportExport";
 
 const TRACKS = [{ trackId: "book", title: "الكتاب" }, { trackId: "packetTracer", title: "Packet Tracer" }];
 const FILTERS = { ok: true, schoolYears: ["2025-2026"], classes: [{ classId: "c1", name: "الحادي عشر", schoolYear: "2025-2026", status: "active", programCodes: ["794589"] }], projects: [{ projectCode: "794589", title: "مشروع 794589" }] };
@@ -77,9 +77,11 @@ describe("P-5d — class report", () => {
     expect(section.textContent).toContain("لم يبدأوا 4");
   });
   it("the class CSV lists «لم يبدأوا» for a project only when the server reports it", () => {
-    const base = { class: { name: "ص" }, projects: [{ title: "م", tracks: [], avgOverall: 1, trackAverages: {}, completedCount: 2 }] };
-    expect(csvRows.classReportRows([], base).map(r => r.join("|"))).not.toContain("م|لم يبدأوا|4");
+    // Reports R-4: the rows come from the unified export (reportExport.ts); the rule is the same — the row exists only when reported.
+    const base = { class: { name: "ص", schoolYear: "", status: "active", studentCount: 0 }, kpis: null, projects: [{ title: "م", tracks: [], avgOverall: 1, trackAverages: {}, completedCount: 2 }] };
+    const projectRows = (d: Parameters<typeof classExport>[0]) => classExport(d, {}).sections.find(x => x.title === "المشاريع")!.rows.map(r => r.join("|"));
+    expect(projectRows(base)).not.toContain("م|لم يبدأوا|4");
     const withCount = { ...base, projects: [{ ...base.projects[0], notStartedCount: 4 }] };
-    expect(csvRows.classReportRows([], withCount).map(r => r.join("|"))).toContain("م|لم يبدأوا|4");
+    expect(projectRows(withCount)).toContain("م|لم يبدأوا|4");
   });
 });

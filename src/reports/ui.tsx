@@ -1,9 +1,15 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import SharedEmptyState from "../ui/EmptyState";
 import { IconDownload, IconPrint, IconArrowUp, IconArrowDown, IconSort } from "../icons";
 import { sortRows, ariaSort, matchesQuery, type SortState, type SortValue } from "./tableTools";
+import { downloadCsv } from "./csv";
+import { downloadXlsx } from "./xlsx";
+import { printReport } from "./printReport";
+import { formatLocalDate } from "./period";
+import { exportRows, exportPrint, exportFilename, type ReportExport, type ExportContext } from "./reportExport";
+import { isDarkScheme } from "../ui/themeColor";
 import { useTableSort } from "./useTableSort";
 
 /* Reports Center presentation helpers (UX-6b). State/data stay in ReportsCenter / ReportViews. */
@@ -18,18 +24,55 @@ export function ErrorState({ text, onRetry }: { text: string; onRetry?: () => vo
   return <div className="platform-error assignment-inline-message" role="alert">{text} {onRetry && <button type="button" className="eb-button is-small" onClick={onRetry}>إعادة المحاولة</button>}</div>;
 }
 
+/** Local «YYYY-MM-DD HH:mm» (Western digits) — when an export was made. */
+function stamp(now: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return formatLocalDate(now) + " " + p(now.getHours()) + ":" + p(now.getMinutes());
+}
+/** The charts of the report on screen as pictures for the print document: each chart card's title and its canvas as a PNG. None
+ *  in the dark theme (a chart drawn for a dark surface is unreadable on paper) and none where a canvas cannot be read. */
+function chartFigures(root: Element | null): { title: string; src: string }[] {
+  if (!root || isDarkScheme()) return [];
+  const out: { title: string; src: string }[] = [];
+  for (const card of Array.from(root.querySelectorAll(".eb-chart-card"))) {
+    const canvas = card.querySelector("canvas") as HTMLCanvasElement | null;
+    const title = card.querySelector(".eb-chart-card-title")?.textContent || "";
+    if (!canvas || typeof canvas.toDataURL !== "function") continue;
+    try { const src = canvas.toDataURL("image/png"); if (src.startsWith("data:image/png;base64,") && src.length > 64) out.push({ title, src }); } catch { /* an unreadable canvas is simply not printed */ }
+  }
+  return out;
+}
+
 /**
- * ReportHeader — the result's context row: title (h3 under the workspace h2), optional description/hint and the
- * CSV / print actions (marked .eb-report-noprint). Export uses the already-loaded data only — no request.
+ * ReportHeader — the result's context row: title (h3 under the workspace h2), optional description/hint and the export actions
+ * (marked .eb-report-noprint). Phase R-4 (owner decision D-4): ONE description of the report (`report()`, built from the
+ * already-loaded data — no request) is exported three ways: CSV, Excel, and a print-ready document («طباعة / PDF») that carries
+ * the report's identity, every table and the charts on screen — instead of printing the application's own page.
  */
-export function ReportHeader({ title, description, onExportCsv, children }: { title: ReactNode; description?: ReactNode; onExportCsv?: () => void; children?: ReactNode }) {
+export function ReportHeader({ title, description, report, children }: { title: ReactNode; description?: ReactNode; report?: () => { data: ReportExport; ctx: ExportContext }; children?: ReactNode }) {
+  const [printError, setPrintError] = useState("");
+  const root = useRef<HTMLDivElement | null>(null);
+  const make = () => { const r = report!(); const now = new Date(); return { ...r, generatedAt: stamp(now), filename: exportFilename(r.data, r.ctx, formatLocalDate(now)) }; };
+  const csv = () => { const r = make(); downloadCsv(r.filename, exportRows(r.data, r.generatedAt).rows); };
+  const xlsx = () => { const r = make(), flat = exportRows(r.data, r.generatedAt); downloadXlsx(r.filename, flat.rows, { sheetName: r.data.kind.replace(/-/g, " "), rtl: true, boldRows: flat.bold }); };
+  const print = () => {
+    const r = make();
+    const ok = printReport(exportPrint(r.data, r.generatedAt, chartFigures(root.current ? root.current.closest(".eb-report-result") : null)));
+    setPrintError(ok ? "" : "تعذر فتح نافذة الطباعة في هذا المتصفح. جرّب تصدير Excel أو CSV.");
+  };
   return (
-    <SectionHeader level={3} className="eb-report-result-head" title={title} description={description}
-      actions={<div className="eb-report-actions eb-report-noprint">
-        {children}
-        {onExportCsv && <button type="button" className="eb-button is-small" onClick={onExportCsv}><IconDownload size={16} />تصدير CSV</button>}
-        <button type="button" className="eb-button is-small" onClick={() => window.print()}><IconPrint size={16} />طباعة</button>
-      </div>} />
+    <div className="eb-report-head-wrap" ref={root}>
+      <SectionHeader level={3} className="eb-report-result-head" title={title} description={description}
+        actions={<div className="eb-report-actions eb-report-noprint">
+          {children}
+          {report && <div className="eb-report-export" role="group" aria-label="تصدير التقرير">
+            <button type="button" className="eb-button is-small" onClick={csv}><IconDownload size={16} />تصدير CSV</button>
+            <button type="button" className="eb-button is-small" onClick={xlsx}><IconDownload size={16} />تصدير Excel</button>
+            <button type="button" className="eb-button is-small" onClick={print}><IconPrint size={16} />طباعة / PDF</button>
+          </div>}
+        </div>} />
+      {printError && <p className="platform-error assignment-inline-message eb-report-noprint" role="alert">{printError}</p>}
+    </div>
   );
 }
 

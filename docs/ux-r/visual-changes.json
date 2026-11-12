@@ -900,6 +900,21 @@
       "page": "reports",
       "viewport": "all",
       "reason": "Reports R-5c (docs/enterprise-reports-follow-up-r5c.md §2.2) — the hub overview gains «يحتاج انتباهك» above the class buttons: one item per class with students who need follow-up or results awaiting correction; the report cards are unchanged."
+    },
+    {
+      "page": "report-assignments",
+      "viewport": "all",
+      "reason": "Reports R-4 (docs/enterprise-reports-export-r4.md §2.1) — the report header's two buttons («تصدير CSV», «طباعة») become one export group of three: «تصدير CSV», «تصدير Excel», «طباعة / PDF»; nothing else on the page moves."
+    },
+    {
+      "page": "report-class",
+      "viewport": "all",
+      "reason": "Reports R-4 (docs/enterprise-reports-export-r4.md §2.1) — the report header's two buttons («تصدير CSV», «طباعة») become one export group of three: «تصدير CSV», «تصدير Excel», «طباعة / PDF»; nothing else on the page moves."
+    },
+    {
+      "page": "report-student",
+      "viewport": "all",
+      "reason": "Reports R-4 (docs/enterprise-reports-export-r4.md §2.1) — the report header's two buttons («تصدير CSV», «طباعة») become one export group of three: «تصدير CSV», «تصدير Excel», «طباعة / PDF»; nothing else on the page moves."
     }
   ]
 }

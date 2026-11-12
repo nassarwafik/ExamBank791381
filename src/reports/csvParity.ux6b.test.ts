@@ -1,18 +1,27 @@
 // @vitest-environment happy-dom
-// UX-6b — CSV HARD PARITY. The row builders in reportCsv.ts must produce byte-identical CSV to the legacy
-// inline builders that lived in ReportViews.tsx before UX-6b. `legacy` below is a verbatim transcription of
-// those inline expressions (frozen), fed with the same fixtures; every report type is compared through the
-// unchanged csv.ts encoder (BOM handled by downloadCsv, CRLF, all cells quoted, formula-injection guard).
+// UX-6b pinned the Reports Center's CSV byte for byte to the builders that lived inline in ReportViews.tsx. Reports R-4 CHANGES
+// those bytes on purpose — owner decision D-4 (docs/reports-center-audit.md §6; docs/enterprise-reports-export-r4.md): one export
+// for CSV / Excel / PDF, figures as numbers, the report's identity at the top, the matrix exported.
+// So this file is now the BEFORE / AFTER record of that change:
+//   BEFORE — `legacy` below is the verbatim transcription of the pre-UX-6b inline builders (frozen since UX-6b; the module that
+//            mirrored them, reportCsv.ts, is removed in R-4), and its output is pinned as explicit text;
+//   AFTER  — the same fixtures through reportExport.ts, pinned as explicit text.
+// The ENCODER (csv.ts: BOM, CRLF, every cell quoted, the formula-injection guard) is unchanged and still pinned here.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { toCsv, csvCell, downloadCsv } from "./csv";
-import * as rows from "./reportCsv";
+import { classExport, assignmentsExport, readyExport, timelineExport, exportRows } from "./reportExport";
 
 const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : Math.round(Number(n)) + "%");
-const TRACKS = [{ trackId: "book", title: "الكتاب" }, { trackId: "packetTracer", title: "Packet Tracer" }];
+const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "" }, { trackId: "packetTracer", title: "Packet Tracer", icon: "" }];
+const AT = "2026-11-11 10:00";
+const lines = (rows: (string | number)[][]) => toCsv(rows).split("\r\n");
+const after = (r: Parameters<typeof exportRows>[0]) => lines(exportRows(r, AT).rows);
 
-/* ---------- frozen legacy builders (pre-UX-6b ReportViews.tsx) ---------- */
+/* ---------- BEFORE: frozen legacy builders (pre-UX-6b ReportViews.tsx), verbatim ---------- */
+type LegacyProject = { title: string; tracks: { trackId: string; title: string }[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number };
+type LegacyAssignment = { title: string; students: number; submitted: number; missing: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
 const legacy = {
-  classReport(data: { class: { name: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: rows.ClassReportData["projects"] }) {
+  classReport(data: { class: { name: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: LegacyProject[] }) {
     const kpis = [
       { label: "الحالة", value: data.class.status === "archived" ? "مؤرشف" : "نشط" },
       { label: "عدد الطلاب", value: data.class.studentCount },
@@ -28,122 +37,104 @@ const legacy = {
     }
     return { filename: "class-" + data.class.name, csv };
   },
-  studentReport(data: { student: { displayName: string; className: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; projects: rows.StudentReportData["projects"] }) {
-    const kpis = [
-      { label: "الصف", value: data.student.className || "—" },
-      { label: "متوسط التقييمات", value: pct(data.academic.average) },
-      { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
-      { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
-    ];
-    const csv: (string | number)[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
-    for (const p of data.projects) {
-      csv.push([p.title, "التقدم العام", String(p.summary.overallProgress)]);
-      for (const t of p.tracks) csv.push([p.title, t.title, String(p.summary.trackProgress[t.trackId] || 0)]);
-    }
-    return { filename: "student-" + data.student.displayName, csv };
+  assignments(className: string, perAssignment: LegacyAssignment[]) {
+    return { filename: "assessments-" + className, csv: [["التقييم", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])] as (string | number)[][] };
   },
-  assignments(className: string, perAssignment: rows.AssignmentRow[]) {
-    return { filename: "assessments-" + className, csv: [["التقييم", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])] };
-  },
-  project(projectCode: string, className: string, summary: { studentCount: number; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number }, tracks: typeof TRACKS) {
-    const kpis = [
-      { label: "عدد الطلاب", value: summary.studentCount },
-      { label: "التقدم العام", value: pct(summary.avgOverall) },
-      ...tracks.map(t => ({ label: t.title, value: pct(summary.trackAverages[t.trackId] || 0) })),
-      { label: "✅ مكتملون", value: summary.completedCount },
-      { label: "🔵 ينتظرون الفحص", value: summary.studentsReadyForReview },
-      { label: "⚠ متأخرون", value: summary.staleCount }
-    ];
-    return { filename: "project-" + projectCode + "-" + className, csv: [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])] };
-  },
-  track(track: string, className: string, r: rows.TrackRow[]) {
-    return { filename: "track-" + track + "-" + className, csv: [["المرحلة", "العنوان", "معتمد", "جاهز", "قيد التنفيذ", "لم يبدأ", "نسبة الاعتماد"], ...r.map(x => [x.stageId, x.title, x.approved, x.ready_for_review, x.in_progress, x.not_started, x.approvedPct])] };
-  },
-  ready(projectCode: string, className: string, students: rows.ReadyStudent[]) {
-    return { filename: "ready-" + projectCode + "-" + className, csv: [["الطالب", "المرحلة", "العنوان"], ...students.flatMap(s => s.stages.map(st => [s.displayName, st.stageId, st.title]))] };
-  },
-  delayed(projectCode: string, className: string, tracks: typeof TRACKS, students: rows.DelayedRow[]) {
-    return { filename: "delayed-" + projectCode + "-" + className, csv: [["الطالب", "التقدم العام", ...tracks.map(t => t.title), "آخر تحديث", "السبب"], ...students.map(r => [r.displayName, r.overall, ...tracks.map(t => r.trackProgress[t.trackId] || 0), r.updatedAt, r.reasons.join("؛ ")])] };
-  },
-  timeline(projectCode: string, className: string, trend: { weekStart: string; avgOverall: number }[]) {
-    return { filename: "timeline-" + projectCode + "-" + className, csv: [["الأسبوع", "متوسط التقدّم"], ...trend.map(t => [t.weekStart, t.avgOverall])] };
+  ready(projectCode: string, className: string, students: { displayName: string; stages: { stageId: string; title: string }[] }[]) {
+    return { filename: "ready-" + projectCode + "-" + className, csv: [["الطالب", "المرحلة", "العنوان"], ...students.flatMap(s => s.stages.map(st => [s.displayName, st.stageId, st.title]))] as (string | number)[][] };
   }
 };
 
-/* ---------- fixtures (include tricky values: null average, zero, empty track, formula-looking title) ---------- */
-type ClassFixture = { class: { name: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: rows.ClassReportData["projects"] };
-const CLASS: ClassFixture = { class: { name: "الحادي عشر", status: "active", studentCount: 24 }, kpis: { assignments: 3, averageScore: 71.26, submissionRate: 83 }, projects: [{ title: "مشروع 794589", tracks: TRACKS, avgOverall: 55, trackAverages: { book: 70 }, completedCount: 2 }] };
-const CLASS_ARCHIVED: ClassFixture = { ...CLASS, class: { ...CLASS.class, status: "archived" }, kpis: { assignments: 0, averageScore: null, submissionRate: 0 }, projects: [] };
-const STUDENT: { student: { displayName: string; className: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; projects: rows.StudentReportData["projects"] } = { student: { displayName: "زيد صالح", className: "" }, academic: { average: null, submittedCount: 2, assessmentCount: 5, submissionRate: 40 }, projects: [{ title: "مشروع 794589", tracks: TRACKS, summary: { overallProgress: 45, trackProgress: { packetTracer: 30 } } }] };
-const PER_ASSIGNMENT: rows.AssignmentRow[] = [
-  { title: "=SUM(A1)", students: 24, submitted: 20, missing: 4, zeroScores: 1, submissionRate: 83, average: 71.3, avgAttempts: 1.2 },
-  { title: "اختبار \"الكسور\"", students: 24, submitted: 0, missing: 24, zeroScores: 0, submissionRate: 0, average: null, avgAttempts: 0 }
+/* ---------- fixtures (tricky values: null average, a formula-looking title, a quote, a leading minus) ---------- */
+const CLASS = { class: { name: "الحادي عشر", schoolYear: "2025-2026", status: "active", studentCount: 24 }, kpis: { assignments: 3, averageScore: 71.26, submissionRate: 83 }, projects: [{ title: "مشروع 794589", tracks: TRACKS, avgOverall: 55, trackAverages: { book: 70 }, completedCount: 2 }] };
+const CLASS_ARCHIVED = { ...CLASS, class: { ...CLASS.class, status: "archived" }, kpis: { assignments: 0, averageScore: null, submissionRate: 0 }, projects: [] };
+const PER_ASSIGNMENT = [
+  { assignmentId: "a1", title: "=SUM(A1)", students: 24, submitted: 20, missing: 4, zeroScores: 1, submissionRate: 83, average: 71.3, avgAttempts: 1.2 },
+  { assignmentId: "a2", title: "اختبار \"الكسور\"", students: 24, submitted: 0, missing: 24, zeroScores: 0, submissionRate: 0, average: null, avgAttempts: 0 }
 ];
-const SUMMARY: { studentCount: number; avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number } = { studentCount: 24, avgOverall: 55.5, trackAverages: { book: 70, packetTracer: 41 }, completedCount: 2, studentsReadyForReview: 3, staleCount: 1 };
-const TRACK_ROWS: rows.TrackRow[] = [{ stageId: "B01", title: "مقدمة", approved: 10, ready_for_review: 2, in_progress: 5, not_started: 7, approvedPct: 42 }];
-const READY: rows.ReadyStudent[] = [{ displayName: "زيد", stages: [{ stageId: "B01", title: "مقدمة" }, { stageId: "P01", title: "طوبولوجيا" }] }, { displayName: "-خالد", stages: [{ stageId: "B02", title: "OSI" }] }];
-const DELAYED: rows.DelayedRow[] = [{ displayName: "سعد", overall: 12, trackProgress: { book: 20 }, updatedAt: "2026-02-01T10:00:00.000Z", reasons: ["بلا تحديث 7+ أيام", "تقدّم أقل من 40%"] }];
+const READY = [{ displayName: "زيد", stages: [{ stageId: "B01", title: "مقدمة", track: "book" }, { stageId: "P01", title: "طوبولوجيا", track: "packetTracer" }] }, { displayName: "-خالد", stages: [{ stageId: "B02", title: "OSI", track: "book" }] }];
 const TREND = [{ weekStart: "2026-02-22", avgOverall: 40 }, { weekStart: "2026-03-01", avgOverall: 72 }];
-
-const kpisClass = (d: typeof CLASS) => [
-  { label: "الحالة", value: d.class.status === "archived" ? "مؤرشف" : "نشط" }, { label: "عدد الطلاب", value: d.class.studentCount }, { label: "عدد الواجبات", value: d.kpis.assignments },
-  { label: "متوسط العلامات", value: pct(d.kpis.averageScore) }, { label: "نسبة التسليم", value: pct(d.kpis.submissionRate) }
-];
-const kpisStudent = (d: typeof STUDENT) => [
-  { label: "الصف", value: d.student.className || "—" }, { label: "متوسط التقييمات", value: pct(d.academic.average) },
-  { label: "المسلَّمة", value: d.academic.submittedCount + " / " + d.academic.assessmentCount }, { label: "نسبة التسليم", value: pct(d.academic.submissionRate) }
-];
-const kpisProject = () => [
-  { label: "عدد الطلاب", value: SUMMARY.studentCount }, { label: "التقدم العام", value: pct(SUMMARY.avgOverall) },
-  ...TRACKS.map(t => ({ label: t.title, value: pct(SUMMARY.trackAverages[t.trackId] || 0) })),
-  { label: "✅ مكتملون", value: SUMMARY.completedCount }, { label: "🔵 ينتظرون الفحص", value: SUMMARY.studentsReadyForReview }, { label: "⚠ متأخرون", value: SUMMARY.staleCount }
-];
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("UX-6b CSV parity — every report's rows and filename are byte-identical to the legacy inline builders", () => {
-  const cases: [string, { filename: string; csv: (string | number)[][] }, { filename: string; csv: (string | number)[][] }][] = [
-    ["class", legacy.classReport(CLASS), { filename: rows.classReportFilename(CLASS), csv: rows.classReportRows(kpisClass(CLASS), CLASS) }],
-    ["class (archived, null average, no projects)", legacy.classReport(CLASS_ARCHIVED), { filename: rows.classReportFilename(CLASS_ARCHIVED), csv: rows.classReportRows(kpisClass(CLASS_ARCHIVED), CLASS_ARCHIVED) }],
-    ["student", legacy.studentReport(STUDENT), { filename: rows.studentReportFilename(STUDENT), csv: rows.studentReportRows(kpisStudent(STUDENT), STUDENT) }],
-    ["assignments", legacy.assignments("الحادي عشر", PER_ASSIGNMENT), { filename: rows.assignmentsReportFilename("الحادي عشر"), csv: rows.assignmentsReportRows(PER_ASSIGNMENT) }],
-    ["project", legacy.project("794589", "الحادي عشر", SUMMARY, TRACKS), { filename: rows.projectReportFilename("794589", "الحادي عشر"), csv: rows.projectReportRows(kpisProject()) }],
-    ["track", legacy.track("book", "الحادي عشر", TRACK_ROWS), { filename: rows.trackReportFilename("book", "الحادي عشر"), csv: rows.trackReportRows(TRACK_ROWS) }],
-    ["ready", legacy.ready("794589", "الحادي عشر", READY), { filename: rows.readyReportFilename("794589", "الحادي عشر"), csv: rows.readyReportRows(READY) }],
-    ["delayed", legacy.delayed("794589", "الحادي عشر", TRACKS, DELAYED), { filename: rows.delayedReportFilename("794589", "الحادي عشر"), csv: rows.delayedReportRows(TRACKS, DELAYED) }],
-    ["timeline", legacy.timeline("794589", "الحادي عشر", TREND), { filename: rows.timelineReportFilename("794589", "الحادي عشر"), csv: rows.timelineReportRows(TREND) }]
-  ];
-  for (const [name, expected, actual] of cases) {
-    it(name, () => {
-      expect(actual.filename).toBe(expected.filename);
-      expect(actual.csv).toEqual(expected.csv);
-      expect(toCsv(actual.csv)).toBe(toCsv(expected.csv));
-    });
-  }
-  it("encoding is unchanged: all cells quoted, CRLF rows, formula-injection guard, Western digits, missing average as empty cell", () => {
-    const text = toCsv(rows.assignmentsReportRows(PER_ASSIGNMENT));
-    expect(text.split("\r\n")).toHaveLength(3);
-    expect(text.split("\r\n")[1].startsWith('"\'=SUM(A1)","24","20","4","1","83","71.3","1.2"')).toBe(true);
-    expect(text.split("\r\n")[2]).toBe('"اختبار ""الكسور""","24","0","24","0","0","","0"');
+describe("D-4 before / after — class report", () => {
+  it("BEFORE: a flat «القسم / المؤشر / القيمة» table, figures as TEXT («71%»), no identity", () => {
+    const b = legacy.classReport(CLASS);
+    expect(b.filename).toBe("class-الحادي عشر");
+    expect(lines(b.csv)).toEqual(['"القسم","المؤشر","القيمة"', '"أكاديمي","الحالة","نشط"', '"أكاديمي","عدد الطلاب","24"', '"أكاديمي","عدد الواجبات","3"', '"أكاديمي","متوسط العلامات","71%"', '"أكاديمي","نسبة التسليم","83%"',
+      '"مشروع 794589","التقدم العام","55"', '"مشروع 794589","الكتاب","70"', '"مشروع 794589","Packet Tracer","0"', '"مشروع 794589","مكتملون","2"']);
+  });
+  it("AFTER: the report's identity, then sections; the average is the NUMBER the server sent (71.26), not «71%»", () => {
+    expect(after(classExport(CLASS, {}))).toEqual(['"تقرير الصف — الحادي عشر"', '"الصف","الحادي عشر"', '"السنة الدراسية","2025-2026"', '"الفترة","كل الفترة"', '"أُنشئ في","2026-11-11 10:00"', '',
+      '"المؤشرات"', '"المؤشر","القيمة"', '"الحالة","نشط"', '"عدد الطلاب","24"', '"عدد التقييمات","3"', '"متوسط النتائج %","71.26"', '"نسبة التسليم %","83"', '"بانتظار التصحيح","0"', '',
+      '"المشاريع"', '"المشروع","المؤشر","القيمة"', '"مشروع 794589","التقدم العام %","55"', '"مشروع 794589","الكتاب %","70"', '"مشروع 794589","Packet Tracer %","0"', '"مشروع 794589","مكتملون","2"']);
+  });
+  it("a missing average: BEFORE the dash «—», AFTER an EMPTY cell — never 0", () => {
+    expect(lines(legacy.classReport(CLASS_ARCHIVED).csv)).toContain('"أكاديمي","متوسط العلامات","—"');
+    const a = after(classExport(CLASS_ARCHIVED, {}));
+    expect(a).toContain('"متوسط النتائج %",""');
+    expect(a).toContain('"الحالة","مؤرشف"');
+    expect(a).not.toContain('"المشاريع"');                         // no project → no empty section
+  });
+});
+
+describe("D-4 before / after — assessments report", () => {
+  it("BEFORE: one table; no pending column, no matrix", () => {
+    const b = legacy.assignments("الحادي عشر", PER_ASSIGNMENT);
+    expect(b.filename).toBe("assessments-الحادي عشر");
+    expect(lines(b.csv)).toEqual(['"التقييم","الطلاب","مُسلَّم","غير مسلَّم","صفر","نسبة التسليم","المتوسط","متوسط المحاولات"', '"\'=SUM(A1)","24","20","4","1","83","71.3","1.2"', '"اختبار ""الكسور""","24","0","24","0","0","","0"']);
+  });
+  it("AFTER: indicators, the per-assessment table WITH «بانتظار التصحيح», the distribution, and the student × assessment matrix", () => {
+    const a = after(assignmentsExport({
+      class: { name: "الحادي عشر" }, students: [{ studentId: "s1", displayName: "زيد" }, { studentId: "s2", displayName: "خالد" }, { studentId: "s3", displayName: "سعد" }],
+      overall: { assessmentCount: 2, participants: 3, pendingReview: 1, average: 45, submissionRate: 50, distribution: { "0-49": 1, "90-100": 1 } },
+      perAssignment: PER_ASSIGNMENT.map((r, i) => ({ ...r, pendingReview: i === 0 ? 1 : 0 })),
+      matrix: [
+        { assignmentId: "a1", title: "=SUM(A1)", cells: [{ studentId: "s1", state: "submitted", percentage: 90.4 }, { studentId: "s2", state: "pending", percentage: 0 }, { studentId: "s3", state: "submitted", percentage: 0, zero: true }] },
+        { assignmentId: "a2", title: "اختبار \"الكسور\"", cells: [{ studentId: "s1", state: "missing", percentage: null }, { studentId: "s2", state: "held-new", percentage: 55 }] }
+      ]
+    }, { from: "2026-01-01", to: "2026-01-31" }));
+    expect(a.slice(0, 5)).toEqual(['"التقييمات والواجبات — الحادي عشر"', '"الصف","الحادي عشر"', '"الفترة","من 2026-01-01 إلى 2026-01-31"', '"معنى الأرقام","نتيجة آخر محاولة مسلّمة؛ ليست درجات نهائية معتمدة"', '"أُنشئ في","2026-11-11 10:00"']);
+    const at = (title: string) => a.indexOf('"' + title + '"');
+    expect(a.slice(at("ملخص كل تقييم") + 1, at("ملخص كل تقييم") + 4)).toEqual(['"التقييم","الطلاب","مُسلَّم","لم يسلّم","بانتظار التصحيح","سلّم بعلامة صفر","نسبة التسليم %","المتوسط %","متوسط المحاولات"',
+      '"\'=SUM(A1)","24","20","4","1","1","83","71.3","1.2"', '"اختبار ""الكسور""","24","0","24","0","0","0","","0"']);
+    // the matrix: a final result is a number (a REAL zero is 0); awaiting the teacher, an unknown state and not handed in are WORDS
+    expect(a.slice(at("مصفوفة الطالب × التقييم (%)") + 1)).toEqual(['"الطالب","\'=SUM(A1)","اختبار ""الكسور"""', '"زيد","90","لم يسلّم"', '"خالد","بانتظار التصحيح","بانتظار التصحيح"', '"سعد","0","لم يسلّم"']);
+  });
+});
+
+describe("D-4 before / after — ready report and the encoder", () => {
+  it("BEFORE three columns; AFTER the track is a column too; a leading «-» is still quote-prefixed by the encoder", () => {
+    expect(lines(legacy.ready("794589", "الحادي عشر", READY).csv)).toEqual(['"الطالب","المرحلة","العنوان"', '"زيد","B01","مقدمة"', '"زيد","P01","طوبولوجيا"', '"\'-خالد","B02","OSI"']);
+    const a = after(readyExport({ class: { name: "الحادي عشر" }, tracks: TRACKS, students: READY }, "794589"));
+    expect(a.slice(a.indexOf('"مراحل بانتظار الفحص"') + 1)).toEqual(['"الطالب","المرحلة","العنوان","المسار"', '"زيد","B01","مقدمة","الكتاب"', '"زيد","P01","طوبولوجيا","Packet Tracer"', '"\'-خالد","B02","OSI","الكتاب"']);
+  });
+  it("the encoder is unchanged: every cell quoted, CRLF rows, the formula guard, Western digits", () => {
+    const text = toCsv(exportRows(classExport(CLASS, {}), AT).rows);
+    expect(text.includes("\r\n")).toBe(true);
+    // every cell quoted: a row starts and ends with a quote and its cells are joined by «","» (an odd count of quotes never occurs)
+    expect(text.split("\r\n").every(l => l === "" || (l.startsWith('"') && l.endsWith('"') && (l.split('"').length - 1) % 2 === 0))).toBe(true);
     expect(/[٠-٩]/.test(text)).toBe(false);
     expect(csvCell("+1")).toBe("\"'+1\"");
-    expect(toCsv(rows.readyReportRows(READY)).split("\r\n")[3]).toBe('"\'-خالد","B02","OSI"');
+    expect(csvCell(71.26)).toBe('"71.26"');
   });
   it("downloadCsv still prefixes the UTF-8 BOM, uses text/csv and the .csv suffix (no network)", async () => {
     let captured: Blob | null = null;
     const anchorClick = vi.fn();
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(anchorClick);
     const create = vi.fn((b: Blob) => { captured = b; return "blob:x"; });
-    const revoke = vi.fn();
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = create;
-    (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = revoke;
-    downloadCsv("class-الحادي عشر", rows.timelineReportRows(TREND));
+    (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = vi.fn();
+    const rows = exportRows(timelineExport({ class: { name: "الحادي عشر" }, scope: "class", trend: TREND }, "794589", {}), AT).rows;
+    downloadCsv("TadrisPlus-التقدم-الزمني", rows);
     expect(create).toHaveBeenCalledTimes(1);
     expect(anchorClick).toHaveBeenCalledTimes(1);
     const blob = captured as unknown as Blob;
     expect(blob.type).toBe("text/csv;charset=utf-8;");
     const bytes = new Uint8Array(await new Response(blob).arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);                              // UTF-8 BOM bytes
-    expect(new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes).slice(1)).toBe('"الأسبوع","متوسط التقدّم"\r\n"2026-02-22","40"\r\n"2026-03-01","72"');
+    const body = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes).slice(1).split("\r\n");
+    // BEFORE: "الأسبوع","متوسط التقدّم" / "2026-02-22","40" / "2026-03-01","72".  AFTER: the same two figures, plus the change.
+    expect(body.slice(-3)).toEqual(['"الأسبوع","متوسط التقدّم %","التغيّر عن الأسبوع السابق (نقطة)"', '"2026-02-22","40",""', '"2026-03-01","72","32"']);
   });
 });
