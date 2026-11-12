@@ -12,7 +12,7 @@ const { requireCapability } = require("../lib/access/require-capability");   // 
 const { getContainer, listJson, listBlobNames, downloadManyJson, getReadConcurrency, mapConcurrent } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { normalizeAssignmentStatus } = require("../lib/assignment-lifecycle");
-const { isStudentClassMember } = require("../lib/class-membership");
+const { isStudentInClass, studentClassIds } = require("../lib/class-membership");   // Tadris+ P11-A: a student counts in every class of theirs
 const { loadPublishedAssignmentsForClasses } = require("../lib/class-assignment-index");
 const { deriveAssignmentProgress } = require("../lib/assignment-progress");
 const { logReadCost } = require("../lib/read-cost-log");
@@ -45,7 +45,7 @@ async function handler(request, deps = {}, obs = null) {
     const idx = await loadPublishedAssignmentsForClasses(container, [...activeIds], { ...deps, listJson: lj }, obs);
     const published = [...idx.byClass.values()].flat().filter(a => a && a.assignmentId && normalizeAssignmentStatus(a) === "published" && activeIds.has(String(a.classId || "")));
     const members = new Map();
-    for (const u of users) { if (!u || u.role !== "student") continue; const cid = String(u.classId || ""); if (activeIds.has(cid) && isStudentClassMember(u, cid)) { if (!members.has(cid)) members.set(cid, []); members.get(cid).push(u); } }
+    for (const u of users) { if (!u || u.role !== "student") continue; for (const cid of studentClassIds(u)) { if (activeIds.has(cid) && isStudentInClass(u, cid)) { if (!members.has(cid)) members.set(cid, []); members.get(cid).push(u); } } }
     const tally = { submissionDocsLoaded: 0 };
     const folders = await (deps.mapConcurrent || mapConcurrent)(published, getReadConcurrency(), a => loadFolder(container, String(a.assignmentId), deps, tally));
     const progress = published.map((a, i) => ({ assignmentId: String(a.assignmentId), classId: String(a.classId), ...deriveAssignmentProgress(members.get(String(a.classId)) || [], folders[i]) }));

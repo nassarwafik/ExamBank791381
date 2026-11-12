@@ -26,6 +26,7 @@ const {gameResultsDocName,eligibleGamePercentages}=require("../lib/game-results-
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
 const {logReadCost}=require("../lib/read-cost-log");
 const {loadPublishedAssignmentsForClasses}=require("../lib/class-assignment-index");
+const {sharedClassIds}=require("../lib/class-membership");   // Tadris+ P11-A
 const SP="platform/submissions/",LP="platform/learning-practice/";
 // Roadmap #12 — a single server-derived presentation state for a dashboard assignment card. It COMBINES
 // availability + attempt lifecycle + grading status into one value the UI renders directly, but never
@@ -50,12 +51,21 @@ async function handler(request,deps={},obs=null){
   // authVersion) and returns the loaded document + container so there is no duplicate user read.
   const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
-  if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
+  // Tadris+ P11-A — the student's assignments are those of EVERY class of theirs that is open: the home class (as before) and the
+  // classes the owner added the student to (a shared class counts only while its document exists and is not archived). An archived
+  // class is closed on its own; the dashboard is refused, as before, only when no class of the student is open.
+  const homeId=String(student.classId||""),homeArchived=!!classroom&&normalizeClassStatus(classroom)==="archived";
+  const sharedOpen=[];
+  for(const id of sharedClassIds(student)){const doc=await dl(c,"platform/classes/"+id+".json");if(doc&&normalizeClassStatus(doc)!=="archived")sharedOpen.push({classId:id,doc})}
+  if(homeArchived&&!sharedOpen.length)return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
+  const openClassIds=[...(homeId&&!homeArchived?[homeId]:[]),...sharedOpen.map(x=>x.classId)];
+  const classNameOf=new Map([[homeId,String(classroom&&classroom.name||"")],...sharedOpen.map(x=>[x.classId,String(x.doc.name||"")])]);
+  const classes=[...(classroom&&!homeArchived?[{classId:homeId,name:String(classroom.name||""),grade:String(classroom.grade||""),schoolYear:String(classroom.schoolYear||""),shared:false}]:[]),...sharedOpen.map(x=>({classId:x.classId,name:String(x.doc.name||""),grade:String(x.doc.grade||""),schoolYear:String(x.doc.schoolYear||""),shared:true}))];
   // Phase 12E-B — the class's PUBLISHED assignments through the per-class index (no global assignment listing in steady
   // state; a not-yet-bootstrapped class is served by ONE legacy scan that also bootstraps the index). Every document is
   // re-validated (published, this class) by the loader and again by `selected` below.
-  const idx=student.classId?await loadPublishedAssignmentsForClasses(c,[String(student.classId)],{...deps,downloadJsonOrNull:dl,listJson:ls,mapConcurrent,getReadConcurrency:readConcurrency},obs):null;
-  const raw=idx?idx.byClass.get(String(student.classId))||[]:[],assignments=[],idxStats=idx?idx.stats:{authoritative:0,authorityChanges:0,indexReads:0,globalScans:0,bootstrapped:0,assignmentDocsLoaded:0};
+  const idx=openClassIds.length?await loadPublishedAssignmentsForClasses(c,openClassIds,{...deps,downloadJsonOrNull:dl,listJson:ls,mapConcurrent,getReadConcurrency:readConcurrency},obs):null;
+  const raw=idx?openClassIds.flatMap(id=>idx.byClass.get(id)||[]):[],assignments=[],idxStats=idx?idx.stats:{authoritative:0,authorityChanges:0,indexReads:0,globalScans:0,bootstrapped:0,assignmentDocsLoaded:0};
   // Legacy stats (kept for backward compatibility) + Roadmap #12 additive authoritative stats.
   let completed=0,sum=0,sumCount=0;                                          // legacy: any completed latest result (sumCount: released ones)
   // Phase 21G.5 (D2) — an assignment whose results are not released yet contributes NO mark anywhere here: not to its own
@@ -70,7 +80,7 @@ async function handler(request,deps={},obs=null){
   // submissions are read with BOUNDED concurrency through the R27 primitive (order-preserving, index-aligned,
   // the first non-404 failure rejects — nothing partial). Still exactly ONE submission read per selected
   // assignment and zero for drafts/archived/other classes; the derivation below runs in the same order as before.
-  const selected=raw.filter(x=>x.status==="published"&&String(x.classId||"")===String(student.classId||""));
+  const selected=raw.filter(x=>x.status==="published"&&openClassIds.includes(String(x.classId||"")));
   const submissions=await mc(selected,readConcurrency(),a=>dl(c,SP+a.assignmentId+"/"+student.userId+".json"));
   for(let i=0;i<selected.length;i++){const a=selected[i];
    // ONE submission read per assignment (unchanged) — every new field is derived from this same object.
@@ -94,7 +104,7 @@ async function handler(request,deps={},obs=null){
    // would contradict a legacy result whose gradingStatus normalizes to "final".
    const latestResult=latest?{attemptNumber:Number(latest.attemptNumber||0),score:Number(latest.score||0),totalMarks:Number(latest.totalMarks||0),percentage:Number(latest.percentage||0),submittedAt:String(latest.submittedAt||""),manualReviewMarks:Number(latest.manualReviewMarks||0),gradingStatus,teacherFeedback:String(latest.teacherFeedback||""),...(latest.finalized===undefined?{}:{finalized:latest.finalized}),...(legacyAutoGradingWithhold(latest)?{autoGradingPending:true}:{}),...(studentCodingGradingStatus(latest)?{autoGradingStatus:studentCodingGradingStatus(latest)}:{})}:null;
    const shownResult=latestResult?(released?{...latestResult,resultsVisible:true}:{...withholdResult(latestResult),...releaseInfo(a,releaseNow)}):null;
-   assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,...(st.inLateWindow?{inLateWindow:true,lateUntil:st.lateUntil,lateDeductionPercent:latePolicyOf(a).deductionPercent}:{}),dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest&&released?Number(latest.score||0):null,latestPercentage:latest&&released?Number(latest.percentage||0):null,latestResult:shownResult,createdAt:String(a.createdAt||"")})
+   assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,...(st.inLateWindow?{inLateWindow:true,lateUntil:st.lateUntil,lateDeductionPercent:latePolicyOf(a).deductionPercent}:{}),dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest&&released?Number(latest.score||0):null,latestPercentage:latest&&released?Number(latest.percentage||0):null,latestResult:shownResult,createdAt:String(a.createdAt||""),classId:String(a.classId||""),className:classNameOf.get(String(a.classId||""))||""})
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
   // Strength: ONE practice-summary read + the class's projects (one config + one progress read per project, bounded
@@ -106,7 +116,7 @@ async function handler(request,deps={},obs=null){
   // Study Practice: ONE completion-state read; points re-derived against the generated key index (never stored).
   const studyDoc=await dl(c,studyDocName(student.userId));
   const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
-  const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
+  const projects=classroom&&!homeArchived?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
   // Phase 4E — educational-game Strength: ONE read of the per-student ASSIGNED-game results store; gamePoints is the sum
   // of each recorded game's best-percentage contribution (≤20 each). A missing/corrupt doc fails safe to [] → 0, so a
   // student with no assigned-game result keeps their exact previous Strength.
@@ -139,7 +149,7 @@ async function handler(request,deps={},obs=null){
   const todayStudy={lastActivity:newer(studied,reading)};
   // Phase 12E-A — count-only read-cost telemetry (numbers the loop above already knows; never an id/title/mark).
   logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:idxStats.assignmentDocsLoaded,publishedClassAssignments:selected.length,submissionReads:submissions.length,assignmentIndexReads:idxStats.indexReads,assignmentIndexesBootstrapped:idxStats.bootstrapped,globalAssignmentScans:idxStats.globalScans,assignmentIndexAuthoritative:idxStats.authoritative,assignmentIndexAuthorityChanges:idxStats.authorityChanges});
-  return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:sumCount?Number((sum/sumCount).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
+  return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,classes,assignments,stats:{assigned:assignments.length,completed,average:sumCount?Number((sum/sumCount).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:withObservability("student-dashboard",handler)});

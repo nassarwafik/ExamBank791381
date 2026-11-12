@@ -107,7 +107,9 @@ describe("P5-B4 the owner imports a list into a teacher's class", () => {
     await owner(ctx, "add-student", { classId: "cB", firstName: "قائم", familyName: "سابق", identityNumber: "300000003" });
     const before = users(ctx);
     const p = await owner(ctx, "preview-import", { classId: "cA", students: [...ROWS, { firstName: "", familyName: "x", identityNumber: "1" }] });
-    expect([p.status, p.jsonBody.valid, p.jsonBody.duplicates, p.jsonBody.invalid]).toEqual([200, 2, 1, 1]);
+    // Tadris+ P11-A (owner decision): an account that exists in ANOTHER class is no longer a dead-end «duplicate» for the owner — it is
+    // reported as «existing» (it may join this class too, docs/enterprise-shared-enrollment-p11a.md). Before P11-A: duplicates 1.
+    expect([p.status, p.jsonBody.valid, p.jsonBody.existing, p.jsonBody.duplicates, p.jsonBody.invalid]).toEqual([200, 2, 1, 0, 1]);
     expect(users(ctx)).toEqual(before);
     const r = await owner(ctx, "import-students", { classId: "cA", students: ROWS.slice(0, 2), importId: "owner-import-000000000001" });
     expect([r.status, r.jsonBody.imported, r.jsonBody.failed]).toEqual([200, 2, 0]);

@@ -17,6 +17,7 @@ const { listLearningCourses } = require("../lib/learning-materials-registry");
 const { trainingReleases } = require("../lib/learning-training-registry");
 const { classCanSeeLearningModule } = require("../lib/class-learning-materials");
 const { loadPublishedAssignmentsForClasses } = require("../lib/class-assignment-index");   // Tadris+ O5
+const { studentClassIds } = require("../lib/class-membership");   // Tadris+ P11-A fix
 const { authorize } = require("../lib/access/authorize");                                  // Tadris+ O5
 
 // Learning Practice API — the SAFE delivery of the book's 36 Learning-Practice items (the T-series trainings T01–T30
@@ -109,11 +110,13 @@ async function reviewWithheldReason(actor, trainingId, deps, obs) {
       return decision && decision.allowed ? null : "keys";
     } catch { return "keys"; }
   }
-  const classId = String(actor.student?.classId || "").trim();
-  if (!classId) return null;
+  // Tadris+ P11-A fix — EVERY class of the student: the home class and the classes the owner added the student to (they solve
+  // those classes' assignments too, P11-A). Reading the home class only revealed the keys of a shared class's open homework.
+  const classIds = studentClassIds(actor.student);
+  if (!classIds.length) return null;
   try {
-    const { byClass } = await (deps.loadPublishedAssignmentsForClasses || loadPublishedAssignmentsForClasses)(actor.container, [classId], deps, obs);
-    const open = byClass.get(classId) || [];
+    const { byClass } = await (deps.loadPublishedAssignmentsForClasses || loadPublishedAssignmentsForClasses)(actor.container, classIds, deps, obs);
+    const open = classIds.flatMap(classId => byClass.get(classId) || []);
     return open.some(a => a && a.source && a.source.kind === "library" && String(a.source.itemId || "") === trainingId) ? "assignment" : null;
   } catch { return "assignment"; }
 }

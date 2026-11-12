@@ -20,6 +20,7 @@ const { notificationContext, unifiedSummary, unifiedView, resolveOwnEvent } = re
 // cannot be decided counts as «no messaging» (fail closed: the bell still works).
 const { studentServices } = require("../lib/access/student-services");
 const { markEventPositionRead } = require("../lib/notification-events");
+const { sharedClassesOf } = require("../lib/shared-conversations");   // Tadris+ P11-B — the classes the student shares
 
 const CLASS_PREFIX = "platform/classes/";
 
@@ -40,7 +41,20 @@ async function handler(request, deps = {}, obs = null) {
     const classroom = await currentClassroom(container, student, dl);
     let messages = false, games = [];   // undecidable → neither (fail closed; the bell still works)
     try { ({ messages, games } = await studentServices(container, student, deps, process.env, { classroom })); } catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
-    const ctx = await notificationContext(container, student, classroom, deps, { messages });
+    // Tadris+ P11-B — each shared class brings its events and, when ITS teacher offers messaging, its conversation. The portal's
+    // messaging entry (`services.messages`) is offered when ANY of the student's teachers offers it. Undecidable → not offered.
+    const sharedClasses = [];
+    for (const shared of await sharedClassesOf(container, student, { ...deps, downloadJsonOrNull: dl })) {
+      const subject = { ...student };
+      delete subject.ownerId;
+      if (typeof shared.classroom.ownerId === "string" && shared.classroom.ownerId) subject.ownerId = shared.classroom.ownerId;
+      let offered = false;
+      try { offered = (await studentServices(container, subject, deps, process.env, { classroom: shared.classroom })).messages === true; }
+      catch (e) { obs?.logWarn?.("student.notifications.services_unavailable", { reason: String(e && e.code || "error") }); }
+      sharedClasses.push({ ...shared, messages: offered });
+    }
+    const ctx = await notificationContext(container, student, classroom, deps, { messages, sharedClasses });
+    messages = ctx.messagesOn;
 
     if (request.method === "GET") {
       const view = new URL(request.url).searchParams.get("view");

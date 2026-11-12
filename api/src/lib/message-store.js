@@ -37,6 +37,13 @@ const { listBlobNames, downloadJsonOrNull, uploadJsonConditional, isConcurrencyC
 const MESSAGE_PREFIX = "platform/messages/";
 const DIRECT_PREFIX = MESSAGE_PREFIX + "direct/";
 const ANNOUNCEMENT_PREFIX = MESSAGE_PREFIX + "announcements/";
+// Tadris+ P11-B — the conversation of a student with the teacher of a class the student SHARES (student.sharedClasses,
+// docs/enterprise-shared-messaging-p11b.md): one more direct stream, keyed by the CLASS first (the class is the root of its data: a
+// class that moves to another teacher takes these conversations with it) and then the student:
+//   platform/messages/shared/<classId>/<studentId>/<messageId>.json
+// Its messages are direct messages that name that class (`sharedClassId`). The student's HOME conversation stays
+// platform/messages/direct/<studentId>/ exactly as before, and a message of one conversation is never valid in another.
+const SHARED_PREFIX = MESSAGE_PREFIX + "shared/";
 const MAX_BODY_LENGTH = 2000;
 const DIRECT_HISTORY_LIMIT = 100;
 const ANNOUNCEMENT_HISTORY_LIMIT = 50;
@@ -67,6 +74,11 @@ function directPrefix(studentId) {
 function announcementPrefix(classId) {
   if (!isSafeId(classId)) throw new Error("Unsafe class id.");
   return ANNOUNCEMENT_PREFIX + classId + "/";
+}
+function sharedDirectPrefix(classId, studentId) {
+  if (!isSafeId(classId)) throw new Error("Unsafe class id.");
+  if (!isSafeId(studentId)) throw new Error("Unsafe student id.");
+  return SHARED_PREFIX + classId + "/" + studentId + "/";
 }
 
 /** The id (and blob name) of stream position `position`: "<SEQUENCE_KEY_BASE + position>-<digest(stream, position)>". */
@@ -229,6 +241,8 @@ function normalizeStoredMessage(doc, expected) {
   if (!doc || typeof doc !== "object") return null;
   if (doc.kind !== expected.kind || doc.messageId !== expected.messageId) return null;
   if (expected.kind === "direct" && doc.studentId !== expected.studentId) return null;
+  // P11-B — the conversation a direct message belongs to: the home conversation (no class named) or ONE shared class's.
+  if (expected.kind === "direct" && String(doc.sharedClassId || "") !== String(expected.sharedClassId || "")) return null;
   if (expected.kind === "announcement" && (doc.classId !== expected.classId || doc.senderRole !== "teacher")) return null;
   if (!SENDER_ROLES.has(doc.senderRole)) return null;
   if (doc.deleted === true) return doc;                                   // M.5 — a tombstone (its body is gone)
@@ -415,7 +429,7 @@ function studentDisplayName(student) {
 }
 
 module.exports = {
-  MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
+  MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, SHARED_PREFIX, sharedDirectPrefix, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
   MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS, MessageContentionError, downloadManyJsonTolerant,
   isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
   createMessage, findPublishedByStamp, STAMP_LOOKBACK, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,

@@ -84,7 +84,7 @@ an in-memory blob container, so most work needs neither.
 | Purpose | Command |
 |---|---|
 | Full test suite (frontend + API, Vitest) | `npm test` |
-| Typecheck | `npx tsc -b` |
+| Typecheck (`tsc -b` with a 4 GB Node heap) | `npm run typecheck` |
 | Production build: typecheck, Vite build, bundle guard | `npm run build` |
 | Bundle guard only (after a build) | `npm run check:bundle` |
 | Lint (oxlint; fails only on error-level findings) | `npm run lint` |
@@ -227,7 +227,7 @@ The binding operating contract for every contributor and coding agent is the roo
 ships as one phase on its own branch and one pull request:
 
 1. Verify `origin/main` is at the expected SHA and the tree is clean before branching.
-2. Implement, then run `npm test`, `npx tsc -b`, `npm run build` and `npm run lint` locally.
+2. Implement, then run `npm test`, `npm run typecheck`, `npm run build` and `npm run lint` locally.
 3. Open the pull request with the first line `⛔ DO NOT MERGE — INDEPENDENT REVIEW REQUIRED`.
 4. Wait for the Quality Gate on the exact head commit, then an independent review.
 5. Merge only on explicit approval, as a standard merge commit pinned to the reviewed head SHA. Never auto-merge.
