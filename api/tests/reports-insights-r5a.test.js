@@ -126,7 +126,8 @@ describe("R-5a B — the REAL reports handler: class and student `insights`", ()
   });
   it("class report: the fields that existed before R-5a are unchanged (additive response)", async () => {
     const cls = await report(seed(), "type=class&classId=c1");
-    expect(Object.keys(cls).sort()).toEqual(["class", "insights", "kpis", "ok", "projects", "type", "withheld"]);
+    // R-6 adds `periodBasis` (what the period and the dates are based on — docs/enterprise-reports-period-basis-r6.md)
+    expect(Object.keys(cls).sort()).toEqual(["class", "insights", "kpis", "ok", "periodBasis", "projects", "type", "withheld"]);
     expect(cls.kpis).toEqual({ assignments: 2, averageScore: 46.7, submissionRate: 67, pendingReview: 1 });
   });
   it("student report: result per assessment beside the class average; pending / missing carry no percentage", async () => {

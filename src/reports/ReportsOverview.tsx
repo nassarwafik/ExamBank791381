@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useReport } from "./useReport";
-import { LoadingState, ErrorState, EmptyState, ReportNote } from "./ui";
-import { pct } from "./format";
+import { LoadingState, ErrorState, EmptyState, ReportNote, PeriodBasisNote } from "./ui";
+import { pct, type PeriodBasis } from "./format";
 import { ClassComparisonChart, PerformanceTrendChart } from "./ReportCharts";
 import SegmentedBar from "./SegmentedBar";
 import StatCard from "../ui/StatCard";
@@ -12,7 +12,7 @@ import { studentsNeedFollowUp } from "./followUp";
 
 export const OVERVIEW_NOTE = "الأرقام هنا لصفوفك النشطة فقط، ومبنية على نتيجة آخر محاولة مسلّمة لكل طالب في كل تقييم. التسليمات التي ما زالت بانتظار تصحيح المعلم تُحسب في نسبة التسليم ولا تدخل في أي متوسط؛ وهذه الأرقام ليست درجات نهائية معتمدة.";
 
-export type OverviewResponse = { overview: OverviewData | null; withheld?: string[] };
+export type OverviewResponse = { overview: OverviewData | null; periodBasis?: PeriodBasis; withheld?: string[] };
 
 /**
  * Phase R-5a — the Reports Center hub overview («نظرة عامة»): the teacher's active classes side by side, the totals and a
@@ -71,6 +71,7 @@ export default function ReportsOverview({ token, onOpenClass, onOpenAssessments,
                     points={o.trend.map(m => ({ label: monthLabel(m.month), average: m.average, submissionRate: m.submissionRate }))} />}
                 </div>
                 <ReportNote>{OVERVIEW_NOTE}</ReportNote>
+                <PeriodBasisNote basis={data?.periodBasis} />
               </>
             ) : <EmptyState text="لا توجد تقييمات منشورة لصفوفك النشطة بعد." />}
             {/* Phase R-5c — what asks for the teacher's attention, each item opening the report that shows it: students who need

@@ -5,6 +5,7 @@ import ChartCard from "../ui/ChartCard";
 import { usePrefersReducedMotion } from "../ui/usePrefersReducedMotion";
 import { STAGE_STATUS_ORDER, stageStatusLabel } from "../projects/teacherPresentation";
 import type { StageStatus } from "../projects/types";
+import { PUBLISHED_DATE_LABEL } from "./format";   // R-6
 import { reportPalette, chartMotion, percentLineOptions, barOptions, barSeries, lineSeries, rowsHeight } from "./chartKit";
 import {
   GRADED_LABEL, PENDING_LABEL, MISSING_LABEL, finiteOrNull, gradedValue, stateText, latestChange, signed, rankStandings, gapToClass,
@@ -47,7 +48,7 @@ export function PerformanceTrendChart({ points, title, description, firstColumn,
   const change = changeText(points.map(p => finiteOrNull(p.average)), "آخر متوسط", "الذي قبله");
   return (
     <ChartCard level={level} title={title} description={[description, change].filter(Boolean).join(" ")}
-      table={{ columns: [firstColumn, ...(points.some(p => p.detail) ? ["التاريخ"] : []), "متوسط النتائج %", "نسبة التسليم %"], rows: points.map(p => [p.label, ...(points.some(q => q.detail) ? [p.detail || "—"] : []), p.average === null ? "—" : p.average, p.submissionRate]) }}>
+      table={{ columns: [firstColumn, ...(points.some(p => p.detail) ? [PUBLISHED_DATE_LABEL] : []), "متوسط النتائج %", "نسبة التسليم %"], rows: points.map(p => [p.label, ...(points.some(q => q.detail) ? [p.detail || "—"] : []), p.average === null ? "—" : p.average, p.submissionRate]) }}>
       <div className="eb-chart-canvas"><Line data={data} options={options} aria-hidden="true" /></div>
     </ChartCard>
   );
@@ -123,7 +124,7 @@ export function StudentTrendChart({ points, level = 3 }: { points: StudentAssess
   return (
     <ChartCard level={level} title="تطوّر نتائج الطالب" description={description}
       empty={mine.some(v => v !== null) ? undefined : "لا توجد نتائج مصحَّحة لهذا الطالب ضمن الفترة المختارة بعد."}
-      table={{ columns: ["التقييم", "التاريخ", "نتيجة الطالب", "متوسط الصف", "المحاولات"], rows: points.map(p => [p.title, p.date || "—", stateText(p), dash(p.classAverage), p.attempts]) }}>
+      table={{ columns: ["التقييم", PUBLISHED_DATE_LABEL, "نتيجة الطالب", "متوسط الصف", "المحاولات"], rows: points.map(p => [p.title, p.date || "—", stateText(p), dash(p.classAverage), p.attempts]) }}>
       <div className="eb-chart-canvas"><Line data={data} options={options} aria-hidden="true" /></div>
     </ChartCard>
   );
