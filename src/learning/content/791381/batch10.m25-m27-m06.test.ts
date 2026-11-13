@@ -314,7 +314,7 @@ describe("Batch 10 — the fifteen REAL book CLI exercises (simulation / cli-ter
     }
     expect(sims(m26)).toHaveLength(0);
     expect(allBlocks.filter(b => b.type === "animation" || b.type === "guided" || b.type === "interactive-diagram")).toHaveLength(0);
-    expect(productionActivityRegistry.list().length).toBe(18);   // + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11)
+    expect(productionActivityRegistry.list().length).toBe(19);   // + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1)
   });
   it("PDF 202 VLAN task (regression): the book's range completes it; VLAN 10 on ONLY f0/1 + f0/10 (+ trunk) stays incomplete; a missing middle port (f0/5) is reported unmet; goals cover every port f0/1 … f0/10", () => {
     const vlan = exOf("m25-l01-p02-sim");

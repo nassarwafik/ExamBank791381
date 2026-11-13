@@ -353,4 +353,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./CSharpSceneActivity"),
     capabilities: { fullscreen: true, reset: true, animated: true, interactive: true },
   },
+  {
+    // AUTO-A1 (docs/enterprise-automata-simulator-a1.md) — «تتبّع الآلة خطوة بخطوة»: a DFA / NFA / push-down automaton / Turing
+    // machine run on the learner's word, one step at a time. The machine is data checked by a strict reader (automaton.ts) and run
+    // by table lookup; nothing is executed. Its own lazy chunk; no timers, no network, no persistence.
+    kind: "simulation",
+    key: "automaton-trace",
+    versions: [1],
+    load: () => import("./AutomatonTraceActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);
