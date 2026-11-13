@@ -1,0 +1,49 @@
+/* AUTO-A3 — «صمّم الآلة» (AutomatonDesignActivity). The drawing reuses the learning-automaton-* styles (activities.css). */
+.learning-autodesign{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-autodesign-unavailable{ margin:0; color:var(--eb-muted); }
+.learning-autodesign-task{ padding:var(--eb-space-3); border:1px solid var(--eb-border); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-autodesign-intro{ margin:0 0 var(--eb-space-2); font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-rules{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); margin:0; padding:0; list-style:none; }
+.learning-autodesign-rules li{ padding:2px var(--eb-space-2); border:1px solid var(--eb-border); border-radius:var(--eb-pill); background:var(--eb-surface); font-size:var(--eb-fs-14); }
+.learning-autodesign-examples p{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); margin:var(--eb-space-2) 0 0; }
+.learning-autodesign-tag{ padding:2px var(--eb-space-2); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-tag.is-accept{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-autodesign-tag.is-reject{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-autodesign-word, .learning-autodesign-mono{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-autodesign-word{ padding:0 var(--eb-space-1); border:1px solid var(--eb-border); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.learning-autodesign-section{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.learning-autodesign-heading{ margin:0; font-size:var(--eb-fs-16); }
+.learning-autodesign-help{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-14); }
+.learning-autodesign-states{ display:flex; flex-direction:column; gap:var(--eb-space-1); margin:0; padding:0; list-style:none; }
+.learning-autodesign-staterow{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-border); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.learning-autodesign-statename{ min-width:2.5em; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; cursor:pointer; }
+.learning-autodesign-toggle input{ width:20px; height:20px; margin:0; accent-color:var(--eb-primary); }
+.learning-autodesign-btn{ align-self:flex-start; min-height:44px; min-width:44px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-pill); background:var(--eb-surface); font:inherit; font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); cursor:pointer; }
+.learning-autodesign-btn.is-primary{ background:var(--eb-primary-050); }
+.learning-autodesign-btn.is-quiet{ margin-inline-start:auto; border-color:var(--eb-border-strong); color:var(--eb-text); }
+.learning-autodesign-btn:disabled{ opacity:.5; cursor:default; }
+.learning-autodesign-tablewrap{ max-width:100%; overflow-x:auto; }
+.learning-autodesign-table{ border-collapse:collapse; }
+.learning-autodesign-table th, .learning-autodesign-table td{ padding:var(--eb-space-1); border:1px solid var(--eb-border); text-align:center; }
+.learning-autodesign-table th{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-autodesign-table thead th:first-child{ font-family:inherit; }
+.learning-autodesign-select{ min-height:44px; min-width:4.5em; border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:inherit; font:inherit; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-autodesign-targets{ display:flex; flex-wrap:wrap; gap:2px; justify-content:center; }
+.learning-autodesign-target{ min-height:44px; min-width:44px; padding:0 var(--eb-space-1); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:inherit; font:inherit; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; cursor:pointer; }
+.learning-autodesign-target.is-on{ border:2px solid var(--eb-primary); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-try{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-autodesign-trylabel{ flex-basis:100%; font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-input{ flex:1 1 8rem; min-width:0; min-height:44px; padding:0 var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:inherit; font:inherit; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-autodesign-tried{ margin:0; padding:var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+.learning-autodesign-checkbar{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); padding-top:var(--eb-space-2); border-top:1px solid var(--eb-border); }
+.learning-autodesign-verdict{ padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); }
+.learning-autodesign-verdict p{ margin:0 0 var(--eb-space-1); }
+.learning-autodesign-verdicthead{ display:flex; align-items:center; gap:var(--eb-space-1); font-weight:var(--eb-fw-semibold); }
+.learning-autodesign-verdict.is-right{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-autodesign-verdict.is-wrong, .learning-autodesign-verdict.is-error{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-autodesign-explain{ color:var(--eb-text); }
+.learning-autodesign-hints{ margin:0; padding-inline-start:var(--eb-space-4); }
+.learning-autodesign-btn:focus-visible, .learning-autodesign-target:focus-visible, .learning-autodesign-select:focus-visible, .learning-autodesign-input:focus-visible, .learning-autodesign-tablewrap:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+@media print{ .learning-autodesign-try, .learning-autodesign-checkbar{ display:none; } }
+.learning-autodesign .learning-automaton-canvas{ flex:none; }

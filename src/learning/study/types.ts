@@ -1,4 +1,5 @@
 import type { StudyActivityKey } from "./eligibility";
+import type { AutomatonDesignMachine } from "../content/types";
 
 /** The learner's response to one eligible in-page exercise — the ONLY thing the browser sends; the server judges it. */
 export type StudyResponse =
@@ -11,7 +12,9 @@ export type StudyResponse =
   | { kind: "ordering"; order: string[] }
   | { kind: "classify"; choices: Record<string, string> }
   /** 791381s Phase 8B — a network lab: the learner's action list (the server replays and judges it). */
-  | { kind: "network-lab"; actions: unknown[] };
+  | { kind: "network-lab"; actions: unknown[] }
+  /** AUTO-A3 — «صمّم الآلة»: the learner's machine (the server compares its language with the reference). */
+  | { kind: "automaton-design"; machine: AutomatonDesignMachine };
 
 /** The server's study policy: each module is worth up to `modulePointsMax` (20) = round(completed / eligible × 20). */
 export type StudyPolicy = { modulePointsMax: number; moduleCount: number };
@@ -46,7 +49,13 @@ export type StudyAttemptResponse = {
   reveal?: StudyReveal;
   /** 791381s Phase 2 — a right answer AFTER the right answer was shown (a wrong answer came first): judged, never recorded. */
   revealedBefore?: boolean;
+  /** AUTO-A3 — «صمّم الآلة», a wrong machine that breaks a PUBLIC rule of the task: which rule (and where). */
+  issue?: AutomatonDesignIssue;
+  /** AUTO-A3 — «صمّم الآلة», a wrong machine within the rules: the SHORTEST word on which it and the reference disagree. */
+  counterexample?: { word: string; shouldAccept: boolean };
 };
+/** The public rule a «صمّم الآلة» machine broke (api/src/lib/learning-automaton-design.js readMachine). */
+export type AutomatonDesignIssue = { code: string; state?: string; symbol?: string; max?: number };
 /** The right answer of a reveal block, as the server sends it after an answer. */
 export type StudyReveal =
   | { kind: "multipleChoice"; optionIds: string[] }

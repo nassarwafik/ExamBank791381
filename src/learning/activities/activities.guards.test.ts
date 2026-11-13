@@ -97,7 +97,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact nineteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2, 899371 P6, 899371 P11, AUTO-A1) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
+  it("registers ONLY the exact twenty-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2, 899371 P6, 899371 P11, AUTO-A1, AUTO-A3) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -118,8 +118,9 @@ describe("production registry is an exact allowlist", () => {
       { kind: "simulation", key: "csharp-trace", versions: [1] },       // 899371 P6 — the C# tracer (recorded steps, data only)
       { kind: "animation", key: "csharp-scene", versions: [1] },        // 899371 P11 — the animated scene engine (scenes are data)
       { kind: "simulation", key: "automaton-trace", versions: [1] },    // AUTO-A1 — the automaton tracer (DFA / NFA / PDA / TM, data only)
+      { kind: "simulation", key: "automaton-design", versions: [1] },   // AUTO-A3 — «صمّم الآلة» (the server judges the machine)
     ]);
-    expect(productionActivityRegistry.size).toBe(19);
+    expect(productionActivityRegistry.size).toBe(20);
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });

@@ -46,6 +46,9 @@ const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير 
 const TOO_LARGE = { status: 413, jsonBody: { ok: false, error: "الإجابة أكبر من الحد المسموح." } };
 const LAB_UNAVAILABLE = { status: 503, jsonBody: { ok: false, retryable: true, error: "تعذّر فحص المختبر حاليًا. حاول مرة أخرى بعد قليل." } };
 /** The UTF-8 size of a JSON response (a cycle or an unserialisable value counts as too large). */
+// AUTO-A3 — «صمّم الآلة»: the answer bound, and the retryable error of a judge that could not run (a broken reference).
+const AUTOMATON_DESIGN_ANSWER_BYTES = 16 * 1024;
+const DESIGN_UNAVAILABLE = { status: 503, jsonBody: { ok: false, retryable: true, error: "تعذّر فحص الآلة حاليًا. حاول مرة أخرى بعد قليل." } };
 const responseBytes = v => { try { return Buffer.byteLength(JSON.stringify(v ?? null), "utf8"); } catch { return Infinity; } };
 // Study policy as the API advertises it (the UI reads it from here, never hardcodes it): each module is worth up to
 // 20 points, round(completed / eligible × 20). `moduleCount` is the COURSE's publishable module count (791381: 28 → 560;
@@ -125,6 +128,8 @@ async function handler(request, deps = {}, obs = null) {
       // A network lab's answer is an action list (791381s Phase 8B): bounded like every smartSim answer (256 KB, ≤ 1000 actions,
       // enforced again by the simulator's replay).
       if (check.key.kind === "network-lab" && responseBytes(body.response) > SMART_SIM_LIMITS.answerBytes) return TOO_LARGE;
+      // AUTO-A3 — a «صمّم الآلة» answer is one small machine (≤ 12 states, ≤ 200 arrows): 16 KB is far above any real one.
+      if (check.key.kind === "automaton-design" && responseBytes(body.response) > AUTOMATON_DESIGN_ANSWER_BYTES) return TOO_LARGE;
       // The gate: the page's OWN module must be published to the student's class (the same authority as the Reader
       // and Learning Practice). Teachers preview freely.
       if (actor.kind === "student" && !classCanSeeLearningModule(classroom, courseId, check.moduleId)) return UNAVAILABLE;
@@ -132,14 +137,14 @@ async function handler(request, deps = {}, obs = null) {
       const verdict = checkResponse(check, body.response);
       // The judge could not run (a broken lab topology / key — never the learner's fault): a retryable error, NOTHING recorded,
       // never a "wrong" (AGENTS.md §10 grading safety).
-      if (verdict.unavailable) return LAB_UNAVAILABLE;
+      if (verdict.unavailable) return check.key.kind === "automaton-design" ? DESIGN_UNAVAILABLE : LAB_UNAVAILABLE;
       const correct = verdict.correct;
       // Points come from the STUDY index alone (the check index only says what to answer): a block it does not list is judged and
       // answered, never recorded.
       const found = findStudyActivity(index, pageId, activityId);
       // `parts`: the per-part verdict of a structured answer / the per-check verdict of a network lab (booleans only) — the
       // Reader's per-part marks and «الصحيح: …» on a served page come from it.
-      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.parts ? { parts: verdict.parts } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}) };
+      const said = { study: !!found, feedback: verdict.feedback, ...(verdict.cells ? { cells: verdict.cells } : {}), ...(verdict.parts ? { parts: verdict.parts } : {}), ...(verdict.reveal ? { reveal: verdict.reveal } : {}), ...(verdict.issue ? { issue: verdict.issue } : {}), ...(verdict.counterexample ? { counterexample: verdict.counterexample } : {}) };
       const page = { pageId, moduleId: check.moduleId };
       // REVEAL + student + study activity: a wrong answer gave the right answer away → record it once (CAS; never over a
       // completion); a right answer after such a reveal is answered but never completed.

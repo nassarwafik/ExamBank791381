@@ -78,11 +78,15 @@ describe("899271 — the bodies", () => {
       else expect(note, p.id).toMatch(/^(اللقاء [1-6]|أمثلة من الحياة اليومية|محاكاة أوتومات المكدّس|وظائف آلة تورنغ) · (الشريحة \d+|الشرائح \d+–\d+)$/);
     }
   }, 30000);
-  it("every machine is shown by the simulator, and every illustration resolves to a registered SVG", async () => {
+  it("every machine is shown by the simulator or built in «صمّم الآلة» (AUTO-A3), and every illustration resolves to a registered SVG", async () => {
     const blocks = pagesOf(await loadAll()).flatMap(p => p.blocks);
     const sims = blocks.filter(b => b.type === "simulation");
     expect(sims.length).toBeGreaterThan(20);
-    expect(sims.every(b => b.type === "simulation" && b.simulationType === "automaton-trace" && b.version === 1)).toBe(true);
+    expect(sims.every(b => b.type === "simulation" && (b.simulationType === "automaton-trace" || b.simulationType === "automaton-design") && b.version === 1)).toBe(true);
+    // the six «صمّم الآلة» exercises: units 2, 3 (two), 4 and 5 (two); all enrichment, all judged on the server
+    const designs = sims.filter(b => b.type === "simulation" && b.simulationType === "automaton-design");
+    expect(designs.map(b => b.id)).toEqual(["m02-l04-p02-b06", "m03-l05-p01-b04", "m03-l05-p01-b05", "m04-l04-p02-b06", "m05-l05-p02-b06", "m05-l05-p02-b07"]);
+    expect(designs.every(b => b.origin === "teacher-enrichment")).toBe(true);
     for (const b of blocks) if (b.type === "visual") expect(resolveVisual(b.visualId), b.visualId).not.toBeNull();
   }, 30000);
 });
