@@ -2,7 +2,7 @@
 // { id, origin: "bank", blobName }), and every payload that delivers it mints a fresh signed URL (bank-asset-hydrate.js). Before P6-F
 // the library route signed only the bundled library's protected pictures (P5-C deliveryCopy), so an exam a teacher built with a picture
 // reached the library — and every teacher opening it — without its picture. TEST data only.
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 import { recordedManagedToken } from "./fixtures/managed-session.js";
@@ -22,17 +22,13 @@ for (const k of ["BUILDER_SESSION_SECRET", "OWNER_SESSION_SECRET", "BUILDER_USER
 
 const { handler: ownerLibrary } = await import("../src/functions/owner-library.js");
 const { handler: library } = await import("../src/functions/exam-library.js");
-const { handler: assignments } = await import("../src/functions/manage-assignments.js");
 const { createOwnerToken } = await import("../src/lib/identity/owner-session.js");
 const { BOOTSTRAP_MARKER, ownerAccountName, ownerSessionName } = await import("../src/lib/identity/owner-store.js");
 const { teacherAccountName } = await import("../src/lib/identity/teacher-accounts.js");
 const { newTeacherSessionId } = await import("../src/lib/identity/teacher-token.js");
 const { buildRevision, revisionName } = await import("../src/lib/access/revisions.js");
 const { ACCESS_CONTROL_DOC } = await import("../src/lib/access/access-mode.js");
-const { OWNER_AUDIT_PREFIX } = await import("../src/lib/audit-log.js");
-const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 const IMP = cjs("../src/lib/exam-library-imported.js");
-const LA = cjs("../src/lib/access/library-access.js");
 const { resetRevisionCache } = cjs("../src/lib/access/revisions.js");
 const { resetOperatorGateCache } = cjs("../src/lib/identity/operator-gate.js");
 const TEMPLATE = cjs("../../public/templates/structured-exam-template.json");
@@ -66,15 +62,9 @@ function setup({ mode = "enforce" } = {}) {
 const hdr = h => ({ get: k => h[String(k).toLowerCase()] ?? null });
 const oreq = (method, action, headers, body = {}) => ({ method, url: "https://x/api/owner-library", params: { action }, headers: hdr(headers), json: async () => body });
 const owner = (ctx, action, body, headers = ctx.owner) => ownerLibrary(oreq("POST", action, headers, body), { getContainer: () => ctx.mem.container });
-const ownerGet = (ctx, headers = ctx.owner) => ownerLibrary(oreq("GET", "", headers), { getContainer: () => ctx.mem.container });
-const catalog = (ctx, headers) => library({ method: "GET", url: "https://x", params: {}, headers: hdr(headers) }, ctx.deps);
 const item = (ctx, headers, id) => library({ method: "GET", url: "https://x", params: { id }, headers: hdr(headers) }, ctx.deps);
-const bankOf = async (ctx, headers) => (await catalog(ctx, headers)).jsonBody.catalog.map(i => i.libraryItemId);
-const assign = (ctx, headers, classId, itemId) => assignments({ method: "POST", url: "http://x/assignments", params: {}, headers: hdr(headers), json: async () => ({ action: "create", classId, title: "واجب", publish: true, libraryRef: { itemId } }) }, ctx.deps);
-const audits = ctx => ctx.mem.names(OWNER_AUDIT_PREFIX).map(n => ctx.mem.getJson(n));
 const exam = (change = e => e) => change(JSON.parse(JSON.stringify(TEMPLATE)));
 const importBody = (over = {}) => ({ exam: exam(), title: "امتحان مستورد", category: "final", activityType: "exam", description: "وصف", sourceFileName: "exam.json", ...over });
-const written = ctx => [...ctx.mem.names("platform/catalog/exam-library-i")];
 
 const bankAsset = { id: "img-1", origin: "bank", blobName: "question-images/t_00112233445566aa/img-1.png", contentType: "image/png" };
 const withPicture = () => exam(e => { e.sections[0].questions[0].image = { exists: true, visible: true, assets: [bankAsset] }; return e; });

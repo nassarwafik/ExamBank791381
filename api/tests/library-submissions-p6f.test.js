@@ -71,13 +71,9 @@ const ownerRead = (ctx, action, query = "", headers = ctx.owner) => ownerLibrary
 const send = (ctx, headers, body) => submissionsRoute({ method: "POST", url: "https://x/api/library-submissions", params: {}, headers: hdr(headers), json: async () => body }, { ...ctx.deps, recordAuditEvent: undefined, ...(ctx.extra || {}) });
 const mine = async (ctx, headers) => (await submissionsRoute({ method: "GET", url: "https://x/api/library-submissions", params: {}, headers: hdr(headers) }, { ...ctx.deps, ...(ctx.extra || {}) })).jsonBody.submissions;
 const catalog = (ctx, headers) => library({ method: "GET", url: "https://x", params: {}, headers: hdr(headers) }, ctx.deps);
-const item = (ctx, headers, id) => library({ method: "GET", url: "https://x", params: { id }, headers: hdr(headers) }, ctx.deps);
 const bankOf = async (ctx, headers) => (await catalog(ctx, headers)).jsonBody.catalog.map(i => i.libraryItemId);
 const assign = (ctx, headers, classId, itemId) => assignments({ method: "POST", url: "http://x/assignments", params: {}, headers: hdr(headers), json: async () => ({ action: "create", classId, title: "واجب", publish: true, libraryRef: { itemId } }) }, ctx.deps);
-const audits = ctx => ctx.mem.names(OWNER_AUDIT_PREFIX).map(n => ctx.mem.getJson(n));
 const exam = (change = e => e) => change(JSON.parse(JSON.stringify(TEMPLATE)));
-const importBody = (over = {}) => ({ exam: exam(), title: "امتحان مستورد", category: "final", activityType: "exam", description: "وصف", sourceFileName: "exam.json", ...over });
-const written = ctx => [...ctx.mem.names("platform/catalog/exam-library-i")];
 
 const saved = (ctx, id, ownerId, change = e => e) => {
   const e = exam(change);

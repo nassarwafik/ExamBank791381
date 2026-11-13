@@ -17,7 +17,7 @@ const bad = (code, error) => reply(400, { ok: false, code, error });
 const UNAVAILABLE = () => reply(503, { ok: false, code: "LIBRARY_AUDIENCE_UNAVAILABLE", error: "تعذر قراءة بنوك الامتحانات حاليًا. حاول مرة أخرى." }, { "Retry-After": "5" });
 
 const MAX_EXAM_BYTES = 10 * 1024 * 1024;
-const MAX_TITLE = 200, MAX_DESCRIPTION = 500, MAX_FILE_NAME = 200;
+const MAX_TITLE = 200, MAX_DESCRIPTION = 500;
 const ACTIVITY_TYPES = ["exam", "training"];
 // A renderable image is shown verbatim (<img src>), so a stored one is: an embedded raster data URL (the client importer's rule,
 // docs/STRUCTURED_EXAM_IMPORT.md), or — P6-F, an exam built in the builder — a protected library picture's stored path. A picture

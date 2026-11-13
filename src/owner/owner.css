@@ -433,3 +433,9 @@
 .eb-owner-import-summary dt { font-size: var(--eb-fs-12); color: var(--eb-muted); }
 .eb-owner-import-summary dd { margin: 0; font-size: var(--eb-fs-17); font-weight: var(--eb-fw-semibold); color: var(--eb-text-heading); }
 .eb-owner-library-tag { display: inline-block; margin-inline-start: var(--eb-space-2); padding: 0 8px; border-radius: var(--eb-pill); background: var(--eb-primary-050); color: var(--eb-primary-strong); font-size: var(--eb-fs-12); }
+
+/* Tadris+ P6-F — the exams teachers send */
+.eb-owner-submission-list { list-style: none; padding-inline-start: 0; gap: var(--eb-space-2); }
+.eb-owner-submission-row { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-3); flex-wrap: wrap; padding: var(--eb-space-2) 0; border-bottom: 1px solid var(--eb-line); }
+.eb-owner-submission-row .eb-owner-status { margin-inline-start: var(--eb-space-2); }
+.eb-owner-library-action .eb-owner-small + .eb-owner-small { margin-inline-start: var(--eb-space-2); }

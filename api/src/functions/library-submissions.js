@@ -53,7 +53,7 @@ async function handler(request, deps = {}, obs = null) {
       const found = await LS.sendableExam({ bankContainer, platformContainer: container, teacherId, savedExamBlob, deps });
       const prepared = LP.prepareLibraryExam(found.exam, {
         invalidMessage: "يُرسل إلى بنك المنصة الامتحان المنظّم فقط.",
-        notReadyMessage: "الامتحان غير جاهز للإرسال: أصلح ما يلي في الباني ثم أرسله من جديد."
+        notReadyMessage: "الامتحان غير جاهز للإرسال: افتحه في الباني وأصلح ما يمنع «اعتماد نهائي»، ثم احفظه وأرسله من جديد."
       });
       if (!prepared.ok) return prepared.response;
       const account = await (deps.readTeacherAccount || readTeacherAccount)(container, teacherId, deps);
