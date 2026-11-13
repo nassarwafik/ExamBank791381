@@ -6,7 +6,6 @@
 //   owner's own workspace (or says how to link it) and takes one for review; the table marks the versions.
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
-import TEMPLATE from "../../public/templates/structured-exam-template.json";
 import OwnerApp from "./OwnerApp";
 import { OWNER_TOKEN_KEY } from "./ownerApi";
 import { ownerSectionHash } from "./ownerRoute";
