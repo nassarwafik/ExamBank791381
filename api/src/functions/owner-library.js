@@ -11,6 +11,8 @@ const LP = require("../lib/library-publish");   // Tadris+ P6-E / P6-F — prepa
 const LS = require("../lib/library-submissions");   // Tadris+ P6-F — the exams teachers send
 const { readTeacherAccount } = require("../lib/identity/teacher-accounts");
 const { hydrateBankAssets } = require("../lib/bank-asset-hydrate");
+const storage = require("../lib/platform-storage");
+const { storedOwnerOf } = require("../lib/saved-exam-access");
 const { evaluateServerFinalization, summarizeFinalization } = require("../lib/server-finalization");
 
 // Tadris+ P6-D — each teacher's own exam bank. Route: /api/owner-library/{action?}   (owner session only)
@@ -27,6 +29,16 @@ const { evaluateServerFinalization, summarizeFinalization } = require("../lib/se
 //                          decides it is ready: the same finalization authority as the builder and governance (no blocker), embedded
 //                          raster images only, ≤ 10 MB, not already in the library. The new exam is in NOBODY's bank («لم يُحدَّد بعد»)
 //                          until the owner chooses its audience with set-audience. Never edited afterwards (a new import is a new exam).
+//   Tadris+ P6-F — the exams teachers send: GET submissions | submission?id= | own-exams; POST publish-submission | decline-submission |
+//                          complete-replacement | take-own (docs/enterprise-library-submissions-p6f.md).
+//   Tadris+ P6-G (docs/enterprise-library-consent-owner-edit-p6g.md):
+//   POST copy-submission { submissionId }   copies a pending submission's frozen exam into the owner's linked teacher workspace (P4-D)
+//                          as a draft the owner edits with the builder. Create-only at a place fixed by the submission: copying again
+//                          returns the same copy, never overwrites the owner's edits. The teacher's frozen exam is unchanged.
+//   POST publish-submission { …, fromOwnerCopy: true }   publishes the owner's edited copy FOR this submission (the server reads the
+//                          copy itself, from the owner's workspace; it must be ready). The teacher sees «نُشر بتعديلات من المالك».
+//                          A teacher's submission without the agreement to the platform's use (P6-G consent) is never published or
+//                          copied (409 CONSENT_MISSING): the owner declines it and the teacher sends it again.
 //
 // Every POST needs a recent second-factor check (step-up) and is in the owner audit log. Unknown exams or teachers are refused
 // (nothing written). Published assignments, attempts and grades are never touched. See lib/access/library-access.js.
@@ -74,7 +86,7 @@ async function handler(request, deps = {}, obs = null) {
     }
     // ── Tadris+ P6-F — reading the submissions (no change: no step-up) ─────────────────────────────────────────────────────────────
     if (method === "GET" && action === "submissions") return await listSubmissions(container, deps);
-    if (method === "GET" && action === "submission") return await oneSubmission(container, deps, new URL(request.url, "https://x").searchParams.get("id"));
+    if (method === "GET" && action === "submission") return await oneSubmission(container, deps, new URL(request.url, "https://x").searchParams.get("id"), owner);
     if (method === "GET" && action === "own-exams") return await ownExams(owner, deps);
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
@@ -93,7 +105,8 @@ async function handler(request, deps = {}, obs = null) {
 
     if (action === "import") return await importExam(body, { container, deps, actor, iso, write });
     // Tadris+ P6-F — deciding the submissions
-    if (action === "publish-submission") return await publishSubmission(body, { container, deps, actor, iso, write });
+    if (action === "publish-submission") return await publishSubmission(body, { owner, container, deps, actor, iso, write });
+    if (action === "copy-submission") return await copySubmission(body, { owner, container, deps, actor, iso, write });   // Tadris+ P6-G
     if (action === "decline-submission") return await declineSubmission(body, { container, deps, actor, iso, write });
     if (action === "complete-replacement") return await finishReplacement(body, { container, deps, actor, iso, write });
     if (action === "take-own") return await takeOwnExam(body, { owner, container, deps, actor, iso, write });
@@ -191,7 +204,11 @@ async function importExam(body, { container, deps, actor, iso, write }) {
 // ── Tadris+ P6-F — the exams teachers send (docs/enterprise-library-submissions-p6f.md) ──────────────────────────────────────────
 const ownerRow = r => ({ submissionId: r.submissionId, teacherId: r.teacherId, teacherName: r.teacherName || "", title: r.title, questionCount: r.questionCount,
   totalMarks: r.totalMarks, status: r.status, submittedAt: r.submittedAt, sentBy: r.sentBy || "teacher", governed: !!r.governed,
-  ...(r.decidedAt ? { decidedAt: r.decidedAt } : {}), ...(r.reason ? { reason: r.reason } : {}), ...(r.libraryItemId ? { libraryItemId: r.libraryItemId } : {}) });
+  ...(r.decidedAt ? { decidedAt: r.decidedAt } : {}), ...(r.reason ? { reason: r.reason } : {}), ...(r.libraryItemId ? { libraryItemId: r.libraryItemId } : {}),
+  // Tadris+ P6-G — whether the teacher agreed to the platform's use of it, the owner's editable copy, and a publication of that copy
+  consented: LS.hasConsent(r), ...(r.consent ? { consentVersion: r.consent.version, consentedAt: r.consent.at } : {}),
+  ...(r.ownerCopy ? { ownerCopy: { blobName: r.ownerCopy.blobName, copiedAt: r.ownerCopy.copiedAt } } : {}), ...(r.editedByOwner ? { editedByOwner: true } : {}) });
+const CONSENT_MISSING = () => reply(409, { ok: false, code: "CONSENT_MISSING", error: "أُرسل هذا الامتحان دون إقرار المعلم بحقوق الاستخدام، فلا يُنشر ولا يُنسخ. ارفضه واطلب من المعلم إرساله من جديد." });
 
 async function listSubmissions(container, deps) {
   const index = await LS.readIndex(container, deps);
@@ -210,7 +227,7 @@ async function currentVersionOf(container, lineage, deps, lsIndex = null, impInd
   return live[0] ? { libraryItemId: live[0].libraryItemId, title: live[0].title } : null;
 }
 
-async function oneSubmission(container, deps, id) {
+async function oneSubmission(container, deps, id, owner) {
   const lsIndex = await LS.readIndex(container, deps);
   const found = await LS.readSubmission(container, id, deps, lsIndex);
   if (!found) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
@@ -218,26 +235,56 @@ async function oneSubmission(container, deps, id) {
   try { decision = evaluateServerFinalization(found.doc.examSnapshot); } catch { decision = null; }
   const replaces = await currentVersionOf(container, found.row.lineage, deps, lsIndex);
   return reply(200, { ok: true, submission: ownerRow(found.row), exam: hydrateBankAssets(found.doc.examSnapshot),
-    finalization: decision ? summarizeFinalization(decision) : null, blockers: decision ? decision.blockers.slice(0, 12).map(b => String(b.message || "")) : [], replaces });
+    finalization: decision ? summarizeFinalization(decision) : null, blockers: decision ? decision.blockers.slice(0, 12).map(b => String(b.message || "")) : [], replaces,
+    // Tadris+ P6-G — what the teacher agreed to, and the owner's edited copy as it is now (read from the owner's workspace)
+    ...(found.row.consent && found.row.consent.version === LS.CONSENT.version ? { consentText: LS.CONSENT.text } : {}),
+    ...(found.row.ownerCopy ? { ownerCopy: await ownerCopyState(found.row, owner, deps) } : {}) });
 }
 
-async function publishSubmission(body, { container, deps, actor, iso, write }) {
+/** The owner's edited copy of a submission as it is now: { blobName, linked, exists, title?, savedAt?, exam?, finalization?, blockers? }. */
+async function ownerCopyState(row, owner, deps) {
+  const blobName = row.ownerCopy.blobName, linked = linkedAccountOf(owner);
+  if (!linked) return { blobName, linked: false, exists: false };
+  const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
+  let document;
+  try { document = await (deps.downloadBankJsonOrNull || storage.downloadJsonOrNull)(bankContainer, blobName); } catch { throw new LS.SubmissionsUnavailableError("owner copy unreadable"); }
+  if (!document || !document.exam || storedOwnerOf(document) !== linked) return { blobName, linked: true, exists: false };
+  let decision = null;
+  try { decision = evaluateServerFinalization(document.exam); } catch { decision = null; }
+  return { blobName, linked: true, exists: true, title: String(document.exam.title || ""), savedAt: String(document.savedAt || ""), exam: hydrateBankAssets(document.exam),
+    finalization: decision ? summarizeFinalization(decision) : null, blockers: decision ? decision.blockers.slice(0, 12).map(b => String(b.message || "")) : [] };
+}
+
+async function publishSubmission(body, { owner, container, deps, actor, iso, write }) {
   const lsIndex = await LS.readIndex(container, deps);
   const found = await LS.readSubmission(container, body.submissionId, deps, lsIndex);
   if (!found) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
   const { row, doc } = found;
   if (row.status !== "pending") return reply(409, { ok: false, code: "SUBMISSION_NOT_PENDING", error: "لم يعد هذا الإرسال قيد المراجعة." });
-  // The server decides again, on the FROZEN exam the teacher sent (never a browser body).
-  const prepared = LP.prepareLibraryExam(doc.examSnapshot, { notReadyMessage: "الامتحان المرسل غير جاهز للنشر. ارفضه مع ذكر ما يجب إصلاحه." });
+  if (!LS.hasConsent(row)) return CONSENT_MISSING();   // Tadris+ P6-G
+  // The server decides again, on the FROZEN exam the teacher sent — or (P6-G) on the owner's edited copy, read from the owner's own
+  // workspace — never a browser body.
+  const fromOwnerCopy = body.fromOwnerCopy === true;
+  let source = doc.examSnapshot;
+  if (fromOwnerCopy) {
+    const linked = linkedAccountOf(owner);
+    if (!linked) return NO_LINKED_WORKSPACE();
+    if (!row.ownerCopy) return reply(409, { ok: false, code: "OWNER_COPY_MISSING", error: "لم تنسخ هذا الامتحان إلى مساحتك بعد." });
+    const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
+    source = (await LS.sendableExam({ bankContainer, platformContainer: container, teacherId: linked, savedExamBlob: row.ownerCopy.blobName, deps })).exam;
+  }
+  const prepared = LP.prepareLibraryExam(source, { notReadyMessage: fromOwnerCopy
+    ? "نسختك المعدّلة غير جاهزة للنشر: أصلح ما يلي في الباني (مساحتك كمعلم) واحفظها، ثم أعد المحاولة."
+    : "الامتحان المرسل غير جاهز للنشر. ارفضه مع ذكر ما يجب إصلاحه، أو انسخه إلى مساحتك وأصلحه." });
   if (!prepared.ok) return prepared.response;
   const m = LP.publishMeta(body);
   if (!m.ok) return m.response;
   const current = await currentVersionOf(container, row.lineage, deps, lsIndex);
   return LP.publishLibraryItem(container, {
-    prepared, meta: m.meta, source: { kind: "teacher-submission", submissionId: row.submissionId }, replaces: current ? current.libraryItemId : null,
-    auditAction: "owner.library.submission-published", auditDetails: { submissionId: row.submissionId, teacherId: row.teacherId },
+    prepared, meta: m.meta, source: { kind: "teacher-submission", submissionId: row.submissionId, ...(fromOwnerCopy ? { editedByOwner: true } : {}) }, replaces: current ? current.libraryItemId : null,
+    auditAction: "owner.library.submission-published", auditDetails: { submissionId: row.submissionId, teacherId: row.teacherId, ...(fromOwnerCopy ? { editedByOwner: true } : {}) },
     after: async item => {
-      try { await LS.setStatus(container, row.submissionId, "pending", { status: "published", decidedAt: iso, libraryItemId: item.libraryItemId }, deps); }
+      try { await LS.setStatus(container, row.submissionId, "pending", { status: "published", decidedAt: iso, libraryItemId: item.libraryItemId, ...(fromOwnerCopy ? { editedByOwner: true } : {}) }, deps); }
       catch (e) { if (e instanceof LS.SubmissionRefusal) return { submissionId: row.submissionId, submissionNote: e.code }; throw e; }
       return { submissionId: row.submissionId };
     }
@@ -275,6 +322,28 @@ async function finishReplacement(body, { container, deps, actor, iso, write }) {
 
 /** The teacher account linked to the owner (P4-D) — the owner's own workspace — or "". */
 const linkedAccountOf = owner => (owner && isTeacherAccountId(owner.linkedTeacherAccountId) ? owner.linkedTeacherAccountId : "");
+const NO_LINKED_WORKSPACE = () => reply(409, { ok: false, code: "NO_LINKED_WORKSPACE", error: "اربط حسابك بمساحة معلم أولًا من «نظرة عامة» ← «مساحة المعلم الخاصة بك»." });
+
+// ── Tadris+ P6-G — the owner edits a sent exam: a copy in the owner's own workspace (lib/library-submissions.js writeOwnerCopy) ─────
+async function copySubmission(body, { owner, container, deps, actor, iso, write }) {
+  const linked = linkedAccountOf(owner);
+  if (!linked) return NO_LINKED_WORKSPACE();
+  const lsIndex = await LS.readIndex(container, deps);
+  const found = await LS.readSubmission(container, body.submissionId, deps, lsIndex);
+  if (!found) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
+  const { row, doc } = found;
+  if (row.status !== "pending") return reply(409, { ok: false, code: "SUBMISSION_NOT_PENDING", error: "لم يعد هذا الإرسال قيد المراجعة." });
+  if (row.sentBy === "owner") return reply(409, { ok: false, code: "OWN_EXAM", error: "هذا امتحانك: عدّله في مساحتك مباشرة، ثم خذه من «من امتحاناتي»." });
+  if (!LS.hasConsent(row)) return CONSENT_MISSING();
+  const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
+  const blobName = LS.ownerCopyBlobOf(row.submissionId);
+  return await recordOwnerChange(container, { actor, action: "owner.library.submission-copied", targetType: "library-submission", targetId: row.submissionId, targetLabel: row.title,
+    details: { teacherId: row.teacherId, workspace: linked, blobName } }, async () => {
+    const copy = await LS.writeOwnerCopy(bankContainer, { submissionId: row.submissionId, snapshot: doc.examSnapshot, linkedTeacherId: linked, iso }, deps);
+    const updated = await LS.setStatus(container, row.submissionId, "pending", { ownerCopy: { blobName: copy.blobName, copiedAt: (row.ownerCopy && row.ownerCopy.copiedAt) || iso } }, deps);
+    return reply(200, { ok: true, created: copy.created, ownerCopy: { blobName: copy.blobName, title: row.title }, submission: ownerRow(updated) });
+  }, { write });
+}
 
 async function ownExams(owner, deps) {
   const linked = linkedAccountOf(owner);
@@ -285,8 +354,10 @@ async function ownExams(owner, deps) {
 
 async function takeOwnExam(body, { owner, container, deps, actor, iso, write }) {
   const linked = linkedAccountOf(owner);
-  if (!linked) return reply(409, { ok: false, code: "NO_LINKED_WORKSPACE", error: "اربط حسابك بمساحة معلم أولًا من «نظرة عامة» ← «مساحة المعلم الخاصة بك»." });
+  if (!linked) return NO_LINKED_WORKSPACE();
   const savedExamBlob = String(body.blobName || "");
+  // Tadris+ P6-G — the owner's edited copy of a teacher's exam is published FOR that submission (its review), never as a new exam of the owner.
+  if (LS.ownerCopySubmissionOf(savedExamBlob)) return reply(409, { ok: false, code: "OWNER_COPY_OF_SUBMISSION", error: "هذه نسختك المعدّلة من امتحان أرسله معلم: انشرها من مراجعة ذلك الإرسال في «امتحانات مرسلة للبنك»." });
   const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
   const found = await LS.sendableExam({ bankContainer, platformContainer: container, teacherId: linked, savedExamBlob, deps });
   const prepared = LP.prepareLibraryExam(found.exam, { invalidMessage: "يُنشر في البنك الامتحان المنظّم فقط.", notReadyMessage: "الامتحان غير جاهز للنشر: أصلح ما يلي في الباني (مساحتك كمعلم) ثم أعد المحاولة." });

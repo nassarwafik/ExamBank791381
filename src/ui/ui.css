@@ -186,6 +186,8 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 /* S.3 — the typed confirmation of an irreversible bulk action: the field the confirm button waits for. */
 .eb-confirm-type { display: flex; flex-direction: column; gap: var(--eb-space-2); color: var(--eb-text); font-weight: var(--eb-fw-semibold); }
 .eb-confirm-type input { min-height: 44px; padding: 0 var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm); background: var(--eb-surface); color: var(--eb-text); font: inherit; font-weight: var(--eb-fw-regular); }
+.eb-confirm-acknowledge { display: flex; align-items: flex-start; gap: var(--eb-space-2); margin-top: var(--eb-space-3); color: var(--eb-text); font-weight: var(--eb-fw-semibold); }   /* Tadris+ P6-G */
+.eb-confirm-acknowledge input { inline-size: 20px; block-size: 20px; margin-top: 2px; flex: none; }
 @media (max-width: 767px) {
   .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
   .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }

@@ -100,7 +100,7 @@ describe("P6-F the exams teachers send", () => {
     routes["POST /api/owner-library/set-audience"] = c => ({ status: 200, body: { ok: true, item: { libraryItemId: "IMP-001", audience: c.body?.audience, teachers: c.body?.teachers, decided: true } } });
     const panel = await openTeachersExams();
     const r = await review(panel);
-    expect(within(r).getByText("✓ الامتحان جاهز للنشر.")).toBeTruthy();
+    expect(within(r).getByText("✓ الامتحان كما أرسله المعلم جاهز للنشر.")).toBeTruthy();
     fireEvent.click(within(r).getByRole("button", { name: "معاينة الامتحان" }));
     expect(await screen.findByText("ما الشبكة؟", {}, { timeout: 8000 })).toBeTruthy();       // the student view (lazy)
     const form = within(r).getByRole("form", { name: "نشر الامتحان المرسل" });

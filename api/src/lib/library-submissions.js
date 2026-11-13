@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const storage = require("./platform-storage");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { storedOwnerOf } = require("./saved-exam-access");
+const { canonicalizeExamContent } = require("./exam-canonical");
 const { countExamQuestions } = require("./exam-structure");
 const { resolveGovernedExamSource, GovernanceError } = require("./exam-governance");
 
@@ -26,6 +27,16 @@ const MAX_REASON = 300;
 const SAVED_EXAM_BLOB = /^exams\/[A-Za-z0-9._-]{1,200}\.json$/;
 const BANK_CONTAINER = "bank";
 
+// Tadris+ P6-G — the teacher's agreement to the platform's use of the exam they send (owner direction: «إقرار حقوق الاستخدام»). The
+// SERVER holds the text and its version: the teacher's page shows exactly this text, and a submission is accepted only when the teacher
+// agreed to THIS version. The version and the moment are stored with the submission; an exam sent without it is never published.
+// A new wording is a new version (never an edit of this one).
+const CONSENT = Object.freeze({
+  version: "library-use-v1",
+  text: "أُقرّ بأن هذا الامتحان من إعدادي أو أن لي حق مشاركته، وأنه لا يتضمن محتوى منقولًا دون إذن صاحبه. وأوافق على أن تنشره المنصة في بنك الامتحانات، وتتيحه للمعلمين الذين يختارهم المالك ليستخدموه مع طلابهم ويعدّلوا نسخهم منه، وعلى أن يعدّله المالك قبل نشره. وأعلم أن اسمي لا يظهر للمعلمين الآخرين، وأن ما نُشر يبقى في البنك ولا يُزال منه إلا بقرار المالك، وأن الواجبات المسندة منه لا تتغير."
+});
+const CONSENT_VERSIONS = Object.freeze([CONSENT.version]);
+
 class SubmissionsUnavailableError extends Error {
   constructor(message) { super(message); this.name = "SubmissionsUnavailableError"; this.code = "LIBRARY_SUBMISSIONS_UNAVAILABLE"; }
 }
@@ -43,8 +54,14 @@ const validIso = v => typeof v === "string" && Number.isFinite(Date.parse(v));
 function validRow(r) {
   return !!r && typeof r === "object" && SUBMISSION_ID.test(String(r.submissionId || "")) && typeof r.teacherId === "string" && !!r.teacherId
     && isSafeSavedExamBlob(r.savedExamBlob) && typeof r.title === "string" && STATUSES.includes(r.status) && validIso(r.submittedAt)
-    && typeof r.contentHash === "string" && /^[0-9a-f]{64}$/.test(r.contentHash) && r.lineage === lineageOf(r.teacherId, r.savedExamBlob);
+    && typeof r.contentHash === "string" && /^[0-9a-f]{64}$/.test(r.contentHash) && r.lineage === lineageOf(r.teacherId, r.savedExamBlob)
+    // Tadris+ P6-G — optional, but never malformed: the agreement, and the owner's editable copy
+    && (r.consent === undefined || validConsent(r.consent))
+    && (r.ownerCopy === undefined || (!!r.ownerCopy && typeof r.ownerCopy === "object" && isSafeSavedExamBlob(r.ownerCopy.blobName) && validIso(r.ownerCopy.copiedAt)));
 }
+const validConsent = c => !!c && typeof c === "object" && CONSENT_VERSIONS.includes(c.version) && validIso(c.at);
+/** Whether a submission may be published (or copied for editing): the teacher agreed to the platform's use of it — or the owner sent it. */
+const hasConsent = r => r.sentBy === "owner" || validConsent(r.consent);
 /** Validates a stored index ({ items: [] } when there is none). Throws SubmissionsUnavailableError when it cannot be understood. */
 function parseIndex(doc) {
   if (!doc) return { schemaVersion: 1, items: [] };
@@ -125,17 +142,17 @@ async function sendableExam({ bankContainer, platformContainer, teacherId, saved
  * Records one submission from a prepared exam (lib/library-publish.js prepareLibraryExam). A pending submission of the same saved
  * exam is superseded (the teacher sent an update before the owner decided). At most MAX_PENDING_PER_TEACHER pending. Returns the row.
  */
-async function createSubmission(container, { teacherId, teacherName, savedExamBlob, governed, prepared, title, sentBy, iso }, deps = {}) {
+async function createSubmission(container, { teacherId, teacherName, savedExamBlob, governed, prepared, title, sentBy, iso, consent = null }, deps = {}) {
   const lineage = lineageOf(teacherId, savedExamBlob);
   const index = await readIndex(container, deps);
   const pending = index.items.filter(r => r.teacherId === teacherId && r.status === "pending" && r.lineage !== lineage).length;
   if (pending >= MAX_PENDING_PER_TEACHER) throw new SubmissionRefusal(429, "TOO_MANY_PENDING", "لديك " + MAX_PENDING_PER_TEACHER + " امتحانًا قيد مراجعة المالك. انتظر قراره أو اسحب بعضها.");
   const submissionId = "sub_" + crypto.randomBytes(10).toString("hex");
-  const doc = { schemaVersion: 1, submissionId, teacherId, savedExamBlob, lineage, contentHash: prepared.contentHash, governed: !!governed, sentBy, submittedAt: iso, examSnapshot: prepared.snapshot };
+  const doc = { schemaVersion: 1, submissionId, teacherId, savedExamBlob, lineage, contentHash: prepared.contentHash, governed: !!governed, sentBy, submittedAt: iso, ...(consent ? { consent } : {}), examSnapshot: prepared.snapshot };
   try { await (deps.uploadJsonConditional || storage.uploadJsonConditional)(container, submissionName(submissionId), doc, null); }
   catch (e) { if (storage.isConcurrencyConflict(e)) throw new SubmissionRefusal(409, "SUBMISSION_CONFLICT", "تعارض مؤقت. حاول مرة أخرى."); throw e; }
   const row = { submissionId, teacherId, teacherName: String(teacherName || "").slice(0, 120), savedExamBlob, lineage, title, questionCount: prepared.stats.questionCount,
-    totalMarks: prepared.stats.totalMarks, contentHash: prepared.contentHash, governed: !!governed, sentBy, submittedAt: iso, status: "pending" };
+    totalMarks: prepared.stats.totalMarks, contentHash: prepared.contentHash, governed: !!governed, sentBy, submittedAt: iso, ...(consent ? { consent } : {}), status: "pending" };
   await mutateIndex(container, idx => {
     const open = idx.items.filter(r => r.teacherId === teacherId && r.status === "pending" && r.lineage !== lineage).length;
     if (open >= MAX_PENDING_PER_TEACHER) throw new SubmissionRefusal(429, "TOO_MANY_PENDING", "لديك " + MAX_PENDING_PER_TEACHER + " امتحانًا قيد مراجعة المالك. انتظر قراره أو اسحب بعضها.");
@@ -169,7 +186,39 @@ function statusRefusal(status) {
 /** The summary a teacher sees of their own submissions (no exam body, nobody else's). */
 const teacherView = r => ({ submissionId: r.submissionId, savedExamBlob: r.savedExamBlob, title: r.title, questionCount: r.questionCount, status: r.status,
   submittedAt: r.submittedAt, ...(r.decidedAt ? { decidedAt: r.decidedAt } : {}), ...(r.status === "declined" && r.reason ? { reason: r.reason } : {}),
-  ...(r.status === "published" ? { published: true } : {}) });
+  ...(r.status === "published" ? { published: true } : {}), ...(r.status === "published" && r.editedByOwner ? { editedByOwner: true } : {}) });
+
+// ── Tadris+ P6-G — the owner edits a sent exam before publishing it (owner direction: «تعديل المالك قبل النشر») ─────────────────────
+// The owner has no second editor: the sent exam is COPIED into the owner's own teacher workspace (P4-D), where every builder tool
+// edits it; the owner then publishes that copy for this submission. The teacher's frozen exam is never changed (it stays the record of
+// what was sent). The copy's place is fixed by the submission, so copying again never makes a second copy and NEVER overwrites the
+// owner's edits.
+const ownerCopyExamId = submissionId => "EXAM-lib-" + String(submissionId).slice(4);
+const ownerCopyBlobOf = submissionId => "exams/" + ownerCopyExamId(submissionId) + ".json";
+/** The submission a saved exam is the owner's copy of ("sub_…"), or "" — such a copy is published from that submission's review only. */
+const ownerCopySubmissionOf = blobName => { const m = /^exams\/EXAM-lib-([0-9a-f]{20})\.json$/.exec(String(blobName || "")); return m ? "sub_" + m[1] : ""; };
+
+/**
+ * Writes the owner's editable copy of one submission's frozen exam into the linked workspace (create-only, owned by that account, a
+ * draft). Returns { blobName, created } — created: false when the copy is already there (left exactly as the owner edited it).
+ * Throws SubmissionRefusal when that place belongs to someone else.
+ */
+async function writeOwnerCopy(bankContainer, { submissionId, snapshot, linkedTeacherId, iso }, deps = {}) {
+  const blobName = ownerCopyBlobOf(submissionId);
+  const exam = { ...canonicalizeExamContent(snapshot), examId: ownerCopyExamId(submissionId), status: "draft", updatedAt: iso };
+  // Create-only (If-None-Match), owned by the owner's workspace — the saved-exam shape the builder reads (save-exam-artifact.js).
+  try {
+    await (deps.uploadBankJsonConditional || storage.uploadJsonConditional)(bankContainer, blobName, { kind: "saved-exam", savedAt: iso, exam, ownerId: linkedTeacherId }, null);
+    return { blobName, created: true };
+  } catch (e) {
+    if (!storage.isConcurrencyConflict(e)) throw e;
+  }
+  // Already there: the copy made earlier (left exactly as the owner edited it) — or a file that is not the workspace's (refused).
+  let current;
+  try { current = await (deps.downloadBankJsonOrNull || storage.downloadJsonOrNull)(bankContainer, blobName); } catch { throw new SubmissionsUnavailableError("owner copy unreadable"); }
+  if (current && storedOwnerOf(current) === linkedTeacherId) return { blobName, created: false };
+  throw new SubmissionRefusal(409, "OWNER_COPY_CONFLICT", "تعذر إنشاء نسختك: مكانها في مساحتك مستخدم. تواصل مع الدعم الفني.");
+}
 
 /** The owner's own saved exams: those of the teacher account linked to the owner (P4-D), structured ones, newest first. */
 async function linkedSavedExams(bankContainer, teacherId, deps = {}) {
@@ -183,12 +232,14 @@ async function linkedSavedExams(bankContainer, teacherId, deps = {}) {
     let document;
     try { document = await (deps.downloadBankJsonOrNull || storage.downloadJsonOrNull)(bankContainer, name); } catch { continue; }
     if (!document || !document.exam || storedOwnerOf(document) !== teacherId || !Array.isArray(document.exam.sections)) continue;
-    out.push({ blobName: name, title: String(document.exam.title || "امتحان بدون عنوان"), savedAt: String(document.savedAt || document.exam.updatedAt || ""), questionCount: countExamQuestions(document.exam) });
+    const copyOf = ownerCopySubmissionOf(name);   // Tadris+ P6-G — an edited copy of a teacher's submission
+    out.push({ blobName: name, title: String(document.exam.title || "امتحان بدون عنوان"), savedAt: String(document.savedAt || document.exam.updatedAt || ""), questionCount: countExamQuestions(document.exam), ...(copyOf ? { ownerCopyOf: copyOf } : {}) });
   }
   return out.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
 }
 
 module.exports = {
+  CONSENT, CONSENT_VERSIONS, hasConsent, ownerCopyBlobOf, ownerCopyExamId, ownerCopySubmissionOf, writeOwnerCopy,
   SUBMISSION_PREFIX, INDEX_DOC, SUBMISSION_ID, STATUSES, MAX_PENDING_PER_TEACHER, MAX_REASON, SubmissionsUnavailableError, SubmissionRefusal,
   submissionName, lineageOf, isSafeSavedExamBlob, parseIndex, readIndex, mutateIndex, readSubmission, getBankContainer, sendableExam,
   createSubmission, setStatus, teacherView, linkedSavedExams
