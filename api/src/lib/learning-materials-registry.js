@@ -164,7 +164,10 @@ const COURSES = [
       { moduleId: "899271-m05", title: "الأوتومات المنتهي غير الحتمي", order: 5 },
       { moduleId: "899271-m06", title: "اللغات غير المنتظمة", order: 6 },
       { moduleId: "899271-m07", title: "العمليات على اللغات وخصائص الانغلاق", order: 7 },
-      { moduleId: "899271-m08", title: "أوتومات المكدّس", order: 8 }
+      { moduleId: "899271-m08", title: "أوتومات المكدّس", order: 8 },
+      { moduleId: "899271-m09", title: "اللغات الخالية من السياق وخصائص انغلاقها", order: 9 },
+      { moduleId: "899271-m10", title: "آلة تورنغ", order: 10 },
+      { moduleId: "899271-m11", title: "مراجعة وأسئلة بجروت", order: 11 }
     ]
   }
   // END 899271

@@ -45,6 +45,13 @@ describe("every simulator of the course runs", () => {
       const m = machineOf(r.block);
       const cfg = readAutomatonConfig(r.block.config)!;
       for (const w of cfg.words) expect(splitWord(m, w).ok, w).toBe(true);
+      // a machine that COMPUTES (a Turing machine writing its answer): each [input, expected tape] is run and the tape compared
+      for (const [input, expected] of (r.block._tapes as [string, string][] | undefined) ?? []) {
+        const res = run(m, input);
+        expect(res.verdict, "«" + input + "» halts in an accepting state").toBe("accept");
+        const tape = res.steps.at(-1)!.tape!.cells.filter(c => c !== "├").join("").replace(/^∆+|∆+$/g, "");
+        expect(tape, "tape after «" + input + "»").toBe(expected);
+      }
       const lang = r.block._lang as ((w: string) => boolean) | undefined;
       if (!lang) return;
       const max = (r.block._langMax as number) ?? 7;

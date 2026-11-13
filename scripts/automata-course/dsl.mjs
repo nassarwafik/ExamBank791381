@@ -73,6 +73,7 @@ export const SIM = (automaton, opts = {}) => enr({
   config: { automaton, ...(opts.words ? { words: opts.words } : {}), ...(opts.word !== undefined ? { word: opts.word } : {}), ...(opts.layout ? { layout: opts.layout } : {}) },
   fallback: { text: opts.fallback ?? "رسم الآلة التفاعلي: " + automaton.kind + " بحالات " + automaton.states.join("، ") + "." },
   ...(opts.lang ? { _lang: opts.lang, _langMax: opts.langMax ?? 7 } : {}),
+  ...(opts.tapes ? { _tapes: opts.tapes } : {}),
 });
 
 /** «حل مع المعلم»: prompt → think first → steps revealed one by one → result. */

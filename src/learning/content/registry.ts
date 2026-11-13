@@ -133,6 +133,9 @@ export const COURSE_CONTENT_MODULE_IDS: Record<string, readonly string[]> = {
     "899271-m06",
     "899271-m07",
     "899271-m08",
+    "899271-m09",
+    "899271-m10",
+    "899271-m11",
   ],
   // END 899271
 };

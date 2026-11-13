@@ -240,6 +240,7 @@ const VISUALS: readonly RegisteredVisual[] = [
   visual("899271/u04/union-intersection", () => import("./899271/groups/u04").then(g => ({ default: g.UnionIntersection })), false),
   visual("899271/u06/same-state-paths", () => import("./899271/groups/u06").then(g => ({ default: g.SameStatePaths })), false),
   visual("899271/u08/stack-lifo", () => import("./899271/groups/u08").then(g => ({ default: g.StackLifo })), false),
+  visual("899271/u10/turing-tape", () => import("./899271/groups/u10").then(g => ({ default: g.TuringTape })), false),
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

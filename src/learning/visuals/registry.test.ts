@@ -178,8 +178,9 @@ describe("visuals registry", () => {
       "899271/u04/union-intersection",
       "899271/u06/same-state-paths",
       "899271/u08/stack-lifo",
+      "899271/u10/turing-tape",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122 + 10);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122 + 11);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {
@@ -213,10 +214,10 @@ describe("visuals registry", () => {
   // 85 visuals animate meaningfully, 37 are intentionally static (reference maps, comparison charts, port/command
   // tables, static topology anatomy). visuals.guards.test.tsx separately proves each motion:true actually animates and
   // each still frame is neutralized under reduced motion.
-  it("pins the audited motion split: 132 total = 85 motion:true + 47 motion:false (truthful flag; the 10 visuals of 899271 are static)", () => {
+  it("pins the audited motion split: 133 total = 85 motion:true + 48 motion:false (truthful flag; the 11 visuals of 899271 are static)", () => {
     const flags = REGISTERED_VISUAL_IDS.map(id => resolveVisual(id)!.motion);
-    expect(flags.length).toBe(132);
+    expect(flags.length).toBe(133);
     expect(flags.filter(Boolean).length).toBe(85);
-    expect(flags.filter(m => m === false).length).toBe(47);
+    expect(flags.filter(m => m === false).length).toBe(48);
   });
 });

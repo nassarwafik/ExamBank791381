@@ -146,6 +146,8 @@ export const LEARNING_COURSES: LearningCourse[] = [
       { id: "b1", label: "الأوتومات المنتهي الحتمي" },
       { id: "b2", label: "غير الحتمي واللغات المنتظمة" },
       { id: "b3", label: "أوتومات المكدّس" },
+      { id: "b4", label: "آلة تورنغ" },
+      { id: "summary", label: "مراجعة وأسئلة بجروت" },
       // END 899271
     ],
   },

@@ -1606,6 +1606,550 @@ const manifest: LearningCourseManifest = {
           ]
         }
       ]
+    },
+    {
+      "id": "899271-m09",
+      "title": "اللغات الخالية من السياق وخصائص انغلاقها",
+      "shortTitle": "الخالية من السياق",
+      "order": 9,
+      "lessons": [
+        {
+          "id": "899271-m09-l01",
+          "title": "أسئلة متقدمة",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271-m09-l01-p01",
+              "title": "لغة المرآة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 16,
+                "pdfPageEnd": 21,
+                "sourceNote": "اللقاء 5 · الشرائح 16–21"
+              },
+              "keywords": [
+                "لغة خالية من السياق",
+                "لغة المرآة"
+              ]
+            },
+            {
+              "id": "899271-m09-l01-p02",
+              "title": "a²ⁿbᵐcᵏ بحيث k < n + m",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 22,
+                "pdfPageEnd": 27,
+                "sourceNote": "اللقاء 5 · الشرائح 22–27"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m09-l02",
+          "title": "خصائص الانغلاق",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271-m09-l02-p01",
+              "title": "جدول خصائص الانغلاق للغات الخالية من السياق",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 28,
+                "pdfPageEnd": 29,
+                "sourceNote": "اللقاء 5 · الشرائح 28–29"
+              },
+              "keywords": [
+                "خصائص الانغلاق",
+                "aⁿbⁿcⁿ"
+              ]
+            },
+            {
+              "id": "899271-m09-l02-p02",
+              "title": "الاتحاد",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 30,
+                "pdfPageEnd": 35,
+                "sourceNote": "اللقاء 5 · الشرائح 30–35"
+              }
+            },
+            {
+              "id": "899271-m09-l02-p03",
+              "title": "التقاطع والمتمّمة",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 36,
+                "pdfPageEnd": 42,
+                "sourceNote": "اللقاء 5 · الشرائح 36–42"
+              }
+            },
+            {
+              "id": "899271-m09-l02-p04",
+              "title": "العكس وخلاصة",
+              "order": 4,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 43,
+                "pdfPageEnd": 46,
+                "sourceNote": "اللقاء 5 · الشرائح 43–46"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m09-l03",
+          "title": "تدريبات الوحدة",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271-m09-l03-p01",
+              "title": "تدريبات الوحدة (1)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 16,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 16"
+              }
+            },
+            {
+              "id": "899271-m09-l03-p02",
+              "title": "تدريبات الوحدة (2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 16,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 16"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m09-l04",
+          "title": "نحلّ معًا",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271-m09-l04-p01",
+              "title": "نحلّ معًا: المرآة المعلّمة wcR(w)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 16,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 16"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271-m10",
+      "title": "آلة تورنغ",
+      "shortTitle": "آلة تورنغ",
+      "order": 10,
+      "lessons": [
+        {
+          "id": "899271-m10-l01",
+          "title": "التعريف",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271-m10-l01-p01",
+              "title": "آلة تورنغ: الفكرة",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "pdfPageEnd": 48,
+                "sourceNote": "اللقاء 5 · الشرائح 47–48"
+              },
+              "keywords": [
+                "آلة تورنغ",
+                "شريط",
+                "رأس القراءة والكتابة"
+              ]
+            },
+            {
+              "id": "899271-m10-l01-p02",
+              "title": "التعريف الصوري والكتابة المعتمدة",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 49,
+                "pdfPageEnd": 56,
+                "sourceNote": "اللقاء 5 · الشرائح 49–56"
+              },
+              "keywords": [
+                "أبجدية الآلة",
+                "├",
+                "∆"
+              ]
+            },
+            {
+              "id": "899271-m10-l01-p03",
+              "title": "متى تتوقف آلة تورنغ؟",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 57,
+                "sourceNote": "اللقاء 5 · الشريحة 57"
+              },
+              "keywords": [
+                "التوقف"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l02",
+          "title": "تمييز لغات",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271-m10-l02-p01",
+              "title": "مثال: awb",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 58,
+                "pdfPageEnd": 60,
+                "sourceNote": "اللقاء 5 · الشرائح 58–60"
+              }
+            },
+            {
+              "id": "899271-m10-l02-p02",
+              "title": "مثال: aⁿbⁿ",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 61,
+                "pdfPageEnd": 64,
+                "sourceNote": "اللقاء 5 · الشرائح 61–64"
+              }
+            },
+            {
+              "id": "899271-m10-l02-p03",
+              "title": "مثال: aⁿbⁿcⁿ — ما لا يستطيعه المكدّس",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 65,
+                "pdfPageEnd": 67,
+                "sourceNote": "اللقاء 5 · الشرائح 65–67"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l03",
+          "title": "حساب دوال",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271-m10-l03-p01",
+              "title": "مثال: f(x) = x + 2",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 71,
+                "pdfPageEnd": 72,
+                "sourceNote": "اللقاء 5 · الشرائح 71–72"
+              },
+              "keywords": [
+                "حساب دالة",
+                "التمثيل الأحادي"
+              ]
+            },
+            {
+              "id": "899271-m10-l03-p02",
+              "title": "مثال: X + Y",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 73,
+                "pdfPageEnd": 74,
+                "sourceNote": "اللقاء 5 · الشرائح 73–74"
+              }
+            },
+            {
+              "id": "899271-m10-l03-p03",
+              "title": "مثال: هل طول الكلمة زوجي؟",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 75,
+                "sourceNote": "اللقاء 5 · الشريحة 75"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l04",
+          "title": "التوقف وأطروحة تشرتش وتورنغ",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271-m10-l04-p01",
+              "title": "آلة لا تتوقف، وأطروحة تشرتش وتورنغ",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 83,
+                "pdfPageEnd": 93,
+                "sourceNote": "اللقاء 5 · الشرائح 83–93"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l05",
+          "title": "وظائف بيتية",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271-m10-l05-p01",
+              "title": "أسئلة من الفصل 16",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 2,
+                "pdfPageEnd": 3,
+                "sourceNote": "وظائف آلة تورنغ · الشرائح 2–3"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l06",
+          "title": "تدريبات الوحدة",
+          "order": 6,
+          "pages": [
+            {
+              "id": "899271-m10-l06-p01",
+              "title": "تدريبات الوحدة (1)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
+            },
+            {
+              "id": "899271-m10-l06-p02",
+              "title": "تدريبات الوحدة (2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m10-l07",
+          "title": "نحلّ معًا",
+          "order": 7,
+          "pages": [
+            {
+              "id": "899271-m10-l07-p01",
+              "title": "نحلّ معًا: المتناظرات w = R(w)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
+            },
+            {
+              "id": "899271-m10-l07-p02",
+              "title": "نحلّ معًا: لماذا تعود الآلة يسارًا؟",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 47,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 5 · الشريحة 47"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "899271-m11",
+      "title": "مراجعة وأسئلة بجروت",
+      "shortTitle": "مراجعة وبجروت",
+      "order": 11,
+      "lessons": [
+        {
+          "id": "899271-m11-l01",
+          "title": "آلة تورنغ في البجروت",
+          "order": 1,
+          "pages": [
+            {
+              "id": "899271-m11-l01-p01",
+              "title": "بجروت 2016: دالة حسب باقي القسمة على 3",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 6,
+                "pdfPageEnd": 10,
+                "sourceNote": "اللقاء 6 · الشرائح 6–10"
+              }
+            },
+            {
+              "id": "899271-m11-l01-p02",
+              "title": "آلة تورنغ لا تتوقف",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 11,
+                "pdfPageEnd": 15,
+                "sourceNote": "اللقاء 6 · الشرائح 11–15"
+              }
+            },
+            {
+              "id": "899271-m11-l01-p03",
+              "title": "بجروت 2020 وسلّم التصحيح",
+              "order": 3,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 16,
+                "pdfPageEnd": 19,
+                "sourceNote": "اللقاء 6 · الشرائح 16–19"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m11-l02",
+          "title": "الأوتومات في البجروت",
+          "order": 2,
+          "pages": [
+            {
+              "id": "899271-m11-l02-p01",
+              "title": "تدريب كوظائف التسليم: أوتومات غير حتمي",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 21,
+                "pdfPageEnd": 28,
+                "sourceNote": "اللقاء 6 · الشرائح 21–28"
+              }
+            },
+            {
+              "id": "899271-m11-l02-p02",
+              "title": "بجروت 2021: أوتومات مكدّس لـ aⁿbᶠᵒᵒ⁽ⁿ⁾",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 35,
+                "pdfPageEnd": 38,
+                "sourceNote": "اللقاء 6 · الشرائح 35–38"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m11-l03",
+          "title": "المنهاج",
+          "order": 3,
+          "pages": [
+            {
+              "id": "899271-m11-l03-p01",
+              "title": "توزيع الساعات في المنهاج",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 20,
+                "sourceNote": "اللقاء 6 · الشريحة 20"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m11-l04",
+          "title": "مراجعة شاملة",
+          "order": 4,
+          "pages": [
+            {
+              "id": "899271-m11-l04-p01",
+              "title": "مراجعة شاملة (1)",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 3,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 6 · الشريحة 3"
+              }
+            },
+            {
+              "id": "899271-m11-l04-p02",
+              "title": "مراجعة شاملة (2)",
+              "order": 2,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 3,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 6 · الشريحة 3"
+              }
+            }
+          ]
+        },
+        {
+          "id": "899271-m11-l05",
+          "title": "نحلّ معًا",
+          "order": 5,
+          "pages": [
+            {
+              "id": "899271-m11-l05-p01",
+              "title": "نحلّ معًا: كيف نقرأ سؤال بجروت؟",
+              "order": 1,
+              "source": {
+                "kind": "book",
+                "sourceId": "899271",
+                "pdfPageStart": 3,
+                "sourceNote": "إثراء (ليس من الشرائح) · يتبع اللقاء 6 · الشريحة 3"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "batches": [
@@ -1638,7 +2182,22 @@ const manifest: LearningCourseManifest = {
       "id": "b3",
       "label": "أوتومات المكدّس",
       "moduleIds": [
-        "899271-m08"
+        "899271-m08",
+        "899271-m09"
+      ]
+    },
+    {
+      "id": "b4",
+      "label": "آلة تورنغ",
+      "moduleIds": [
+        "899271-m10"
+      ]
+    },
+    {
+      "id": "summary",
+      "label": "مراجعة وأسئلة بجروت",
+      "moduleIds": [
+        "899271-m11"
       ]
     }
   ]

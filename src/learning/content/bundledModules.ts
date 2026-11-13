@@ -150,6 +150,9 @@ export const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>>
     "899271-m06": () => import("./899271/modules/m06"),
     "899271-m07": () => import("./899271/modules/m07"),
     "899271-m08": () => import("./899271/modules/m08"),
+    "899271-m09": () => import("./899271/modules/m09"),
+    "899271-m10": () => import("./899271/modules/m10"),
+    "899271-m11": () => import("./899271/modules/m11"),
   },
   // END 899271
 };

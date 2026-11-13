@@ -604,6 +604,202 @@
           ]
         }
       }
+    },
+    "899271-m09-l03-p01": {
+      "moduleId": "899271-m09",
+      "activities": {
+        "m09-l03-p01-b01": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g1",
+            "c3": "g1",
+            "c4": "g2",
+            "c5": "g2",
+            "c6": "g2"
+          }
+        },
+        "m09-l03-p01-b02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m09-l03-p01-b03": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m09-l03-p01-b04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m09-l03-p01-b05": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3",
+            "s4"
+          ]
+        }
+      }
+    },
+    "899271-m09-l03-p02": {
+      "moduleId": "899271-m09",
+      "activities": {
+        "m09-l03-p02-b02": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m09-l03-p02-b03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m09-l03-p02-b04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m09-l03-p02-b05": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "899271-m10-l06-p01": {
+      "moduleId": "899271-m10",
+      "activities": {
+        "m10-l06-p01-b02": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m10-l06-p01-b03": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m10-l06-p01-b04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m10-l06-p01-b05": {
+          "kind": "matching",
+          "pairs": {
+            "l1": "r1",
+            "l2": "r2",
+            "l3": "r3",
+            "l4": "r4"
+          }
+        }
+      }
+    },
+    "899271-m10-l06-p02": {
+      "moduleId": "899271-m10",
+      "activities": {
+        "m10-l06-p02-b01": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m10-l06-p02-b02": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g1",
+            "c3": "g2",
+            "c4": "g2",
+            "c5": "g3"
+          }
+        },
+        "m10-l06-p02-b03": {
+          "kind": "shortInput",
+          "answer": "5"
+        },
+        "m10-l06-p02-b04": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3",
+            "s4",
+            "s5"
+          ]
+        },
+        "m10-l06-p02-b05": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "899271-m11-l04-p01": {
+      "moduleId": "899271-m11",
+      "activities": {
+        "m11-l04-p01-b01": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g1",
+            "c3": "g2",
+            "c4": "g2",
+            "c5": "g3"
+          }
+        },
+        "m11-l04-p01-b02": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l04-p01-b03": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m11-l04-p01-b04": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        },
+        "m11-l04-p01-b05": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "899271-m11-l04-p02": {
+      "moduleId": "899271-m11",
+      "activities": {
+        "m11-l04-p02-b02": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m11-l04-p02-b03": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l04-p02-b04": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g1",
+            "c3": "g1",
+            "c4": "g2",
+            "c5": "g2",
+            "c6": "g2"
+          }
+        },
+        "m11-l04-p02-b05": {
+          "kind": "shortInput",
+          "answer": "7"
+        }
+      }
     }
   }
 }

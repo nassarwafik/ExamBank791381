@@ -40,8 +40,8 @@ describe("registry source — statically-authored lazy allowlist, never content-
     expect(entries.length).toBe(122);
     // AUTO-A2 — the second course's entries follow the same literal shape in their own namespace (899271/uNN → groups/uNN)
     const entries899271 = registry.match(/^  visual\("899271\/u\d{2}\/[a-z0-9-]+", \(\) => import\("\.\/899271\/groups\/(u\d{2})"\)\.then\(g => \(\{ default: g\.[A-Z]\w+ \}\)\), (?:true|false)\),$/gm) || [];
-    expect(entries899271.length).toBe(10);
-    expect((registry.match(/^  visual\(/gm) || []).length).toBe(122 + 10);             // no entry escapes the literal patterns
+    expect(entries899271.length).toBe(11);
+    expect((registry.match(/^  visual\(/gm) || []).length).toBe(122 + 11);             // no entry escapes the literal patterns
     expect(registry).toMatch(/const load = lazyWithRetry\(importer, "learning-visual:" \+ id\);/);
     expect(registry).toMatch(/return \{ id, component: lazy\(load\), load, motion \};/);
   });
@@ -53,7 +53,7 @@ describe("registry source — statically-authored lazy allowlist, never content-
     expect(registryCode).not.toMatch(/\beval\b|new Function/);
     expect(registryCode).not.toMatch(/visualId/);                                        // the content key never appears in the loader code
     const dynamicTargets = [...registryCode.matchAll(/import\("([^"]+)"\)/g)].map(m => m[1]);
-    expect(dynamicTargets.length).toBe(122 + 10);
+    expect(dynamicTargets.length).toBe(122 + 11);
     for (const t of dynamicTargets) expect(t).toMatch(/^\.\/(791381\/groups\/(ch1|m\d{2})|899271\/groups\/u\d{2})$/);
   });
   it("every group barrel is a plain list of literal re-exports; together they cover each of the 122 component files exactly once", () => {
@@ -98,7 +98,7 @@ describe("registry source — statically-authored lazy allowlist, never content-
       expect(codeOnly(src)).not.toMatch(/import\(|import\.meta|eval|fetch|http/);
     }
     expect([...exported].sort()).toEqual([...components].sort());
-    expect(exported.length).toBe(10);
+    expect(exported.length).toBe(11);
     for (const m of registry.matchAll(/visual\("899271\/(u\d{2})\/[a-z0-9-]+", \(\) => import\("\.\/899271\/groups\/(u\d{2})"\)\.then\(g => \(\{ default: g\.(\w+) \}\)\)/g)) {
       expect(m[2]).toBe(m[1]);
       expect(readFileSync(resolve(dir, "groups", m[2] + ".ts"), "utf8")).toContain("export { default as " + m[3] + " }");
@@ -109,7 +109,7 @@ describe("registry source — statically-authored lazy allowlist, never content-
 describe("registry evaluation — importing the registry or resolving an id evaluates NO visual module", () => {
   it("resolveVisual is synchronous and evaluates nothing; only load() evaluates the ONE group, once", async () => {
     const { resolveVisual, REGISTERED_VISUAL_IDS } = await import("./registry");
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122 + 10);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122 + 11);
     expect(evaluated).toEqual({ ch1: 0, m02: 0 });
     const entry = resolveVisual("791381/ch1/network-connected-devices");
     expect(entry).not.toBeNull(); expect(entry!.motion).toBe(true);
