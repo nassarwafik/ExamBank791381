@@ -249,7 +249,20 @@ export type OwnerLibraryItem = {
   audience: LibraryAudience; teachers: string[]; decided: boolean;
   /** Tadris+ P6-E — an exam the owner imported (IMP-nnn), and whether it is an exam or a training. */
   imported?: boolean; activityType?: LibraryActivityType;
+  /** Tadris+ P6-F — sent by a teacher; the version it replaces / the version that replaced it. */
+  fromTeacher?: boolean; replaces?: string; replacedBy?: string;
 };
+/** Tadris+ P6-F — an exam a teacher (or the owner's own workspace) sent to the platform bank. */
+export type LibrarySubmissionStatus = "pending" | "published" | "declined" | "withdrawn" | "superseded";
+export type OwnerSubmission = {
+  submissionId: string; teacherId: string; teacherName: string; title: string; questionCount: number; totalMarks: number; status: LibrarySubmissionStatus;
+  submittedAt: string; sentBy: "teacher" | "owner"; governed: boolean; decidedAt?: string; reason?: string; libraryItemId?: string;
+};
+export type OwnerSubmissionDetail = {
+  submission: OwnerSubmission; exam: Record<string, unknown>; replaces: { libraryItemId: string; title: string } | null;
+  finalization: { canFinalize: boolean } | null; blockers: string[];
+};
+export type OwnSavedExam = { blobName: string; title: string; savedAt: string; questionCount: number };
 export type LibraryActivityType = "exam" | "training";
 /** Tadris+ P6-E — what the owner publishes: one prepared structured exam (the server decides it is ready). */
 export type LibraryImportInput = { exam: unknown; title: string; category: string; activityType: LibraryActivityType; description: string; sourceFileName: string };
@@ -261,7 +274,18 @@ export const ownerLibraryApi = {
   setTeacher: (token: string, accountId: string, include: string[], exclude: string[]) =>
     call<{ ok: true; accountId: string; added: string[]; removed: string[] }>("/api/owner-library/set-teacher", { method: "POST", token, body: { accountId, include, exclude } }),
   importExam: (token: string, input: LibraryImportInput) =>
-    call<{ ok: true; item: OwnerLibraryItem }>("/api/owner-library/import", { method: "POST", token, body: input })
+    call<{ ok: true; item: OwnerLibraryItem }>("/api/owner-library/import", { method: "POST", token, body: input }),
+  // Tadris+ P6-F — the exams teachers send
+  submissions: (token: string) => call<{ ok: true; submissions: OwnerSubmission[]; pending: number }>("/api/owner-library/submissions", { token }),
+  submission: (token: string, id: string) => call<{ ok: true } & OwnerSubmissionDetail>("/api/owner-library/submission?id=" + encodeURIComponent(id), { token }),
+  publishSubmission: (token: string, submissionId: string, input: { title: string; category: string; activityType: LibraryActivityType; description: string }) =>
+    call<{ ok: true; item: OwnerLibraryItem; submissionId: string; replaces?: string; replacementPending?: boolean }>("/api/owner-library/publish-submission", { method: "POST", token, body: { submissionId, ...input } }),
+  declineSubmission: (token: string, submissionId: string, reason: string) =>
+    call<{ ok: true; submission: OwnerSubmission }>("/api/owner-library/decline-submission", { method: "POST", token, body: { submissionId, reason } }),
+  completeReplacement: (token: string, libraryItemId: string) =>
+    call<{ ok: true; libraryItemId: string; replaces: string }>("/api/owner-library/complete-replacement", { method: "POST", token, body: { libraryItemId } }),
+  ownExams: (token: string) => call<{ ok: true; linked: boolean; exams: OwnSavedExam[] }>("/api/owner-library/own-exams", { token }),
+  takeOwn: (token: string, blobName: string) => call<{ ok: true; submission: OwnerSubmission }>("/api/owner-library/take-own", { method: "POST", token, body: { blobName } })
 };
 
 // Tadris+ P5-B4 — the owner adds students to a teacher's class (/api/owner-classes): one, or a list after the server preview. The

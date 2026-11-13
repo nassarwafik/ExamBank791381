@@ -139,7 +139,10 @@ describe("entry and request discipline", () => {
     expect(dialog.textContent).toContain("التصحيح يدوي");
     fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق المعاينة" }));
     openTab("نظرة عامة"); openTab("الامتحانات المحفوظة");
-    expect(calls).toHaveLength(2);                                          // still only the two entry loads
+    // Tadris+ P6-F — the first opening of the saved exams reads this teacher's «إرسال إلى بنك المنصة» states ONCE; nothing else
+    expect(gets("/api/library-submissions")).toBe(1); expect(calls).toHaveLength(3);
+    openTab("نظرة عامة"); openTab("الامتحانات المحفوظة");
+    expect(calls).toHaveLength(3);                                          // reopening reads nothing again
   });
   it("overview counts come from the loaded data (Western digits) and the primary actions route to the builder / import / add-question dialog", async () => {
     await mount();

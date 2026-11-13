@@ -9,6 +9,8 @@ import { lazyWithRetry } from "../lazyWithRetry";
 
 // Tadris+ P6-E — the import (its parser and checks) loads only when the owner opens it.
 const OwnerLibraryImport = lazy(lazyWithRetry(() => import("./OwnerLibraryImport"), "owner-library-import"));
+// Tadris+ P6-F — the exams teachers send (and the owner's own): loads only when opened.
+const OwnerLibrarySubmissions = lazy(lazyWithRetry(() => import("./OwnerLibrarySubmissions"), "owner-library-submissions"));
 
 /**
  * Tadris+ P6-D — «بنك الامتحانات» in the Owner Console (#/owner/exams, /api/owner-library): who sees each library exam.
@@ -44,6 +46,8 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
   const [editing, setEditing] = useState<string | null>(null);
   const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>("all");
   const [importing, setImporting] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [pendingSent, setPendingSent] = useState<number | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -53,6 +57,8 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
       else if (r.status === 401) onSignedOut();
       else setError(r.error);
     });
+    // Tadris+ P6-F — how many exams teachers sent are waiting (the button's count; the list itself loads when opened)
+    void ownerLibraryApi.submissions(token).then(r => { if (live && r.ok) setPendingSent(r.data.pending); });
     return () => { live = false; };
   }, [token, nonce, onSignedOut]);
 
@@ -80,7 +86,12 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
     <section className="eb-owner-panel eb-owner-library" aria-labelledby="eb-owner-library-title">
       <div className="eb-owner-panel-head">
         <h2 id="eb-owner-library-title" className="eb-owner-h2">بنك الامتحانات{data && <span className="eb-owner-h2-count"> · {data.items.length} امتحانًا</span>}</h2>
-        {data && !importing && <button type="button" className="eb-owner-secondary" onClick={() => { setNotice(""); setError(""); setImporting(true); }}><IconUpload size={16} aria-hidden="true" /> استيراد امتحان</button>}
+        {data && !importing && !reviewing && (
+          <div className="eb-owner-actions">
+            <button type="button" className="eb-owner-secondary" onClick={() => { setNotice(""); setError(""); setReviewing(true); }}>امتحانات المعلمين{pendingSent ? <span className="eb-owner-chip-count">{pendingSent}</span> : null}</button>
+            <button type="button" className="eb-owner-secondary" onClick={() => { setNotice(""); setError(""); setImporting(true); }}><IconUpload size={16} aria-hidden="true" /> استيراد امتحان</button>
+          </div>
+        )}
       </div>
       <p className="eb-owner-hint">اختر من يرى كل امتحان: كل المعلمين، أو مجموعة تختارها. بنك المعلم يحوي ما هو «لكل المعلمين» وما اخترته له، ومنه يسند الواجبات لطلابه. لاختيار بنك معلم بعينه افتح صفحته ← «الامتحانات». إزالة امتحان لا تمس الواجبات المنشورة منه.</p>
 
@@ -94,6 +105,14 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
             onPublished={() => setNonce(n => n + 1)}
             onCancel={() => setImporting(false)}
             onDone={message => { setImporting(false); setNotice(message); setNonce(n => n + 1); }} />
+        </Suspense>
+      )}
+      {data && reviewing && (
+        <Suspense fallback={<p className="eb-owner-hint" role="status">جارٍ الفتح…</p>}>
+          <OwnerLibrarySubmissions token={token} busy={busy} send={send} teachers={data.teachers} categories={categories} onSignedOut={onSignedOut}
+            onChanged={() => setNonce(n => n + 1)}
+            onDone={message => { setReviewing(false); setNotice(message); setNonce(n => n + 1); }} />
+          <div className="eb-owner-actions"><button type="button" className="eb-owner-secondary" onClick={() => setReviewing(false)}>إغلاق</button></div>
         </Suspense>
       )}
       {data === null && !error && <p className="eb-owner-hint" role="status">جارٍ تحميل بنك الامتحانات…</p>}
@@ -127,13 +146,19 @@ export default function OwnerLibrary({ token, onSignedOut }: { token: string; on
               {shown.map(item => (
                 <tbody key={item.libraryItemId} className="eb-owner-teacher-group" aria-label={item.title}>
                   <tr className={"eb-owner-teacher-row" + (editing === item.libraryItemId ? " is-open" : "")}>
-                    <td className="eb-owner-teacher-who"><strong><bdi>{item.title}</bdi></strong><span className="eb-owner-teacher-user" dir="ltr">{item.libraryItemId}</span>{item.imported && <span className="eb-owner-library-tag">مستورد{item.activityType === "training" ? " · تدريب" : ""}</span>}</td>
+                    <td className="eb-owner-teacher-who"><strong><bdi>{item.title}</bdi></strong><span className="eb-owner-teacher-user" dir="ltr">{item.libraryItemId}</span>{item.imported && <span className="eb-owner-library-tag">{item.fromTeacher ? "من معلم" : "مستورد"}{item.activityType === "training" ? " · تدريب" : ""}</span>}
+                      {item.replacedBy && <span className="eb-owner-library-tag">نسخة سابقة ← {item.replacedBy}</span>}
+                      {item.replaces && <span className="eb-owner-library-tag">نسخة محدَّثة من {item.replaces}</span>}</td>
                     <td className="eb-owner-library-meta">{categoryLabel(item.category)}</td>
                     <td className="eb-owner-library-meta eb-owner-library-count"><bdi>{item.questionCount}</bdi><span className="eb-owner-library-unit"> سؤال</span></td>
                     <td className="eb-owner-library-meta"><span className={"eb-owner-status eb-owner-status--" + (item.audience === "all" ? "active" : item.decided ? "invited" : "suspended")}>{audienceText(item)}</span></td>
                     <td className="eb-owner-teacher-menu eb-owner-library-action">
                       <button type="button" className="eb-owner-secondary eb-owner-small" disabled={busy} aria-expanded={editing === item.libraryItemId}
                         onClick={() => setEditing(e => (e === item.libraryItemId ? null : item.libraryItemId))}>تحديد الجمهور</button>
+                      {item.replaces && data.items.some(o => o.libraryItemId === item.replaces && o.replacedBy !== item.libraryItemId) && (
+                        <button type="button" className="eb-owner-secondary eb-owner-small" disabled={busy}
+                          onClick={() => void send(() => ownerLibraryApi.completeReplacement(token, item.libraryItemId), () => { setNotice("اكتمل استبدال " + item.replaces + " بـ " + item.libraryItemId + "."); setNonce(n => n + 1); })}>إكمال الاستبدال</button>
+                      )}
                     </td>
                   </tr>
                   {editing === item.libraryItemId && (
