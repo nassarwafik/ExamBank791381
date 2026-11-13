@@ -43,8 +43,8 @@ export const MUTANTS = [
   { id: "P6F-M18", what: "completing a replacement overwrites the owner's chosen audience", edits: [{ file: LP, find: "    if (!doc.items[newId]) {", replace: "    if (true) {" }] },
   { id: "P6F-M19", what: "an updated version is never recognised (published as a new exam)", edits: [{ file: OL, find: "  if (!subs.length) return null;", replace: "  return null;" }] },
   { id: "P6F-M20", what: "a builder picture in a library exam is not signed", edits: [{ file: LIB, find: "    if (id) entry = withBankPictures(entry, (deps.nowMs || Date.now)());", replace: "" }] },
-  { id: "P6F-M21", what: "the teacher is offered «إرسال» for a legacy exam", edits: [{ file: BANK, find: "{submissions && item.kind === \"structured\" && (", replace: "{submissions && (" }] },
-  { id: "P6F-M22", what: "the owner may publish an exam that is not ready", edits: [{ file: SUBUI, find: "      {ready && (\n        <form", replace: "      {true && (\n        <form" }] },
+  { id: "P6F-M21", what: "the teacher is offered «إرسال» for a legacy exam", edits: [{ file: BANK, find: "{submissions && consent && item.kind === \"structured\" && (", replace: "{submissions && consent && (" }] },
+  { id: "P6F-M22", what: "the owner may publish an exam that is not ready", edits: [{ file: SUBUI, find: "      {consented && (sentReady || copy) && (\n        <form", replace: "      {consented && (\n        <form" }] },
   { id: "P6F-M23", what: "the owner may decline without a reason", edits: [{ file: SUBUI, find: "disabled={busy || !reason.trim()}", replace: "disabled={busy}" }] }
 ];
 

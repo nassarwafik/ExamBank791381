@@ -1,10 +1,10 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconEye, IconWarning } from "../icons";
 import { CATEGORY_LABELS, categoryLabel } from "../examLibrary";
 import { lazyWithRetry } from "../lazyWithRetry";
 import type { ApiResult, LibraryActivityType, LibraryAudience, OwnSavedExam, OwnerLibraryItem, OwnerLibraryTeacher, OwnerSubmission, OwnerSubmissionDetail } from "./ownerApi";
-import { ownerLibraryApi } from "./ownerApi";
+import { ownerHandoffApi, ownerLibraryApi } from "./ownerApi";
 import AudienceEditor from "./OwnerAudienceEditor";
 
 // The ONE faithful exam renderer (it scrubs every grading secret itself): the owner sees the exam as a student will.
@@ -16,6 +16,10 @@ const ExamPreview = lazy(lazyWithRetry(() => import("../ExamPreview"), "owner-su
  * then publishes it (title, exam / training, category) or declines it with a reason the teacher sees. An updated version of an exam already
  * published replaces it with the same audience. The owner's own exams (their linked teacher workspace, P4-D) are listed directly.
  * Every change goes through the page's `send` (second-factor check asked inline, then retried); the server decides everything.
+ *
+ * Tadris+ P6-G (docs/enterprise-library-consent-owner-edit-p6g.md) — the review shows whether the teacher agreed to the platform's use
+ * of the exam (one sent without it can only be declined), and lets the owner edit before publishing: «نسخ إلى مساحتي للتعديل» puts a
+ * copy in the owner's teacher workspace (P4-D), edited there with the builder; the owner then publishes that copy for the submission.
  */
 
 type Send = <T>(call: () => Promise<ApiResult<T>>, onOk: (data: T) => void) => Promise<void>;
@@ -83,7 +87,8 @@ export default function OwnerLibrarySubmissions({ token, busy, send, teachers, c
               <div>
                 <strong><bdi>{s.title}</bdi></strong>
                 <span className="eb-owner-hint"> · <bdi>{s.teacherName || "معلم"}</bdi>{s.sentBy === "owner" ? " (مساحتك)" : ""} · {day(s.submittedAt)} · {s.questionCount} سؤال</span>
-                <span className={"eb-owner-status eb-owner-status--" + (s.status === "pending" ? "invited" : s.status === "published" ? "active" : "suspended")}>{STATUS_TEXT[s.status]}{s.libraryItemId ? " · " + s.libraryItemId : ""}</span>
+                <span className={"eb-owner-status eb-owner-status--" + (s.status === "pending" ? "invited" : s.status === "published" ? "active" : "suspended")}>{STATUS_TEXT[s.status]}{s.editedByOwner ? " بتعديلاتك" : ""}{s.libraryItemId ? " · " + s.libraryItemId : ""}</span>
+                {s.status === "pending" && s.ownerCopy && <span className="eb-owner-hint"> · نسخة للتعديل في مساحتك</span>}
                 {s.status === "declined" && s.reason && <span className="eb-owner-hint"> · السبب: {s.reason}</span>}
               </div>
               {s.status === "pending" && <button type="button" className="eb-owner-secondary eb-owner-small" onClick={() => setReviewing(s.submissionId)}>مراجعة</button>}
@@ -100,9 +105,13 @@ export default function OwnerLibrarySubmissions({ token, busy, send, teachers, c
         <ul className="eb-owner-import-list eb-owner-submission-list" aria-label="امتحاناتي المحفوظة">
           {own.exams.map(e => (
             <li key={e.blobName} className="eb-owner-submission-row">
-              <div><strong><bdi>{e.title}</bdi></strong><span className="eb-owner-hint"> · {e.questionCount} سؤال · آخر حفظ {day(e.savedAt)}</span></div>
-              <button type="button" className="eb-owner-secondary eb-owner-small" disabled={busy}
-                onClick={() => void send(() => ownerLibraryApi.takeOwn(token, e.blobName), d => setReviewing(d.submission.submissionId))}>مراجعة ونشر</button>
+              <div><strong><bdi>{e.title}</bdi></strong><span className="eb-owner-hint"> · {e.questionCount} سؤال · آخر حفظ {day(e.savedAt)}{e.ownerCopyOf ? " · نسختك المعدّلة من امتحان أرسله معلم" : ""}</span></div>
+              {e.ownerCopyOf ? (
+                <button type="button" className="eb-owner-secondary eb-owner-small" onClick={() => setReviewing(e.ownerCopyOf as string)}>فتح المراجعة</button>
+              ) : (
+                <button type="button" className="eb-owner-secondary eb-owner-small" disabled={busy}
+                  onClick={() => void send(() => ownerLibraryApi.takeOwn(token, e.blobName), d => setReviewing(d.submission.submissionId))}>مراجعة ونشر</button>
+              )}
             </li>
           ))}
         </ul>
@@ -124,6 +133,12 @@ function Review({ token, id, busy, send, teachers, categories, onBack, onDone, o
   const [description, setDescription] = useState("");
   const [reason, setReason] = useState("");
   const [published, setPublished] = useState<{ item: OwnerLibraryItem; replaces?: string; replacementPending?: boolean } | null>(null);
+  // Tadris+ P6-G — what is published (the owner's edited copy once it exists), the copy's preview, the one-time workspace link
+  const [useCopy, setUseCopy] = useState(true);
+  const [previewCopy, setPreviewCopy] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [ticket, setTicket] = useState<string | null>(null);
+  const loaded = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -131,17 +146,25 @@ function Review({ token, id, busy, send, teachers, categories, onBack, onDone, o
       if (!live) return;
       if (!r.ok) { if (r.status === 401) onSignedOut(); else setError(r.error); return; }
       setDetail(r.data);
+      if (loaded.current) return;   // a reload (the copy as it is now) keeps what the owner typed
+      loaded.current = true;
       setTitle(r.data.submission.title);
       const cover = (r.data.exam.coverPage || null) as { activityType?: string } | null;
       setActivityType(cover && cover.activityType === "training" ? "training" : "exam");
     });
     return () => { live = false; };
-  }, [token, id, onSignedOut]);
+  }, [token, id, onSignedOut, reload]);
 
   const categoryChoices = [...new Set([...Object.keys(CATEGORY_LABELS), ...categories])];
   if (error) return <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" />{error} <button type="button" className="eb-owner-secondary" onClick={onBack}>رجوع</button></div>;
   if (!detail) return <p className="eb-owner-hint" role="status">جارٍ تحميل الامتحان…</p>;
-  const s = detail.submission, ready = !!detail.finalization && detail.finalization.canFinalize;
+  const s = detail.submission;
+  const copy = detail.ownerCopy && detail.ownerCopy.exists ? detail.ownerCopy : null;
+  const fromCopy = !!copy && useCopy;
+  const sentReady = !!detail.finalization && detail.finalization.canFinalize;
+  const copyReady = !!copy && !!copy.finalization && copy.finalization.canFinalize;
+  const ready = fromCopy ? copyReady : sentReady;
+  const consented = s.consented !== false;   // P6-G — an exam sent without the agreement is never published (decline it)
 
   if (published) {
     const doneText = "نُشر «" + published.item.title + "» (" + published.item.libraryItemId + ")";
@@ -177,16 +200,74 @@ function Review({ token, id, busy, send, teachers, categories, onBack, onDone, o
         <button type="button" className="eb-owner-secondary" onClick={() => setPreview(true)}><IconEye size={16} aria-hidden="true" /> معاينة الامتحان</button>
       </div>
       {preview && createPortal(<Suspense fallback={null}><ExamPreview exam={detail.exam as never} onClose={() => setPreview(false)} /></Suspense>, document.body)}
-      {ready ? <p className="eb-owner-hint eb-owner-done" role="status">✓ الامتحان جاهز للنشر.</p> : (
+      {previewCopy && copy && copy.exam && createPortal(<Suspense fallback={null}><ExamPreview exam={copy.exam as never} onClose={() => setPreviewCopy(false)} /></Suspense>, document.body)}
+
+      {/* Tadris+ P6-G — the teacher's agreement to the platform's use of the exam */}
+      {s.sentBy === "teacher" && (consented ? (
+        <details className="eb-owner-hint">
+          <summary>✓ أقرّ المعلم بحقوق الاستخدام{s.consentedAt ? " في " + day(s.consentedAt) : ""}</summary>
+          {detail.consentText && <p>{detail.consentText}</p>}
+        </details>
+      ) : (
+        <div className="auth-error" role="alert"><IconWarning size={16} aria-hidden="true" /><span>أُرسل هذا الامتحان دون إقرار المعلم بحقوق الاستخدام، فلا يُنشر ولا يُنسخ. ارفضه واطلب من المعلم إرساله من جديد.</span></div>
+      ))}
+
+      {consented && (sentReady ? <p className="eb-owner-hint eb-owner-done" role="status">✓ الامتحان كما أرسله المعلم جاهز للنشر.</p> : (
         <div className="auth-error" role="alert">
-          <span>لا يمكن نشر هذا الامتحان. ارفضه مع ذكر ما يجب إصلاحه:</span>
+          <span>لا يمكن نشر الامتحان كما أُرسل. ارفضه مع ذكر ما يجب إصلاحه، أو انسخه إلى مساحتك وأصلحه:</span>
           <ul className="eb-owner-import-list">{detail.blockers.map((b, i) => <li key={i}>{b}</li>)}</ul>
         </div>
+      ))}
+
+      {/* Tadris+ P6-G — the owner edits before publishing: a copy in the owner's teacher workspace, edited with the builder */}
+      {consented && s.sentBy === "teacher" && (
+        <section className="eb-owner-cap-group" aria-label="تعديل قبل النشر">
+          <h4 className="eb-owner-h3">تعديل قبل النشر</h4>
+          {!detail.ownerCopy ? (
+            <>
+              <p className="eb-owner-hint">تُنسخ نسخة من الامتحان إلى مساحتك كمعلم، فتعدّلها بالباني بكل أدواته ثم تنشرها من هنا. ما أرسله المعلم لا يتغير.</p>
+              <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void send(() => ownerLibraryApi.copySubmission(token, s.submissionId), () => setReload(n => n + 1))}>نسخ إلى مساحتي للتعديل</button>
+            </>
+          ) : !detail.ownerCopy.linked ? (
+            <p className="eb-owner-hint" role="note">نسختك في مساحة معلم لم تعد مربوطة بحسابك. اربط مساحتك من «نظرة عامة» ← «مساحة المعلم الخاصة بك».</p>
+          ) : !copy ? (
+            <>
+              <p className="eb-owner-hint" role="note">لم تعد نسختك موجودة في مساحتك. يمكنك نسخ الامتحان من جديد.</p>
+              <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void send(() => ownerLibraryApi.copySubmission(token, s.submissionId), () => setReload(n => n + 1))}>نسخ إلى مساحتي للتعديل</button>
+            </>
+          ) : (
+            <>
+              <p className="eb-owner-hint">نسختك في مساحتك كمعلم ← «امتحاناتي» باسم «<bdi>{copy.title}</bdi>»{copy.savedAt ? " · آخر حفظ " + day(copy.savedAt) : ""}. افتحها بالباني وعدّلها واحفظها، ثم عد هنا واضغط «تحديث النسخة».</p>
+              <div className="eb-owner-actions">
+                {ticket ? (
+                  <a className="auth-submit" href={ticket} target="_blank" rel="noopener noreferrer" onClick={() => setTicket(null)}>فتح مساحة المعلم في تبويب جديد</a>
+                ) : (
+                  <button type="button" className="eb-owner-secondary" disabled={busy} onClick={() => void send(() => ownerHandoffApi.issue(token), d => setTicket(window.location.pathname + d.handoffPath))}>فتح مساحتي كمعلم</button>
+                )}
+                <button type="button" className="eb-owner-secondary" onClick={() => setReload(n => n + 1)}>تحديث النسخة</button>
+                <button type="button" className="eb-owner-secondary" onClick={() => setPreviewCopy(true)}><IconEye size={16} aria-hidden="true" /> معاينة نسختي</button>
+              </div>
+              {copyReady ? <p className="eb-owner-hint eb-owner-done" role="status">✓ نسختك المعدّلة جاهزة للنشر.</p> : (
+                <div className="auth-error" role="alert">
+                  <span>نسختك المعدّلة غير جاهزة للنشر بعد. أصلح في الباني:</span>
+                  <ul className="eb-owner-import-list">{(copy.blockers || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       )}
       {detail.replaces && <p className="eb-owner-hint" role="note">نسخة محدَّثة من «<bdi>{detail.replaces.title}</bdi>» ({detail.replaces.libraryItemId}): عند النشر تحلّ محلها في بنوك المعلمين أنفسهم، وتُخفى السابقة. الواجبات المسندة منها لا تتغير.</p>}
 
-      {ready && (
-        <form className="auth-form eb-owner-create" aria-label="نشر الامتحان المرسل" onSubmit={e => { e.preventDefault(); void send(() => ownerLibraryApi.publishSubmission(token, s.submissionId, { title: title.trim(), category, activityType, description: description.trim() }), d => setPublished({ item: d.item, replaces: d.replaces, replacementPending: d.replacementPending })); }}>
+      {consented && (sentReady || copy) && (
+        <form className="auth-form eb-owner-create" aria-label="نشر الامتحان المرسل" onSubmit={e => { e.preventDefault(); if (!ready) return; void send(() => ownerLibraryApi.publishSubmission(token, s.submissionId, { title: title.trim(), category, activityType, description: description.trim(), ...(fromCopy ? { fromOwnerCopy: true } : {}) }), d => setPublished({ item: d.item, replaces: d.replaces, replacementPending: d.replacementPending })); }}>
+          {copy && (
+            <fieldset className="eb-owner-cap-group">
+              <legend>ما يُنشر</legend>
+              <label className="eb-owner-check"><input type="radio" name="eb-review-source" checked={useCopy} onChange={() => setUseCopy(true)} /> نسختي المعدّلة</label>
+              <label className="eb-owner-check"><input type="radio" name="eb-review-source" checked={!useCopy} onChange={() => setUseCopy(false)} /> كما أرسله المعلم</label>
+            </fieldset>
+          )}
           <label className="auth-field"><span>عنوان الامتحان في البنك</span>
             <div className="auth-input"><input value={title} onChange={e => setTitle(e.target.value)} maxLength={200} required /></div>
           </label>
@@ -206,7 +287,7 @@ function Review({ token, id, busy, send, teachers, categories, onBack, onDone, o
             <div className="auth-input"><input value={description} onChange={e => setDescription(e.target.value)} maxLength={500} /></div>
           </label>
           <div className="eb-owner-actions">
-            <button type="submit" className="auth-submit" disabled={busy || !title.trim() || !category}>{detail.replaces ? "نشر النسخة المحدَّثة" : "نشر في البنك"}</button>
+            <button type="submit" className="auth-submit" disabled={busy || !ready || !title.trim() || !category}>{detail.replaces ? "نشر النسخة المحدَّثة" : "نشر في البنك"}{fromCopy ? " (بتعديلاتي)" : ""}</button>
           </div>
         </form>
       )}

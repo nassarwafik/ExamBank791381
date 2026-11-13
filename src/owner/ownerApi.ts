@@ -257,12 +257,20 @@ export type LibrarySubmissionStatus = "pending" | "published" | "declined" | "wi
 export type OwnerSubmission = {
   submissionId: string; teacherId: string; teacherName: string; title: string; questionCount: number; totalMarks: number; status: LibrarySubmissionStatus;
   submittedAt: string; sentBy: "teacher" | "owner"; governed: boolean; decidedAt?: string; reason?: string; libraryItemId?: string;
+  /** Tadris+ P6-G — the teacher agreed to the platform's use of it (always true for the owner's own); the owner's editable copy. */
+  consented?: boolean; consentVersion?: string; consentedAt?: string; ownerCopy?: { blobName: string; copiedAt: string }; editedByOwner?: boolean;
+};
+/** Tadris+ P6-G — the owner's edited copy of a sent exam, as it is now in the owner's teacher workspace. */
+export type OwnerSubmissionCopy = {
+  blobName: string; linked: boolean; exists: boolean; title?: string; savedAt?: string; exam?: Record<string, unknown>;
+  finalization?: { canFinalize: boolean } | null; blockers?: string[];
 };
 export type OwnerSubmissionDetail = {
   submission: OwnerSubmission; exam: Record<string, unknown>; replaces: { libraryItemId: string; title: string } | null;
   finalization: { canFinalize: boolean } | null; blockers: string[];
+  consentText?: string; ownerCopy?: OwnerSubmissionCopy;
 };
-export type OwnSavedExam = { blobName: string; title: string; savedAt: string; questionCount: number };
+export type OwnSavedExam = { blobName: string; title: string; savedAt: string; questionCount: number; /** P6-G — the submission this is the owner's edited copy of */ ownerCopyOf?: string };
 export type LibraryActivityType = "exam" | "training";
 /** Tadris+ P6-E — what the owner publishes: one prepared structured exam (the server decides it is ready). */
 export type LibraryImportInput = { exam: unknown; title: string; category: string; activityType: LibraryActivityType; description: string; sourceFileName: string };
@@ -278,14 +286,17 @@ export const ownerLibraryApi = {
   // Tadris+ P6-F — the exams teachers send
   submissions: (token: string) => call<{ ok: true; submissions: OwnerSubmission[]; pending: number }>("/api/owner-library/submissions", { token }),
   submission: (token: string, id: string) => call<{ ok: true } & OwnerSubmissionDetail>("/api/owner-library/submission?id=" + encodeURIComponent(id), { token }),
-  publishSubmission: (token: string, submissionId: string, input: { title: string; category: string; activityType: LibraryActivityType; description: string }) =>
+  publishSubmission: (token: string, submissionId: string, input: { title: string; category: string; activityType: LibraryActivityType; description: string; fromOwnerCopy?: boolean }) =>
     call<{ ok: true; item: OwnerLibraryItem; submissionId: string; replaces?: string; replacementPending?: boolean }>("/api/owner-library/publish-submission", { method: "POST", token, body: { submissionId, ...input } }),
   declineSubmission: (token: string, submissionId: string, reason: string) =>
     call<{ ok: true; submission: OwnerSubmission }>("/api/owner-library/decline-submission", { method: "POST", token, body: { submissionId, reason } }),
   completeReplacement: (token: string, libraryItemId: string) =>
     call<{ ok: true; libraryItemId: string; replaces: string }>("/api/owner-library/complete-replacement", { method: "POST", token, body: { libraryItemId } }),
   ownExams: (token: string) => call<{ ok: true; linked: boolean; exams: OwnSavedExam[] }>("/api/owner-library/own-exams", { token }),
-  takeOwn: (token: string, blobName: string) => call<{ ok: true; submission: OwnerSubmission }>("/api/owner-library/take-own", { method: "POST", token, body: { blobName } })
+  takeOwn: (token: string, blobName: string) => call<{ ok: true; submission: OwnerSubmission }>("/api/owner-library/take-own", { method: "POST", token, body: { blobName } }),
+  // Tadris+ P6-G — a copy of a sent exam in the owner's teacher workspace, edited there with the builder
+  copySubmission: (token: string, submissionId: string) =>
+    call<{ ok: true; created: boolean; ownerCopy: { blobName: string; title: string }; submission: OwnerSubmission }>("/api/owner-library/copy-submission", { method: "POST", token, body: { submissionId } })
 };
 
 // Tadris+ P5-B4 — the owner adds students to a teacher's class (/api/owner-classes): one, or a list after the server preview. The

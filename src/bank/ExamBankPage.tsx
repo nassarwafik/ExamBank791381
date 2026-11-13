@@ -34,7 +34,10 @@ import { useDevicePref } from "../ui/devicePrefs";   // Tadris+ P8-B2b
  */
 export type SavedExamListItem = { blobName: string; examId: string; title: string; savedAt: string; questionCount: number; totalMarks: number; kind?: "structured" | "legacy" };
 /** Tadris+ P6-F — one «إرسال إلى بنك المنصة» of this teacher (/api/library-submissions). */
-export type LibrarySubmission = { submissionId: string; savedExamBlob: string; title: string; questionCount: number; status: "pending" | "published" | "declined" | "withdrawn" | "superseded"; submittedAt: string; decidedAt?: string; reason?: string };
+export type LibrarySubmission = { submissionId: string; savedExamBlob: string; title: string; questionCount: number; status: "pending" | "published" | "declined" | "withdrawn" | "superseded"; submittedAt: string; decidedAt?: string; reason?: string;
+  /** Tadris+ P6-G — the owner published it with their edits */ editedByOwner?: boolean };
+/** Tadris+ P6-G — the agreement to the platform's use of a sent exam: the text and its version come from the server. */
+export type LibraryConsent = { version: string; text: string };
 type LibraryCatalogItem = { libraryItemId: string; title: string; questionCount: number; totalMarks: number; publishable?: boolean; category?: string };
 type View = "overview" | "questions" | "exams" | "library";
 type Props = {
@@ -81,6 +84,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   const [savedError, setSavedError] = useState("");
   // Tadris+ P6-F — this teacher's submissions to the platform bank (null: not offered — an identity without an account, or unreadable).
   const [submissions, setSubmissions] = useState<LibrarySubmission[] | null>(null);
+  const [consent, setConsent] = useState<LibraryConsent | null>(null);   // Tadris+ P6-G
   const [catalog, setCatalog] = useState<LibraryCatalogItem[] | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState("");
@@ -102,7 +106,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   // rows yet and no error, or an explicit refresh in flight), so no state is written synchronously in the effect.
   const fetchBank = useCallback(() => api<{ questions: BankQuestionRow[] }>("/api/bank-questions"), [api]);
   const fetchSavedExams = useCallback(() => api<{ exams: SavedExamListItem[] }>("/api/saved-exams"), [api]);
-  const fetchSubmissions = useCallback(() => api<{ submissions: LibrarySubmission[] }>("/api/library-submissions"), [api]);
+  const fetchSubmissions = useCallback(() => api<{ submissions: LibrarySubmission[]; consent?: LibraryConsent }>("/api/library-submissions"), [api]);
   useEffect(() => {
     const seq = ++loadSeq.current;
     fetchBank()
@@ -118,7 +122,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   function loadSubmissions() {
     if (!may.save) return;
     submissionsTried.current = true;
-    fetchSubmissions().then(r => setSubmissions(r.submissions || [])).catch(() => setSubmissions(null));
+    fetchSubmissions().then(r => { setSubmissions(r.submissions || []); setConsent(r.consent && r.consent.version && r.consent.text ? r.consent : null); }).catch(() => setSubmissions(null));
   }
   async function refreshBank() {                                              // user-initiated: shows the loading state
     const seq = ++loadSeq.current;
@@ -192,12 +196,16 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
     } finally { setBusy(false); }
   }
   // Tadris+ P6-F — «إرسال إلى بنك المنصة»: the server reads and freezes the saved exam; the owner reviews it.
+  // Tadris+ P6-G — only after the teacher ticks the agreement to the platform's use of the exam (its text comes from the server).
   async function sendToPlatformBank(item: SavedExamListItem) {
-    const ok = await confirm({ title: "إرسال إلى بنك المنصة", message: "سيُرسل «" + item.title + "» كما هو محفوظ الآن إلى مالك المنصة للمراجعة. إن نشره يصبح متاحًا للمعلمين الذين يختارهم. تعديلك للامتحان بعد الإرسال لا يغيّر ما أُرسل؛ لإرسال التعديل أرسله من جديد.", confirmLabel: "إرسال", cancelLabel: "إلغاء" });
+    if (!consent) return;
+    const agreement = consent;
+    const ok = await confirm({ title: "إرسال إلى بنك المنصة", message: "سيُرسل «" + item.title + "» كما هو محفوظ الآن إلى مالك المنصة للمراجعة. إن نشره يصبح متاحًا للمعلمين الذين يختارهم. تعديلك للامتحان بعد الإرسال لا يغيّر ما أُرسل؛ لإرسال التعديل أرسله من جديد.\n\nإقرار حقوق الاستخدام:\n" + agreement.text,
+      acknowledge: { label: "قرأت الإقرار وأوافق عليه" }, confirmLabel: "إرسال", cancelLabel: "إلغاء" });
     if (!ok) return;
     setBusy(true); setActionError(""); setNotice("");
     try {
-      const r = await api<{ submission: LibrarySubmission }>("/api/library-submissions", { method: "POST", body: JSON.stringify({ action: "submit", blobName: item.blobName }) });
+      const r = await api<{ submission: LibrarySubmission }>("/api/library-submissions", { method: "POST", body: JSON.stringify({ action: "submit", blobName: item.blobName, consentVersion: agreement.version }) });
       setSubmissions(prev => [r.submission, ...(prev || []).map(s => (s.savedExamBlob === item.blobName && s.status === "pending" ? { ...s, status: "superseded" as const } : s))]);
       setNotice("✓ أُرسل «" + item.title + "» إلى مالك المنصة للمراجعة.");
     } catch (e) {
@@ -355,7 +363,7 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
                   </div>
                   <div className="eb-bank-exam-actions">
                     <button type="button" className="eb-button is-primary is-small" onClick={() => void onOpenSavedExam(item)} disabled={busy}><IconBuilder size={14} aria-hidden="true" />فتح في الباني</button>
-                    {submissions && item.kind === "structured" && (latestSubmission(item.blobName)?.status === "pending"
+                    {submissions && consent && item.kind === "structured" && (latestSubmission(item.blobName)?.status === "pending"
                       ? <button type="button" className="eb-button is-quiet is-small" onClick={() => void withdrawSubmission(latestSubmission(item.blobName) as LibrarySubmission)} disabled={busy}>سحب الإرسال</button>
                       : <button type="button" className="eb-button is-small" onClick={() => void sendToPlatformBank(item)} disabled={busy}><IconUpload size={14} aria-hidden="true" />{latestSubmission(item.blobName)?.status === "published" ? "إرسال نسخة محدَّثة" : "إرسال إلى بنك المنصة"}</button>)}
                     {may.save && <button type="button" className="eb-button is-quiet is-small is-danger" onClick={() => void deleteSavedExam(item)} disabled={busy}><IconTrash size={14} aria-hidden="true" />حذف</button>}
@@ -528,7 +536,7 @@ function nextOptionValue(options: { value: string }[]): string {
 function SubmissionStatus({ s }: { s: LibrarySubmission | null }) {
   if (!s) return null;
   if (s.status === "pending") return <p className="eb-bank-exam-meta"><StatusBadge tone="info">قيد مراجعة المالك</StatusBadge></p>;
-  if (s.status === "published") return <p className="eb-bank-exam-meta"><StatusBadge tone="success">نُشر في بنك المنصة</StatusBadge></p>;
+  if (s.status === "published") return <p className="eb-bank-exam-meta"><StatusBadge tone="success">{s.editedByOwner ? "نُشر في بنك المنصة بتعديلات من المالك" : "نُشر في بنك المنصة"}</StatusBadge></p>;
   if (s.status === "declined") return <p className="eb-bank-exam-meta"><StatusBadge tone="danger">رُفض</StatusBadge> <span>{s.reason ? "السبب: " + s.reason : ""}</span></p>;
   return null;
 }

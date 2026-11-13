@@ -13,6 +13,8 @@ const EXAMS = [
   { blobName: "exams/s2.json", examId: "s2", title: "امتحان منشور", savedAt: "2026-11-10T09:00:00.000Z", questionCount: 4, totalMarks: 40, kind: "structured" },
   { blobName: "exams/s3.json", examId: "s3", title: "امتحان مرفوض", savedAt: "2026-11-09T09:00:00.000Z", questionCount: 4, totalMarks: 40, kind: "structured" }
 ];
+// P6-G — the agreement to the platform's use of the exam comes with the read; sending needs its box ticked
+const CONSENT = { version: "library-use-v1", text: "أُقرّ بأن هذا الامتحان من إعدادي (نص اختباري)." };
 const sub = (id: string, blob: string, status: string, over: Record<string, unknown> = {}) => ({ submissionId: id, savedExamBlob: blob, title: "x", questionCount: 4, status, submittedAt: "2026-11-12T10:00:00.000Z", ...over });
 type Call = { url: string; method: string; body: Record<string, unknown> };
 let calls: Call[] = [];
@@ -31,7 +33,7 @@ beforeEach(() => {
     calls.push({ url, method, body });
     if (url === "/api/bank-questions") return json({ ok: true, questions: [] });
     if (url === "/api/saved-exams") return json({ ok: true, exams: EXAMS });
-    if (url === "/api/library-submissions" && method === "GET") return subsStatus === 200 ? json({ ok: true, submissions: subs }) : json({ ok: false, code: "ACCOUNT_REQUIRED", error: "الإرسال إلى بنك المنصة متاح لحسابات المعلمين فقط." }, subsStatus);
+    if (url === "/api/library-submissions" && method === "GET") return subsStatus === 200 ? json({ ok: true, submissions: subs, consent: CONSENT }) : json({ ok: false, code: "ACCOUNT_REQUIRED", error: "الإرسال إلى بنك المنصة متاح لحسابات المعلمين فقط." }, subsStatus);
     if (url === "/api/library-submissions" && body.action === "submit") return json(submitReply.body, submitReply.status);
     if (url === "/api/library-submissions" && body.action === "withdraw") return json({ ok: true, submission: sub(String(body.submissionId), "exams/s1.json", "withdrawn") });
     return json({ ok: true });
@@ -65,9 +67,10 @@ describe("P6-F «إرسال إلى بنك المنصة»", () => {
     await openSaved();
     await waitFor(() => within(rowOf("امتحان منظّم")).getByRole("button", { name: "إرسال إلى بنك المنصة" }));
     fireEvent.click(within(rowOf("امتحان منظّم")).getByRole("button", { name: "إرسال إلى بنك المنصة" }));
+    fireEvent.click(within(await confirmEl()).getByRole("checkbox", { name: "قرأت الإقرار وأوافق عليه" }));
     fireEvent.click(within(await confirmEl()).getByRole("button", { name: "إرسال" }));
     await screen.findByText("✓ أُرسل «امتحان منظّم» إلى مالك المنصة للمراجعة.");
-    expect(posted()).toEqual([{ action: "submit", blobName: "exams/s1.json" }]);
+    expect(posted()).toEqual([{ action: "submit", blobName: "exams/s1.json", consentVersion: "library-use-v1" }]);
     expect(within(rowOf("امتحان منظّم")).getByText("قيد مراجعة المالك")).toBeTruthy();
     fireEvent.click(within(rowOf("امتحان منظّم")).getByRole("button", { name: "سحب الإرسال" }));
     await screen.findByText("✓ سُحب الإرسال.");
@@ -80,6 +83,7 @@ describe("P6-F «إرسال إلى بنك المنصة»", () => {
     await openSaved();
     await waitFor(() => within(rowOf("امتحان منظّم")).getByRole("button", { name: "إرسال إلى بنك المنصة" }));
     fireEvent.click(within(rowOf("امتحان منظّم")).getByRole("button", { name: "إرسال إلى بنك المنصة" }));
+    fireEvent.click(within(await confirmEl()).getByRole("checkbox", { name: "قرأت الإقرار وأوافق عليه" }));
     fireEvent.click(within(await confirmEl()).getByRole("button", { name: "إرسال" }));
     expect((await screen.findByRole("alert")).textContent).toContain("الامتحان غير جاهز للإرسال");
     expect(within(rowOf("امتحان منظّم")).queryByText("قيد مراجعة المالك")).toBeNull();

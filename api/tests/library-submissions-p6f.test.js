@@ -68,7 +68,9 @@ const owner = (ctx, action, body, headers = ctx.owner) => ownerLibrary(oreq("POS
 const ownerGet = (ctx, headers = ctx.owner) => ownerLibrary(oreq("GET", "", headers), odeps(ctx));
 const ownerRead = (ctx, action, query = "", headers = ctx.owner) => ownerLibrary({ method: "GET", url: "https://x/api/owner-library/" + action + query, params: { action }, headers: hdr(headers), json: async () => ({}) }, odeps(ctx));
 // the teacher's activity log is written for real here (the shared harness silences it for the assignment routes)
-const send = (ctx, headers, body) => submissionsRoute({ method: "POST", url: "https://x/api/library-submissions", params: {}, headers: hdr(headers), json: async () => body }, { ...ctx.deps, recordAuditEvent: undefined, ...(ctx.extra || {}) });
+// P6-G — a teacher sends after agreeing to the platform's use of the exam (the current consent version); P6-G's own tests prove the refusal without it
+const agreed = body => (body && body.action === "submit" && !("consentVersion" in body) ? { ...body, consentVersion: LS.CONSENT.version } : body);
+const send = (ctx, headers, body) => submissionsRoute({ method: "POST", url: "https://x/api/library-submissions", params: {}, headers: hdr(headers), json: async () => agreed(body) }, { ...ctx.deps, recordAuditEvent: undefined, ...(ctx.extra || {}) });
 const mine = async (ctx, headers) => (await submissionsRoute({ method: "GET", url: "https://x/api/library-submissions", params: {}, headers: hdr(headers) }, { ...ctx.deps, ...(ctx.extra || {}) })).jsonBody.submissions;
 const catalog = (ctx, headers) => library({ method: "GET", url: "https://x", params: {}, headers: hdr(headers) }, ctx.deps);
 const bankOf = async (ctx, headers) => (await catalog(ctx, headers)).jsonBody.catalog.map(i => i.libraryItemId);

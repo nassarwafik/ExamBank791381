@@ -11,11 +11,14 @@ const LP = require("../lib/library-publish");
 
 // Tadris+ P6-F — «إرسال إلى بنك المنصة» (docs/enterprise-library-submissions-p6f.md; owner decision (2)). Route: /api/library-submissions
 //
-//   GET              → { submissions: [this teacher's own submissions: title, status, dates, the owner's reason when declined] }
-//   POST submit      { blobName }        sends THE TEACHER'S OWN saved exam (its stored owner is exactly this account). The server
+//   GET              → { submissions: [this teacher's own submissions: title, status, dates, the owner's reason when declined],
+//                         consent: { version, text } }   (Tadris+ P6-G — the agreement the teacher's page shows before sending)
+//   POST submit      { blobName, consentVersion }   sends THE TEACHER'S OWN saved exam (its stored owner is exactly this account). The server
 //                                         reads it itself — when it is governed, its PUBLISHED revision — and freezes it: later edits
 //                                         do not change what was sent. It must be ready (the shared finalization authority) — the
 //                                         reasons are answered when it is not. A pending submission of the same exam is superseded.
+//                                         P6-G: `consentVersion` must be the CURRENT agreement's version (the teacher agreed to the text
+//                                         the server holds); else 400 CONSENT_REQUIRED with that text, nothing written.
 //   POST withdraw    { submissionId }    the teacher's own pending submission → «سُحب».
 //
 // Capability: examBuilder.exam.save (route-capabilities.js) — sending is a use of what the teacher may save. Only an account-based
@@ -44,11 +47,15 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET") {
       const index = await LS.readIndex(container, deps);
       const submissions = index.items.filter(r => r.teacherId === teacherId).map(LS.teacherView).sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
-      return reply(200, { ok: true, submissions });
+      return reply(200, { ok: true, submissions, consent: { version: LS.CONSENT.version, text: LS.CONSENT.text } });
     }
 
     if (action === "submit") {
       const savedExamBlob = String(body.blobName || "");
+      // Tadris+ P6-G — the agreement first: nothing is read or written for a teacher who has not agreed to the current text.
+      if (body.consentVersion !== LS.CONSENT.version) {
+        return reply(400, { ok: false, code: "CONSENT_REQUIRED", error: "وافق على إقرار حقوق الاستخدام لإرسال الامتحان.", consent: { version: LS.CONSENT.version, text: LS.CONSENT.text } });
+      }
       const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
       const found = await LS.sendableExam({ bankContainer, platformContainer: container, teacherId, savedExamBlob, deps });
       const prepared = LP.prepareLibraryExam(found.exam, {
@@ -58,9 +65,9 @@ async function handler(request, deps = {}, obs = null) {
       if (!prepared.ok) return prepared.response;
       const account = await (deps.readTeacherAccount || readTeacherAccount)(container, teacherId, deps);
       const row = await LS.createSubmission(container, { teacherId, teacherName: account ? account.displayName || account.username : "", savedExamBlob, governed: found.governed,
-        prepared, title: found.title, sentBy: "teacher", iso }, deps);
+        prepared, title: found.title, sentBy: "teacher", iso, consent: { version: LS.CONSENT.version, at: iso } }, deps);
       await (deps.recordAuditEvent || recordAuditEvent)(container, { actor: teacherId, action: "library.submission.sent", targetType: "saved-exam", targetId: savedExamBlob, targetLabel: row.title,
-        details: { submissionId: row.submissionId, questionCount: row.questionCount, governed: row.governed } });
+        details: { submissionId: row.submissionId, questionCount: row.questionCount, governed: row.governed, consentVersion: LS.CONSENT.version } });
       return reply(200, { ok: true, submission: LS.teacherView(row) });
     }
 
