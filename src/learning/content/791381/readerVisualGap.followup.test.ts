@@ -43,7 +43,7 @@ const SITE_MAP = [
 
 describe("Reader follow-up — registry & activity allowlists", () => {
   it("the visual registry holds exactly 122 ids and includes the ONE new follow-up visual (sw6-router-trunk)", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
+    expect(REGISTERED_VISUAL_IDS.filter(id => id.startsWith("791381/")).length).toBe(122);   // this course's visuals (AUTO-A2 adds the 899271/ namespace)
     expect(REGISTERED_VISUAL_IDS).toContain("791381/m04/sw6-router-trunk");
     expect(new Set(REGISTERED_VISUAL_IDS).size).toBe(REGISTERED_VISUAL_IDS.length);   // no duplicate id
   });

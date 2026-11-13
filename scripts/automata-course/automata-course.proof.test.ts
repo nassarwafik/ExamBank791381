@@ -4,7 +4,7 @@
 //   • a machine that declares its language (`lang`) accepts EXACTLY that language on every word over its alphabet up to a length;
 //   • each example word of a simulator is a valid word of its alphabet;
 //   • each exercise with a `prove` is checked against the machine shown above it on the same page (accepts / finalState /
-//     stateSet / shortest / classify).
+//     stateSet / shortest / classify / stackAfter).
 import { describe, it, expect } from "vitest";
 // @ts-expect-error — plain ESM authoring tools, untyped on purpose.
 import { buildCourse } from "../build-automata-course.mjs";
@@ -68,6 +68,7 @@ describe("every machine exercise is proven on the machine above it", () => {
         case "accepts": expect(accepted(m, p.word!)).toBe(p.expect); break;
         case "finalState": expect(run(m, p.word!).steps.at(-1)!.active).toEqual([p.expect]); break;
         case "stateSet": expect(run(m, p.word!).steps.at(-1)!.active).toEqual(p.expect); break;
+        case "stackAfter": expect(run(m, p.word!).steps.at(-1)!.stack!.join("")).toBe(p.expect); break;
         case "classify": for (const [w, g] of p.words!) expect(accepted(m, w), "«" + w + "»").toBe(g === 0); break;
         case "shortest": {
           const all = words(m.alphabet, 8).filter(w => accepted(m, w));

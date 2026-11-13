@@ -37,6 +37,8 @@ const B = "791381s", B1 = "791381s-m01";
 // 899371 P2: a third registered course. It is published (no catalog document) and narrowed like the others; the tests below
 // that list EVERY published course name it, the rest keep working on A and B.
 const C = "899371";
+// AUTO-A2: a fourth registered course («الوحدة الخامسة: الأتمتة»), published like the others; named where EVERY course is listed.
+const D = "899271";
 const CATALOG = id => "platform/catalog/courses/" + id + ".json";
 
 function setup({ mode = "enforce", courses, preset = "full-teaching" } = {}) {
@@ -125,7 +127,7 @@ describe("P5-A the catalog: an archived course is closed to everyone, in every m
       expect(available(await c.trainings("teacher"))).toEqual([]);                                  // every release course archived
       ctx.mem.setJson(CATALOG(B), { schemaVersion: 1, courseId: B, status: "published" });
       expect(available(await c.trainings("teacher"))).toContain("T01");                             // T01 is also released through B
-      expect(ids(await c.catalog())).toEqual([B, C]);
+      expect(ids(await c.catalog())).toEqual([B, C, D]);
       expect((await c.release(A, [A1])).jsonBody.code).toBe("COURSE_NOT_AVAILABLE");
       expect((await c.content("student")).jsonBody.code).toBe("COURSE_NOT_AVAILABLE");
       expect((await c.study("student")).status).toBe(403);
@@ -162,7 +164,7 @@ describe("P5-A the teacher's entitlement (resources.courses) narrows — while E
       const ctx = setup({ mode, courses: [A] });
       const c = calls(ctx);
       expect([(await c.content("teacher", B)).status, (await c.content("student", B)).status]).toEqual([200, 200]);
-      expect(ids(await c.catalog())).toEqual([A, B, C]);
+      expect(ids(await c.catalog())).toEqual([A, B, C, D]);
     }
   });
 
@@ -186,7 +188,7 @@ describe("P5-A the teacher's entitlement (resources.courses) narrows — while E
 
   it("no list = every published course; an empty list = none", async () => {
     let ctx = setup();
-    expect(ids(await calls(ctx).catalog())).toEqual([A, B, C]);
+    expect(ids(await calls(ctx).catalog())).toEqual([A, B, C, D]);
     ctx = setup({ courses: [] });
     expect(ids(await calls(ctx).catalog())).toEqual([]);
     expect((await calls(ctx).content("student")).status).toBe(403);
@@ -284,7 +286,7 @@ describe("P5-A the owner's API: catalog status, and courses in assign / history 
   it("catalog: every course with its status; course-status needs a step-up, refuses bad input, is audited", async () => {
     const ctx = setup({ mode: "legacy" });
     const owner = withOwner(ctx), stale = withOwner(ctx, true);
-    expect((await oa(ctx, owner, "GET", "catalog")).jsonBody.courses.map(c => [c.courseId, c.status])).toEqual([[A, "published"], [B, "published"], [C, "published"]]);
+    expect((await oa(ctx, owner, "GET", "catalog")).jsonBody.courses.map(c => [c.courseId, c.status])).toEqual([[A, "published"], [B, "published"], [C, "published"], [D, "published"]]);
     expect((await oa(ctx, stale, "POST", "course-status", { courseId: A, status: "archived" })).jsonBody.code).toBe("STEP_UP_REQUIRED");
     expect((await oa(ctx, owner, "POST", "course-status", { courseId: "x", status: "archived" })).status).toBe(404);
     expect((await oa(ctx, owner, "POST", "course-status", { courseId: A, status: "gone" })).status).toBe(400);

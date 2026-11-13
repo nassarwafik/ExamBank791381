@@ -40,7 +40,7 @@ const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(
 
 describe("899371 — identity and registration", () => {
   it("is the third catalog course, with the card the owner set", () => {
-    expect(LEARNING_COURSES.map(c => c.id)).toEqual(["791381", "791381s", CID]);
+    expect(LEARNING_COURSES.map(c => c.id)).toEqual(["791381", "791381s", CID, "899271"]);   // AUTO-A2 adds the automata course after it
     expect(findLearningCourse(CID)).toMatchObject({ title: "أسس علم الحاسوب", productTitle: "مجمع أسئلة 899371 — أسس علم الحاسوب", subject: "علم الحاسوب", grades: "الصف الحادي عشر", year: "2026–2027", author: "الأستاذ وفيق نصار", status: "available" });
     expect(registeredCourseIds()).toContain(CID);
     expect(manifest.courseId).toBe(CID);

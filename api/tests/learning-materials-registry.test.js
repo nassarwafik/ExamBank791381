@@ -71,7 +71,7 @@ describe("registry — the summary booklet course 791381s", () => {
 describe("registry — exact production catalog", () => {
   it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4; m17–m18 = Batch 5; m03 = Batch 6, the historical id completed in place, order 15; m19 = Batch 7 VTP, order 16; m04 = Batch 7, the historical id completed in place, order 17; m20–m22 = Batch 8 Wi-Fi / IPv6 والمنافذ / DHCP, orders 18–20; m23–m24 = Batch 9 Port Security / حماية أجهزة Cisco, orders 21–22; m05 = Batch 9, the historical id completed in place, order 23)", () => {
     const courses = listLearningCourses();
-    expect(courses.map(c => c.courseId)).toEqual(["791381", "791381s", "899371"]);   // the book, the summary booklet, then 899371 (P2)
+    expect(courses.map(c => c.courseId)).toEqual(["791381", "791381s", "899371", "899271"]);   // the book, the summary booklet, then 899371 (P2), then 899271 (AUTO-A2)
     expect(courses[0]).toMatchObject({ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة" });
     expect(courses[0].modules).toEqual([
       { moduleId: "791381-m01", title: "أساسيات الشبكات", order: 1 },

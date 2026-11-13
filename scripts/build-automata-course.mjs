@@ -93,6 +93,19 @@ export function render() {
     })),
     batches: COURSE.batches.map(b => ({ id: b.id, label: b.label, moduleIds: b.units.map(n => COURSE.id + "-m" + pad(n)) })),
   };
+  // the per-course lists elsewhere in the repository, between «BEGIN 899271» / «END 899271» marker lines (so they never drift)
+  const ids = modules.map(m => m.id);
+  const region = (rel, indent, body) => {
+    const text = readFileSync(join(ROOT, rel), "utf8");
+    const re = new RegExp("(\\n" + indent + "// BEGIN " + COURSE.id + "[^\\n]*\\n)[\\s\\S]*?(" + indent + "// END " + COURSE.id + ")");
+    if (!re.test(text)) throw new Error("no BEGIN/END " + COURSE.id + " markers in " + rel);
+    files[rel] = text.replace(re, (_, a, b) => a + body.map(l => indent + l + "\n").join("") + b);
+  };
+  region("src/learning/content/registry.ts", "  ", [`"${COURSE.id}": [`, ...ids.map(id => `  "${id}",`), "],"]);
+  region("src/learning/content/bundledModules.ts", "  ", [`"${COURSE.id}": {`, ...ids.map(id => `  "${id}": () => import("./${COURSE.id}/modules/${id.slice(COURSE.id.length + 1)}"),`), "},"]);
+  region("api/src/lib/learning-materials-registry.js", "  ", ["{", `  courseId: "${COURSE.id}",`, `  title: "${COURSE.title}",`, `  subject: "${COURSE.subject}",`, "  modules: [",
+    ...modules.map((m, i) => `    { moduleId: "${m.id}", title: "${m.title}", order: ${m.order} }${i < modules.length - 1 ? "," : ""}`), "  ]", "}"]);
+  region("src/learning/catalog.ts", "      ", COURSE.batches.map(b => `{ id: "${b.id}", label: "${b.label}" },`));
   files[`${dir}/manifest.ts`] = HEADER("content MANIFEST")
     + `//\n// ID policy: \`${COURSE.id}\` · \`${COURSE.id}-mNN\` · \`${COURSE.id}-mNN-lNN\` · \`${COURSE.id}-mNN-lNN-pNN\` — stable, never regenerated at runtime.\n`
     + `\nimport { LEARNING_CONTENT_SCHEMA_VERSION, type LearningCourseManifest } from "../types";\n\nconst manifest: LearningCourseManifest = `

@@ -67,7 +67,7 @@ describe("Batch 7 — scope and placement (VTP/Trunk remainder + Wi-Fi + IPv6)",
   });
 
   it("post-sync registry total = 81 + Batch 7 (13) + Batch 8 (11) + Batch 9 (16) = 121; each new Batch 7 id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
+    expect(REGISTERED_VISUAL_IDS.filter(id => id.startsWith("791381/")).length).toBe(122);   // this course's visuals (AUTO-A2 adds the 899271/ namespace)
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

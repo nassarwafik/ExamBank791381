@@ -19,7 +19,14 @@ import {
  * the shell's reset returns to the block's first word and step.
  */
 
-const CELL_W = 150, CELL_H = 120, R = 24, LINE_H = 15, CHAR_W = 7.8;
+const CELL_W = 150, CELL_H = 120, LINE_H = 15, CHAR_W = 7.8;
+/** The circle radius and name size for a machine: a short name (q0) in the standard circle, a long one (q0p0t0 of a product
+ *  automaton, q0q1q2 of a subset conversion) in a smaller font and a wider circle, so a name never spills out of its state. */
+function stateSizing(states: string[]): { r: number; font: number } {
+  const longest = Math.max(...states.map(s => [...s].length));
+  const font = longest <= 3 ? 15 : longest <= 5 ? 13 : 11;
+  return { font, r: Math.max(24, Math.ceil((longest * font * 0.62) / 2) + 7) };
+}
 const KIND_TEXT: Record<Machine["kind"], string> = { DFA: "أوتومات منتهٍ حتمي", NFA: "أوتومات منتهٍ غير حتمي", PDA: "أوتومات مكدّس", TM: "آلة تورنغ" };
 const VERDICT_TEXT: Record<Verdict, string> = { accept: "الكلمة مقبولة", reject: "الكلمة مرفوضة", stuck: "الكلمة مرفوضة", nohalt: "الآلة لم تتوقف" };
 const shown = (w: string) => (w === "" ? "ε" : w);
@@ -70,6 +77,8 @@ const firstBaseline = (pl: Placed) => {
 };
 
 type Scene = {
+  r: number;
+  font: number;
   pos: Record<string, Pt>;
   edges: { e: DrawnEdge; d: string; label: Placed }[];
   stateLabels: Record<string, Placed>;
@@ -79,8 +88,10 @@ type Scene = {
 
 /** Lays the whole drawing out once per machine: arrows, loops on the freest side, labels clear of the arrows, the bounds. */
 function buildScene(machine: Machine, layout: Record<string, [number, number]>): Scene {
+  const { r: R, font } = stateSizing(machine.states);
+  const cw = Math.max(CELL_W, 2 * R + 100), ch = Math.max(CELL_H, 2 * R + 72);
   const pos: Record<string, Pt> = {};
-  for (const s of machine.states) { const [c, r] = layout[s]; pos[s] = { x: c * CELL_W, y: r * CELL_H }; }
+  for (const s of machine.states) { const [c, r] = layout[s]; pos[s] = { x: c * cw, y: r * ch }; }
   const all = drawnEdges(machine);
   const pairs = new Set(all.map(e => e.key));
   const touching: Record<string, number[]> = Object.fromEntries(machine.states.map(s => [s, [] as number[]]));
@@ -146,7 +157,7 @@ function buildScene(machine: Machine, layout: Record<string, [number, number]>):
   }
   for (const l of Object.values(stateLabels)) grow(textBox(l));
   for (const p of curvePeaks) grow({ x1: p.x - 4, y1: p.y - 4, x2: p.x + 4, y2: p.y + 4 });
-  return { pos, edges, stateLabels, start, box: { x1: box.x1 - 12, y1: box.y1 - 12, x2: box.x2 + 12, y2: box.y2 + 12 } };
+  return { r: R, font, pos, edges, stateLabels, start, box: { x1: box.x1 - 12, y1: box.y1 - 12, x2: box.x2 + 12, y2: box.y2 + 12 } };
 }
 
 function Label({ pl, className, rtl }: { pl: Placed; className: string; rtl?: boolean }) {
@@ -161,7 +172,7 @@ function Label({ pl, className, rtl }: { pl: Placed; className: string; rtl?: bo
 }
 
 function Diagram({ machine, scene, step, ids }: { machine: Machine; scene: Scene; step: RunStep; ids: string }) {
-  const { pos, box } = scene;
+  const { pos, box, r: R } = scene;
   const width = Math.ceil(box.x2 - box.x1), height = Math.ceil(box.y2 - box.y1);
   const summary = KIND_TEXT[machine.kind] + " حالاته " + machine.states.join("، ") + "؛ البداية " + machine.start
     + "؛ " + (machine.accept.length ? "القبول " + machine.accept.join("، ") : "لا حالة قبول") + ". الحالة الآن: " + (step.active.length ? step.active.join("، ") : "لا شيء") + ".";
@@ -196,7 +207,7 @@ function Diagram({ machine, scene, step, ids }: { machine: Machine; scene: Scene
             <g key={s} className={"learning-automaton-state" + (on ? " is-active" : "") + (acc ? " is-accept" : "")}>
               <circle cx={p.x} cy={p.y} r={R} className="learning-automaton-circle" />
               {acc && <circle cx={p.x} cy={p.y} r={R - 5} className="learning-automaton-ring" />}
-              <text x={p.x} y={p.y + 5} textAnchor="middle" className="learning-automaton-name">{s}</text>
+              <text x={p.x} y={p.y + scene.font / 3} textAnchor="middle" className="learning-automaton-name" style={{ fontSize: scene.font + "px" }}>{s}</text>
               {scene.stateLabels[s] && <Label pl={scene.stateLabels[s]} className="learning-automaton-statelabel" rtl />}
             </g>
           );

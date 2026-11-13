@@ -150,6 +150,9 @@
 .eb-visual-node.is-target{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); stroke-width:2; }
 .eb-visual-node.is-dim{ opacity:.55; }
 .eb-visual-zone{ fill:none; stroke:var(--eb-primary); stroke-width:1.5; stroke-dasharray:5 5; }
+/* AUTO-A2 (899271) — nested / shaded zones for set and language diagrams (Venn-style). */
+.eb-visual-zone.is-inner{ fill:var(--eb-primary-050, var(--eb-surface)); stroke-dasharray:none; }
+.eb-visual-zone.is-core{ fill:var(--eb-primary-100, var(--eb-surface-2)); stroke-dasharray:none; fill-opacity:.85; }
 .eb-visual-zone-label{ fill:var(--eb-primary-strong); font-size:11.5px; font-weight:700; }
 .eb-visual-router{ fill:var(--eb-primary); }
 .eb-visual-cloud{ fill:var(--eb-info); }

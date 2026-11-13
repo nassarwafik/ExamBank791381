@@ -238,3 +238,34 @@ export function subsets(m, { complete = true, trapName = "qT" } = {}) {
   const states = [...order.map(key), ...(needTrap ? [trapName] : [])];
   return { kind: "DFA", states, alphabet: m.alphabet, start: key(start), accept: order.filter(set => set.some(q => m.accept.includes(q))).map(key), transitions, ...(needTrap ? { stateLabels: { [trapName]: "مصيدة" } } : {}) };
 }
+
+/** Marks a block the author wrote (a table, a paragraph …) on an added page as enrichment, not slide content. */
+export const ADDED = b => ({ ...b, origin: "teacher-enrichment" });
+
+// ── the course's closure constructions (اللقاء 3 الشرائح 84–90، اللقاء 4 الشرائح 4–17), as the slides do them ──────────────
+const tri = m => m.transitions.map(t => (Array.isArray(t) ? t : [t.from, t.symbol, t.to]));
+/** Union by a new start state q0new: it copies every arrow leaving the two original starts; accepting if either start was. */
+export function unionNew(A, B) {
+  const ta = tri(A), tb = tri(B);
+  const extra = [...ta.filter(([f]) => f === A.start), ...tb.filter(([f]) => f === B.start)].map(([, s, t]) => ["q0new", s, t]);
+  return { kind: "NFA", states: ["q0new", ...A.states, ...B.states], alphabet: A.alphabet, start: "q0new",
+    accept: [...(A.accept.includes(A.start) || B.accept.includes(B.start) ? ["q0new"] : []), ...A.accept, ...B.accept], transitions: [...extra, ...ta, ...tb] };
+}
+/** Complement of a COMPLETE DFA: the accepting and the non-accepting states swap. */
+export const complement = A => ({ ...A, accept: A.states.filter(s => !A.accept.includes(s)) });
+/** Concatenation: start = A1's start; from every accepting state of A1 the arrows that leave A2's start are added; accepting = A2's
+ *  (and A1's too when A2's start is accepting). */
+export function concat(A, B) {
+  const ta = tri(A), tb = tri(B);
+  const extra = A.accept.flatMap(f => tb.filter(([s]) => s === B.start).map(([, x, t]) => [f, x, t]));
+  return { kind: "NFA", states: [...A.states, ...B.states], alphabet: A.alphabet, start: A.start,
+    accept: B.accept.includes(B.start) ? [...A.accept, ...B.accept] : [...B.accept], transitions: [...ta, ...tb, ...extra] };
+}
+/** Reversal: every arrow flipped; the original start becomes the single accepting state; a new start q0new (accepting iff the
+ *  original start was) takes every arrow that now leaves an original accepting state. */
+export function reverse(A) {
+  const flipped = tri(A).map(([f, s, t]) => [t, s, f]);
+  const extra = A.accept.flatMap(f => flipped.filter(([x]) => x === f).map(([, s, t]) => ["q0new", s, t]));
+  return { kind: "NFA", states: ["q0new", ...A.states], alphabet: A.alphabet, start: "q0new",
+    accept: [A.start, ...(A.accept.includes(A.start) ? ["q0new"] : [])], transitions: [...extra, ...flipped] };
+}
