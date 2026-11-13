@@ -137,6 +137,8 @@ describe("P6-F a teacher sends their own exam; the owner reviews and publishes i
     const d = await owner(ctx, "decline-submission", { submissionId: id, reason: "أضف أسئلة على الوحدة 3" });
     expect([d.status, d.jsonBody.submission.status]).toEqual([200, "declined"]);
     expect((await mine(ctx, ctx.sara))[0]).toMatchObject({ status: "declined", reason: "أضف أسئلة على الوحدة 3" });
+    // recorded in the owner audit before it happens (P10-L) — the length of the reason, never its text
+    expect(ownerAudits(ctx).map(a => [a.action, a.targetId, a.details.teacherId, a.details.reasonLength])).toEqual([["owner.library.submission-declined", id, SARA, "أضف أسئلة على الوحدة 3".length]]);
     expect((await owner(ctx, "publish-submission", publishBody(id))).jsonBody.code).toBe("SUBMISSION_NOT_PENDING");
     expect(IMP.parseIndex(ctx.mem.getJson(IMP.INDEX_DOC)).items).toEqual([]);
   });
