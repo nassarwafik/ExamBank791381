@@ -229,6 +229,18 @@ const VISUALS: readonly RegisteredVisual[] = [
   visual("791381/m28/admin-distance-summary", () => import("./791381/groups/m28").then(g => ({ default: g.AdminDistanceSummary })), false),
   // Reader follow-up — Sw6 ↔ Router trunk topology (m04 PDF150, site page 138)
   visual("791381/m04/sw6-router-trunk", () => import("./791381/groups/m04").then(g => ({ default: g.Sw6RouterTrunk })), false),
+  // AUTO-A2 — course 899271 «الوحدة الخامسة: الأتمتة» (docs/enterprise-automata-course-a2.md): one lazy group per unit (899271/groups/uNN).
+  visual("899271/u01/models-ladder", () => import("./899271/groups/u01").then(g => ({ default: g.ModelsLadder })), false),
+  visual("899271/u01/subset-venn", () => import("./899271/groups/u01").then(g => ({ default: g.SubsetVenn })), false),
+  visual("899271/u01/word-anatomy", () => import("./899271/groups/u01").then(g => ({ default: g.WordAnatomy })), false),
+  visual("899271/u01/prefix-suffix", () => import("./899271/groups/u01").then(g => ({ default: g.PrefixSuffix })), false),
+  visual("899271/u01/languages-nested", () => import("./899271/groups/u01").then(g => ({ default: g.LanguagesNested })), false),
+  visual("899271/u02/parking-gate", () => import("./899271/groups/u02").then(g => ({ default: g.ParkingGate })), false),
+  visual("899271/u02/turnstile", () => import("./899271/groups/u02").then(g => ({ default: g.Turnstile })), false),
+  visual("899271/u04/union-intersection", () => import("./899271/groups/u04").then(g => ({ default: g.UnionIntersection })), false),
+  visual("899271/u06/same-state-paths", () => import("./899271/groups/u06").then(g => ({ default: g.SameStatePaths })), false),
+  visual("899271/u08/stack-lifo", () => import("./899271/groups/u08").then(g => ({ default: g.StackLifo })), false),
+  visual("899271/u10/turing-tape", () => import("./899271/groups/u10").then(g => ({ default: g.TuringTape })), false),
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

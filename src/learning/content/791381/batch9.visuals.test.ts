@@ -95,7 +95,7 @@ describe("Batch 9 — scope, registry and the 16 new unique ids (post controlled
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
   it("whole-course registry total is 121 (81 baseline + 13 Batch 7 + 11 Batch 8 + 16 Batch 9)", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
+    expect(REGISTERED_VISUAL_IDS.filter(id => id.startsWith("791381/")).length).toBe(122);   // this course's visuals (AUTO-A2 adds the 899271/ namespace)
     expect(NEW_IDS.every(id => REGISTERED_VISUAL_IDS.includes(id))).toBe(true);
     expect(new Set(REGISTERED_VISUAL_IDS).size).toBe(REGISTERED_VISUAL_IDS.length);   // no duplicate id
   });

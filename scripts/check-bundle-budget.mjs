@@ -185,7 +185,9 @@ const MODULE_BODY_SIGNATURE = /[`"']m\d\d-l\d\d-p\d\d-[A-Za-z]/;
 // Phase L.7 — learning content budgets, gzip KB. Measured on the L.6b build (main 5d308329): Reader first-load graph 33.7, manifest
 // 12.2, largest visual group chunk 6.5, all 27 visual chunks 64.4 — each budget leaves room for normal growth, not for a design
 // change (a body bundled again, the visuals packed into one chunk, the table of contents carrying page bodies).
-export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 40, manifest: 15, visualGroup: 9, visualsTotal: 75 });
+// readerFirstLoad 40 → 41 KB by the owner (AUTO-A2, 2026-11-13): main stood at 40,942 / 40,960 B and every new activity / course adds
+// its registry lines to the Reader's first load (docs/enterprise-automata-course-a2.md §7).
+export const LEARNING_BUDGETS_KB = Object.freeze({ readerFirstLoad: 41, manifest: 15, visualGroup: 9, visualsTotal: 75 });
 // 899371 enrichment P11 (docs/enterprise-899371-enrichment-plan.md §7.3) — the scene engine's own lazy chunk, gzip KB (measured 4.0).
 export const SCENE_ENGINE_GZIP_BUDGET_KB = 8;
 // The manifest is the only chunk that carries the book's course-prefixed page ids (`"791381-m01-l01-p01"`, and for the summary

@@ -80,7 +80,7 @@ describe("Batch 5 — scope and placement (backlog + m18 + m03)", () => {
   });
 
   it("registry grew by exactly 16 (49 → 65); each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122);   // total after Batch 7 + 8 + 9 controlled sync
+    expect(REGISTERED_VISUAL_IDS.filter(id => id.startsWith("791381/")).length).toBe(122);   // this course's visuals (AUTO-A2 adds the 899271/ namespace)   // total after Batch 7 + 8 + 9 controlled sync
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

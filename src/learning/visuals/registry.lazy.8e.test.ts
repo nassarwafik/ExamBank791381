@@ -38,7 +38,10 @@ describe("registry source — statically-authored lazy allowlist, never content-
   it("holds exactly 122 entries, each a literal group import + literal named export, wrapped by the ONE visual() helper", () => {
     const entries = registry.match(/^  visual\("791381\/(?:ch1|m\d{2})\/[a-z0-9-]+", \(\) => import\("\.\/791381\/groups\/(ch1|m\d{2})"\)\.then\(g => \(\{ default: g\.[A-Z]\w+ \}\)\), (?:true|false)\),$/gm) || [];
     expect(entries.length).toBe(122);
-    expect((registry.match(/^  visual\(/gm) || []).length).toBe(122);                 // no entry escapes the literal pattern
+    // AUTO-A2 — the second course's entries follow the same literal shape in their own namespace (899271/uNN → groups/uNN)
+    const entries899271 = registry.match(/^  visual\("899271\/u\d{2}\/[a-z0-9-]+", \(\) => import\("\.\/899271\/groups\/(u\d{2})"\)\.then\(g => \(\{ default: g\.[A-Z]\w+ \}\)\), (?:true|false)\),$/gm) || [];
+    expect(entries899271.length).toBe(11);
+    expect((registry.match(/^  visual\(/gm) || []).length).toBe(122 + 11);             // no entry escapes the literal patterns
     expect(registry).toMatch(/const load = lazyWithRetry\(importer, "learning-visual:" \+ id\);/);
     expect(registry).toMatch(/return \{ id, component: lazy\(load\), load, motion \};/);
   });
@@ -50,8 +53,8 @@ describe("registry source — statically-authored lazy allowlist, never content-
     expect(registryCode).not.toMatch(/\beval\b|new Function/);
     expect(registryCode).not.toMatch(/visualId/);                                        // the content key never appears in the loader code
     const dynamicTargets = [...registryCode.matchAll(/import\("([^"]+)"\)/g)].map(m => m[1]);
-    expect(dynamicTargets.length).toBe(122);
-    for (const t of dynamicTargets) expect(t).toMatch(/^\.\/791381\/groups\/(ch1|m\d{2})$/);
+    expect(dynamicTargets.length).toBe(122 + 11);
+    for (const t of dynamicTargets) expect(t).toMatch(/^\.\/(791381\/groups\/(ch1|m\d{2})|899271\/groups\/u\d{2})$/);
   });
   it("every group barrel is a plain list of literal re-exports; together they cover each of the 122 component files exactly once", () => {
     const exported: string[] = [];
@@ -78,12 +81,35 @@ describe("registry source — statically-authored lazy allowlist, never content-
   it("the id namespace decides the group: a 791381/<module>/… id always loads groups/<module>", () => {
     for (const m of registry.matchAll(/visual\("791381\/(\w+)\/[a-z0-9-]+", \(\) => import\("\.\/791381\/groups\/(\w+)"\)/g)) expect(m[2]).toBe(m[1]);
   });
+  it("AUTO-A2 — the course 899271's group barrels are plain literal re-exports covering each of its component files exactly once, and an 899271/uNN/… id loads groups/uNN", () => {
+    const dir = resolve(ROOT, "899271");
+    const groups = readdirSync(resolve(dir, "groups")).filter(f => f.endsWith(".ts")).sort();
+    const components = readdirSync(dir).filter(d => /^u\d{2}$/.test(d)).flatMap(d => readdirSync(resolve(dir, d)).filter(f => f.endsWith(".tsx")).map(f => d + "/" + f.replace(/\.tsx$/, "")));
+    const exported: string[] = [];
+    for (const f of groups) {
+      const src = readFileSync(resolve(dir, "groups", f), "utf8");
+      for (const line of src.split("\n").filter(l => l.trim() && !l.startsWith("//"))) {
+        const m = line.match(/^export \{ default as ([A-Z]\w+) \} from "\.\.\/(u\d{2})\/([A-Z]\w+)";$/);
+        expect(m, f + ": " + line).not.toBeNull();
+        expect(m![1]).toBe(m![3]);
+        expect(m![2] + ".ts").toBe(f);
+        exported.push(m![2] + "/" + m![3]);
+      }
+      expect(codeOnly(src)).not.toMatch(/import\(|import\.meta|eval|fetch|http/);
+    }
+    expect([...exported].sort()).toEqual([...components].sort());
+    expect(exported.length).toBe(11);
+    for (const m of registry.matchAll(/visual\("899271\/(u\d{2})\/[a-z0-9-]+", \(\) => import\("\.\/899271\/groups\/(u\d{2})"\)\.then\(g => \(\{ default: g\.(\w+) \}\)\)/g)) {
+      expect(m[2]).toBe(m[1]);
+      expect(readFileSync(resolve(dir, "groups", m[2] + ".ts"), "utf8")).toContain("export { default as " + m[3] + " }");
+    }
+  });
 });
 
 describe("registry evaluation — importing the registry or resolving an id evaluates NO visual module", () => {
   it("resolveVisual is synchronous and evaluates nothing; only load() evaluates the ONE group, once", async () => {
     const { resolveVisual, REGISTERED_VISUAL_IDS } = await import("./registry");
-    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122 + 11);
     expect(evaluated).toEqual({ ch1: 0, m02: 0 });
     const entry = resolveVisual("791381/ch1/network-connected-devices");
     expect(entry).not.toBeNull(); expect(entry!.motion).toBe(true);

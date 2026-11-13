@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { handler as studentMaterials } from "../src/functions/student-learning-materials.js";
 import { handler as catalog } from "../src/functions/learning-materials-catalog.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { listLearningModules } from "../src/lib/learning-materials-registry.js";
 
 // Class Learning Materials — the STUDENT entitlement endpoint. Drives the REAL requireActiveStudentSession (token
 // verification stubbed) over the in-memory container, so the persisted student document is proven to be the
@@ -223,6 +224,9 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "899371-m10", title: "مصفوفة ثنائية الابعاد", order: 10 },
       { moduleId: "899371-m11", title: "الكائنات", order: 11 },
       { moduleId: "899371-m12", title: "الكلمة الختامية", order: 12 }
+    ] }, { courseId: "899271", title: "الأتمتة", subject: "علم الحاسوب", modules: [
+      // AUTO-A2: «الوحدة الخامسة: الأتمتة», generated with its content (its exact list is pinned by course899271.test.ts)
+      ...listLearningModules("899271"),
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m29|pages|lessons|blocks|answer|pdf/i);
   });
