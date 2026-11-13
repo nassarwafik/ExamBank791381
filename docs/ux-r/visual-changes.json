@@ -1355,6 +1355,16 @@
       "page": "report-student",
       "viewport": "all",
       "reason": "Reports R-6 (docs/enterprise-reports-period-basis-r6.md §2.3) — the period field is described by «حسب تاريخ نشر التقييم، والمجدول من موعد فتحه.» beside it (on a phone it wraps to one more line); the student's assessments table's date column reads «تاريخ النشر». Nothing else moves."
+    },
+    {
+      "page": "learning",
+      "viewport": "all",
+      "reason": "AUTO-A2 (docs/enterprise-automata-course-a2.md) — the learning library lists a fourth course, «الوحدة الخامسة — الأتمتة» (899271): one more course card after «أسس علم الحاسوب» (the page is one card row taller on tablet and phone), and the grade filter gains «الصف الثاني عشر». Nothing else on the page moves."
+    },
+    {
+      "page": "learning-search",
+      "viewport": "all",
+      "reason": "AUTO-A2 (docs/enterprise-automata-course-a2.md) — the learning library lists a fourth course, «الوحدة الخامسة — الأتمتة» (899271): one more course card after «أسس علم الحاسوب» (the page is one card row taller on tablet and phone), and the grade filter gains «الصف الثاني عشر». Nothing else on the page moves."
     }
   ]
 }
