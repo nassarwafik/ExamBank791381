@@ -3,6 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { requireTeacherSession } = require("../lib/teacher-session");
 const { requireCapability } = require("../lib/access/require-capability");   // Tadris+ P3-B
 const { deliveryCopy } = require("../lib/content-assets");   // Tadris+ P5-C
+const { hydrateBankAssets } = require("../lib/bank-asset-hydrate");   // Tadris+ P6-F — builder pictures
 const { teacherLibraryFilter, importedLibraryFilter, libraryAccessUnavailable } = require("../lib/access/library-access");   // Tadris+ P6-D, P6-E
 const crypto = require("crypto");
 // The exam library is read-only global system data, so it ships bundled with the app (versioned in
@@ -16,7 +17,7 @@ const crypto = require("crypto");
 // observability wrapper (request id, duration, status class, redacted error events) and answers with a strong ETag and
 // `private, no-cache` — a teacher's browser keeps the catalog / an item and revalidates it, and a 304 is answered only after
 // the builder check passed. The library carries answer keys, so it is never cacheable by a shared cache.
-const { VALID_ID, libraryItemEntry } = require("../lib/exam-library-store");
+const { VALID_ID, libraryItemEntry, deepFreeze } = require("../lib/exam-library-store");
 const { IMPORTED_ID, ImportedLibraryError, resolveLibraryItemEntry, resolveLibraryCatalogEntry } = require("../lib/exam-library-imported");   // Tadris+ P6-E
 const { authorize } = require("../lib/access/authorize");
 const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
@@ -44,6 +45,16 @@ function bankCatalog(entry, bank) {
   if (value.length === entry.value.length) return entry;
   const ids = value.map(item => item.libraryItemId).join(",");
   return { value, etag: "\"" + crypto.createHash("sha256").update(String(entry.etag) + "|" + ids).digest("base64url").slice(0, 22) + "\"" };
+}
+
+function withBankPictures(entry, nowMs) {
+  const snapshot = entry.value && entry.value.examSnapshot;
+  if (!snapshot) return entry;
+  // the protected library pictures were signed for this window just above (same nowMs → the same URLs, no copy); only bank pictures change
+  const signed = hydrateBankAssets(snapshot, { nowMs });
+  if (signed === snapshot) return entry;
+  const value = Object.freeze({ ...entry.value, examSnapshot: deepFreeze(signed) });   // like deliveryCopy: no caller alters the next answer
+  return { value, etag: "\"" + crypto.createHash("sha256").update(String(entry.etag) + "|bank|" + JSON.stringify(signed)).digest("base64url").slice(0, 22) + "\"" };
 }
 
 const CACHE_HEADERS = { "Cache-Control": "private, no-cache", Vary: "Authorization, x-builder-token" };
@@ -95,6 +106,10 @@ async function handler(request, deps = {}, obs = null) {
     }
     // Tadris+ P5-C (S7, D10): an item's question images are delivered as this window's signed URLs (its own ETag per window).
     if (id) entry = deliveryCopy(entry.value, entry.etag, (deps.nowMs || Date.now)());
+    // Tadris+ P6-F — a picture uploaded in the builder is a BANK asset (durable identity only in storage): like every payload that
+    // delivers one (a saved exam reopened, an assignment), the item carries a freshly signed URL. Its ETag then names this signed copy,
+    // so a cached copy without (or with an expired) picture is never confirmed by a 304. Items without a bank asset are unchanged.
+    if (id) entry = withBankPictures(entry, (deps.nowMs || Date.now)());
     const headers = { ...CACHE_HEADERS, ETag: entry.etag };
     if (notModified(request, entry.etag)) return { status: 304, headers };
     return { status: 200, headers, jsonBody: id ? { ok: true, item: entry.value } : { ok: true, catalog: entry.value } };

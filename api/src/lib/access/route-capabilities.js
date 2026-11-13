@@ -46,6 +46,8 @@ const ROUTE_CAPABILITIES = Object.freeze({
 
   // Exam library, question bank, imports.
   "exam-library.js": { "*": "examLibrary.item.view" },
+  // Tadris+ P6-F — «إرسال إلى بنك المنصة»: sending one's own saved exam to the owner is a use of what the teacher may save.
+  "library-submissions.js": { "*": "examBuilder.exam.save" },
   "bank-summary.js": { "*": "examBank.collection.view" },
   "bank-questions.js": { GET: "examBank.collection.view", create: "examBank.question.create", update: "examBank.question.edit", "*": "examBank.question.edit" },
   "bank-question-select.js": { "*": "examBank.question.select" },

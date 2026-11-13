@@ -29,7 +29,10 @@ const REGISTRY = {
     "mesh-assets.js": /ownerHashOf\(auth\.user\.sub\)/, "teacher-profile.js": /profileDocName\(sub\)/, "game-live-challenge.js": /teacherId = String\(sess\.user/,
     "audit-history.js": TENANT, "bank-questions.js": TENANT, "bank-question-select.js": TENANT, "question-bank-action.js": TENANT,
     "generate-exam.js": TENANT, "bank-summary.js": TENANT, "bank-import-action.js": TENANT, "exam-question-availability.js": TENANT,
-    "import-upload.js": TENANT, "import-fetch-url.js": TENANT, "import-analyze.js": TENANT
+    "import-upload.js": TENANT, "import-fetch-url.js": TENANT, "import-analyze.js": TENANT,
+    // Tadris+ P6-F — «إرسال إلى بنك المنصة»: the account is the verified session subject; only that account's own saved exam is sent
+    // (lib/library-submissions.js sendableExam: its stored owner must equal it) and only its own submissions are listed / withdrawn.
+    "library-submissions.js": /const teacherId = auth\.user && auth\.user\.am === "managed" && isTeacherAccountId\(auth\.user\.sub\) \? auth\.user\.sub[\s\S]*r\.teacherId === teacherId[\s\S]*r\.teacherId !== teacherId/
   },
   sharedByDesign: ["exam-library.js", "exam-governance.js", "governance-inbox.js", "learning-content.js", "learning-materials-catalog.js", "learning-study.js", "learning-training.js",
     // 791381s Phase 8C-1 — the learning book's advanced exam items: platform course content (a private store under api/data),

@@ -7,9 +7,11 @@ const { listTeacherAccounts } = require("../lib/identity/teacher-accounts");
 const { libraryItemEntry } = require("../lib/exam-library-store");
 const { AUDIENCES, MAX_TEACHERS, LibraryAccessError, readAudienceDoc, audienceOf, mutateAudience } = require("../lib/access/library-access");
 const IMP = require("../lib/exam-library-imported");   // Tadris+ P6-E — exams the owner imports
+const LP = require("../lib/library-publish");   // Tadris+ P6-E / P6-F — preparation and publication of a library exam
+const LS = require("../lib/library-submissions");   // Tadris+ P6-F — the exams teachers send
+const { readTeacherAccount } = require("../lib/identity/teacher-accounts");
+const { hydrateBankAssets } = require("../lib/bank-asset-hydrate");
 const { evaluateServerFinalization, summarizeFinalization } = require("../lib/server-finalization");
-const { examOfficialStats } = require("../lib/exam-structure");
-const crypto = require("crypto");
 
 // Tadris+ P6-D — each teacher's own exam bank. Route: /api/owner-library/{action?}   (owner session only)
 //
@@ -64,10 +66,16 @@ async function handler(request, deps = {}, obs = null) {
       try { catalog = (await IMP.resolveLibraryCatalogEntry(container, deps)).value; } catch { return UNAVAILABLE(); }
       const items = catalog.map(i => {
         const a = audienceOf(doc, i.libraryItemId);
-        return { libraryItemId: i.libraryItemId, title: String(i.title || ""), category: String(i.category || ""), questionCount: Number(i.questionCount || 0), totalMarks: Number(i.totalMarks || 0), audience: a.audience, teachers: a.teachers, decided: a.stored || a.audience === "all", imported: IMP.IMPORTED_ID.test(i.libraryItemId), ...(i.activityType ? { activityType: i.activityType } : {}) };
+        return { libraryItemId: i.libraryItemId, title: String(i.title || ""), category: String(i.category || ""), questionCount: Number(i.questionCount || 0), totalMarks: Number(i.totalMarks || 0), audience: a.audience, teachers: a.teachers, decided: a.stored || a.audience === "all", imported: IMP.IMPORTED_ID.test(i.libraryItemId), ...(i.activityType ? { activityType: i.activityType } : {}),
+          // Tadris+ P6-F — an exam a teacher sent, and the versions of one exam (an updated version replaces the previous one)
+          ...(i.source && i.source.kind === "teacher-submission" ? { fromTeacher: true } : {}), ...(i.replaces ? { replaces: i.replaces } : {}), ...(i.replacedBy ? { replacedBy: i.replacedBy } : {}) };
       });
       return reply(200, { ok: true, items, teachers });
     }
+    // ── Tadris+ P6-F — reading the submissions (no change: no step-up) ─────────────────────────────────────────────────────────────
+    if (method === "GET" && action === "submissions") return await listSubmissions(container, deps);
+    if (method === "GET" && action === "submission") return await oneSubmission(container, deps, new URL(request.url, "https://x").searchParams.get("id"));
+    if (method === "GET" && action === "own-exams") return await ownExams(owner, deps);
     if (method !== "POST") return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
     const denial = stepUpDenial(session, nowMs);
     if (denial) return denial;
@@ -84,6 +92,11 @@ async function handler(request, deps = {}, obs = null) {
     };
 
     if (action === "import") return await importExam(body, { container, deps, actor, iso, write });
+    // Tadris+ P6-F — deciding the submissions
+    if (action === "publish-submission") return await publishSubmission(body, { container, deps, actor, iso, write });
+    if (action === "decline-submission") return await declineSubmission(body, { container, deps, actor, iso, write });
+    if (action === "complete-replacement") return await finishReplacement(body, { container, deps, actor, iso, write });
+    if (action === "take-own") return await takeOwnExam(body, { owner, container, deps, actor, iso, write });
 
     if (action === "set-audience") {
       const itemId = String(body.itemId || "").trim();
@@ -155,84 +168,136 @@ async function handler(request, deps = {}, obs = null) {
 
     return reply(404, { ok: false, code: "NOT_FOUND", error: "غير موجود." });
   } catch (e) {
-    if (e instanceof IMP.ImportedLibraryError) return UNAVAILABLE();
+    if (e instanceof IMP.ImportedLibraryError || e instanceof LS.SubmissionsUnavailableError || e instanceof LibraryAccessError) return UNAVAILABLE();
+    if (e instanceof LS.SubmissionRefusal) return reply(e.status, { ok: false, code: e.code, error: e.error, ...e.extra });
     obs?.logError?.("owner.library.error", e);
     return reply(500, { ok: false, error: "تعذر تنفيذ هذا الإجراء حاليًا." });
   }
 }
 
-// ── Tadris+ P6-E — POST import ───────────────────────────────────────────────────────────────────────────────────────────────────
-const MAX_EXAM_BYTES = 10 * 1024 * 1024;
-const MAX_TITLE = 200, MAX_DESCRIPTION = 500, MAX_FILE_NAME = 200;
-const ACTIVITY_TYPES = ["exam", "training"];
-// A renderable image is shown verbatim (<img src>), so only an embedded raster data URL may be one (the client importer's rule,
-// docs/STRUCTURED_EXAM_IMPORT.md): never a link, never SVG or another data: type.
-const SAFE_IMAGE = /^data:image\/(png|jpe?g|webp|gif);base64,/i;
-function unsafeImages(node, depth = 0) {
-  if (depth > 64) return 1;
-  if (Array.isArray(node)) return node.reduce((n, v) => n + unsafeImages(v, depth + 1), 0);
-  if (!node || typeof node !== "object") return 0;
-  let n = 0;
-  for (const [k, v] of Object.entries(node)) {
-    if (k === "dataUrl" && v !== undefined && v !== null && v !== "" && !(typeof v === "string" && SAFE_IMAGE.test(v))) n++;
-    else if (v && typeof v === "object") n += unsafeImages(v, depth + 1);
-  }
-  return n;
-}
-const text = (v, max) => (typeof v === "string" ? v.trim() : "").slice(0, max);
-
+// ── Tadris+ P6-E — POST import (the preparation and the publication are lib/library-publish.js, shared with P6-F) ─────────────────
 async function importExam(body, { container, deps, actor, iso, write }) {
-  const exam = body.exam;
-  if (!exam || typeof exam !== "object" || Array.isArray(exam) || !Array.isArray(exam.sections) || Array.isArray(exam.questions)) {
-    return bad("EXAM_INVALID", "الملف ليس امتحانًا منظّمًا (sections).");
-  }
-  let raw;
-  try { raw = JSON.stringify(exam); } catch { return bad("EXAM_INVALID", "الملف ليس امتحانًا منظّمًا (sections)."); }
-  if (Buffer.byteLength(raw) > MAX_EXAM_BYTES) return reply(413, { ok: false, code: "EXAM_TOO_LARGE", error: "الامتحان كبير جدًّا (الحد الأقصى ~10 ميغابايت)." });
-  const title = text(body.title, MAX_TITLE);
-  if (!title) return bad("TITLE_REQUIRED", "اكتب عنوان الامتحان.");
-  const category = text(body.category, 40);
-  if (!IMP.CATEGORY.test(category)) return bad("CATEGORY_INVALID", "اختر تصنيف الامتحان.");
-  if (!ACTIVITY_TYPES.includes(body.activityType)) return bad("ACTIVITY_TYPE_INVALID", "اختر: امتحان أو تدريب.");
-  if (unsafeImages(exam)) return bad("IMAGE_UNSAFE", "في الامتحان صورة غير مضمّنة أو غير آمنة. الصور المقبولة: PNG أو JPEG أو WEBP أو GIF مضمّنة في الملف.");
-  // The SERVER decides the exam is ready — the same authority as the builder's «اعتماد نهائي» and governance (shared-finalization).
-  const snapshot = JSON.parse(raw);
-  let decision;
-  try { decision = evaluateServerFinalization(snapshot); } catch { decision = null; }
-  if (!decision || decision.canFinalize !== true) {
-    return reply(422, { ok: false, code: "EXAM_NOT_READY", error: "الامتحان غير جاهز للنشر: أصلح الأخطاء المتبقية في الملف ثم أعد الاستيراد.", finalization: decision ? summarizeFinalization(decision) : null });
-  }
-  const stats = examOfficialStats(snapshot);
-  if (!stats.questionCount) return bad("EXAM_EMPTY", "لا يحتوي الامتحان على أسئلة.");
-  // The same exam = the same sections (the examId and import time differ on every import of one file).
-  const contentHash = crypto.createHash("sha256").update(JSON.stringify(snapshot.sections)).digest("hex");
-  let index;
-  try { index = await IMP.readImportedIndex(container, deps); } catch { return UNAVAILABLE(); }
-  const same = index.items.find(m => m.contentHash === contentHash);
-  if (same) return reply(409, { ok: false, code: "LIBRARY_ITEM_DUPLICATE", error: "هذا الامتحان موجود في البنك بالفعل («" + same.title + "»).", libraryItemId: same.libraryItemId });
+  const prepared = LP.prepareLibraryExam(body.exam);
+  if (!prepared.ok) return prepared.response;
+  const m = LP.publishMeta(body);
+  if (!m.ok) return m.response;
+  const sourceFileName = LP.text(body.sourceFileName, 200);
+  return LP.publishLibraryItem(container, {
+    prepared, meta: m.meta, source: { kind: "owner-import", ...(sourceFileName ? { sourceFile: sourceFileName } : {}) },
+    auditAction: "owner.library.item-imported", auditDetails: { sourceFile: sourceFileName }
+  }, { actor, iso, write, deps });
+}
 
-  const description = text(body.description, MAX_DESCRIPTION), sourceFileName = text(body.sourceFileName, MAX_FILE_NAME);
-  let id = IMP.nextImportedId(index);
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const item = {
-      libraryItemId: id, title, category, description, tags: [], questionCount: stats.questionCount, totalMarks: stats.totalMarks,
-      conversionStatus: "ready", publishable: true, activityType: body.activityType, libraryVersion: 1, contentHash, convertedAt: iso,
-      source: { kind: "owner-import", ...(sourceFileName ? { sourceFile: sourceFileName } : {}) }, schemaVersion: 1,
-      examSnapshot: { ...snapshot, examId: "LIB-" + id, title, status: "final", totalMarks: stats.totalMarks }
-    };
-    const response = await recordOwnerChange(container, {
-      actor, action: "owner.library.item-imported", targetType: "library-item", targetId: id, targetLabel: title,
-      details: { category, activityType: body.activityType, questionCount: stats.questionCount, totalMarks: stats.totalMarks, contentHash, sourceFile: sourceFileName }
-    }, async () => {
-      const outcome = await IMP.publishImportedItem(container, item, deps);
-      if (outcome === "taken") return reply(409, { ok: false, code: "LIBRARY_ID_TAKEN", error: "تعارض مؤقت. حاول مرة أخرى." });
-      if (outcome === "duplicate") return reply(409, { ok: false, code: "LIBRARY_ITEM_DUPLICATE", error: "هذا الامتحان موجود في البنك بالفعل." });
-      return reply(200, { ok: true, item: { libraryItemId: id, title, category, activityType: body.activityType, questionCount: stats.questionCount, totalMarks: stats.totalMarks, audience: "selected", teachers: [], decided: false, imported: true } });
-    }, { write });
-    if (response.status !== 409 || response.jsonBody.code !== "LIBRARY_ID_TAKEN") return response;
-    id = "IMP-" + String(Number(id.slice(4)) + 1).padStart(3, "0");
-  }
-  return reply(409, { ok: false, code: "LIBRARY_ID_TAKEN", error: "تعارض مؤقت. حاول مرة أخرى." });
+// ── Tadris+ P6-F — the exams teachers send (docs/enterprise-library-submissions-p6f.md) ──────────────────────────────────────────
+const ownerRow = r => ({ submissionId: r.submissionId, teacherId: r.teacherId, teacherName: r.teacherName || "", title: r.title, questionCount: r.questionCount,
+  totalMarks: r.totalMarks, status: r.status, submittedAt: r.submittedAt, sentBy: r.sentBy || "teacher", governed: !!r.governed,
+  ...(r.decidedAt ? { decidedAt: r.decidedAt } : {}), ...(r.reason ? { reason: r.reason } : {}), ...(r.libraryItemId ? { libraryItemId: r.libraryItemId } : {}) });
+
+async function listSubmissions(container, deps) {
+  const index = await LS.readIndex(container, deps);
+  const order = r => (r.status === "pending" ? 0 : 1);
+  const submissions = index.items.map(ownerRow).sort((a, b) => order(a) - order(b) || String(b.submittedAt).localeCompare(String(a.submittedAt)));
+  return reply(200, { ok: true, submissions, pending: submissions.filter(r => r.status === "pending").length });
+}
+
+/** The library exam an exam's series currently stands for (the latest published version not yet replaced), or null. */
+async function currentVersionOf(container, lineage, deps, lsIndex = null, impIndex = null) {
+  const subs = (lsIndex || (await LS.readIndex(container, deps))).items.filter(r => r.lineage === lineage && r.status === "published" && r.libraryItemId);
+  if (!subs.length) return null;
+  const imp = impIndex || (await IMP.readImportedIndex(container, deps));
+  const live = subs.map(r => imp.items.find(m => m.libraryItemId === r.libraryItemId)).filter(m => m && !m.replacedBy);
+  live.sort((a, b) => String(b.convertedAt).localeCompare(String(a.convertedAt)));
+  return live[0] ? { libraryItemId: live[0].libraryItemId, title: live[0].title } : null;
+}
+
+async function oneSubmission(container, deps, id) {
+  const lsIndex = await LS.readIndex(container, deps);
+  const found = await LS.readSubmission(container, id, deps, lsIndex);
+  if (!found) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
+  let decision = null;
+  try { decision = evaluateServerFinalization(found.doc.examSnapshot); } catch { decision = null; }
+  const replaces = await currentVersionOf(container, found.row.lineage, deps, lsIndex);
+  return reply(200, { ok: true, submission: ownerRow(found.row), exam: hydrateBankAssets(found.doc.examSnapshot),
+    finalization: decision ? summarizeFinalization(decision) : null, blockers: decision ? decision.blockers.slice(0, 12).map(b => String(b.message || "")) : [], replaces });
+}
+
+async function publishSubmission(body, { container, deps, actor, iso, write }) {
+  const lsIndex = await LS.readIndex(container, deps);
+  const found = await LS.readSubmission(container, body.submissionId, deps, lsIndex);
+  if (!found) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
+  const { row, doc } = found;
+  if (row.status !== "pending") return reply(409, { ok: false, code: "SUBMISSION_NOT_PENDING", error: "لم يعد هذا الإرسال قيد المراجعة." });
+  // The server decides again, on the FROZEN exam the teacher sent (never a browser body).
+  const prepared = LP.prepareLibraryExam(doc.examSnapshot, { notReadyMessage: "الامتحان المرسل غير جاهز للنشر. ارفضه مع ذكر ما يجب إصلاحه." });
+  if (!prepared.ok) return prepared.response;
+  const m = LP.publishMeta(body);
+  if (!m.ok) return m.response;
+  const current = await currentVersionOf(container, row.lineage, deps, lsIndex);
+  return LP.publishLibraryItem(container, {
+    prepared, meta: m.meta, source: { kind: "teacher-submission", submissionId: row.submissionId }, replaces: current ? current.libraryItemId : null,
+    auditAction: "owner.library.submission-published", auditDetails: { submissionId: row.submissionId, teacherId: row.teacherId },
+    after: async item => {
+      try { await LS.setStatus(container, row.submissionId, "pending", { status: "published", decidedAt: iso, libraryItemId: item.libraryItemId }, deps); }
+      catch (e) { if (e instanceof LS.SubmissionRefusal) return { submissionId: row.submissionId, submissionNote: e.code }; throw e; }
+      return { submissionId: row.submissionId };
+    }
+  }, { actor, iso, write, deps });
+}
+
+async function declineSubmission(body, { container, deps, actor, iso, write }) {
+  const id = String(body.submissionId || "");
+  const reason = LP.text(body.reason, LS.MAX_REASON);
+  if (!reason) return reply(400, { ok: false, code: "REASON_REQUIRED", error: "اكتب سبب الرفض ليصل إلى المعلم." });
+  const index = await LS.readIndex(container, deps);
+  const row = index.items.find(r => r.submissionId === id);
+  if (!row) return reply(404, { ok: false, code: "SUBMISSION_NOT_FOUND", error: "الإرسال غير موجود." });
+  if (row.status !== "pending") return reply(409, { ok: false, code: "SUBMISSION_NOT_PENDING", error: "لم يعد هذا الإرسال قيد المراجعة." });
+  return await recordOwnerChange(container, { actor, action: "owner.library.submission-declined", targetType: "library-submission", targetId: id, targetLabel: row.title,
+    details: { teacherId: row.teacherId, reasonLength: reason.length } }, async () => {
+    const updated = await LS.setStatus(container, id, "pending", { status: "declined", decidedAt: iso, reason }, deps);
+    return reply(200, { ok: true, submission: ownerRow(updated) });
+  }, { write });
+}
+
+async function finishReplacement(body, { container, deps, actor, iso, write }) {
+  const id = String(body.libraryItemId || "");
+  const index = await IMP.readImportedIndex(container, deps);
+  const fresh = index.items.find(m => m.libraryItemId === id);
+  const oldId = fresh && fresh.replaces;
+  if (!fresh || !oldId) return reply(404, { ok: false, code: "REPLACEMENT_NOT_FOUND", error: "لا توجد نسخة سابقة لهذا الامتحان." });
+  const old = index.items.find(m => m.libraryItemId === oldId);
+  if (old && old.replacedBy === id) return reply(200, { ok: true, libraryItemId: id, replaces: oldId, alreadyComplete: true });
+  return await recordOwnerChange(container, { actor, action: "owner.library.replacement-completed", targetType: "library-item", targetId: id, targetLabel: fresh.title, details: { replaces: oldId } }, async () => {
+    await LP.completeReplacement(container, id, oldId, { actor, iso, deps });
+    return reply(200, { ok: true, libraryItemId: id, replaces: oldId });
+  }, { write });
+}
+
+/** The teacher account linked to the owner (P4-D) — the owner's own workspace — or "". */
+const linkedAccountOf = owner => (owner && isTeacherAccountId(owner.linkedTeacherAccountId) ? owner.linkedTeacherAccountId : "");
+
+async function ownExams(owner, deps) {
+  const linked = linkedAccountOf(owner);
+  if (!linked) return reply(200, { ok: true, linked: false, exams: [] });
+  const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
+  return reply(200, { ok: true, linked: true, exams: await LS.linkedSavedExams(bankContainer, linked, deps) });
+}
+
+async function takeOwnExam(body, { owner, container, deps, actor, iso, write }) {
+  const linked = linkedAccountOf(owner);
+  if (!linked) return reply(409, { ok: false, code: "NO_LINKED_WORKSPACE", error: "اربط حسابك بمساحة معلم أولًا من «نظرة عامة» ← «مساحة المعلم الخاصة بك»." });
+  const savedExamBlob = String(body.blobName || "");
+  const bankContainer = deps.bankContainer || (deps.getBankContainer || LS.getBankContainer)();
+  const found = await LS.sendableExam({ bankContainer, platformContainer: container, teacherId: linked, savedExamBlob, deps });
+  const prepared = LP.prepareLibraryExam(found.exam, { invalidMessage: "يُنشر في البنك الامتحان المنظّم فقط.", notReadyMessage: "الامتحان غير جاهز للنشر: أصلح ما يلي في الباني (مساحتك كمعلم) ثم أعد المحاولة." });
+  if (!prepared.ok) return prepared.response;
+  const account = await (deps.readTeacherAccount || readTeacherAccount)(container, linked, deps);
+  return await recordOwnerChange(container, { actor, action: "owner.library.own-exam-taken", targetType: "saved-exam", targetId: savedExamBlob, targetLabel: found.title,
+    details: { teacherId: linked, questionCount: prepared.stats.questionCount } }, async () => {
+    const row = await LS.createSubmission(container, { teacherId: linked, teacherName: account ? account.displayName || account.username : "", savedExamBlob, governed: found.governed,
+      prepared, title: found.title, sentBy: "owner", iso }, deps);
+    return reply(200, { ok: true, submission: ownerRow(row) });
+  }, { write });
 }
 
 app.http("ownerLibrary", { methods: ["GET", "POST"], authLevel: "anonymous", route: "owner-library/{action?}", handler: withObservability("owner-library", handler) });

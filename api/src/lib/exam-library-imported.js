@@ -20,7 +20,8 @@ const ITEM_PREFIX = "platform/catalog/exam-library-items/";
 const IMPORTED_ID = /^IMP-\d{3,6}$/;
 const CATEGORY = /^[a-z0-9-]{1,40}$/;
 const MAX_ITEMS = 2000;
-const META_KEYS = ["libraryItemId", "title", "category", "description", "tags", "questionCount", "totalMarks", "conversionStatus", "publishable", "activityType", "libraryVersion", "contentHash", "convertedAt", "source"];
+const META_KEYS = ["libraryItemId", "title", "category", "description", "tags", "questionCount", "totalMarks", "conversionStatus", "publishable", "activityType", "libraryVersion", "contentHash", "convertedAt", "source",
+  "replaces", "replacedBy"];   // Tadris+ P6-F — an updated version and the version it replaced (library ids only)
 
 class ImportedLibraryError extends Error {
   constructor(message) { super(message); this.name = "ImportedLibraryError"; this.code = "LIBRARY_IMPORTED_UNAVAILABLE"; }
@@ -133,10 +134,25 @@ async function removeUnlisted(container, id, deps) {
   try { await (deps.deleteBlob || storage.deleteBlob)(container, itemName(id)); } catch { /* never listed: unreachable either way */ }
 }
 
+/**
+ * Tadris+ P6-F — marks an updated version in the index: the new item `replaces` the old one, the old one is `replacedBy` the new one.
+ * Both must be listed; idempotent. Throws ImportedLibraryError when the index cannot be understood (nothing written).
+ */
+async function markReplacement(container, newId, oldId, deps = {}) {
+  await (deps.mutateJsonWithRetry || storage.mutateJsonWithRetry)(container, INDEX_DOC, current => {
+    const doc = JSON.parse(JSON.stringify(parseIndex(current)));
+    const fresh = doc.items.find(m => m.libraryItemId === newId), old = doc.items.find(m => m.libraryItemId === oldId);
+    if (!fresh || !old) throw new ImportedLibraryError("replacement of an unlisted item");
+    fresh.replaces = oldId;
+    old.replacedBy = newId;
+    return doc;
+  });
+}
+
 /** Tests only. */
 function resetImportedLibraryCacheForTests() { ITEMS.clear(); }
 
 module.exports = {
   INDEX_DOC, ITEM_PREFIX, IMPORTED_ID, CATEGORY, ImportedLibraryError, itemName, parseIndex, readImportedIndex, catalogMeta,
-  importedItemEntry, resolveLibraryItemEntry, resolveLibraryCatalogEntry, nextImportedId, publishImportedItem, resetImportedLibraryCacheForTests
+  importedItemEntry, resolveLibraryItemEntry, resolveLibraryCatalogEntry, nextImportedId, publishImportedItem, markReplacement, resetImportedLibraryCacheForTests
 };

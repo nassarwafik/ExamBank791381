@@ -14,6 +14,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = buf => createHash("sha256").update(buf).digest("hex");
 const TESTS = ["api/tests/owner-library-import-p6e.test.js", "src/owner/OwnerLibrary.p6e.test.tsx", "src/AppLibraryCopy.p6e.test.tsx"];
 const OL = "api/src/functions/owner-library.js";
+const LP = "api/src/lib/library-publish.js";   // P6-F moved the preparation and the publication here (the guarded lines unchanged)
 const IMP = "api/src/lib/exam-library-imported.js";
 const LIB = "api/src/functions/exam-library.js";
 const AS = "api/src/functions/manage-assignments.js";
@@ -21,10 +22,10 @@ const UI = "src/owner/OwnerLibraryImport.tsx";
 const APP = "src/App.tsx";
 
 export const MUTANTS = [
-  { id: "P6E-M1", what: "an exam the finalization authority refuses is published", edits: [{ file: OL, find: "if (!decision || decision.canFinalize !== true) {", replace: "if (!decision) {" }] },
-  { id: "P6E-M2", what: "a linked / SVG image is accepted", edits: [{ file: OL, find: "  if (unsafeImages(exam)) return bad(", replace: "  if (false) return bad(" }] },
-  { id: "P6E-M3", what: "the image rule accepts any data: URL", edits: [{ file: OL, find: "const SAFE_IMAGE = /^data:image\\/(png|jpe?g|webp|gif);base64,/i;", replace: "const SAFE_IMAGE = /^data:/i;" }] },
-  { id: "P6E-M4", what: "the same exam can be published twice", edits: [{ file: OL, find: "  if (same) return reply(409,", replace: "  if (false) return reply(409," }, { file: IMP, find: " || m.contentHash === item.contentHash)) { outcome = \"duplicate\"", replace: ")) { outcome = \"duplicate\"" }] },
+  { id: "P6E-M1", what: "an exam the finalization authority refuses is published", edits: [{ file: LP, find: "if (!decision || decision.canFinalize !== true) {", replace: "if (!decision) {" }] },
+  { id: "P6E-M2", what: "a linked / SVG image is accepted", edits: [{ file: LP, find: "  if (unsafeImages(snapshot)) return { ok: false", replace: "  if (false) return { ok: false" }] },
+  { id: "P6E-M3", what: "the image rule accepts any data: URL", edits: [{ file: LP, find: "const SAFE_IMAGE = /^data:image\\/(png|jpe?g|webp|gif);base64,/i;", replace: "const SAFE_IMAGE = /^data:/i;" }] },
+  { id: "P6E-M4", what: "the same exam can be published twice", edits: [{ file: LP, find: "  if (same) return reply(409,", replace: "  if (false) return reply(409," }, { file: IMP, find: " || m.contentHash === item.contentHash)) { outcome = \"duplicate\"", replace: ")) { outcome = \"duplicate\"" }] },
   { id: "P6E-M5", what: "an item document overwrites whatever holds its id (not create-only)", edits: [{ file: IMP, find: "  try { await upload(container, itemName(item.libraryItemId), item, null); }", replace: "  try { await storage.uploadJson(container, itemName(item.libraryItemId), item); }" }] },
   { id: "P6E-M6", what: "an unlisted item document is served (the index is not the authority)", edits: [{ file: IMP, find: "  if (!listed) return null;", replace: "  if (!listed) { const v = await storage.downloadJsonOrNull(container, itemName(clean)); return v ? { value: v, etag: \"\\\"x\\\"\" } : null; }" }] },
   { id: "P6E-M7", what: "a listed item that is not the exam listed is served (fail open)", edits: [{ file: IMP, find: "value.contentHash !== listed.contentHash || ", replace: "" }] },
@@ -32,8 +33,8 @@ export const MUTANTS = [
   { id: "P6E-M9", what: "a published exam is not listed in the index", edits: [{ file: IMP, find: "    doc.items.push(catalogMeta(item));", replace: "" }] },
   { id: "P6E-M10", what: "an imported item is not resolved by the teacher route", edits: [{ file: LIB, find: "(IMPORTED_ID.test(id) ? await resolveLibraryItemEntry(containerOf(), id, deps) : null)", replace: "null" }] },
   { id: "P6E-M11", what: "an imported item cannot be assigned by reference", edits: [{ file: AS, find: "(IMPORTED_ID.test(itemId)?await resolveLibraryItemEntry(c,itemId,deps):null)", replace: "null" }] },
-  { id: "P6E-M12", what: "the import is not recorded in the owner audit before it happens", edits: [{ file: OL, find: "    const response = await recordOwnerChange(container, {", replace: "    const response = await (async (_c, _e, apply) => apply())(container, {" }] },
-  { id: "P6E-M13", what: "an id held by an unlisted document is not skipped", edits: [{ file: OL, find: "    id = \"IMP-\" + String(Number(id.slice(4)) + 1).padStart(3, \"0\");", replace: "" }] },
+  { id: "P6E-M12", what: "the import is not recorded in the owner audit before it happens", edits: [{ file: LP, find: "    const response = await recordOwnerChange(container, {", replace: "    const response = await (async (_c, _e, apply) => apply())(container, {" }] },
+  { id: "P6E-M13", what: "an id held by an unlisted document is not skipped", edits: [{ file: LP, find: "    id = \"IMP-\" + String(Number(id.slice(4)) + 1).padStart(3, \"0\");", replace: "" }] },
   { id: "P6E-M14", what: "the console lets an exam with a remaining blocker go on to publishing", edits: [{ file: UI, find: "            {decision.canFinalize\n              ? <button", replace: "            {true\n              ? <button" }] },
   { id: "P6E-M15", what: "the console publishes without a category", edits: [{ file: UI, find: "disabled={busy || !title.trim() || !category}", replace: "disabled={busy || !title.trim()}" }] },
   { id: "P6E-M17", what: "before enforcement an imported exam is listed / served to every teacher", edits: [{ file: LIB, find: "    if (!bank && (id ? IMPORTED_ID.test(id)", replace: "    if (false && (id ? IMPORTED_ID.test(id)" }] },
