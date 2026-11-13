@@ -11,7 +11,7 @@ const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
 describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5 and Batch 8 renderers, 899371 P6, 899371 P11, AUTO-A1)", () => {
-  it("registers ONLY the nineteen allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress, network-lab, csharp-trace, csharp-scene, automaton-trace (all v1)", () => {
+  it("registers ONLY the twenty allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress, network-lab, csharp-trace, csharp-scene, automaton-trace, automaton-design (all v1)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -32,13 +32,14 @@ describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–
       { kind: "simulation", key: "csharp-trace", versions: [1] },       // 899371 P6 — the C# tracer (recorded steps, data only)
       { kind: "animation", key: "csharp-scene", versions: [1] },        // 899371 P11 — the animated scene engine (scenes are data)
       { kind: "simulation", key: "automaton-trace", versions: [1] },    // AUTO-A1 — the automaton tracer (DFA / NFA / PDA / TM, data only)
+      { kind: "simulation", key: "automaton-design", versions: [1] },   // AUTO-A3 — «صمّم الآلة» (the server judges the machine)
     ]);
-    expect(productionActivityRegistry.size).toBe(19);
+    expect(productionActivityRegistry.size).toBe(20);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });
-  it("registers exactly SEVEN simulations (hub-switch-router-flow, message-delivery, cli-terminal, ipv6-compress, network-lab, csharp-trace, automaton-trace) and TWO animations (gateway-flow, csharp-scene); no VLAN/subnet renderer", () => {
-    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab", "csharp-trace", "automaton-trace"]);
+  it("registers exactly EIGHT simulations (hub-switch-router-flow, message-delivery, cli-terminal, ipv6-compress, network-lab, csharp-trace, automaton-trace, automaton-design) and TWO animations (gateway-flow, csharp-scene); no VLAN/subnet renderer", () => {
+    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab", "csharp-trace", "automaton-trace", "automaton-design"]);
     expect(productionActivityRegistry.list().filter(e => e.kind === "animation").map(e => e.key)).toEqual(["gateway-flow", "csharp-scene"]);
     expect(productionActivityRegistry.resolve(simBlock)).toBeUndefined();   // the synthetic "vlan" simulation has no renderer
     expect(productionActivityRegistry.has("simulation", "vlan")).toBe(false);

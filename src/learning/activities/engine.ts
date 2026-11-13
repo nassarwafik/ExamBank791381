@@ -67,7 +67,7 @@ export interface LearningActivityProps {
   commands: ActivityCommandSignals;
   /** Emit a no-op-safe event (the default sink discards it). */
   emit: LearningActivityEventSink;
-  /** 791381s Phase 8B — ONLY for a served network lab (`serverCheck`) inside a study host: send the learner's answer to the
+  /** 791381s Phase 8B / AUTO-A3 — ONLY for a served server-judged simulation (`serverCheck`: a network lab or «صمّم الآلة») inside a study host: send the learner's answer to the
    *  server and get its verdict. Absent → the activity offers no check (explore only). The renderer never fetches itself. */
   check?: ActivityCheck;
 }
@@ -81,9 +81,17 @@ export type ActivityCheckResult = {
   study?: boolean;
   persisted?: boolean;
   alreadyCompleted?: boolean;
+  /** AUTO-A3 — «صمّم الآلة»: the public rule a wrong machine broke. */
+  issue?: { code: string; state?: string; symbol?: string; max?: number };
+  /** AUTO-A3 — «صمّم الآلة»: the shortest word on which a wrong machine and the reference disagree. */
+  counterexample?: { word: string; shouldAccept: boolean };
 };
+/** What a server-judged simulation sends: a network lab's action list, or a «صمّم الآلة» machine (AUTO-A3). */
+export type ActivityCheckResponse =
+  | { kind: "network-lab"; actions: unknown[] }
+  | { kind: "automaton-design"; machine: { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] } };
 /** Rejects on a transport failure or a retryable server error (a judge that could not run): never a "wrong". */
-export type ActivityCheck = (response: { kind: "network-lab"; actions: unknown[] }) => Promise<ActivityCheckResult>;
+export type ActivityCheck = (response: ActivityCheckResponse) => Promise<ActivityCheckResult>;
 
 export type ActivityComponent = ComponentType<LearningActivityProps>;
 /** A statically-analyzable code-split loader for a trusted repo component. NEVER a path taken from content. */
@@ -361,6 +369,15 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "automaton-trace",
     versions: [1],
     load: () => import("./AutomatonTraceActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // AUTO-A3 — «صمّم الآلة»: the learner builds a DFA / NFA; «تحقّق من الآلة» sends it through the host's `check` seam and the
+    // SERVER compares its language with the reference (the reference never reaches the browser).
+    kind: "simulation",
+    key: "automaton-design",
+    versions: [1],
+    load: () => import("./AutomatonDesignActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);

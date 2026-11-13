@@ -1701,6 +1701,85 @@ const m02: ContentModule = {
                 }
               },
               "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m02-l04-p02-b06",
+              "type": "simulation",
+              "simulationType": "automaton-design",
+              "version": 1,
+              "title": "صمّم الآلة: تنتهي بـ 1",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق {0, 1} التي تنتهي بـ 1.",
+                  "machine": "DFA",
+                  "alphabet": [
+                    "0",
+                    "1"
+                  ],
+                  "maxStates": 4,
+                  "complete": true,
+                  "examples": {
+                    "accept": [
+                      "1",
+                      "01",
+                      "0111"
+                    ],
+                    "reject": [
+                      "",
+                      "0",
+                      "10"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q1"
+                  ],
+                  "transitions": [
+                    [
+                      "q0",
+                      "0",
+                      "q0"
+                    ],
+                    [
+                      "q0",
+                      "1",
+                      "q1"
+                    ],
+                    [
+                      "q1",
+                      "1",
+                      "q1"
+                    ],
+                    [
+                      "q1",
+                      "0",
+                      "q0"
+                    ]
+                  ]
+                },
+                "feedback": {
+                  "explanation": "حالتان تكفيان: q0 «آخر رمز ليس 1 (أو لم نقرأ شيئًا)» و q1 «آخر رمز 1» وهي حالة القبول. كل 1 يقود إلى q1 وكل 0 إلى q0.",
+                  "hints": [
+                    "يكفي أن تتذكّر الآلة الرمز الأخير الذي قرأته: هل كان 1؟",
+                    "هل ε في اللغة؟ إذن هل حالة البداية حالة قبول؟"
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات للغة: صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق {0, 1} التي تنتهي بـ 1."
+              },
+              "origin": "teacher-enrichment"
             }
           ]
         }

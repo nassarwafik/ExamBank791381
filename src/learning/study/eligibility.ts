@@ -9,6 +9,8 @@
 //   • `practice` shortInput with a non-empty `answer`                       → key: the normalized text
 //   • `practice-table` (every select cell carries its expected choice)      → key: every select cell's choice
 //   • `practice` wordBank / matching / ordering / classify with their key   → key: answers / pairs / order / assign
+//   • `simulation` / `automaton-design` v1 (AUTO-A3) with a task and a reference machine → key: { rules, reference }; the SERVER
+//     judges the learner's machine by language equivalence (api/src/lib/learning-automaton-design.js);
 //   • `simulation` / `network-lab` v1 (791381s Phase 8B) with a topology and checks → key: { topology, checks }; the SERVER
 //     replays the learner's actions and every check must pass (api/src/lib/learning-lab.js). It may opt out with
 //     `studyEligible: false` like any practice block (checked, never counted).
@@ -21,7 +23,7 @@
 //
 // IDENTITY: the activity id is the block's own id, which the content validator guarantees unique per course and
 // which the authoring contract treats as stable (renaming a block id is a content change, never a cosmetic one).
-import { isNetworkLabBlock, NETWORK_LAB_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
+import { isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, isServerJudgedSimulation, AUTOMATON_DESIGN_VERSION, type ContentBlock, type ContentPage, type PracticeQuestion, type PracticeTableBlock, type SimulationBlock } from "../content/types";
 
 /** Decision Q10 (899371 plan §18): Arabic-Indic «٠–٩» and Persian «۰–۹» digits and the Arabic decimal separator «٫» read as «0–9» / «.». */
 export const foldArabicDigits = (s: string): string =>
@@ -39,6 +41,7 @@ export type StudyActivityKey =
   | { kind: "ordering"; order: string[] }
   | { kind: "classify"; assign: Record<string, string> }
   | { kind: "network-lab"; topology: Record<string, unknown>; checks: Record<string, unknown>[] }
+  | { kind: "automaton-design"; rules: { machine: string; alphabet: string[]; maxStates?: number; complete?: boolean }; reference: Record<string, unknown> }
   | { kind: "exam-item"; itemId: string };
 
 export interface StudyActivitySpec { activityId: string; key: StudyActivityKey; }
@@ -91,13 +94,30 @@ export function networkLabKey(block: SimulationBlock): StudyActivityKey | null {
   return { kind: "network-lab", topology, checks: checks as Record<string, unknown>[] };
 }
 
+/** AUTO-A3 — the key of a «صمّم الآلة» exercise (v1, a task and a reference machine), or null — e.g. a served body (the reference
+ *  stayed on the server) or another version. Structural only: the server judge reads the rules and the reference (fail closed). */
+export function automatonDesignKey(block: SimulationBlock): StudyActivityKey | null {
+  if (!isAutomatonDesignBlock(block) || block.version !== AUTOMATON_DESIGN_VERSION || !isPlainObject(block.config)) return null;
+  const { task, reference } = block.config as { task?: unknown; reference?: unknown };
+  if (!isPlainObject(task) || !isPlainObject(reference) || typeof task.machine !== "string" || !Array.isArray(task.alphabet)) return null;
+  const rules: { machine: string; alphabet: string[]; maxStates?: number; complete?: boolean } = { machine: task.machine, alphabet: (task.alphabet as unknown[]).map(String) };
+  if (typeof task.maxStates === "number") rules.maxStates = task.maxStates;
+  if (typeof task.complete === "boolean") rules.complete = task.complete;
+  return { kind: "automaton-design", rules, reference };
+}
+
+/** The key of a server-judged simulation (a network lab or a «صمّم الآلة» exercise), or null. Pure. */
+export function serverSimulationKey(block: SimulationBlock): StudyActivityKey | null {
+  return isNetworkLabBlock(block) ? networkLabKey(block) : isAutomatonDesignBlock(block) ? automatonDesignKey(block) : null;
+}
+
 /** The eligible activity of one block, or null. Pure.
  *  A practice-capable block may explicitly opt OUT with `studyEligible: false` (local self-check only): it stays
  *  interactive in the Reader but never earns a study point. This is generic — no page id is ever special-cased. */
 export function studyActivityOf(block: ContentBlock): StudyActivitySpec | null {
   if (block.type === "practice") { if (block.studyEligible === false) return null; const key = practiceQuestionKey(block.question); return key ? { activityId: block.id, key } : null; }
   if (block.type === "practice-table") { if (block.studyEligible === false) return null; const key = practiceTableKey(block); return key ? { activityId: block.id, key } : null; }
-  if (isNetworkLabBlock(block)) { if (block.studyEligible === false) return null; const key = networkLabKey(block); return key ? { activityId: block.id, key } : null; }
+  if (isServerJudgedSimulation(block)) { if (block.studyEligible === false) return null; const key = serverSimulationKey(block); return key ? { activityId: block.id, key } : null; }
   if (block.type === "exam-item") return typeof block.itemId === "string" && block.itemId ? { activityId: block.id, key: { kind: "exam-item", itemId: block.itemId } } : null;
   return null;
 }
@@ -118,7 +138,7 @@ export function studyActivityIds(page: Pick<ContentPage, "blocks">): string[] {
   const out: string[] = [];
   for (const block of page.blocks) {
     if (block.type === "exam-item") { if (studyActivityOf(block)) out.push(block.id); continue; }   // metadata only: same authored / served
-    if (block.type !== "practice" && block.type !== "practice-table" && !isNetworkLabBlock(block)) continue;
+    if (block.type !== "practice" && block.type !== "practice-table" && !isServerJudgedSimulation(block)) continue;
     if (block.serverCheck === true ? block.studyEligible !== false : studyActivityOf(block) !== null) out.push(block.id);
   }
   return out;

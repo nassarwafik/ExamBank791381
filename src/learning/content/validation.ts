@@ -6,7 +6,7 @@
 
 import {
   BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
-  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind, isNetworkLabBlock, NETWORK_LAB_VERSION,
+  LEARNING_CONTENT_SCHEMA_VERSION, CONTENT_PAGE_LAYOUTS, isActivityBlock, activityKey, isStructuredKind, isNetworkLabBlock, NETWORK_LAB_VERSION, isAutomatonDesignBlock, AUTOMATON_DESIGN_VERSION,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -54,6 +54,7 @@ export type ContentIssueCode =
   | "invalid-page-layout"
   | "invalid-structured-question"
   | "invalid-network-lab"
+  | "invalid-automaton-design"
   | "exam-item-invalid"
   | "invalid-review-page";
 
@@ -333,6 +334,50 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
   }
   if (block.type === "guided") checkGuided(block, add, loc);
   if (isNetworkLabBlock(block)) checkNetworkLab(block, add, loc);
+  if (isAutomatonDesignBlock(block)) checkAutomatonDesign(block, add, loc);
+}
+
+const DESIGN_CONFIG_KEYS = new Set(["task", "reference", "feedback"]);
+const DESIGN_TASK_KEYS = new Set(["intro", "machine", "alphabet", "maxStates", "complete", "examples"]);
+const DESIGN_SYMBOL = /^[A-Za-z0-9#$*+@]$/;
+/**
+ * AUTO-A3 — the STRUCTURE of a «صمّم الآلة» exercise (`simulation` / `automaton-design` v1). Whether the reference machine reads
+ * under the server judge, follows the task's own rules and accepts the declared example words is proven by
+ * scripts/automata-course/automata-course.proof.test.ts through the real judge (api/src/lib/learning-automaton-design.js).
+ */
+function checkAutomatonDesign(block: ActivityBlock, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  const bad = (m: string) => add("invalid-automaton-design", "automaton-design: " + m, loc);
+  if (block.version !== AUTOMATON_DESIGN_VERSION) bad("only version " + AUTOMATON_DESIGN_VERSION + " exists");
+  if ("reveal" in (block as object)) bad("a design exercise never reveals (the reference is judged, not shown)");
+  if ("serverCheck" in (block as object)) bad("serverCheck is a served-body marker, never authored");
+  const config = block.config as Record<string, unknown> | undefined;
+  if (!config || typeof config !== "object" || Array.isArray(config)) { bad("config must be an object"); return; }
+  for (const k of Object.keys(config)) if (!DESIGN_CONFIG_KEYS.has(k)) bad("unknown config field " + k);
+  const task = config.task as Record<string, unknown> | undefined;
+  if (!task || typeof task !== "object" || Array.isArray(task)) { bad("task is required"); return; }
+  for (const k of Object.keys(task)) if (!DESIGN_TASK_KEYS.has(k)) bad("unknown task field " + k);
+  if (!isNonEmptyString(task.intro)) bad("task.intro is required");
+  if (task.machine !== "DFA" && task.machine !== "NFA") bad("task.machine is DFA or NFA");
+  const alphabet = Array.isArray(task.alphabet) ? task.alphabet : null;
+  if (!alphabet || alphabet.length === 0 || alphabet.length > 6 || !alphabet.every(a => typeof a === "string" && DESIGN_SYMBOL.test(a)) || new Set(alphabet).size !== alphabet.length) bad("task.alphabet lists 1–6 distinct one-character symbols");
+  if (task.maxStates !== undefined && !(Number.isInteger(task.maxStates) && (task.maxStates as number) >= 1 && (task.maxStates as number) <= 12)) bad("task.maxStates is 1–12");
+  if (task.complete !== undefined && typeof task.complete !== "boolean") bad("task.complete is a boolean");
+  if (task.complete === true && task.machine !== "DFA") bad("task.complete applies to a DFA only");
+  if (task.examples !== undefined) {
+    const e = task.examples as Record<string, unknown>;
+    const words = (v: unknown) => v === undefined || (Array.isArray(v) && v.length <= 8 && v.every(w => typeof w === "string" && w.length <= 20));
+    if (!e || typeof e !== "object" || Array.isArray(e) || Object.keys(e).some(k => k !== "accept" && k !== "reject") || !words(e.accept) || !words(e.reject)) bad("task.examples holds accept / reject word lists (≤ 8 words of ≤ 20 symbols)");
+  }
+  const ref = config.reference as Record<string, unknown> | undefined;
+  if (!ref || typeof ref !== "object" || Array.isArray(ref) || !Array.isArray(ref.states) || typeof ref.start !== "string" || !Array.isArray(ref.accept) || !Array.isArray(ref.transitions)
+    || !(ref.transitions as unknown[]).every(t => Array.isArray(t) && t.length === 3 && t.every(x => typeof x === "string"))) bad("reference is the reference machine { states, start, accept, transitions: [from, symbol, to][] }");
+  const feedback = config.feedback;
+  if (feedback !== undefined) {
+    const f = feedback as Record<string, unknown>;
+    const strOk = (v: unknown) => v === undefined || typeof v === "string";
+    if (!f || typeof f !== "object" || Array.isArray(f) || !strOk(f.correctFeedback) || !strOk(f.incorrectFeedback) || !strOk(f.explanation)
+      || (f.hints !== undefined && !(Array.isArray(f.hints) && f.hints.every(h => typeof h === "string")))) bad("feedback holds correctFeedback / incorrectFeedback / explanation strings and a hints list");
+  }
 }
 
 const LAB_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;

@@ -2360,6 +2360,182 @@ const m05: ContentModule = {
                 }
               },
               "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m05-l05-p02-b06",
+              "type": "simulation",
+              "simulationType": "automaton-design",
+              "version": 1,
+              "title": "صمّم الآلة: تنتهي بـ ab",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي تنتهي بـ ab.",
+                  "machine": "NFA",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 4,
+                  "examples": {
+                    "accept": [
+                      "ab",
+                      "bab",
+                      "aab"
+                    ],
+                    "reject": [
+                      "",
+                      "a",
+                      "ba",
+                      "abb"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q2"
+                  ],
+                  "transitions": [
+                    [
+                      "q0",
+                      "a",
+                      "q0"
+                    ],
+                    [
+                      "q0",
+                      "b",
+                      "q0"
+                    ],
+                    [
+                      "q0",
+                      "a",
+                      "q1"
+                    ],
+                    [
+                      "q1",
+                      "b",
+                      "q2"
+                    ]
+                  ]
+                },
+                "feedback": {
+                  "explanation": "ثلاث حالات: q0 بحلقة على a وعلى b؛ ومن q0 بالرمز a إلى q1؛ ومن q1 بالرمز b إلى q2، وهي حالة القبول. الكلمة مقبولة إذا وُجد مسار ينتهي في q2.",
+                  "hints": [
+                    "الآلة غير الحتمية «تخمّن» أين يبدأ ab الأخير: حلقة على كل رمز في البداية، ثم a ثم b.",
+                    "حالة القبول لا تخرج منها أسهم: بعد ab يجب أن تنتهي الكلمة."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات للغة: صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي تنتهي بـ ab."
+              },
+              "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m05-l05-p02-b07",
+              "type": "simulation",
+              "simulationType": "automaton-design",
+              "version": 1,
+              "title": "صمّم الآلة: الثالث من النهاية a",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي الرمز الثالث من النهاية فيها هو a.",
+                  "machine": "NFA",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 4,
+                  "examples": {
+                    "accept": [
+                      "abb",
+                      "aaa",
+                      "babb"
+                    ],
+                    "reject": [
+                      "",
+                      "ab",
+                      "bab",
+                      "abbb"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "q0",
+                    "q1",
+                    "q2",
+                    "q3"
+                  ],
+                  "start": "q0",
+                  "accept": [
+                    "q3"
+                  ],
+                  "transitions": [
+                    [
+                      "q0",
+                      "a",
+                      "q0"
+                    ],
+                    [
+                      "q0",
+                      "b",
+                      "q0"
+                    ],
+                    [
+                      "q0",
+                      "a",
+                      "q1"
+                    ],
+                    [
+                      "q1",
+                      "a",
+                      "q2"
+                    ],
+                    [
+                      "q1",
+                      "b",
+                      "q2"
+                    ],
+                    [
+                      "q2",
+                      "a",
+                      "q3"
+                    ],
+                    [
+                      "q2",
+                      "b",
+                      "q3"
+                    ]
+                  ]
+                },
+                "feedback": {
+                  "explanation": "q0 بحلقة على a وعلى b؛ ومن q0 بالرمز a إلى q1؛ ومن q1 بأي رمز إلى q2؛ ومن q2 بأي رمز إلى q3، وهي حالة القبول. أربع حالات فقط، بينما يحتاج الأوتومات الحتمي المكافئ 8 حالات.",
+                  "hints": [
+                    "كما في «الثاني قبل الأخير b»: خمّن متى تقرأ الـ a المطلوبة، ثم بالضبط رمزان آخران.",
+                    "أربع حالات تكفي؛ والأوتومات الحتمي لهذه اللغة يحتاج 8 حالات."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات للغة: صمّم أوتومات منتهيًا غير حتمي يقبل لغة كل الكلمات فوق {a, b} التي الرمز الثالث من النهاية فيها هو a."
+              },
+              "origin": "teacher-enrichment"
             }
           ]
         }

@@ -9,6 +9,7 @@
 //       feedback: { correct?, incorrect?, hints?, explanation? },
 //       reveal? } } } } }                              // true: REVEAL mode (791381s Phase 2) — see checkResponse
 // A network lab's key is { kind: "network-lab", topology, checks } (791381s Phase 8B): judged by learning-lab.js.
+// A «صمّم الآلة» key is { kind: "automaton-design", rules, reference } (AUTO-A3): judged by learning-automaton-design.js.
 //
 // The API judges every answer here and returns the verdict with ONLY the feedback that answer earns: a right answer gets the right
 // message and the explanation, a wrong one gets the wrong message and the hint ladder. Study points stay with the study index.
@@ -17,6 +18,7 @@
 // key never leaves without an answer of that question.
 const { evaluateStudyResponse, structuredKeyMap } = require("./learning-study");
 const { evaluateNetworkLab } = require("./learning-lab");
+const { evaluateAutomatonDesign } = require("./learning-automaton-design");
 
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const cleanId = v => (typeof v === "string" ? v.trim() : "");
@@ -60,7 +62,14 @@ function checkResponse(activity, response) {
     lab = evaluateNetworkLab(activity.key, response);
     if (lab.status !== "judged") return { unavailable: true };
   }
-  const correct = lab ? lab.correct === true : evaluateStudyResponse(activity.key, response);
+  // AUTO-A3 — a «صمّم الآلة» exercise is judged by language equivalence with the reference machine: a broken key is `unavailable`
+  // (retryable, nothing written); a wrong machine carries the broken public rule (`issue`) or the shortest separating word.
+  let design = null;
+  if (activity.key && activity.key.kind === "automaton-design") {
+    design = evaluateAutomatonDesign(activity.key, response);
+    if (design.status !== "judged") return { unavailable: true };
+  }
+  const correct = lab ? lab.correct === true : design ? design.correct === true : evaluateStudyResponse(activity.key, response);
   const fb = activity.feedback || {};
   const feedback = {};
   const message = text(correct ? fb.correct : fb.incorrect);
@@ -79,8 +88,12 @@ function checkResponse(activity, response) {
     }
     out.cells = cells;
   }
-  const parts = lab ? lab.parts : partsOf(activity.key, response);
+  const parts = lab ? lab.parts : design ? null : partsOf(activity.key, response);
   if (parts) out.parts = parts;
+  if (design && !correct) {
+    if (design.issue) out.issue = design.issue;
+    if (design.counterexample) out.counterexample = design.counterexample;
+  }
   return out;
 }
 

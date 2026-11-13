@@ -1,5 +1,5 @@
 // Unit 4 — اتحاد اللغات المنتظمة وتقاطعها، والأوتومات الحتمي غير الكامل (اللقاء 2، الشرائح 59–79).
-import { P, H, DEF, NOTE, LIST, OL, EX, VIS, SIM, MC, TF, SHORT, CLASSIFY, ORDER, PTABLE, TRUE_FALSE, GUIDED, dfa, product, tidy } from "./dsl.mjs";
+import { P, H, DEF, NOTE, LIST, OL, EX, VIS, SIM, MC, TF, SHORT, CLASSIFY, ORDER, PTABLE, TRUE_FALSE, GUIDED, dfa, product, tidy, DESIGN } from "./dsl.mjs";
 
 const len = w => [...w].length;
 const AB = ["a", "b"];
@@ -169,6 +169,16 @@ export default {
               "يُقبل كل ما لا يحوي aa. الكلمات aa و baab و abaa تحوي aa، فيعلق الأوتومات عند a الثاني.", { prove: "words" }),
             MC("في أوتومات الاتحاد لـ A1 و A2، متى تكون الحالة (qi, pj) حالة قبول؟", ["*إذا كانت qi أو pj (أو كلتاهما) حالة قبول", "إذا كانت qi و pj كلتاهما حالتي قبول", "إذا كانت qi فقط حالة قبول", "دائمًا"], "في الاتحاد يكفي أن تكون إحداهما حالة قبول. «كلتاهما» هو شرط التقاطع."),
             SHORT("كم حالة في الأوتومات الحتمي الكامل المكافئ للأوتومات أعلاه (بعد إضافة حالة المصيدة)؟", "3", "نضيف حالة مصيدة واحدة يذهب إليها الانتقال الناقص (من q1 بالرمز a): q0، q1، والمصيدة."),
+            DESIGN({
+              title: "صمّم الآلة: التقاطع",
+              intro: "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق `{a, b}` التي **تحوي a واحدًا على الأقل وطولها زوجي**.",
+              machine: "DFA", alphabet: ["a", "b"], maxStates: 6, complete: true,
+              accept: ["ab", "ba", "aaab"], reject: ["", "a", "bb", "aba"],
+              reference: dfa({ states: ["e0", "e1", "a0", "a1"], alphabet: ["a", "b"], start: "e0", accept: ["a0"], t: ["e0 a a1", "e0 b e1", "e1 a a0", "e1 b e0", "a0 a,b a1", "a1 a,b a0"] }),
+              lang: w => w.includes("a") && [...w].length % 2 === 0, langMax: 8,
+              hints: ["ابنِ أوتوماتين صغيرين: «تحوي a» و«طولها زوجي»، ثم أوتومات التقاطع لهما.", "في التقاطع، حالة القبول زوج فيه الحالتان حالتا قبول."],
+              explanation: "أربع حالات: (هل قرأنا a؟ × زوجية الطول). القبول فقط في «قرأنا a والطول زوجي». هذا أوتومات الجداء للتقاطع.",
+            }),
           ],
         },
       ],

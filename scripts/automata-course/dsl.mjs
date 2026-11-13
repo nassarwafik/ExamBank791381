@@ -76,6 +76,24 @@ export const SIM = (automaton, opts = {}) => enr({
   ...(opts.tapes ? { _tapes: opts.tapes } : {}),
 });
 
+/**
+ * AUTO-A3 — «صمّم الآلة»: the learner builds the machine; the SERVER compares its language with `reference` (a dfa()/nfa() of
+ * this file, which never reaches the browser). `lang` (authoring only, like SIM's) is the declared language: the proof test checks
+ * the reference accepts exactly it, that the example words agree with it, and that the reference itself passes the real judge
+ * under the task's own rules (so the task can be met).
+ */
+export const DESIGN = ({ intro, machine, alphabet, maxStates, complete, accept = [], reject = [], reference, lang, langMax = 7, explanation, hints, title }) => enr({
+  type: "simulation", simulationType: "automaton-design", version: 1, title: title ?? "صمّم الآلة",
+  capabilities: { fullscreen: true, reset: true, interactive: true },
+  config: {
+    task: { intro: plain(intro), machine, alphabet, ...(maxStates ? { maxStates } : {}), ...(complete ? { complete: true } : {}), ...(accept.length || reject.length ? { examples: { ...(accept.length ? { accept } : {}), ...(reject.length ? { reject } : {}) } } : {}) },
+    reference: { states: reference.states, start: reference.start, accept: reference.accept, transitions: reference.transitions },
+    feedback: { ...(explanation ? { explanation: plain(explanation) } : {}), ...(hints?.length ? { hints: hints.map(plain) } : {}) },
+  },
+  fallback: { text: "تمرين تفاعلي: صمّم أوتومات للغة: " + plain(intro) },
+  _lang: lang, _langMax: langMax,
+});
+
 /** «حل مع المعلم»: prompt → think first → steps revealed one by one → result. */
 export const GUIDED = ({ title, prompt, steps, result, explanation }) => enr({
   type: "guided", guidedType: "reveal", version: 1, title,

@@ -10,12 +10,14 @@
 //
 // A NETWORK LAB (`simulation` / `network-lab`, 791381s Phase 8B) follows the same rule: its `checks`, `feedback` and `solution`
 // stay in the check index / the authored source; the served block keeps the public `topology` and `task` and gets `serverCheck`.
+// A «صمّم الآلة» exercise (`simulation` / `automaton-design`, AUTO-A3) likewise: its `reference` machine and `feedback` stay in the
+// check index; the served block keeps the public `task` only and gets `serverCheck`.
 //
 // Which blocks are checkable is the eligibility rule's key (practiceQuestionKey / practiceTableKey); `study` is the study rule
 // itself (studyActivityOf), so the check index's study activities are exactly the study index's.
-import { hintLadder, isNetworkLabBlock, type ContentBlock, type ContentModule, type LearningCourseManifest, type NetworkLabConfig, type PracticeQuestion } from "../content/types";
+import { hintLadder, isNetworkLabBlock, isAutomatonDesignBlock, type AutomatonDesignConfig, type SimulationBlock, type ContentBlock, type ContentModule, type LearningCourseManifest, type NetworkLabConfig, type PracticeQuestion } from "../content/types";
 import { orderedModules } from "../content/navigation";
-import { networkLabKey, practiceQuestionKey, practiceTableKey, studyActivityOf, type StudyActivityKey } from "./eligibility";
+import { automatonDesignKey, networkLabKey, practiceQuestionKey, practiceTableKey, studyActivityOf, type StudyActivityKey } from "./eligibility";
 
 /** What the server says after an answer: the right / wrong message, the hint ladder (after a wrong answer), the explanation (after a right one). */
 export interface CheckFeedback { correct?: string; incorrect?: string; hints?: string[]; explanation?: string }
@@ -39,7 +41,7 @@ function feedbackOf(question: PracticeQuestion): CheckFeedback {
   return out;
 }
 
-function labFeedbackOf(config: NetworkLabConfig["feedback"] | undefined): CheckFeedback {
+function labFeedbackOf(config: NetworkLabConfig["feedback"] | AutomatonDesignConfig["feedback"] | undefined): CheckFeedback {
   const out: CheckFeedback = {};
   if (typeof config?.correctFeedback === "string" && config.correctFeedback) out.correct = config.correctFeedback;
   if (typeof config?.incorrectFeedback === "string" && config.incorrectFeedback) out.incorrect = config.incorrectFeedback;
@@ -51,6 +53,11 @@ function labFeedbackOf(config: NetworkLabConfig["feedback"] | undefined): CheckF
 
 /** The check entry of one block, or null when the block cannot be checked automatically. Pure. */
 export function checkActivityOf(block: ContentBlock): CheckActivity | null {
+  if (isAutomatonDesignBlock(block)) {
+    const sim = block as SimulationBlock;
+    const key = automatonDesignKey(sim);
+    return key ? { key, study: studyActivityOf(sim) !== null, feedback: labFeedbackOf((sim.config as Partial<AutomatonDesignConfig> | undefined)?.feedback) } : null;
+  }
   if (isNetworkLabBlock(block)) {
     const key = networkLabKey(block);
     return key ? { key, study: studyActivityOf(block) !== null, feedback: labFeedbackOf((block.config as Partial<NetworkLabConfig> | undefined)?.feedback) } : null;
@@ -82,6 +89,14 @@ function servedQuestion(q: PracticeQuestion): PracticeQuestion {
 
 /** One block as the browser receives it. Pure; blocks other than `practice` / `practice-table` / a network lab are returned unchanged. */
 export function servedBlock(block: ContentBlock): ContentBlock {
+  if (isAutomatonDesignBlock(block)) {
+    // The PUBLIC task only (an allowlist): the reference machine and the feedback never leave the server.
+    const { serverCheck: _authored, config, ...rest } = block as SimulationBlock;
+    const c = (config ?? {}) as Partial<AutomatonDesignConfig>;
+    const served: Record<string, unknown> = {};
+    if (c.task !== undefined) served.task = c.task;
+    return { ...rest, config: served, ...(checkActivityOf(block) ? { serverCheck: true as const } : {}) };
+  }
   if (isNetworkLabBlock(block)) {
     // The PUBLIC part only (an allowlist, never a denylist): the topology and the task statement. Checks, feedback and the
     // authored solution never leave the server.
@@ -92,6 +107,7 @@ export function servedBlock(block: ContentBlock): ContentBlock {
     if (c.task !== undefined) served.task = c.task;
     return { ...rest, config: served, ...(checkActivityOf(block) ? { serverCheck: true as const } : {}) };
   }
+
   if (block.type === "practice") {
     const { question, serverCheck: _authored, ...rest } = block;
     return { ...rest, question: servedQuestion(question), ...(checkActivityOf(block) ? { serverCheck: true as const } : {}) };

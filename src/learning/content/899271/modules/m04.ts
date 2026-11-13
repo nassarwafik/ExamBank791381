@@ -1970,6 +1970,108 @@ const m04: ContentModule = {
                 }
               },
               "origin": "teacher-enrichment"
+            },
+            {
+              "id": "m04-l04-p02-b06",
+              "type": "simulation",
+              "simulationType": "automaton-design",
+              "version": 1,
+              "title": "صمّم الآلة: التقاطع",
+              "capabilities": {
+                "fullscreen": true,
+                "reset": true,
+                "interactive": true
+              },
+              "config": {
+                "task": {
+                  "intro": "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق {a, b} التي تحوي a واحدًا على الأقل وطولها زوجي.",
+                  "machine": "DFA",
+                  "alphabet": [
+                    "a",
+                    "b"
+                  ],
+                  "maxStates": 6,
+                  "complete": true,
+                  "examples": {
+                    "accept": [
+                      "ab",
+                      "ba",
+                      "aaab"
+                    ],
+                    "reject": [
+                      "",
+                      "a",
+                      "bb",
+                      "aba"
+                    ]
+                  }
+                },
+                "reference": {
+                  "states": [
+                    "e0",
+                    "e1",
+                    "a0",
+                    "a1"
+                  ],
+                  "start": "e0",
+                  "accept": [
+                    "a0"
+                  ],
+                  "transitions": [
+                    [
+                      "e0",
+                      "a",
+                      "a1"
+                    ],
+                    [
+                      "e0",
+                      "b",
+                      "e1"
+                    ],
+                    [
+                      "e1",
+                      "a",
+                      "a0"
+                    ],
+                    [
+                      "e1",
+                      "b",
+                      "e0"
+                    ],
+                    [
+                      "a0",
+                      "a",
+                      "a1"
+                    ],
+                    [
+                      "a0",
+                      "b",
+                      "a1"
+                    ],
+                    [
+                      "a1",
+                      "a",
+                      "a0"
+                    ],
+                    [
+                      "a1",
+                      "b",
+                      "a0"
+                    ]
+                  ]
+                },
+                "feedback": {
+                  "explanation": "أربع حالات: (هل قرأنا a؟ × زوجية الطول). القبول فقط في «قرأنا a والطول زوجي». هذا أوتومات الجداء للتقاطع.",
+                  "hints": [
+                    "ابنِ أوتوماتين صغيرين: «تحوي a» و«طولها زوجي»، ثم أوتومات التقاطع لهما.",
+                    "في التقاطع، حالة القبول زوج فيه الحالتان حالتا قبول."
+                  ]
+                }
+              },
+              "fallback": {
+                "text": "تمرين تفاعلي: صمّم أوتومات للغة: صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق {a, b} التي تحوي a واحدًا على الأقل وطولها زوجي."
+              },
+              "origin": "teacher-enrichment"
             }
           ]
         }

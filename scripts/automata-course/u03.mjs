@@ -1,5 +1,5 @@
 // Unit 3 — بناء أوتومات منتهٍ حتمي كامل (اللقاء 1، الشرائح 65–107؛ اللقاء 2، الشرائح 3–58).
-import { P, H, NOTE, TIP, OL, EX, CLAR, SIM, MC, TF, SHORT, CLASSIFY, ORDER, GUIDED, dfa } from "./dsl.mjs";
+import { P, H, NOTE, TIP, OL, EX, CLAR, SIM, MC, TF, SHORT, CLASSIFY, ORDER, GUIDED, dfa, DESIGN, nfa } from "./dsl.mjs";
 
 const len = w => [...w].length;
 const count = (w, s) => [...w].filter(c => c === s).length;
@@ -166,6 +166,26 @@ export default {
             ]),
             SIM(T8, { title: "المهمة 8: تبدأ بـ ab وتنتهي بـ a", words: ["aba", "abcca", "ab", "aab"], lang: w => w.startsWith("ab") && w.endsWith("a") }),
             EX({ mode: "practice", title: "تدرّب: مهمتان إضافيتان", prompt: "1. ابنِ أوتومات حتميًا كاملًا يقبل لغة كل الكلمات فوق {a,b,c} التي تبدأ بـ ab وتحوي التسلسل ba. 2. ابنِ أوتومات حتميًا كاملًا يقبل لغة كل الكلمات فوق {a,b,c} التي تبدأ بـ aa وتحوي التسلسل aba." }),
+            DESIGN({
+              title: "صمّم الآلة: المهمة الإضافية 1",
+              intro: "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق `{a, b, c}` التي تبدأ بـ `ab` وتحوي التسلسل `ba`.",
+              machine: "DFA", alphabet: ["a", "b", "c"], maxStates: 8, complete: true,
+              accept: ["aba", "abba", "abcba"], reject: ["ab", "abc", "ba", "bab"],
+              reference: nfa({ states: ["s", "x", "y", "m", "t", "f"], alphabet: ["a", "b", "c"], start: "s", accept: ["f"], t: ["s a x", "x b y", "y a f", "y a,b,c m", "m a,b,c m", "m b t", "y b t", "t a f", "f a,b,c f"] }),
+              lang: w => w.startsWith("ab") && w.includes("ba"), langMax: 7,
+              hints: ["انتبه: الحرف b في البداية ab قد يكون أول التسلسل ba — الكلمة aba مقبولة.", "بعد ab تحتاج الآلة أن تتذكّر: هل آخر رمز قرأته b؟", "لا تنسَ حالة المصيدة لكلمة لا تبدأ بـ ab."],
+              explanation: "حالات تكفي: البداية، «قرأنا a»، «بدأت بـ ab وآخر رمز b»، «بدأت بـ ab وآخر رمز ليس b»، حالة القبول (حلقة على كل رمز)، وحالة المصيدة. من «آخر رمز b» يقود a إلى القبول.",
+            }),
+            DESIGN({
+              title: "صمّم الآلة: المهمة الإضافية 2",
+              intro: "صمّم أوتومات منتهيًا حتميًا كاملًا يقبل لغة كل الكلمات فوق `{a, b, c}` التي تبدأ بـ `aa` وتحوي التسلسل `aba`.",
+              machine: "DFA", alphabet: ["a", "b", "c"], maxStates: 9, complete: true,
+              accept: ["aaba", "aacaba", "aababc"], reject: ["aa", "aab", "aba", "aabba"],
+              reference: nfa({ states: ["s", "x", "y", "m", "n", "z", "f"], alphabet: ["a", "b", "c"], start: "s", accept: ["f"], t: ["s a x", "x a y", "y a y", "y b z", "y a,b,c m", "m a,b,c m", "m a n", "n b z", "z a f", "f a,b,c f"] }),
+              lang: w => w.startsWith("aa") && w.includes("aba"), langMax: 7,
+              hints: ["الحرف a الثاني في البداية aa قد يكون أول التسلسل aba — الكلمة aaba مقبولة.", "بعد aa تتذكّر الآلة كم وصلنا من aba: لا شيء، a، أو ab.", "ماذا يحدث بعد ab إذا جاء b أو c؟ وبعد ab إذا جاء a؟"],
+              explanation: "بعد البداية aa نتتبّع التقدّم نحو aba: «آخر رمز a» (بعد aa مباشرة نحن هنا)، «آخر رمزين ab»، و«لا تقدّم». ab ثم a ← القبول، وحالة القبول حلقة على كل رمز. مع البداية و«قرأنا a» وحالة المصيدة: 7 حالات.",
+            }),
           ],
         },
         {
