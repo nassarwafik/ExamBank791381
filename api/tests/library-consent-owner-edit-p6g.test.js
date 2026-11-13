@@ -250,6 +250,21 @@ describe("P6-G the owner edits a sent exam in their own workspace, then publishe
     expect(ctx.bank.getJson(LS.ownerCopyBlobOf(id)).ownerId).toBe(OMAR);
   });
 
+  it("a submission already decided (withdrawn, declined, superseded) is refused BEFORE anything is copied or recorded", async () => {
+    const withdrawn = await sendNow(ctx, "EXAM-w");
+    await send(ctx, ctx.sara, { action: "withdraw", submissionId: withdrawn });
+    const declined = await sendNow(ctx, "EXAM-d");
+    await owner(ctx, "decline-submission", { submissionId: declined, reason: "ناقص" });
+    const superseded = await sendNow(ctx, "EXAM-s");
+    await sendNow(ctx, "EXAM-s");
+    for (const id of [withdrawn, declined, superseded]) {
+      const r = await owner(ctx, "copy-submission", { submissionId: id });
+      expect([r.status, r.jsonBody.code]).toEqual([409, "SUBMISSION_NOT_PENDING"]);
+    }
+    expect(ctx.bank.names("exams/EXAM-lib-")).toEqual([]);                              // nothing in the owner's workspace
+    expect(copyAudits(ctx)).toEqual([]);                                                 // nothing recorded
+  });
+
   it("an updated version the owner edited replaces the published one with the same audience (decision (أ) unchanged)", async () => {
     const first = await sendNow(ctx, "EXAM-series");
     const p1 = await owner(ctx, "publish-submission", publishBody(first));
