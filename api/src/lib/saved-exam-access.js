@@ -57,7 +57,14 @@ async function writeSavedExam(container, blobName, { build, owner, conditional, 
   const attempts = conditional ? 1 : MAX_UNCONDITIONAL_ATTEMPTS;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const { value: current, etag: currentEtag } = await io.downloadJsonWithEtagOrNull(container, blobName);
-    if (!canAccessSavedExam(current, owner)) throw new SaveRefusal(403, EXAM_FORBIDDEN);
+    // Hotfix (found during Tadris+ P6-G) — the access rule decides about a document that EXISTS. With no document there is nothing to
+    // protect: the save CREATES it, owned by this teacher (stamped below). Asking the rule about "no document" treated it as an unowned
+    // pre-tenancy document — hidden from an Owner-Console account (t_…) and, with LEGACY_DATA_OWNER set, owned by that owner — so those
+    // teachers could never save a new exam. The create stays atomic with this decision: the write is create-only (If-None-Match), and
+    // a document someone else created meanwhile is read again and decided by the rule on the next attempt. A stored blob (it has an
+    // ETag) is always decided by the rule, even when its content is empty.
+    const exists = current !== null || !!currentEtag;
+    if (exists && !canAccessSavedExam(current, owner)) throw new SaveRefusal(403, EXAM_FORBIDDEN);
     if (conditional) {
       const expected = typeof baseEtag === "string" && baseEtag ? baseEtag : null;
       const matches = expected ? currentEtag === expected : current === null;
