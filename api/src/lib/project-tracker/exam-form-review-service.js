@@ -8,7 +8,7 @@
 const { downloadJsonOrNull, listJson, mutateJsonWithRetry } = require("../platform-storage");
 const { getStorageNamespace } = require("./registry");
 const { formProgress } = require("./exam-form-answers");
-const { loadClassForm, trustedTemplate } = require("./exam-form-service");
+const { loadClassForm, trustedTemplate, rulesOf } = require("./exam-form-service");
 const review = require("./exam-form-review");
 const svc = require("./service");
 
@@ -42,7 +42,7 @@ async function classFormStudents(container, projectCode, classId, students) {
     const doc = byStudent.get(String(s.studentId)) || null;
     const status = statusOf(doc);
     counts[status] += 1;
-    const progress = formProgress(template, doc && doc.answers);
+    const progress = formProgress(template, doc && doc.answers, rulesOf(classForm));   // Phase F4: image questions count where the class switched them on
     return {
       studentId: s.studentId, displayName: s.displayName, code: s.code, status,
       answered: progress.answered, total: progress.total,
@@ -67,7 +67,7 @@ function teacherBody(classForm, template, student, doc) {
     revision: doc ? doc.revision : 0,
     submittedAt: (doc && doc.submittedAt) || "", updatedAt: (doc && doc.updatedAt) || "",
     returnNote: (doc && doc.returnNote) || "", approvedAt: (doc && doc.approvedAt) || "",
-    progress: formProgress(template, answers),
+    progress: formProgress(template, answers, rulesOf(classForm)),
     auto: evidence,
     review: { ratings: (stored && stored.ratings) || {}, generalNote: (stored && stored.generalNote) || "", updatedAt: (stored && stored.updatedAt) || "" },
     unrated: doc ? review.unratedSections(template, doc) : template.sections.filter(s => s.weight > 0).map(s => s.sectionId),

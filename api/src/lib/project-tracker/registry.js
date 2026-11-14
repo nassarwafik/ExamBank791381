@@ -129,7 +129,10 @@ function examFormNames(code) {
   return {
     examFormClassName: classId => base + "classes/" + classId + ".json",
     examFormAnswersPrefix: classId => base + "answers/" + classId + "/",
-    examFormAnswersName: (classId, studentId) => base + "answers/" + classId + "/" + studentId + ".json"
+    examFormAnswersName: (classId, studentId) => base + "answers/" + classId + "/" + studentId + ".json",
+    // Phase F4 — one immutable blob per attached image, under the student who owns it (never under the answers prefix,
+    // which is listed as JSON documents).
+    examFormImageName: (classId, studentId, imageId) => base + "images/" + classId + "/" + studentId + "/" + imageId + ".webp"
   };
 }
 

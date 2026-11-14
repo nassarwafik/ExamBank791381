@@ -11,6 +11,10 @@ const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;   // 3 MB original
 const OUTPUT_SIZE = 512;
 const OUTPUT_CONTENT_TYPE = "image/webp";
 const MAX_INPUT_PIXELS = 40 * 1000 * 1000;   // decompression-bomb guard (40 MP)
+// Phase F4 — an EVIDENCE image (a student's screenshot or photo attached to a project exam form): the SAME pipeline, a
+// larger bounded box (text in a screenshot must stay readable) and a larger upload bound (a phone photo).
+const EVIDENCE_MAX_UPLOAD_BYTES = 6 * 1024 * 1024;   // 6 MB original
+const EVIDENCE_OUTPUT_SIZE = 1600;
 
 class ProfileImageError extends Error {
   constructor(message, code, httpStatus = 400) { super(message); this.code = code; this.httpStatus = httpStatus; }
@@ -32,14 +36,14 @@ function sniffRasterKind(buffer) {
   return null;
 }
 
-/** A `data:image/(jpeg|png|webp);base64,…` transport string → raw bytes (bounded BEFORE decoding). */
-function decodeImageDataUrl(dataUrl) {
+/** A `data:image/(jpeg|png|webp);base64,…` transport string → raw bytes (bounded BEFORE decoding). `maxBytes` defaults to the photo bound. */
+function decodeImageDataUrl(dataUrl, maxBytes = MAX_UPLOAD_BYTES) {
   const text = String(dataUrl || "");
   if (!text) throw new ProfileImageError(MESSAGES.EMPTY, "EMPTY");
   const m = /^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/i.exec(text);
   if (!m) throw new ProfileImageError(MESSAGES.UNSUPPORTED, "UNSUPPORTED");
   const b64 = m[2].replace(/\s+/g, "");
-  if (b64.length > Math.ceil(MAX_UPLOAD_BYTES * 4 / 3) + 4) throw new ProfileImageError(MESSAGES.TOO_LARGE, "TOO_LARGE", 413);
+  if (b64.length > Math.ceil(maxBytes * 4 / 3) + 4) throw new ProfileImageError(tooLargeMessage(maxBytes), "TOO_LARGE", 413);
   const buffer = Buffer.from(b64, "base64");
   if (!buffer.length) throw new ProfileImageError(MESSAGES.EMPTY, "EMPTY");
   return buffer;
@@ -58,9 +62,19 @@ async function normalizeLogoImage(input) {
   return normalizeRaster(input, { fit: "inside" });
 }
 
-async function normalizeRaster(input, { fit }) {
+/**
+ * Phase F4 — an evidence image: bounded upload (6 MB), sniffed bytes, decoded, EXIF orientation applied, fitted INSIDE a
+ * 1600 px box (never enlarged, never cropped), metadata stripped, re-encoded to WebP.
+ */
+async function normalizeEvidenceImage(input) {
+  return normalizeRaster(input, { fit: "inside", size: EVIDENCE_OUTPUT_SIZE, maxBytes: EVIDENCE_MAX_UPLOAD_BYTES });
+}
+
+const tooLargeMessage = maxBytes => (maxBytes === MAX_UPLOAD_BYTES ? MESSAGES.TOO_LARGE : "حجم الصورة كبير جدًا. الحد الأقصى " + Math.round(maxBytes / (1024 * 1024)) + " ميغابايت.");
+
+async function normalizeRaster(input, { fit, size = OUTPUT_SIZE, maxBytes = MAX_UPLOAD_BYTES }) {
   if (!Buffer.isBuffer(input) || !input.length) throw new ProfileImageError(MESSAGES.EMPTY, "EMPTY");
-  if (input.length > MAX_UPLOAD_BYTES) throw new ProfileImageError(MESSAGES.TOO_LARGE, "TOO_LARGE", 413);
+  if (input.length > maxBytes) throw new ProfileImageError(tooLargeMessage(maxBytes), "TOO_LARGE", 413);
   const kind = sniffRasterKind(input);
   if (!kind) throw new ProfileImageError(MESSAGES.UNSUPPORTED, "UNSUPPORTED");
   let sharp;
@@ -71,7 +85,7 @@ async function normalizeRaster(input, { fit }) {
     if (!meta || !["jpeg", "png", "webp"].includes(String(meta.format)) || !meta.width || !meta.height) throw new Error("not a raster");
     const buffer = await pipeline
       .rotate()                                                              // apply EXIF orientation, then drop the tag
-      .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit, withoutEnlargement: true })
+      .resize(size, size, { fit, withoutEnlargement: true })
       .webp({ quality: 82, effort: 4 })                                      // no withMetadata → EXIF/ICC/XMP stripped
       .toBuffer();
     const out = await sharp(buffer).metadata();
@@ -82,4 +96,4 @@ async function normalizeRaster(input, { fit }) {
   }
 }
 
-module.exports = { MAX_UPLOAD_BYTES, OUTPUT_SIZE, OUTPUT_CONTENT_TYPE, ProfileImageError, MESSAGES, sniffRasterKind, decodeImageDataUrl, normalizeProfileImage, normalizeLogoImage };
+module.exports = { MAX_UPLOAD_BYTES, OUTPUT_SIZE, OUTPUT_CONTENT_TYPE, EVIDENCE_MAX_UPLOAD_BYTES, EVIDENCE_OUTPUT_SIZE, ProfileImageError, MESSAGES, sniffRasterKind, decodeImageDataUrl, normalizeProfileImage, normalizeLogoImage, normalizeEvidenceImage };

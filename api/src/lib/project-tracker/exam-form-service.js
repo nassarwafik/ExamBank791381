@@ -10,10 +10,13 @@
 //
 // The class form holds the WHOLE template, answer keys included: it is server-side only. A student is sent
 // toStudentView(template) and their own answers, never the stored class form.
-const { downloadJsonOrNull, mutateJsonWithRetry } = require("../platform-storage");
+const crypto = require("crypto");
+const { downloadJsonOrNull, mutateJsonWithRetry, uploadBinary, downloadBinaryOrNull, deleteBlob } = require("../platform-storage");
+const { decodeImageDataUrl, normalizeEvidenceImage, EVIDENCE_MAX_UPLOAD_BYTES } = require("../profile-image");
+const images = require("./exam-form-images");
 const { getStorageNamespace, getExamFormTemplate } = require("./registry");
 const { validateExamFormTemplate, toStudentView, summarizeExamForm } = require("./exam-form");
-const { applyDraft, applySubmit, formProgress, DEFERRED_KINDS } = require("./exam-form-answers");
+const { applyDraft, applySubmit, formProgress, deferredKindsOf } = require("./exam-form-answers");
 const { studentReviewView } = require("./exam-form-review");   // Phase F3
 const svc = require("./service");
 
@@ -35,6 +38,10 @@ function trustedTemplate(classForm, projectCode) {
   return classForm.template;
 }
 
+// Phase F4 — the rules of ONE class's form that the answer code needs: whether its teacher switched image answers on. A
+// class form that never did (every form opened before F4) keeps image questions deferred, exactly as before.
+const rulesOf = classForm => ({ imageAnswers: !!(classForm && classForm.imageAnswers === true) });
+
 async function loadClassForm(container, projectCode, classId) {
   return downloadJsonOrNull(container, getStorageNamespace(projectCode).examFormClassName(classId));
 }
@@ -48,7 +55,8 @@ async function classFormState(container, projectCode, classId) {
   return {
     hasForm: true, state: stored.state === "open" ? "open" : "closed", formVersion: stored.formVersion,
     openedAt: stored.openedAt || "", closedAt: stored.closedAt || "", summary: summarizeExamForm(trustedTemplate(stored, projectCode)),
-    hiddenQuestionIds: Array.isArray(stored.hiddenQuestionIds) ? stored.hiddenQuestionIds : []
+    hiddenQuestionIds: Array.isArray(stored.hiddenQuestionIds) ? stored.hiddenQuestionIds : [],
+    ...(stored.imageAnswers === true ? { imageAnswers: true } : {})                 // Phase F4 (absent while off)
   };
 }
 
@@ -90,8 +98,13 @@ async function classFormQuestions(container, projectCode, classId) {
  * Opens the form for a class. The FIRST open freezes the bundled template into the class — without the questions the
  * teacher hides (`hiddenQuestionIds`, Phase F3); a later open (after a close) keeps those questions, so answers already
  * saved always match the questions the student saw. Hiding a question after the first open is refused.
+ * Phase F4 — `imageAnswers: true` switches the class's image questions on (students attach images, and a required image
+ * question then counts for a submit). It may be switched on at the first open or by a later open, and never off again:
+ * a class whose students attached images cannot lose the input. Any other value leaves the class as it is.
  */
-async function openClassForm(container, projectCode, classId, { actor, now, hiddenQuestionIds }) {
+async function openClassForm(container, projectCode, classId, { actor, now, hiddenQuestionIds, imageAnswers }) {
+  if (imageAnswers !== undefined && typeof imageAnswers !== "boolean") fail("طلب غير صحيح.", 400, "BAD_IMAGE_ANSWERS");
+  let imagesSwitchedOn = false;
   const bundled = getExamFormTemplate(projectCode);
   if (!bundled) fail("هذا المشروع لا يملك استمارة امتحان.", 400, "NO_FORM");
   const frozen = withoutHidden(bundled, hiddenQuestionIds, projectCode);
@@ -101,16 +114,26 @@ async function openClassForm(container, projectCode, classId, { actor, now, hidd
     if (current) {
       trustedTemplate(current, projectCode);
       if (frozen.hidden.length) fail("ثُبّتت أسئلة الاستمارة عند أول فتح، ولا يمكن إخفاء سؤال بعده.", 409, "FORM_FROZEN");
-      changed = current.state !== "open";
-      return changed ? { ...current, state: "open", reopenedAt: now, reopenedBy: actor || "", updatedAt: now } : current;
+      if (imageAnswers === false && current.imageAnswers === true) fail("فُعّلت أسئلة الصور لهذا الصف، ولا يمكن إيقافها.", 409, "IMAGES_FROZEN");
+      const reopen = current.state !== "open";
+      imagesSwitchedOn = imageAnswers === true && current.imageAnswers !== true;
+      changed = reopen || imagesSwitchedOn;
+      if (!changed) return current;
+      return {
+        ...current, state: "open", updatedAt: now,
+        ...(reopen ? { reopenedAt: now, reopenedBy: actor || "" } : {}),
+        ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {})
+      };
     }
     changed = true;
+    imagesSwitchedOn = imageAnswers === true;
     return {
       schemaVersion: 1, projectCode, classId, state: "open", formVersion: bundled.formVersion,
-      template: frozen.template, hiddenQuestionIds: frozen.hidden, openedAt: now, openedBy: actor || "", updatedAt: now
+      template: frozen.template, hiddenQuestionIds: frozen.hidden, openedAt: now, openedBy: actor || "", updatedAt: now,
+      ...(imagesSwitchedOn ? { imageAnswers: true, imageAnswersAt: now, imageAnswersBy: actor || "" } : {})
     };
   });
-  return { doc, first, changed };
+  return { doc, first, changed, imagesSwitchedOn };
 }
 
 // Closes the form: students keep reading what they wrote and can no longer save or submit. Nothing is deleted.
@@ -135,8 +158,8 @@ function studentBody(classForm, template, doc) {
     status: doc ? doc.status : "draft",
     submittedAt: (doc && doc.submittedAt) || "",
     updatedAt: (doc && doc.updatedAt) || "",
-    progress: formProgress(template, answers),
-    deferredKinds: [...DEFERRED_KINDS],
+    progress: formProgress(template, answers, rulesOf(classForm)),
+    deferredKinds: [...deferredKindsOf(rulesOf(classForm))],
     // Phase F3 — the note of a returned form; after the approval, the mark and the teacher's ratings (never an answer key).
     ...studentReviewView(template, doc)
   };
@@ -160,7 +183,7 @@ async function studentFormSummary(container, projectCode, classId, studentId) {
   if (!classForm) return null;
   const template = trustedTemplate(classForm, projectCode);
   const doc = await downloadJsonOrNull(container, getStorageNamespace(projectCode).examFormAnswersName(classId, studentId));
-  const progress = formProgress(template, doc && doc.answers);
+  const progress = formProgress(template, doc && doc.answers, rulesOf(classForm));
   return {
     title: template.title, state: classForm.state === "open" ? "open" : "closed",
     status: doc && ["submitted", "returned", "approved"].includes(doc.status) ? doc.status : "draft", started: !!doc, answered: progress.answered, total: progress.total,
@@ -180,7 +203,7 @@ async function writeStudentForm(container, projectCode, classId, studentId, appl
     if (!classForm) fail("الاستمارة غير متاحة لصفك.", 404, "FORM_NOT_OPENED");
     template = trustedTemplate(classForm, projectCode);
     if (classForm.state !== "open") fail("أغلق المعلم الاستمارة. إجاباتك المحفوظة باقية.", 409, "FORM_CLOSED");
-    outcome = apply(current, template);
+    outcome = apply(current, template, rulesOf(classForm));
     if (outcome.changed === false) { const err = new Error("NO_CHANGE"); err.code = "NO_CHANGE"; err.current = current; throw err; }
     return outcome.doc;
   }).catch(e => {
@@ -191,12 +214,69 @@ async function writeStudentForm(container, projectCode, classId, studentId, appl
 }
 
 function saveStudentDraft(container, projectCode, classId, studentId, { patch, baseRevision, now }) {
-  return writeStudentForm(container, projectCode, classId, studentId, (current, template) =>
-    applyDraft(current, template, { patch, baseRevision, identity: { projectCode, classId, studentId }, now }));
+  return writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) =>
+    applyDraft(current, template, { patch, baseRevision, identity: { projectCode, classId, studentId }, now, rules }));
 }
 
 function submitStudentForm(container, projectCode, classId, studentId, { baseRevision, now }) {
-  return writeStudentForm(container, projectCode, classId, studentId, (current, template) => applySubmit(current, template, { baseRevision, now }));
+  return writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) => applySubmit(current, template, { baseRevision, now, rules }));
 }
 
-module.exports = { trustedTemplate, loadClassForm, classFormState, classFormQuestions, openClassForm, closeClassForm, readStudentForm, studentFormSummary, saveStudentDraft, submitStudentForm };
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase F4 — the images a student attaches (docs/enterprise-project-exam-form-f4.md).
+//
+// Attach: the upload is bounded, sniffed, decoded and re-encoded by the platform's ONE image pipeline (profile-image.js;
+// metadata never survives), stored as a NEW immutable blob under the student's own prefix, and only then referenced from
+// the answer in one CAS round. A reference therefore never points at a blob that is not there; when the round refuses the
+// image (the question is full, the form was closed or submitted meanwhile) the blob just written is removed again.
+// Remove: the reference goes first (CAS), then the blob, best effort — a failed delete leaves an unreferenced blob that no
+// route can serve, never a broken reference.
+// ---------------------------------------------------------------------------------------------------------------------
+async function bestEffortDelete(container, name) {
+  try { await deleteBlob(container, name); return true; } catch { return false; }
+}
+
+async function addStudentImage(container, projectCode, classId, studentId, { questionId, dataUrl, now }) {
+  // Everything that can be refused without touching the image is refused first (cheap checks before the decode).
+  const membership = await svc.requireStudentInClass(container, studentId, classId);
+  if (!membership.ok) fail("لا يمكنك تعديل هذه الاستمارة.", 403, "NOT_MEMBER");
+  const ns = getStorageNamespace(projectCode);
+  const before = await loadClassForm(container, projectCode, classId);
+  if (!before) fail("الاستمارة غير متاحة لصفك.", 404, "FORM_NOT_OPENED");
+  if (before.state !== "open") fail("أغلق المعلم الاستمارة. إجاباتك المحفوظة باقية.", 409, "FORM_CLOSED");
+  images.imageQuestion(trustedTemplate(before, projectCode), questionId, rulesOf(before));
+
+  const normalized = await normalizeEvidenceImage(decodeImageDataUrl(dataUrl, EVIDENCE_MAX_UPLOAD_BYTES));
+  const image = { id: crypto.randomBytes(12).toString("hex"), width: normalized.width, height: normalized.height, bytes: normalized.buffer.length };
+  const blobName = ns.examFormImageName(classId, studentId, image.id);
+  await uploadBinary(container, blobName, normalized.buffer, normalized.contentType);
+  try {
+    const r = await writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) =>
+      images.applyAddImage(current, template, { questionId, image, identity: { projectCode, classId, studentId }, now, rules }));
+    return { ...r, image };
+  } catch (e) {
+    await bestEffortDelete(container, blobName);                                  // the round refused it: no orphan is left behind
+    throw e;
+  }
+}
+
+async function removeStudentImage(container, projectCode, classId, studentId, { questionId, imageId, now }) {
+  const r = await writeStudentForm(container, projectCode, classId, studentId, (current, template, rules) =>
+    images.applyRemoveImage(current, template, { questionId, imageId, now, rules }));
+  if (r.changed) await bestEffortDelete(container, getStorageNamespace(projectCode).examFormImageName(classId, studentId, imageId));
+  return r;
+}
+
+// One attached image, or null: only an image that THIS student's answers document references is ever served — to the
+// student who owns it (the student route) and to the teacher of the class (the teacher route, after its own tenancy and
+// membership checks). The id alone is never enough: the blob name is built from the class and the student too.
+async function readStudentImage(container, projectCode, classId, studentId, imageId) {
+  if (!images.isImageId(imageId)) return null;
+  const ns = getStorageNamespace(projectCode);
+  const doc = await downloadJsonOrNull(container, ns.examFormAnswersName(classId, studentId));
+  if (!images.referencesImage(doc, imageId)) return null;
+  const blob = await downloadBinaryOrNull(container, ns.examFormImageName(classId, studentId, imageId));
+  return blob ? { buffer: blob.buffer, contentType: "image/webp" } : null;
+}
+
+module.exports = { trustedTemplate, rulesOf, loadClassForm, classFormState, classFormQuestions, openClassForm, closeClassForm, readStudentForm, studentFormSummary, saveStudentDraft, submitStudentForm, addStudentImage, removeStudentImage, readStudentImage };
