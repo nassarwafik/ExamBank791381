@@ -45,7 +45,7 @@ const blocksOf = (mods: ContentModule[]) => mods.flatMap(m => m.lessons.flatMap(
 
 describe("791381s — identity and registration", () => {
   it("is a catalog course after 791381, and its manifest batches are the catalog's overview sections", () => {
-    expect(LEARNING_COURSES.map(c => c.id)).toEqual(["791381", CID, "899371", "899271"]);   // 899371 P2: the C# book is the third course; AUTO-A2: the automata course the fourth
+    expect(LEARNING_COURSES.map(c => c.id)).toEqual(["791381", CID, "899371", "899271", "899271d"]);   // 899371 P2: the C# book is the third course; AUTO-A2: the automata course the fourth; DS-A2: data structures the fifth
     const course = findLearningCourse(CID)!;
     expect(course.status).toBe("available");
     expect(manifest.courseId).toBe(CID);
@@ -53,7 +53,7 @@ describe("791381s — identity and registration", () => {
     expect(manifest.batches!.map(b => ({ id: b.id, label: b.label }))).toEqual(course.overviewBatches);
     // Object.keys order: integer-like ids ("791381", "899371") come first, so the C# book sits before the booklet here; the library
     // follows the catalog order above, never this one.
-    expect(registeredCourseIds()).toEqual(["791381", "899271", "899371", CID]);   // integer-like keys first, in numeric order
+    expect(registeredCourseIds()).toEqual(["791381", "899271", "899371", CID, "899271d"]);   // integer-like keys first, in numeric order; then the lettered ids as registered
   });
 
   it("modules m00–m36 in section order; every batch module exists and each module is in exactly one batch", () => {

@@ -50,10 +50,21 @@ describe("Learning Materials — Phase 1 library", () => {
     expect(within(card).getByRole("heading", { level: 3, name: course.title })).toBeTruthy();
     expect(within(card).getByText(course.subject)).toBeTruthy();
     expect(within(card).getByText(course.grades)).toBeTruthy();
-    expect(within(card).getByText(course.author)).toBeTruthy();
+    expect(within(card).getByText(course.author!)).toBeTruthy();
     expect(within(card).getByText(course.year)).toBeTruthy();
     expect(within(card).getByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();                                    // no network on entry
+  });
+
+  it("DS-A2 — a course without an author shows no «المؤلّف» row (899271d), on its card and on its overview; the others keep theirs", () => {
+    render(<LearningMaterialsPage />);
+    const mine = screen.getByRole("article", { name: "مبنى المعطيات" });
+    expect(within(mine).queryByText("المؤلّف")).toBeNull();
+    expect(within(mine).getByText("العام الدراسي")).toBeTruthy();             // the other rows are still there
+    expect(within(screen.getByRole("article", { name: course.title })).getByText("المؤلّف")).toBeTruthy();
+    fireEvent.click(within(mine).getByRole("button", { name: "فتح الكتاب" }));
+    expect(screen.queryByText("المؤلّف")).toBeNull();
+    expect(screen.getByText("العام الدراسي")).toBeTruthy();
   });
 
   it("opening the book shows a course overview whose eight sections are a live index (only the page-less intro is قريبًا, no stale release note); back restores the library — all with zero requests", async () => {

@@ -227,6 +227,9 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
     ] }, { courseId: "899271", title: "الأتمتة", subject: "علم الحاسوب", modules: [
       // AUTO-A2: «الوحدة الخامسة: الأتمتة», generated with its content (its exact list is pinned by course899271.test.ts)
       ...listLearningModules("899271"),
+    ] }, { courseId: "899271d", title: "مبنى المعطيات", subject: "علم الحاسوب", modules: [
+      // DS-A2: «الوحدة الرابعة: مبنى المعطيات», generated with its content (its exact list is pinned by course899271d.test.ts)
+      ...listLearningModules("899271d"),
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/791381-m29|pages|lessons|blocks|answer|pdf/i);
   });
