@@ -44,6 +44,16 @@ describe("the «النتيجة» line of a worked example", () => {
     expect(r.value.classList.contains("learning-reader-mono")).toBe(true);
   });
 
+  it("a technical record that holds an Arabic word keeps its left-to-right order through the isolate its author wrote (791381)", async () => {
+    // «Pc2-GAZ: المحاسبة · VLAN 20 · 192.168.20.2 /24» is a record, not a sentence: drawn right-to-left its «·» separators change
+    // sides where the line wraps. The content wraps it in U+2066 … U+2069, which the line passes to the browser untouched.
+    const record = "\u2066Pc2-GAZ: المحاسبة · VLAN 20 · 192.168.20.2 /24\u2069";
+    const m03 = (await import("../content/791381/modules/m03")).default;
+    const results = m03.lessons.flatMap(l => l.pages).flatMap(pg => pg.blocks).flatMap(b => (b.type === "example" && b.result ? [b.result] : []));
+    expect(results).toContain(record);
+    expect(resultOf(record)!.value.textContent).toBe(record);
+  });
+
   it("a practice example still shows no result", () => {
     expect(resultOf("الكابل الأنسب هو STP.", "practice")).toBeNull();
   });

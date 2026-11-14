@@ -59,7 +59,7 @@ const manifest: LearningCourseManifest = {
               "keywords": [
                 "CDT",
                 "ADT",
-                "مبنى مجرّد",
+                "مبنى مجرَّد",
                 "واجهة الاستعمال"
               ]
             },
@@ -178,7 +178,7 @@ const manifest: LearningCourseManifest = {
                 "Add",
                 "Pow",
                 "Gcd",
-                "أقليدس",
+                "إقليدس",
                 "أكبر قاسم مشترك"
               ]
             }
@@ -1495,7 +1495,7 @@ const manifest: LearningCourseManifest = {
           "pages": [
             {
               "id": "899271d-m05-l02-p01",
-              "title": "بناء دور، طوله ونسخه",
+              "title": "بناء دور وطوله ونسخه",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -2405,7 +2405,7 @@ const manifest: LearningCourseManifest = {
             },
             {
               "id": "899271d-m08-l01-p02",
-              "title": "أيّ مبنى أختار؟",
+              "title": "أي مبنى أختار؟",
               "order": 2,
               "source": {
                 "kind": "book",

@@ -68,7 +68,7 @@ export function QueueDrawing({ items, labels, changed }: { items: string[]; labe
   const inner = items.length ? ws.reduce((a, b) => a + b, 0) : 96;
   const x0 = 44, top = 24, ch = 34, w = x0 + inner + 12 + 44, h = top + ch + 44;
   const name = names(labels);
-  const say = (name ? "الدور " + name + ": " : "دور: ") + (items.length ? "من الرأس إلى الذيل: " + items.join("، ") : "فارغ");
+  const say = (name ? "الدور " + name + ": " : "دور: ") + (items.length ? "من الرأس إلى النهاية: " + items.join("، ") : "فارغ");
   const xs = ws.map((_, i) => x0 + 6 + ws.slice(0, i).reduce((a, b) => a + b, 0));
   return (
     <Canvas w={w} h={h} label={say}>
@@ -85,7 +85,7 @@ export function QueueDrawing({ items, labels, changed }: { items: string[]; labe
         </g>
       ))}
       {items.length > 0 && <text className="learning-ds-tag" x={xs[0] + ws[0] / 2} y={top + ch + 17} textAnchor="middle">الرأس</text>}
-      {items.length > 1 && <text className="learning-ds-tag" x={xs[items.length - 1] + ws[items.length - 1] / 2} y={top + ch + 17} textAnchor="middle">الذيل</text>}
+      {items.length > 1 && <text className="learning-ds-tag" x={xs[items.length - 1] + ws[items.length - 1] / 2} y={top + ch + 17} textAnchor="middle">النهاية</text>}
       {name && <text className="learning-ds-name" x={x0 + 6 + inner / 2} y={h - 5} textAnchor="middle">{name}</text>}
     </Canvas>
   );

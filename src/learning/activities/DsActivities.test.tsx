@@ -21,7 +21,7 @@ const TRACE = {
   out: "1\n",
   steps: [
     { l: 1, n: "تبدأ العملية `Size` مع `s` = الراصّة `[7]`.", o: 0, f: [{ name: "Main", vars: [["s", ref(1)]] }, { name: "Size", vars: [["s", ref(1)]] }], h: [{ id: 1, k: "stack", items: ["7"] }] },
-    { l: 3, n: "الشرط `s.IsEmpty()` خطأ: نتخطّى ما بعد `if`.", o: 0 },
+    { l: 3, n: "الشرط `s.IsEmpty()` غير صحيح: نتخطّى ما بعد `if`.", o: 0 },
     { l: 5, n: "نخرج `7` من رأس الراصّة `s`.", o: 0, h: [{ id: 1, k: "stack", items: [] }] },
     { l: 1, n: "تبدأ العملية `Size` مع `s` = الراصّة `[]`.", o: 0, f: [{ name: "Main", vars: [["s", ref(1)]] }, { name: "Size", vars: [["s", ref(1)]] }, { name: "Size", vars: [["s", ref(1)]] }] },
     { l: 4, n: "العملية `Size` تُعيد `0`.", o: 0 },
@@ -162,7 +162,7 @@ describe("simulation/ds-lab/v1 — a queue, a chain, a search tree", () => {
     const { container } = await mount(sim("ds-lab", { structure: "queue", valueType: "char", values: ["a", "b"], name: "q" }));
     type(container, "c"); fireEvent.click(btn(/^Insert/));
     fireEvent.click(btn(/^Remove/)); fireEvent.click(btn(/^Head/));
-    expect(drawings(container)).toEqual(["الدور q: من الرأس إلى الذيل: b، c"]);
+    expect(drawings(container)).toEqual(["الدور q: من الرأس إلى النهاية: b، c"]);
     expect(log(container)).toEqual(["q.Insert('c');", "q.Remove();   // a", "q.Head();   // b"]);
   });
   it("a chain: add at the start, move p, insert after p, delete the cell after p, delete the first", async () => {
@@ -227,7 +227,7 @@ describe("interactive-diagram/ds-figure/v1", () => {
       { kind: "tree", tree: [5, 3, 7], facts: true },
     ] }));
     expect(drawings(container)).toEqual([
-      "راصّة: من الرأس إلى القاع: 4، 3، 2، 1", "دور: من الرأس إلى الذيل: 2، 4",
+      "راصّة: من الرأس إلى القاع: 4، 3، 2، 1", "دور: من الرأس إلى النهاية: 2، 4",
       "سلسلة خلايا: 13 (يشير إليها chain) ثم 15 ثم null", "شجرة ثنائية جذرها 5. الخلية 5: ابنها الأيسر 3، ابنها الأيمن 7",
     ]);
     expect(container.querySelector(".learning-ds-caption")!.textContent).toBe("قبل");

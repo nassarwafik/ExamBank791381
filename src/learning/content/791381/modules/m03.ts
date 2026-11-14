@@ -596,7 +596,9 @@ const m03: ContentModule = {
                 { text: "VLAN: 20 — أجهزة المحاسبة في هذا المثال كلها في VLAN 20." },
                 { text: "العنوان 192.168.20.2 والقناع /24 — شبكته 192.168.20.x، وهي غير شبكة الإدارة 192.168.10.x." },
               ],
-              result: "Pc2-GAZ: المحاسبة · VLAN 20 · 192.168.20.2 /24",
+              // A technical record that holds one Arabic word: the isolate (U+2066 … U+2069) keeps its left-to-right order inside the
+              // right-to-left «النتيجة» line (on a phone the two «·» separators would otherwise end up side by side).
+              result: "\u2066Pc2-GAZ: المحاسبة · VLAN 20 · 192.168.20.2 /24\u2069",
               explanation: "في هذا المثال، كل VLAN لها شبكة IP مختلفة، كما يقول صندوق «لاحظ».",
             },
             {

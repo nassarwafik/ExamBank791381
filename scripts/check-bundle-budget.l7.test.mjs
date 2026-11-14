@@ -20,13 +20,13 @@ const measured = { readerFirstLoad: 33.7, manifest: [{ file: "manifest-a.js", kb
 
 describe("L.7 — learning content budgets", () => {
   it("the budgets leave room above the measured L.6b build, and the measured build passes", () => {
-    expect(LEARNING_BUDGETS_KB).toEqual({ readerFirstLoad: 41, manifest: 15, visualGroup: 9, visualsTotal: 75 });   // 40 → 41 by the owner (AUTO-A2)
+    expect(LEARNING_BUDGETS_KB).toEqual({ readerFirstLoad: 42, manifest: 15, visualGroup: 9, visualsTotal: 75 });   // 40 → 41 by the owner (AUTO-A2), 41 → 42 by the owner (DS-A4)
     expect(Object.isFrozen(LEARNING_BUDGETS_KB)).toBe(true);
     expect(learningContentFailures(measured)).toEqual([]);
   });
   it("each budget fails on its own, just above it; exactly at the budget passes", () => {
-    expect(learningContentFailures({ ...measured, readerFirstLoad: 41 })).toEqual([]);
-    expect(learningContentFailures({ ...measured, readerFirstLoad: 41.1 })).toEqual(["the Learning Reader's first-load graph is 41.1 KB gzip — over its 41 KB budget"]);
+    expect(learningContentFailures({ ...measured, readerFirstLoad: 42 })).toEqual([]);
+    expect(learningContentFailures({ ...measured, readerFirstLoad: 42.1 })).toEqual(["the Learning Reader's first-load graph is 42.1 KB gzip — over its 42 KB budget"]);
     expect(learningContentFailures({ ...measured, manifest: [{ file: "manifest-a.js", kb: 15.2 }] })).toEqual(["the course manifest chunk manifest-a.js is 15.2 KB gzip — over its 15 KB budget"]);
     expect(learningContentFailures({ ...measured, visuals: [{ file: "m28-a.js", kb: 9.3 }] })).toEqual(["the learning visual chunk m28-a.js is 9.3 KB gzip — over its 9 KB budget"]);
     const many = Array.from({ length: 10 }, (_, i) => ({ file: "v" + i + ".js", kb: 8 }));
