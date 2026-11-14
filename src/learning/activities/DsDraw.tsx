@@ -169,7 +169,9 @@ export function TreeDrawing({ cells, onPick, picked, levels }: { cells: TreeCell
   );
 }
 
-/** Text with `code` runs (backticks) — the notes of a trace and the lab's messages. */
+/** Text with `code` runs (backticks) and **bold** — the notes of a trace, the lab's messages, a solution's checklist. */
 export function Marked({ text }: { text: string }) {
-  return <>{text.split("`").map((part, i) => (i % 2 ? <code key={i} className="learning-ds-code" dir="ltr">{part}</code> : part))}</>;
+  return <>{text.split("`").map((part, i) => (i % 2
+    ? <code key={i} className="learning-ds-code" dir="ltr">{part}</code>
+    : part.split("**").map((piece, j) => (j % 2 ? <strong key={i + "-" + j}>{piece}</strong> : piece))))}</>;
 }

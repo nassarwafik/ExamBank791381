@@ -8,7 +8,7 @@ import { buildCourse } from "../build-ds-course.mjs";
 import { COURSE, UNITS } from "./index.mjs";
 import { LEARNING_CONTENT_SCHEMA_VERSION, type ContentModule, type LearningCourseContent } from "../../src/learning/content/types";
 import { validateLearningCourseContent } from "../../src/learning/content/validation";
-import { readDsFigure, readDsLab, readDsTrace } from "../../src/learning/activities/ds";
+import { readDsFigure, readDsLab, readDsSolution, readDsTrace } from "../../src/learning/activities/ds";
 
 type Unit = { n: number; title: string };
 const wanted = process.env.DS_UNIT ? Number(process.env.DS_UNIT) : null;
@@ -26,6 +26,7 @@ describe("each unit of «مبنى المعطيات» alone", () => {
         if (b.simulationType === "ds-trace") expect(readDsTrace(b.config), b.id + " trace").not.toBeNull();
         if (b.simulationType === "ds-lab") expect(readDsLab(b.config), b.id + " lab").not.toBeNull();
         if (b.interactionType === "ds-figure") expect(readDsFigure(b.config), b.id + " figure").not.toBeNull();
+        if (b.guidedType === "ds-solution") expect(readDsSolution(b.config), b.id + " solution").not.toBeNull();
       }
     });
   }

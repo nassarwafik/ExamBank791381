@@ -182,3 +182,45 @@ export const treeOf = (name, tree) => {
   const e = t => (t === null || t === undefined ? "null" : !Array.isArray(t) ? `new BinNode<int>(${t})` : t[1] == null && t[2] == null ? `new BinNode<int>(${t[0]})` : `new BinNode<int>(${e(t[1])}, ${t[0]}, ${e(t[2])})`);
   return `BinNode<int> ${name} = ${e(tree)};`;
 };
+
+// ── DS-A3: questions by difficulty, solved ones and homework with a solution window ───────────────────────────────────
+/** The three difficulty levels, easiest first. Questions of a page are written in this order. */
+export const LEVELS = ["سهل", "متوسط", "متقدّم"];
+/** The heading of a question on a «… محلولة» or «وظيفة: …» page: «سؤال 3 · متوسط — title». */
+export function QH(n, level, title) {
+  if (!LEVELS.includes(level)) throw new Error("QH: the level is one of " + LEVELS.join(" / "));
+  return enr({ type: "heading", level: 3, text: iso("سؤال " + n + " · " + level + (title ? " — " + title : "")), _question: { n, level } });
+}
+/**
+ * The «الحل» button of a homework question (guided / ds-solution / v1): pressing it opens a window with the solution.
+ *   steps      the reasoning, one sentence per step (inline markup) — at least one
+ *   answer     the final answer in one line (optional)
+ *   code       the solution's C# code (for a writing question)
+ *   checklist  what a correct solution must contain (plain strings with `code` runs)
+ *   trace      { code?, run?, lib?, given?, quiet?, max? } — the recorded trace shown in the window; `code` defaults to the
+ *              solution's code. The program is proven like every TRACE.
+ *   prove      { code?, run, lib?, out } — when there is code but no trace: the program must print `out` (so no solution code
+ *              is ever shown without having been compiled and run).
+ */
+export function SOLUTION({ title = "الحل", steps, answer, code, checklist, trace, prove, note }) {
+  if (!Array.isArray(steps) || !steps.length) throw new Error("SOLUTION «" + title + "»: at least one step");
+  const shown = code ? dedent(code) : undefined;
+  if (shown && !trace && !prove) throw new Error("SOLUTION «" + title + "»: code needs a `trace` or a `prove` (it must be compiled and run)");
+  let traced = null, proof = null;
+  if (trace) {
+    const prog = program({ code: trace.code ?? code, run: trace.run, lib: trace.lib, stdin: trace.stdin, quiet: trace.quiet, allowError: trace.allowError });
+    const r = execute(prog, trace.max ?? 150);
+    if (!r.steps.length) throw new Error("SOLUTION «" + title + "»: the trace has no step in the shown code");
+    traced = { prog, out: r.out, config: { code: prog.code, ...(trace.given ? { given: trace.given } : {}), ...(prog.stdin ? { stdin: prog.stdin } : {}), out: r.out, steps: compact(r.steps, r.out) } };
+  }
+  if (prove) proof = { type: "output", prog: program({ code: prove.code ?? code, run: prove.run, lib: prove.lib, stdin: prove.stdin, quiet: prove.quiet }), out: prove.out, loose: true };
+  return enr({
+    type: "guided", guidedType: "ds-solution", version: 1, title: iso(title),
+    steps: steps.map((st, i) => ({ id: "s" + (i + 1), text: spans(st) })),
+    ...(answer ? { result: spans(answer) } : {}), ...(note ? { explanation: plain(iso(note)) } : {}),
+    capabilities: { interactive: true },
+    config: { ...(shown ? { code: shown } : {}), ...(checklist?.length ? { checklist } : {}), ...(traced ? { trace: traced.config } : {}) },
+    fallback: { text: "حل السؤال: " + steps.map(plain).join(" ") },
+    ...(traced ? { _prog: traced.prog, _out: traced.out } : {}), ...(proof ? { _prove: proof } : {}),
+  });
+}

@@ -53,7 +53,8 @@ describe("every trace is the recorded run of its program", () => {
   for (const r of traces) {
     it(r.block.id + " — «" + bare(String(r.block.title)) + "»", () => {
       const p = r.block._prog!;
-      const cfg = r.block.config as { code: string; out: string; steps: unknown[] };
+      // a trace activity holds the trace as its config; a solution window holds it under `trace`
+      const cfg = (r.block.simulationType === "ds-trace" ? r.block.config : (r.block.config as { trace: unknown }).trace) as { code: string; out: string; steps: unknown[] };
       const read = readDsTrace(cfg)!;
       expect(read, "the activity can read the trace").not.toBeNull();
       expect(cfg.code).toBe(p.code);
@@ -73,7 +74,8 @@ describe("every exercise proven with a program states that program's real output
     const pr = r.block._prove!;
     it(r.block.id + " — " + pr.type, () => {
       const res = run(pr.prog);
-      const q = r.block.question as { kind: string; answer?: unknown; options?: { text: string; correct?: boolean }[] };
+      // an exercise has a question; a solution window's proof has none (its code only has to print what it says)
+      const q = (r.block.question ?? { kind: "solution" }) as { kind: string; answer?: unknown; options?: { text: string; correct?: boolean }[] };
       if (pr.type === "count") {
         const lines = pr.prog.code.split("\n");
         expect(lines.some(l => l.trim() === pr.line), "the statement is a line of the shown program").toBe(true);

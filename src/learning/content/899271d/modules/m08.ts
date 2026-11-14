@@ -11,7 +11,7 @@ const m08: ContentModule = {
  "id": "899271d-m08",
  "title": "مراجعة شاملة: المباني تعمل معًا",
  "shortTitle": "مراجعة شاملة",
- "description": "كل المباني في جدول واحد، كيف نختار المبنى المناسب للمسألة، وأسئلة تتبّع وكتابة تجمع السلسلة والراصّة والدور والشجرة.",
+ "description": "كل المباني في جدول واحد، كيف نختار المبنى المناسب للمسألة، ووظيفة من أسئلة تتبّع وكتابة تجمع السلسلة والراصّة والدور والشجرة، مع نافذة حل لكل سؤال.",
  "order": 9,
  "lessons": [
   {
@@ -458,7 +458,7 @@ const m08: ContentModule = {
    "pages": [
     {
      "id": "899271d-m08-l02-p01",
-     "title": "أسئلة تتبّع: مبنيان معًا",
+     "title": "وظيفة: أسئلة تتبّع",
      "order": 1,
      "source": {
       "kind": "book",
@@ -467,6 +467,7 @@ const m08: ContentModule = {
       "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
+      "وظيفة",
       "تتبّع",
       "سلسلة وراصّة",
       "راصّة ودور",
@@ -478,7 +479,7 @@ const m08: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "في كل سؤال عملية تعمل على مبنيين. أجب أولًا ثم افتح التتبّع: الرسم يعرض المبنيين معًا في كل خطوة."
+         "text": "في كل سؤال عملية تعمل على مبنيين. الأسئلة مرتّبة من الأسهل إلى الأصعب. أجب أولًا، ثم اضغط «الحل»: تفتح نافذة فيها الشرح وتتبّع البرنامج خطوة بخطوة، والرسم يعرض المبنيين معًا."
         }
        ],
        "origin": "teacher-enrichment"
@@ -487,7 +488,7 @@ const m08: ContentModule = {
        "id": "m08-l02-p01-b02",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 1 — من سلسلة إلى راصّة",
+       "text": "سؤال 1 · سهل — من سلسلة إلى راصّة",
        "origin": "teacher-enrichment"
       },
       {
@@ -532,20 +533,65 @@ const m08: ContentModule = {
       },
       {
        "id": "m08-l02-p01-b05",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066ToStack\u2069",
+       "title": "حل سؤال 1 — \u2066ToStack\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "المؤشّر "
+          },
+          {
+           "text": "pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " يبدأ من أول السلسلة ويمشي خلية خلية حتى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "في كل خلية ندخل قيمتها إلى الراصّة: 13 ثم 15 ثم 17."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "آخر قيمة دخلت (17) هي رأس الراصّة: الراصّة تقلب ترتيب السلسلة."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "[17,15,13]",
+         "dir": "ltr"
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static Stack<int> ToStack(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    return s;\n}",
-        "given": "السلسلة `13 → 15 → 17 → null`، والاستدعاء `ToStack(chain)`.",
-        "out": "[17,15,13]\n",
-        "steps": [
+        "trace": {
+         "code": "public static Stack<int> ToStack(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    return s;\n}",
+         "given": "السلسلة `13 → 15 → 17 → null`، والاستدعاء `ToStack(chain)`.",
+         "out": "[17,15,13]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `ToStack` مع `chain` = الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"ToStack","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2}]},
 {"l":3,"n":"ننشئ راصّة فارغة باسم `s`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"ToStack","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2},{"id":4,"k":"stack","items":[]}]},
 {"l":4,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"ToStack","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":3}]]}]},
@@ -562,9 +608,10 @@ const m08: ContentModule = {
 {"l":10,"n":"العملية `ToStack` تُعيد الراصّة `[17,15,13]`.","o":0},
 {"l":0,"n":"نطبع: `[17,15,13]`. انتهى التنفيذ.","o":11,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}],["st",{"t":"ref","id":4}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (15 خطوة)؛ ناتج البرنامج: [17,15,13]."
+        "text": "حل السؤال: المؤشّر pos يبدأ من أول السلسلة ويمشي خلية خلية حتى null. في كل خلية ندخل قيمتها إلى الراصّة: 13 ثم 15 ثم 17. آخر قيمة دخلت (17) هي رأس الراصّة: الراصّة تقلب ترتيب السلسلة."
        },
        "origin": "teacher-enrichment"
       },
@@ -572,7 +619,7 @@ const m08: ContentModule = {
        "id": "m08-l02-p01-b06",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 2 — راصّة ودور",
+       "text": "سؤال 2 · متوسط — سلسلة وتراجعية",
        "origin": "teacher-enrichment"
       },
       {
@@ -580,11 +627,153 @@ const m08: ContentModule = {
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
-       "code": "public static void Mix(Stack<int> s, Queue<int> q)\n{\n    while (!s.IsEmpty())\n    {\n        int x = s.Pop();\n        if (x % 2 == 0)\n            q.Insert(x);\n        else\n            q.Insert(q.Remove());\n    }\n}",
+       "code": "public static void PrintReversed(Node<int> chain)\n{\n    if (chain == null)\n        return;\n    PrintReversed(chain.GetNext());\n    Console.Write(chain.GetValue() + \" \");\n}",
        "origin": "teacher-enrichment"
       },
       {
        "id": "m08-l02-p01-b08",
+       "type": "practice",
+       "reveal": true,
+       "question": {
+        "kind": "multipleChoice",
+        "prompt": "للسلسلة \u206613 → 15 → 17 → null\u2069، ماذا تطبع \u2066PrintReversed(chain)\u2069؟",
+        "options": [
+         {
+          "id": "o1",
+          "text": "\u206613 15 17\u2069"
+         },
+         {
+          "id": "o2",
+          "text": "\u206617 15 13\u2069",
+          "correct": true
+         },
+         {
+          "id": "o3",
+          "text": "\u206617\u2069"
+         },
+         {
+          "id": "o4",
+          "text": "لا تطبع شيئًا"
+         }
+        ],
+        "feedback": {
+         "explanation": "كل استدعاء يستدعي نفسه على بقية السلسلة قبل أن يطبع. أول طباعة تحدث عند آخر خلية: 17، ثم 15، ثم 13."
+        }
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p01-b09",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066PrintReversed\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "كل استدعاء يستدعي "
+          },
+          {
+           "text": "PrintReversed",
+           "dir": "ltr"
+          },
+          {
+           "text": " على الخلية التالية "
+          },
+          {
+           "text": "قبل",
+           "style": "strong"
+          },
+          {
+           "text": " أن يطبع قيمته."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "الاستدعاءات تتراكم في مكدّس الاستدعاءات حتى نصل إلى "
+          },
+          {
+           "text": "null",
+           "dir": "ltr"
+          },
+          {
+           "text": " (شرط التوقّف)."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "عند العودة يطبع آخر استدعاء أولًا: 17 ثم 15 ثم 13. التراجعية تعمل هنا كراصّة."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "17 15 13",
+         "dir": "ltr"
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "trace": {
+         "code": "public static void PrintReversed(Node<int> chain)\n{\n    if (chain == null)\n        return;\n    PrintReversed(chain.GetNext());\n    Console.Write(chain.GetValue() + \" \");\n}",
+         "given": "السلسلة `13 → 15 → 17 → null`، والاستدعاء `PrintReversed(chain)`.",
+         "out": "17 15 13 ",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2}]},
+{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `15`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]}]},
+{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `17`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]}]},
+{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
+{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]},{"name":"PrintReversed","vars":[["chain",{"t":"null"}]]}]},
+{"l":3,"n":"الشرط `chain == null` صحيح: ننفّذ ما بعد `if`.","o":0},
+{"l":4,"n":"نخرج من العملية `PrintReversed`.","o":0},
+{"l":5,"n":"","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]}]},
+{"l":6,"n":"نطبع: `17 ` (بلا سطر جديد).","o":3},
+{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":3},
+{"l":5,"n":"","o":3,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]}]},
+{"l":6,"n":"نطبع: `15 ` (بلا سطر جديد).","o":6},
+{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":6},
+{"l":5,"n":"","o":6,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]}]},
+{"l":6,"n":"نطبع: `13 ` (بلا سطر جديد).","o":9},
+{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":9},
+{"l":0,"n":"انتهى التنفيذ.","o":9,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: كل استدعاء يستدعي PrintReversed على الخلية التالية قبل أن يطبع قيمته. الاستدعاءات تتراكم في مكدّس الاستدعاءات حتى نصل إلى null (شرط التوقّف). عند العودة يطبع آخر استدعاء أولًا: 17 ثم 15 ثم 13. التراجعية تعمل هنا كراصّة."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p01-b10",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 3 · متوسط — راصّة ودور",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p01-b11",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static void Mix(Stack<int> s, Queue<int> q)\n{\n    while (!s.IsEmpty())\n    {\n        int x = s.Pop();\n        if (x % 2 == 0)\n            q.Insert(x);\n        else\n            q.Insert(q.Remove());\n    }\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p01-b12",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -610,27 +799,94 @@ const m08: ContentModule = {
          }
         ],
         "feedback": {
-         "explanation": "العدد الفردي لا يدخل الدور: بدلًا منه ينتقل رأس الدور إلى نهايته. الزوجي يدخل إلى النهاية. بعد 5: \u2066[3,1]\u2069، بعد 2: \u2066[3,1,2]\u2069، بعد 7: \u2066[1,2,3]\u2069، بعد 4: \u2066[1,2,3,4]\u2069."
+         "explanation": "العدد الفردي لا يدخل الدور: بدلًا منه ينتقل رأس الدور إلى نهايته. الزوجي يدخل إلى النهاية."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b09",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m08-l02-p01-b13",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Mix\u2069",
+       "title": "حل سؤال 3 — \u2066Mix\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "نُخرج 5 (فردي): رأس الدور ينتقل إلى نهايته، فيصير الدور "
+          },
+          {
+           "text": "[3,1]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "نُخرج 2 (زوجي): يدخل إلى نهاية الدور: "
+          },
+          {
+           "text": "[3,1,2]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "نُخرج 7 (فردي): الرأس 3 ينتقل إلى النهاية: "
+          },
+          {
+           "text": "[1,2,3]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "نُخرج 4 (زوجي): يدخل إلى النهاية: "
+          },
+          {
+           "text": "[1,2,3,4]",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "[1,2,3,4]",
+         "dir": "ltr"
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Mix(Stack<int> s, Queue<int> q)\n{\n    while (!s.IsEmpty())\n    {\n        int x = s.Pop();\n        if (x % 2 == 0)\n            q.Insert(x);\n        else\n            q.Insert(q.Remove());\n    }\n}",
-        "given": "الراصّة `s = [5,2,7,4]` والدور `q = [1,3]`، والاستدعاء `Mix(s, q)`.",
-        "out": "[1,2,3,4]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Mix(Stack<int> s, Queue<int> q)\n{\n    while (!s.IsEmpty())\n    {\n        int x = s.Pop();\n        if (x % 2 == 0)\n            q.Insert(x);\n        else\n            q.Insert(q.Remove());\n    }\n}",
+         "given": "الراصّة `s = [5,2,7,4]` والدور `q = [1,3]`، والاستدعاء `Mix(s, q)`.",
+         "out": "[1,2,3,4]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Mix` مع `s` = الراصّة `[5,2,7,4]`، `q` = الدور `[1,3]`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}],["q",{"t":"ref","id":2}]]},{"name":"Mix","vars":[["s",{"t":"ref","id":1}],["q",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"stack","items":["5","2","7","4"]},{"id":2,"k":"queue","items":["1","3"]}]},
 {"l":3,"n":"الشرط `!s.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
 {"l":5,"n":"نخرج `5` من رأس الراصّة `s`. `x = 5`.","o":0,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}],["q",{"t":"ref","id":2}]]},{"name":"Mix","vars":[["s",{"t":"ref","id":1}],["q",{"t":"ref","id":2}],["x",{"t":"v","s":"5"}]]}],"h":[{"id":1,"k":"stack","items":["2","7","4"]},{"id":2,"k":"queue","items":["1","3"]}]},
@@ -652,21 +908,22 @@ const m08: ContentModule = {
 {"l":11,"n":"تنتهي العملية `Mix` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `[1,2,3,4]`. انتهى التنفيذ.","o":10,"f":[{"name":"Main","vars":[["s",{"t":"ref","id":1}],["q",{"t":"ref","id":2}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (20 خطوة)؛ ناتج البرنامج: [1,2,3,4]."
+        "text": "حل السؤال: نُخرج 5 (فردي): رأس الدور ينتقل إلى نهايته، فيصير الدور [3,1]. نُخرج 2 (زوجي): يدخل إلى نهاية الدور: [3,1,2]. نُخرج 7 (فردي): الرأس 3 ينتقل إلى النهاية: [1,2,3]. نُخرج 4 (زوجي): يدخل إلى النهاية: [1,2,3,4]."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b10",
+       "id": "m08-l02-p01-b14",
        "type": "heading",
        "level": 3,
-       "text": "سؤال 3 — شجرة وراصّة وتراجعية",
+       "text": "سؤال 4 · متقدّم — شجرة وراصّة وتراجعية",
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b11",
+       "id": "m08-l02-p01-b15",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -674,7 +931,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b12",
+       "id": "m08-l02-p01-b16",
        "type": "interactive-diagram",
        "interactionType": "ds-figure",
        "version": 1,
@@ -706,7 +963,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b13",
+       "id": "m08-l02-p01-b17",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -732,28 +989,62 @@ const m08: ContentModule = {
          }
         ],
         "feedback": {
-         "explanation": "العملية تمشّط الشجرة تمشيطًا داخليًا: 30 ثم 50 ثم 70، وتدخلها بهذا الترتيب. الأخيرة (70) في الرأس، فتُطبع الراصّة تنازليًا."
+         "explanation": "العملية تمشّط الشجرة تمشيطًا داخليًا: 30 ثم 50 ثم 70، وتدخلها بهذا الترتيب. الأخيرة (70) في الرأس."
         }
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p01-b14",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "id": "m08-l02-p01-b18",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Fill\u2069",
-       "description": "راقب مكدّس الاستدعاءات: كل استدعاء ينتظر عودة الابن الأيسر قبل أن يُدخل قيمته.",
+       "title": "حل سؤال 4 — \u2066Fill\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "Fill",
+           "dir": "ltr"
+          },
+          {
+           "text": " تمشيط داخلي: الابن الأيسر، ثم الخلية نفسها، ثم الابن الأيمن."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "في شجرة بحث ثنائية هذا يزور القيم تصاعديًا: 30 ثم 50 ثم 70."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "كل قيمة تُدخل إلى الراصّة عند زيارتها، فتكون 70 في الرأس: الراصّة تُطبع تنازليًا."
+          }
+         ]
+        }
+       ],
+       "result": [
+        {
+         "text": "[70,50,30]",
+         "dir": "ltr"
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
-        "code": "public static void Fill(BinNode<int> bt, Stack<int> s)\n{\n    if (bt == null)\n        return;\n    Fill(bt.GetLeft(), s);\n    s.Push(bt.GetValue());\n    Fill(bt.GetRight(), s);\n}",
-        "given": "شجرة البحث `bt` (جذرها 50 وابناها 30 و 70) وراصّة فارغة `s`، والاستدعاء `Fill(bt, s)`.",
-        "out": "[70,50,30]\n",
-        "steps": [
+        "trace": {
+         "code": "public static void Fill(BinNode<int> bt, Stack<int> s)\n{\n    if (bt == null)\n        return;\n    Fill(bt.GetLeft(), s);\n    s.Push(bt.GetValue());\n    Fill(bt.GetRight(), s);\n}",
+         "given": "شجرة البحث `bt` (جذرها 50 وابناها 30 و 70) وراصّة فارغة `s`، والاستدعاء `Fill(bt, s)`.",
+         "out": "[70,50,30]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Fill` مع `bt` = الخلية التي قيمتها `50`، `s` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]},{"name":"Fill","vars":[["bt",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"bin","v":"30","l":null,"r":null},{"id":2,"k":"bin","v":"70","l":null,"r":null},{"id":3,"k":"bin","v":"50","l":1,"r":2},{"id":4,"k":"stack","items":[]}]},
 {"l":3,"n":"الشرط `bt == null` خطأ: نتخطّى ما بعد `if`.","o":0},
 {"l":1,"n":"تبدأ العملية `Fill` مع `bt` = الخلية التي قيمتها `30`، `s` = الراصّة `[]`.","o":0,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]},{"name":"Fill","vars":[["bt",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]},{"name":"Fill","vars":[["bt",{"t":"ref","id":1}],["s",{"t":"ref","id":4}]]}]},
@@ -786,99 +1077,10 @@ const m08: ContentModule = {
 {"l":8,"n":"تنتهي العملية `Fill` ونعود إلى من استدعاها.","o":0},
 {"l":0,"n":"نطبع: `[70,50,30]`. انتهى التنفيذ.","o":11,"f":[{"name":"Main","vars":[["bt",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]}]}
 ]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (31 خطوة)؛ ناتج البرنامج: [70,50,30]."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p01-b15",
-       "type": "heading",
-       "level": 3,
-       "text": "سؤال 4 — سلسلة وتراجعية",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p01-b16",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static void PrintReversed(Node<int> chain)\n{\n    if (chain == null)\n        return;\n    PrintReversed(chain.GetNext());\n    Console.Write(chain.GetValue() + \" \");\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p01-b17",
-       "type": "practice",
-       "reveal": true,
-       "question": {
-        "kind": "multipleChoice",
-        "prompt": "للسلسلة \u206613 → 15 → 17 → null\u2069، ماذا تطبع \u2066PrintReversed(chain)\u2069؟",
-        "options": [
-         {
-          "id": "o1",
-          "text": "\u206613 15 17\u2069"
-         },
-         {
-          "id": "o2",
-          "text": "\u206617 15 13\u2069",
-          "correct": true
-         },
-         {
-          "id": "o3",
-          "text": "\u206617\u2069"
-         },
-         {
-          "id": "o4",
-          "text": "لا تطبع شيئًا"
-         }
-        ],
-        "feedback": {
-         "explanation": "كل استدعاء يستدعي نفسه على بقية السلسلة قبل أن يطبع. أول طباعة تحدث عند آخر خلية: 17، ثم 15، ثم 13."
         }
        },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p01-b18",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066PrintReversed\u2069",
-       "description": "التراجعية تستعمل مكدّس الاستدعاءات كراصّة: آخر استدعاء يطبع أولًا.",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static void PrintReversed(Node<int> chain)\n{\n    if (chain == null)\n        return;\n    PrintReversed(chain.GetNext());\n    Console.Write(chain.GetValue() + \" \");\n}",
-        "given": "السلسلة `13 → 15 → 17 → null`، والاستدعاء `PrintReversed(chain)`.",
-        "out": "17 15 13 ",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `13`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"17","next":null},{"id":2,"k":"node","v":"15","next":1},{"id":3,"k":"node","v":"13","next":2}]},
-{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `15`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]}]},
-{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = الخلية التي قيمتها `17`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]}]},
-{"l":3,"n":"الشرط `chain == null` خطأ: نتخطّى ما بعد `if`.","o":0},
-{"l":1,"n":"تبدأ العملية `PrintReversed` مع `chain` = `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]},{"name":"PrintReversed","vars":[["chain",{"t":"null"}]]}]},
-{"l":3,"n":"الشرط `chain == null` صحيح: ننفّذ ما بعد `if`.","o":0},
-{"l":4,"n":"نخرج من العملية `PrintReversed`.","o":0},
-{"l":5,"n":"","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":1}]]}]},
-{"l":6,"n":"نطبع: `17 ` (بلا سطر جديد).","o":3},
-{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":3},
-{"l":5,"n":"","o":3,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":2}]]}]},
-{"l":6,"n":"نطبع: `15 ` (بلا سطر جديد).","o":6},
-{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":6},
-{"l":5,"n":"","o":6,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"PrintReversed","vars":[["chain",{"t":"ref","id":3}]]}]},
-{"l":6,"n":"نطبع: `13 ` (بلا سطر جديد).","o":9},
-{"l":7,"n":"تنتهي العملية `PrintReversed` ونعود إلى من استدعاها.","o":9},
-{"l":0,"n":"انتهى التنفيذ.","o":9,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]}]}
-]
-       },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (19 خطوة)؛ ناتج البرنامج: 17 15 13."
+        "text": "حل السؤال: Fill تمشيط داخلي: الابن الأيسر، ثم الخلية نفسها، ثم الابن الأيمن. في شجرة بحث ثنائية هذا يزور القيم تصاعديًا: 30 ثم 50 ثم 70. كل قيمة تُدخل إلى الراصّة عند زيارتها، فتكون 70 في الرأس: الراصّة تُطبع تنازليًا."
        },
        "origin": "teacher-enrichment"
       }
@@ -886,7 +1088,7 @@ const m08: ContentModule = {
     },
     {
      "id": "899271d-m08-l02-p02",
-     "title": "أسئلة كتابة: مبنيان معًا",
+     "title": "وظيفة: أسئلة كتابة",
      "order": 2,
      "source": {
       "kind": "book",
@@ -895,6 +1097,7 @@ const m08: ContentModule = {
       "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
      },
      "keywords": [
+      "وظيفة",
       "كتابة عملية",
       "Merge",
       "IsPalindrome"
@@ -905,22 +1108,29 @@ const m08: ContentModule = {
        "type": "text",
        "spans": [
         {
-         "text": "اكتب كل عملية قبل أن تنتقل إلى صفحة الحلول."
+         "text": "اكتب كل عملية في دفترك أو في محرّر الكود، ثم اضغط «الحل» وقارن: في النافذة كود الحل وما يُفحص فيه وتتبّعه."
         }
        ],
        "origin": "teacher-enrichment"
       },
       {
        "id": "m08-l02-p02-b02",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 1 · متوسط — دمج دورين مرتّبين",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p02-b03",
        "type": "example",
        "mode": "practice",
-       "title": "سؤال 1 — دمج دورين مرتّبين",
+       "title": "المطلوب",
        "prompt": "اكتب العملية \u2066Merge\u2069 التي تستقبل دورين \u2066q1\u2069 و \u2066q2\u2069 من أعداد صحيحة، كل منهما مرتّب تصاعديًا من الرأس إلى النهاية، وتعيد دورًا جديدًا فيه كل القيم مرتّبة تصاعديًا. لا حاجة للحفاظ على الدورين. مثال: للدورين \u2066[1,4,9]\u2069 و \u2066[2,3,10]\u2069 تعيد العملية \u2066[1,2,3,4,9,10]\u2069. ما درجة نجاعة عمليتك؟",
        "steps": [],
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p02-b03",
+       "id": "m08-l02-p02-b04",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -928,178 +1138,74 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p02-b04",
-       "type": "example",
-       "mode": "practice",
-       "title": "سؤال 2 — سلسلة متناظرة",
-       "prompt": "اكتب العملية \u2066IsPalindrome\u2069 التي تستقبل سلسلة خلايا من أعداد صحيحة، وتعيد \u2066true\u2069 إذا كانت السلسلة تُقرأ من أولها كما تُقرأ من آخرها (مثل \u20661 → 2 → 1\u2069)، وإلا تعيد \u2066false\u2069. استعن براصّة. يجب ألا تتغيّر السلسلة.",
-       "steps": [],
-       "origin": "teacher-enrichment"
-      },
-      {
        "id": "m08-l02-p02-b05",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    // اكتب هنا\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p02-b06",
-       "type": "list",
-       "variant": "checklist",
-       "title": "افحص حلّك قبل أن ترى الحل",
-       "items": [
-        {
-         "id": "i1",
-         "text": [
-          {
-           "text": "في "
-          },
-          {
-           "text": "Merge",
-           "dir": "ltr"
-          },
-          {
-           "text": ": هل تفحص أنّ الدورين "
-          },
-          {
-           "text": "كليهما",
-           "style": "strong"
-          },
-          {
-           "text": " غير فارغين قبل مقارنة الرأسين؟"
-          }
-         ]
-        },
-        {
-         "id": "i2",
-         "text": [
-          {
-           "text": "في "
-          },
-          {
-           "text": "Merge",
-           "dir": "ltr"
-          },
-          {
-           "text": ": هل تنقل ما بقي في الدور الذي لم يفرغ؟"
-          }
-         ]
-        },
-        {
-         "id": "i3",
-         "text": [
-          {
-           "text": "في "
-          },
-          {
-           "text": "IsPalindrome",
-           "dir": "ltr"
-          },
-          {
-           "text": ": هل تعود بالمؤشّر إلى أول السلسلة قبل المقارنة؟"
-          }
-         ]
-        },
-        {
-         "id": "i4",
-         "text": [
-          {
-           "text": "هل تستعمل متغيّرًا مساعدًا ("
-          },
-          {
-           "text": "pos",
-           "dir": "ltr"
-          },
-          {
-           "text": ") ولا تحرّك المؤشّر الأصلي إلى السلسلة؟"
-          }
-         ]
-        }
-       ],
-       "origin": "teacher-enrichment"
-      }
-     ]
-    },
-    {
-     "id": "899271d-m08-l02-p03",
-     "title": "حلول أسئلة الكتابة",
-     "order": 3,
-     "source": {
-      "kind": "book",
-      "sourceId": "899271d",
-      "pdfPageStart": 243,
-      "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
-     },
-     "keywords": [
-      "حلول",
-      "Merge",
-      "IsPalindrome"
-     ],
-     "blocks": [
-      {
-       "id": "m08-l02-p03-b01",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 1 — \u2066Merge\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b02",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static Queue<int> Merge(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() <= q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b03",
-       "type": "text",
-       "spans": [
-        {
-         "text": "في كل دورة نقارن رأسَي الدورين وننقل الأصغر. حين يفرغ أحدهما ننقل ما بقي في الآخر كما هو: هو مرتّب أصلًا. كل قيمة تُنقل مرة واحدة، فدرجة النجاعة "
-        },
-        {
-         "text": "O(n + m)",
-         "dir": "ltr"
-        },
-        {
-         "text": " حيث "
-        },
-        {
-         "text": "n",
-         "dir": "ltr"
-        },
-        {
-         "text": " و "
-        },
-        {
-         "text": "m",
-         "dir": "ltr"
-        },
-        {
-         "text": " طولا الدورين."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b04",
-       "type": "simulation",
-       "simulationType": "ds-trace",
+       "type": "guided",
+       "guidedType": "ds-solution",
        "version": 1,
-       "title": "تتبّع \u2066Merge\u2069",
+       "title": "حل سؤال 1 — \u2066Merge\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "في كل دورة نقارن رأسَي الدورين وننقل الأصغر إلى الدور الجديد."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "حين يفرغ أحد الدورين ننقل ما بقي في الآخر كما هو: هو مرتّب أصلًا."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "كل قيمة تُنقل مرة واحدة، فدرجة النجاعة "
+          },
+          {
+           "text": "O(n + m)",
+           "dir": "ltr"
+          },
+          {
+           "text": " حيث "
+          },
+          {
+           "text": "n",
+           "dir": "ltr"
+          },
+          {
+           "text": " و "
+          },
+          {
+           "text": "m",
+           "dir": "ltr"
+          },
+          {
+           "text": " طولا الدورين."
+          }
+         ]
+        }
+       ],
        "capabilities": {
-        "fullscreen": true,
-        "reset": true,
         "interactive": true
        },
        "config": {
         "code": "public static Queue<int> Merge(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() <= q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
-        "given": "الدوران `q1 = [1,4,9]` و `q2 = [2,3,10]`، والاستدعاء `Merge(q1, q2)`.",
-        "out": "[1,2,3,4,9,10]\n",
-        "steps": [
+        "checklist": [
+         "فحص أنّ الدورين **كليهما** غير فارغين قبل مقارنة الرأسين.",
+         "المقارنة بـ `Head()` والنقل بـ `Remove()`.",
+         "حلقتان بعد الحلقة الأولى لنقل ما بقي في كل دور.",
+         "إعادة الدور الجديد `res`."
+        ],
+        "trace": {
+         "code": "public static Queue<int> Merge(Queue<int> q1, Queue<int> q2)\n{\n    Queue<int> res = new Queue<int>();\n    while (!q1.IsEmpty() && !q2.IsEmpty())\n    {\n        if (q1.Head() <= q2.Head())\n            res.Insert(q1.Remove());\n        else\n            res.Insert(q2.Remove());\n    }\n    while (!q1.IsEmpty())\n        res.Insert(q1.Remove());\n    while (!q2.IsEmpty())\n        res.Insert(q2.Remove());\n    return res;\n}",
+         "given": "الدوران `q1 = [1,4,9]` و `q2 = [2,3,10]`، والاستدعاء `Merge(q1, q2)`.",
+         "out": "[1,2,3,4,9,10]\n",
+         "steps": [
 {"l":1,"n":"تبدأ العملية `Merge` مع `q1` = الدور `[1,4,9]`، `q2` = الدور `[2,3,10]`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Merge","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]}],"h":[{"id":1,"k":"queue","items":["1","4","9"]},{"id":2,"k":"queue","items":["2","3","10"]}]},
 {"l":3,"n":"ننشئ دورًا فارغًا باسم `res`.","o":0,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}]]},{"name":"Merge","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}],["res",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"queue","items":["1","4","9"]},{"id":2,"k":"queue","items":["2","3","10"]},{"id":3,"k":"queue","items":[]}]},
 {"l":4,"n":"الشرط `!q1.IsEmpty() && !q2.IsEmpty()` صحيح: ننفّذ جسم الحلقة.","o":0},
@@ -1125,14 +1231,156 @@ const m08: ContentModule = {
 {"l":15,"n":"العملية `Merge` تُعيد الدور `[1,2,3,4,9,10]`.","o":0},
 {"l":0,"n":"نطبع: `[1,2,3,4,9,10]`. انتهى التنفيذ.","o":15,"f":[{"name":"Main","vars":[["q1",{"t":"ref","id":1}],["q2",{"t":"ref","id":2}],["res",{"t":"ref","id":3}]]}]}
 ]
+        }
        },
        "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (24 خطوة)؛ ناتج البرنامج: [1,2,3,4,9,10]."
+        "text": "حل السؤال: في كل دورة نقارن رأسَي الدورين وننقل الأصغر إلى الدور الجديد. حين يفرغ أحد الدورين ننقل ما بقي في الآخر كما هو: هو مرتّب أصلًا. كل قيمة تُنقل مرة واحدة، فدرجة النجاعة O(n + m) حيث n و m طولا الدورين."
        },
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p03-b05",
+       "id": "m08-l02-p02-b06",
+       "type": "heading",
+       "level": 3,
+       "text": "سؤال 2 · متقدّم — سلسلة متناظرة",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p02-b07",
+       "type": "example",
+       "mode": "practice",
+       "title": "المطلوب",
+       "prompt": "اكتب العملية \u2066IsPalindrome\u2069 التي تستقبل سلسلة خلايا من أعداد صحيحة، وتعيد \u2066true\u2069 إذا كانت السلسلة تُقرأ من أولها كما تُقرأ من آخرها (مثل \u20661 → 2 → 1\u2069)، وإلا تعيد \u2066false\u2069. استعن براصّة. يجب ألا تتغيّر السلسلة.",
+       "steps": [],
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p02-b08",
+       "type": "code",
+       "language": "csharp",
+       "dir": "ltr",
+       "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    // اكتب هنا\n}",
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p02-b09",
+       "type": "guided",
+       "guidedType": "ds-solution",
+       "version": 1,
+       "title": "حل سؤال 2 — \u2066IsPalindrome\u2069",
+       "steps": [
+        {
+         "id": "s1",
+         "text": [
+          {
+           "text": "التمشيط الأول يُدخل قيم السلسلة إلى راصّة، فتخرج منها "
+          },
+          {
+           "text": "معكوسة",
+           "style": "strong"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s2",
+         "text": [
+          {
+           "text": "نعيد "
+          },
+          {
+           "text": "pos",
+           "dir": "ltr"
+          },
+          {
+           "text": " إلى أول السلسلة، ونقارن كل قيمة بالقيمة الخارجة من الراصّة: أول السلسلة مع آخرها، وهكذا."
+          }
+         ]
+        },
+        {
+         "id": "s3",
+         "text": [
+          {
+           "text": "أول اختلاف يعيد "
+          },
+          {
+           "text": "false",
+           "dir": "ltr"
+          },
+          {
+           "text": "؛ إذا انتهت السلسلة بلا اختلاف نعيد "
+          },
+          {
+           "text": "true",
+           "dir": "ltr"
+          },
+          {
+           "text": "."
+          }
+         ]
+        },
+        {
+         "id": "s4",
+         "text": [
+          {
+           "text": "السلسلة لا تتغيّر لأننا نقرأ منها فقط."
+          }
+         ]
+        }
+       ],
+       "capabilities": {
+        "interactive": true
+       },
+       "config": {
+        "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    pos = chain;\n    while (pos != null)\n    {\n        if (pos.GetValue() != s.Pop())\n            return false;\n        pos = pos.GetNext();\n    }\n    return true;\n}",
+        "checklist": [
+         "متغيّر مساعد `pos` للتمشيط، دون تحريك المؤشّر `chain`.",
+         "إعادة `pos` إلى أول السلسلة قبل حلقة المقارنة.",
+         "`return false` عند أول اختلاف، و `return true` بعد الحلقة."
+        ],
+        "trace": {
+         "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    pos = chain;\n    while (pos != null)\n    {\n        if (pos.GetValue() != s.Pop())\n            return false;\n        pos = pos.GetNext();\n    }\n    return true;\n}",
+         "given": "السلسلة `1 → 2 → 1 → null`، والاستدعاء `IsPalindrome(chain)`.",
+         "out": "True\n",
+         "steps": [
+{"l":1,"n":"تبدأ العملية `IsPalindrome` مع `chain` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2}]},
+{"l":3,"n":"ننشئ راصّة فارغة باسم `s`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":[]}]},
+{"l":4,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":3}]]}]},
+{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ندخل `1` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1"]}]},
+{"l":8,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":2}]]}]},
+{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ندخل `2` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["2","1"]}]},
+{"l":8,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":1}]]}]},
+{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":7,"n":"ندخل `1` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1","2","1"]}]},
+{"l":8,"n":"`pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"null"}]]}]},
+{"l":5,"n":"الشرط `pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":10,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":3}]]}]},
+{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `1` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["2","1"]}]},
+{"l":15,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":2}]]}]},
+{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `2` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1"]}]},
+{"l":15,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":1}]]}]},
+{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
+{"l":13,"n":"نخرج `1` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":[]}]},
+{"l":15,"n":"`pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"null"}]]}]},
+{"l":11,"n":"الشرط `pos != null` خطأ: نخرج من الحلقة.","o":0},
+{"l":17,"n":"العملية `IsPalindrome` تُعيد `true`.","o":0},
+{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2}]}
+]
+        }
+       },
+       "fallback": {
+        "text": "حل السؤال: التمشيط الأول يُدخل قيم السلسلة إلى راصّة، فتخرج منها معكوسة. نعيد pos إلى أول السلسلة، ونقارن كل قيمة بالقيمة الخارجة من الراصّة: أول السلسلة مع آخرها، وهكذا. أول اختلاف يعيد false؛ إذا انتهت السلسلة بلا اختلاف نعيد true. السلسلة لا تتغيّر لأننا نقرأ منها فقط."
+       },
+       "origin": "teacher-enrichment"
+      },
+      {
+       "id": "m08-l02-p02-b10",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1164,88 +1412,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p03-b06",
-       "type": "heading",
-       "level": 3,
-       "text": "حل سؤال 2 — \u2066IsPalindrome\u2069",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b07",
-       "type": "code",
-       "language": "csharp",
-       "dir": "ltr",
-       "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    pos = chain;\n    while (pos != null)\n    {\n        if (pos.GetValue() != s.Pop())\n            return false;\n        pos = pos.GetNext();\n    }\n    return true;\n}",
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b08",
-       "type": "text",
-       "spans": [
-        {
-         "text": "التمشيط الأول يُدخل القيم إلى الراصّة، فتخرج منها "
-        },
-        {
-         "text": "معكوسة",
-         "style": "strong"
-        },
-        {
-         "text": ". في التمشيط الثاني نقارن كل قيمة في السلسلة بالقيمة الخارجة من الراصّة: أول السلسلة مع آخرها، وهكذا. السلسلة نفسها لا تتغيّر لأننا نقرأ منها فقط."
-        }
-       ],
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b09",
-       "type": "simulation",
-       "simulationType": "ds-trace",
-       "version": 1,
-       "title": "تتبّع \u2066IsPalindrome\u2069 على سلسلة متناظرة",
-       "capabilities": {
-        "fullscreen": true,
-        "reset": true,
-        "interactive": true
-       },
-       "config": {
-        "code": "public static bool IsPalindrome(Node<int> chain)\n{\n    Stack<int> s = new Stack<int>();\n    Node<int> pos = chain;\n    while (pos != null)\n    {\n        s.Push(pos.GetValue());\n        pos = pos.GetNext();\n    }\n    pos = chain;\n    while (pos != null)\n    {\n        if (pos.GetValue() != s.Pop())\n            return false;\n        pos = pos.GetNext();\n    }\n    return true;\n}",
-        "given": "السلسلة `1 → 2 → 1 → null`، والاستدعاء `IsPalindrome(chain)`.",
-        "out": "True\n",
-        "steps": [
-{"l":1,"n":"تبدأ العملية `IsPalindrome` مع `chain` = الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2}]},
-{"l":3,"n":"ننشئ راصّة فارغة باسم `s`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":[]}]},
-{"l":4,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":3}]]}]},
-{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":7,"n":"ندخل `1` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1"]}]},
-{"l":8,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":2}]]}]},
-{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":7,"n":"ندخل `2` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["2","1"]}]},
-{"l":8,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":1}]]}]},
-{"l":5,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":7,"n":"ندخل `1` إلى رأس الراصّة `s`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1","2","1"]}]},
-{"l":8,"n":"`pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"null"}]]}]},
-{"l":5,"n":"الشرط `pos != null` خطأ: نخرج من الحلقة.","o":0},
-{"l":10,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":3}]]}]},
-{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":13,"n":"نخرج `1` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["2","1"]}]},
-{"l":15,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `2`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":2}]]}]},
-{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":13,"n":"نخرج `2` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":["1"]}]},
-{"l":15,"n":"`pos` يشير الآن إلى الخلية التي قيمتها `1`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"ref","id":1}]]}]},
-{"l":11,"n":"الشرط `pos != null` صحيح: ننفّذ جسم الحلقة.","o":0},
-{"l":13,"n":"نخرج `1` من رأس الراصّة `s`. الشرط `pos.GetValue() != s.Pop()` خطأ: نتخطّى ما بعد `if`.","o":0,"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2},{"id":4,"k":"stack","items":[]}]},
-{"l":15,"n":"`pos` يشير الآن إلى `null`.","o":0,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]},{"name":"IsPalindrome","vars":[["chain",{"t":"ref","id":3}],["s",{"t":"ref","id":4}],["pos",{"t":"null"}]]}]},
-{"l":11,"n":"الشرط `pos != null` خطأ: نخرج من الحلقة.","o":0},
-{"l":17,"n":"العملية `IsPalindrome` تُعيد `true`.","o":0},
-{"l":0,"n":"نطبع: `True`. انتهى التنفيذ.","o":5,"f":[{"name":"Main","vars":[["chain",{"t":"ref","id":3}]]}],"h":[{"id":1,"k":"node","v":"1","next":null},{"id":2,"k":"node","v":"2","next":1},{"id":3,"k":"node","v":"1","next":2}]}
-]
-       },
-       "fallback": {
-        "text": "تتبّع تفاعلي لبرنامج C# خطوة بخطوة (26 خطوة)؛ ناتج البرنامج: True."
-       },
-       "origin": "teacher-enrichment"
-      },
-      {
-       "id": "m08-l02-p03-b10",
+       "id": "m08-l02-p02-b11",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -1260,9 +1427,9 @@ const m08: ContentModule = {
      ]
     },
     {
-     "id": "899271d-m08-l02-p04",
+     "id": "899271d-m08-l02-p03",
      "title": "تدريبات الوحدة",
-     "order": 4,
+     "order": 3,
      "source": {
       "kind": "book",
       "sourceId": "899271d",
@@ -1276,7 +1443,7 @@ const m08: ContentModule = {
      ],
      "blocks": [
       {
-       "id": "m08-l02-p04-b01",
+       "id": "m08-l02-p03-b01",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1310,7 +1477,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b02",
+       "id": "m08-l02-p03-b02",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1356,7 +1523,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b03",
+       "id": "m08-l02-p03-b03",
        "type": "code",
        "language": "csharp",
        "dir": "ltr",
@@ -1364,7 +1531,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b04",
+       "id": "m08-l02-p03-b04",
        "type": "practice",
        "question": {
         "kind": "shortInput",
@@ -1377,7 +1544,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b05",
+       "id": "m08-l02-p03-b05",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1409,7 +1576,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b06",
+       "id": "m08-l02-p03-b06",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1423,7 +1590,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b07",
+       "id": "m08-l02-p03-b07",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1455,7 +1622,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b08",
+       "id": "m08-l02-p03-b08",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1487,7 +1654,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b09",
+       "id": "m08-l02-p03-b09",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1539,7 +1706,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b10",
+       "id": "m08-l02-p03-b10",
        "type": "practice",
        "reveal": true,
        "question": {
@@ -1571,7 +1738,7 @@ const m08: ContentModule = {
        "origin": "teacher-enrichment"
       },
       {
-       "id": "m08-l02-p04-b11",
+       "id": "m08-l02-p03-b11",
        "type": "practice",
        "reveal": true,
        "question": {

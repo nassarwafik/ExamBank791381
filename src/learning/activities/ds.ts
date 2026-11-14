@@ -341,3 +341,18 @@ export function readDsFigure(config: unknown): DsFigure | null {
   }
   return { panels };
 }
+
+// ── the solution window (guided / ds-solution / v1) ──────────────────────────────────────────────────────────────────
+/** What the «الحل» window shows beside the block's own steps and result: the solution's code, what a correct solution must
+ *  contain, and the trace of the solution. All optional; every text may hold `code` runs. */
+export type DsSolution = { code?: string; checklist: string[]; trace?: DsTrace };
+export function readDsSolution(config: unknown): DsSolution | null {
+  const c = rec(config ?? {});
+  if (Object.keys(c).some(k => k !== "code" && k !== "checklist" && k !== "trace")) return null;
+  if (c.code !== undefined && (!isStr(c.code) || !c.code.trim() || c.code.split("\n").length > DS_LIMITS.lines)) return null;
+  const checklist = c.checklist ?? [];
+  if (!Array.isArray(checklist) || checklist.length > 12 || !checklist.every(t => isStr(t) && t.length > 0 && t.length <= 400)) return null;
+  let trace: DsTrace | undefined;
+  if (c.trace !== undefined) { const t = readDsTrace(c.trace); if (!t) return null; trace = t; }
+  return { ...(isStr(c.code) ? { code: c.code } : {}), checklist: checklist as string[], ...(trace ? { trace } : {}) };
+}

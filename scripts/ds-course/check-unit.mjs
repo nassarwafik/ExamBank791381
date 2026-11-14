@@ -12,10 +12,11 @@ const unit = (await import("./u" + n + ".mjs")).default;
 const { modules, raw } = buildCourse([unit]);
 const pages = modules[0].lessons.flatMap(l => l.pages);
 const count = {};
-for (const r of raw) { const k = r.block.type === "simulation" ? r.block.simulationType : r.block.type === "interactive-diagram" ? "ds-figure" : r.block.type; count[k] = (count[k] ?? 0) + 1; }
+for (const r of raw) { const k = r.block.type === "simulation" ? r.block.simulationType : r.block.type === "interactive-diagram" ? "ds-figure" : r.block.guidedType === "ds-solution" ? "ds-solution" : r.block.type; count[k] = (count[k] ?? 0) + 1; }
 console.log("unit " + unit.n + " «" + unit.title + "»: " + modules[0].lessons.length + " lessons, " + pages.length + " pages, " + raw.length + " blocks");
 console.log(Object.entries(count).map(([k, v]) => k + " " + v).join(" · "));
 for (const r of raw.filter(x => x.block.simulationType === "ds-trace")) console.log("  trace " + r.block.id + " «" + r.block.title + "»: " + r.block.config.steps.length + " steps, " + JSON.stringify(r.block.config).length + " bytes" + (r.block._error ? " — ends with a run-time error: " + r.block._error : ""));
+for (const r of raw.filter(x => x.block.guidedType === "ds-solution")) console.log("  solution " + r.block.id + " «" + r.block.title + "»" + (r.block.config.trace ? ": trace of " + r.block.config.trace.steps.length + " steps" : r.block.config.code ? ": code proven by a run" : ""));
 let bad = 0;
 // every exercise proof on the interpreter
 for (const r of raw.filter(x => x.block._prove)) {

@@ -865,3 +865,12 @@
 .learning-ds-caption{ font-size:var(--eb-fs-14); color:var(--eb-muted); text-align:center; }
 .learning-ds-facts{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-1) var(--eb-space-3); margin:0; padding:0; list-style:none; font-size:var(--eb-fs-14); color:var(--eb-text); }
 @media (prefers-reduced-motion: reduce){ .learning-ds-box, .learning-ds-cell{ transition:none; } }
+
+/* DS-A3 — the solution window (guided / ds-solution / v1): one «الحل» button on the page; the solution is in the shared Dialog. */
+.learning-ds-solution{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); }
+.learning-ds-solution-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-14); }
+.learning-ds-solution-btn{ min-width:6rem; }
+.learning-ds-solution-body{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; text-align:start; }
+.learning-ds-solution-answer{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-success-bg); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
+.learning-ds-solution-steps, .learning-ds-solution-checklist{ display:flex; flex-direction:column; gap:var(--eb-space-1); margin:0; padding-inline-start:var(--eb-space-4); line-height:var(--eb-lh-body); }
+.learning-ds-solution-note{ margin:0; color:var(--eb-muted); line-height:var(--eb-lh-body); }

@@ -2307,7 +2307,7 @@ const manifest: LearningCourseManifest = {
           "pages": [
             {
               "id": "899271d-m08-l02-p01",
-              "title": "أسئلة تتبّع: مبنيان معًا",
+              "title": "وظيفة: أسئلة تتبّع",
               "order": 1,
               "source": {
                 "kind": "book",
@@ -2316,6 +2316,7 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
+                "وظيفة",
                 "تتبّع",
                 "سلسلة وراصّة",
                 "راصّة ودور",
@@ -2324,7 +2325,7 @@ const manifest: LearningCourseManifest = {
             },
             {
               "id": "899271d-m08-l02-p02",
-              "title": "أسئلة كتابة: مبنيان معًا",
+              "title": "وظيفة: أسئلة كتابة",
               "order": 2,
               "source": {
                 "kind": "book",
@@ -2333,6 +2334,7 @@ const manifest: LearningCourseManifest = {
                 "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
               },
               "keywords": [
+                "وظيفة",
                 "كتابة عملية",
                 "Merge",
                 "IsPalindrome"
@@ -2340,24 +2342,8 @@ const manifest: LearningCourseManifest = {
             },
             {
               "id": "899271d-m08-l02-p03",
-              "title": "حلول أسئلة الكتابة",
-              "order": 3,
-              "source": {
-                "kind": "book",
-                "sourceId": "899271d",
-                "pdfPageStart": 243,
-                "sourceNote": "إثراء (ليس من الكتاب) · يتبع الفصل السادس «الأشجار الثنائية»"
-              },
-              "keywords": [
-                "حلول",
-                "Merge",
-                "IsPalindrome"
-              ]
-            },
-            {
-              "id": "899271d-m08-l02-p04",
               "title": "تدريبات الوحدة",
-              "order": 4,
+              "order": 3,
               "source": {
                 "kind": "book",
                 "sourceId": "899271d",

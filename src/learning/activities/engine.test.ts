@@ -10,8 +10,8 @@ import { simBlock, animBlock, unsupportedVersionBlock, unregisteredBlock } from 
 const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
-describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5 and Batch 8 renderers, 899371 P6, 899371 P11, AUTO-A1, AUTO-A3, DS-A1)", () => {
-  it("registers ONLY the twenty-three allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress, network-lab, csharp-trace, csharp-scene, automaton-trace, automaton-design, ds-trace, ds-lab, ds-figure (all v1)", () => {
+describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5 and Batch 8 renderers, 899371 P6, 899371 P11, AUTO-A1, AUTO-A3, DS-A1, DS-A3)", () => {
+  it("registers ONLY the twenty-four allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers, network-domains, tcp-handshake, cli-terminal, ipv6-compress, network-lab, csharp-trace, csharp-scene, automaton-trace, automaton-design, ds-trace, ds-lab, ds-figure, ds-solution (all v1)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -36,8 +36,9 @@ describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–
       { kind: "simulation", key: "ds-trace", versions: [1] },           // DS-A1 — a program on a data structure, step by step (recorded steps, data only)
       { kind: "simulation", key: "ds-lab", versions: [1] },             // DS-A1 — the data-structure lab (stack / queue / chain / binary tree)
       { kind: "interactive-diagram", key: "ds-figure", versions: [1] }, // DS-A1 — a drawing of the structures written as data
+      { kind: "guided", key: "ds-solution", versions: [1] },            // DS-A3 — the «الحل» button and its solution window
     ]);
-    expect(productionActivityRegistry.size).toBe(23);
+    expect(productionActivityRegistry.size).toBe(24);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });

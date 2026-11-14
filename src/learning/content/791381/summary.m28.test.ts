@@ -288,7 +288,7 @@ describe("Final summary — the ten REAL book CLI exercises (simulation / cli-te
       if (cfg!.kind === "task") expect(cfg!.goals!.length, e.block.id).toBe((raw.goals as unknown[]).length);
       else expect(cfg!.steps!.length, e.block.id).toBe((raw.steps as unknown[]).length);
     }
-    expect(productionActivityRegistry.list().length).toBe(23);   // + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1)
+    expect(productionActivityRegistry.list().length).toBe(24);   // + network-lab/v1 (791381s Phase 8B-2), + csharp-trace/v1 (899371 P6), + csharp-scene/v1 (899371 P11), + automaton-trace/v1 (AUTO-A1), + automaton-design/v1 (AUTO-A3), + ds-trace/v1, ds-lab/v1 and ds-figure/v1 (DS-A1), + ds-solution/v1 (DS-A3)
     const cfgText = JSON.stringify(list.map(s => s.block.config));
     expect(cfgText).not.toMatch(/ping|tracert|ipconfig|nslookup|arp -a|restrict|protect|show interfaces trunk|show mac address-table|show spanning-tree/i);
     expect(list.map(s => (s.block.config as { kind: string }).kind)).toEqual(["task", "guided", "guided", "task", "challenge", "guided", "task", "task", "task", "challenge"]);

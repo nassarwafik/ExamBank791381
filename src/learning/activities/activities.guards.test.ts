@@ -97,7 +97,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact twenty-three-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2, 899371 P6, 899371 P11, AUTO-A1, AUTO-A3, DS-A1) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
+  it("registers ONLY the exact twenty-four-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up, 791381s 8B-2, 899371 P6, 899371 P11, AUTO-A1, AUTO-A3, DS-A1, DS-A3) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -122,13 +122,14 @@ describe("production registry is an exact allowlist", () => {
       { kind: "simulation", key: "ds-trace", versions: [1] },           // DS-A1 — a program on a data structure, step by step (recorded steps, data only)
       { kind: "simulation", key: "ds-lab", versions: [1] },             // DS-A1 — the data-structure lab (stack / queue / chain / binary tree)
       { kind: "interactive-diagram", key: "ds-figure", versions: [1] }, // DS-A1 — a drawing of the structures written as data
+      { kind: "guided", key: "ds-solution", versions: [1] },            // DS-A3 — the «الحل» button and its solution window
     ]);
-    expect(productionActivityRegistry.size).toBe(23);
+    expect(productionActivityRegistry.size).toBe(24);
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });
   it("every Units 4–6, Units 7–8, Batch 3, Batch 4 and Batch 5 renderer is reached only through a static string-literal import thunk", () => {
-    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder", "OsiLayersExplorer", "NetworkDomainsExplorer", "TcpHandshakeStepper", "CSharpTraceActivity", "CSharpSceneActivity", "AutomatonTraceActivity", "DsTraceActivity", "DsLabActivity", "DsFigureActivity"]) expect(engine).toContain(`import("./${name}")`);
+    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder", "OsiLayersExplorer", "NetworkDomainsExplorer", "TcpHandshakeStepper", "CSharpTraceActivity", "CSharpSceneActivity", "AutomatonTraceActivity", "DsTraceActivity", "DsLabActivity", "DsFigureActivity", "DsSolutionActivity"]) expect(engine).toContain(`import("./${name}")`);
   });
   it("the ipv4-octets renderer is reached only through a static string-literal import thunk", () => {
     expect(engine).toContain('import("./IPv4OctetsDiagram")');

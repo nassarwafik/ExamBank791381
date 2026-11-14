@@ -2822,7 +2822,7 @@
             "o2"
           ]
         },
-        "m08-l02-p01-b13": {
+        "m08-l02-p01-b12": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
@@ -2836,32 +2836,32 @@
         }
       }
     },
-    "899271d-m08-l02-p03": {
+    "899271d-m08-l02-p02": {
       "moduleId": "899271d-m08",
       "activities": {
-        "m08-l02-p03-b05": {
+        "m08-l02-p02-b10": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m08-l02-p03-b10": {
+        "m08-l02-p02-b11": {
           "kind": "shortInput",
           "answer": "false"
         }
       }
     },
-    "899271d-m08-l02-p04": {
+    "899271d-m08-l02-p03": {
       "moduleId": "899271d-m08",
       "activities": {
-        "m08-l02-p04-b01": {
+        "m08-l02-p03-b01": {
           "kind": "wordBank",
           "answers": {
             "w1": "LIFO",
             "w2": "FIFO"
           }
         },
-        "m08-l02-p04-b02": {
+        "m08-l02-p03-b02": {
           "kind": "matching",
           "pairs": {
             "l1": "r1",
@@ -2869,21 +2869,21 @@
             "l3": "r3"
           }
         },
-        "m08-l02-p04-b04": {
+        "m08-l02-p03-b04": {
           "kind": "shortInput",
           "answer": "5"
         },
-        "m08-l02-p04-b05": {
+        "m08-l02-p03-b05": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m08-l02-p04-b06": {
+        "m08-l02-p03-b06": {
           "kind": "trueFalse",
           "answer": true
         },
-        "m08-l02-p04-b07": {
+        "m08-l02-p03-b07": {
           "kind": "ordering",
           "order": [
             "s1",
@@ -2891,13 +2891,13 @@
             "s3"
           ]
         },
-        "m08-l02-p04-b08": {
+        "m08-l02-p03-b08": {
           "kind": "multipleChoice",
           "correct": [
             "o3"
           ]
         },
-        "m08-l02-p04-b09": {
+        "m08-l02-p03-b09": {
           "kind": "classify",
           "assign": {
             "c1": "g1",
@@ -2907,13 +2907,13 @@
             "c5": "g1"
           }
         },
-        "m08-l02-p04-b10": {
+        "m08-l02-p03-b10": {
           "kind": "multipleChoice",
           "correct": [
             "o2"
           ]
         },
-        "m08-l02-p04-b11": {
+        "m08-l02-p03-b11": {
           "kind": "multipleChoice",
           "correct": [
             "o2"

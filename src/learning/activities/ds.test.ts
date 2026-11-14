@@ -2,7 +2,7 @@
 // binary-tree operations of the lab (the book's rules: smaller to the left; delete = leaf / one child / smallest of the right).
 import { describe, it, expect } from "vitest";
 import {
-  bstDelete, bstInsert, bstSearch, isBst, keyAtPath, layoutBst, readDsFigure, readDsLab, readDsTrace, readLabValue, readTree, sceneOf, traverse,
+  bstDelete, bstInsert, bstSearch, isBst, keyAtPath, layoutBst, readDsFigure, readDsLab, readDsSolution, readDsTrace, readLabValue, readTree, sceneOf, traverse,
   treeHeight, treeLeaves, treeSize, DS_LIMITS, type Bst, type DsFrame, type DsObj,
 } from "./ds";
 
@@ -181,5 +181,17 @@ describe("readDsLab / readLabValue / readDsFigure", () => {
   it("refuses a figure with no panel, too many, a pointer outside the chain or a path outside the tree", () => {
     for (const c of [{}, { panels: [] }, { panels: Array(5).fill({ kind: "stack", items: [] }) }, { panels: [{ kind: "chain", items: [1], pointers: [["p", 3]] }] },
       { panels: [{ kind: "tree", tree: [5, 3, 7], hi: ["LL"] }] }, { panels: [{ kind: "tree", tree: [5, 3, 7], pointers: [["p p", "L"]] }] }, { panels: [{ kind: "pie", items: [] }] }]) expect(readDsFigure(c), JSON.stringify(c)).toBeNull();
+  });
+});
+
+describe("readDsSolution — the solution window's config", () => {
+  it("reads code, a checklist and a trace; all optional", () => {
+    expect(readDsSolution(undefined)).toEqual({ checklist: [] });
+    expect(readDsSolution({ code: "return 1;", checklist: ["`return` بعد الحلقة"] })).toEqual({ code: "return 1;", checklist: ["`return` بعد الحلقة"] });
+    const s = readDsSolution({ trace: TRACE })!;
+    expect(s.trace!.steps).toHaveLength(3);
+  });
+  it("refuses an unknown field, empty code, a bad checklist or an unreadable trace", () => {
+    for (const c of [{ solution: "x" }, { code: "  " }, { code: 5 }, { checklist: "x" }, { checklist: [""] }, { checklist: Array(13).fill("x") }, { trace: { code: "x;", out: "", steps: [] } }]) expect(readDsSolution(c), JSON.stringify(c)).toBeNull();
   });
 });

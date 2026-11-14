@@ -6,10 +6,10 @@
 //     drawing, the C# statement of every operation, and an operation the class forbids refused with its reason;
 //   • interactive-diagram/ds-figure/v1 — panels drawn from data, a tree's facts.
 import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import LearningActivityHost from "./LearningActivityHost";
 import { productionActivityRegistry } from "./engine";
-import type { InteractiveDiagramBlock, SimulationBlock } from "../content/types";
+import type { GuidedBlock, InteractiveDiagramBlock, SimulationBlock } from "../content/types";
 
 afterEach(() => { cleanup(); });
 
@@ -35,7 +35,11 @@ const sim = (key: string, config: Record<string, unknown>): SimulationBlock => (
 const fig = (config: Record<string, unknown>): InteractiveDiagramBlock => ({
   id: "fg", type: "interactive-diagram", origin: "teacher-enrichment", interactionType: "ds-figure", version: 1, title: "رسم", capabilities: { fullscreen: true }, config,
 });
-const mount = async (b: SimulationBlock | InteractiveDiagramBlock) => {
+const solution = (config: Record<string, unknown>, extra: Partial<GuidedBlock> = {}): GuidedBlock => ({
+  id: "sol", type: "guided", origin: "teacher-enrichment", guidedType: "ds-solution", version: 1, title: "حل سؤال 6", capabilities: { interactive: true },
+  steps: [{ id: "s1", text: [{ text: "نُخرج كل قيمة ونجمع الفردية منها." }] }, { id: "s2", text: [{ text: "نعيد " }, { text: "sum", dir: "ltr" }, { text: " بعد الحلقة." }] }], config, ...extra,
+});
+const mount = async (b: SimulationBlock | InteractiveDiagramBlock | GuidedBlock) => {
   const r = render(<LearningActivityHost block={b} courseId="DS" />);
   await waitFor(() => { if (!r.container.querySelector(".learning-ds, .learning-trace-empty")) throw new Error("not yet"); });
   return r;
@@ -231,5 +235,58 @@ describe("interactive-diagram/ds-figure/v1", () => {
   it("an unreadable figure says so", async () => {
     const { container } = await mount(fig({ panels: [] }));
     expect(container.querySelector(".learning-trace-empty")!.textContent).toBe("هذا الرسم غير متوفر حاليًا.");
+  });
+});
+
+describe("guided/ds-solution/v1 — the «الحل» button and its window", () => {
+  it("resolves by exact identity, beside the built-in guided walkthrough", () => {
+    const b = solution({});
+    expect(productionActivityRegistry.resolve(b)?.key).toBe("ds-solution");
+    expect(productionActivityRegistry.resolve({ ...b, version: 2 })).toBeUndefined();
+    expect(productionActivityRegistry.resolve({ ...b, guidedType: "reveal" })).toBeUndefined();   // reveal stays the built-in presenter's
+  });
+  it("shows only the button before the learner asks: no step, no code, no answer on the page", async () => {
+    const { container } = await mount(solution({ code: "return sum;", checklist: ["`sum` يبدأ من صفر"] }, { result: [{ text: "21" }] }));
+    expect(btn("الحل").getAttribute("aria-haspopup")).toBe("dialog");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body.textContent).not.toContain("نُخرج كل قيمة");
+    expect(document.body.textContent).not.toContain("return sum;");
+    expect(container.querySelector(".learning-ds-solution-hint")!.textContent).toBe("حاول أولًا، ثم قارن حلّك.");
+  });
+  it("«الحل» opens a labelled modal window with the answer, the steps, the code and the checklist; closing it hides them again", async () => {
+    await mount(solution({ code: "int sum = 0;\nreturn sum;", checklist: ["`sum` يبدأ من **صفر**"] }, { result: [{ text: "21" }] }));
+    fireEvent.click(btn("الحل"));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)!.textContent).toBe("حل سؤال 6");
+    expect(dialog.querySelector(".learning-ds-solution-answer")!.textContent).toBe("الجواب: 21");
+    expect([...dialog.querySelectorAll(".learning-ds-solution-steps li")].map(l => l.textContent)).toEqual(["نُخرج كل قيمة ونجمع الفردية منها.", "نعيد sum بعد الحلقة."]);
+    expect([...dialog.querySelectorAll(".learning-trace-linecode")].map(l => l.textContent)).toEqual(["int sum = 0;", "return sum;"]);
+    const check = dialog.querySelector(".learning-ds-solution-checklist li")!;
+    expect(check.textContent).toBe("sum يبدأ من صفر");
+    expect(check.querySelector("code")!.textContent).toBe("sum");
+    expect(check.querySelector("strong")!.textContent).toBe("صفر");
+    fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.body.textContent).not.toContain("return sum;");
+  });
+  it("a recorded trace is stepped inside the window, and restarts from its first step when the window is opened again", async () => {
+    await mount(solution({ trace: TRACE }));
+    fireEvent.click(btn("الحل"));
+    let dialog = screen.getByRole("dialog");
+    expect(dialog.querySelector(".learning-trace-note")!.textContent).toContain("السطر 1:");
+    fireEvent.click(within(dialog).getByRole("button", { name: "الخطوة التالية" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "الخطوة التالية" }));
+    expect(dialog.querySelector(".learning-trace-note")!.textContent).toContain("السطر 5:");
+    expect(dialog.querySelector(".learning-ds-svg")!.getAttribute("aria-label")).toBe("الراصّة s: فارغة");
+    fireEvent.click(within(dialog).getByRole("button", { name: "إغلاق" }));
+    fireEvent.click(btn("الحل"));
+    dialog = screen.getByRole("dialog");
+    expect(dialog.querySelector(".learning-trace-note")!.textContent).toContain("السطر 1:");
+  });
+  it("an unreadable solution says so instead of showing a button", async () => {
+    const { container } = await mount(solution({ trace: { code: "x;", out: "", steps: [] } }));
+    expect(container.querySelector(".learning-trace-empty")!.textContent).toBe("هذا الحل غير متوفر حاليًا.");
+    expect(screen.queryByRole("button", { name: "الحل" })).toBeNull();
   });
 });

@@ -408,4 +408,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./DsFigureActivity"),
     capabilities: { fullscreen: true },
   },
+  {
+    // DS-A3 — the solution of a homework question: one «الحل» button that opens a window (the shared Dialog) with the answer, the
+    // reasoning, the solution's code, a checklist and the recorded trace of the solution. A guided renderer in its own lazy
+    // chunk (the built-in guided/reveal presenter is unchanged). Data only.
+    kind: "guided",
+    key: "ds-solution",
+    versions: [1],
+    load: () => import("./DsSolutionActivity"),
+    capabilities: { interactive: true },
+  },
 ]);
