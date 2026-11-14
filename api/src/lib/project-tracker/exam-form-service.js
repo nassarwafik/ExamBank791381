@@ -110,6 +110,21 @@ async function readStudentForm(container, projectCode, classId, studentId) {
   return studentBody(classForm, template, doc);
 }
 
+// Phase F2-UI — the few facts the student's project page shows on its form card, or null when the project ships no form
+// or the teacher never opened it for this class. No question, no answer and no key: only the state and the counts.
+async function studentFormSummary(container, projectCode, classId, studentId) {
+  if (!getExamFormTemplate(projectCode)) return null;
+  const classForm = await loadClassForm(container, projectCode, classId);
+  if (!classForm) return null;
+  const template = trustedTemplate(classForm, projectCode);
+  const doc = await downloadJsonOrNull(container, getStorageNamespace(projectCode).examFormAnswersName(classId, studentId));
+  const progress = formProgress(template, doc && doc.answers);
+  return {
+    title: template.title, state: classForm.state === "open" ? "open" : "closed",
+    status: doc && doc.status === "submitted" ? "submitted" : "draft", started: !!doc, answered: progress.answered, total: progress.total
+  };
+}
+
 // One student write (draft or submit): canonical class membership, then ONE CAS round on the student's document. The
 // class form is read again INSIDE the round, so a form the teacher closed meanwhile refuses the write.
 async function writeStudentForm(container, projectCode, classId, studentId, apply) {
@@ -141,4 +156,4 @@ function submitStudentForm(container, projectCode, classId, studentId, { baseRev
   return writeStudentForm(container, projectCode, classId, studentId, (current, template) => applySubmit(current, template, { baseRevision, now }));
 }
 
-module.exports = { loadClassForm, classFormState, openClassForm, closeClassForm, readStudentForm, saveStudentDraft, submitStudentForm };
+module.exports = { loadClassForm, classFormState, openClassForm, closeClassForm, readStudentForm, studentFormSummary, saveStudentDraft, submitStudentForm };

@@ -236,6 +236,82 @@
   .eb-sp-task, .student-avatar-circle, .eb-sp-avatar-option, .eb-sp-rankring-fill{ transition:none; }
 }
 
+/* Phase F2-UI — the project exam form («استمارة امتحان المشروع»): its card on the project page and the form itself (one section at
+   a time, native inputs, technical text typed left-to-right). Token-only, mobile first, logical properties. */
+/* (Placed before the learning-materials block on purpose: that block's guard reads the stylesheet from its heading to the end
+   of the file and allows no scrolling container there. The form's section row, command box and wide tables do scroll.) */
+.eb-sp-form-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-primary); border-radius:var(--eb-r); }
+.eb-sp-form-card-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; flex:1 1 16rem; }
+.eb-sp-form-card-text p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-sp-form-card-title{ color:var(--eb-text-heading); }
+.eb-sp-form-card .eb-button{ min-height:44px; }
+.eb-sp-form{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-form-back{ align-self:flex-start; display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
+.eb-sp-form-head{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-sp-form-head .eb-subheading{ margin:0; flex:1 1 12rem; min-width:0; }
+.eb-sp-form-note{ margin:0; font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+.eb-sp-form-sections{ display:flex; flex-wrap:nowrap; gap:var(--eb-space-1); min-width:0; max-inline-size:100%; overflow-x:auto; padding-block-end:var(--eb-space-1); }
+.eb-sp-form-sections .eb-chip-button{ flex:0 0 auto; }
+/* Every button of the form is a 44 px target (the form is filled on phones in class). */
+.eb-sp-form .eb-button,.eb-sp-form .eb-chip-button{ min-height:44px; }
+.eb-sp-form-sections .eb-chip-button[aria-current="step"]{ border-color:var(--eb-primary); color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
+.eb-sp-form-section{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-form-section-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); }
+.eb-sp-form-question{ display:block; margin:0; min-inline-size:0; padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
+/* The spacing inside a question is a class on its own body, never a universal sibling selector: `.eb-sp-form-question > * + *`
+   changed seven anti-aliased pixels of an icon on the teacher's studio home at phone width (visual gate, both themes) although
+   it matches nothing there. Found by bisecting the built stylesheet rule by rule. */
+.eb-sp-form-question-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; margin-block-start:var(--eb-space-2); }
+.eb-sp-form-question.is-missing{ border-color:var(--eb-danger); }
+.eb-sp-form-question > legend{ padding:0 var(--eb-space-1); color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); line-height:var(--eb-lh-body); }
+.eb-sp-form-number{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-sp-form-help,.eb-sp-form-deferred,.eb-sp-form-missing-mark{ margin:0; font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+.eb-sp-form-deferred{ color:var(--eb-text-secondary); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); }
+.eb-sp-form-missing-mark{ color:var(--eb-danger); }
+.eb-sp-form-text,.eb-sp-form-cell,.eb-sp-form-select{ box-sizing:border-box; inline-size:100%; min-height:44px; padding:var(--eb-space-2); color:var(--eb-text); background:var(--eb-surface); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); font:inherit; font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-sp-form-paragraph{ resize:vertical; }
+.eb-sp-form-cli{ font-family:var(--eb-font-mono); font-size:var(--eb-fs-13); direction:ltr; text-align:start; resize:vertical; white-space:pre; overflow-x:auto; }
+.eb-sp-form-options,.eb-sp-form-match,.eb-sp-form-scale,.eb-sp-form-order{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-sp-form-option{ display:flex; align-items:flex-start; gap:var(--eb-space-2); min-height:44px; padding:var(--eb-space-1) 0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-sp-form-option input{ flex:0 0 auto; margin-block-start:var(--eb-space-1); }
+.eb-sp-form-justify{ display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+.eb-sp-form-match-row{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-sp-form-match-left{ color:var(--eb-text); font-size:var(--eb-fs-14); }
+.eb-sp-form-scale-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin:0; padding:0; border:0; min-width:0; }
+.eb-sp-form-scale-row > legend{ padding:0; color:var(--eb-text); font-size:var(--eb-fs-14); }
+.eb-sp-form-scale-step{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; min-width:44px; }
+.eb-sp-form-order-list{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:var(--eb-space-1); counter-reset:eb-form-order; }
+.eb-sp-form-order-item{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-14); counter-increment:eb-form-order; }
+.eb-sp-form-order-text::before{ content:counter(eb-form-order) ". "; color:var(--eb-muted); font-weight:var(--eb-fw-semibold); }
+.eb-sp-form-order-actions{ display:inline-flex; gap:var(--eb-space-1); }
+.eb-sp-form-order-actions .eb-button{ min-height:44px; }
+.eb-sp-form-order-confirm{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin:0; font-size:var(--eb-fs-13); }
+.eb-sp-form-table-wrap{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--eb-space-2); min-width:0; inline-size:100%; max-inline-size:100%; overflow-x:auto; }
+.eb-sp-form-table{ display:block; border-collapse:collapse; inline-size:100%; }
+.eb-sp-form-table thead{ position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.eb-sp-form-table tbody{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-sp-form-table tr{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
+.eb-sp-form-table th{ padding:var(--eb-space-1) var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); text-align:start; white-space:nowrap; }
+.eb-sp-form-table td{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:0; }
+.eb-sp-form-table td[data-label]::before{ content:attr(data-label); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-sp-form-steps{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-sp-form-steps .eb-button{ min-height:44px; }
+.eb-sp-form-missing p{ margin:0; }
+.eb-sp-form-missing ul{ margin:var(--eb-space-2) 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+@media (min-width: 768px){
+  .eb-sp-form-sections{ flex-wrap:wrap; overflow-x:visible; padding-block-end:0; }
+  .eb-sp-form-table{ display:table; }
+  .eb-sp-form-table thead{ position:static; inline-size:auto; block-size:auto; overflow:visible; clip-path:none; }
+  .eb-sp-form-table tbody{ display:table-row-group; }
+  .eb-sp-form-table tr{ display:table-row; padding:0; border:0; }
+  .eb-sp-form-table td{ display:table-cell; padding:var(--eb-space-1); vertical-align:middle; }
+  .eb-sp-form-table td[data-label]::before{ content:none; }
+  .eb-sp-form-cell{ min-inline-size:6rem; }
+  .eb-sp-form-match-row{ flex-direction:row; align-items:center; }
+  .eb-sp-form-match-left{ flex:1 1 50%; min-width:0; }
+  .eb-sp-form-match-row .eb-sp-form-select{ flex:1 1 50%; }
+}
+
 /* ---------- موادي التعليمية (Class Learning Materials) ---------- */
 .eb-sp-learning-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
 .eb-sp-learning-card{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); }
