@@ -144,6 +144,16 @@ across the rating box; the wording of the hidden-questions count).
 **Visual regression (local run of the UX-R19b gate).** Base `ff4117af` build against this branch's build, phone viewport,
 light and dark: 79 captures compared in each theme, 0 changed, GATE PASS. Tablet and desktop run in CI.
 
+## Reconciliation with F1b (the 883589 form)
+
+`main` moved from `ff4117af` to `d9f7dbfc` during this phase: another window merged the 883589 exam form (F1b, data and a
+registry flag). The branch took it by a normal merge commit with no conflict. The review path of F3 and these screens were
+written and tested on the 794589 form only, so one test was added for the union of both sides:
+`api/tests/project-exam-form-review-all-forms-f3ui.test.js` runs, for **every** project that ships a form, the whole path
+over the real handlers — hide an auto-marked question, submit a complete form of right answers, the evidence, the ratings,
+the approval (mark 100) and the student's result without a key. It passes for 794589 and 883589 with no code change.
+The screens read the sections, kinds and rubric from the response and hold no project-specific text.
+
 ## Known limitations
 
 - The list has no filter or search; a class of 16–35 students is one screen or two.
