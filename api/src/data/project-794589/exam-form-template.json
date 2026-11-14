@@ -1,0 +1,1654 @@
+{
+  "projectCode": "794589",
+  "formVersion": 1,
+  "title": "استمارة امتحان المشروع",
+  "rubric": {
+    "levels": [
+      {
+        "value": 0,
+        "label": "لم يُجب"
+      },
+      {
+        "value": 1,
+        "label": "إجابات ناقصة، أو منقولة من الكتاب بلا شرح"
+      },
+      {
+        "value": 2,
+        "label": "صحيحة جزئيًا، أو بلا صور تثبتها"
+      },
+      {
+        "value": 3,
+        "label": "صحيحة ومثبتة بصور أو مخرجات من الملف"
+      },
+      {
+        "value": 4,
+        "label": "صحيحة ومثبتة، مع شرح واضح للسبب ولما يحدث لو تغيّر الإعداد"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "sectionId": "S01",
+      "title": "بطاقة المشروع",
+      "order": 1,
+      "weight": 3,
+      "bookRef": "الغلاف",
+      "questions": [
+        {
+          "questionId": "S01Q01",
+          "prompt": "ما اسم مشروعك؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 120
+        },
+        {
+          "questionId": "S01Q02",
+          "prompt": "اكتب موضوع المشروع في جملة واحدة.",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S01Q03",
+          "prompt": "ما شعار المؤسسة، وماذا يقول عن هدفها؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S01Q04",
+          "prompt": "أرفق صورة غلاف كتاب المشروع.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 1
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S02",
+      "title": "المقترح والخلفية",
+      "order": 2,
+      "weight": 4,
+      "bookRef": "مقترح المشروع",
+      "questions": [
+        {
+          "questionId": "S02Q01",
+          "prompt": "لماذا اخترت هذه المؤسسة بالذات؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S02Q02",
+          "prompt": "ما المشكلة التي تحلها شبكة الاتصال لهذه المؤسسة؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S02Q03",
+          "prompt": "اكتب ثلاثة أهداف للمشروع، وأين تحقق كل هدف فعليًا في ملفك.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "goal",
+              "title": "الهدف"
+            },
+            {
+              "id": "where",
+              "title": "أين تحقق في الملف"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 5
+        },
+        {
+          "questionId": "S02Q04",
+          "prompt": "من يستخدم الشبكة (موظفون، زبائن، ضيوف)، وماذا يحتاج كل منهم؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S02Q05",
+          "prompt": "اذكر شيئًا وعدت به في المقترح ولم تنفذه بعد، ولماذا.",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "sectionId": "S03",
+      "title": "المؤسسة والفروع",
+      "order": 3,
+      "weight": 3,
+      "bookRef": "توزيع الفروع، الخريطة",
+      "questions": [
+        {
+          "questionId": "S03Q01",
+          "prompt": "كم فرعًا في مشروعك؟ اكتب اسم كل فرع واختصاره ووظيفته.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "name",
+              "title": "اسم الفرع"
+            },
+            {
+              "id": "abbr",
+              "title": "الاختصار"
+            },
+            {
+              "id": "role",
+              "title": "الوظيفة"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S03Q02",
+          "prompt": "اذكر أقسام كل فرع.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "branch",
+              "title": "الفرع"
+            },
+            {
+              "id": "departments",
+              "title": "الأقسام"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S03Q03",
+          "prompt": "أي قسم هو الأكثر حساسية أمنيًا، ولماذا؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S03Q04",
+          "prompt": "أرفق خريطة مواقع الفروع.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S04",
+      "title": "تخطيط العناوين و VLAN",
+      "order": 4,
+      "weight": 11,
+      "bookRef": "جداول الشبكات",
+      "questions": [
+        {
+          "questionId": "S04Q01",
+          "prompt": "املأ جدول الشبكات لكل فرع: القسم، رقم VLAN، عنوان الشبكة، القناع، البوابة.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "branch",
+              "title": "الفرع"
+            },
+            {
+              "id": "department",
+              "title": "القسم"
+            },
+            {
+              "id": "vlan",
+              "title": "VLAN"
+            },
+            {
+              "id": "network",
+              "title": "عنوان الشبكة"
+            },
+            {
+              "id": "mask",
+              "title": "القناع"
+            },
+            {
+              "id": "gateway",
+              "title": "البوابة"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 40
+        },
+        {
+          "questionId": "S04Q02",
+          "prompt": "لماذا اخترت هذه النطاقات لكل فرع؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S04Q03",
+          "prompt": "أي النطاقات التالية عناوين خاصة (Private)؟ اختر كل ما ينطبق.",
+          "kind": "multiChoice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "10.0.0.0/8"
+            },
+            {
+              "id": "o2",
+              "text": "172.16.0.0/12"
+            },
+            {
+              "id": "o3",
+              "text": "192.168.0.0/16"
+            },
+            {
+              "id": "o4",
+              "text": "8.8.8.0/24"
+            },
+            {
+              "id": "o5",
+              "text": "172.32.0.0/16"
+            },
+            {
+              "id": "o6",
+              "text": "200.100.50.0/24"
+            }
+          ],
+          "answer": {
+            "correctOptionIds": [
+              "o1",
+              "o2",
+              "o3"
+            ]
+          }
+        },
+        {
+          "questionId": "S04Q04",
+          "prompt": "كم جهازًا يتسع له قسم بقناع 255.255.255.0؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "254"
+            },
+            {
+              "id": "o2",
+              "text": "256"
+            },
+            {
+              "id": "o3",
+              "text": "255"
+            },
+            {
+              "id": "o4",
+              "text": "128"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o1"
+          }
+        },
+        {
+          "questionId": "S04Q05",
+          "prompt": "اختر حاسوبًا من مشروعك واكتب: اسمه، عنوانه، قناعه، بوابته، رقم VLAN، السويتش والمنفذ.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "name",
+              "title": "اسم الحاسوب"
+            },
+            {
+              "id": "ip",
+              "title": "العنوان"
+            },
+            {
+              "id": "mask",
+              "title": "القناع"
+            },
+            {
+              "id": "gateway",
+              "title": "البوابة"
+            },
+            {
+              "id": "vlan",
+              "title": "VLAN"
+            },
+            {
+              "id": "switchPort",
+              "title": "السويتش والمنفذ"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 1
+        },
+        {
+          "questionId": "S04Q06",
+          "prompt": "لماذا يجب أن تكون البوابة من شبكة الحاسوب نفسها؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S04Q07",
+          "prompt": "حاسوب عنوانه 192.168.20.7 بقناع 255.255.255.0 وبوابته 192.168.10.254: هل يصل إلى الأقسام الأخرى؟ برّر جوابك.",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "نعم، يصل إلى كل الأقسام"
+            },
+            {
+              "id": "o2",
+              "text": "لا، لأن البوابة ليست في شبكته فلا يستطيع الوصول إليها"
+            },
+            {
+              "id": "o3",
+              "text": "يصل إلى الأقسام الأخرى ولا يصل إلى قسمه"
+            },
+            {
+              "id": "o4",
+              "text": "يصل فقط إذا كان السويتش من الطبقة الثانية"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          },
+          "justification": true
+        },
+        {
+          "questionId": "S04Q08",
+          "prompt": "ماذا يحدث إذا أخذ حاسوبان العنوان نفسه؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S04Q09",
+          "prompt": "أرفق صورة إعدادات IP لحاسوب واحد من كل فرع.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 4
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S05",
+      "title": "التسمية والاختصارات",
+      "order": 5,
+      "weight": 4,
+      "bookRef": "الأقسام والاختصارات",
+      "questions": [
+        {
+          "questionId": "S05Q01",
+          "prompt": "اشرح قاعدة تسمية الأجهزة في مشروعك بمثال واحد.",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S05Q02",
+          "prompt": "املأ جدول اختصارات الأقسام.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "department",
+              "title": "القسم"
+            },
+            {
+              "id": "abbr",
+              "title": "الاختصار"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 30
+        },
+        {
+          "questionId": "S05Q03",
+          "prompt": "ما فائدة التسمية الموحدة عند البحث عن عطل؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        }
+      ]
+    },
+    {
+      "sectionId": "S06",
+      "title": "الطوبولوجيا في Packet Tracer",
+      "order": 6,
+      "weight": 8,
+      "bookRef": "صور الفروع والأجهزة",
+      "questions": [
+        {
+          "questionId": "S06Q01",
+          "prompt": "كم راوترًا وسويتشًا وحاسوبًا وخادمًا في كل فرع؟",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "branch",
+              "title": "الفرع"
+            },
+            {
+              "id": "routers",
+              "title": "الراوترات"
+            },
+            {
+              "id": "switches",
+              "title": "السويتشات"
+            },
+            {
+              "id": "pcs",
+              "title": "الحواسيب"
+            },
+            {
+              "id": "servers",
+              "title": "الخوادم"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S06Q02",
+          "prompt": "أرفق صورة كاملة لكل فرع من ملفك.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 4
+          }
+        },
+        {
+          "questionId": "S06Q03",
+          "prompt": "ما طراز الراوتر والسويتش الذي استعملته، ولماذا؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S06Q04",
+          "prompt": "طابق كل استعمال بنوع الكابل المناسب له.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "ربط حاسوب بسويتش"
+            },
+            {
+              "id": "l2",
+              "text": "ربط سويتش بسويتش"
+            },
+            {
+              "id": "l3",
+              "text": "ربط فرعين بعيدين بسرعة عالية"
+            },
+            {
+              "id": "l4",
+              "text": "إعداد راوتر من حاسوب قبل أن يأخذ عنوانًا"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "ألياف ضوئية (Fiber)"
+            },
+            {
+              "id": "r2",
+              "text": "كابل مستقيم (Straight-through)"
+            },
+            {
+              "id": "r3",
+              "text": "كابل Console"
+            },
+            {
+              "id": "r4",
+              "text": "كابل متقاطع (Crossover)"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r2",
+              "l2": "r4",
+              "l3": "r1",
+              "l4": "r3"
+            }
+          }
+        },
+        {
+          "questionId": "S06Q05",
+          "prompt": "لماذا ربطت السويتشات بأكثر من مسار؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S06Q06",
+          "prompt": "بعض منافذ السويتشات برتقالية في ملفك. ماذا يعني ذلك؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "الكابل مقطوع"
+            },
+            {
+              "id": "o2",
+              "text": "المنفذ في VLAN خاطئة"
+            },
+            {
+              "id": "o3",
+              "text": "بروتوكول STP يحجب المنفذ أو ما زال يفحصه لمنع الحلقات"
+            },
+            {
+              "id": "o4",
+              "text": "سرعة المنفذين غير متطابقة"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          }
+        },
+        {
+          "questionId": "S06Q07",
+          "prompt": "ماذا يحدث للشبكة لو لم يعمل STP مع الوصلات المكررة؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S06Q08",
+          "prompt": "اختر كابلًا بين سويتشين. لو انقطع، أي مسار بديل تسلكه البيانات؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        }
+      ]
+    },
+    {
+      "sectionId": "S07",
+      "title": "السويتشات: VLAN و Trunk",
+      "order": 7,
+      "weight": 8,
+      "bookRef": "السويتشات والمنافذ، الجسور",
+      "questions": [
+        {
+          "questionId": "S07Q01",
+          "prompt": "اكتب أوامر إنشاء VLAN واحدة وتسميتها وإسناد منفذ لها.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S07Q02",
+          "prompt": "ما الفرق بين منفذ Access ومنفذ Trunk؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "منفذ Access أسرع من منفذ Trunk"
+            },
+            {
+              "id": "o2",
+              "text": "منفذ Trunk للحواسيب ومنفذ Access للسويتشات"
+            },
+            {
+              "id": "o3",
+              "text": "منفذ Access ينقل VLAN واحدة لجهاز طرفي، ومنفذ Trunk ينقل عدة VLAN بين السويتشات والراوتر"
+            },
+            {
+              "id": "o4",
+              "text": "لا فرق، الاسمان للمنفذ نفسه"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          }
+        },
+        {
+          "questionId": "S07Q03",
+          "prompt": "اختر سويتشًا واملأ جدول منافذه: المنفذ، النوع، رقم VLAN.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "port",
+              "title": "المنفذ"
+            },
+            {
+              "id": "mode",
+              "title": "النوع (Access أو Trunk)"
+            },
+            {
+              "id": "vlan",
+              "title": "VLAN"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 26
+        },
+        {
+          "questionId": "S07Q04",
+          "prompt": "ألصق مخرجات show vlan brief من السويتش نفسه.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000
+        },
+        {
+          "questionId": "S07Q05",
+          "prompt": "هل تطابق المخرجات جدولك في السؤال السابق؟ إن اختلفت فاشرح السبب.",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S07Q06",
+          "prompt": "املأ جدول وصلات Trunk في فرع واحد: من، إلى، المنفذان.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "from",
+              "title": "من"
+            },
+            {
+              "id": "to",
+              "title": "إلى"
+            },
+            {
+              "id": "fromPort",
+              "title": "منفذ الأول"
+            },
+            {
+              "id": "toPort",
+              "title": "منفذ الثاني"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 20
+        },
+        {
+          "questionId": "S07Q07",
+          "prompt": "ألصق مخرجات show interfaces trunk.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000
+        },
+        {
+          "questionId": "S07Q08",
+          "prompt": "حاسوبان في VLAN نفسها على سويتشين مختلفين لا يتواصلان. اذكر ثلاثة أسباب محتملة.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        }
+      ]
+    },
+    {
+      "sectionId": "S08",
+      "title": "الراوتر والتوجيه بين VLAN",
+      "order": 8,
+      "weight": 8,
+      "bookRef": "الراوتر وتعريفات dot1Q",
+      "questions": [
+        {
+          "questionId": "S08Q01",
+          "prompt": "لماذا لا تتواصل شبكتا VLAN مختلفتان بدون راوتر؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S08Q02",
+          "prompt": "اشرح كل سطر: interface g0/0.10 ثم encapsulation dot1Q 10 ثم ip address.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S08Q03",
+          "prompt": "كم واجهة فرعية على راوتر كل فرع، ولماذا هذا العدد؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S08Q04",
+          "prompt": "لماذا نكتب no ip address و no shutdown على الواجهة الفيزيائية؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S08Q05",
+          "prompt": "في الأمر encapsulation dot1Q 10، ماذا يمثل الرقم 10؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "رقم الواجهة الفيزيائية"
+            },
+            {
+              "id": "o2",
+              "text": "عدد الأجهزة في القسم"
+            },
+            {
+              "id": "o3",
+              "text": "سرعة الواجهة"
+            },
+            {
+              "id": "o4",
+              "text": "رقم VLAN التي تخدمها الواجهة الفرعية"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o4"
+          }
+        },
+        {
+          "questionId": "S08Q06",
+          "prompt": "ألصق مخرجات show ip interface brief من راوتر فرع واحد.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000
+        },
+        {
+          "questionId": "S08Q07",
+          "prompt": "أرفق صورة ping ناجح بين حاسوبين من قسمين مختلفين في الفرع نفسه.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 1
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S09",
+      "title": "ربط الفروع: WAN و OSPF",
+      "order": 9,
+      "weight": 8,
+      "bookRef": "Metro Ethernet",
+      "questions": [
+        {
+          "questionId": "S09Q01",
+          "prompt": "كيف ربطت الفروع؟ أرفق صورة جزء WAN من ملفك.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        },
+        {
+          "questionId": "S09Q02",
+          "prompt": "ما Metro Ethernet، ولماذا يناسب مؤسستك؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S09Q03",
+          "prompt": "املأ جدول عناوين وصلات WAN بين الراوترات.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "from",
+              "title": "من راوتر"
+            },
+            {
+              "id": "fromIp",
+              "title": "عنوانه"
+            },
+            {
+              "id": "to",
+              "title": "إلى راوتر"
+            },
+            {
+              "id": "toIp",
+              "title": "عنوانه"
+            },
+            {
+              "id": "mask",
+              "title": "القناع"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S09Q04",
+          "prompt": "اشرح: router ospf 1 ثم router-id ثم network 192.168.10.0 0.0.0.255 area 0.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S09Q05",
+          "prompt": "ما Wildcard Mask المقابل للقناع 255.255.255.0؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "255.255.255.0"
+            },
+            {
+              "id": "o2",
+              "text": "0.0.255.255"
+            },
+            {
+              "id": "o3",
+              "text": "0.0.0.255"
+            },
+            {
+              "id": "o4",
+              "text": "255.0.0.0"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          }
+        },
+        {
+          "questionId": "S09Q06",
+          "prompt": "ماذا يحدث لقسم نسيت شبكته من أوامر network؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S09Q07",
+          "prompt": "أرفق صورة show ip route تُظهر مسارات OSPF، وصورة ping بين فرعين.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 2,
+            "max": 3
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S10",
+      "title": "الخوادم والخدمات",
+      "order": 10,
+      "weight": 8,
+      "bookRef": "الخوادم",
+      "questions": [
+        {
+          "questionId": "S10Q01",
+          "prompt": "املأ جدول الخوادم: الاسم، العنوان، الخدمة، من يستخدمها.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "name",
+              "title": "اسم الخادم"
+            },
+            {
+              "id": "ip",
+              "title": "العنوان"
+            },
+            {
+              "id": "service",
+              "title": "الخدمة"
+            },
+            {
+              "id": "users",
+              "title": "من يستخدمها"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 10
+        },
+        {
+          "questionId": "S10Q02",
+          "prompt": "طابق كل خدمة بوظيفتها ومنفذها.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "DNS"
+            },
+            {
+              "id": "l2",
+              "text": "DHCP"
+            },
+            {
+              "id": "l3",
+              "text": "HTTP"
+            },
+            {
+              "id": "l4",
+              "text": "FTP"
+            },
+            {
+              "id": "l5",
+              "text": "SMTP"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "ينقل الملفات — المنفذان 20 و21"
+            },
+            {
+              "id": "r2",
+              "text": "يحوّل الأسماء إلى عناوين — المنفذ 53"
+            },
+            {
+              "id": "r3",
+              "text": "يرسل البريد الإلكتروني — المنفذ 25"
+            },
+            {
+              "id": "r4",
+              "text": "يوزّع عناوين IP تلقائيًا — المنفذان 67 و68"
+            },
+            {
+              "id": "r5",
+              "text": "يعرض صفحات الويب — المنفذ 80"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r2",
+              "l2": "r4",
+              "l3": "r5",
+              "l4": "r1",
+              "l5": "r3"
+            }
+          }
+        },
+        {
+          "questionId": "S10Q03",
+          "prompt": "كيف يحصل حاسوب في VLAN أخرى على عنوان من خادم DHCP؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S10Q04",
+          "prompt": "أرفق صورة نطاق DHCP لقسم واحد.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 1
+          }
+        },
+        {
+          "questionId": "S10Q05",
+          "prompt": "ما اسم الموقع الذي سجلته في DNS، وإلى أي عنوان يشير؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S10Q06",
+          "prompt": "أرفق صورة متصفح حاسوب يفتح موقع المؤسسة بالاسم.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 1
+          }
+        },
+        {
+          "questionId": "S10Q07",
+          "prompt": "أرفق صورة إرسال بريد أو رفع ملف FTP بين حاسوبين.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S11",
+      "title": "أمن الشبكة",
+      "order": 11,
+      "weight": 8,
+      "bookRef": "Banners، Passwords، Port Security",
+      "questions": [
+        {
+          "questionId": "S11Q01",
+          "prompt": "ما نص رسالة Banner في أجهزتك، ولماذا نضعها؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S11Q02",
+          "prompt": "أي مداخل الجهاز حميتها بكلمة مرور؟ لا تكتب كلمات المرور نفسها.",
+          "kind": "multiChoice",
+          "grading": "teacher",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "منفذ Console"
+            },
+            {
+              "id": "o2",
+              "text": "خطوط VTY (الدخول عن بعد)"
+            },
+            {
+              "id": "o3",
+              "text": "وضع enable"
+            }
+          ]
+        },
+        {
+          "questionId": "S11Q03",
+          "prompt": "ما الفرق بين enable password و enable secret؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "enable password أقوى من enable secret"
+            },
+            {
+              "id": "o2",
+              "text": "enable secret تُخزَّن مشفّرة ولها الأولوية إذا وُجدت الاثنتان"
+            },
+            {
+              "id": "o3",
+              "text": "لا فرق بينهما"
+            },
+            {
+              "id": "o4",
+              "text": "enable secret تحمي منفذ Console فقط"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          }
+        },
+        {
+          "questionId": "S11Q04",
+          "prompt": "ماذا يفعل الأمر service password-encryption؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S11Q05",
+          "prompt": "على أي منافذ فعّلت Port Security، وما الإعدادات؟",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "device",
+              "title": "الجهاز"
+            },
+            {
+              "id": "port",
+              "title": "المنفذ"
+            },
+            {
+              "id": "settings",
+              "title": "الإعدادات"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 20
+        },
+        {
+          "questionId": "S11Q06",
+          "prompt": "طابق كل وضع مخالفة في Port Security بسلوكه.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "protect"
+            },
+            {
+              "id": "l2",
+              "text": "restrict"
+            },
+            {
+              "id": "l3",
+              "text": "shutdown"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "يتجاهل الرزم ويسجّل المخالفة ويزيد العدّاد"
+            },
+            {
+              "id": "r2",
+              "text": "يعطّل المنفذ حتى يعيد المسؤول تشغيله"
+            },
+            {
+              "id": "r3",
+              "text": "يتجاهل رزم الجهاز الغريب بصمت ولا يسجّل شيئًا"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r3",
+              "l2": "r1",
+              "l3": "r2"
+            }
+          }
+        },
+        {
+          "questionId": "S11Q07",
+          "prompt": "ألصق مخرجات show port-security لمنفذ واحد، وأرفق صورة ما يحدث عند وصل حاسوب غريب.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S12",
+      "title": "الفحص وتشخيص الأعطال",
+      "order": 12,
+      "weight": 7,
+      "bookRef": "اختبار الشبكة",
+      "questions": [
+        {
+          "questionId": "S12Q01",
+          "prompt": "املأ جدول اختبارات من 5 صفوف على الأقل: من، إلى، نوع الاختبار، النتيجة.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "from",
+              "title": "من"
+            },
+            {
+              "id": "to",
+              "title": "إلى"
+            },
+            {
+              "id": "test",
+              "title": "نوع الاختبار"
+            },
+            {
+              "id": "result",
+              "title": "النتيجة"
+            }
+          ],
+          "minRows": 5,
+          "maxRows": 15
+        },
+        {
+          "questionId": "S12Q02",
+          "prompt": "أرفق صورة من Simulation Mode تتابع رزمة من حاسوب إلى خادم.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        },
+        {
+          "questionId": "S12Q03",
+          "prompt": "رتّب خطوات تشخيص حاسوب لا يصل إلى الخادم، من الأولى إلى الأخيرة.",
+          "kind": "ordering",
+          "grading": "auto",
+          "required": true,
+          "items": [
+            {
+              "id": "i1",
+              "text": "نفّذ ping إلى البوابة"
+            },
+            {
+              "id": "i2",
+              "text": "افحص الكابل ولون المنفذ"
+            },
+            {
+              "id": "i3",
+              "text": "نفّذ ping إلى الخادم وافحص التوجيه بين الشبكات"
+            },
+            {
+              "id": "i4",
+              "text": "افحص عنوان الحاسوب وقناعه وبوابته"
+            },
+            {
+              "id": "i5",
+              "text": "نفّذ ping إلى حاسوب في القسم نفسه"
+            }
+          ],
+          "answer": {
+            "order": [
+              "i2",
+              "i4",
+              "i5",
+              "i1",
+              "i3"
+            ]
+          }
+        },
+        {
+          "questionId": "S12Q04",
+          "prompt": "حاسوب يصل إلى بوابته ولا يصل إلى فرع آخر. أين تبحث؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S12Q05",
+          "prompt": "طابق كل أمر بما يعرضه.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "show vlan brief"
+            },
+            {
+              "id": "l2",
+              "text": "show ip route"
+            },
+            {
+              "id": "l3",
+              "text": "show running-config"
+            },
+            {
+              "id": "l4",
+              "text": "show interfaces trunk"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "كل الإعدادات العاملة حاليًا على الجهاز"
+            },
+            {
+              "id": "r2",
+              "text": "منافذ Trunk وشبكات VLAN المسموحة عليها"
+            },
+            {
+              "id": "r3",
+              "text": "شبكات VLAN والمنافذ المسندة لكل منها"
+            },
+            {
+              "id": "r4",
+              "text": "جدول التوجيه والمسارات المتعلَّمة"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r3",
+              "l2": "r4",
+              "l3": "r1",
+              "l4": "r2"
+            }
+          }
+        },
+        {
+          "questionId": "S12Q06",
+          "prompt": "اذكر عطلًا حقيقيًا واجهته في مشروعك: كيف اكتشفته وكيف أصلحته؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        }
+      ]
+    },
+    {
+      "sectionId": "S13",
+      "title": "تدقيق الكتاب مقابل الملف",
+      "order": 13,
+      "weight": 6,
+      "bookRef": "الكتاب كله",
+      "questions": [
+        {
+          "questionId": "S13Q01",
+          "prompt": "أشّر ما تحققت منه بنفسك بين كتابك وملف Packet Tracer.",
+          "kind": "checklist",
+          "grading": "none",
+          "required": true,
+          "items": [
+            {
+              "id": "c1",
+              "text": "العناوين في جداول الكتاب تطابق الملف"
+            },
+            {
+              "id": "c2",
+              "text": "أرقام VLAN في الكتاب تطابق الملف"
+            },
+            {
+              "id": "c3",
+              "text": "أسماء الأجهزة في الكتاب تطابق الملف"
+            },
+            {
+              "id": "c4",
+              "text": "لا يوجد عنوان مكرر"
+            },
+            {
+              "id": "c5",
+              "text": "الفهرست يطابق أرقام الصفحات"
+            }
+          ]
+        },
+        {
+          "questionId": "S13Q02",
+          "prompt": "اذكر اختلافين وجدتهما بين كتابك وملفك، وكيف صححت كلًا منهما.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "difference",
+              "title": "الاختلاف"
+            },
+            {
+              "id": "fix",
+              "title": "التصحيح"
+            }
+          ],
+          "minRows": 2,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S13Q03",
+          "prompt": "أي أقسام كتابك ما زالت فارغة، ومتى تكملها؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S13Q04",
+          "prompt": "أرفق صورة الفهرست بعد التحديث.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S14",
+      "title": "المردود والتأمل",
+      "order": 14,
+      "weight": 5,
+      "bookRef": "المردود",
+      "questions": [
+        {
+          "questionId": "S14Q01",
+          "prompt": "ما أهم ثلاثة أشياء تعلمتها من المشروع؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S14Q02",
+          "prompt": "ما أصعب جزء، وكيف تجاوزته؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S14Q03",
+          "prompt": "ماذا تضيف أو تغيّر لو بدأت من جديد؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S14Q04",
+          "prompt": "قيّم إتقانك لكل موضوع من 1 (ضعيف) إلى 5 (متمكن).",
+          "kind": "scale",
+          "grading": "none",
+          "required": true,
+          "min": 1,
+          "max": 5,
+          "items": [
+            {
+              "id": "s1",
+              "text": "VLAN"
+            },
+            {
+              "id": "s2",
+              "text": "Trunk"
+            },
+            {
+              "id": "s3",
+              "text": "التوجيه بين VLAN"
+            },
+            {
+              "id": "s4",
+              "text": "OSPF"
+            },
+            {
+              "id": "s5",
+              "text": "الخوادم"
+            },
+            {
+              "id": "s6",
+              "text": "أمن الشبكة"
+            }
+          ]
+        },
+        {
+          "questionId": "S14Q05",
+          "prompt": "كيف يخدم مشروعك مؤسسة حقيقية؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "sectionId": "S15",
+      "title": "المصادر والأمانة الأكاديمية",
+      "order": 15,
+      "weight": 4,
+      "bookRef": "المصادر",
+      "questions": [
+        {
+          "questionId": "S15Q01",
+          "prompt": "املأ قائمة المصادر: العنوان، الرابط، فيمَ استعملته.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "title",
+              "title": "العنوان"
+            },
+            {
+              "id": "link",
+              "title": "الرابط"
+            },
+            {
+              "id": "usedFor",
+              "title": "فيمَ استعملته"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 15
+        },
+        {
+          "questionId": "S15Q02",
+          "prompt": "هل استعملت الذكاء الاصطناعي؟ في أي أجزاء، وما الذي غيّرته بنفسك؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q03",
+          "prompt": "اختر فقرة من مقدمة كتابك وأعد كتابتها بكلماتك.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q04",
+          "prompt": "أقرّ بأن هذا العمل عملي وأن كل المصادر التي استعملتها مذكورة.",
+          "kind": "declaration",
+          "grading": "none",
+          "required": true
+        }
+      ]
+    },
+    {
+      "sectionId": "S16",
+      "title": "المرفقات والتسليم",
+      "order": 16,
+      "weight": 5,
+      "bookRef": "صور الشبكة الفيزيائية، الملحقات",
+      "questions": [
+        {
+          "questionId": "S16Q01",
+          "prompt": "أرفق صورًا من الشبكة الفيزيائية أو المختبر إن وُجدت.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": false,
+          "images": {
+            "min": 0,
+            "max": 5
+          }
+        },
+        {
+          "questionId": "S16Q02",
+          "prompt": "أرفق ملف Packet Tracer النهائي.",
+          "kind": "file",
+          "grading": "teacher",
+          "required": true,
+          "accept": [
+            ".pkt"
+          ]
+        },
+        {
+          "questionId": "S16Q03",
+          "prompt": "أرفق كتاب المشروع النهائي.",
+          "kind": "file",
+          "grading": "teacher",
+          "required": true,
+          "accept": [
+            ".docx",
+            ".pdf"
+          ]
+        },
+        {
+          "questionId": "S16Q04",
+          "prompt": "راجعت كل الأقسام وأنا جاهز للتسليم.",
+          "kind": "declaration",
+          "grading": "none",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
