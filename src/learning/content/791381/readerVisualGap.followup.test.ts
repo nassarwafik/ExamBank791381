@@ -48,10 +48,10 @@ describe("Reader follow-up — registry & activity allowlists", () => {
     expect(new Set(REGISTERED_VISUAL_IDS).size).toBe(REGISTERED_VISUAL_IDS.length);   // no duplicate id
   });
   it("the activity registry gains ONLY the ipv6-compress simulator (v1); still fifteen entries", () => {
-    expect(productionActivityRegistry.size).toBe(19);   // + network-lab/v1 (791381s Phase 8B-2), csharp-trace/v1 (899371 P6), csharp-scene/v1 (899371 P11) and automaton-trace/v1 (AUTO-A1), the only later additions
+    expect(productionActivityRegistry.size).toBe(22);   // + network-lab/v1 (791381s Phase 8B-2), csharp-trace/v1 (899371 P6), csharp-scene/v1 (899371 P11), automaton-trace/v1 (AUTO-A1) and ds-trace/v1, ds-lab/v1, ds-figure/v1 (DS-A1), the only later additions
     expect(productionActivityRegistry.has("simulation", "ipv6-compress")).toBe(true);
     expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key))
-      .toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab", "csharp-trace", "automaton-trace"]);
+      .toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress", "network-lab", "csharp-trace", "automaton-trace", "ds-trace", "ds-lab"]);
   });
 });
 

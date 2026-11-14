@@ -40,7 +40,7 @@ describe("L3-B teacher library — search", () => {
     fireEvent.click(screen.getByRole("button", { name: "ابحث في عناوين الدروس والصفحات" }));
     const box = await screen.findByRole("searchbox", undefined, SLOW) as HTMLInputElement;
     expect(document.activeElement).toBe(box);
-    await waitFor(() => expect([...manifestLoads].sort()).toEqual(["791381", "791381s", "899271", "899371"]), SLOW);   // the library searches every course
+    await waitFor(() => expect([...manifestLoads].sort()).toEqual(["791381", "791381s", "899271", "899271d", "899371"]), SLOW);   // the library searches every course
     fireEvent.change(box, { target: { value: "VLAN" } });
     await settle();
     const section = screen.getByRole("region", { name: "البحث في المكتبة" });

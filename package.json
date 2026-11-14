@@ -20,7 +20,9 @@
     "build:learning-study-index": "node scripts/build-learning-study-index.mjs",
     "build:learning-content": "node scripts/build-learning-content.mjs",
     "build:learning-page-index": "node scripts/build-learning-page-index.mjs",
-    "build:automata-course": "node scripts/build-automata-course.mjs && npm run build:learning-content && npm run build:learning-study-index && npm run build:learning-page-index"
+    "build:automata-course": "node scripts/build-automata-course.mjs && npm run build:learning-content && npm run build:learning-study-index && npm run build:learning-page-index",
+    "build:ds-course": "node scripts/build-ds-course.mjs && npm run build:learning-content && npm run build:learning-study-index && npm run build:learning-page-index",
+    "prove:ds-course": "node scripts/ds-course/prove-dotnet.mjs"
   },
   "dependencies": {
     "chart.js": "^4.6.1",

@@ -363,4 +363,32 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./AutomatonTraceActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  {
+    // DS-A1 (docs/enterprise-data-structures-course.md) — «تتبّع البرنامج على مبنى المعطيات»: a program of the data-structures
+    // course step by step, the stack / queue / chain of cells / binary tree drawn at every step. The steps are data recorded by the
+    // authoring tool and checked against the real C# compiler; nothing is interpreted here. Its own lazy chunk; no timers.
+    kind: "simulation",
+    key: "ds-trace",
+    versions: [1],
+    load: () => import("./DsTraceActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // DS-A1 — «مختبر مبنى المعطيات»: the learner pushes / pops, inserts / removes, links and unlinks cells, inserts into and
+    // deletes from a binary search tree, and sees the structure and the C# statement of every operation. Data only; its own chunk.
+    kind: "simulation",
+    key: "ds-lab",
+    versions: [1],
+    load: () => import("./DsLabActivity"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // DS-A1 — a drawing of the course's structures written as data (stack, queue, chain, binary tree), drawn by the same code as
+    // the trace and the lab. Static; its own lazy chunk.
+    kind: "interactive-diagram",
+    key: "ds-figure",
+    versions: [1],
+    load: () => import("./DsFigureActivity"),
+    capabilities: { fullscreen: true },
+  },
 ]);

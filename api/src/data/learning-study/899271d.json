@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "courseId": "899271d",
+  "pages": {
+    "899271d-m04-l01-p01": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l01-p01-b07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l01-p02": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l01-p02-b08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l01-p02-b09": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "899271d-m04-l02-p02": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l02-p02-b12": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3",
+            "s4",
+            "s5"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l02-p03": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l02-p03-b07": {
+          "kind": "shortInput",
+          "answer": "30"
+        },
+        "m04-l02-p03-b08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l03-p01": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l03-p01-b09": {
+          "kind": "matching",
+          "pairs": {
+            "l1": "r1",
+            "l2": "r2",
+            "l3": "r3",
+            "l4": "r4"
+          }
+        }
+      }
+    },
+    "899271d-m04-l04-p01": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l04-p01-b11": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g2",
+            "c3": "g1",
+            "c4": "g2",
+            "c5": "g2",
+            "c6": "g1"
+          }
+        },
+        "m04-l04-p01-b12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l04-p02": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l04-p02-b09": {
+          "kind": "shortInput",
+          "answer": "2"
+        }
+      }
+    },
+    "899271d-m04-l04-p03": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l04-p03-b13": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "899271d-m04-l05-p01": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l05-p01-b04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m04-l05-p01-b08": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p01-b13": {
+          "kind": "shortInput",
+          "answer": "28"
+        },
+        "m04-l05-p01-b14": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l05-p02": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l05-p02-b04": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        },
+        "m04-l05-p02-b09": {
+          "kind": "shortInput",
+          "answer": "3"
+        },
+        "m04-l05-p02-b10": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m04-l05-p02-b14": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p02-b15": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o4"
+          ]
+        },
+        "m04-l05-p02-b19": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p02-b20": {
+          "kind": "shortInput",
+          "answer": "7"
+        }
+      }
+    },
+    "899271d-m04-l05-p04": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l05-p04-b05": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o4"
+          ]
+        },
+        "m04-l05-p04-b12": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p04-b17": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o1"
+          ]
+        }
+      }
+    },
+    "899271d-m04-l05-p05": {
+      "moduleId": "899271d-m04",
+      "activities": {
+        "m04-l05-p05-b01": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        },
+        "m04-l05-p05-b02": {
+          "kind": "wordBank",
+          "answers": {
+            "w1": "Push",
+            "w2": "Pop",
+            "w3": "Top",
+            "w4": "IsEmpty"
+          }
+        },
+        "m04-l05-p05-b04": {
+          "kind": "shortInput",
+          "answer": "[12,6,3]"
+        },
+        "m04-l05-p05-b05": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m04-l05-p05-b06": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o4"
+          ]
+        },
+        "m04-l05-p05-b07": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o3"
+          ]
+        },
+        "m04-l05-p05-b08": {
+          "kind": "shortInput",
+          "answer": "true"
+        },
+        "m04-l05-p05-b09": {
+          "kind": "ordering",
+          "order": [
+            "s1",
+            "s2",
+            "s3",
+            "s4"
+          ]
+        },
+        "m04-l05-p05-b10": {
+          "kind": "classify",
+          "assign": {
+            "c1": "g1",
+            "c2": "g1",
+            "c3": "g2",
+            "c4": "g2",
+            "c5": "g2"
+          }
+        },
+        "m04-l05-p05-b11": {
+          "kind": "multipleChoice",
+          "correct": [
+            "o2"
+          ]
+        }
+      }
+    }
+  }
+}

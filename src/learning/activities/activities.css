@@ -820,3 +820,48 @@
 .learning-automaton[data-reduced-motion="true"] .learning-automaton-circle, .learning-automaton[data-reduced-motion="true"] .learning-automaton-edge{ transition:none; }
 @media (prefers-reduced-motion: reduce){ .learning-automaton .learning-automaton-circle, .learning-automaton .learning-automaton-edge{ transition:none; } }
 @media print{ .learning-automaton-form, .learning-automaton-controls, .learning-automaton-examples{ display:none; } }
+
+/* DS-A1 (docs/enterprise-data-structures-course.md) — the data-structure activities (simulation / ds-trace / v1, simulation /
+   ds-lab / v1, interactive-diagram / ds-figure / v1). They reuse the tracer's learning-trace-* rules for the program, the controls,
+   the variables and the output; learning-ds-* is the drawings (DsDraw.tsx) and the lab's form. Tokens only; every control is a
+   44 px target; a drawing scrolls inside its own box, never the page; the only motion is a short colour transition. */
+.learning-ds{ min-width:0; }
+.learning-ds-canvas{ max-width:100%; overflow-x:auto; direction:ltr; }
+.learning-ds-svg{ display:block; max-width:100%; height:auto; }
+.learning-ds-box{ fill:none; stroke:var(--eb-border-strong); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke 160ms ease; }
+.learning-ds-box.is-changed{ stroke:var(--eb-primary); }
+.learning-ds-cell{ fill:var(--eb-surface-2); stroke:var(--eb-border-strong); stroke-width:1.5; transition:fill 160ms ease, stroke 160ms ease; }
+.learning-ds-cell.is-round{ fill:var(--eb-surface); stroke-width:2; }
+.learning-ds-cell.is-head{ fill:var(--eb-primary-100); stroke:var(--eb-primary); stroke-width:2.5; }
+.learning-ds-split{ stroke:var(--eb-border-strong); stroke-width:1.5; }
+.learning-ds-value{ fill:var(--eb-text); font-size:14px; font-weight:600; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-ds-name{ fill:var(--eb-primary-strong); font-size:13px; font-weight:700; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-ds-name.is-dim{ fill:var(--eb-muted); font-weight:400; }
+.learning-ds-tag, .learning-ds-muted{ fill:var(--eb-muted); font-size:12px; }
+.learning-ds-null{ fill:var(--eb-muted); font-size:14px; font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-ds-order{ fill:var(--eb-success-tx); font-size:12px; font-weight:700; }
+.learning-ds-dot{ fill:var(--eb-text); }
+.learning-ds-link{ fill:none; stroke:var(--eb-text); stroke-width:1.6; }
+.learning-ds-pointer{ fill:none; stroke:var(--eb-primary); stroke-width:1.8; }
+.learning-ds-head{ fill:currentColor; stroke:none; }
+.learning-ds-link.learning-ds-head{ fill:var(--eb-text); }
+.learning-ds-pointer.learning-ds-head{ fill:var(--eb-primary); }
+.learning-ds-pick{ cursor:pointer; }
+.learning-ds-code{ padding:0 4px; border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; unicode-bidi:isolate; }
+.learning-ds-given{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px dashed var(--eb-border-strong); border-radius:var(--eb-r-sm); line-height:var(--eb-lh-body); }
+.learning-ds-error{ border-inline-start-color:var(--eb-danger-tx); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-ds-structures{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.learning-ds-row{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-3); min-width:0; }
+.learning-ds-stage{ display:flex; justify-content:center; min-width:0; padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.learning-ds-info{ margin:0; font-size:var(--eb-fs-14); color:var(--eb-text); line-height:var(--eb-lh-body); }
+.learning-ds-form{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.learning-ds-field{ display:flex; flex-direction:column; gap:var(--eb-space-1); max-width:16rem; font-weight:var(--eb-fw-semibold); }
+.learning-ds-field input, .learning-ds-field select{ min-height:44px; padding:0 var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:inherit; font:inherit; }
+.learning-ds-field input{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.learning-ds-field input:focus-visible, .learning-ds-field select:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-ds-log{ max-height:14rem; overflow-y:auto; }
+.learning-ds-figure{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:center; gap:var(--eb-space-4); }
+.learning-ds-panel{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); min-width:0; max-width:100%; margin:0; }
+.learning-ds-caption{ font-size:var(--eb-fs-14); color:var(--eb-muted); text-align:center; }
+.learning-ds-facts{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-1) var(--eb-space-3); margin:0; padding:0; list-style:none; font-size:var(--eb-fs-14); color:var(--eb-text); }
+@media (prefers-reduced-motion: reduce){ .learning-ds-box, .learning-ds-cell{ transition:none; } }
