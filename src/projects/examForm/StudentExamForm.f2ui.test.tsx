@@ -6,9 +6,10 @@
 // page that missed another device's save keeps both; a closed form is a read-only record.
 import { createRequire } from "node:module";
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, renderHook, act, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import StudentProjectPanel from "../StudentProjectPanel";
 import StudentExamForm from "./StudentExamForm";
+import { useExamFormDraft, type SubmitOutcome } from "./useExamFormDraft";
 
 const nodeRequire = createRequire(import.meta.url);
 const { handler: studentTracker } = nodeRequire("../../../api/src/functions/student-project-tracker.js");
@@ -308,6 +309,21 @@ describe("F2-UI submitting", () => {
     fireEvent.click(screen.getByRole("button", { name: "تسليم الاستمارة" }));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تسليم" }));
     await waitFor(() => expect(s.doc()?.status).toBe("submitted"));
+    expect(s.doc()?.answers.S01Q01).toEqual({ text: "آخر تعديل" });
+  });
+
+  it("the draft's own submit saves a pending edit first, whoever calls it", async () => {
+    const s = server();
+    await s.teacher("examForm.open");
+    await s.save(Object.fromEntries(ANSWERABLE.map(q => [q.questionId, fullAnswer(q)])), 0);
+    const { result } = renderHook(() => useExamFormDraft("st", CODE, 60000));    // the pause never elapses
+    await waitFor(() => expect(result.current.view).not.toBeNull());
+    act(() => result.current.setAnswer("S01Q01", { text: "آخر تعديل" }));
+    expect(s.doc()?.revision).toBe(1);                                          // not saved yet
+    let outcome: SubmitOutcome | null = null;
+    await act(async () => { outcome = await result.current.submit(); });
+    expect(outcome).toEqual({ ok: true });
+    expect(s.doc()?.status).toBe("submitted");
     expect(s.doc()?.answers.S01Q01).toEqual({ text: "آخر تعديل" });
   });
 

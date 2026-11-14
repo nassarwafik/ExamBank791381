@@ -236,71 +236,10 @@
   .eb-sp-task, .student-avatar-circle, .eb-sp-avatar-option, .eb-sp-rankring-fill{ transition:none; }
 }
 
-/* ---------- موادي التعليمية (Class Learning Materials) ---------- */
-.eb-sp-learning-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
-.eb-sp-learning-card{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); }
-.eb-sp-learning-head{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
-.eb-sp-learning-cover{ flex:0 0 auto; display:inline-grid; place-items:center; inline-size:48px; block-size:48px; border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
-.eb-sp-learning-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-.eb-sp-learning-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
-.eb-sp-learning-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
-.eb-sp-learning-count{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
-.eb-sp-learning-modules{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
-/* Phase L.2 — each released unit is a link-like control that opens the Reader at that unit (44px touch target). */
-.eb-sp-learning-module{
-  display:inline-flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-2); min-block-size:44px; padding:0 var(--eb-space-1);
-  background:none; border:0; border-radius:var(--eb-r-sm); color:var(--eb-primary-strong); font:inherit; text-align:start; cursor:pointer;
-  text-decoration:underline; text-decoration-color:var(--eb-primary-100); text-underline-offset:4px;
-}
-.eb-sp-learning-module:hover{ text-decoration-color:currentColor; }
-.eb-sp-learning-module:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
-.eb-sp-learning-module:disabled{ cursor:default; opacity:.7; }
-.eb-sp-learning-module-state{ color:var(--eb-muted); font-size:var(--eb-fs-12); text-decoration:none; }
-.eb-sp-learning-open{ width:100%; min-height:44px; }
-.eb-sp-learning-error{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
-@media (min-width:768px){
-  .eb-sp-learning-list{ grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
-  .eb-sp-learning-open{ width:auto; align-self:flex-start; min-width:160px; }
-}
-
-/* ---------- Project Performance (student): cards + detail ---------- */
-.eb-sp-project-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
-.eb-sp-project-card{ display:flex; gap:var(--eb-space-3); align-items:flex-start; padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
-.eb-sp-project-card-art{ flex:0 0 auto; object-fit:contain; }
-.eb-sp-project-card-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; flex:1 1 auto; }
-.eb-sp-project-card-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
-.eb-sp-project-card-facts{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); }
-.eb-sp-project-card-facts div{ display:flex; gap:var(--eb-space-1); align-items:baseline; font-size:var(--eb-fs-13); }
-.eb-sp-project-card-facts dt{ color:var(--eb-muted); }
-.eb-sp-project-card-facts dt::after{ content:":"; }
-.eb-sp-project-card-facts dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
-.eb-sp-project-card .eb-button{ align-self:flex-start; }
-.eb-sp-project-back{ align-self:flex-start; }
-.eb-sp-stage-score{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
-.eb-sp-stage-score strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
-@media (min-width: 768px){
-  .eb-sp-project-cards{ grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
-}
-
-/* ---------- Achievement Hub: recognition tiles + feed event art ---------- */
-.eb-sp-recognition{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--eb-space-2); min-width:0; }
-.eb-sp-recognition-tile{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:var(--eb-space-3) var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); min-width:0; text-align:center; }
-.eb-sp-recognition-icon.is-medal{ color:var(--eb-warn); }
-.eb-sp-recognition-icon.is-reaction{ color:var(--eb-danger); }
-.eb-sp-recognition-icon.is-achievement{ color:var(--eb-primary-strong); }
-.eb-sp-recognition-count{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; line-height:var(--eb-lh-tight); }
-.eb-sp-recognition-label{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.eb-sp-recognition-detail{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
-.eb-sp-feed-rank-art{ flex:0 0 auto; object-fit:contain; }
-@media (min-width: 768px){
-  .eb-sp-recognition{ gap:var(--eb-space-3); }
-}
-
-/* Phase 21E.3 (S-7) — coarse pointers at any width keep the 44 px reaction targets (the 768 px rule above is for fine pointers). */
-@media (pointer: coarse){ .eb-sp-reaction{ min-height:44px; } .eb-sp-code-toggle{ min-height:44px; } }   /* UX-S2 — touch keeps 44 px */
-
 /* Phase F2-UI — the project exam form («استمارة امتحان المشروع»): its card on the project page and the form itself (one section at
    a time, native inputs, technical text typed left-to-right). Token-only, mobile first, logical properties. */
+/* (Placed before the learning-materials block on purpose: that block's guard reads the stylesheet from its heading to the end
+   of the file and allows no scrolling container there. The form's section row, command box and wide tables do scroll.) */
 .eb-sp-form-card{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-primary); border-radius:var(--eb-r); }
 .eb-sp-form-card-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; flex:1 1 16rem; }
 .eb-sp-form-card-text p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
@@ -369,3 +308,66 @@
   .eb-sp-form-match-left{ flex:1 1 50%; min-width:0; }
   .eb-sp-form-match-row .eb-sp-form-select{ flex:1 1 50%; }
 }
+
+/* ---------- موادي التعليمية (Class Learning Materials) ---------- */
+.eb-sp-learning-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-learning-card{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); }
+.eb-sp-learning-head{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-learning-cover{ flex:0 0 auto; display:inline-grid; place-items:center; inline-size:48px; block-size:48px; border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
+.eb-sp-learning-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.eb-sp-learning-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-sp-learning-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.eb-sp-learning-count{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.eb-sp-learning-modules{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+/* Phase L.2 — each released unit is a link-like control that opens the Reader at that unit (44px touch target). */
+.eb-sp-learning-module{
+  display:inline-flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-2); min-block-size:44px; padding:0 var(--eb-space-1);
+  background:none; border:0; border-radius:var(--eb-r-sm); color:var(--eb-primary-strong); font:inherit; text-align:start; cursor:pointer;
+  text-decoration:underline; text-decoration-color:var(--eb-primary-100); text-underline-offset:4px;
+}
+.eb-sp-learning-module:hover{ text-decoration-color:currentColor; }
+.eb-sp-learning-module:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-sp-learning-module:disabled{ cursor:default; opacity:.7; }
+.eb-sp-learning-module-state{ color:var(--eb-muted); font-size:var(--eb-fs-12); text-decoration:none; }
+.eb-sp-learning-open{ width:100%; min-height:44px; }
+.eb-sp-learning-error{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
+@media (min-width:768px){
+  .eb-sp-learning-list{ grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+  .eb-sp-learning-open{ width:auto; align-self:flex-start; min-width:160px; }
+}
+
+/* ---------- Project Performance (student): cards + detail ---------- */
+.eb-sp-project-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-project-card{ display:flex; gap:var(--eb-space-3); align-items:flex-start; padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-sp-project-card-art{ flex:0 0 auto; object-fit:contain; }
+.eb-sp-project-card-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; flex:1 1 auto; }
+.eb-sp-project-card-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
+.eb-sp-project-card-facts{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); }
+.eb-sp-project-card-facts div{ display:flex; gap:var(--eb-space-1); align-items:baseline; font-size:var(--eb-fs-13); }
+.eb-sp-project-card-facts dt{ color:var(--eb-muted); }
+.eb-sp-project-card-facts dt::after{ content:":"; }
+.eb-sp-project-card-facts dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-sp-project-card .eb-button{ align-self:flex-start; }
+.eb-sp-project-back{ align-self:flex-start; }
+.eb-sp-stage-score{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.eb-sp-stage-score strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+@media (min-width: 768px){
+  .eb-sp-project-cards{ grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
+}
+
+/* ---------- Achievement Hub: recognition tiles + feed event art ---------- */
+.eb-sp-recognition{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--eb-space-2); min-width:0; }
+.eb-sp-recognition-tile{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:var(--eb-space-3) var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); min-width:0; text-align:center; }
+.eb-sp-recognition-icon.is-medal{ color:var(--eb-warn); }
+.eb-sp-recognition-icon.is-reaction{ color:var(--eb-danger); }
+.eb-sp-recognition-icon.is-achievement{ color:var(--eb-primary-strong); }
+.eb-sp-recognition-count{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; line-height:var(--eb-lh-tight); }
+.eb-sp-recognition-label{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-sp-recognition-detail{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.eb-sp-feed-rank-art{ flex:0 0 auto; object-fit:contain; }
+@media (min-width: 768px){
+  .eb-sp-recognition{ gap:var(--eb-space-3); }
+}
+
+/* Phase 21E.3 (S-7) — coarse pointers at any width keep the 44 px reaction targets (the 768 px rule above is for fine pointers). */
+@media (pointer: coarse){ .eb-sp-reaction{ min-height:44px; } .eb-sp-code-toggle{ min-height:44px; } }   /* UX-S2 — touch keeps 44 px */
