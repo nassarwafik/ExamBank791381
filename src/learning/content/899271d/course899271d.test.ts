@@ -137,13 +137,11 @@ describe("899271d — the bodies", () => {
     expect(homeworkPages).toBe(16);                                    // the same fourteen and the review unit's two
     expect(homework).toBeGreaterThanOrEqual(14 * 3 + 6);
   }, 30000);
-  it("a worked example never puts an Arabic sentence in the Reader's left-to-right «النتيجة» line, and a long code run wraps instead of widening the page", async () => {
-    // The Reader draws `result` left-to-right in a monospace face (a short technical value). A sentence there is laid out backwards,
-    // so the authoring tool turns it into the closing step «النتيجة: …» (scripts/ds-course/dsl.mjs).
+  it("a long code run in a worked example wraps instead of widening the page", async () => {
+    // (A result that is an Arabic sentence is drawn right-to-left by the Reader: LearningPageRenderer.exampleResult.test.tsx.)
     const examples = pagesOf(await loadAll()).flatMap(p => p.blocks).filter(b => b.type === "example");
     expect(examples.length).toBeGreaterThan(100);
-    expect(examples.filter(b => b.type === "example" && /[\u0600-\u06FF]/.test(b.result ?? "")).map(b => b.id)).toEqual([]);
-    expect(examples.filter(b => b.type === "example" && b.steps.some(st => st.text.startsWith("النتيجة: "))).length).toBeGreaterThanOrEqual(40);
+    expect(examples.filter(b => b.type === "example" && /[\u0600-\u06FF]/.test(b.result ?? "")).length).toBeGreaterThanOrEqual(40);   // sentences, in the «النتيجة» line
     // A stack of ten values (`[100,81,80,49,60,25,40,9,20,1]`) or a chained call has no break point: on a phone the step text
     // must wrap anywhere rather than scroll the whole page sideways.
     const css = readFileSync(fileURLToPath(new URL("../../reader/reader.css", import.meta.url)), "utf8");

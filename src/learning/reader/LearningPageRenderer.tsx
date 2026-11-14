@@ -503,7 +503,11 @@ function ExampleView({ block }: { block: Extract<ContentBlock, { type: "example"
         </ol>
       )}
       {solved && block.result !== undefined && (
-        <p className="learning-reader-example-result"><span className="learning-reader-example-tag">النتيجة</span><span dir="ltr" className="learning-reader-mono">{block.result}</span></p>
+        <p className="learning-reader-example-result"><span className="learning-reader-example-tag">النتيجة</span>{
+          // A technical value (`192.168.1.0/24`, `[3,5]`) is left-to-right monospace; a result that holds Arabic letters is a
+          // sentence, drawn as the page's ordinary right-to-left text (left-to-right it would start from the wrong side).
+          /[\u0600-\u06FF]/.test(block.result) ? <span>{block.result}</span> : <span dir="ltr" className="learning-reader-mono">{block.result}</span>
+        }</p>
       )}
       {solved && block.explanation && <p className="learning-reader-example-explain">{block.explanation}</p>}
     </div>
