@@ -33,7 +33,9 @@ next phase (F4-UI). Until then no screen can switch image answers on, so nothing
 | What happens to the blob when the student removes an image? | The reference is removed (CAS), then the blob is deleted, best effort. | An unreferenced image has no reader. A failed delete leaves a blob no route can serve, never a broken reference. |
 | How many, how large? | Per question, the form's own `images.max` (at most 6). Upload at most 6 MB; stored as WebP inside a 1600 px box. | A screenshot's text must stay readable; a phone photo of the physical network must fit. |
 
-Open for the owner (F4-UI): whether the teacher's control switches images on by default for a new class.
+Decided by the owner in F4-UI (`docs/enterprise-project-exam-form-f4-ui.md`): the teacher's control switches images on
+at a class's first open; a class opened before stays off until its teacher switches them on. The server's default above
+is unchanged.
 
 ## Storage
 
@@ -161,10 +163,8 @@ The first run had 31 mutants: 29 killed, 2 survivors.
 
 ## Known limits
 
-- No user can reach any of this until F4-UI: no screen sends `imageAnswers`, attaches an image or shows one.
-- The merged student page (F2-UI) does not know how to answer an image question. A class whose images were switched on
-  through the API before F4-UI ships would show required questions with no input; nothing in the product can do that
-  today, and F4-UI must ship the input together with the switch.
+- The screens arrived in F4-UI (`docs/enterprise-project-exam-form-f4-ui.md`): the student's input and the teacher's
+  switch shipped together.
 - There is no quota beyond the per-question maximum; a student's stored images are bounded by the form (the sum of its
   maxima), and each stored image by the 1600 px box.
 - Images are processed in the request; a 6 MB upload is decoded in memory by the Functions host.

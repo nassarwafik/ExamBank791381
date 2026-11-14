@@ -58,7 +58,8 @@ describe("F2-UI the teacher's exam-form control", () => {
     expect(s.posts).toEqual([]);
     fireEvent.click(within(dialog).getByRole("button", { name: "فتح الاستمارة" }));
     await waitFor(() => expect(s.classForm()?.state).toBe("open"));
-    expect(s.posts).toEqual([{ projectCode: "794589", action: "examForm.open", classId: "c1" }]);
+    // Phase F4-UI (owner decision, 2026-11-14): the first open of a class switches its image answers on.
+    expect(s.posts).toEqual([{ projectCode: "794589", action: "examForm.open", classId: "c1", imageAnswers: true }]);
     expect(s.classForm()?.template.sections).toHaveLength(16);
     expect(await screen.findByText("فُتحت الاستمارة لطلاب الصف.")).toBeTruthy();
     expect(screen.getByText("مفتوحة للطلاب")).toBeTruthy();

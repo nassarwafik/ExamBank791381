@@ -2,6 +2,9 @@
 // visible label; the question's own text is the group's legend (ExamFormQuestionBlock in StudentExamForm.tsx). Technical
 // text (commands, addresses) is typed left-to-right. Image and file questions are shown with a notice: their inputs arrive
 // in a later phase and they never block a submit.
+// Phase F4-UI — where the class has image answers on (`images` is given), an image question takes images, and a text / code /
+// table question that asks for images takes them under its own input. Without it everything is as before.
+import ExamFormImages, { type ExamFormImageTools } from "./ExamFormImages";
 import type { ExamFormAnswer, ExamFormEntry, ExamFormQuestion } from "./types";
 
 type Props = {
@@ -9,6 +12,8 @@ type Props = {
   answer: ExamFormAnswer | undefined;
   disabled: boolean;
   onChange: (answer: ExamFormAnswer | null) => void;
+  /** Phase F4-UI — present only where the class has image answers on. */
+  images?: ExamFormImageTools;
 };
 
 const DEFERRED_TEXT: Record<string, string> = {
@@ -91,6 +96,21 @@ function OrderingInput({ question, answer, disabled, onChange }: Props) {
 }
 
 export default function QuestionInput(props: Props) {
+  const { question, answer, disabled, images } = props;
+  if (!images) return <AnswerInput {...props} />;
+  const attached = answer?.images || [];
+  if (question.kind === "image") return <ExamFormImages question={question} images={attached} disabled={disabled} tools={images} />;
+  // A question that asks for images beside its answer: its own input first, the images under it.
+  if (!question.images || !(question.images.max > 0)) return <AnswerInput {...props} />;
+  return (
+    <>
+      <AnswerInput {...props} />
+      <ExamFormImages question={question} images={attached} disabled={disabled} tools={images} />
+    </>
+  );
+}
+
+function AnswerInput(props: Props) {
   const { question, answer, disabled, onChange } = props;
   const name = "eb-form-" + question.questionId;
 
@@ -106,7 +126,7 @@ export default function QuestionInput(props: Props) {
         <>
           <textarea className="eb-sp-form-text eb-sp-form-cli" dir="ltr" rows={8} spellCheck={false} maxLength={question.maxLength} disabled={disabled} value={answer?.text || ""}
             aria-label="الأوامر أو المخرجات" onChange={e => onChange({ text: e.target.value })} />
-          {question.images && !disabled && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا سيتاح قريبًا. اكتب الآن النص فقط.</p>}
+          {question.images && !props.images && !disabled && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا سيتاح قريبًا. اكتب الآن النص فقط.</p>}
         </>
       );
     case "table":

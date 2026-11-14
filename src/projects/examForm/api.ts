@@ -1,5 +1,6 @@
 // Phase F2-UI — the student's three requests to the project exam form route. The request carries the project, the page's
 // last known revision and the answers only: the student and the class come from the session on the server.
+// Phase F4-UI — and the three image requests: attach one image, remove one, read one of the student's own images.
 import type { ExamFormAnswer, ExamFormView } from "./types";
 
 const ROUTE = "/api/student-project-exam-form";
@@ -22,12 +23,15 @@ export class ExamFormRequestError extends Error {
 
 type Raw = { ok?: boolean; error?: string; code?: string; missing?: unknown; available?: boolean };
 
+const OFFLINE = "تعذر الاتصال بالخادم. تحقق من الإنترنت.";
+const authHeaders = (token: string) => ({ "x-student-token": token, Authorization: "Bearer " + token });
+
 async function request(token: string, url: string, init: RequestInit, fallback: string): Promise<Raw> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, headers: { ...(init.body ? { "Content-Type": "application/json" } : {}), "x-student-token": token, Authorization: "Bearer " + token } });
+    response = await fetch(url, { ...init, headers: { ...(init.body ? { "Content-Type": "application/json" } : {}), ...authHeaders(token) } });
   } catch {
-    throw new ExamFormRequestError("تعذر الاتصال بالخادم. تحقق من الإنترنت.", 0);
+    throw new ExamFormRequestError(OFFLINE, 0);
   }
   let body: Raw = {};
   try { body = (await response.json()) as Raw; } catch { body = {}; }
@@ -59,4 +63,29 @@ export async function saveExamFormDraft(token: string, projectCode: string, base
 export async function submitExamForm(token: string, projectCode: string, baseRevision: number): Promise<ExamFormView> {
   const fallback = "تعذر تسليم الاستمارة.";
   return viewOf(await request(token, ROUTE, { method: "POST", body: JSON.stringify({ projectCode, action: "submit", baseRevision }) }, fallback), fallback);
+}
+
+/** Phase F4-UI — attach one image to a question. The server sanitizes and stores it, and answers with the form as it is now. */
+export async function addExamFormImage(token: string, projectCode: string, questionId: string, dataUrl: string): Promise<ExamFormView> {
+  const fallback = "تعذر رفع الصورة.";
+  return viewOf(await request(token, ROUTE, { method: "POST", body: JSON.stringify({ projectCode, action: "addImage", questionId, dataUrl }) }, fallback), fallback);
+}
+
+/** Phase F4-UI — remove one attached image. A repeat is harmless (the server answers with the form as it is). */
+export async function removeExamFormImage(token: string, projectCode: string, questionId: string, imageId: string): Promise<ExamFormView> {
+  const fallback = "تعذر حذف الصورة.";
+  return viewOf(await request(token, ROUTE, { method: "POST", body: JSON.stringify({ projectCode, action: "removeImage", questionId, imageId }) }, fallback), fallback);
+}
+
+/** Phase F4-UI — the bytes of one of the student's own images. An image has no public address: it is read with the session. */
+export async function fetchExamFormImage(token: string, projectCode: string, imageId: string): Promise<Blob> {
+  const fallback = "تعذر تحميل الصورة.";
+  let response: Response;
+  try {
+    response = await fetch(ROUTE + "?" + new URLSearchParams({ projectCode, image: imageId }), { method: "GET", headers: authHeaders(token) });
+  } catch {
+    throw new ExamFormRequestError(OFFLINE, 0);
+  }
+  if (!response.ok) throw new ExamFormRequestError(fallback, response.status);
+  return response.blob();
 }
