@@ -106,7 +106,7 @@ export default function QuestionInput(props: Props) {
         <>
           <textarea className="eb-sp-form-text eb-sp-form-cli" dir="ltr" rows={8} spellCheck={false} maxLength={question.maxLength} disabled={disabled} value={answer?.text || ""}
             aria-label="الأوامر أو المخرجات" onChange={e => onChange({ text: e.target.value })} />
-          {question.images && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا سيتاح قريبًا. اكتب الآن النص فقط.</p>}
+          {question.images && !disabled && <p className="eb-sp-form-deferred">إرفاق الصورة المطلوبة هنا سيتاح قريبًا. اكتب الآن النص فقط.</p>}
         </>
       );
     case "table":
