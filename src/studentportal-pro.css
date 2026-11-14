@@ -313,6 +313,8 @@
 .eb-sp-form-note{ margin:0; font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 .eb-sp-form-sections{ display:flex; flex-wrap:nowrap; gap:var(--eb-space-1); min-width:0; max-inline-size:100%; overflow-x:auto; padding-block-end:var(--eb-space-1); }
 .eb-sp-form-sections .eb-chip-button{ flex:0 0 auto; }
+/* Every button of the form is a 44 px target (the form is filled on phones in class). */
+.eb-sp-form .eb-button,.eb-sp-form .eb-chip-button{ min-height:44px; }
 .eb-sp-form-sections .eb-chip-button[aria-current="step"]{ border-color:var(--eb-primary); color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
 .eb-sp-form-section{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
 .eb-sp-form-section-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); }
