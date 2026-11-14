@@ -23,6 +23,7 @@ const { selfReportStages } = require("../lib/project-tracker/service");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { getProjectDefinition } = require("../lib/project-tracker/registry");
+const { studentFormSummary } = require("../lib/project-tracker/exam-form-service");   // Phase F2-UI
 
 // Phase P2 — the student marks the stages they completed (owner decision: counts immediately, no attachment; the
 // teacher confirms or cancels). Body { projectCode, stageIds: [...], mark: true | false }. The student and the class come
@@ -94,8 +95,13 @@ async function handler(request, deps = {}, obs = null) {
 
       const loaded = await loadStudentProjectsAcross(container, classList, studentId, now, deps);
       const several = classList.length > 1;
-      const projects = loaded.map(({ projectCode, definition, snapshot, workDef, progress, summary, classroom: served }) => ({
+      // Phase F2-UI — additive: the state of the project's exam form for this student (only where the teacher opened one for the
+      // class that serves the project). The card is optional: a form that cannot be read never breaks the project page.
+      const examForms = await Promise.all(loaded.map(({ projectCode, classId }) =>
+        studentFormSummary(container, projectCode, classId, studentId).catch(() => null)));
+      const projects = loaded.map(({ projectCode, definition, snapshot, workDef, progress, summary, classroom: served }, index) => ({
         projectCode,
+        ...(examForms[index] ? { examForm: examForms[index] } : {}),
         // P11-C — with more than one class: the class that runs this project (and whether it is read-only there)
         ...(several ? { className: String(served.name || ""), ...(normalizeClassStatus(served) !== "active" ? { readOnly: true } : {}) } : {}),
         title: definition.title,

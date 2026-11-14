@@ -16,6 +16,9 @@ import type { ProjectStrength } from "../student/types";
 import { visualImgProps } from "../studentVisualSizes";
 import type { StudentProjectDrill, StudentProjectDrillOutcome } from "./studentProjectDrill";
 import { postSelfReport } from "./studentSelfReport";
+import StudentExamFormCard from "./examForm/StudentExamFormCard";
+import StudentExamForm from "./examForm/StudentExamForm";
+import type { ExamFormSummary } from "./examForm/types";
 
 type StudentProject = {
   projectCode: string;
@@ -26,6 +29,8 @@ type StudentProject = {
   performance?: ProjectPerformance | null;
   /** Phase 9B — additive server field (absent on older payloads): the student's own evaluation summary. */
   evaluation?: ProjectEvaluation | null;
+  /** Phase F2-UI — additive server field: present only when the teacher opened the project's exam form for the class. */
+  examForm?: ExamFormSummary | null;
   stages: ProjectStage[];
   groups: ProjectGroup[];
   progress: Record<string, StageProgressEntry>;
@@ -90,6 +95,7 @@ function openingFilter(project: StudentProject, trackId: string): StageFilter {
 
 function OneProject({ project, contribution, onBack, token, onChanged, readOnly = false }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null; token: string; onChanged: () => void; readOnly?: boolean }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
+  const [formOpen, setFormOpen] = useState(false);                               // Phase F2-UI: the exam form replaces the project view while open
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
   const perf = normalizeProjectPerformance(project.performance);
@@ -149,6 +155,9 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
     </button>
   );
 
+  // Phase F2-UI — the project's exam form, opened from its card below. Closing it reloads the project (the card's counts).
+  if (formOpen && project.examForm) return <StudentExamForm token={token} projectCode={project.projectCode} onClose={() => { setFormOpen(false); onChanged(); }} />;
+
   return (
     <div className="eb-sp-project" data-project-code={project.projectCode}>
       {onBack && <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={onBack}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشاريع</button>}
@@ -169,6 +178,7 @@ function OneProject({ project, contribution, onBack, token, onChanged, readOnly 
       )}
       {/* Phase 9B — the EVALUATION axis (graded / ungraded stages, average of graded scores), read-only, server-derived. */}
       {evaluation && <ProjectEvaluationCard id={"eb-sp-eval-" + project.projectCode} variant="student" evaluation={evaluation} />}
+      {project.examForm && <StudentExamFormCard summary={project.examForm} readOnly={readOnly} onOpen={() => setFormOpen(true)} />}
       {/* UX-S4 — one control per track: several tracks are buttons that carry their own progress; one track is one bar. */}
       {project.tracks.length > 1 ? (
         <div className="eb-sp-filters eb-sp-track-chips" role="group" aria-label="مسارات المشروع">
