@@ -895,6 +895,185 @@
             "s4",
             "s5"
           ]
+        },
+        "m06-l03-p02-b06": {
+          "kind": "automaton-design",
+          "rules": {
+            "machine": "DFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 6,
+            "complete": true
+          },
+          "reference": {
+            "states": [
+              "s",
+              "a1",
+              "a2",
+              "b1",
+              "b2"
+            ],
+            "start": "s",
+            "accept": [
+              "s",
+              "a1",
+              "b1"
+            ],
+            "transitions": [
+              [
+                "s",
+                "a",
+                "a1"
+              ],
+              [
+                "s",
+                "b",
+                "b1"
+              ],
+              [
+                "a1",
+                "a",
+                "a1"
+              ],
+              [
+                "a1",
+                "b",
+                "a2"
+              ],
+              [
+                "a2",
+                "b",
+                "a2"
+              ],
+              [
+                "a2",
+                "a",
+                "a1"
+              ],
+              [
+                "b1",
+                "b",
+                "b1"
+              ],
+              [
+                "b1",
+                "a",
+                "b2"
+              ],
+              [
+                "b2",
+                "a",
+                "b2"
+              ],
+              [
+                "b2",
+                "b",
+                "b1"
+              ]
+            ]
+          }
+        },
+        "m06-l03-p02-b07": {
+          "kind": "automaton-design",
+          "rules": {
+            "machine": "DFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 8,
+            "complete": true
+          },
+          "reference": {
+            "states": [
+              "p0",
+              "p1",
+              "p2",
+              "p3",
+              "p4",
+              "p5",
+              "T"
+            ],
+            "start": "p0",
+            "accept": [
+              "p3",
+              "p5"
+            ],
+            "transitions": [
+              [
+                "p0",
+                "a",
+                "p1"
+              ],
+              [
+                "p0",
+                "b",
+                "T"
+              ],
+              [
+                "p1",
+                "a",
+                "p2"
+              ],
+              [
+                "p1",
+                "b",
+                "p3"
+              ],
+              [
+                "p2",
+                "a",
+                "T"
+              ],
+              [
+                "p2",
+                "b",
+                "p4"
+              ],
+              [
+                "p3",
+                "a",
+                "T"
+              ],
+              [
+                "p3",
+                "b",
+                "T"
+              ],
+              [
+                "p4",
+                "a",
+                "T"
+              ],
+              [
+                "p4",
+                "b",
+                "p5"
+              ],
+              [
+                "p5",
+                "a",
+                "T"
+              ],
+              [
+                "p5",
+                "b",
+                "T"
+              ],
+              [
+                "T",
+                "a",
+                "T"
+              ],
+              [
+                "T",
+                "b",
+                "T"
+              ]
+            ]
+          }
         }
       }
     },
@@ -966,6 +1145,112 @@
           "correct": [
             "o1"
           ]
+        },
+        "m07-l03-p02-b06": {
+          "kind": "automaton-design",
+          "rules": {
+            "machine": "DFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 4,
+            "complete": true
+          },
+          "reference": {
+            "states": [
+              "q0",
+              "q1",
+              "q2"
+            ],
+            "start": "q0",
+            "accept": [
+              "q0",
+              "q1"
+            ],
+            "transitions": [
+              [
+                "q0",
+                "b",
+                "q0"
+              ],
+              [
+                "q0",
+                "a",
+                "q1"
+              ],
+              [
+                "q1",
+                "a",
+                "q1"
+              ],
+              [
+                "q1",
+                "b",
+                "q2"
+              ],
+              [
+                "q2",
+                "a",
+                "q2"
+              ],
+              [
+                "q2",
+                "b",
+                "q2"
+              ]
+            ]
+          }
+        },
+        "m07-l03-p02-b07": {
+          "kind": "automaton-design",
+          "rules": {
+            "machine": "NFA",
+            "alphabet": [
+              "a",
+              "b"
+            ],
+            "maxStates": 5
+          },
+          "reference": {
+            "states": [
+              "q0",
+              "q1",
+              "q2",
+              "q3"
+            ],
+            "start": "q0",
+            "accept": [
+              "q3"
+            ],
+            "transitions": [
+              [
+                "q0",
+                "a",
+                "q0"
+              ],
+              [
+                "q0",
+                "b",
+                "q0"
+              ],
+              [
+                "q0",
+                "b",
+                "q1"
+              ],
+              [
+                "q1",
+                "a",
+                "q2"
+              ],
+              [
+                "q2",
+                "a",
+                "q3"
+              ]
+            ]
+          }
         }
       }
     },
