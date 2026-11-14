@@ -20,7 +20,7 @@ import { buildPageIndex } from "../../progress/buildPageIndex";
 import { courseThemeId } from "../../themes/courseTheme";
 import { productionActivityRegistry } from "../../activities/engine";
 import { builtinActivityRegistry } from "../../activities/builtins";
-import { readDsFigure, readDsLab, readDsTrace } from "../../activities/ds";
+import { readDsFigure, readDsLab, readDsSolution, readDsTrace } from "../../activities/ds";
 // @ts-expect-error — the server registry is an untyped CommonJS module; it is imported here on purpose to cross-check it.
 import * as apiRegistry from "../../../../api/src/lib/learning-materials-registry.js";
 // @ts-expect-error — plain ESM authoring tool; untyped on purpose.
@@ -96,11 +96,18 @@ describe("899271d — the bodies", () => {
       expect(last.blocks.filter(b => b.type === "practice" || b.type === "practice-table").length, m.id).toBeGreaterThanOrEqual(6);
     }
   }, 30000);
-  it("every activity is a data-structure activity (or the guided walkthrough) with a readable config and a fallback text", async () => {
+  it("every activity is a data-structure activity (or the guided walkthrough / a solution window) with a readable config and a fallback text", async () => {
     const blocks = pagesOf(await loadAll()).flatMap(p => p.blocks);
-    let traces = 0, labs = 0, figures = 0;
+    let traces = 0, labs = 0, figures = 0, solutions = 0;
     for (const b of blocks) {
-      if (b.type === "guided") { expect(builtinActivityRegistry.resolve(b), b.id).toBeTruthy(); continue; }
+      if (b.type === "guided" && b.guidedType === "reveal") { expect(builtinActivityRegistry.resolve(b), b.id).toBeTruthy(); continue; }
+      if (b.type === "guided") {   // the «الحل» button and its solution window
+        expect(productionActivityRegistry.resolve(b)?.key, b.id).toBe("ds-solution");
+        expect(readDsSolution(b.config), b.id).not.toBeNull();
+        expect(b.fallback?.text, b.id + " fallback").toBeTruthy();
+        solutions++;
+        continue;
+      }
       if (b.type !== "simulation" && b.type !== "interactive-diagram" && b.type !== "animation") continue;
       expect(productionActivityRegistry.resolve(b), b.id + " resolves to a registered renderer").toBeTruthy();
       expect(b.fallback?.text, b.id + " fallback").toBeTruthy();
@@ -112,5 +119,6 @@ describe("899271d — the bodies", () => {
     expect(traces).toBeGreaterThan(15);
     expect(labs).toBeGreaterThan(1);
     expect(figures).toBeGreaterThan(2);
+    expect(solutions).toBeGreaterThan(2);
   }, 30000);
 });
