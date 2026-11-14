@@ -3,6 +3,8 @@
 // Phase F3 — what the STUDENT's page does with the teacher's review, over the REAL handlers (in-memory container): a form
 // the teacher returned can be edited and submitted again, with the teacher's note shown; an approved form is a read-only
 // record that shows its mark; the teacher's ratings are invisible before the approval.
+// Phase F3-UI — the approved form's result: each section's level, the teacher's notes and right / wrong per auto-marked
+// question, never a key.
 import { createRequire } from "node:module";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -147,5 +149,40 @@ describe("F3 the teacher's review and the student's page", () => {
     expect(card.textContent).toContain("اعتُمدت");
     expect(card.textContent).toMatch(/علامة الاستمارة:\s*94\.5\s*\/\s*100/);
     expect(within(card).getByRole("button", { name: "عرض الاستمارة" })).toBeTruthy();
+  });
+
+  it("the result of an approved form: each section's level and note, the general note, right / wrong per auto question — no key", async () => {
+    const s = await submittedForm();
+    await s.teacher("examForm.review", { studentId: "s1", expectedRevision: 2, generalNote: "عمل مرتب",
+      ratings: { ...rateAll(4), S04: { level: 2, note: "جدول الشبكات ناقص" } } });
+    expect((await s.teacher("examForm.approve", { studentId: "s1", expectedRevision: 3 })).status).toBe(200);
+    openForm();
+    const result = await screen.findByTestId("exam-form-result");
+    expect(result.textContent).toContain("ملاحظة معلمك: عمل مرتب");
+    const rows = [...result.querySelectorAll("[data-section]")] as HTMLElement[];
+    expect(rows).toHaveLength(16);
+    const s04 = result.querySelector('[data-section="S04"]') as HTMLElement;
+    expect(s04.textContent).toContain("تخطيط العناوين");
+    expect(s04.textContent).toMatch(/\(2\/4\)/);
+    expect(s04.textContent).toMatch(/5\.5\s*من\s*11/);
+    expect(s04.textContent).toContain("ملاحظة: جدول الشبكات ناقص");
+    // the section's own page: its level and note, and a verdict on each auto-marked question
+    fireEvent.click(within(s04).getByRole("button", { name: /تخطيط العناوين/ }));
+    expect((await screen.findByTestId("exam-form-section-result")).textContent).toContain("جدول الشبكات ناقص");
+    const auto = questionBox("S04Q04");
+    expect(auto.querySelector('[data-verdict="right"]')).toBeTruthy();
+    expect(auto.textContent).toContain("إجابة صحيحة");
+    expect(questionBox("S04Q01").querySelector("[data-verdict]")).toBeNull();       // a teacher-marked question has no verdict
+    expect(document.body.textContent).not.toContain("الإجابة الصحيحة");               // never a key
+  });
+
+  it("a returned or a submitted form shows no result panel", async () => {
+    const s = await submittedForm();
+    await s.teacher("examForm.review", { studentId: "s1", expectedRevision: 2, ratings: rateAll(3) });
+    openForm();
+    await screen.findByTestId("exam-form-locked");
+    expect(screen.queryByTestId("exam-form-result")).toBeNull();
+    expect(document.querySelector("[data-verdict]")).toBeNull();
+    expect(screen.queryByTestId("exam-form-section-result")).toBeNull();
   });
 });

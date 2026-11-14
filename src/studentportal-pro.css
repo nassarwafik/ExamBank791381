@@ -298,6 +298,17 @@
 .eb-sp-form-steps .eb-button{ min-height:44px; }
 .eb-sp-form-missing p{ margin:0; }
 .eb-sp-form-missing ul{ margin:var(--eb-space-2) 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+/* Phase F3-UI — the result of an approved form: the mark, each section's level and the teacher's notes. Class selectors only. */
+.eb-sp-form-result{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+.eb-sp-form-result-mark,.eb-sp-form-result-general,.eb-sp-form-section-result,.eb-sp-form-verdict{ margin:0; font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-sp-form-result-mark{ color:var(--eb-text-heading); font-size:var(--eb-fs-16); }
+.eb-sp-form-result-general,.eb-sp-form-section-result{ color:var(--eb-text-secondary); }
+.eb-sp-form-result-list{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; min-width:0; }
+.eb-sp-form-result-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); min-width:0; padding-block:var(--eb-space-1); border-block-start:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
+.eb-sp-form-result-title{ flex:1 1 12rem; min-width:0; }
+.eb-sp-form-result-level{ color:var(--eb-text); }
+.eb-sp-form-result-points{ color:var(--eb-text-secondary); font-variant-numeric:tabular-nums; }
+.eb-sp-form-result-note{ flex:1 1 100%; min-width:0; color:var(--eb-text-secondary); overflow-wrap:anywhere; }
 @media (min-width: 768px){
   .eb-sp-form-sections{ flex-wrap:wrap; overflow-x:visible; padding-block-end:0; }
   .eb-sp-form-table{ display:table; }
