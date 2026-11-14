@@ -375,6 +375,14 @@
 .eb-review-group-head .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
 @media (max-width: 767px){ .eb-review-group-head .eb-button,.eb-review-list-controls .eb-segmented > button{ min-height:44px; } }
 
+/* Phase F2-UI — the exam form's control on the project dashboard: its state and the one open / close action. */
+.eb-project-exam-form{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); margin-block-end:var(--eb-space-3); padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+.eb-project-exam-form-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; flex:1 1 18rem; }
+.eb-project-exam-form-text p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-project-exam-form-title{ color:var(--eb-text-heading); }
+.eb-project-exam-form .eb-button{ min-height:44px; }
+.eb-project-exam-form .assignment-inline-message{ flex:1 1 100%; margin:0; }
+
 /* ---------- UX-R10 — the projects pages in the reference look (docs/enterprise-ux-r0-redesign-foundation.md R10) ----------
    Presentation only. Every rule is scoped to the hub (.eb-projects-hub) or the workspace (.eb-project-workspace), so the shared
    chips, segmented groups, stat grids, tables and charts keep their look on the student portal, the dashboard and the reports.

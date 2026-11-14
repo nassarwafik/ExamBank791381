@@ -7,6 +7,7 @@ import EmptyState from "../ui/EmptyState";
 import { IconCheck } from "../icons";
 import type { ClassSummary, TrackMeta } from "./types";
 import type { BulkMode } from "./ProjectBulkReview";
+import ProjectExamFormControl from "./ProjectExamFormControl";
 
 type Props = {
   token: string; projectCode: string; classId: string; tracks: TrackMeta[];
@@ -64,6 +65,8 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks, 
           {selfStages > 0 && <button type="button" className={"eb-button" + (summary.totalReadyStages > 0 ? "" : " is-primary")} onClick={() => onOpenBulk("self")}><IconCheck size={16} aria-hidden="true" />تأكيد ما حدّده الطلاب ({selfStages})</button>}
         </div>
       )}
+      {/* Phase F2-UI — the project's exam form for this class (shown only for a project that ships one). */}
+      <ProjectExamFormControl token={token} projectCode={projectCode} classId={classId} readOnly={readOnly} />
       <div className="eb-project-progress-card">
         <ProgressBar label="التقدم العام للصف" value={summary.avgOverall} tone="primary" />
         <div className="eb-project-track-bars">
