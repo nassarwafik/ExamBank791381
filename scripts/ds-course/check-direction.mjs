@@ -14,11 +14,11 @@ const RULES = [
   [/[A-Za-z_]\w*\s*\(/, "a call or a name followed by ("],
   [/[;<>]|==|!=|&&|\|\|/, "a code operator"],
   [/[A-Za-z_]\w*\.[A-Za-z_]/, "member access a.b"],
-  [/[0-9A-Za-z\]\)]\s*(→|←|->|=>)\s*[0-9A-Za-z[(]/, "an arrow between values"],
-  [/\d\s*[+*\/=]\s*-?\d|\d\s+-\s+\d/, "arithmetic between numbers"],
+  [/[0-9A-Za-z\])]\s*(→|←|->|=>)\s*[0-9A-Za-z[(]/, "an arrow between values"],
+  [/\d\s*[+*/=]\s*-?\d|\d\s+-\s+\d/, "arithmetic between numbers"],
   [/\d\s*,\s+-?\d/, "numbers separated by a comma and a space"],
-  [/[A-Za-z0-9]\s*=\s*[A-Za-z0-9\["']/, "an assignment / equality"],
-  [/\[[^\]؀-ۿ]*[A-Za-z0-9][^\]؀-ۿ]*\]/, "a bracketed list"],
+  [/[A-Za-z0-9]\s*=\s*[A-Za-z0-9["']/, "an assignment / equality"],
+  [/\[[^\]\u0600-\u06FF]*[A-Za-z0-9][^\]\u0600-\u06FF]*\]/, "a bracketed list"],
 ];
 const strip = s => s.replace(new RegExp(LRI + "[^" + PDI + "]*" + PDI, "g"), " ");
 const SKIP = new Set(["id", "type", "origin", "code", "language", "dir", "config", "fallback", "simulationType", "interactionType", "guidedType", "visualId", "kind", "variant", "answer", "answers", "bank", "key", "options_key", "columnDirs", "capabilities", "source"]);
