@@ -40,6 +40,7 @@ describe("899271d — identity and registration", () => {
   it("is the fifth catalog course with its card, independent of the automata course 899271", () => {
     expect(LEARNING_COURSES.map(c => c.id)).toEqual(["791381", "791381s", "899371", "899271", CID]);
     expect(findLearningCourse(CID)).toMatchObject({ title: "مبنى المعطيات", productTitle: "الوحدة الرابعة — مبنى المعطيات", subject: "علم الحاسوب", status: "available", year: "2026–2027" });
+    expect(findLearningCourse(CID)!.author).toBeUndefined();   // the owner asked for no author on this card
     expect(registeredCourseIds()).toContain(CID);
     expect(manifest.courseId).toBe(CID);
     expect(manifest.title).toBe(findLearningCourse(CID)!.title);

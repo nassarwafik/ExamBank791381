@@ -257,7 +257,7 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
         <dl className="eb-lm-meta">
           <div><dt>المادة</dt><dd>{course.subject}</dd></div>
           <div><dt>الصفوف</dt><dd>{course.grades}</dd></div>
-          <div><dt>المؤلّف</dt><dd>{course.author}</dd></div>
+          {course.author && <div><dt>المؤلّف</dt><dd>{course.author}</dd></div>}
           <div><dt>العام الدراسي</dt><dd>{course.year}</dd></div>
         </dl>
         <p className="eb-lm-card-desc">{course.description}</p>
@@ -324,7 +324,7 @@ function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection
       <dl className="eb-lm-meta eb-lm-meta-wide">
         <div><dt>المادة</dt><dd>{course.subject}</dd></div>
         <div><dt>الصفوف</dt><dd>{course.grades}</dd></div>
-        <div><dt>المؤلّف</dt><dd>{course.author}</dd></div>
+        {course.author && <div><dt>المؤلّف</dt><dd>{course.author}</dd></div>}
         <div><dt>العام الدراسي</dt><dd>{course.year}</dd></div>
       </dl>
       <div className="eb-lm-batches">

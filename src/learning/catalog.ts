@@ -28,8 +28,8 @@ export type LearningCourse = {
   subject: string;
   /** Target grades, e.g. "الصف العاشر / الحادي عشر". */
   grades: string;
-  /** Author display name. */
-  author: string;
+  /** Author display name. Optional: a course without one shows no «المؤلّف» row (DS-A2: the owner asked for none on 899271d). */
+  author?: string;
   /** Academic year, e.g. "2026–2027". */
   year: string;
   /** Availability of the course entry. */
@@ -164,7 +164,6 @@ export const LEARNING_COURSES: LearningCourse[] = [
     productTitle: "الوحدة الرابعة — مبنى المعطيات",
     subject: "علم الحاسوب",
     grades: "الصف الحادي عشر / الثاني عشر",
-    author: "الأستاذ وفيق نصار",
     year: "2026–2027",
     status: "available",
     description: "مباني المعطيات بلغة C# خطوة بخطوة: التراجعية، النجاعة، سلاسل الخلايا، الراصّة، الدور والأشجار الثنائية — مع تتبّع للبرامج، مختبر تفاعلي لكل مبنى، رسوم توضيحية، وأسئلة تتبّع وكتابة.",
