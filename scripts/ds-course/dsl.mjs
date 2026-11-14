@@ -149,7 +149,7 @@ export function LAB(structure, opts = {}) {
  * { kind: "tree", tree: [value, left, right], pointers?: [[name, "LR"]], hi?: ["L"], facts?: true, label? }.
  */
 export function FIG(title, panels, opts = {}) {
-  const said = p => (p.kind === "tree" ? "شجرة ثنائية" : p.kind === "chain" ? "سلسلة خلايا: " + p.items.join(" ← ") + " ← null" : (p.kind === "stack" ? "راصّة من الرأس إلى القاع: " : "دور من الرأس إلى الذيل: ") + (p.items.join("، ") || "فارغ")) + (p.label ? " (" + p.label + ")" : "");
+  const said = p => (p.kind === "tree" ? "شجرة ثنائية" : p.kind === "chain" ? "سلسلة خلايا: " + p.items.join(" ← ") + " ← null" : (p.kind === "stack" ? "راصّة من الرأس إلى القاع: " : "دور من الرأس إلى النهاية: ") + (p.items.join("، ") || "فارغ")) + (p.label ? " (" + p.label + ")" : "");
   return enr({
     type: "interactive-diagram", interactionType: "ds-figure", version: 1, title: iso(title),
     ...(opts.description ? { description: iso(opts.description) } : {}),

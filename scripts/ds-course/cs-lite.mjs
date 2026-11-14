@@ -474,16 +474,16 @@ export function run(src, opts = {}) {
     const arity = n => { if (a.length !== n) throw new CsError(name + " takes " + n + " argument(s)", line); };
     if (o instanceof LStack) {
       switch (name) {
-        case "Push": arity(1); o.items.push(a[0]); say("ندخل `" + cell(a[0]) + "` إلى رأس الراصّة" + nm + "."); return undefined;
-        case "Pop": { arity(0); if (!o.items.length) throw new CsRuntimeError("Pop من راصّة فارغة", line); const v = o.items.pop(); say("نخرج `" + cell(v) + "` من رأس الراصّة" + nm + "."); return v; }
+        case "Push": arity(1); o.items.push(a[0]); say("نُدخل `" + cell(a[0]) + "` إلى رأس الراصّة" + nm + "."); return undefined;
+        case "Pop": { arity(0); if (!o.items.length) throw new CsRuntimeError("Pop من راصّة فارغة", line); const v = o.items.pop(); say("نُخرج `" + cell(v) + "` من رأس الراصّة" + nm + "."); return v; }
         case "Top": arity(0); if (!o.items.length) throw new CsRuntimeError("Top على راصّة فارغة", line); say("رأس الراصّة" + nm + " هو `" + cell(o.items.at(-1)) + "` (لا يخرج)."); return o.items.at(-1);
         case "IsEmpty": arity(0); return o.items.length === 0;
         case "ToString": arity(0); return str(o);
       }
     } else if (o instanceof LQueue) {
       switch (name) {
-        case "Insert": arity(1); o.items.push(a[0]); say("ندخل `" + cell(a[0]) + "` إلى نهاية الدور" + nm + "."); return undefined;
-        case "Remove": { arity(0); if (!o.items.length) throw new CsRuntimeError("Remove من دور فارغ", line); const v = o.items.shift(); say("نخرج `" + cell(v) + "` من رأس الدور" + nm + "."); return v; }
+        case "Insert": arity(1); o.items.push(a[0]); say("نُدخل `" + cell(a[0]) + "` إلى نهاية الدور" + nm + "."); return undefined;
+        case "Remove": { arity(0); if (!o.items.length) throw new CsRuntimeError("Remove من دور فارغ", line); const v = o.items.shift(); say("نُخرج `" + cell(v) + "` من رأس الدور" + nm + "."); return v; }
         case "Head": arity(0); if (!o.items.length) throw new CsRuntimeError("Head على دور فارغ", line); say("رأس الدور" + nm + " هو `" + cell(o.items[0]) + "` (لا يخرج)."); return o.items[0];
         case "IsEmpty": arity(0); return o.items.length === 0;
         case "ToString": arity(0); return str(o);
@@ -575,7 +575,7 @@ export function run(src, opts = {}) {
   /** A call; an operation named in `quiet` runs without steps of its own (the caller's line tells what it returned). */
   function invoke(m, argv, self, callLine) {
     if (m.k === "method" && silent.has(m.name) && !muted) return quiet(() => invoke(m, argv, self, callLine));
-    if (frames.length > 60) throw new CsRuntimeError("StackOverflow: التراجع لا يتوقف", callLine);
+    if (frames.length > 60) throw new CsRuntimeError("StackOverflow: التراجعية لا تتوقّف", callLine);
     const isEntry = frames.length === 0;
     const f = { name: m.k === "ctor" ? m.cls : m.name === "__Run" ? "Main" : m.name, scopes: [new Map()], self };
     frames.push(f);
@@ -612,7 +612,7 @@ export function run(src, opts = {}) {
     if (e.k === "index") {
       const o = need(ev(e.o), e.line, "[]"), i = num(ev(e.i));
       if (!(o instanceof CsArray)) throw new CsError("only arrays can be assigned by index", e.line);
-      if (i < 0 || i >= o.items.length) throw new CsRuntimeError("IndexOutOfRangeException: المؤشر " + i + " خارج حدود المصفوفة", e.line);
+      if (i < 0 || i >= o.items.length) throw new CsRuntimeError("IndexOutOfRangeException: الإندكس " + i + " خارج حدود المصفوفة", e.line);
       return { get: () => o.items[i], set: v => { o.items[i] = typeof o.items[i] === "object" && o.items[i] instanceof CsDouble && typeof v === "number" ? new CsDouble(v) : v; } };
     }
     throw new CsError("not assignable", e.line);
@@ -641,7 +641,7 @@ export function run(src, opts = {}) {
     return a === b;
   }
   function ev(e) {
-    if (--stepsLeft < 0) throw new CsRuntimeError("البرنامج لا يتوقف", e.line);
+    if (--stepsLeft < 0) throw new CsRuntimeError("البرنامج لا يتوقّف", e.line);
     switch (e.k) {
       case "lit": return e.v;
       case "paren": return ev(e.a);
@@ -723,9 +723,9 @@ export function run(src, opts = {}) {
       }
       case "index": {
         const o = need(ev(e.o), e.line, "[]"), i = num(ev(e.i));
-        if (typeof o === "string") { if (i < 0 || i >= o.length) throw new CsRuntimeError("IndexOutOfRangeException: المؤشر " + i + " خارج حدود النص", e.line); return new CsChar(o[i]); }
+        if (typeof o === "string") { if (i < 0 || i >= o.length) throw new CsRuntimeError("IndexOutOfRangeException: الإندكس " + i + " خارج حدود النص", e.line); return new CsChar(o[i]); }
         if (!(o instanceof CsArray)) throw new CsError("[] on something that is not an array", e.line);
-        if (i < 0 || i >= o.items.length) throw new CsRuntimeError("IndexOutOfRangeException: المؤشر " + i + " خارج حدود المصفوفة", e.line);
+        if (i < 0 || i >= o.items.length) throw new CsRuntimeError("IndexOutOfRangeException: الإندكس " + i + " خارج حدود المصفوفة", e.line);
         return o.items[i];
       }
       case "member": {
@@ -790,7 +790,7 @@ export function run(src, opts = {}) {
   function test(c, line, yes, no) {
     const v = ev(c);
     if (typeof v !== "boolean") throw new CsError("the condition is not a bool", line);
-    rec(line, "الشرط `" + sourceOf(c) + "` " + (v ? "صحيح" : "خطأ") + ": " + (v ? yes : no) + ".");
+    rec(line, "الشرط `" + sourceOf(c) + "` " + (v ? "صحيح" : "غير صحيح") + ": " + (v ? yes : no) + ".");
     return v;
   }
   function loopBody(s) {
@@ -798,7 +798,7 @@ export function run(src, opts = {}) {
     return false;
   }
   function exec(s) {
-    if (--stepsLeft < 0) throw new CsRuntimeError("البرنامج لا يتوقف", s.line);
+    if (--stepsLeft < 0) throw new CsRuntimeError("البرنامج لا يتوقّف", s.line);
     switch (s.k) {
       case "empty": return;
       case "block": return execBlock(s);
@@ -819,10 +819,10 @@ export function run(src, opts = {}) {
           const before = e.op === "=" ? null : lvalue(e.target).get();
           const v = ev(e);
           const name = sourceOf(e.target);
-          rec(s.line, e.op === "=" ? gets(name, v, e.value) : "`" + name + "` كانت `" + lit(before) + "` وتصبح `" + lit(v) + "`.");
+          rec(s.line, e.op === "=" ? gets(name, v, e.value) : "قيمة `" + name + "` كانت `" + lit(before) + "` وتصبح `" + lit(v) + "`.");
         } else if (e.k === "incdec") {
           ev(e);
-          rec(s.line, "`" + sourceOf(e.target) + "` " + (e.op === "++" ? "تزيد" : "تنقص") + " بواحد وتصبح `" + lit(lvalue(e.target).get()) + "`.");
+          rec(s.line, "قيمة `" + sourceOf(e.target) + "` " + (e.op === "++" ? "تزيد" : "تنقص") + " بواحد وتصبح `" + lit(lvalue(e.target).get()) + "`.");
         } else { ev(e); rec(s.line, ""); }
         return;
       }
@@ -856,7 +856,7 @@ export function run(src, opts = {}) {
         throw new Signal("return", v);
       }
       case "break": rec(s.line, "`break`: نخرج من الحلقة."); throw new Signal("break");
-      case "continue": rec(s.line, "`continue`: إلى الدورة التالية."); throw new Signal("continue");
+      case "continue": rec(s.line, "`continue`: ننتقل إلى الدورة التالية."); throw new Signal("continue");
     }
     throw new CsError("unsupported statement " + s.k, s.line);
   }
@@ -873,7 +873,7 @@ export function run(src, opts = {}) {
     if (e instanceof Signal) throw new CsError("break / continue outside a loop");
     if (!(e instanceof CsRuntimeError) || !opts.allowError) throw e;
     error = e.message.replace(/^line \d+: /, "");
-    if (e.line <= shown) steps.push({ line: e.line, note: "خطأ في التشغيل: " + error + ". البرنامج يتوقف هنا.", frames: steps.at(-1)?.frames ?? [], objs: steps.at(-1)?.objs ?? [], out, error: true });
+    if (e.line <= shown) steps.push({ line: e.line, note: "خطأ في التشغيل: " + error + ". البرنامج يتوقّف هنا.", frames: steps.at(-1)?.frames ?? [], objs: steps.at(-1)?.objs ?? [], out, error: true });
   }
   return { steps, out, error };
 }
