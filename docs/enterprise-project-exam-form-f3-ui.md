@@ -96,7 +96,7 @@ No answer key is shown or received.
 
 ## Tests and proof
 
-`src/projects/ProjectExamFormReview.f3ui.test.tsx` (17 tests, the real `project-tracker` and student handlers on the
+`src/projects/ProjectExamFormReview.f3ui.test.tsx` (18 tests, the real `project-tracker` and student handlers on the
 in-memory container): the picker (count, confirmation, frozen form, last question, read-only); the list (offered after the
 first open, order, counts, buttons, mark); the review (read-only answers, right / wrong / unanswered and the key; a rating
 saved for its section only and invisible to the student; clearing; an approval with unrated sections not sent; the last
@@ -154,6 +154,18 @@ over the real handlers — hide an auto-marked question, submit a complete form 
 the approval (mark 100) and the student's result without a key. It passes for 794589 and 883589 with no code change.
 The screens read the sections, kinds and rubric from the response and hold no project-specific text.
 
+## Reconciliation with F4 (student images, server side)
+
+`main` moved again, from `d9f7dbfc` to `7cef9488`: the other window merged F4 (a class may attach images to its answers,
+once its teacher switches that on; no screen can switch it on before F4-UI). Merge commit `b22527d9`; one conflict, the
+roadmap table of `docs/enterprise-project-exam-form-f1.md`, resolved as the union of both sides' rows. No code conflict:
+F4 changed API files this phase does not touch.
+
+One follow-up, because both sides meet on the review page: an answer may now carry `images` references. The review does not
+display them (that is F4-UI's «the images in the teacher's review»), and it must not pass over them: a question whose
+answer has images says «أرفق الطالب صورًا لهذا السؤال (العدد: N)» instead of «يُفحص من كتاب الطالب وملف مشروعه». Tested with
+stored references («images a student attached (F4) are counted on the question…»).
+
 ## Known limitations
 
 - The list has no filter or search; a class of 16–35 students is one screen or two.
@@ -161,4 +173,5 @@ The screens read the sections, kinds and rubric from the response and hold no pr
   the browser tab does not.
 - After a return, the ratings given to the earlier answers stay (F3 limitation): the teacher re-reads the corrected
   sections before approving.
-- Image and file answers are not in the form yet (F4 / F5): those questions are rated from the student's book and file.
+- Images a student attached (F4) are counted on their question but not displayed in the review yet (F4-UI). File answers
+  are not in the form yet (F5): those questions are rated from the student's book and file.

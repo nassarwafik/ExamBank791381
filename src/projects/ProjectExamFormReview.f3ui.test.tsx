@@ -230,6 +230,27 @@ describe("F3-UI the teacher reviews one student's form", () => {
     expect(questionBox("S04Q03").textContent).toContain("لم يُجب الطالب عن هذا السؤال");
   });
 
+  it("images a student attached (F4) are counted on the question, never passed over as «checked from the book»", async () => {
+    const s = await classWithForms();
+    const name = NS.examFormAnswersName("c1", "s1");
+    const stored = s.ctx.getJson(name) as { answers: Record<string, Body> };
+    const imageQuestion = SECTIONS[0].questions.find(q => q.kind === "image")!;
+    stored.answers[imageQuestion.questionId] = { images: [{ id: "a".repeat(24), width: 800, height: 600 }, { id: "b".repeat(24), width: 800, height: 600 }] };
+    s.ctx.setJson(name, stored);
+    mount();
+    await openReview();
+    const box = questionBox(imageQuestion.questionId);
+    expect(box.querySelector("[data-images]")?.getAttribute("data-images")).toBe("2");
+    expect(box.textContent).toMatch(/أرفق الطالب صورًا لهذا السؤال \(العدد:\s*2\)/);
+    expect(box.textContent).not.toContain("يُفحص من كتاب الطالب");
+    // an image question without images still says where it is checked
+    const other = SECTIONS.flatMap(x => x.questions).find(q => q.kind === "image" && q.questionId !== imageQuestion.questionId)!;
+    const section = SECTIONS.find(x => x.questions.includes(other))!;
+    goTo(new RegExp(section.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    expect(questionBox(other.questionId).textContent).toContain("يُفحص من كتاب الطالب");
+    expect(questionBox(other.questionId).querySelector("[data-images]")).toBeNull();
+  });
+
   it("a rating and its note are saved for that section only; the student sees nothing before the approval", async () => {
     const s = await classWithForms();
     mount();

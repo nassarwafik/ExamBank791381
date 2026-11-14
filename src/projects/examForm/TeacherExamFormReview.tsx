@@ -67,10 +67,16 @@ function AnswerBlock({ question, view }: { question: TeacherQuestion; view: Teac
   const answer = view.answers[question.questionId];
   const verdict = question.grading === "auto" ? view.auto.byQuestion[question.questionId] : undefined;
   const key = question.grading === "auto" ? keyText(question) : "";
+  // Phase F4 (server) lets a class attach images to its answers. This page does not display them yet (F4-UI): it says how
+  // many there are instead of saying nothing, or that the question is checked from the book only.
+  const images = answer && Array.isArray(answer.images) ? answer.images.length : 0;
   return (
     <div className="eb-sp-form-question-body">
+      {images > 0
+        ? <p className="eb-sp-form-deferred" data-images={images}>أرفق الطالب صورًا لهذا السؤال (العدد: <span dir="ltr">{images}</span>). عرضها في هذه الصفحة يُضاف مع واجهة الصور.</p>
+        : null}
       {question.kind === "image" || question.kind === "file"
-        ? <p className="eb-sp-form-deferred">{question.kind === "image" ? "سؤال صورة" : "سؤال ملف"}: يُفحص من كتاب الطالب وملف مشروعه.</p>
+        ? (images > 0 ? null : <p className="eb-sp-form-deferred">{question.kind === "image" ? "سؤال صورة" : "سؤال ملف"}: يُفحص من كتاب الطالب وملف مشروعه.</p>)
         : !answer
           ? <p className="eb-sp-form-deferred">لم يُجب الطالب عن هذا السؤال.</p>
           : <QuestionInput question={question} answer={answer} disabled onChange={noop} />}
