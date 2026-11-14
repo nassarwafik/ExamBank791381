@@ -97,7 +97,7 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
   const last = index === sections.length - 1;
   // Image questions take images only where the server says the class has them on; otherwise they stay a notice.
   const imageTools: ExamFormImageTools | undefined = draft.imagesOn
-    ? { token, projectCode, add: draft.addImage, remove: draft.removeImage,
+    ? { read: draft.readImage, add: draft.addImage, remove: draft.removeImage,
       confirmRemove: () => confirm({ title: "حذف الصورة", message: "ستُحذف هذه الصورة من إجابتك. يمكنك إرفاق صورة أخرى بعدها.", confirmLabel: "حذف الصورة", tone: "danger" }) }
     : undefined;
   const deferredNote = view.progress.deferred === 0 ? ""

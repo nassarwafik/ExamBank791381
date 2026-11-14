@@ -1,17 +1,19 @@
 // Phase F4-UI — the images of one question of the project exam form: the thumbnails of what the student attached, the
 // button that attaches another one, and the one that removes one. An image has no public address: each thumbnail is read
-// with the student's session and shown from memory. On a read-only form (submitted, closed, archived) only the
-// thumbnails remain.
+// with the reader's session and shown from memory. On a read-only form (submitted, closed, archived) only the
+// thumbnails remain. The teacher's review shows the same thumbnails, read with the teacher's session (ExamFormImageList).
 import { useEffect, useRef, useState } from "react";
 import { IconTrash, IconUpload } from "../../icons";
-import { fetchExamFormImage } from "./api";
 import { IMAGE_ACCEPT, prepareImageFile } from "./imageFile";
 import type { ExamFormImageRef, ExamFormQuestion } from "./types";
 
+/** Reads the bytes of one image by its id: the student's own read, or the teacher's read of one student's image. */
+export type ExamFormImageReader = (imageId: string) => Promise<Blob>;
+
 /** What the form page gives a question so it can take images. Absent while the class has image answers off. */
 export type ExamFormImageTools = {
-  token: string;
-  projectCode: string;
+  /** The bytes of one attached image, read with the session. Its identity must be stable across renders. */
+  read: ExamFormImageReader;
   add: (questionId: string, dataUrl: string) => Promise<void>;
   remove: (questionId: string, imageId: string) => Promise<void>;
   /** Asks the student before an image is removed; false keeps it. */
@@ -29,15 +31,14 @@ function requirement(min: number, max: number): string {
 }
 
 // One attached image, read with the session. `large` shows it at the width of the question instead of a thumbnail.
-function Thumbnail({ image, index, tools }: { image: ExamFormImageRef; index: number; tools: ExamFormImageTools }) {
-  const { token, projectCode } = tools;
+function Thumbnail({ image, index, read }: { image: ExamFormImageRef; index: number; read: ExamFormImageReader }) {
   const [shown, setShown] = useState<{ id: string; address: string } | null>(null);
   const [failed, setFailed] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [large, setLarge] = useState(false);
   useEffect(() => {
     let alive = true, created = "";
-    fetchExamFormImage(token, projectCode, image.id)
+    read(image.id)
       .then(blob => {
         if (!alive) return;
         created = URL.createObjectURL(blob);
@@ -46,7 +47,7 @@ function Thumbnail({ image, index, tools }: { image: ExamFormImageRef; index: nu
       })
       .catch(() => { if (alive) setFailed(image.id); });
     return () => { alive = false; if (created) URL.revokeObjectURL(created); };
-  }, [token, projectCode, image.id, attempt]);
+  }, [read, image.id, attempt]);
 
   const number = index + 1;
   if (shown && shown.id === image.id) {
@@ -66,6 +67,15 @@ function Thumbnail({ image, index, tools }: { image: ExamFormImageRef; index: nu
     );
   }
   return <span className="eb-sp-form-image-wait" role="status">جارٍ تحميل الصورة <span dir="ltr">{number}</span>...</span>;
+}
+
+/** The attached images of one question, to look at only: the teacher's review of a student's form. */
+export function ExamFormImageList({ images, read }: { images: ExamFormImageRef[]; read: ExamFormImageReader }) {
+  return (
+    <ul className="eb-sp-form-images-list" data-testid="exam-form-image-list">
+      {images.map((image, index) => <li key={image.id} className="eb-sp-form-image"><Thumbnail image={image} index={index} read={read} /></li>)}
+    </ul>
+  );
 }
 
 export default function ExamFormImages({ question, images, disabled, tools }: Props) {
@@ -116,7 +126,7 @@ export default function ExamFormImages({ question, images, disabled, tools }: Pr
         <ul className="eb-sp-form-images-list">
           {images.map((image, index) => (
             <li key={image.id} className="eb-sp-form-image">
-              <Thumbnail image={image} index={index} tools={tools} />
+              <Thumbnail image={image} index={index} read={tools.read} />
               {!disabled && (
                 <button type="button" className="eb-button is-small is-quiet" disabled={!!busy} aria-label={"حذف الصورة " + (index + 1)} onClick={() => void remove(image)}>
                   <IconTrash size={14} aria-hidden="true" />حذف

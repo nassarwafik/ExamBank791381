@@ -58,3 +58,22 @@ export async function teacherFetchJson<T>(token: string, url: string, options: R
   if (body === null) throw new TeacherHttpError(UNEXPECTED_RESPONSE_TEXT, response.status);
   return body;
 }
+
+/**
+ * Project exam form (F4-UI) — the bytes of a protected file the teacher may read (a student's image). The same session
+ * headers and the same 401 handling as the JSON helper; a refusal is an Arabic message, never the body shown as a file.
+ */
+export async function teacherFetchBlob(token: string, url: string, fallback = "تعذر تحميل الملف."): Promise<Blob> {
+  let response: Response;
+  try { response = await fetch(url, { headers: { "x-builder-token": token, Authorization: "Bearer " + token } }); }
+  catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw e;
+    throw new TeacherHttpError(NETWORK_ERROR_TEXT, 0);
+  }
+  if (response.status === 401) {
+    announceTeacherSessionExpired();
+    throw new TeacherHttpError(SESSION_EXPIRED_TEXT, 401);
+  }
+  if (!response.ok) throw new TeacherHttpError(fallback, response.status);
+  return response.blob();
+}

@@ -173,5 +173,6 @@ stored references (Â«images a student attached (F4) are counted on the questionâ
   the browser tab does not.
 - After a return, the ratings given to the earlier answers stay (F3 limitation): the teacher re-reads the corrected
   sections before approving.
-- Images a student attached (F4) are counted on their question but not displayed in the review yet (F4-UI). File answers
+- Images a student attached (F4) are counted on their question and, since F4-UI, displayed under that count
+  (`docs/enterprise-project-exam-form-f4-ui.md`). File answers
   are not in the form yet (F5): those questions are rated from the student's book and file.

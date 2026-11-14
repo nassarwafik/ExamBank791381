@@ -15,7 +15,7 @@
 // always the newest one.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deriveSaveState, shouldWarnBeforeUnload, type SaveStateKind } from "../../studentSaveState";
-import { ExamFormRequestError, addExamFormImage, fetchExamForm, removeExamFormImage, saveExamFormDraft, submitExamForm } from "./api";
+import { ExamFormRequestError, addExamFormImage, fetchExamForm, fetchExamFormImage, removeExamFormImage, saveExamFormDraft, submitExamForm } from "./api";
 import type { ExamFormAnswer, ExamFormAnswers, ExamFormImageRef, ExamFormView } from "./types";
 
 const BACKOFF_MS = [1000, 2000, 4000];
@@ -46,6 +46,8 @@ export type ExamFormDraft = {
   /** Attach one image (a data URL) to a question; rejects with the server's reason. */
   addImage: (questionId: string, dataUrl: string) => Promise<void>;
   removeImage: (questionId: string, imageId: string) => Promise<void>;
+  /** The bytes of one of the student's own images (stable across renders). */
+  readImage: (imageId: string) => Promise<Blob>;
   saveKind: SaveStateKind;
   lastSavedAt: string;
   retrySave: () => void;
@@ -220,6 +222,7 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
     imageRequest(() => addExamFormImage(token, projectCode, questionId, dataUrl), "تعذر رفع الصورة."), [imageRequest, token, projectCode]);
   const removeImage = useCallback((questionId: string, imageId: string) =>
     imageRequest(() => removeExamFormImage(token, projectCode, questionId, imageId), "تعذر حذف الصورة."), [imageRequest, token, projectCode]);
+  const readImage = useCallback((imageId: string) => fetchExamFormImage(token, projectCode, imageId), [token, projectCode]);
 
   const submit = useCallback(async (): Promise<SubmitOutcome> => {
     setSubmitting(true);
@@ -269,7 +272,7 @@ export function useExamFormDraft(token: string, projectCode: string, saveDelayMs
 
   return {
     view, unavailable, loading, loadError, answers, locked: isLocked(view), setAnswer,
-    imagesOn: hasImageAnswers(view), addImage, removeImage,
+    imagesOn: hasImageAnswers(view), addImage, removeImage, readImage,
     saveKind: deriveSaveState({ localRevision, savedRevision, saving, retrying, errorExhausted, online }),
     lastSavedAt, retrySave: () => { setErrorExhausted(false); void flush(); },
     notice, error, submitting, saveNow, submit, reload

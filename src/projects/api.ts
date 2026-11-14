@@ -1,4 +1,4 @@
-import { teacherFetchJson } from "../teacherFetch";
+import { teacherFetchBlob, teacherFetchJson } from "../teacherFetch";
 
 // Teacher-side fetch wrapper for the generic Project Tracker API (route /api/project-tracker): x-builder-token + Bearer,
 // JSON in/out, throw on !ok. Batch 5 (F1): built on teacherFetch (an expired session signs the teacher out; Arabic text only).
@@ -10,6 +10,12 @@ export function projectApi<T>(token: string, url: string, options: RequestInit =
 export function trackerGet<T>(token: string, projectCode: string, resource: string, params: Record<string, string> = {}): Promise<T> {
   const qs = new URLSearchParams({ projectCode, resource, ...params });
   return projectApi<T>(token, "/api/project-tracker?" + qs.toString());
+}
+
+// GET helper for a protected file (a student's exam-form image): the bytes, read with the teacher's session.
+export function trackerGetBlob(token: string, projectCode: string, resource: string, params: Record<string, string> = {}): Promise<Blob> {
+  const qs = new URLSearchParams({ projectCode, resource, ...params });
+  return teacherFetchBlob(token, "/api/project-tracker?" + qs.toString(), "تعذر تحميل الصورة.");
 }
 
 // POST helper: body always carries projectCode.
