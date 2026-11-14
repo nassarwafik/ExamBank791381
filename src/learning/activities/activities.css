@@ -847,7 +847,7 @@
 .learning-ds-link.learning-ds-head{ fill:var(--eb-text); }
 .learning-ds-pointer.learning-ds-head{ fill:var(--eb-primary); }
 .learning-ds-pick{ cursor:pointer; }
-.learning-ds-code{ padding:0 4px; border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; unicode-bidi:isolate; }
+.learning-ds-code{ display:inline-block; max-width:100%; padding:0 4px; border-radius:var(--eb-r-sm); background:var(--eb-surface-2); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; unicode-bidi:isolate; overflow-wrap:anywhere; }   /* a code run stays on one line when it fits */
 .learning-ds-given{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px dashed var(--eb-border-strong); border-radius:var(--eb-r-sm); line-height:var(--eb-lh-body); }
 .learning-ds-error{ border-inline-start-color:var(--eb-danger-tx); background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
 .learning-ds-structures{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
