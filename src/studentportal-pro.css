@@ -258,7 +258,10 @@
 .eb-sp-form-section{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
 .eb-sp-form-section-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); }
 .eb-sp-form-question{ display:block; margin:0; min-inline-size:0; padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
-.eb-sp-form-question > * + *{ margin-block-start:var(--eb-space-2); }
+/* The spacing inside a question is a class on its own body, never a universal sibling selector: `.eb-sp-form-question > * + *`
+   changed seven anti-aliased pixels of an icon on the teacher's studio home at phone width (visual gate, both themes) although
+   it matches nothing there. Found by bisecting the built stylesheet rule by rule. */
+.eb-sp-form-question-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; margin-block-start:var(--eb-space-2); }
 .eb-sp-form-question.is-missing{ border-color:var(--eb-danger); }
 .eb-sp-form-question > legend{ padding:0 var(--eb-space-1); color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); line-height:var(--eb-lh-body); }
 .eb-sp-form-number{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }

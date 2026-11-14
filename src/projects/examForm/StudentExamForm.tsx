@@ -142,10 +142,12 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
                 <span className="eb-sp-form-number" dir="ltr">{section.order}.{qi + 1}</span> {question.prompt}
                 {!question.required && <span className="eb-muted"> (اختياري)</span>}
               </legend>
-              {question.help && <p className="eb-muted eb-sp-form-help">{question.help}</p>}
-              <QuestionInput question={question} answer={draft.answers[question.questionId]} disabled={draft.locked}
-                onChange={answer => draft.setAnswer(question.questionId, answer)} />
-              {flagged && <p className="eb-sp-form-missing-mark">هذا السؤال إلزامي ولم يكتمل بعد.</p>}
+              <div className="eb-sp-form-question-body">
+                {question.help && <p className="eb-muted eb-sp-form-help">{question.help}</p>}
+                <QuestionInput question={question} answer={draft.answers[question.questionId]} disabled={draft.locked}
+                  onChange={answer => draft.setAnswer(question.questionId, answer)} />
+                {flagged && <p className="eb-sp-form-missing-mark">هذا السؤال إلزامي ولم يكتمل بعد.</p>}
+              </div>
             </fieldset>
           );
         })}
