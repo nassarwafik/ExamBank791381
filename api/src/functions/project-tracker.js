@@ -18,6 +18,7 @@ const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
 const svc = require("../lib/project-tracker/service");
+const examForms = require("../lib/project-tracker/exam-form-service");   // Phase F2
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
 const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
@@ -266,6 +267,16 @@ async function handler(request, deps = {}, obs = null) {
         const readOnly = normalizeClassStatus(classroom) === "archived";
         // Phase P-9 — a read never writes: the snapshot as the next write will see it (lazy create / upgrade in memory only).
         // Phase P7 — `view`: each progress document as a pending conversion / reset will store it (in memory too).
+        // Phase F2 — the state of this class's exam form (none / open / closed) and the size of the form. Reads only.
+        if (resource === "exam-form") {
+          try {
+            return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, examForm: await examForms.classFormState(container, projectCode, classId) } };
+          } catch (e) {
+            if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
+            throw e;
+          }
+        }
+
         const { config, view } = await svc.readClassView(container, projectCode, classroom);
         const workDef = svc.workingDefinition(projectCode, config);
 
@@ -345,6 +356,29 @@ async function handler(request, deps = {}, obs = null) {
       // Every write is blocked on an archived class (read-only history preserved).
       if (normalizeClassStatus(classroom) === "archived") {
         return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — المتابعة للقراءة فقط." } };
+      }
+
+      // Phase F2 — open / close the exam form for this class. The first open freezes the form's questions into the class; a
+      // close keeps every saved answer and only stops student writes. Both are audited.
+      if (action === "examform.open" || action === "examform.close") {
+        const open = action === "examform.open";
+        try {
+          const r = open
+            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now })
+            : await examForms.closeClassForm(container, projectCode, classId, { actor: auth.user?.sub, now });
+          if (r.changed) {
+            await rec(container, {
+              actor: auth.user?.sub, action: open ? "project.exam_form.open" : "project.exam_form.close",
+              targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
+              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first } : {}) }
+            });
+          }
+          return { status: 200, jsonBody: { ok: true, projectCode, classId, changed: r.changed, examForm: await examForms.classFormState(container, projectCode, classId) } };
+        } catch (e) {
+          if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: "حدث تعارض مؤقت أثناء الحفظ. حاول مرة أخرى." } };
+          if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message, ...(e.code ? { code: e.code } : {}) } };
+          throw e;
+        }
       }
 
       if (action === "program.activate") {
