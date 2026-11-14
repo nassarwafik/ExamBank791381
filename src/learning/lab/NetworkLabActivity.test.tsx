@@ -55,7 +55,7 @@ describe("NetworkLabActivity", () => {
     fireEvent.click(checkBtn());
     await screen.findByText(/تحقّق 1 من 7 أهداف/);
     expect(check).toHaveBeenCalledTimes(1);
-    const sent = check.mock.calls[0][0];
+    const sent = check.mock.calls[0][0] as { kind: string; actions: unknown[] };
     expect(Object.keys(sent).sort()).toEqual(["actions", "kind"]);
     expect(sent.kind).toBe("network-lab");
     expect(sent.actions).toEqual(["enable", "configure terminal", "interface g0/1", "switchport mode trunk", "end"].map(command => ({ type: "switch.command", deviceId: "sw1", command })));

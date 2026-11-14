@@ -308,7 +308,8 @@ interface ActivityBlockBase extends BlockBase {
 }
 
 /** Native interactive simulation (e.g. VLAN/subnet/CLI). `simulationType` is a trusted registry KEY, not a name.
- *  `studyEligible` / `serverCheck` apply only to a server-judged network lab (`network-lab`, see NetworkLabConfig). */
+ *  `studyEligible` / `serverCheck` apply only to a server-judged simulation: a network lab (`network-lab`, see NetworkLabConfig)
+ *  or a «صمّم الآلة» exercise (`automaton-design`, see AutomatonDesignConfig). */
 export interface SimulationBlock extends ActivityBlockBase, StudyEligibilityOptOut, ServerCheckMarker {
   type: "simulation";
   /** Trusted registry key (e.g. "vlan"). Resolved by the registry to a repo component — never executed as code. */
@@ -340,6 +341,40 @@ export interface NetworkLabConfig {
 /** A network-lab block (any version — the validator and the engine decide what a version means). */
 export const isNetworkLabBlock = (block: { type: string; simulationType?: unknown }): block is SimulationBlock =>
   block.type === "simulation" && block.simulationType === NETWORK_LAB_KEY;
+/**
+ * AUTO-A3 (docs/enterprise-automata-design-a3.md) — «صمّم الآلة»: `simulation` / `automaton-design` v1. The learner BUILDS a finite
+ * automaton for a language; the SERVER decides whether it accepts exactly the language of the authored reference machine
+ * (api/src/lib/learning-automaton-design.js). Authored config:
+ *   • task      — PUBLIC: the statement (`intro`), the machine type (DFA / NFA), the alphabet, the state limit, whether a complete
+ *                 DFA is required, and optional example words (`examples.accept` / `examples.reject`, part of the statement);
+ *   • reference — the PRIVATE reference machine (the automaton-trace format: states, start, accept, transitions [from, symbol, to]):
+ *                 never served, judged on the server only;
+ *   • feedback  — right / wrong messages, hints and the explanation: never served.
+ * The served body keeps `task` only and carries `serverCheck: true` (checkIndex.ts servedBlock).
+ */
+export const AUTOMATON_DESIGN_KEY = "automaton-design";
+export const AUTOMATON_DESIGN_VERSION = 1;
+export interface AutomatonDesignMachine { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] }
+export interface AutomatonDesignTask {
+  intro: string;
+  machine: "DFA" | "NFA";
+  alphabet: string[];
+  maxStates?: number;
+  complete?: boolean;
+  examples?: { accept?: string[]; reject?: string[] };
+}
+export interface AutomatonDesignConfig {
+  task: AutomatonDesignTask;
+  reference?: AutomatonDesignMachine;
+  feedback?: { correctFeedback?: string; incorrectFeedback?: string; hints?: string[]; explanation?: string };
+}
+/** An automaton-design block (any version — the validator and the engine decide what a version means). A plain boolean, not a
+ *  type guard: a network lab is a SimulationBlock too, so a guard's false branch would rule every simulation out. */
+export const isAutomatonDesignBlock = (block: { type: string; simulationType?: unknown }): boolean =>
+  block.type === "simulation" && block.simulationType === AUTOMATON_DESIGN_KEY;
+/** A simulation whose answer the SERVER judges (its key never reaches the browser): a network lab or a «صمّم الآلة» exercise. */
+export const isServerJudgedSimulation = (block: { type: string; simulationType?: unknown }): block is SimulationBlock =>
+  isNetworkLabBlock(block) || isAutomatonDesignBlock(block);
 /** A guided, stepped animation of a concept (e.g. a packet traversing a path). Registry key = `animationType`. */
 export interface AnimationBlock extends ActivityBlockBase {
   type: "animation";

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useState, type ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck, IconInfo } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, isNetworkLabBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock, type ExamItemBlock } from "../content/types";
+import { isActivityBlock, isServerJudgedSimulation, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock, type ExamItemBlock } from "../content/types";
 import type { ExamItemHost, LibraryTrainingHost } from "../training/types";
 import type { StudyHost } from "../study/types";
 import type { CodeRunAccess } from "../run/runClient";
@@ -474,16 +474,17 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
 }
 
 /**
- * 791381s Phase 8B — the server-check seam of a NETWORK LAB: only for a SERVED lab (`serverCheck`: its key stayed on the
+ * 791381s Phase 8B — the server-check seam of a NETWORK LAB (and, AUTO-A3, of a «صمّم الآلة» exercise): only for a SERVED block
+ * (`serverCheck`: its key stayed on the
  * server) inside a study host with a page id. The answer goes through the study host (POST /api/learning-study/…/attempt);
  * the activity receives the verdict only. Anything else → undefined (the lab is explore-only, never judged in the browser).
  */
 function labCheckOf(block: ContentBlock, ctx: ActivityRenderContext): ActivityCheck | undefined {
-  if (!isNetworkLabBlock(block) || block.serverCheck !== true || !ctx.study || !ctx.pageId) return undefined;
+  if (!isServerJudgedSimulation(block) || block.serverCheck !== true || !ctx.study || !ctx.pageId) return undefined;
   const { study, pageId } = ctx;
   return async response => {
     const r = await study.report(pageId, block.id, response);
-    return { correct: r.correct, parts: r.parts, feedback: r.feedback, study: r.study, persisted: r.persisted, alreadyCompleted: r.alreadyCompleted };
+    return { correct: r.correct, parts: r.parts, feedback: r.feedback, study: r.study, persisted: r.persisted, alreadyCompleted: r.alreadyCompleted, issue: r.issue, counterexample: r.counterexample };
   };
 }
 
