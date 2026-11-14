@@ -45,7 +45,7 @@ const allAnswers = () => Object.fromEntries(ANSWERABLE.map(q => [q.questionId, f
 function setup(extra = {}, hooks = {}) {
   const ctx = createMemoryContainer({
     "platform/classes/c1.json": room("c1"), "platform/classes/c2.json": room("c2"),
-    "platform/classes/c8.json": room("c8", { programCodes: ["883589"] }), "platform/classes/c9.json": room("c9", { programCodes: [] }),
+    "platform/classes/c8.json": room("c8", { programCodes: ["899373"] }), "platform/classes/c9.json": room("c9", { programCodes: [] }),
     "platform/users/s1.json": user("s1", "c1"), "platform/users/s2.json": user("s2", "c1"), "platform/users/s3.json": user("s3", "c2"), "platform/users/n1.json": user("n1", "c9"),
     ...extra
   }, hooks);
@@ -114,7 +114,7 @@ describe("F2 teacher opens and closes the form for a class", () => {
   it("refuses: closing a form that was never opened, a project with no form, an archived class, an unknown class", async () => {
     const t = setup({ "platform/classes/c7.json": room("c7", { status: "archived", active: false }) });
     expect((await t.teacher({ action: "examForm.close" })).status).toBe(404);
-    const noForm = await t.teacher({ action: "examForm.open", classId: "c8" }, "883589");
+    const noForm = await t.teacher({ action: "examForm.open", classId: "c8" }, "899373");
     expect(noForm.status).toBe(400);
     expect(noForm.jsonBody.code).toBe("NO_FORM");
     expect((await t.teacher({ action: "examForm.open", classId: "c7" })).status).toBe(403);

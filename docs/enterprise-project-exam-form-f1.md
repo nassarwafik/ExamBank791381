@@ -20,7 +20,7 @@ from its name to the reflection, sources and attachments, with no time limit, sa
 | The P2 decision was "no attachment". Are student images allowed here? | **Yes, images** (F4). Files (`.pkt`, the book) wait for F5. |
 | When does the student see the auto-marked results and the teacher's notes? | **After the teacher approves**, not on submit. |
 | May the student edit after submitting? | **Only when the teacher returns the form.** |
-| Which project first? | **794589 only.** 883589 and 899373 get their own question banks in F5. |
+| Which project first? | **794589 only.** 883589 got its own question bank in F1b (`docs/enterprise-project-exam-form-883589.md`); 899373 gets one in F5. |
 
 ## Scope
 
@@ -121,7 +121,8 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F2-UI | The student's page for the form, and the teacher's control that opens it. Split out of F2 so the write path is reviewed on its own. |
 | F3 | Teacher tools: open the form for a class (the questions are frozen into the class at that moment), follow progress, rate sections, return for correction, approve. |
 | F4 | Student images through the existing image sanitizer; served by the API only, to the student who owns them and the teacher. |
-| F5 | Files (`.pkt`, the book), PDF export, the 883589 and 899373 question banks. |
+| F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
+| F5 | Files (`.pkt`, the book), PDF export, the 899373 question bank. |
 
 Sequencing the later phases must handle: image and file questions are `required` in the template, so until F4 / F5 enable
 those inputs the completeness check must not block a submit on them.

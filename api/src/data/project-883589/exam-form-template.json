@@ -1,0 +1,1824 @@
+{
+  "projectCode": "883589",
+  "formVersion": 1,
+  "title": "استمارة امتحان المشروع",
+  "rubric": {
+    "levels": [
+      {
+        "value": 0,
+        "label": "لم يُجب"
+      },
+      {
+        "value": 1,
+        "label": "إجابات ناقصة، أو منقولة من الكتاب بلا شرح"
+      },
+      {
+        "value": 2,
+        "label": "صحيحة جزئيًا، أو بلا صور أو مخرجات تثبتها"
+      },
+      {
+        "value": 3,
+        "label": "صحيحة ومثبتة بصور أو مخرجات من المشروع (Visual Studio، قاعدة البيانات، فحص خدمة الويب)"
+      },
+      {
+        "value": 4,
+        "label": "صحيحة ومثبتة، مع شرح واضح للسبب ولما يحدث لو تغيّر الكود أو القيد"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "sectionId": "S01",
+      "title": "بطاقة المشروع",
+      "order": 1,
+      "weight": 3,
+      "bookRef": "بداية الكتاب: الغلاف والفهرست والمقدمة",
+      "questions": [
+        {
+          "questionId": "S01Q01",
+          "prompt": "ما اسم مشروعك؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 120
+        },
+        {
+          "questionId": "S01Q02",
+          "prompt": "اكتب موضوع المشروع في جملة واحدة: ما النظام الذي بنيته ولمن؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S01Q03",
+          "prompt": "أرفق صورة غلاف كتاب المشروع.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 1
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S02",
+      "title": "المقدمة وموضوع المشروع",
+      "order": 2,
+      "weight": 3,
+      "bookRef": "بداية الكتاب: الغلاف والفهرست والمقدمة",
+      "questions": [
+        {
+          "questionId": "S02Q01",
+          "prompt": "لماذا اخترت هذا الموضوع، وما المشكلة التي يحلها نظامك؟ كيف كان العمل يُدار قبل النظام؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S02Q02",
+          "prompt": "اكتب ثلاثة أهداف للمشروع، وأين تحقق كل هدف فعليًا (جدول، عملية في خدمة الويب، صفحة في الموقع).",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "goal",
+              "title": "الهدف"
+            },
+            {
+              "id": "where",
+              "title": "أين تحقق في المشروع"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 5
+        },
+        {
+          "questionId": "S02Q03",
+          "prompt": "من يستخدم النظام؟ اكتب كل نوع مستخدم وما يحتاجه من النظام.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "userType",
+              "title": "نوع المستخدم"
+            },
+            {
+              "id": "needs",
+              "title": "ما يحتاجه"
+            }
+          ],
+          "minRows": 2,
+          "maxRows": 5
+        },
+        {
+          "questionId": "S02Q04",
+          "prompt": "اذكر شيئًا وعدت به في المقدمة وليس له جدول أو صفحة في مشروعك بعد، ولماذا.",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        }
+      ]
+    },
+    {
+      "sectionId": "S03",
+      "title": "الجداول وحقولها",
+      "order": 3,
+      "weight": 8,
+      "bookRef": "الجداول الخمسة",
+      "questions": [
+        {
+          "questionId": "S03Q01",
+          "prompt": "اكتب جداول قاعدة بياناتك: اسم الجدول، الهدف منه، مفتاحه الأساسي، عدد حقوله.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "tableName",
+              "title": "اسم الجدول"
+            },
+            {
+              "id": "purpose",
+              "title": "الهدف"
+            },
+            {
+              "id": "primaryKey",
+              "title": "المفتاح الأساسي"
+            },
+            {
+              "id": "fieldCount",
+              "title": "عدد الحقول"
+            }
+          ],
+          "minRows": 5,
+          "maxRows": 10
+        },
+        {
+          "questionId": "S03Q02",
+          "prompt": "اختر جدولًا واحدًا واكتب كل حقوله: اسم الحقل، نوع البيانات، شرح الحقل.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "field",
+              "title": "اسم الحقل"
+            },
+            {
+              "id": "dataType",
+              "title": "نوع البيانات"
+            },
+            {
+              "id": "meaning",
+              "title": "الشرح"
+            }
+          ],
+          "minRows": 4,
+          "maxRows": 15
+        },
+        {
+          "questionId": "S03Q03",
+          "prompt": "طابق كل نوع بيانات بالقيمة التي تناسبه.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "INT"
+            },
+            {
+              "id": "l2",
+              "text": "DECIMAL(10,2)"
+            },
+            {
+              "id": "l3",
+              "text": "VARCHAR(50)"
+            },
+            {
+              "id": "l4",
+              "text": "DATETIME"
+            },
+            {
+              "id": "l5",
+              "text": "DATE"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "سعر مثل 59.90"
+            },
+            {
+              "id": "r2",
+              "text": "تاريخ ووقت معًا، مثل لحظة تسجيل طلب"
+            },
+            {
+              "id": "r3",
+              "text": "رقم تعريفي صحيح مثل 17"
+            },
+            {
+              "id": "r4",
+              "text": "تاريخ بلا وقت، مثل تاريخ الميلاد"
+            },
+            {
+              "id": "r5",
+              "text": "اسم شخص"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r3",
+              "l2": "r1",
+              "l3": "r5",
+              "l4": "r2",
+              "l5": "r4"
+            }
+          }
+        },
+        {
+          "questionId": "S03Q04",
+          "prompt": "لماذا يُحفظ رقم الهاتف نصًا (VARCHAR) وليس عددًا (INT)؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        },
+        {
+          "questionId": "S03Q05",
+          "prompt": "هل أسماء الجداول والحقول في كتابك هي نفسها في قاعدة البيانات الفعلية وفي الاستعلامات؟ (مثال على اختلاف: employee_id في مكان و EmployeeID في مكان آخر.) اكتب كل اختلاف وجدته وأي اسم ستعتمد.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S03Q06",
+          "prompt": "لماذا قسمت المعلومات إلى هذه الجداول ولم تضعها كلها في جدول واحد؟ أعط مثالًا من مشروعك.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S03Q07",
+          "prompt": "أرفق صورة تصميم جدول واحد (Table Design) من Visual Studio أو SQL Server.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S04",
+      "title": "المفاتيح والعلاقات بين الجداول",
+      "order": 4,
+      "weight": 8,
+      "bookRef": "SQL Server Code والعلاقات بين الجداول",
+      "questions": [
+        {
+          "questionId": "S04Q01",
+          "prompt": "اكتب العلاقات بين جداولك: الجدول الأول، الجدول الثاني، نوع العلاقة، المفتاح الأجنبي الذي يربطهما.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "tableA",
+              "title": "الجدول الأول"
+            },
+            {
+              "id": "tableB",
+              "title": "الجدول الثاني"
+            },
+            {
+              "id": "relation",
+              "title": "نوع العلاقة"
+            },
+            {
+              "id": "foreignKey",
+              "title": "المفتاح الأجنبي"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 10
+        },
+        {
+          "questionId": "S04Q02",
+          "prompt": "اختر جدولًا واكتب مفتاحه الأساسي. لماذا اخترت رقمًا تعريفيًا يتولد تلقائيًا وليس رقم الهوية أو رقم الهاتف؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S04Q03",
+          "prompt": "طالب واحد يستعير كتبًا كثيرة، وكل استعارة تخص طالبًا واحدًا. ما نوع العلاقة بين جدول الطلاب وجدول الاستعارات؟ اكتب في التبرير في أي جدول يوضع المفتاح الأجنبي.",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "واحد لواحد (1:1)"
+            },
+            {
+              "id": "o2",
+              "text": "متعدد لمتعدد (N:M)"
+            },
+            {
+              "id": "o3",
+              "text": "واحد لمتعدد (1:N)"
+            },
+            {
+              "id": "o4",
+              "text": "لا توجد علاقة بين الجدولين"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          },
+          "justification": true
+        },
+        {
+          "questionId": "S04Q04",
+          "prompt": "اختر علاقة من مشروعك كتبت أنها واحد لواحد (1:1) أو واحد لمتعدد (1:N). ما القيد في أمر CREATE TABLE الذي يفرض هذا النوع بالذات؟ وماذا تقبل قاعدة البيانات لو حذفت هذا القيد؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S04Q05",
+          "prompt": "حاول في مشروعك حذف سجل يشير إليه سجل في جدول آخر (مفتاح أجنبي). ماذا حدث، وما الرسالة التي ظهرت؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S04Q06",
+          "prompt": "أرفق صورة مخطط العلاقات بين الجداول (Database Diagram أو ERD) من مشروعك.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S05",
+      "title": "معطيات الجداول",
+      "order": 5,
+      "weight": 5,
+      "bookRef": "معطيات الجداول وصورها",
+      "questions": [
+        {
+          "questionId": "S05Q01",
+          "prompt": "انسخ من قاعدة بيانات مشروعك سجلًا حقيقيًا من جدول فيه مفتاح أجنبي، واكتب السجل الذي يشير إليه في الجدول الآخر.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "tableName",
+              "title": "الجدول"
+            },
+            {
+              "id": "record",
+              "title": "السجل"
+            },
+            {
+              "id": "fkValue",
+              "title": "قيمة المفتاح الأجنبي"
+            },
+            {
+              "id": "referenced",
+              "title": "السجل المشار إليه"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 3
+        },
+        {
+          "questionId": "S05Q02",
+          "prompt": "افحص معطياتك: هل فيها سجل يخالف قواعدك (مثل دفعة مسجلة لطلب ملغى، أو تاريخ دفع قبل تاريخ الطلب، أو قيمة ليست من القيم المسموحة)؟ اكتب ما وجدته وكيف صححته.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S05Q03",
+          "prompt": "جدول «الطلبات» فيه مفتاح أجنبي إلى جدول «الزبائن». بأي ترتيب تُدخل المعطيات؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "الطلبات أولًا ثم الزبائن"
+            },
+            {
+              "id": "o2",
+              "text": "الزبائن أولًا ثم الطلبات"
+            },
+            {
+              "id": "o3",
+              "text": "الترتيب لا يهم"
+            },
+            {
+              "id": "o4",
+              "text": "يُدخل الجدولان معًا في أمر INSERT واحد"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          }
+        },
+        {
+          "questionId": "S05Q04",
+          "prompt": "أرفق صور معطيات جدولين من قاعدة البيانات الفعلية (Show Table Data)، لا من جداول الكتاب.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 4
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S06",
+      "title": "التحقق من صحة المعلومات و Regex",
+      "order": 6,
+      "weight": 8,
+      "bookRef": "الجداول الخمسة · التحقق من صحة المعلومات (Validation)",
+      "questions": [
+        {
+          "questionId": "S06Q01",
+          "prompt": "اكتب قواعد التحقق لجدول واحد: الحقل، القاعدة، أين تُفرض (قاعدة البيانات، كود C#، JavaScript)، رسالة الخطأ.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "field",
+              "title": "الحقل"
+            },
+            {
+              "id": "rule",
+              "title": "القاعدة"
+            },
+            {
+              "id": "enforcedIn",
+              "title": "أين تُفرض"
+            },
+            {
+              "id": "message",
+              "title": "رسالة الخطأ"
+            }
+          ],
+          "minRows": 4,
+          "maxRows": 12
+        },
+        {
+          "questionId": "S06Q02",
+          "prompt": "طابق كل قيد بما يفرضه.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "NOT NULL"
+            },
+            {
+              "id": "l2",
+              "text": "UNIQUE"
+            },
+            {
+              "id": "l3",
+              "text": "CHECK"
+            },
+            {
+              "id": "l4",
+              "text": "DEFAULT"
+            },
+            {
+              "id": "l5",
+              "text": "FOREIGN KEY"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "القيمة يجب أن تحقق شرطًا، مثل price > 0"
+            },
+            {
+              "id": "r2",
+              "text": "القيمة يجب أن توجد في جدول آخر"
+            },
+            {
+              "id": "r3",
+              "text": "لا يُترك الحقل فارغًا"
+            },
+            {
+              "id": "r4",
+              "text": "قيمة توضع تلقائيًا إذا لم تُدخل قيمة"
+            },
+            {
+              "id": "r5",
+              "text": "لا تتكرر القيمة في سجلين"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r3",
+              "l2": "r5",
+              "l3": "r1",
+              "l4": "r4",
+              "l5": "r2"
+            }
+          }
+        },
+        {
+          "questionId": "S06Q03",
+          "prompt": "أي تعبير Regex يقبل نصًا مكوّنًا من 9 أرقام بالضبط، لا أكثر ولا أقل؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "^\\d{1,9}$"
+            },
+            {
+              "id": "o2",
+              "text": "^[0-9]+$"
+            },
+            {
+              "id": "o3",
+              "text": "^\\d{9,}$"
+            },
+            {
+              "id": "o4",
+              "text": "^\\d{9}$"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o4"
+          }
+        },
+        {
+          "questionId": "S06Q04",
+          "prompt": "أي تعبير Regex يقبل رقم هاتف من 10 أرقام يبدأ بـ 05؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "^05\\d{10}$"
+            },
+            {
+              "id": "o2",
+              "text": "^05\\d{8}$"
+            },
+            {
+              "id": "o3",
+              "text": "^\\d{10}$"
+            },
+            {
+              "id": "o4",
+              "text": "^05\\d*$"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          }
+        },
+        {
+          "questionId": "S06Q05",
+          "prompt": "اختر قاعدة كتبتها في جدول التحقق في كتابك (مثل «التاريخ ليس في الماضي» أو «9 خانات بالضبط»). هل هي موجودة فعلًا في أمر CREATE TABLE؟ إن لم تكن، أين تُفرض في مشروعك؟ انسخ السطر الذي يفرضها.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S06Q06",
+          "prompt": "لماذا لا يكفي التحقق في المتصفح (JavaScript) وحده، ويجب التحقق أيضًا في خدمة الويب أو في قاعدة البيانات؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S06Q07",
+          "prompt": "جرّب ثلاثة إدخالات خاطئة في مشروعك: ماذا أدخلت، أين (صفحة أو عملية)، ماذا حدث.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "input",
+              "title": "الإدخال الخاطئ"
+            },
+            {
+              "id": "where",
+              "title": "أين"
+            },
+            {
+              "id": "result",
+              "title": "ماذا حدث"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 6
+        },
+        {
+          "questionId": "S06Q08",
+          "prompt": "أرفق صورة رسالة خطأ تظهر في مشروعك عند إدخال خاطئ.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S07",
+      "title": "SQL Server Code",
+      "order": 7,
+      "weight": 7,
+      "bookRef": "SQL Server Code والعلاقات بين الجداول · قاعدة البيانات MDF",
+      "questions": [
+        {
+          "questionId": "S07Q01",
+          "prompt": "الصق أمر CREATE TABLE لجدول فيه مفتاح أجنبي، كما هو في مشروعك.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000
+        },
+        {
+          "questionId": "S07Q02",
+          "prompt": "ماذا يعني IDENTITY(1,1) في تعريف حقل؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "الحقل يقبل القيمة 1 فقط"
+            },
+            {
+              "id": "o2",
+              "text": "قيمة الحقل تتولد تلقائيًا: تبدأ من 1 وتزيد 1 مع كل سجل جديد"
+            },
+            {
+              "id": "o3",
+              "text": "الحقل مفتاح أجنبي إلى الجدول رقم 1"
+            },
+            {
+              "id": "o4",
+              "text": "الحقل يقبل سجلًا واحدًا فقط"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          }
+        },
+        {
+          "questionId": "S07Q03",
+          "prompt": "انسخ كود SQL من كتابك كما هو مكتوب ونفّذه. هل كل قوس مفتوح مغلق، وكل أمر ينتهي بشكل صحيح؟ اكتب أي خطأ ظهر وكيف أصلحته في الكتاب.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S07Q04",
+          "prompt": "أين يوجد ملف قاعدة البيانات (MDF) في مشروعك؟ وما اسم سلسلة الاتصال (Connection String) وفي أي ملف كُتبت؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S07Q05",
+          "prompt": "أرفق صورة الجداول كما تظهر في Server Explorer أو SQL Server Object Explorer.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S08",
+      "title": "الاستعلامات",
+      "order": 8,
+      "weight": 8,
+      "bookRef": "استعلامات الإضافة والحذف والتعديل · استعلامات البحث والحساب والبارامتر",
+      "questions": [
+        {
+          "questionId": "S08Q01",
+          "prompt": "طابق كل أمر SQL بعمله.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "INSERT"
+            },
+            {
+              "id": "l2",
+              "text": "SELECT"
+            },
+            {
+              "id": "l3",
+              "text": "UPDATE"
+            },
+            {
+              "id": "l4",
+              "text": "DELETE"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "يعدّل قيمًا في سجلات موجودة"
+            },
+            {
+              "id": "r2",
+              "text": "يحذف سجلات"
+            },
+            {
+              "id": "r3",
+              "text": "يضيف سجلًا جديدًا"
+            },
+            {
+              "id": "r4",
+              "text": "يقرأ سجلات ويعرضها"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r3",
+              "l2": "r4",
+              "l3": "r1",
+              "l4": "r2"
+            }
+          }
+        },
+        {
+          "questionId": "S08Q02",
+          "prompt": "اكتب استعلام إضافة (INSERT) من مشروعك، وتحته سطرًا يشرح ما يفعله.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 4000
+        },
+        {
+          "questionId": "S08Q03",
+          "prompt": "اكتب استعلام تعديل (UPDATE) واستعلام حذف (DELETE) من مشروعك، مع شرط WHERE لكل منهما.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 4000
+        },
+        {
+          "questionId": "S08Q04",
+          "prompt": "ماذا يحدث عند تنفيذ UPDATE أو DELETE بلا شرط WHERE؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "يظهر خطأ ولا يتغير شيء"
+            },
+            {
+              "id": "o2",
+              "text": "يُطبَّق الأمر على السجل الأول فقط"
+            },
+            {
+              "id": "o3",
+              "text": "يُطبَّق الأمر على كل سجلات الجدول"
+            },
+            {
+              "id": "o4",
+              "text": "يُطبَّق الأمر على آخر سجل أُضيف"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          }
+        },
+        {
+          "questionId": "S08Q05",
+          "prompt": "اكتب استعلام بحث يجمع جدولين (JOIN) من مشروعك، واشرح شرط الربط بينهما.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 4000
+        },
+        {
+          "questionId": "S08Q06",
+          "prompt": "اكتب استعلامًا حسابيًا (SUM أو COUNT أو AVG) من مشروعك، واكتب السؤال الذي يجيب عنه.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 4000
+        },
+        {
+          "questionId": "S08Q07",
+          "prompt": "اكتب استعلامًا مع بارامتر (مثل @Id) من مشروعك. من أين تأتي قيمة البارامتر عند التنفيذ؟",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 4000
+        },
+        {
+          "questionId": "S08Q08",
+          "prompt": "أرفق صورة نتيجة تنفيذ استعلام واحد من هذه الاستعلامات.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 3
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S09",
+      "title": "لغات البرمجة والفئات",
+      "order": 9,
+      "weight": 6,
+      "bookRef": "البرمجة: اللغات المستعملة والفئات",
+      "questions": [
+        {
+          "questionId": "S09Q01",
+          "prompt": "طابق كل لغة بدورها في مشروعك.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "HTML"
+            },
+            {
+              "id": "l2",
+              "text": "CSS"
+            },
+            {
+              "id": "l3",
+              "text": "JavaScript"
+            },
+            {
+              "id": "l4",
+              "text": "C#"
+            },
+            {
+              "id": "l5",
+              "text": "SQL"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "التعامل مع المعطيات في قاعدة البيانات"
+            },
+            {
+              "id": "r2",
+              "text": "مظهر الصفحة: الألوان والخطوط والتنسيق"
+            },
+            {
+              "id": "r3",
+              "text": "منطق الخادم وعمليات خدمة الويب"
+            },
+            {
+              "id": "r4",
+              "text": "هيكل الصفحة ومحتواها"
+            },
+            {
+              "id": "r5",
+              "text": "التفاعل داخل المتصفح"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r4",
+              "l2": "r2",
+              "l3": "r5",
+              "l4": "r3",
+              "l5": "r1"
+            }
+          }
+        },
+        {
+          "questionId": "S09Q02",
+          "prompt": "اختر فئة (Class) من مشروعك واكتب خصائصها مقابل حقول جدولها: الخاصية، نوعها في C#، الحقل في الجدول، نوعه في SQL.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "property",
+              "title": "الخاصية"
+            },
+            {
+              "id": "csType",
+              "title": "النوع في C#"
+            },
+            {
+              "id": "column",
+              "title": "الحقل في الجدول"
+            },
+            {
+              "id": "sqlType",
+              "title": "النوع في SQL"
+            }
+          ],
+          "minRows": 4,
+          "maxRows": 12
+        },
+        {
+          "questionId": "S09Q03",
+          "prompt": "الصق كود فئة واحدة كما هو في Visual Studio. تأكد أن كل قوس { له قوس } يغلقه.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 6000
+        },
+        {
+          "questionId": "S09Q04",
+          "prompt": "قارن جدولًا بالفئة التي تمثله: هل في الجدول حقول لا توجد في الفئة، أو العكس (مثل اسم المستخدم وكلمة المرور)؟ اكتب الفرق وسببه.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S09Q05",
+          "prompt": "ما معنى { get; set; } في خاصية الفئة؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 300
+        }
+      ]
+    },
+    {
+      "sectionId": "S10",
+      "title": "خدمات الويب وفحصها",
+      "order": 10,
+      "weight": 9,
+      "bookRef": "Web Services: Add / Update / Delete / Parameter · WCF وخدمات الويب وفحصها",
+      "questions": [
+        {
+          "questionId": "S10Q01",
+          "prompt": "اكتب خمس عمليات (Web Methods) من مشروعك: اسم العملية، ماذا تتلقى، ماذا تعيد، ماذا تنفذ.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "operation",
+              "title": "اسم العملية"
+            },
+            {
+              "id": "parameters",
+              "title": "ماذا تتلقى"
+            },
+            {
+              "id": "returns",
+              "title": "ماذا تعيد"
+            },
+            {
+              "id": "does",
+              "title": "ماذا تنفذ"
+            }
+          ],
+          "minRows": 5,
+          "maxRows": 12
+        },
+        {
+          "questionId": "S10Q02",
+          "prompt": "رتّب ما يحدث عند الضغط على «حفظ» في صفحة تستدعي عملية إضافة في خدمة الويب، من الأول إلى الأخير.",
+          "kind": "ordering",
+          "grading": "auto",
+          "required": true,
+          "items": [
+            {
+              "id": "i1",
+              "text": "العملية تنفّذ أمر INSERT في قاعدة البيانات"
+            },
+            {
+              "id": "i2",
+              "text": "المتصفح يرسل طلب HTTP إلى عملية خدمة الويب"
+            },
+            {
+              "id": "i3",
+              "text": "الصفحة تعرض النتيجة للمستخدم"
+            },
+            {
+              "id": "i4",
+              "text": "JavaScript في الصفحة يفحص الحقول قبل الإرسال"
+            },
+            {
+              "id": "i5",
+              "text": "خدمة الويب تعيد الرد إلى المتصفح"
+            },
+            {
+              "id": "i6",
+              "text": "العملية تتحقق من صحة المعطيات ومن صلاحية المستخدم"
+            }
+          ],
+          "answer": {
+            "order": [
+              "i4",
+              "i2",
+              "i6",
+              "i1",
+              "i5",
+              "i3"
+            ]
+          }
+        },
+        {
+          "questionId": "S10Q03",
+          "prompt": "بأي صيغة تتبادل خدمات SOAP (مثل خدمات ASMX) المعطيات؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "CSS"
+            },
+            {
+              "id": "o2",
+              "text": "SQL"
+            },
+            {
+              "id": "o3",
+              "text": "XML"
+            },
+            {
+              "id": "o4",
+              "text": "JPEG"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o3"
+          }
+        },
+        {
+          "questionId": "S10Q04",
+          "prompt": "الصق كود عملية إضافة (Add) كاملة من مشروعك، مع الاستعلام الذي تنفذه.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 8000
+        },
+        {
+          "questionId": "S10Q05",
+          "prompt": "اختر عملية تعديل أو حذف: من يُسمح له باستدعائها؟ أين في الكود يُفحص ذلك؟ وماذا يحدث إذا استدعاها مستخدم غير مسموح له؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S10Q06",
+          "prompt": "هل توقيع كل عملية (الاسم، البارامترات، نوع الإرجاع) في جداول كتابك مطابق للكود الفعلي، ومتطابق بين كل جداول الكتاب؟ اكتب عملية وجدت فيها اختلافًا وكيف صححتها.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S10Q07",
+          "prompt": "افحص ثلاث عمليات: العملية، القيم التي أدخلتها، النتيجة المتوقعة، النتيجة الفعلية.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "operation",
+              "title": "العملية"
+            },
+            {
+              "id": "inputs",
+              "title": "القيم المدخلة"
+            },
+            {
+              "id": "expected",
+              "title": "النتيجة المتوقعة"
+            },
+            {
+              "id": "actual",
+              "title": "النتيجة الفعلية"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 8
+        },
+        {
+          "questionId": "S10Q08",
+          "prompt": "أرفق صور فحص عمليتين: صفحة الفحص والنتيجة التي عادت.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 2,
+            "max": 4
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S11",
+      "title": "XML والمخططات",
+      "order": 11,
+      "weight": 8,
+      "bookRef": "مخططات XML وDFD وDSD · مخططات Sequence وActivity وERD وUse Case",
+      "questions": [
+        {
+          "questionId": "S11Q01",
+          "prompt": "اكتب سجلًا واحدًا من أحد جداولك بصيغة XML.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 3000
+        },
+        {
+          "questionId": "S11Q02",
+          "prompt": "ما الفرق الأساسي بين XML و HTML؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "XML لغة برمجة تنفَّذ على الخادم، و HTML قاعدة بيانات"
+            },
+            {
+              "id": "o2",
+              "text": "XML يصف المعطيات وينقلها بوسوم يختارها المبرمج، و HTML يصف عرض صفحة الويب بوسوم محددة مسبقًا"
+            },
+            {
+              "id": "o3",
+              "text": "XML ينسّق ألوان الصفحة وخطوطها، و HTML ينفّذ الاستعلامات"
+            },
+            {
+              "id": "o4",
+              "text": "لا فرق بينهما: اسمان للّغة نفسها"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          }
+        },
+        {
+          "questionId": "S11Q03",
+          "prompt": "طابق كل مخطط بما يعرضه.",
+          "kind": "matching",
+          "grading": "auto",
+          "required": true,
+          "left": [
+            {
+              "id": "l1",
+              "text": "ERD"
+            },
+            {
+              "id": "l2",
+              "text": "DFD"
+            },
+            {
+              "id": "l3",
+              "text": "Use Case"
+            },
+            {
+              "id": "l4",
+              "text": "Sequence"
+            },
+            {
+              "id": "l5",
+              "text": "Activity"
+            }
+          ],
+          "right": [
+            {
+              "id": "r1",
+              "text": "الرسائل بين الأطراف مرتبة حسب الزمن"
+            },
+            {
+              "id": "r2",
+              "text": "الكيانات وخصائصها والعلاقات بينها"
+            },
+            {
+              "id": "r3",
+              "text": "خطوات عملية واحدة وتفرعات القرار فيها"
+            },
+            {
+              "id": "r4",
+              "text": "حركة المعطيات بين المستخدم والعمليات ومخازن المعطيات"
+            },
+            {
+              "id": "r5",
+              "text": "المستخدمون وما يستطيع كل منهم أن يفعله في النظام"
+            }
+          ],
+          "answer": {
+            "pairs": {
+              "l1": "r2",
+              "l2": "r4",
+              "l3": "r5",
+              "l4": "r1",
+              "l5": "r3"
+            }
+          }
+        },
+        {
+          "questionId": "S11Q04",
+          "prompt": "اختر مخطط DFD من كتابك واشرحه خطوة خطوة: من يرسل ماذا، وإلى من، وأين تُحفظ المعطيات؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S11Q05",
+          "prompt": "من مخطط Use Case: اكتب كل ممثل (Actor) وما يفعله، وفي أي صفحة من موقعك يفعل ذلك.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "actor",
+              "title": "الممثل"
+            },
+            {
+              "id": "action",
+              "title": "ما يفعله"
+            },
+            {
+              "id": "page",
+              "title": "الصفحة في الموقع"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 12
+        },
+        {
+          "questionId": "S11Q06",
+          "prompt": "هل ما في مخطط ERD (الجداول، الحقول، نوع كل علاقة) يطابق أوامر CREATE TABLE في مشروعك؟ اكتب فرقًا واحدًا وجدته، أو كيف تأكدت أنه لا يوجد فرق.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S11Q07",
+          "prompt": "أرفق صور مخططين من كتابك.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 4
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S12",
+      "title": "الموقع: المبنى والصفحات",
+      "order": 12,
+      "weight": 8,
+      "bookRef": "الموقع: مبنى المشروع والصفحات · بناء الموقع والصفحات العامة: الرئيسية، من نحن، تواصل معنا",
+      "questions": [
+        {
+          "questionId": "S12Q01",
+          "prompt": "اكتب صفحات موقعك: الصفحة، من يراها، ماذا تعرض، أي عمليات خدمة الويب تستدعي.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "page",
+              "title": "الصفحة"
+            },
+            {
+              "id": "audience",
+              "title": "من يراها"
+            },
+            {
+              "id": "shows",
+              "title": "ماذا تعرض"
+            },
+            {
+              "id": "operations",
+              "title": "العمليات التي تستدعيها"
+            }
+          ],
+          "minRows": 5,
+          "maxRows": 15
+        },
+        {
+          "questionId": "S12Q02",
+          "prompt": "اكتب مجلدات مشروعك كما تظهر في Solution Explorer وماذا يحتوي كل مجلد.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "folder",
+              "title": "المجلد"
+            },
+            {
+              "id": "content",
+              "title": "ماذا يحتوي"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 10
+        },
+        {
+          "questionId": "S12Q03",
+          "prompt": "الصق كود JavaScript من موقعك يستدعي عملية في خدمة الويب ويعرض نتيجتها، واشرح أسطره المهمة.",
+          "kind": "cli",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 6000
+        },
+        {
+          "questionId": "S12Q04",
+          "prompt": "كيف تنتقل معلومة من نموذج HTML في صفحتك حتى تُحفظ في الجدول؟ اشرح المسار بأسماء الملفات والعمليات الحقيقية في مشروعك.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S12Q05",
+          "prompt": "اختر نموذجًا في موقعك (مثل «تواصل معنا»): أي حقول تُفحص بـ JavaScript قبل الإرسال، وما الرسالة التي تظهر عند الخطأ؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S12Q06",
+          "prompt": "أي ملف CSS ينسّق موقعك، وكيف جعلت الصفحة تناسب شاشة الهاتف؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S12Q07",
+          "prompt": "أرفق صورة الصفحة الرئيسية وصورتين لصفحتين أخريين.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 2,
+            "max": 5
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S13",
+      "title": "الدخول والصلاحيات والأمان",
+      "order": 13,
+      "weight": 6,
+      "bookRef": "الدخول وصفحات المستخدمين: المدير، الزبون، العامل",
+      "questions": [
+        {
+          "questionId": "S13Q01",
+          "prompt": "اكتب أنواع المستخدمين في موقعك: النوع، الصفحة التي يدخل إليها، ما يُسمح له، ما يُمنع عنه.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "userType",
+              "title": "النوع"
+            },
+            {
+              "id": "page",
+              "title": "صفحته"
+            },
+            {
+              "id": "allowed",
+              "title": "ما يُسمح له"
+            },
+            {
+              "id": "denied",
+              "title": "ما يُمنع عنه"
+            }
+          ],
+          "minRows": 2,
+          "maxRows": 5
+        },
+        {
+          "questionId": "S13Q02",
+          "prompt": "أي طريقة آمنة لبناء استعلام يحتوي قيمة كتبها المستخدم؟ اكتب في التبرير اسم الهجوم الذي تمنعه هذه الطريقة.",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "ضمّ النص الذي كتبه المستخدم مباشرة داخل جملة SQL"
+            },
+            {
+              "id": "o2",
+              "text": "استعمال بارامترات مثل @Username وإرسال القيمة منفصلة عن نص الاستعلام"
+            },
+            {
+              "id": "o3",
+              "text": "حذف شرط WHERE من الاستعلام"
+            },
+            {
+              "id": "o4",
+              "text": "تحويل النص إلى أحرف كبيرة قبل ضمّه إلى الاستعلام"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o2"
+          },
+          "justification": true
+        },
+        {
+          "questionId": "S13Q03",
+          "prompt": "كيف تُحفظ كلمات المرور في قاعدة البيانات بشكل صحيح؟",
+          "kind": "choice",
+          "grading": "auto",
+          "required": true,
+          "options": [
+            {
+              "id": "o1",
+              "text": "كما كتبها المستخدم، ليتمكن المدير من قراءتها"
+            },
+            {
+              "id": "o2",
+              "text": "في ملف JavaScript داخل الموقع"
+            },
+            {
+              "id": "o3",
+              "text": "في عنوان الصفحة (URL) بعد تسجيل الدخول"
+            },
+            {
+              "id": "o4",
+              "text": "تُحفظ نتيجة دالة تجزئة (Hash) مع قيمة عشوائية (Salt)، وليس كلمة المرور نفسها"
+            }
+          ],
+          "answer": {
+            "correctOptionId": "o4"
+          }
+        },
+        {
+          "questionId": "S13Q04",
+          "prompt": "أين تُحفظ كلمات المرور في مشروعك وبأي شكل؟ اكتب اسم الجدول والحقل. هل هذا الحقل مذكور في جداول كتابك وفي فئاته؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S13Q05",
+          "prompt": "جرّب: مستخدم لم يسجل الدخول كتب عنوان صفحة المدير مباشرة في المتصفح. ماذا حدث في مشروعك، وأين الكود الذي يمنعه؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S13Q06",
+          "prompt": "هل يستطيع مستخدم عادي أن يرى معطيات مستخدم آخر (مثلًا بتغيير الرقم التعريفي في الطلب)؟ ما الذي يمنعه في خدمة الويب؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S13Q07",
+          "prompt": "أرفق صورة صفحة الدخول وصورة محاولة دخول مرفوضة.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 3
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S14",
+      "title": "تدقيق الكتاب مقابل المشروع",
+      "order": 14,
+      "weight": 5,
+      "bookRef": "الكتاب كله ومشروع Visual Studio",
+      "questions": [
+        {
+          "questionId": "S14Q01",
+          "prompt": "أشّر ما تحققت منه بنفسك بين كتابك ومشروع Visual Studio.",
+          "kind": "checklist",
+          "grading": "none",
+          "required": true,
+          "items": [
+            {
+              "id": "c1",
+              "text": "أسماء الجداول والحقول في الكتاب تطابق قاعدة البيانات الفعلية"
+            },
+            {
+              "id": "c2",
+              "text": "القيم المسموحة (مثل حالات السجل وطرق الدفع) واحدة في كل أقسام الكتاب وفي قيود CHECK"
+            },
+            {
+              "id": "c3",
+              "text": "كل قاعدة في جداول التحقق مفروضة فعلًا في قاعدة البيانات أو في الكود"
+            },
+            {
+              "id": "c4",
+              "text": "توقيع كل عملية خدمة ويب في الكتاب يطابق الكود"
+            },
+            {
+              "id": "c5",
+              "text": "كل فئة تحتوي حقول جدولها"
+            },
+            {
+              "id": "c6",
+              "text": "كل كود في الكتاب يعمل عند نسخه كما هو"
+            },
+            {
+              "id": "c7",
+              "text": "الفهرست يطابق العناوين وأرقام الصفحات"
+            }
+          ]
+        },
+        {
+          "questionId": "S14Q02",
+          "prompt": "اذكر ثلاثة اختلافات وجدتها بين كتابك ومشروعك (أو بين قسمين في الكتاب)، وأين وجدت كلًا منها، وكيف صححته.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "difference",
+              "title": "الاختلاف"
+            },
+            {
+              "id": "where",
+              "title": "أين"
+            },
+            {
+              "id": "fix",
+              "title": "التصحيح"
+            }
+          ],
+          "minRows": 3,
+          "maxRows": 8
+        },
+        {
+          "questionId": "S14Q03",
+          "prompt": "اختر حقلًا قيمه محدودة (مثل «الحالة»): اكتب قيمه كما في قيد CHECK، وكما في جدول التحقق في الكتاب، وكما في القائمة المنسدلة في الصفحة.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "field",
+              "title": "الحقل"
+            },
+            {
+              "id": "inCheck",
+              "title": "في قيد CHECK"
+            },
+            {
+              "id": "inBook",
+              "title": "في الكتاب"
+            },
+            {
+              "id": "inPage",
+              "title": "في الصفحة"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 4
+        },
+        {
+          "questionId": "S14Q04",
+          "prompt": "أي أقسام كتابك ما زالت فارغة أو عناوين بلا محتوى (مثل خارطة الموقع، كود من الموقع، أو مخطط ناقص)، ومتى تكملها؟",
+          "kind": "shortText",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "questionId": "S14Q05",
+          "prompt": "أرفق صورة الفهرست بعد التحديث.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "S15",
+      "title": "المردود والمصادر والأمانة الأكاديمية",
+      "order": 15,
+      "weight": 5,
+      "bookRef": "نهاية الكتاب: المردود والمصادر",
+      "questions": [
+        {
+          "questionId": "S15Q01",
+          "prompt": "ما أهم ثلاثة أشياء تعلمتها من المشروع؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q02",
+          "prompt": "ما أصعب جزء واجهته، وكيف تجاوزته؟ أعط مثالًا محددًا: الخطأ، الرسالة التي ظهرت، الحل.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q03",
+          "prompt": "قيّم إتقانك لكل موضوع من 1 (ضعيف) إلى 5 (متمكن).",
+          "kind": "scale",
+          "grading": "none",
+          "required": true,
+          "items": [
+            {
+              "id": "t1",
+              "text": "تصميم الجداول والعلاقات"
+            },
+            {
+              "id": "t2",
+              "text": "استعلامات SQL"
+            },
+            {
+              "id": "t3",
+              "text": "الفئات في C#"
+            },
+            {
+              "id": "t4",
+              "text": "خدمات الويب"
+            },
+            {
+              "id": "t5",
+              "text": "HTML و CSS"
+            },
+            {
+              "id": "t6",
+              "text": "JavaScript"
+            },
+            {
+              "id": "t7",
+              "text": "المخططات"
+            }
+          ],
+          "min": 1,
+          "max": 5
+        },
+        {
+          "questionId": "S15Q04",
+          "prompt": "املأ قائمة المصادر: العنوان، الرابط، فيمَ استعملته.",
+          "kind": "table",
+          "grading": "teacher",
+          "required": true,
+          "columns": [
+            {
+              "id": "title",
+              "title": "العنوان"
+            },
+            {
+              "id": "link",
+              "title": "الرابط"
+            },
+            {
+              "id": "usedFor",
+              "title": "فيمَ استعملته"
+            }
+          ],
+          "minRows": 1,
+          "maxRows": 15
+        },
+        {
+          "questionId": "S15Q05",
+          "prompt": "هل استعملت الذكاء الاصطناعي؟ في أي أجزاء (نص، كود، مخططات)، وما الذي غيّرته وفحصته بنفسك؟",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q06",
+          "prompt": "اختر فقرة في كتابك أخذتها من مصدر (مثل تعريف لغة أو تقنية) وأعد كتابتها بكلماتك، مع مثال من مشروعك.",
+          "kind": "paragraph",
+          "grading": "teacher",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "questionId": "S15Q07",
+          "prompt": "أقرّ بأن هذا العمل عملي وأن كل المصادر والأدوات التي استعملتها مذكورة.",
+          "kind": "declaration",
+          "grading": "none",
+          "required": true
+        }
+      ]
+    },
+    {
+      "sectionId": "S16",
+      "title": "المرفقات والتسليم",
+      "order": 16,
+      "weight": 3,
+      "bookRef": "تهيئة المشروع: التعريف والمجلدات والصور · المخرجات: الرسوم البيانية والتقارير",
+      "questions": [
+        {
+          "questionId": "S16Q01",
+          "prompt": "أرفق صورة Solution Explorer تظهر مبنى المشروع كاملًا.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 2
+          }
+        },
+        {
+          "questionId": "S16Q02",
+          "prompt": "أرفق صورة رسم بياني أو تقرير من موقعك.",
+          "kind": "image",
+          "grading": "teacher",
+          "required": true,
+          "images": {
+            "min": 1,
+            "max": 3
+          }
+        },
+        {
+          "questionId": "S16Q03",
+          "prompt": "أرفق كتاب المشروع النهائي.",
+          "kind": "file",
+          "grading": "teacher",
+          "required": true,
+          "accept": [
+            ".docx",
+            ".pdf"
+          ]
+        },
+        {
+          "questionId": "S16Q04",
+          "prompt": "راجعت كل الأقسام، وشغّلت المشروع من جديد وتأكدت أنه يعمل، وأنا جاهز للتسليم.",
+          "kind": "declaration",
+          "grading": "none",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

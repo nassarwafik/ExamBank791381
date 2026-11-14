@@ -84,9 +84,10 @@ describe("F1 — the bundled 794589 exam form", () => {
 });
 
 describe("F1 — the registry", () => {
-  it("returns a form only for the project that ships one", () => {
-    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null)).toEqual([CODE]);
-    expect(getExamFormTemplate("883589")).toBeNull();
+  // Phase F1b — 883589 ships its own form now (api/tests/project-exam-form-883589-f1b.test.js); 899373 is the project with none.
+  it("returns a form only for the projects that ship one", () => {
+    expect(getSupportedProjects().filter(code => getExamFormTemplate(code) !== null).sort()).toEqual([CODE, "883589"]);
+    expect(getExamFormTemplate("883589").projectCode).toBe("883589");
     expect(getExamFormTemplate("899373")).toBeNull();
   });
   it("refuses an unknown project instead of answering «no form»", () => {
@@ -96,7 +97,7 @@ describe("F1 — the registry", () => {
   it("the loader takes a six-digit code only (never a path)", () => {
     expect(() => loadExamFormTemplate("../project-794589")).toThrow(/Unknown project code/);
     expect(() => loadExamFormTemplate("794589/..")).toThrow(/Unknown project code/);
-    expect(() => loadExamFormTemplate("883589")).toThrow(/not found/);
+    expect(() => loadExamFormTemplate("899373")).toThrow(/not found/);
   });
 });
 

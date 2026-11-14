@@ -51,6 +51,8 @@ const DEFINITIONS = {
       { trackId: "visualStudio", title: "Visual Studio", icon: "🧩" }
     ],
     loadTemplate: () => loadTemplateFile("883589"),
+    // Phase F1b — this project ships an exam form too: data file exam-form-template.json (docs/enterprise-project-exam-form-883589.md).
+    examForm: true,
     // Phase P7 — v1 (52 stages) converts to the condensed v2 set (18) with its progress.
     snapshotUpgrade: { currentVersion: 2, condenseFrom: 1 }
   }
