@@ -121,7 +121,8 @@ to compare the book with the Packet Tracer file and correct what differs.
 | F2-UI | The student's page for the form, and the teacher's control that opens it. Split out of F2 so the write path is reviewed on its own. (`docs/enterprise-project-exam-form-f2-ui.md`) |
 | F3 | The teacher's review, server side: hide questions at the first open, the class list, one student's form with the evidence, rate sections, return for correction, approve (the mark is computed then), take an approval back; what the student is sent. (`docs/enterprise-project-exam-form-f3.md`) |
 | F3-UI | The teacher's screens for the review and the student's result page. |
-| F4 | Student images through the existing image sanitizer; served by the API only, to the student who owns them and the teacher. |
+| F4 | Student images through the existing image sanitizer; served by the API only, to the student who owns them and the teacher. Server side: `docs/enterprise-project-exam-form-f4.md` (a class's image answers are off until its teacher switches them on). |
+| F4-UI | The student's upload control, the teacher's switch, the images in the teacher's review. |
 | F1b | The 883589 question bank, as data (`docs/enterprise-project-exam-form-883589.md`). |
 | F5 | Files (`.pkt`, the book), PDF export, the 899373 question bank. |
 

@@ -9,6 +9,15 @@
 // Inputs that are not available yet: student images arrive in F4 and files in F5. Their questions are shown, not answerable,
 // and never block a submit until then.
 const DEFERRED_KINDS = new Set(["image", "file"]);
+// Phase F4 — a class whose teacher switched image answers on (`rules.imageAnswers`, stored on the class form) answers its
+// image questions; files still wait for F5. Every function below takes the class's `rules`; without them (or for a class
+// that never switched images on) image questions stay deferred exactly as before.
+const DEFERRED_WITH_IMAGES = new Set(["file"]);
+const deferredKindsOf = rules => (rules && rules.imageAnswers === true ? DEFERRED_WITH_IMAGES : DEFERRED_KINDS);
+// A question that takes images: an image question, or a text / code / table question that asks for images beside its answer.
+const acceptsImages = question => isObject(question.images) && Number.isInteger(question.images.max) && question.images.max > 0;
+// The image references stored on an answer ([{ id, width, height, bytes, addedAt }]); written only by exam-form-images.js.
+const imagesOf = answer => (answer && Array.isArray(answer.images) ? answer.images : []);
 const MAX_PATCH_QUESTIONS = 120;
 const CELL_MAX = 300;
 const JUSTIFICATION_MAX = 1000;
@@ -40,9 +49,11 @@ function uniqueKnown(list, known, what) {
  * @param {object} question a question of the class's (validated) form
  * @param {*} raw what the student sent for it
  */
-function normalizeAnswer(question, raw) {
+function normalizeAnswer(question, raw, rules) {
   const what = "السؤال " + question.questionId;
-  if (DEFERRED_KINDS.has(question.kind)) fail(what + ": هذا النوع من الإجابات غير متاح بعد.", 400, "KIND_NOT_AVAILABLE");
+  if (deferredKindsOf(rules).has(question.kind)) fail(what + ": هذا النوع من الإجابات غير متاح بعد.", 400, "KIND_NOT_AVAILABLE");
+  // Phase F4 — an image is never written through a draft: it is uploaded (sanitized, stored, then referenced by the server).
+  if (question.kind === "image") fail(what + ": تُضاف الصور بزر إرفاق الصورة.", 400, "IMAGE_VIA_UPLOAD");
   if (raw === null || raw === undefined) return null;
   if (!isObject(raw)) fail(what + ": إجابة غير صحيحة.");
 
@@ -128,8 +139,13 @@ function normalizeAnswer(question, raw) {
 }
 
 // Is this question fully answered (what a submit needs for a required question)? `answer` is a stored, normalized answer.
-function isAnswered(question, answer) {
+// Phase F4 — with image answers on, an image question needs at least `images.min` images (and at least one), and a text /
+// code / table question that asks for images needs them beside its answer.
+function isAnswered(question, answer, rules) {
   if (!answer) return false;
+  const imagesOn = !!(rules && rules.imageAnswers === true);
+  if (question.kind === "image") return imagesOn && imagesOf(answer).length >= Math.max(1, question.images.min);
+  if (imagesOn && acceptsImages(question) && imagesOf(answer).length < question.images.min) return false;
   switch (question.kind) {
     case "shortText": case "paragraph": case "cli": return typeof answer.text === "string" && !blank(answer.text);
     case "table": return Array.isArray(answer.rows) && answer.rows.length >= question.minRows;
@@ -150,14 +166,15 @@ const questionsOf = template => template.sections.flatMap(s => s.questions);
  * Where the student stands: how many answerable questions are answered, and which REQUIRED ones still block a submit.
  * Questions of a deferred kind are counted apart and never block.
  */
-function formProgress(template, answers) {
+function formProgress(template, answers, rules) {
   const stored = isObject(answers) ? answers : {};
+  const deferredKinds = deferredKindsOf(rules);
   let total = 0, answered = 0, deferred = 0;
   const missing = [];
   for (const q of questionsOf(template)) {
-    if (DEFERRED_KINDS.has(q.kind)) { deferred += 1; continue; }
+    if (deferredKinds.has(q.kind)) { deferred += 1; continue; }
     total += 1;
-    if (isAnswered(q, stored[q.questionId])) answered += 1;
+    if (isAnswered(q, stored[q.questionId], rules)) answered += 1;
     else if (q.required === true) missing.push(q.questionId);
   }
   return { total, answered, deferred, missing };
@@ -173,10 +190,15 @@ const STUDENT_WRITABLE = new Set(["draft", "returned"]);
 
 // The checks shared by both writes: the document is this form's, the student may still write it, and the page that sends the
 // write has seen the latest saved state (another device or tab may have saved since).
-function assertWritableDraft(doc, template, baseRevision) {
+// Phase F4 — the state part alone (used by the image writes, which carry no revision: adding or removing one image never
+// overwrites another answer, so there is nothing a stale page could undo).
+function assertStudentWritable(doc, template) {
   if (doc.formVersion !== template.formVersion) fail("تغيّرت نسخة الاستمارة. حدّث الصفحة.", 409, "FORM_VERSION_CHANGED");
   if (doc.status === "approved") fail("اعتمد المعلم الاستمارة، ولا يمكن تعديلها.", 409, "FORM_APPROVED");
   if (!STUDENT_WRITABLE.has(doc.status)) fail("سلّمت الاستمارة، ولا يمكن تعديلها إلا إذا أعادها المعلم.", 409, "FORM_SUBMITTED");
+}
+function assertWritableDraft(doc, template, baseRevision) {
+  assertStudentWritable(doc, template);
   if (!Number.isInteger(baseRevision) || baseRevision !== doc.revision) fail("حُفظت إجاباتك من جهاز أو نافذة أخرى. حدّث الصفحة.", 409, "DRAFT_STALE");
 }
 
@@ -184,7 +206,7 @@ function assertWritableDraft(doc, template, baseRevision) {
  * Saves a draft: `patch` = { questionId: answer | null } for the questions that changed (null clears one).
  * Returns { doc, changed }. Nothing is returned for writing when the patch changes nothing.
  */
-function applyDraft(current, template, { patch, baseRevision, identity, now }) {
+function applyDraft(current, template, { patch, baseRevision, identity, now, rules }) {
   const doc = current ? JSON.parse(JSON.stringify(current)) : emptyDocument({ ...identity, formVersion: template.formVersion, now });
   assertWritableDraft(doc, template, baseRevision);
   if (!isObject(patch)) fail("طلب غير صحيح.");
@@ -197,8 +219,12 @@ function applyDraft(current, template, { patch, baseRevision, identity, now }) {
   for (const id of ids) {
     const question = byId.get(id);
     if (!question) fail("سؤال غير موجود في الاستمارة: " + id);
-    const next = normalizeAnswer(question, patch[id]);
     const before = has(doc.answers, id) ? doc.answers[id] : null;
+    // Phase F4 — the images already attached to this question stay: a draft rewrites the text / rows only, and never
+    // carries an image reference of its own (normalizeAnswer rebuilds the answer from the fields it knows).
+    const written = normalizeAnswer(question, patch[id], rules);
+    const kept = imagesOf(before);
+    const next = kept.length ? { ...(written || {}), images: kept } : written;
     if (JSON.stringify(before) === JSON.stringify(next)) continue;
     if (next === null) delete doc.answers[id]; else doc.answers[id] = next;
     changed = true;
@@ -212,11 +238,11 @@ function applyDraft(current, template, { patch, baseRevision, identity, now }) {
 /**
  * Submits the form: every required, answerable question must be answered. The document becomes read-only for the student.
  */
-function applySubmit(current, template, { baseRevision, now }) {
+function applySubmit(current, template, { baseRevision, now, rules }) {
   if (!current) fail("لا توجد إجابات محفوظة للتسليم.", 400, "NOTHING_TO_SUBMIT");
   const doc = JSON.parse(JSON.stringify(current));
   assertWritableDraft(doc, template, baseRevision);
-  const progress = formProgress(template, doc.answers);
+  const progress = formProgress(template, doc.answers, rules);
   if (progress.missing.length) {
     const err = new Error("أكمل الأسئلة الإلزامية قبل التسليم (" + progress.missing.length + ").");
     err.httpStatus = 400; err.code = "FORM_INCOMPLETE"; err.missing = progress.missing;
@@ -230,4 +256,4 @@ function applySubmit(current, template, { baseRevision, now }) {
   return { doc };
 }
 
-module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, STUDENT_WRITABLE, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };
+module.exports = { DEFERRED_KINDS, MAX_PATCH_QUESTIONS, STUDENT_WRITABLE, deferredKindsOf, acceptsImages, imagesOf, assertStudentWritable, normalizeAnswer, isAnswered, formProgress, emptyDocument, applyDraft, applySubmit };

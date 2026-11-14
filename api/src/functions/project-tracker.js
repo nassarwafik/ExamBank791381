@@ -280,6 +280,18 @@ async function handler(request, deps = {}, obs = null) {
           }
         }
 
+        // Phase F4 — one image a student of THIS class attached to their form, for the teacher who reviews it. The same gate
+        // as every read here (capability, the teacher's own class, the class enrolled in the project), then: the student
+        // must be a member of the class and the image must be referenced by that student's answers. Anything else is 404.
+        if (resource === "exam-form-image") {
+          const studentId = String(url.searchParams.get("studentId") || "").trim();
+          const imageId = String(url.searchParams.get("imageId") || "").trim();
+          const membership = studentId ? await svc.requireStudentInClass(container, studentId, classId) : { ok: false };
+          const image = membership.ok ? await examForms.readStudentImage(container, projectCode, classId, studentId, imageId) : null;
+          if (!image) return { status: 404, jsonBody: { ok: false, error: "لا توجد صورة." } };
+          return { status: 200, body: image.buffer, headers: { "content-type": image.contentType, "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff", "content-disposition": "inline" } };
+        }
+
         // Phase F3 — the class's forms (every student's state) and one student's form with the review. Reads only. The
         // student view carries the form's answer keys: it is a teacher read behind this route's capability and tenancy.
         if (resource === "exam-form-students" || resource === "exam-form-student") {
@@ -384,13 +396,13 @@ async function handler(request, deps = {}, obs = null) {
         const open = action === "examform.open";
         try {
           const r = open
-            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds })
+            ? await examForms.openClassForm(container, projectCode, classId, { actor: auth.user?.sub, now, hiddenQuestionIds: body.hiddenQuestionIds, imageAnswers: body.imageAnswers })   // imageAnswers: Phase F4
             : await examForms.closeClassForm(container, projectCode, classId, { actor: auth.user?.sub, now });
           if (r.changed) {
             await rec(container, {
               actor: auth.user?.sub, action: open ? "project.exam_form.open" : "project.exam_form.close",
               targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
-              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first, hiddenQuestions: Array.isArray(r.doc.hiddenQuestionIds) ? r.doc.hiddenQuestionIds.length : 0 } : {}) }
+              details: { projectCode, classId, formVersion: r.doc.formVersion, ...(open ? { firstOpen: r.first, hiddenQuestions: Array.isArray(r.doc.hiddenQuestionIds) ? r.doc.hiddenQuestionIds.length : 0 } : {}), ...(open && r.imagesSwitchedOn ? { imageAnswers: true } : {}) }
             });
           }
           return { status: 200, jsonBody: { ok: true, projectCode, classId, changed: r.changed, examForm: await examForms.classFormState(container, projectCode, classId) } };
