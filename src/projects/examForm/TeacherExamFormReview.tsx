@@ -3,13 +3,14 @@
 // ratings, return the form for correction, approve it (the server computes the mark then) or take an approval back.
 // Everything shown here is presentation: the server decides who may rate, what a valid level is and what the mark is.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { trackerGet, trackerPost } from "../api";
+import { trackerGet, trackerGetBlob, trackerPost } from "../api";
 import { isStaleEdit } from "../../teacherFetch";
 import StatusBadge from "../../ui/StatusBadge";
 import { IconChevronBack } from "../../icons";
 import { useConfirm } from "../../ui/useConfirm";
 import { SAVE_STATE_LABELS } from "../../teacher/saveLabels";
 import QuestionInput from "./QuestionInput";
+import { ExamFormImageList, type ExamFormImageReader } from "./ExamFormImages";
 import { STATUS_BADGE, entryText, type SectionRating, type TeacherFormView, type TeacherQuestion, type TeacherSection } from "./teacherTypes";
 
 type Props = {
@@ -63,17 +64,21 @@ function keyText(q: TeacherQuestion): string {
   return "";
 }
 
-function AnswerBlock({ question, view }: { question: TeacherQuestion; view: TeacherFormView }) {
+function AnswerBlock({ question, view, readImage }: { question: TeacherQuestion; view: TeacherFormView; readImage: ExamFormImageReader }) {
   const answer = view.answers[question.questionId];
   const verdict = question.grading === "auto" ? view.auto.byQuestion[question.questionId] : undefined;
   const key = question.grading === "auto" ? keyText(question) : "";
-  // Phase F4 (server) lets a class attach images to its answers. This page does not display them yet (F4-UI): it says how
-  // many there are instead of saying nothing, or that the question is checked from the book only.
-  const images = answer && Array.isArray(answer.images) ? answer.images.length : 0;
+  // Phase F4 lets a class attach images to its answers. The review says how many a question has and (F4-UI) shows them,
+  // read with the teacher's session through the class's own route; a question with none is checked from the book.
+  const attached = answer && Array.isArray(answer.images) ? answer.images : [];
+  const images = attached.length;
   return (
     <div className="eb-sp-form-question-body">
       {images > 0
-        ? <p className="eb-sp-form-deferred" data-images={images}>أرفق الطالب صورًا لهذا السؤال (العدد: <span dir="ltr">{images}</span>). عرضها في هذه الصفحة يُضاف مع واجهة الصور.</p>
+        ? <>
+          <p className="eb-sp-form-deferred" data-images={images}>أرفق الطالب صورًا لهذا السؤال (العدد: <span dir="ltr">{images}</span>).</p>
+          <ExamFormImageList images={attached} read={readImage} />
+        </>
         : null}
       {question.kind === "image" || question.kind === "file"
         ? (images > 0 ? null : <p className="eb-sp-form-deferred">{question.kind === "image" ? "سؤال صورة" : "سؤال ملف"}: يُفحص من كتاب الطالب وملف مشروعه.</p>)
@@ -110,6 +115,10 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
   const adopt = useCallback((next: TeacherFormView) => {
     setView(next); setDraft(draftOf(next)); setGeneralNote(next.review.generalNote || "");
   }, []);
+
+  // Phase F4-UI — one of this student's attached images, through the class's own route (capability, tenancy, membership
+  // and the reference are the server's checks). Stable, so a thumbnail is read once.
+  const readImage = useCallback<ExamFormImageReader>(imageId => trackerGetBlob(token, projectCode, "exam-form-image", { classId, studentId, imageId }), [token, projectCode, classId, studentId]);
 
   const load = useCallback(async () => {
     const mine = ++seq.current;
@@ -287,7 +296,7 @@ export default function TeacherExamFormReview({ token, projectCode, classId, stu
         {section.questions.map((question, qi) => (
           <fieldset key={question.questionId} className="eb-sp-form-question" data-question={question.questionId}>
             <legend><span className="eb-sp-form-number" dir="ltr">{section.order}.{qi + 1}</span> {question.prompt}</legend>
-            <AnswerBlock question={question} view={view} />
+            <AnswerBlock question={question} view={view} readImage={readImage} />
           </fieldset>
         ))}
 
