@@ -21,12 +21,15 @@ type Props = {
 
 const share = (answered: number, total: number) => (total > 0 ? (answered * 100) / total : 0);
 
-function statusOf(view: ExamFormView): { tone: "success" | "neutral" | "info"; text: string } {
+function statusOf(view: ExamFormView): { tone: "success" | "neutral" | "info" | "warn"; text: string } {
+  if (view.status === "approved") return { tone: "success", text: "اعتُمدت" };
   if (view.status === "submitted") return { tone: "success", text: "سُلّمت" };
   if (view.state !== "open") return { tone: "neutral", text: "مغلقة" };
+  if (view.status === "returned") return { tone: "warn", text: "أُعيدت للتعديل" };
   return { tone: "info", text: "مسودة" };
 }
 function lockReason(view: ExamFormView): string {
+  if (view.status === "approved") return "اعتمد معلمك هذه الاستمارة. هي الآن للعرض فقط.";
   if (view.status === "submitted") return "سلّمت هذه الاستمارة. هي الآن للعرض فقط، ويراجعها معلمك.";
   if (view.readOnly) return "الصف مؤرشف — الاستمارة للعرض فقط.";
   if (view.state !== "open") return "أغلق المعلم الاستمارة. إجاباتك المحفوظة باقية، ولا يمكن تعديلها الآن.";
@@ -114,6 +117,16 @@ export default function StudentExamForm({ token, projectCode, onClose, saveDelay
       </header>
       <ProgressBar size="sm" showValue={false} label={"أجبت عن " + view.progress.answered + " من " + view.progress.total} value={share(view.progress.answered, view.progress.total)} tone={view.status === "submitted" ? "success" : "primary"} />
       {reason && <p className="platform-notice assignment-inline-message" data-testid="exam-form-locked">{reason}</p>}
+      {view.status === "returned" && (
+        <p className="platform-notice assignment-inline-message" data-testid="exam-form-returned">
+          أعاد معلمك الاستمارة للتعديل{view.returnNote ? ": " + view.returnNote : "."} عدّل إجاباتك ثم سلّمها من جديد.
+        </p>
+      )}
+      {view.result && (
+        <p className="platform-notice assignment-inline-message" data-testid="exam-form-mark">
+          علامة الاستمارة: <strong dir="ltr">{view.result.mark} / {view.result.outOf}</strong>
+        </p>
+      )}
       {submitted && <p className="platform-notice assignment-inline-message" role="status">تم تسليم الاستمارة.</p>}
       {draft.notice && !reason && <p className="platform-notice assignment-inline-message" role="status">{draft.notice}</p>}
       {draft.error && <p className="platform-error assignment-inline-message" role="alert">{draft.error}</p>}

@@ -44,7 +44,8 @@ export type ExamFormDraft = {
   reload: () => Promise<void>;
 };
 
-export const isLocked = (view: ExamFormView | null) => !view || view.status !== "draft" || view.state !== "open" || view.readOnly === true;
+// The student may write a draft and a form the teacher returned for correction (Phase F3); nothing else.
+export const isLocked = (view: ExamFormView | null) => !view || !(view.status === "draft" || view.status === "returned") || view.state !== "open" || view.readOnly === true;
 
 export function useExamFormDraft(token: string, projectCode: string, saveDelayMs = 800): ExamFormDraft {
   const [view, setView] = useState<ExamFormView | null>(null);
