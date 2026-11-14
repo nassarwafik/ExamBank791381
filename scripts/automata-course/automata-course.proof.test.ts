@@ -104,7 +104,7 @@ describe("every machine exercise is proven on the machine above it", () => {
 const designs = raw.filter(r => r.block.type === "simulation" && r.block.simulationType === "automaton-design");
 type DesignCfg = { task: { machine: "DFA" | "NFA"; alphabet: string[]; maxStates?: number; complete?: boolean; examples?: { accept?: string[]; reject?: string[] } }; reference: { states: string[]; start: string; accept: string[]; transitions: [string, string, string][] } };
 describe("every «صمّم الآلة» exercise is proven through the real server judge", () => {
-  it("the course has design exercises", () => { expect(designs.length).toBeGreaterThanOrEqual(6); });
+  it("the course has design exercises", () => { expect(designs.length).toBeGreaterThanOrEqual(10); });
   for (const r of designs) {
     it(r.block.id + " — reads, reference = its language, examples agree, the reference passes the judge, a wrong machine does not", () => {
       const cfg = r.block.config as unknown as DesignCfg;

@@ -1,5 +1,5 @@
 // Unit 7 — العمليات على اللغات وخصائص الانغلاق للغات المنتظمة (اللقاء 3، الشرائح 60–90؛ اللقاء 4، الشرائح 2–34).
-import { P, H, DEF, NOTE, SUM, OL, TABLE, SIM, MC, TF, SHORT, CLASSIFY, MATCH, GUIDED, ADDED, dfa, unionNew, complement, concat, reverse } from "./dsl.mjs";
+import { P, H, DEF, NOTE, SUM, OL, TABLE, SIM, MC, TF, SHORT, CLASSIFY, MATCH, GUIDED, ADDED, dfa, unionNew, complement, concat, reverse, DESIGN, nfa } from "./dsl.mjs";
 
 const len = w => [...w].length;
 const AB = ["a", "b"];
@@ -165,6 +165,26 @@ export default {
               "المتمّمة تقبل كل ما لا يحوي aa، وترفض ما يحويها.", { prove: "words" }),
             SHORT("كم حالة قبول في الأوتومات أعلاه؟", "2", "في الأصلي حالة قبول واحدة (q2) من ثلاث، فبعد التبديل حالتا قبول: q0 و q1."),
             MC("R(L) للغة L = {ab, abb, ε}؟", ["*{ba, bba, ε}", "{ab, abb, ε}", "{ba, abb}", "{ba, bba}"], "نعكس كل كلمة: ab → ba، abb → bba، و ε تبقى ε."),
+            DESIGN({
+              title: "صمّم الآلة: المتمّمة — لا تحوي ab",
+              intro: "اللغة L فوق `{a, b}` هي كل الكلمات التي **لا تحوي** التسلسل `ab`. صمّم لها أوتومات منتهيًا حتميًا كاملًا (فكّر في أوتومات «تحوي ab» ثم في المتمّمة).",
+              machine: "DFA", alphabet: ["a", "b"], maxStates: 4, complete: true,
+              accept: ["", "a", "ba", "bbaa"], reject: ["ab", "aab", "bab", "abba"],
+              reference: dfa({ states: ["q0", "q1", "q2"], alphabet: ["a", "b"], accept: ["q0", "q1"], t: ["q0 b q0", "q0 a q1", "q1 a q1", "q1 b q2", "q2 a,b q2"] }),
+              lang: w => !w.includes("ab"), langMax: 9,
+              hints: ["ابنِ أولًا أوتومات حتميًا كاملًا للغة «تحوي ab»، وله ثلاث حالات.", "المتمّمة: نفس الأوتومات الكامل، ونبدّل حالات القبول بحالات الرفض."],
+              explanation: "للأوتومات الحتمي الكامل للغة «تحوي ab» ثلاث حالات، هي q0 (لا تقدّم) و q1 (آخر رمز a) و q2 (وجدنا ab، وهي حالة قبول بحلقة). المتمّمة لها نفس الأسهم، وحالتا القبول فيها q0 و q1. لذلك يجب أن يكون الأوتومات كاملًا قبل التبديل.",
+            }),
+            DESIGN({
+              title: "صمّم الآلة: العكس — تنتهي بـ baa",
+              intro: "L هي كل الكلمات فوق `{a, b}` التي تبدأ بـ `aab`. صمّم أوتومات منتهيًا غير حتمي يقبل **عكس** اللغة، أي Lᴿ: كل الكلمات التي تنتهي بـ `baa`.",
+              machine: "NFA", alphabet: ["a", "b"], maxStates: 5,
+              accept: ["baa", "abaa", "bbaa"], reject: ["", "aab", "baab", "aa"],
+              reference: nfa({ states: ["q0", "q1", "q2", "q3"], alphabet: ["a", "b"], accept: ["q3"], t: ["q0 a,b q0", "q0 b q1", "q1 a q2", "q2 a q3"] }),
+              lang: w => w.endsWith("baa"), langMax: 8,
+              hints: ["في أوتومات «تبدأ بـ aab» نقرأ a ثم a ثم b ثم حلقة على كل رمز. اعكس اتجاه كل سهم، وبدّل حالة البداية بحالة القبول.", "أو مباشرة: حلقة على كل رمز في البداية، ثم b ثم a ثم a."],
+              explanation: "بعكس أوتومات «تبدأ بـ aab» نحصل على: حلقة على a و b في البداية، ثم b ثم a ثم a إلى حالة القبول — أربع حالات. هذا أوتومات غير حتمي، كما في بناء العكس في الدرس.",
+            }),
           ],
         },
       ],
