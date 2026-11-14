@@ -18,7 +18,7 @@ const NOW = "2026-11-14T00:00:00.000Z";
 const room = (id: string, code: string) => ({ classId: id, name: "صف " + id, active: true, status: "active", studentIds: [], programCodes: [code], schoolYear: "2026", updatedAt: NOW, createdAt: NOW });
 
 function server() {
-  const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1", "794589"), "platform/classes/c8.json": room("c8", "883589") });
+  const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1", "794589"), "platform/classes/c8.json": room("c8", "899373") });
   const audits: Body[] = [];
   const deps = { container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async (_c: unknown, ev: Body) => { audits.push(ev); }, requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) };
   const posts: Body[] = [];
@@ -93,7 +93,7 @@ describe("F2-UI the teacher's exam-form control", () => {
 
   it("is not shown for a project that ships no form, nor when the state cannot be read", async () => {
     const s = server();
-    const { unmount } = mount({ projectCode: "883589", classId: "c8" });
+    const { unmount } = mount({ projectCode: "899373", classId: "c8" });   // 899373 ships no form (883589 has one since F1b)
     await waitFor(() => expect((globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1));
     expect(screen.queryByTestId("project-exam-form")).toBeNull();
     unmount();
