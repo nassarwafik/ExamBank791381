@@ -28,8 +28,9 @@ project 883589. The decisions recorded in F1 apply unchanged (one form for the w
 results after the teacher approves, the form's mark not merged into the project score, images in F4, files in F5). This
 replaces F1's "794589 only; 883589 and 899373 in F5" for 883589. 899373 still ships no form.
 
-**Status: draft.** The question bank is on the working branch for the owner's review of the proposal (sections, question
-counts, weights, wording). Nothing is merged, and no user can reach the form.
+**Status: approved.** The owner approved the proposal (16 sections, 95 questions, the weights) on 2026-11-14. F2-UI — the
+student's page and the teacher's open / close control — was merged to `main` from another branch meanwhile
+(`docs/enterprise-project-exam-form-f2-ui.md`); this branch was reconciled with it by a normal merge.
 
 ## Scope
 
@@ -112,7 +113,8 @@ bad ones.
   allow-list projection, unchanged: no key, rubric, weight or book reference. The new tests check this for the 883589 form
   directly and through the student route.
 - **Reachability.** The form is reachable only through the F2 routes: a teacher with `projects.tracker.manage` must open it
-  for a class that runs 883589. No screen calls those routes yet, so the form stays unreachable for users until F2-UI.
+  for a class that runs 883589. With F2-UI on `main`, merging this phase makes the form reachable: the teacher's project
+  dashboard offers «فتح الاستمارة» for a 883589 class, and the students of that class then see the form in their project.
 - **Isolation.** The class form and the answers live under `platform/project-exam-forms/883589/…`. A class that does not run
   883589 is refused the form; a class that runs 794589 keeps getting the 794589 file.
 - **Deferred kinds.** The 14 image questions and the one file question are shown, refuse an answer and never block a submit
@@ -133,6 +135,18 @@ and 15 deferred; a class of another project is refused).
 
 The F1 and F2 tests used 883589 as their «project with no form». They now use 899373, which still has none; no other
 expectation changed.
+
+## Reconciliation with F2-UI
+
+`main` moved from 9ff9cfde to 3ecc8d57 (pull request 632, F2-UI) while this phase waited for review. `git merge origin/main`
+was a clean merge. Two things changed because of it:
+
+- `src/projects/ProjectExamFormControl.f2ui.test.tsx` used 883589 as its «project that ships no form»; it now uses 899373
+  (the same change the F1 and F2 tests needed). No other expectation of F2-UI changed.
+- `src/projects/examForm/StudentExamForm.883589.f1b.test.tsx` (4 tests, new) runs the F2-UI page with the 883589 bank over the
+  real handlers: the card on the 883589 project after the teacher opens the form, all 16 sections and 95 questions drawn
+  (the 15 image / file questions without an input), an answer saved under the 883589 prefix, and a complete form submitted.
+  F2-UI was written against the 794589 form; this pins that the page is not specific to it.
 
 Fail-first is not applicable: this phase adds behaviour and fixes no defect.
 
